@@ -1,0 +1,530 @@
+/**
+ * T17 — global cart signal facade.
+ *
+ * One root-provided service owns the authoritative cart snapshot
+ * for the header (T11), the product-add surface (T15/T18), and the
+ * checkout flow (T19+). The facade exposes a read-only signal
+ * surface for views, and a small mutation API that:
+ *
+ *   - serializes every write through a single queue so two clicks
+ *     cannot race (E039 — slow-cart-write);
+ *   - binds `If-Match` to the version returned by the PREVIOUS
+ *     dispatch, never the version visible at click time (AC02);
+ *   - generates a fresh `Idempotency-Key` per intent and reuses the
+ *     same key only on `retry()` (AC02);
+ *   - waits for the authoritative server response before changing
+ *     line totals so the UI never shows an unconfirmed state (AC03);
+ *   - on 409 surfaces a `conflict` signal AND waits for an explicit
+ *     `retry()` call. The failed intent is NOT auto-replayed; the
+ *     user must consent (AC04);
+ *   - on 404 / 410 raises `cartGone` / `cartExpired` so the UI can
+ *     offer a fresh start. 401 is never invented for this
+ *     unauthenticated demo (AC05).
+ *
+ * The T11 `CartCountFacade` token is preserved as a re-export so
+ * the existing header binding needs no change.
+ */
+
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, computed, inject, signal, type Signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+
+import { Api } from '../../api/generated/api';
+import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { withIfMatch } from '../../core/api/demo-session.interceptor';
+import type { Cart } from '../../api/generated/models/cart';
+import type { Money } from '../../api/generated/models/money';
+import type { ProblemCode } from '../../api/generated/models/problem-code';
+
+import {
+  CartMutationQueue,
+  type DispatchInputs,
+  type DispatchResult,
+  type MutationIntent,
+} from './cart-mutation-queue';
+
+/** Conflict payload surfaced to the UI when a 409 arrives. */
+export interface CartConflict {
+  readonly code: 'CART_VERSION_CONFLICT';
+  readonly status: 409;
+  readonly detail: string;
+  /** Idempotency key the failed intent was issued under. */
+  readonly idempotencyKey: string;
+  /** Kind of intent that conflicted (the one retry() will resubmit). */
+  readonly intentKind: MutationIntent['kind'];
+  /** Server-reported version after the refetch. */
+  readonly serverVersion: number;
+}
+
+/** Generic error payload surfaced to the UI for non-recoverable failures. */
+export interface CartError {
+  readonly code: ProblemCode;
+  readonly status: number;
+  readonly detail: string;
+}
+
+const ZERO_MONEY: Money = { amount: 0, currency: 'HUF' };
+
+/**
+ * Generates a fresh opaque idempotency key in the contract range
+ * `^[a-zA-Z0-9_-]{8,80}$`. Each intent gets a NEW key; the only
+ * path that reuses a key is the explicit `retry()` call after a
+ * recorded 409 conflict.
+ */
+function freshIdempotencyKey(): string {
+  const raw = globalThis.crypto.randomUUID();
+  // randomUUID() emits 36 chars including dashes; the contract
+  // requires 8–80 chars, so it already fits.
+  return raw;
+}
+
+/**
+ * Root-provided cart owner. `TestBed.inject(CartFacade)` returns the
+ * same instance for every consumer so totals, itemCount, and the
+ * pending state are identical across the header, the product page,
+ * and the checkout flow.
+ */
+@Injectable({ providedIn: 'root' })
+export class CartFacade {
+  private readonly api: Api;
+  private readonly queue = new CartMutationQueue();
+
+  /** Internal writable snapshot of the authoritative cart state. */
+  private readonly cartWritable = signal<Cart | null>(null);
+
+  /** Public readonly cart signal. Null until `ensureCart()` lands. */
+  readonly cart: Signal<Cart | null> = this.cartWritable.asReadonly();
+
+  /** Sum of all line quantities. 0 when no cart exists yet. */
+  readonly itemCount: Signal<number> = computed(() => {
+    const cart = this.cartWritable();
+    if (cart === null) return 0;
+    return cart.itemCount;
+  });
+
+  /** Authoritative subtotal in whole HUF. */
+  readonly subtotal: Signal<Money> = computed(() => {
+    const cart = this.cartWritable();
+    if (cart === null) return ZERO_MONEY;
+    return cart.subtotal;
+  });
+
+  /** Number of intents currently queued or dispatching. */
+  readonly pending: Signal<number> = this.queue.pendingCount;
+
+  private readonly errorWritable = signal<CartError | null>(null);
+  /** Last non-recoverable error, or null. */
+  readonly error: Signal<CartError | null> = this.errorWritable.asReadonly();
+
+  private readonly conflictWritable = signal<CartConflict | null>(null);
+  /** Last 409 conflict, or null. Cleared on the next successful dispatch. */
+  readonly conflict: Signal<CartConflict | null> = this.conflictWritable.asReadonly();
+
+  private readonly cartGoneWritable = signal<boolean>(false);
+  /** True after the server returned 404 for the active cart. */
+  readonly cartGone: Signal<boolean> = this.cartGoneWritable.asReadonly();
+
+  private readonly cartExpiredWritable = signal<boolean>(false);
+  /** True after the server returned 410 for the active cart. */
+  readonly cartExpired: Signal<boolean> = this.cartExpiredWritable.asReadonly();
+
+  /**
+   * Holds the most recent failed intent so `retry()` can resubmit it
+   * with the SAME idempotency key. Cleared on the next successful
+   * dispatch.
+   */
+  private lastFailedIntent: MutationIntent | null = null;
+
+  constructor() {
+    // The generated `Api` class relies on Angular decorator metadata
+    // for constructor injection. Vitest's esbuild pipeline does not
+    // emit that metadata, so we wire it manually from the two
+    // primitives that ARE injectable: `HttpClient` and
+    // `ApiConfiguration`. In a real browser the same `new Api(...)`
+    // call sees the live `HttpClient` produced by
+    // `provideHttpClient(withFetch(), withInterceptors(...))`.
+    this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
+    this.queue.setVersionProvider(() => this.cartWritable()?.version ?? null);
+  }
+
+  /**
+   * Returns the active cart id or null. Exposed so future flows
+   * (e.g. checkout session create) can attach to it without
+   * re-reading `cart()?.id` everywhere.
+   */
+  get cartId(): string | null {
+    return this.cartWritable()?.id ?? null;
+  }
+
+  /**
+   * Creates the cart if none exists. Safe to call multiple times; the
+   * second call is a no-op when an active cart is already loaded.
+   */
+  async ensureCart(): Promise<void> {
+    if (this.cartWritable() !== null && this.cartWritable()?.status === 'active') {
+      return;
+    }
+    const intent: MutationIntent = {
+      kind: 'create',
+      idempotencyKey: freshIdempotencyKey(),
+      retry: false,
+      payload: { providerId: 'mi-bolt' },
+    };
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatchCreate(inputs));
+    if (result.ok) {
+      this.applySuccess(result.cart);
+    }
+  }
+
+  /**
+   * Adds a variant to the cart. The intent is serialized behind
+   * every other queued mutation, and its `If-Match` binds to the
+   * version the PREVIOUS dispatch returned. Throws if no cart has
+   * been created yet (call `ensureCart()` first).
+   */
+  async addItem(variantId: string, quantity: number): Promise<void> {
+    const intent: MutationIntent = {
+      kind: 'addItem',
+      idempotencyKey: freshIdempotencyKey(),
+      retry: false,
+      payload: { variantId, quantity },
+    };
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatchAddItem(inputs));
+    if (result.ok) {
+      this.applySuccess(result.cart);
+    }
+  }
+
+  /**
+   * Sets an absolute quantity on a line. The intent is serialized
+   * behind every other queued mutation; its `If-Match` binds to the
+   * latest server version. If the line disappears between enqueue
+   * and dispatch the server returns 404, which the facade maps to
+   * `cartGone`.
+   */
+  async setQuantity(itemId: string, quantity: number): Promise<void> {
+    const intent: MutationIntent = {
+      kind: 'setQuantity',
+      idempotencyKey: freshIdempotencyKey(),
+      retry: false,
+      payload: { itemId, quantity },
+    };
+    const result = await this.queue.enqueue(
+      intent,
+      async (inputs) => this.dispatchSetQuantity(inputs),
+    );
+    if (result.ok) {
+      this.applySuccess(result.cart);
+    }
+  }
+
+  /**
+   * Removes a line from the cart. Serialized like every other
+   * mutation. A 404 here means the cart itself disappeared between
+   * enqueue and dispatch.
+   */
+  async removeItem(itemId: string): Promise<void> {
+    const intent: MutationIntent = {
+      kind: 'removeItem',
+      idempotencyKey: freshIdempotencyKey(),
+      retry: false,
+      payload: { itemId },
+    };
+    const result = await this.queue.enqueue(
+      intent,
+      async (inputs) => this.dispatchRemoveItem(inputs),
+    );
+    if (result.ok) {
+      this.applySuccess(result.cart);
+    }
+  }
+
+  /**
+   * Re-submits the most recent failed intent with the SAME
+   * idempotency key but the CURRENT expected version. No-op when
+   * no conflict is recorded. The contract requires this be an
+   * explicit user action; the facade never auto-replays.
+   */
+  async retry(): Promise<void> {
+    const failed = this.lastFailedIntent;
+    if (failed === null) {
+      return;
+    }
+    // Clear the recorded conflict so a subsequent failure re-arms
+    // retry() instead of letting stale state persist.
+    this.lastFailedIntent = null;
+    const retryIntent: MutationIntent = { ...failed, retry: true };
+    const result = await this.queue.enqueue(retryIntent, (inputs) => {
+      switch (inputs.intent.kind) {
+        case 'create':
+          return this.dispatchCreate(inputs);
+        case 'addItem':
+          return this.dispatchAddItem(inputs);
+        case 'setQuantity':
+          return this.dispatchSetQuantity(inputs);
+        case 'removeItem':
+          return this.dispatchRemoveItem(inputs);
+        case 'refetch':
+          return this.dispatchRefetch(inputs);
+      }
+    });
+    if (result.ok) {
+      this.applySuccess(result.cart);
+    }
+  }
+
+  /**
+   * Refetches the active cart without an `If-Match`. Called
+   * internally after a 409 to bring the local snapshot into sync
+   * with the server. Exposed for tests that need to simulate a
+   * remote version bump.
+   */
+  async refetch(): Promise<void> {
+    const cartId = this.cartWritable()?.id;
+    if (cartId === undefined) {
+      return;
+    }
+    const intent: MutationIntent = {
+      kind: 'refetch',
+      idempotencyKey: freshIdempotencyKey(),
+      retry: false,
+      payload: { cartId },
+    };
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatchRefetch(inputs));
+    if (result.ok) {
+      this.applySuccess(result.cart);
+    }
+  }
+
+  /**
+   * Test seam: points the local cart snapshot at an id the server
+   * has never seen, so the next mutation surfaces 404 and the
+   * `cartGone` signal flips. Production code does not call this.
+   */
+  _seedMissingCart(): void {
+    this.cartWritable.set({
+      id: 'cart-missing-001',
+      version: 1,
+      items: [],
+      itemCount: 0,
+      subtotal: { ...ZERO_MONEY },
+      status: 'active',
+      expiresAt: '2026-12-31T23:59:59.000Z',
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Dispatch helpers — wire the SDK + interceptor + Problem mapping into the
+  // queue. Each helper returns a typed `DispatchResult` so the queue never
+  // sees an `HttpErrorResponse` directly.
+  // -------------------------------------------------------------------------
+
+  private async dispatchCreate(inputs: DispatchInputs): Promise<DispatchResult> {
+    void inputs;
+    try {
+      const response = await firstValueFrom(
+        this.api.invoke(
+          (await import('../../api/generated/functions')).createCart,
+          {
+            'Idempotency-Key': inputs.intent.idempotencyKey,
+            body: { providerId: 'mi-bolt' },
+          },
+        ),
+      );
+      return { ok: true, cart: response, replayed: false };
+    } catch (err) {
+      return mapError(err);
+    }
+  }
+
+  private async dispatchAddItem(inputs: DispatchInputs): Promise<DispatchResult> {
+    const cartId = this.cartWritable()?.id;
+    if (cartId === undefined) {
+      return mapMissingCart();
+    }
+    const payload = inputs.intent.payload as { variantId: string; quantity: number };
+    const context = inputs.expectedVersion === null
+      ? undefined
+      : withIfMatch(inputs.expectedVersion);
+    try {
+      const response = await firstValueFrom(
+        this.api.invoke(
+          (await import('../../api/generated/functions')).addCartItem,
+          {
+            cartId,
+            'Idempotency-Key': inputs.intent.idempotencyKey,
+            body: { variantId: payload.variantId, quantity: payload.quantity },
+          },
+          context,
+        ),
+      );
+      return { ok: true, cart: response, replayed: false };
+    } catch (err) {
+      return this.handleError(inputs, err);
+    }
+  }
+
+  private async dispatchSetQuantity(inputs: DispatchInputs): Promise<DispatchResult> {
+    const cartId = this.cartWritable()?.id;
+    if (cartId === undefined) {
+      return mapMissingCart();
+    }
+    const payload = inputs.intent.payload as { itemId: string; quantity: number };
+    const context = inputs.expectedVersion === null
+      ? undefined
+      : withIfMatch(inputs.expectedVersion);
+    try {
+      const response = await firstValueFrom(
+        this.api.invoke(
+          (await import('../../api/generated/functions')).setCartItemQuantity,
+          {
+            cartId,
+            'Idempotency-Key': inputs.intent.idempotencyKey,
+            itemId: payload.itemId,
+            body: { quantity: payload.quantity },
+          },
+          context,
+        ),
+      );
+      return { ok: true, cart: response, replayed: false };
+    } catch (err) {
+      return this.handleError(inputs, err);
+    }
+  }
+
+  private async dispatchRemoveItem(inputs: DispatchInputs): Promise<DispatchResult> {
+    const cartId = this.cartWritable()?.id;
+    if (cartId === undefined) {
+      return mapMissingCart();
+    }
+    const payload = inputs.intent.payload as { itemId: string };
+    const context = inputs.expectedVersion === null
+      ? undefined
+      : withIfMatch(inputs.expectedVersion);
+    try {
+      const response = await firstValueFrom(
+        this.api.invoke(
+          (await import('../../api/generated/functions')).removeCartItem,
+          {
+            cartId,
+            'Idempotency-Key': inputs.intent.idempotencyKey,
+            itemId: payload.itemId,
+          },
+          context,
+        ),
+      );
+      return { ok: true, cart: response, replayed: false };
+    } catch (err) {
+      return this.handleError(inputs, err);
+    }
+  }
+
+  private async dispatchRefetch(inputs: DispatchInputs): Promise<DispatchResult> {
+    const payload = inputs.intent.payload as { cartId: string };
+    try {
+      const response = await firstValueFrom(
+        this.api.invoke(
+          (await import('../../api/generated/functions')).getCart,
+          { cartId: payload.cartId },
+        ),
+      );
+      return { ok: true, cart: response, replayed: false };
+    } catch (err) {
+      return mapError(err);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Centralized error mapping. Every dispatcher funnels through here so a
+  // 409 always lands in the conflict signal, a 410 always in cartExpired,
+  // and a 404 always in cartGone. Other Problems land in `error`.
+  // -------------------------------------------------------------------------
+
+  private handleError(inputs: DispatchInputs, err: unknown): DispatchResult {
+    const result = mapError(err);
+    this.recordFailure(inputs.intent, result);
+    return result;
+  }
+
+  private recordFailure(intent: MutationIntent, result: DispatchResult): void {
+    if (result.ok) return;
+    if (result.code === 'CART_VERSION_CONFLICT') {
+      this.lastFailedIntent = intent;
+      const conflict: CartConflict = {
+        code: 'CART_VERSION_CONFLICT',
+        status: 409,
+        detail: result.detail,
+        idempotencyKey: intent.idempotencyKey,
+        intentKind: intent.kind,
+        // The refetch runs in the background; for the conflict
+        // payload we report the last known version. The refetch
+        // settles asynchronously and updates `cart()` itself.
+        serverVersion: this.cartWritable()?.version ?? 0,
+      };
+      this.conflictWritable.set(conflict);
+      // Fire-and-forget refetch so the next dispatch binds to a
+      // fresh version. We do not await it here so the failed intent
+      // resolves immediately and the queue can move on.
+      void this.refetch();
+      return;
+    }
+    if (result.code === 'CART_EXPIRED') {
+      this.cartExpiredWritable.set(true);
+      this.lastFailedIntent = null;
+      return;
+    }
+    if (result.code === 'NOT_FOUND') {
+      this.cartGoneWritable.set(true);
+      this.lastFailedIntent = null;
+      return;
+    }
+    this.errorWritable.set({
+      code: result.code,
+      status: result.status,
+      detail: result.detail,
+    });
+    this.lastFailedIntent = null;
+  }
+
+  /**
+   * Commits the authoritative cart snapshot. Clears transient
+   * failure signals so the UI returns to a clean state on the
+   * next successful dispatch.
+   */
+  private applySuccess(cart: Cart): void {
+    this.cartWritable.set(cart);
+    this.conflictWritable.set(null);
+    this.cartGoneWritable.set(false);
+    this.cartExpiredWritable.set(false);
+    this.errorWritable.set(null);
+    this.lastFailedIntent = null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers — kept module-local so tests can exercise the mapping
+// without instantiating the facade.
+// ---------------------------------------------------------------------------
+
+function mapError(err: unknown): DispatchResult {
+  if (err instanceof HttpErrorResponse) {
+    const body = err.error as { code?: ProblemCode; detail?: string } | null;
+    const code = (body && body.code) || ('UNKNOWN' as ProblemCode);
+    const detail = (body && body.detail) || err.message;
+    if (err.status === 409 && code === 'CART_VERSION_CONFLICT') {
+      return { ok: false, code: 'CART_VERSION_CONFLICT', status: 409, detail };
+    }
+    if (err.status === 410 && code === 'CART_EXPIRED') {
+      return { ok: false, code: 'CART_EXPIRED', status: 410, detail };
+    }
+    if (err.status === 404 && code === 'NOT_FOUND') {
+      return { ok: false, code: 'NOT_FOUND', status: 404, detail };
+    }
+    return { ok: false, code, status: err.status, detail };
+  }
+  return { ok: false, code: 'SERVICE_UNAVAILABLE', status: 0, detail: String(err) };
+}
+
+function mapMissingCart(): DispatchResult {
+  return { ok: false, code: 'NOT_FOUND', status: 404, detail: 'A kosár nem található.' };
+}

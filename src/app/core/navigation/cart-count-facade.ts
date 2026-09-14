@@ -1,22 +1,18 @@
-import { Injectable, signal } from '@angular/core';
-
 /**
- * T11 stub for the cart count surfaced in the header.
+ * T17 — re-export of the root-provided `CartFacade` under the
+ * `CartCountFacade` name the T11 header still binds to.
  *
- * T17 replaces this with the real `CartFacade` (providedIn root) that
- * exposes the same `itemCount` signal. Consumers — `AppShell`, `HeaderNav`
- * — inject this token only, so swapping the implementation later is a
- * single-line change with no consumer edits.
+ * The T11 stub exposed a writable `count` signal so the unit suite
+ * could drive the badge without a full cart lifecycle. T17 replaces
+ * that stub: the real `CartFacade` (providedIn root) owns the
+ * authoritative cart state and surfaces `itemCount` as a derived
+ * signal. Re-exporting under the same name keeps every existing
+ * consumer — `AppShell`, `HeaderNav` — pointing at the single
+ * root-owned instance with zero change to its import line.
  *
- * The class intentionally exposes a writable internal `count` signal so
- * the T11 unit suite can drive the badge without depending on a full
- * cart lifecycle; T17 closes that seam.
+ * No sibling event bus. No duplicate totals. The header reads the
+ * SAME `CartFacade` as the product-add surface (T18/T15) and the
+ * checkout flow (T19+).
  */
-@Injectable({ providedIn: 'root' })
-export class CartCountFacade {
-  /** Internal writable signal. T17 will replace the body, not the API. */
-  readonly count = signal<number>(0);
 
-  /** Readonly cart line item total. UI subscribes through this signal. */
-  readonly itemCount = this.count.asReadonly();
-}
+export { CartFacade as CartCountFacade } from '../../features/cart/cart.facade';
