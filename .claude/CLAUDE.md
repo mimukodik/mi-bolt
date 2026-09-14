@@ -430,3 +430,11 @@ launch, which is why the SessionStart hook does not re-inject them.
   `linear-conventions` skill before writing anything to Linear; it owns the
   wording and formatting rules, the two comments finished work needs,
   attachments and sub-issues.
+
+## Design skill mandate
+
+The `mi-bolt-design` skill is mandatory for every implementation and every verification step in this workspace, including nonvisual work such as build, API and test-infrastructure tasks. The skill is installed separately and is not part of this repository's documentation; the resolved path, approved version and SHA-256 are recorded in `docs/mi-bolt/execution/skill-location.json`, which is the only source of truth for those values.
+
+The skill's `## 26 Verifiable Rules` table (R01–R26) is the audit checklist for every implementation. Each task records the applicability and outcome of every relevant R-rule in its review file under `docs/mi-bolt/execution/tasks/Txx.md`. A nonvisual task may mark individual visual R-rules N/A, but each N/A carries a one-sentence reason in the same file; silent omission is not a reason.
+
+Do not copy, embed, paraphrase or rebuild the skill in this repository. The installed copy is the only authority.
