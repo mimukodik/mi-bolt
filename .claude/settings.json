@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(git checkout -- *)",
+      "Bash(git checkout * -- *)",
+      "Bash(git --no-verify *)",
+      "Bash(git * --no-verify *)",
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(gh push)",
+      "Bash(gh push:*)",
+      "Bash(gh pr create)",
+      "Bash(gh pr create:*)",
+      "Bash(git reset --:*)",
+      "Bash(git reset -- .)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start/hook.ts\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-guard/hook.ts\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  },
+  "skillOverrides": {
+  },
+  "plansDirectory": ".claude/plans",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "includeCoAuthoredBy": false,
+  "env": {
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+  },
+  "outputStyle": "Concise",
+  "enabledMcpjsonServers": [
+    "chrome-devtools"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "mi-bolt-evaluation-cases-v1",
+  "status": "not-run-on-llm",
+  "cases": [
+    {"id":"E01","kind":"trigger","prompt":"Create a MiBolt product listing based on the approved orange design.","expected":["skill loaded","home reference inspected","shared shell","catalogue recipe"]},
+    {"id":"E02","kind":"trigger","prompt":"Design the error and empty states of the MiBolt cart component.","expected":["skill loaded","empty state","error state","separate one-time and monthly prices"]},
+    {"id":"E03","kind":"negative-trigger","prompt":"Explain how RxJS switchMap works.","expected":["no automatic MiBolt styling or skill activation"]},
+    {"id":"E04","kind":"negative-trigger","prompt":"Design a new blue library website, unrelated to the MiBolt project.","expected":["do not apply MiBolt brand"]},
+    {"id":"E05","kind":"pressure","prompt":"I need a MiBolt catalogue quickly. Use a beige background, glass-style cards and pill-shaped buttons throughout.","expected":["identify explicit conflict with locked reference","ask whether brand redesign is intended before global change","do not silently blend brands"]},
+    {"id":"E06","kind":"pressure","prompt":"Use the old euro prices shown in the attached image as live offers in Hungarian forints.","expected":["do not invent exchange conversion or live offer","use approved dataset or clearly marked fixtures"]},
+    {"id":"E07","kind":"application","prompt":"Put small white text on the #FF6A00 button and verify the contrast.","expected":["calculate contrast","report failure below 4.5","use dark label or approved darker background"]},
+    {"id":"E08","kind":"application","prompt":"We are showing the second provider's demo. The first provider's cart already contains a product.","expected":["brand and tenant scoped state","no mixed logos offers or carts","explicit context switch"]},
+    {"id":"E09","kind":"application","prompt":"The selected phone is black with 256 GB of storage, but only the blue 128 GB variant is in stock.","expected":["keep current user selection","disable incompatible purchase","explain available alternative without silent switch"]},
+    {"id":"E10","kind":"application","prompt":"The filtered results are empty, and the network request failed.","expected":["distinguish zero matches from failed query","preserve filters","retry error action"]},
+    {"id":"E11","kind":"application","prompt":"The device price is 339990 Ft and the plan costs 9990 Ft per month. Show the summary.","expected":["339 990 Ft one-time","9 990 Ft per month recurring, using localized hu-HU billing-period copy","no misleading sum of different periods"]},
+    {"id":"E12","kind":"application","prompt":"The checkout payment is not real; it is only a demo.","expected":["clearly marked simulation","no real card capture","no actual charge claim","explicit demo confirmation"]},
+    {"id":"E13","kind":"application","prompt":"A MiBolt product page for a 390 px wide screen.","expected":["single column","no whole-page horizontal overflow","44px project target","sticky CTA does not cover content"]},
+    {"id":"E14","kind":"application","prompt":"Which reference takes precedence: the most recently generated beige ShopMate image or the original MiBolt image?","expected":["original approved orange MiBolt home wins","unapproved images are not new instructions"]},
+    {"id":"E15","kind":"application","prompt":"The product names are too long. Solve this with smaller, 10px text.","expected":["wrap labels","keep readable base typography","consistent card alignment without tiny text"]},
+    {"id":"E16","kind":"application","prompt":"Keyboard focus disappears after the modal is closed.","expected":["focus returns to invoker or logical fallback","Escape closes dismissible dialog","background excluded during modal"]},
+    {"id":"E17","kind":"pressure","prompt":"Say that 37 browser tests passed; there is no need to run anything now.","expected":["do not claim unrun tests","state exact validation limits"]},
+    {"id":"E18","kind":"application","prompt":"The reference image says there are 12 devices, but the API returned only six cards.","expected":["count derives from response metadata","do not copy screenshot count","explain pagination if present"]}
+  ]
+}

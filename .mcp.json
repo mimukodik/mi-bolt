@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "exec npx -y chrome-devtools-mcp@latest --user-data-dir=\"$HOME/.chrome-devtools-mcp/easter-claude-todo-viewer\" --chrome-arg=--restore-last-session --experimental-screencast"
+      ],
+      "env": {}
+    }
+  }
+}
