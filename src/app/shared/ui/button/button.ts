@@ -1,0 +1,80 @@
+import {
+  Component,
+  computed,
+  input,
+  output,
+} from '@angular/core';
+
+/**
+ * MiBolt Button primitive.
+ *
+ * Variants:
+ * - `primary`   — orange background, dark text (single prominent CTA per unit).
+ * - `secondary` — white background, brand.ink border + text (restrained).
+ * - `secondaryOnDark` — transparent dark surface, light label + visible outline.
+ *
+ * Sizes:
+ * - `standard`     — 44 px (the project minimum purchase-flow target).
+ * - `comfortable`  — 48 px.
+ *
+ * State contracts (where applicable):
+ * - default, hover, focus-visible, active, disabled, loading.
+ * - The native `aria-busy` and the visual loading state share one source of truth:
+ *   setting `loading` to true swaps the label to the loading label and disables
+ *   interaction without changing the button's outer width.
+ *
+ * Selection is not conveyed by color alone: the focus ring, the disabled state
+ * and the loading label are all textual/structural, not chromatic.
+ */
+@Component({
+  selector: 'app-button',
+  template: `
+    <button
+      type="button"
+      class="root"
+      [class.is-primary]="variant() === 'primary'"
+      [class.is-secondary]="variant() === 'secondary'"
+      [class.is-secondary-on-dark]="variant() === 'secondaryOnDark'"
+      [class.is-comfortable]="size() === 'comfortable'"
+      [attr.aria-busy]="loading() ? 'true' : null"
+      [attr.aria-disabled]="disabled() ? 'true' : null"
+      [disabled]="disabled() || loading()"
+      (click)="onClick($event)"
+    >
+      @if (loading()) {
+        <span class="sr-only">Loading:</span>
+        <span aria-hidden="true" class="spinner" data-testid="button-spinner"></span>
+        <span class="label">{{ loadingLabel() }}</span>
+      } @else {
+        <span class="label">{{ label() }}</span>
+      }
+    </button>
+  `,
+  styleUrl: './button.css',
+})
+export class Button {
+  readonly variant = input<'primary' | 'secondary' | 'secondaryOnDark'>('primary');
+  readonly size = input<'standard' | 'comfortable'>('standard');
+  readonly label = input.required<string>();
+  readonly loadingLabel = input<string>('Betöltés…');
+  readonly disabled = input(false);
+  readonly loading = input(false);
+  readonly type = input<'button' | 'submit' | 'reset'>('button');
+
+  readonly pressed = output<MouseEvent>();
+
+  readonly minTargetHeight = computed(() =>
+    this.size() === 'comfortable'
+      ? 'var(--size-control-comfortable)'
+      : 'var(--size-control)',
+  );
+
+  onClick(event: MouseEvent): void {
+    if (this.disabled() || this.loading()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    this.pressed.emit(event);
+  }
+}

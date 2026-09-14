@@ -1,0 +1,73 @@
+/* mi-bolt primitives — page-level reset and shared focus ring.
+   Components own their own styling via component-scoped CSS referencing
+   the tokens in tokens.css. This file is intentionally minimal: no
+   utility framework, no design system library, only what every primitive
+   needs from the host page. */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-family-base);
+  font-size: var(--type-body);
+  line-height: var(--line-height-body);
+  color: var(--color-text-primary);
+  background: var(--color-surface-light);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--weight-bold);
+  line-height: var(--line-height-heading);
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+p {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+/* The accessibility focus indicator referenced by every primitive.
+   Outer 2px ring + 2px offset, never clipped. Selection of text/icon
+   always sits beside the indicator, never replaces it. */
+:focus-visible {
+  outline: 2px solid var(--color-focus-light);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* Visually-hidden helper for assistive-only labels. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Default skelemin background does not animate when reduced motion is set. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
