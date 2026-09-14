@@ -21,7 +21,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import istanbulCoverage from 'istanbul-lib-coverage';
 
@@ -97,7 +97,7 @@ function resolveMetric(fileData, metric) {
       covered += 1;
     }
   }
-  const pct = total === 0 ? 100 : Math.round((covered / total) * 10000) / 100;
+  const pct = total === 0 ? Number.NaN : Math.round((covered / total) * 10000) / 100;
   return { count: covered, total, pct };
 }
 
@@ -324,9 +324,9 @@ async function main() {
 }
 
 function joinSafe(root, rel) {
-  // Tiny shim so the script runs under both POSIX and the Windows CI
-  // path layouts the repo might encounter later.
-  return root.endsWith('/') || root.endsWith('\\') ? `${root}${rel}` : `${root}/${rel}`;
+  // Use the platform-native separator so the script works on both
+  // POSIX and Windows CI layouts without producing mixed slashes.
+  return join(root, rel);
 }
 
 main().catch((err) => {

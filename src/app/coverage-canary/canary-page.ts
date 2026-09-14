@@ -8,7 +8,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
-import { branch, defaultBranch } from './canary';
+import { branch } from './canary';
 
 @Component({
   selector: 'app-coverage-canary',
@@ -49,20 +49,11 @@ import { branch, defaultBranch } from './canary';
 export class CoverageCanaryPage {
   private readonly flag = signal<boolean>(false);
 
-  readonly label = computed(() => (this.flag() ? 'A' : 'B'));
+  readonly label = computed(() => branch(this.flag()));
 
   constructor(route: ActivatedRoute) {
-    const flag = route.snapshot.queryParamMap.get('branch') === 'true';
+    const raw = route.snapshot.queryParamMap.get('branch');
+    const flag = raw === null ? false : raw === 'true';
     this.flag.set(flag);
-  }
-
-  /** Pure helper delegating to the canary function for easy unit testing. */
-  resolveBranch(flag: boolean): 'A' | 'B' {
-    return branch(flag);
-  }
-
-  /** Pure helper delegating to the canary function for easy unit testing. */
-  resolveDefault(): 'A' | 'B' {
-    return defaultBranch();
   }
 }

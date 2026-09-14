@@ -189,7 +189,10 @@ export const coverageFixture = async (
   // the fixture keeping these lists, so the spec can call
   // `coverage.read()` and inspect them.
   const openSockets = new Set<string>();
-  const pendingRequests = new Map<string, string>();
+  const pendingRequests = new Map<
+    string,
+    { method: string; count: number }
+  >();
 
   context.on('page', (page) => {
     page.on('websocket', (ws) => {
@@ -198,13 +201,27 @@ export const coverageFixture = async (
       ws.on('close', () => openSockets.delete(url));
     });
     page.on('request', (req) => {
-      pendingRequests.set(req.url(), req.method());
+      // Counter map: multiple concurrent requests to the same URL
+      // share one entry so finishing one of them does not clear
+      // the entry while another is still in flight.
+      const existing = pendingRequests.get(req.url());
+      if (existing) {
+        existing.count += 1;
+      } else {
+        pendingRequests.set(req.url(), { method: req.method(), count: 1 });
+      }
     });
     page.on('requestfinished', (req) => {
-      pendingRequests.delete(req.url());
+      const existing = pendingRequests.get(req.url());
+      if (!existing) return;
+      existing.count -= 1;
+      if (existing.count <= 0) pendingRequests.delete(req.url());
     });
     page.on('requestfailed', (req) => {
-      pendingRequests.delete(req.url());
+      const existing = pendingRequests.get(req.url());
+      if (!existing) return;
+      existing.count -= 1;
+      if (existing.count <= 0) pendingRequests.delete(req.url());
     });
   });
 

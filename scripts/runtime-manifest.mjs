@@ -30,7 +30,7 @@
 // The script is idempotent; the output is deterministic for a
 // given tree state (sorted, POSIX paths).
 
-import { mkdir, readdir, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

@@ -49,5 +49,3 @@ function hashSeed(input: string): number {
   }
   return h;
 }
-
-export { expect } from '@playwright/test';

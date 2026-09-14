@@ -34,9 +34,11 @@ base.describe('T02-AC05 E2E network isolation', () => {
         }
       });
       // MSW's onUnhandledRequest='error' rejects the request; the
-      // page sees a network error. We only care that the attempt was
-      // observed by the page-level request listener.
-      expect(apiCalls.length + (result.ok ? 0 : 1)).toBeGreaterThanOrEqual(0);
+      // page sees a network error. We assert (a) the attempt was
+      // observed by the page-level request listener and (b) the
+      // fetch itself was rejected so the network was not allowed.
+      expect(apiCalls.length).toBeGreaterThan(0);
+      expect(result.ok).toBe(false);
     },
   );
 
@@ -62,7 +64,12 @@ base.describe('T02-AC05 E2E network isolation', () => {
           return 'failed';
         }
       });
-      expect(result).toBeTruthy();
+      // The page cannot actually reach example.com (the runner
+      // network is isolated), but the attempt MUST show up in the
+      // request log AND the fetch must end with 'failed' so the
+      // test proves no outbound traffic succeeded.
+      expect(external.length).toBeGreaterThan(0);
+      expect(result).toBe('failed');
     },
   );
 });
