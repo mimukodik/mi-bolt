@@ -15,9 +15,55 @@
 //                             the gate rejects them)
 //   - reporter: json-summary, json — the gate reads coverage-final.json
 
-import { defineConfig } from 'vitest/config';
+import { transform as esbuildTransform } from 'esbuild';
+import { defineConfig, type PluginOption } from 'vitest/config';
+
+/**
+ * Vite 8 / Rolldown switched the SSR transform pipeline to oxc
+ * (https://github.com/vitejs/vite/discussions/21891). oxc does NOT
+ * downgrade TC39 stage-3 decorators into the legacy form that
+ * TypeScript's `experimentalDecorators` flag produces, so the SSR
+ * output for any file that uses `@Component` / `@Injectable`
+ * decorators ends up as `@(SomeImport())({...}) class Foo {}`,
+ * which Node 22+ refuses to parse and yields "Invalid or unexpected
+ * token" before any test runs.
+ *
+ * The esbuild pre-transform plugin below runs before vite's
+ * `vite:oxc` plugin (`enforce: 'pre'`) and lowers the TS source
+ * files into the classic `__decorateClass([...], class {})` form
+ * esbuild emits when `experimentalDecorators: true` is set. The
+ * oxc parser then sees zero decorator AST nodes and emits JS that
+ * Node can parse.
+ *
+ * The plugin is a no-op for non-TS inputs and only registers the
+ * `tsconfigRaw` field that mirrors the project's `tsconfig.json`,
+ * so other transforms (jsdom env, the rolldown pipeline in build,
+ * etc.) are unaffected.
+ */
+const esbuildLegacyDecoratorsPlugin = (): PluginOption => ({
+  name: 'mi-bolt:esbuild-legacy-decorators',
+  enforce: 'pre',
+  async transform(code, id) {
+    if (!id.endsWith('.ts') || id.includes('node_modules')) {
+      return null;
+    }
+    const result = await esbuildTransform(code, {
+      loader: 'ts',
+      tsconfigRaw: {
+        compilerOptions: {
+          experimentalDecorators: true,
+          useDefineForClassFields: false,
+          target: 'es2022',
+          importsNotUsedAsValues: 'remove',
+        },
+      },
+    });
+    return { code: result.code, map: result.map };
+  },
+});
 
 export default defineConfig({
+  plugins: [esbuildLegacyDecoratorsPlugin()],
   test: {
     include: ['tests/**/*.spec.ts'],
     environment: 'node',

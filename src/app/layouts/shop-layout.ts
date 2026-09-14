@@ -1,0 +1,64 @@
+import { ChangeDetectionStrategy, Component, OnInit, effect, inject } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+
+import { AppShell } from '../shared/shell/app-shell';
+import { RouteFocusService } from '../core/navigation/route-focus';
+
+/**
+ * `ShopLayout` is the shell for the Catalogue (S2) and Product (S3)
+ * families, and the utility 404 state.
+ *
+ * Variants:
+ * - The default chrome (full nav, dark header with mobile search bar
+ *   below at <= 640 px) wraps the catalogue and product routes.
+ * - The 404 route is also mounted under this layout, so the user keeps
+ *   the standard header/footer when an unknown URL is hit.
+ *
+ * Mobile search input: rendered by `HeaderNav` as a full-width strip
+ * below the header on narrow widths. Visibility is driven by a CSS
+ * media query (max-width: 640 px) inside `header-nav.css`.
+ */
+@Component({
+  selector: 'app-shop-layout',
+  imports: [AppShell, RouterOutlet],
+  template: `
+    <app-app-shell variant="shop">
+      <main id="main-content" tabindex="-1" class="layout-main">
+        <router-outlet />
+      </main>
+    </app-app-shell>
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+
+      .layout-main {
+        display: block;
+        background: var(--color-surface-light);
+        color: var(--color-text-primary);
+        scroll-margin-top: 80px;
+      }
+
+      @media (max-width: 640px) {
+        .layout-main {
+          padding-bottom: var(--space-7);
+        }
+      }
+    `,
+  ],
+})
+export class ShopLayout implements OnInit {
+  private readonly routeFocus = inject(RouteFocusService);
+
+  constructor() {
+    effect(() => {
+      this.routeFocus.routeChange$;
+    });
+  }
+
+  ngOnInit(): void {
+    queueMicrotask(() => this.routeFocus.focusMainHeading());
+  }
+}
