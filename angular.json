@@ -88,7 +88,27 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runnerConfig": "vitest.config.ts",
+            "coverage": true,
+            "coverageInclude": [
+              "src/**/*.ts"
+            ],
+            "coverageExclude": [
+              "**/*.spec.ts",
+              "**/*.test.ts",
+              "**/*.d.ts",
+              "src/app/api/generated/**",
+              "tests/**",
+              "e2e/**"
+            ],
+            "coverageReporters": [
+              "json-summary",
+              "json",
+              "text"
+            ]
+          }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",

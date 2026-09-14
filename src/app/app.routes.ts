@@ -11,6 +11,10 @@ import { Routes } from '@angular/router';
  * task packet (T10). It renders one instance of every UI
  * primitive so the design and Playwright suites can audit them
  * in isolation. It is not a business page.
+ *
+ * `/canary` is the T02 coverage-canary route. It exists to
+ * verify the gate catches an unvisited lazy chunk; the URL query
+ * `branch=true|false` selects which path the component renders.
  */
 export const routes: Routes = [
   {
@@ -27,5 +31,13 @@ export const routes: Routes = [
         (m) => m.PrimitivesShowcase,
       ),
     title: 'MiBolt — UI primitives',
+  },
+  {
+    path: 'canary',
+    loadComponent: () =>
+      import('./coverage-canary/canary-page').then(
+        (m) => m.CoverageCanaryPage,
+      ),
+    title: 'MiBolt — coverage canary',
   },
 ];

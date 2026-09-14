@@ -11,7 +11,11 @@
     "contract:validate": "node scripts/validate-contract.mjs",
     "api:generate": "ng-openapi-gen --config ng-openapi-gen.json",
     "api:drift": "node scripts/api-drift.mjs",
-    "api:validate": "node scripts/validate-contract.mjs && node scripts/api-drift.mjs"
+    "api:validate": "node scripts/validate-contract.mjs && node scripts/api-drift.mjs",
+    "coverage:manifest": "node scripts/runtime-manifest.mjs",
+    "coverage:unit:check": "node scripts/check-coverage.mjs --unit",
+    "coverage:e2e:check": "node scripts/check-coverage.mjs --e2e",
+    "test:unit:coverage": "vitest run --coverage"
   },
   "private": true,
   "packageManager": "npm@11.17.0",
@@ -34,6 +38,7 @@
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.12",
+    "@vitest/browser-playwright": "^4.1.11",
     "@vitest/coverage-v8": "^4.1.0",
     "angular-eslint": "22.5.0",
     "eslint": "^10.9.1",
