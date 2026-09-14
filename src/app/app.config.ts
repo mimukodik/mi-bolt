@@ -6,11 +6,14 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { APP_BASE_HREF } from '@angular/common';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+import { provideApiConfiguration } from './api/generated/api-configuration';
+import { resolveApiRoot } from './core/api/api-root';
+import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
 
 /**
  * Local production / development / e2e build providers. Each binding is
@@ -20,12 +23,13 @@ import { environment } from '../environments/environment';
  * inserting a new `const _foo = provideX(...)` line.
  */
 const _provideZoneless: EnvironmentProviders = provideZonelessChangeDetection();
-const _provideHttpWithFetch = provideHttpClient(withFetch());
+const _provideHttpWithFetch = provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor]));
 const _provideRouter = provideRouter(routes, withComponentInputBinding());
 const _provideBaseHref: Provider = {
   provide: APP_BASE_HREF,
   useValue: environment.apiBase === '/api/v1' ? '/' : '/mi-bolt/',
 };
+const _provideApi: Provider = provideApiConfiguration(resolveApiRoot());
 
 /**
  * `appConfig` is the provider list passed to `bootstrapApplication`
@@ -39,6 +43,7 @@ export const appConfig: ApplicationConfig = {
     _provideHttpWithFetch,
     _provideRouter,
     _provideBaseHref,
+    _provideApi,
   ],
 };
 
@@ -54,4 +59,5 @@ export const providerManifest = {
   httpClientWithFetch: _provideHttpWithFetch,
   router: _provideRouter,
   baseHref: _provideBaseHref,
+  api: _provideApi,
 } as const;

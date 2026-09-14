@@ -9,7 +9,9 @@
     "test": "ng test",
     "lint": "ng lint",
     "contract:validate": "node scripts/validate-contract.mjs",
-    "api:generate": "ng-openapi-gen --config ng-openapi-gen.json"
+    "api:generate": "ng-openapi-gen --config ng-openapi-gen.json",
+    "api:drift": "node scripts/api-drift.mjs",
+    "api:validate": "node scripts/validate-contract.mjs && node scripts/api-drift.mjs"
   },
   "private": true,
   "packageManager": "npm@11.17.0",
@@ -28,6 +30,7 @@
     "@angular/build": "^22.1.8",
     "@angular/cli": "^22.1.8",
     "@angular/compiler-cli": "^22.1.0",
+    "@angular/platform-browser-dynamic": "^22.1.6",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.12",

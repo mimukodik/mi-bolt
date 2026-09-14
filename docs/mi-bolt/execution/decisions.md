@@ -109,3 +109,29 @@ insurance, login, user profiles, account verification, an admin UI,
 product comparison, a CMS, a localization framework, analytics,
 social login, chat or a provider switcher is a scope change and
 must raise its own decision before any code lands.
+
+## D08 — Real OpenAPI source path
+**Status:** APPLIED
+**Path:** `docs/api/openapi.yaml`
+**Reason:** T04 owns the SDK generation. The README at
+`docs/api/README.md` historically claimed the contract lives at
+`docs/mi-bolt/api/openapi.yaml`; that path does not exist in the
+repository (verified with `ls docs/mi-bolt/api/` on 2026-09-14 —
+the directory contains only `docs/mi-bolt/execution/`). The actual
+file is `docs/api/openapi.yaml`. Both `scripts/validate-contract.mjs`
+(which already used `docs/api/openapi.yaml`) and the new
+`scripts/api-drift.mjs` resolve to the real path; the project-root
+`ng-openapi-gen.json` and the SDK output (`src/app/api/generated/`)
+are wired to it.
+
+**Config drift introduced by T04:** `ng-openapi-gen.json` is copied
+from `docs/api/ng-openapi-gen.json` with two changes:
+1. `input` is `docs/api/openapi.yaml` (the real file, not the
+   README claim of `docs/mi-bolt/api/openapi.yaml`).
+2. `excludeParameters: ["X-Demo-Session", "If-Match"]` is added so
+   the demo-session interceptor and the `withIfMatch(version)` helper
+   are the only way these headers reach the wire, matching the
+   "added centrally" wording in T04-AC05.
+
+The README at `docs/api/README.md` is corrected in the same commit
+to point at the real path and to reference D08.
