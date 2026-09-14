@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-My operating rules for the muhely workspace, written for the orchestrating
+My operating rules for the mi-bolt workspace, written for the orchestrating
 main session. A spawned subagent also loads this file: it follows everything
 here except "How I work", does its assigned task itself, and reports back. It
 does not route and does not load the `model-routing` skill, because routing and

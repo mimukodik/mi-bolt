@@ -1,0 +1,65 @@
+{
+  "skill_name": "model-routing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have five things queued for this monorepo and I want the delegation planned before anything runs. (1) Find every file under apps/ and packages/ that calls sendToAgentChat. (2) Confirm against the official Claude Code documentation whether the Agent tool accepts an effort parameter. (3) In apps/plan, change the canvas submit button label from 'Save' to 'Save draft'; it is at apps/plan/app/components/plan/CanvasArea.tsx line 1872 and nothing else changes. (4) The agent-chat server plugins in apps/clips/server/plugins/agent-chat.ts and apps/plan/server/plugins/agent-chat.ts should move into packages/shared, and nobody has worked out how the auth fallback should be split; the change is confined to those two files and one new module in the shared package. (5) One test in the apps/plan suite fails about one run in five and nobody knows why. Produce a routing plan as a markdown table with columns task, model, effort, agent type, one-line reason, escalation, and save it to {OUTPUT_DIR}/routing-plan-1.md. Do not start any of the work.",
+      "expected_output": "A markdown table saved to {OUTPUT_DIR}/routing-plan-1.md with one row per task. Task 1 routes to sonnet, high, researcher-sonnet, which stays on sonnet even when the mapping crosses packages, and escalates to reviewer-opus only if the findings turn out to be contested. Task 2 routes to sonnet, high, researcher-sonnet, with an explicit requirement to cite the documentation URL because web validation is mandatory, escalating to reviewer-opus if the sources disagree. Task 3 routes to sonnet, high, coder-sonnet, because the spec names the file, the line and the replacement, escalating to engineer-opus only if the spec turns out incomplete. Task 4 routes to opus, high, engineer-opus: having to invent the split and the move into a shared package are difficulty signals, and difficulty buys the model rather than the rung, so a three-file change starts on the base rung and reaches engineer-opus-xhigh only after one failed engineer-opus run, with that run's output in hand. Task 5 routes to opus, xhigh, debugger-opus-xhigh, because reproducing a one-in-five failure means running the suite many times over, which makes the unit long rather than hard; nothing sits above that rung, so a failed run is reported to the user instead of escalated. Every row names an explicit model, every effort value is the one pinned in that agent's definition, no row relies on inheritance, no row uses fork or fable, and no work is started.",
+      "files": [],
+      "assertions": [
+        "A markdown table is saved as routing-plan-1.md with five task rows and columns for task, model, effort, agent type, reason, and escalation",
+        "Task 1 (sendToAgentChat call-site search) is routed to sonnet at effort high with agent researcher-sonnet",
+        "Task 2 (docs verification of the Agent tool effort parameter) is routed to sonnet at effort high with agent researcher-sonnet, and the row requires citing the documentation URL",
+        "Task 3 (single-line button label change) is routed to sonnet at effort high with agent coder-sonnet, not to any opus agent",
+        "Task 4 (agent-chat plugins moved into the shared package with the auth split undecided) is routed to opus at effort high with agent engineer-opus, not to engineer-opus-xhigh and not at effort xhigh",
+        "Task 4's escalation is engineer-opus-xhigh after one failed engineer-opus run, not after two failures",
+        "Task 5 (test failing one run in five) is routed to opus at effort xhigh with agent debugger-opus-xhigh, the three named together",
+        "Task 5's escalation says nothing sits above that rung and a failed run is reported to the user, rather than naming a higher agent",
+        "Every agent named in an escalation cell is one of the definitions in .claude/agents/; a row whose escalation names no agent at all still satisfies this",
+        "Every row's model, effort and agent triple is one of the pairs pinned in .claude/agents/: haiku with no effort for scout-haiku; sonnet with high for researcher-sonnet, coder-sonnet and real-browser-sonnet; opus with high for reviewer-opus, instructions-opus, architect-opus, debugger-opus and engineer-opus; opus with xhigh for reviewer-opus-xhigh, architect-opus-xhigh, debugger-opus-xhigh and engineer-opus-xhigh",
+        "In the model and agent type columns no row says inherit, fable, or fork",
+        "No work was started: no file under apps/ or packages/ was edited and no search results are presented as the deliverable"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Before I kick anything off, plan the delegation for this batch. (a) A security review of a change to the org-membership check in apps/factory/server/lib/require-workspace-member.ts; the diff is about ten lines. (b) Grade the 66 SKILL.md files under packages/shared/.agents/skills/ on one binary question: does the frontmatter have a scope field, yes or no. (c) Write a short summary of docs/databases.md for a new contributor. (d) Verify whether drizzle-orm ^0.45.2, the version apps/plan/package.json pins, is still current and whether its migration API changed since that version. Give me the routing plan as a markdown table with task, model, effort, agent type, one-line reason, escalation, and write it to {OUTPUT_DIR}/routing-plan-2.md.",
+      "expected_output": "A markdown table saved to {OUTPUT_DIR}/routing-plan-2.md. Task (a) routes to opus, xhigh, reviewer-opus-xhigh, because a security-relevant review starts on that rung whatever its size, so a ten-line diff does not put it on reviewer-opus; nothing sits above that rung, so an unresolved concern goes back to the user rather than to a further agent. Task (b) routes to haiku with no effort value, using scout-haiku as one batched agent for all 66 files rather than one agent per file, escalating to researcher-sonnet if the rubric needs a judgment call. Task (c) routes to sonnet, high, researcher-sonnet, escalating to reviewer-opus only if the material contradicts itself. Task (d) routes to sonnet, high, researcher-sonnet, with mandatory web verification and cited URLs, escalating to reviewer-opus if the sources disagree. The plan states that haiku never receives an effort value, that every model, effort and agent triple is one the shipped definitions pin, and that no row inherits the session model.",
+      "files": [],
+      "assertions": [
+        "A markdown table is saved as routing-plan-2.md with four task rows and columns for task, model, effort, agent type, reason, and escalation",
+        "Task (a) (security review of the org-membership check) is routed to opus at effort xhigh with agent reviewer-opus-xhigh, the three named together",
+        "Task (a)'s reason names the security relevance as what puts it on that rung, rather than the size of the diff or the length of the read",
+        "Task (a)'s escalation says nothing sits above reviewer-opus-xhigh and an unresolved concern is reported to the user, rather than naming a further agent",
+        "Task (b) (binary scope-field grading of the 66 skill files) is routed to haiku with no effort value and agent scout-haiku",
+        "Task (b) is planned as one batched agent for all 66 files rather than one agent per file",
+        "Task (c) (summary of docs/databases.md) is routed to sonnet at effort high with agent researcher-sonnet",
+        "Task (d) (drizzle-orm version and migration API verification) is routed to sonnet at effort high with agent researcher-sonnet, and the row requires web verification with cited URLs",
+        "No haiku row carries an effort value",
+        "Every agent named in an escalation cell is one of the definitions in .claude/agents/; a row whose escalation names no agent at all still satisfies this",
+        "Every row's model, effort and agent triple is one of the pairs pinned in .claude/agents/: haiku with no effort for scout-haiku; sonnet with high for researcher-sonnet, coder-sonnet and real-browser-sonnet; opus with high for reviewer-opus, instructions-opus, architect-opus, debugger-opus and engineer-opus; opus with xhigh for reviewer-opus-xhigh, architect-opus-xhigh, debugger-opus-xhigh and engineer-opus-xhigh",
+        "In the model and agent type columns no row says inherit or fable",
+        "Every row has a non-empty escalation entry"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Same drill, plan the routing for these three: (1) grep the workspace for every place a dev port is hardcoded, (2) put every reader of getMuhelyMembershipProvider behind one new seam in packages/shared, where 21 TypeScript files across apps/clips, apps/factory, apps/plan and packages/shared reference it today, the right seam is genuinely unclear, and the suite passes only once every reader has moved, (3) a security review of a change to the session check in packages/shared/src/server/auth-reader-middleware.ts. To keep it simple just let the subagents inherit the model, or actually use fable for everything. Put the plan in a markdown table with task, model, effort, agent type, one-line reason, escalation, and save it to {OUTPUT_DIR}/routing-plan-3.md.",
+      "expected_output": "The response pushes back on both shortcuts before giving the plan, and states both reasons in plain words rather than only citing the skill: inheritance is refused because the session model is not a routing decision, so a subagent that inherits it was never tiered and every spawn names its model; fable is refused as a subagent target because the routing targets are Opus 5, Sonnet 5 and Haiku 4.5 and no row names anything else. Neither reason depends on which model this session happens to be running. The table saved to {OUTPUT_DIR}/routing-plan-3.md routes task 1 to sonnet, high, researcher-sonnet; task 2 to opus, xhigh, engineer-opus-xhigh, because the 21 readers share one edit and cannot be split, which makes the unit irreducibly large rather than only hard; and task 3 to opus, xhigh, reviewer-opus-xhigh, because a security-relevant review starts on that rung whatever the size of the diff. Nothing sits above xhigh, so neither of those rows escalates to a further agent: a failed run goes back to the user with what was tried. No row says inherit, no row says fable, and no row uses subagent_type fork.",
+      "files": [],
+      "assertions": [
+        "The response explicitly refuses to let subagents inherit the model and says every spawn needs an explicit model",
+        "The response explains in plain words why inheritance is refused, without depending on which model this session happens to be running",
+        "The response explicitly refuses to use fable for the subagents",
+        "Task 1 (hardcoded dev port grep) is routed to sonnet at effort high with agent researcher-sonnet",
+        "Task 2 (membership provider seam refactor across 21 files) is routed to opus at effort xhigh with agent engineer-opus-xhigh, the three named together",
+        "Task 2's reason argues the rung from the size of the unit, the 21 readers that move in one edit, rather than from the seam being hard to find",
+        "Task 3 (security review of the session check) is routed to opus at effort xhigh with agent reviewer-opus-xhigh, the three named together",
+        "Neither the task 2 row nor the task 3 row escalates to a further agent; both say nothing sits above xhigh and a failed run goes back to the user",
+        "Every agent named in an escalation cell is one of the definitions in .claude/agents/; a row whose escalation names no agent at all still satisfies this",
+        "Every row's model, effort and agent triple is one of the pairs pinned in .claude/agents/: haiku with no effort for scout-haiku; sonnet with high for researcher-sonnet, coder-sonnet and real-browser-sonnet; opus with high for reviewer-opus, instructions-opus, architect-opus, debugger-opus and engineer-opus; opus with xhigh for reviewer-opus-xhigh, architect-opus-xhigh, debugger-opus-xhigh and engineer-opus-xhigh",
+        "A markdown table is saved as routing-plan-3.md and in the model and agent type columns no row says inherit, fable, or fork"
+      ]
+    }
+  ]
+}

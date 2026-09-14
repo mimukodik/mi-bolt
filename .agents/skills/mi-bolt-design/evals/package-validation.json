@@ -1,0 +1,146 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "required-files",
+      "status": "PASS"
+    },
+    {
+      "name": "frontmatter-supported-subset",
+      "status": "PASS"
+    },
+    {
+      "name": "skill-length",
+      "status": "PASS"
+    },
+    {
+      "name": "local-markdown-links",
+      "status": "PASS"
+    },
+    {
+      "name": "rule-identifiers",
+      "status": "PASS"
+    },
+    {
+      "name": "token-values-and-aliases",
+      "status": "PASS"
+    },
+    {
+      "name": "css-token-parity",
+      "status": "PASS"
+    },
+    {
+      "name": "specified-contrast-pairs",
+      "status": "PASS"
+    },
+    {
+      "name": "reference-images-and-hashes",
+      "status": "PASS"
+    },
+    {
+      "name": "evaluation-specification",
+      "status": "PASS"
+    },
+    {
+      "name": "package-scope-and-exclusions",
+      "status": "PASS"
+    }
+  ],
+  "details": {
+    "skill_name": "mi-bolt-design",
+    "description_characters": 396,
+    "skill_lines": 107,
+    "local_links_checked": 12,
+    "rule_count": 26,
+    "token_count": 75,
+    "contrast_pairs": [
+      {
+        "foreground": "color.text.primary",
+        "background": "color.surface.page",
+        "ratio": 17.3126,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "color.text.secondary",
+        "background": "color.surface.page",
+        "ratio": 6.8685,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "color.text.secondary",
+        "background": "color.surface.subtle",
+        "ratio": 6.3478,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "button.primaryText",
+        "background": "button.primaryBackground",
+        "ratio": 6.0294,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "button.primaryText",
+        "background": "color.brand.accentHover",
+        "ratio": 5.2283,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "color.brand.ink",
+        "background": "color.surface.page",
+        "ratio": 6.3819,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "color.text.inverse",
+        "background": "color.surface.dark",
+        "ratio": 16.4232,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "color.text.inverseMuted",
+        "background": "color.surface.dark",
+        "ratio": 10.5974,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "color.border.control",
+        "background": "color.surface.page",
+        "ratio": 4.2898,
+        "minimum": 3
+      },
+      {
+        "foreground": "color.focus.light",
+        "background": "color.surface.page",
+        "ratio": 7.5176,
+        "minimum": 3
+      },
+      {
+        "foreground": "color.focus.dark",
+        "background": "color.surface.dark",
+        "ratio": 7.8742,
+        "minimum": 3
+      },
+      {
+        "foreground": "color.status.error",
+        "background": "color.surface.page",
+        "ratio": 6.5743,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "color.status.success",
+        "background": "color.surface.page",
+        "ratio": 7.1303,
+        "minimum": 4.5
+      }
+    ],
+    "rejected_white_on_orange_ratio": 2.8714,
+    "reference_images": 2,
+    "evaluation_cases": 18
+  },
+  "limitations": [
+    "Not a general YAML or DTCG validator",
+    "No browser or UI tests executed",
+    "No live LLM activation or behavior evaluation",
+    "Not a complete WCAG audit"
+  ]
+}

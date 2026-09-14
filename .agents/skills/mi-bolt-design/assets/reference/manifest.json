@@ -1,0 +1,19 @@
+{
+  "schema": "mi-bolt-reference-manifest-v1",
+  "images": [
+    {
+      "path": "assets/reference/home-orange-hu.png",
+      "sourceFilename": "mi-bolt_egy_fényesebb_holnap_felé.png",
+      "status": "approved-primary",
+      "description": "Hungarian version of the fifth concept approved by the user.",
+      "sha256": "cad79d666a06640879959c0bc713cd16015d772134b29c71922dd81742a521ef"
+    },
+    {
+      "path": "assets/reference/catalogue-concept-hu.png",
+      "sourceFilename": "wide_screenshot_of_a_modern_e_commerce_webpage_de.png",
+      "status": "secondary-unapproved-concept",
+      "description": "Catalogue layout sketch. The logo, numbers, products and filter states are not normative.",
+      "sha256": "5fdd1445d432022687bbb9a14d2a1fa60755e22f0416c0e0c53886f4a48f3e04"
+    }
+  ]
+}

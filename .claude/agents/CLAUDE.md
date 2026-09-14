@@ -29,7 +29,7 @@ Which unit reaches which rung is decided in
 `instructions-opus` is the only opus role with no sibling, and a large
 instruction job is not a reason to add one: a unit it cannot hold is split
 rather than promoted. The routing skill owns that rule, and
-`instructions-opus.md` says why the rung is wrong for this work.
+`agent.md` says why the rung is wrong for this work.
 
 ## Tools
 

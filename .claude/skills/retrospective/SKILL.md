@@ -33,7 +33,7 @@ Never read the whole transcript into context at once. The file can be large.
 Run the skill's own reader instead, from the repository root:
 
 ```bash
-node packages/shared/.agents/skills/retrospective/scripts/read-transcript.ts \
+node packages/shared/..agents/skills/retrospective/scripts/read-transcript.ts \
   <transcript.jsonl>
 ```
 
