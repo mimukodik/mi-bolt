@@ -1,0 +1,2415 @@
+[
+  {
+    "id": "E001",
+    "group": "foundation",
+    "title": "Stable Angular 22 lock",
+    "scenario": "default",
+    "action": "Resolve exact versions and run toolchain gate",
+    "expected": "Latest stable major 22 accepted; next/rc/other-major and unsupported peers rejected.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T00",
+      "T01",
+      "T02",
+      "T27"
+    ]
+  },
+  {
+    "id": "E002",
+    "group": "foundation",
+    "title": "CSR-only bootstrap",
+    "scenario": "default",
+    "action": "Build and open root page",
+    "expected": "No SSR/prerender/hydration/zone.js runtime; Angular standalone screen renders.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T00",
+      "T01",
+      "T02",
+      "T27"
+    ]
+  },
+  {
+    "id": "E003",
+    "group": "foundation",
+    "title": "Required design skill",
+    "scenario": "skill-missing",
+    "action": "Remove skill evidence in a controlled gate test",
+    "expected": "Execution/review gate fails; missing skill cannot be replaced by a text claim.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T00",
+      "T01",
+      "T02",
+      "T27"
+    ]
+  },
+  {
+    "id": "E004",
+    "group": "coverage",
+    "title": "Unvisited branch canary",
+    "scenario": "coverage-canary",
+    "action": "Execute true branch only",
+    "expected": "Both independent coverage gates fail; completing false branch makes both pass.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T27"
+    ]
+  },
+  {
+    "id": "E005",
+    "group": "coverage",
+    "title": "Unvisited lazy file",
+    "scenario": "coverage-lazy",
+    "action": "Leave a lazy runtime file unloaded",
+    "expected": "File manifest contributes zeros; absent report entry cannot improve percent.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T27"
+    ]
+  },
+  {
+    "id": "E006",
+    "group": "coverage",
+    "title": "Reload coverage segments",
+    "scenario": "coverage-reload",
+    "action": "Perform app navigation then full reload",
+    "expected": "Both source segments and bootstrap are represented once in merged file map.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T27"
+    ]
+  },
+  {
+    "id": "E007",
+    "group": "coverage",
+    "title": "Invalid coverage report",
+    "scenario": "coverage-broken",
+    "action": "Feed empty/missing/NaN report",
+    "expected": "Gate fails closed; no 100% default on missing data.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T27"
+    ]
+  },
+  {
+    "id": "E008",
+    "group": "isolation",
+    "title": "Unknown API call",
+    "scenario": "unhandled-api",
+    "action": "Cause an unknown API request via failure scenario",
+    "expected": "MSW refuses it and test fails; static host receives no business request.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E009",
+    "group": "isolation",
+    "title": "External network attempt",
+    "scenario": "external-egress",
+    "action": "Cause a controlled unexpected fetch",
+    "expected": "MSW/CSP/network sandbox blocks and records failure.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E010",
+    "group": "isolation",
+    "title": "Mock ownership",
+    "scenario": "default",
+    "action": "Run complete purchase with SDK",
+    "expected": "All business requests match exactly one MSW handler, not page.route fulfill.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E011",
+    "group": "isolation",
+    "title": "Independent browser contexts",
+    "scenario": "default",
+    "action": "Open two contexts and create different carts",
+    "expected": "No fixture override, cart, receipt or key leaks across contexts.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T02",
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E012",
+    "group": "persistence",
+    "title": "Cart reload",
+    "scenario": "cart-seeded",
+    "action": "Change quantity then reload",
+    "expected": "Line ID/variant/quantity/total restore from non-PII snapshot.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E013",
+    "group": "persistence",
+    "title": "Corrupt snapshot",
+    "scenario": "storage-corrupt",
+    "action": "Open app with invalid JSON/schema",
+    "expected": "Explain reset, preserve safe browsing, no uncaught exception.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E014",
+    "group": "persistence",
+    "title": "Unsupported storage version",
+    "scenario": "storage-version",
+    "action": "Open app with old snapshot version",
+    "expected": "Discard incompatible data under explicit version policy; no false order.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E015",
+    "group": "persistence",
+    "title": "Storage denied",
+    "scenario": "storage-denied",
+    "action": "Block storage access then shop",
+    "expected": "Memory-only shopping works; reload limitation is announced.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E016",
+    "group": "persistence",
+    "title": "Checkout full reload privacy",
+    "scenario": "checkout-ready",
+    "action": "Enter contact/address then reload",
+    "expected": "Contact/address absent from storage; redirect to data step with cart retained.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E017",
+    "group": "persistence",
+    "title": "Worker startup failure",
+    "scenario": "worker-start-fails",
+    "action": "Load demo when MSW cannot start",
+    "expected": "Fatal startup UI and retry; business APIs never fall through.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T05",
+      "T27"
+    ]
+  },
+  {
+    "id": "E018",
+    "group": "home",
+    "title": "Hero navigation",
+    "scenario": "default",
+    "action": "Click main hero CTA",
+    "expected": "Catalogue opens with meaningful title/focus.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T14",
+      "T27"
+    ]
+  },
+  {
+    "id": "E019",
+    "group": "home",
+    "title": "Category shortcuts",
+    "scenario": "default",
+    "action": "Use 5G then stock shortcut",
+    "expected": "Expected query and matching results appear.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T14",
+      "T27"
+    ]
+  },
+  {
+    "id": "E020",
+    "group": "home",
+    "title": "Featured navigation",
+    "scenario": "default",
+    "action": "Open each of four featured products",
+    "expected": "Correct slug/default variant; no missing/empty target.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T14",
+      "T27"
+    ]
+  },
+  {
+    "id": "E021",
+    "group": "home",
+    "title": "Featured error and recovery",
+    "scenario": "featured-503-once",
+    "action": "Fail catalogue load then Retry",
+    "expected": "Useful hero persists; prices not fabricated; retry renders products.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T14",
+      "T27"
+    ]
+  },
+  {
+    "id": "E022",
+    "group": "catalog",
+    "title": "Default list and count",
+    "scenario": "default",
+    "action": "Open catalogue",
+    "expected": "16 total products; page 1 shows 12, page 2 shows 4.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E023",
+    "group": "catalog",
+    "title": "Search normalization",
+    "scenario": "default",
+    "action": "Search with spaces and mixed case",
+    "expected": "Trimmed NFC/case-insensitive query; URL/count/results agree.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E024",
+    "group": "catalog",
+    "title": "All sort modes",
+    "scenario": "default",
+    "action": "Use recommended,price_asc,price_desc,name_asc",
+    "expected": "Stable expected ordering and tie-breaks; page resets.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E025",
+    "group": "catalog",
+    "title": "Brand OR + cross-facet AND",
+    "scenario": "default",
+    "action": "Choose two brands plus 256 GB and stock",
+    "expected": "OR within brand; AND with other facets; each match uses one variant.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E026",
+    "group": "catalog",
+    "title": "Same-variant predicate",
+    "scenario": "split-variant-attributes",
+    "action": "Choose storage/price/stock that match only separate variants",
+    "expected": "Product excluded; independent-variant matching cannot pass.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E027",
+    "group": "catalog",
+    "title": "Price bounds",
+    "scenario": "default",
+    "action": "Use min/max and exact equal boundary",
+    "expected": "Inclusive matching; invalid min>max blocked with error.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E028",
+    "group": "catalog",
+    "title": "Faceted counts",
+    "scenario": "default",
+    "action": "Toggle one brand while other filters active",
+    "expected": "Own facet omitted when counting; product counts not variant counts.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E029",
+    "group": "catalog",
+    "title": "No results",
+    "scenario": "catalog-empty",
+    "action": "Apply a zero-match query",
+    "expected": "Dedicated empty state, active filters and Reset; not a network error.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E030",
+    "group": "catalog",
+    "title": "Server error",
+    "scenario": "catalog-503-once",
+    "action": "Load failing query then Retry",
+    "expected": "Error preserves filters; retry recovers, never false zero price.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E031",
+    "group": "catalog",
+    "title": "Pagination and page size",
+    "scenario": "default",
+    "action": "Switch 12→24 and page navigation",
+    "expected": "Correct items, count and canonical URL; page resets appropriately.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E032",
+    "group": "catalog",
+    "title": "Out-of-range page",
+    "scenario": "default",
+    "action": "Open ?page=999 then load",
+    "expected": "Empty response canonicalized to last valid page with one refetch.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E033",
+    "group": "catalog",
+    "title": "Applied chip removal",
+    "scenario": "default",
+    "action": "Remove one selected chip then Reset",
+    "expected": "Only that filter removed; Reset restores query defaults.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E034",
+    "group": "catalog",
+    "title": "Mobile apply/cancel",
+    "scenario": "default",
+    "action": "Open filter drawer, change, Cancel; repeat Apply",
+    "expected": "Cancel leaves URL/results unchanged; Apply commits once.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E035",
+    "group": "catalog",
+    "title": "Direct URL and browser back",
+    "scenario": "default",
+    "action": "Navigate with repeated filters then back/forward",
+    "expected": "Selections, sort, page and list restore correctly.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E036",
+    "group": "catalog",
+    "title": "Invalid query",
+    "scenario": "invalid-query",
+    "action": "Open unknown/invalid query params",
+    "expected": "UI canonicalizes safely; direct API malformed params return 400.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13",
+      "T27"
+    ]
+  },
+  {
+    "id": "E037",
+    "group": "race",
+    "title": "Latest catalogue response wins",
+    "scenario": "slow-old-query",
+    "action": "Type first query then change before response",
+    "expected": "New results survive delayed old response; no double subscription.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T12",
+      "T15",
+      "T17",
+      "T27"
+    ]
+  },
+  {
+    "id": "E038",
+    "group": "race",
+    "title": "Product route race",
+    "scenario": "slow-old-product",
+    "action": "Switch between product routes rapidly",
+    "expected": "Old product cannot overwrite current slug or title.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T12",
+      "T15",
+      "T17",
+      "T27"
+    ]
+  },
+  {
+    "id": "E039",
+    "group": "race",
+    "title": "Serialized cart writes",
+    "scenario": "slow-cart-write",
+    "action": "Request quantity then another valid action",
+    "expected": "Dispatch uses fresh returned version; no lost update.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T12",
+      "T15",
+      "T17",
+      "T27"
+    ]
+  },
+  {
+    "id": "E040",
+    "group": "race",
+    "title": "Stale cart conflict",
+    "scenario": "cart-conflict-once",
+    "action": "Mutate outdated version",
+    "expected": "409 triggers refetch, preserves intent for explicit correction; no blind replay.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T12",
+      "T15",
+      "T17",
+      "T27"
+    ]
+  },
+  {
+    "id": "E041",
+    "group": "product",
+    "title": "Product direct entry",
+    "scenario": "default",
+    "action": "Open valid slug/variant URL",
+    "expected": "Exact variant has matching price/image/storage/stock.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T15",
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E042",
+    "group": "product",
+    "title": "Unknown product",
+    "scenario": "product-404",
+    "action": "Open nonexistent slug",
+    "expected": "Dedicated not-found with catalogue return; no fake product.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T15",
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E043",
+    "group": "product",
+    "title": "Product error retry",
+    "scenario": "product-503-once",
+    "action": "Fail then Retry",
+    "expected": "Recover same slug; selection not replaced with unrelated device.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T15",
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E044",
+    "group": "product",
+    "title": "Color and storage selection",
+    "scenario": "default",
+    "action": "Select each available pair",
+    "expected": "Exactly one variant selected, accessible selected state and coherent display.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T15",
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E045",
+    "group": "product",
+    "title": "Unavailable combination",
+    "scenario": "variant-unavailable",
+    "action": "Select unavailable pair",
+    "expected": "Disabled reason; no silent substitution; Add unavailable.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T15",
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E046",
+    "group": "product",
+    "title": "Invalid variant URL",
+    "scenario": "default",
+    "action": "Open ?variant=missing",
+    "expected": "Explain invalid variant; require valid selection before Add.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T15",
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E047",
+    "group": "product",
+    "title": "Quantity min/max",
+    "scenario": "low-stock",
+    "action": "Try decrement below1/increment beyond available",
+    "expected": "Controls/validation prevent invalid request; no hidden clamp.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T15",
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E048",
+    "group": "gallery",
+    "title": "Images and thumbnails",
+    "scenario": "default",
+    "action": "Use prev/next/thumbnails",
+    "expected": "Correct image/count/alt; stable frame and complete device.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E049",
+    "group": "gallery",
+    "title": "Zoom keyboard dialog",
+    "scenario": "default",
+    "action": "Open zoom, tab, Escape",
+    "expected": "Focus trapped, background excluded and trigger restored.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E050",
+    "group": "gallery",
+    "title": "Missing image",
+    "scenario": "image-missing",
+    "action": "Fail selected product image",
+    "expected": "Neutral fallback and product name; other functions still work.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E051",
+    "group": "gallery",
+    "title": "Spec disclosures",
+    "scenario": "default",
+    "action": "Open/close each spec group by keyboard",
+    "expected": "Correct expanded state and associated content; no fake specification data.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T16",
+      "T27"
+    ]
+  },
+  {
+    "id": "E052",
+    "group": "cart",
+    "title": "First add",
+    "scenario": "default",
+    "action": "Choose One graphite256 qty1 and add",
+    "expected": "Cart created then item mutation through SDK/MSW; badge=1 subtotal339990.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E053",
+    "group": "cart",
+    "title": "Merge same variant",
+    "scenario": "cart-seeded",
+    "action": "Add same variant once more",
+    "expected": "One line qty2, subtotal679980; version increments once.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E054",
+    "group": "cart",
+    "title": "Different variants",
+    "scenario": "cart-seeded",
+    "action": "Add silver or different capacity",
+    "expected": "Separate variant line; totals sum exact unit prices.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E055",
+    "group": "cart",
+    "title": "Quantity update",
+    "scenario": "cart-seeded",
+    "action": "Set qty2 then qty1",
+    "expected": "Full authoritative totals/badge agree; no rounding drift.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E056",
+    "group": "cart",
+    "title": "Remove item",
+    "scenario": "cart-two-lines",
+    "action": "Remove one line",
+    "expected": "Only selected line removed; other selection retained.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E057",
+    "group": "cart",
+    "title": "Empty cart",
+    "scenario": "cart-seeded",
+    "action": "Remove last line",
+    "expected": "Empty-state CTA to catalogue; checkout blocked.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E058",
+    "group": "cart",
+    "title": "Add/update failure",
+    "scenario": "cart-503-once",
+    "action": "Attempt mutation then Retry",
+    "expected": "Prior cart retained; error recovery does not duplicate item.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E059",
+    "group": "cart",
+    "title": "Expired cart",
+    "scenario": "cart-expired",
+    "action": "Restore expired cart",
+    "expected": "Explicit expiry and new-cart path; no silent order on expired state.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E060",
+    "group": "cart",
+    "title": "Out of stock late",
+    "scenario": "stock-lost-before-add",
+    "action": "Add chosen variant after stock changed",
+    "expected": "409 OUT_OF_STOCK; selection shown, no misleading success.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18",
+      "T27"
+    ]
+  },
+  {
+    "id": "E061",
+    "group": "idempotency",
+    "title": "Same-key replay",
+    "scenario": "idempotency-repeat",
+    "action": "Repeat same logical write and key",
+    "expected": "Same response, one domain mutation and one version increment.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E062",
+    "group": "idempotency",
+    "title": "Key/body conflict",
+    "scenario": "idempotency-conflict",
+    "action": "Reuse key with different normalized body",
+    "expected": "409 IDEMPOTENCY_CONFLICT; prior result unchanged.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E063",
+    "group": "idempotency",
+    "title": "Double order click",
+    "scenario": "checkout-ready",
+    "action": "Double-click final confirmation",
+    "expected": "Exactly one order request in flight and one receipt.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E064",
+    "group": "idempotency",
+    "title": "Timeout after commit",
+    "scenario": "order-timeout-after-commit",
+    "action": "Commit silently then Retry same request",
+    "expected": "Same DEMO number, same total, stock decremented once.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E065",
+    "group": "idempotency",
+    "title": "Reload unknown outcome",
+    "scenario": "order-timeout-after-commit",
+    "action": "Reload before receipt then recover",
+    "expected": "Replay/lookup receipt without contact persistence or second order.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T07",
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E066",
+    "group": "checkout",
+    "title": "Back navigation retains draft",
+    "scenario": "checkout-ready",
+    "action": "Go review→contact→delivery",
+    "expected": "Entered values survive SPA navigation; changing draft invalidates quote.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T19",
+      "T27"
+    ]
+  },
+  {
+    "id": "E067",
+    "group": "checkout",
+    "title": "Incomplete wizard guard",
+    "scenario": "cart-seeded",
+    "action": "Directly open review URL",
+    "expected": "Redirect to earliest incomplete step, not broken summary.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T19",
+      "T27"
+    ]
+  },
+  {
+    "id": "E068",
+    "group": "checkout",
+    "title": "Draft save error",
+    "scenario": "draft-503-once",
+    "action": "Save contact then Retry",
+    "expected": "Typed values retained; no advance on failure.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T19",
+      "T27"
+    ]
+  },
+  {
+    "id": "E069",
+    "group": "checkout",
+    "title": "Clear transaction after order",
+    "scenario": "order-existing",
+    "action": "Start new shopping after completed receipt",
+    "expected": "New cart/order intent; completed cart cannot be reused.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T19",
+      "T27"
+    ]
+  },
+  {
+    "id": "E070",
+    "group": "guards",
+    "title": "Empty-cart deep link",
+    "scenario": "default",
+    "action": "Open contact/delivery/review with no cart",
+    "expected": "Cart empty screen with explanation.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T19",
+      "T27"
+    ]
+  },
+  {
+    "id": "E071",
+    "group": "guards",
+    "title": "Ordered-cart back",
+    "scenario": "order-existing",
+    "action": "Browser Back into old review",
+    "expected": "Existing receipt or new-shopping choice; no automatic submit.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T19",
+      "T27"
+    ]
+  },
+  {
+    "id": "E072",
+    "group": "guards",
+    "title": "Unknown order route",
+    "scenario": "default",
+    "action": "Open /siker/missing",
+    "expected": "404 recovery; not a success layout with invented ID.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T19",
+      "T27"
+    ]
+  },
+  {
+    "id": "E073",
+    "group": "contact",
+    "title": "Valid contact",
+    "scenario": "default",
+    "action": "Enter Teszt Elek,teszt@example.test,+36201234567",
+    "expected": "Normalized Contact sent; next step opens only after success.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T20",
+      "T27"
+    ]
+  },
+  {
+    "id": "E074",
+    "group": "contact",
+    "title": "Required validation",
+    "scenario": "default",
+    "action": "Submit empty fields",
+    "expected": "Required messages and focus order; no draft API request.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T20",
+      "T27"
+    ]
+  },
+  {
+    "id": "E075",
+    "group": "contact",
+    "title": "Boundary validation",
+    "scenario": "default",
+    "action": "Use too-short/too-long name,invalid email,wrong phone",
+    "expected": "Each relevant boundary has distinct assertion; no request until valid.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T20",
+      "T27"
+    ]
+  },
+  {
+    "id": "E076",
+    "group": "contact",
+    "title": "Backend field error",
+    "scenario": "contact-422-once",
+    "action": "Submit schema-valid contact rejected by mock rule",
+    "expected": "Map /email field error; retain all values; successful correction works.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T20",
+      "T27"
+    ]
+  },
+  {
+    "id": "E077",
+    "group": "delivery",
+    "title": "Home shipping",
+    "scenario": "checkout-contact",
+    "action": "Choose home with valid HU address",
+    "expected": "Shipping1990; complete address saved.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T21",
+      "T27"
+    ]
+  },
+  {
+    "id": "E078",
+    "group": "delivery",
+    "title": "Pickup without address",
+    "scenario": "checkout-contact",
+    "action": "Choose virtual pickup",
+    "expected": "Shipping0, address omitted, no real location claim.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T21",
+      "T27"
+    ]
+  },
+  {
+    "id": "E079",
+    "group": "delivery",
+    "title": "Address validation",
+    "scenario": "checkout-contact",
+    "action": "Submit invalid postcode/city/line1",
+    "expected": "Accessible field errors; no invalid draft saved.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T21",
+      "T27"
+    ]
+  },
+  {
+    "id": "E080",
+    "group": "delivery",
+    "title": "Options load failure",
+    "scenario": "options-503-once",
+    "action": "Fail choices load then Retry",
+    "expected": "No fabricated choice or zero shipping; retry recovers.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T21",
+      "T27"
+    ]
+  },
+  {
+    "id": "E081",
+    "group": "delivery",
+    "title": "Changing delivery",
+    "scenario": "checkout-ready",
+    "action": "Change home to pickup and return review",
+    "expected": "Fresh quote total differs by1990; old payment invalidated.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T21",
+      "T27"
+    ]
+  },
+  {
+    "id": "E082",
+    "group": "quote",
+    "title": "Quote totals",
+    "scenario": "checkout-ready",
+    "action": "Create quote for One x1 home delivery",
+    "expected": "339990 +1990 =341980 HUF; qty2=681970 HUF.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E083",
+    "group": "quote",
+    "title": "Expired quote",
+    "scenario": "quote-expired",
+    "action": "Advance mock clock to expiry then submit",
+    "expected": "QUOTE_EXPIRED, explicit refresh/review required.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E084",
+    "group": "quote",
+    "title": "Price change",
+    "scenario": "price-changed",
+    "action": "Change fixture price before quote/order",
+    "expected": "409 PRICE_CHANGED with new cart version; user explicitly re-reviews.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E085",
+    "group": "quote",
+    "title": "Stock loss at submit",
+    "scenario": "stock-lost-before-order",
+    "action": "Confirm after stock changes",
+    "expected": "No order committed; return to cart correction without wiping contact.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E086",
+    "group": "quote",
+    "title": "Stale cart version",
+    "scenario": "quote-stale-cart",
+    "action": "Change cart after quote",
+    "expected": "Old quote cannot authorize order; new total required.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T08",
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E087",
+    "group": "review",
+    "title": "Review completeness",
+    "scenario": "checkout-ready",
+    "action": "Open review",
+    "expected": "Correct product variant, contact, method, shipping, subtotal and total.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E088",
+    "group": "review",
+    "title": "Unchecked consent",
+    "scenario": "checkout-ready",
+    "action": "Try final action without one/both checks",
+    "expected": "Submission disabled/explained; no API order request.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E089",
+    "group": "review",
+    "title": "Demo terms dialog",
+    "scenario": "checkout-ready",
+    "action": "Open terms with keyboard and close",
+    "expected": "Accessible modal; explicitly demo terms, no real subscription.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E090",
+    "group": "review",
+    "title": "Edit links",
+    "scenario": "checkout-ready",
+    "action": "Use contact and delivery edit links",
+    "expected": "Correct earlier step, retained fields, invalidated previous quote.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T22",
+      "T27"
+    ]
+  },
+  {
+    "id": "E091",
+    "group": "payment",
+    "title": "COD simulated purchase",
+    "scenario": "checkout-ready",
+    "action": "Choose demo_cod and confirm",
+    "expected": "No payment-intent call; order successfully simulated.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T21",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E092",
+    "group": "payment",
+    "title": "Card simulation succeeds",
+    "scenario": "payment-success",
+    "action": "Choose demo_card and confirm",
+    "expected": "Succeeded matching intent then one order; no card fields or real network.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T21",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E093",
+    "group": "payment",
+    "title": "Card simulation declined",
+    "scenario": "payment-declined",
+    "action": "Confirm then retry new intent",
+    "expected": "Remain on review; fields/cart retained; new key for new payment attempt.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T21",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E094",
+    "group": "payment",
+    "title": "Pending resolves",
+    "scenario": "payment-pending-resolves",
+    "action": "Poll deterministic pending intent",
+    "expected": "At most ten GET polls; stop on success and create one order.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T21",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E095",
+    "group": "payment",
+    "title": "Pending remains unknown",
+    "scenario": "payment-pending-timeout",
+    "action": "Keep pending for ten polls",
+    "expected": "Stop and explain unknown outcome, no false receipt or automatic new payment.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T21",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E096",
+    "group": "payment",
+    "title": "Payment response lost",
+    "scenario": "payment-response-lost",
+    "action": "Retry original payment key",
+    "expected": "Intent not duplicated; correct existing state recovered.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T21",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E097",
+    "group": "payment",
+    "title": "Wrong intent/amount",
+    "scenario": "payment-mismatch",
+    "action": "Submit mismatching intent scenario",
+    "expected": "Backend rejects; no order despite client-selected success.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T21",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E098",
+    "group": "order",
+    "title": "Consent enforced by mock",
+    "scenario": "consent-missing",
+    "action": "Submit invalid order via contract test",
+    "expected": "422/400 as declared; UI cannot bypass acceptedTerms or simulation flag.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E099",
+    "group": "order",
+    "title": "Order transaction atomicity",
+    "scenario": "order-atomicity",
+    "action": "Force commit conflict with low stock",
+    "expected": "One winner or complete rollback, no partial receipt/stock mutation.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E100",
+    "group": "order",
+    "title": "Order service error",
+    "scenario": "order-503-once",
+    "action": "Fail before commit then Retry",
+    "expected": "One eventual order; exact request/key reused for uncertain transport failure.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T09",
+      "T23",
+      "T27"
+    ]
+  },
+  {
+    "id": "E101",
+    "group": "receipt",
+    "title": "Receipt truthful copy",
+    "scenario": "order-existing",
+    "action": "Open valid success route",
+    "expected": "DEMO number and explicit no real order/payment/email notice.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T24",
+      "T27"
+    ]
+  },
+  {
+    "id": "E102",
+    "group": "receipt",
+    "title": "Receipt reload",
+    "scenario": "order-existing",
+    "action": "Reload success route",
+    "expected": "GET existing receipt; no POST, same totals, no PII.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T24",
+      "T27"
+    ]
+  },
+  {
+    "id": "E103",
+    "group": "receipt",
+    "title": "Receipt error retry",
+    "scenario": "receipt-503-once",
+    "action": "Fail GET then Retry",
+    "expected": "Existing receipt restored; no new transaction.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T24",
+      "T27"
+    ]
+  },
+  {
+    "id": "E104",
+    "group": "receipt",
+    "title": "Cart badge after completion",
+    "scenario": "order-existing",
+    "action": "Inspect header and start new cart",
+    "expected": "Badge reflects empty/new cart, not committed items.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T24",
+      "T27"
+    ]
+  },
+  {
+    "id": "E105",
+    "group": "navigation",
+    "title": "Titles, skip and focus",
+    "scenario": "default",
+    "action": "Navigate each route with keyboard",
+    "expected": "One H1, route title, skip-to-main and visible focus.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T11",
+      "T27"
+    ]
+  },
+  {
+    "id": "E106",
+    "group": "navigation",
+    "title": "Mobile navigation",
+    "scenario": "default",
+    "action": "Open/close mobile menu and select category",
+    "expected": "Focus restoration and meaningful link destination.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T11",
+      "T27"
+    ]
+  },
+  {
+    "id": "E107",
+    "group": "navigation",
+    "title": "Unknown route",
+    "scenario": "default",
+    "action": "Open unmatched application path",
+    "expected": "Utility 404 with working home/catalogue recovery.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T11",
+      "T27"
+    ]
+  },
+  {
+    "id": "E108",
+    "group": "accessibility",
+    "title": "Full keyboard purchase",
+    "scenario": "default",
+    "action": "Complete purchase without mouse",
+    "expected": "No traps outside dialogs; all buttons/selectors/form fields operable.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T10",
+      "T20",
+      "T25",
+      "T27"
+    ]
+  },
+  {
+    "id": "E109",
+    "group": "accessibility",
+    "title": "All dialog types",
+    "scenario": "default",
+    "action": "Exercise filter,menu,zoom,terms",
+    "expected": "Initial focus, trap, background exclusion, Escape and return focus.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T10",
+      "T20",
+      "T25",
+      "T27"
+    ]
+  },
+  {
+    "id": "E110",
+    "group": "accessibility",
+    "title": "Reduced motion and zoom",
+    "scenario": "default",
+    "action": "Use reduced-motion +200% text sizing",
+    "expected": "No nonessential motion/clipping; purchase controls remain reachable.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T10",
+      "T20",
+      "T25",
+      "T27"
+    ]
+  },
+  {
+    "id": "E111",
+    "group": "accessibility",
+    "title": "Control targets and names",
+    "scenario": "default",
+    "action": "Measure visible purchasing controls",
+    "expected": ">=44x44 target, accessible name, non-color-only selection.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T10",
+      "T20",
+      "T25",
+      "T27"
+    ]
+  },
+  {
+    "id": "E112",
+    "group": "accessibility",
+    "title": "Error announcements",
+    "scenario": "multiple-errors",
+    "action": "Trigger form/server/add failures",
+    "expected": "Assert meaningful live feedback and focus; critical result persists after toast.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T10",
+      "T20",
+      "T25",
+      "T27"
+    ]
+  },
+  {
+    "id": "E113",
+    "group": "responsive",
+    "title": "Six-width screen matrix",
+    "scenario": "default",
+    "action": "Render all four screen families +wizard steps at six widths",
+    "expected": "No horizontal page overflow; grid/rails/controls follow screen contract.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T25",
+      "T27"
+    ]
+  },
+  {
+    "id": "E114",
+    "group": "responsive",
+    "title": "Mobile sticky purchase rail",
+    "scenario": "default",
+    "action": "Tab/scroll around product and review on390px",
+    "expected": "No content or focused field obscured; safe-area bottom reserved.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T25",
+      "T27"
+    ]
+  },
+  {
+    "id": "E115",
+    "group": "contract",
+    "title": "All schema examples",
+    "scenario": "default",
+    "action": "Validate every example/product/options",
+    "expected": "No dangling refs, invalid fixture or duplicate operationId.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T03",
+      "T04",
+      "T26",
+      "T27"
+    ]
+  },
+  {
+    "id": "E116",
+    "group": "contract",
+    "title": "16 operation parity",
+    "scenario": "default",
+    "action": "Exercise each generated operation",
+    "expected": "Exactly matching handlers, request shape, response status and validated schema.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T03",
+      "T04",
+      "T26",
+      "T27"
+    ]
+  },
+  {
+    "id": "E117",
+    "group": "contract",
+    "title": "Malformed wire values",
+    "scenario": "contract-invalid",
+    "action": "Wrong headers/types/ranges/unknown fields",
+    "expected": "Documented 4xx Problem response, no unexpected mutation.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T03",
+      "T04",
+      "T26",
+      "T27"
+    ]
+  },
+  {
+    "id": "E118",
+    "group": "sdk",
+    "title": "Generated file drift",
+    "scenario": "sdk-drift",
+    "action": "Regenerate twice then modify a generated file",
+    "expected": "Stable output; unauthorized edit fails clean-generation diff.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T04",
+      "T26",
+      "T27"
+    ]
+  },
+  {
+    "id": "E119",
+    "group": "sdk",
+    "title": "Base href SDK paths",
+    "scenario": "default",
+    "action": "Run under root and /mi-bolt/",
+    "expected": "SDK and worker resolve same scoped logical API/media paths.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T04",
+      "T26",
+      "T27"
+    ]
+  },
+  {
+    "id": "E120",
+    "group": "deployment",
+    "title": "Static deep links",
+    "scenario": "default",
+    "action": "Load each route directly on static host",
+    "expected": "SPA route fallback works; /api/v1 never returns HTML as data.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "T28"
+    ]
+  },
+  {
+    "id": "E121",
+    "group": "deployment",
+    "title": "SW update and cache",
+    "scenario": "worker-update",
+    "action": "Serve newer static build and worker",
+    "expected": "Documented no-cache worker/index, immutable hashed chunks, no stale Angular PWA worker.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "T28"
+    ]
+  },
+  {
+    "id": "E122",
+    "group": "deployment",
+    "title": "Demo distribution isolation",
+    "scenario": "default",
+    "action": "Open optimized demo build offline from business hosts",
+    "expected": "All business data remains MSW; no real-backend fallback.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "T28"
+    ]
+  },
+  {
+    "id": "E123",
+    "group": "performance",
+    "title": "Resource budgets",
+    "scenario": "default",
+    "action": "Measure optimized build and profile",
+    "expected": "Initial/lazy/assets/CLS budgets enforced with recorded conditions.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "T28"
+    ]
+  },
+  {
+    "id": "E124",
+    "group": "performance",
+    "title": "No baseline 3D bytes",
+    "scenario": "default",
+    "action": "Load product and inspect network/chunks",
+    "expected": "No model-viewer or GLB unless separately approved O01.",
+    "layers": [
+      "unit-or-gate",
+      "integration-or-e2e"
+    ],
+    "optional": false,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "T28"
+    ]
+  },
+  {
+    "id": "E125",
+    "group": "3d",
+    "title": "Deferred local model",
+    "scenario": "3d-approved",
+    "action": "Activate 3D control on licensed local device",
+    "expected": "Model+decoders local; camera works; no AR/telemetry/autoload.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": true,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "O01"
+    ]
+  },
+  {
+    "id": "E126",
+    "group": "3d",
+    "title": "3D failure fallback",
+    "scenario": "3d-model-error",
+    "action": "Fail model or WebGL",
+    "expected": "Static gallery remains usable with explanatory message.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": true,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "O01"
+    ]
+  },
+  {
+    "id": "E127",
+    "group": "3d",
+    "title": "3D keyboard and model variation",
+    "scenario": "3d-approved",
+    "action": "Operate camera controls and change variant",
+    "expected": "Controls named; model/poster stays variant-consistent; wrapper branches covered.",
+    "layers": [
+      "unit",
+      "e2e"
+    ],
+    "optional": true,
+    "status": "specified-not-run",
+    "tasks": [
+      "T27",
+      "O01"
+    ]
+  }
+]

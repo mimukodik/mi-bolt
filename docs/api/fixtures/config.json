@@ -1,0 +1,14 @@
+{
+  "providerId": "mi-bolt",
+  "displayName": "MiBolt",
+  "currency": "HUF",
+  "isDemo": true,
+  "termsVersion": "demo-1",
+  "featuredSlugs": [
+    "demo-one-5g",
+    "demo-air-5g",
+    "demo-pro-5g",
+    "demo-lite-5g"
+  ],
+  "maximumLineQuantity": 5
+}

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "requireDesignSkillAt": [
+    "implementation",
+    "verification"
+  ],
+  "skill": "mi-bolt-design",
+  "unit": {
+    "thresholds": {
+      "statements": 100,
+      "branches": 100,
+      "functions": 100,
+      "lines": 100
+    },
+    "perFile": true,
+    "include": [
+      "src/**/*.ts"
+    ],
+    "excludeClassifications": {
+      "generated": [
+        "src/app/api/generated/**",
+        "public/mockServiceWorker.js"
+      ],
+      "tests": [
+        "**/*.spec.ts",
+        "**/*.test.ts",
+        "tests/**",
+        "e2e/**"
+      ],
+      "typesOnly": [
+        "**/*.d.ts"
+      ]
+    },
+    "includeUnvisitedFiles": true
+  },
+  "e2e": {
+    "thresholds": {
+      "statements": 100,
+      "branches": 100,
+      "functions": 100,
+      "lines": 100
+    },
+    "perFile": true,
+    "measurementBrowser": "chromium",
+    "functionalBrowsers": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "sourceScope": "All first-party browser-delivered executable runtime source, including shared mock handlers/domain/persistence/bootstrap; exclude only declared generated/vendor/test-only or Node-only targets with separate unit + integration evidence.",
+    "mergeUnitCoverage": false,
+    "includeUnvisitedFiles": true,
+    "scenarioRowsRequired": true
+  },
+  "forbidden": [
+    "coverage-ignore pragmas",
+    "skip/todo/only",
+    "silent reduced thresholds",
+    "unit+e2e counter merging",
+    "calling internal business functions from page.evaluate to increase E2E counters",
+    "deleting defensive code solely to evade meaningful behavior tests",
+    "using 100% passing tests as a synonym for 100% source coverage"
+  ],
+  "artifactStatus": "policy-design-not-executed"
+}

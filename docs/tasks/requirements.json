@@ -1,0 +1,214 @@
+[
+  {
+    "id": "RQ01",
+    "text": "Angular 22 latest stable; no SSR",
+    "tasks": [
+      "T00",
+      "T01",
+      "T28"
+    ],
+    "evidence": "Toolchain lock, build artifact inspection and static deep links."
+  },
+  {
+    "id": "RQ02",
+    "text": "Mandatory mi-bolt-design on every execution AND verification",
+    "tasks": [
+      "T00",
+      "T10",
+      "T25",
+      "T29"
+    ],
+    "evidence": "Every task evidence has separate implementation and review skill application; skill package hashes match."
+  },
+  {
+    "id": "RQ03",
+    "text": "Four precise screen families and three responsive layout shells",
+    "tasks": [
+      "T11",
+      "T13",
+      "T14",
+      "T16",
+      "T18",
+      "T20",
+      "T21",
+      "T22",
+      "T24",
+      "T25"
+    ],
+    "evidence": "Desktop/mobile designs, state matrix and route contract."
+  },
+  {
+    "id": "RQ04",
+    "text": "Signals + modern Angular templates + Signal Forms",
+    "tasks": [
+      "T01",
+      "T12",
+      "T15",
+      "T17",
+      "T19",
+      "T20"
+    ],
+    "evidence": "Static lint, compiler diagnostics and rendered behavioral tests."
+  },
+  {
+    "id": "RQ05",
+    "text": "No backend; MSW-only business operations",
+    "tasks": [
+      "T05",
+      "T06",
+      "T07",
+      "T08",
+      "T09",
+      "T28"
+    ],
+    "evidence": "MSW ownership + isolated egress logs in demo and all tests."
+  },
+  {
+    "id": "RQ06",
+    "text": "OpenAPI 3.0/3.1 as authoritative contract; choose 3.1.0",
+    "tasks": [
+      "T03",
+      "T26"
+    ],
+    "evidence": "All 16 endpoints/32 schemas validate; request/response parity."
+  },
+  {
+    "id": "RQ07",
+    "text": "ng-openapi-gen-generated SDK",
+    "tasks": [
+      "T04",
+      "T26"
+    ],
+    "evidence": "Clean generation diff and actual SDK transport tests."
+  },
+  {
+    "id": "RQ08",
+    "text": "Search/filter/sort/pagination URL state",
+    "tasks": [
+      "T06",
+      "T12",
+      "T13"
+    ],
+    "evidence": "Same-variant filtering, result counts, URL back/forward, latest-request-wins."
+  },
+  {
+    "id": "RQ09",
+    "text": "Product gallery/variants/specifications",
+    "tasks": [
+      "T15",
+      "T16"
+    ],
+    "evidence": "Variant-consistent price, media, stock and accessible gallery controls."
+  },
+  {
+    "id": "RQ10",
+    "text": "Editable persistent cart",
+    "tasks": [
+      "T07",
+      "T17",
+      "T18"
+    ],
+    "evidence": "One authoritative state, reload restoration, exact integer-HUF totals."
+  },
+  {
+    "id": "RQ11",
+    "text": "Complete simulated purchase and durable receipt",
+    "tasks": [
+      "T08",
+      "T09",
+      "T19",
+      "T20",
+      "T21",
+      "T22",
+      "T23",
+      "T24"
+    ],
+    "evidence": "COD and mock-card paths; record exists through API; no false live transaction."
+  },
+  {
+    "id": "RQ12",
+    "text": "Validation, errors, timeouts and idempotency",
+    "tasks": [
+      "T07",
+      "T08",
+      "T09",
+      "T19",
+      "T23"
+    ],
+    "evidence": "All negative scenarios preserve data, revalidate state and prevent duplicate commits."
+  },
+  {
+    "id": "RQ13",
+    "text": "100% unit source coverage",
+    "tasks": [
+      "T02",
+      "T27"
+    ],
+    "evidence": "Per-file and global statement/branch/function/line thresholds=100; inventory includes unvisited source."
+  },
+  {
+    "id": "RQ14",
+    "text": "100% independent E2E coverage",
+    "tasks": [
+      "T02",
+      "T27"
+    ],
+    "evidence": "Browser source coverage=100 independently + all declared behavior/state cases; no unit-counter merge."
+  },
+  {
+    "id": "RQ15",
+    "text": "All tests use mocks; no real services",
+    "tasks": [
+      "T02",
+      "T05",
+      "T26",
+      "T27"
+    ],
+    "evidence": "No SDK replacement, live request, production payment, remote media or data leak."
+  },
+  {
+    "id": "RQ16",
+    "text": "Responsive and accessible operation",
+    "tasks": [
+      "T10",
+      "T11",
+      "T25"
+    ],
+    "evidence": "Six viewport widths, keyboard flow, target sizes, focus restoration and manual evidence."
+  },
+  {
+    "id": "RQ17",
+    "text": "No analytics/social/tracking/chat",
+    "tasks": [
+      "T00",
+      "T28"
+    ],
+    "evidence": "Dependency/script/network allowlist; no dead signup or account feature."
+  },
+  {
+    "id": "RQ18",
+    "text": "Research transfer evaluation; optional 3D discussion",
+    "tasks": [
+      "T00",
+      "O01"
+    ],
+    "evidence": "Evidence/inference distinction, adoption matrix and model licensing/asset decision."
+  },
+  {
+    "id": "RQ19",
+    "text": "Decomposed tasks, dependency DAG and strict per-task acceptance",
+    "tasks": [
+      "T00",
+      "T29"
+    ],
+    "evidence": "31 packets; 30 baseline +1 optional; acyclic validated graph with exact dependencies."
+  },
+  {
+    "id": "RQ20",
+    "text": "Separate overall acceptance and reproducible handoff",
+    "tasks": [
+      "T29"
+    ],
+    "evidence": "Every overall criterion has evidence; planned activity never labeled passed."
+  }
+]

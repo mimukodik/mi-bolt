@@ -1,0 +1,1952 @@
+openapi: 3.1.0
+info:
+  title: MiBolt Demo Commerce API
+  version: 1.0.0
+  description: Contract-first Angular MVP. Every operation is implemented with MSW;
+    no live backend, billing, email or fulfillment. Demo values are fictional. JSON
+    Schema constraints plus documented domain invariants are mandatory. All validation
+    text is hu-HU at the UI boundary.
+servers:
+- url: /api/v1
+  description: Same-origin logical endpoint; served only by MSW. Runtime root respects
+    the Angular base href.
+tags:
+- name: Configuration
+- name: Catalog
+- name: Cart
+- name: Checkout
+- name: Payment
+- name: Orders
+security: []
+paths:
+  /config:
+    get:
+      operationId: getConfig
+      tags:
+      - Configuration
+      summary: Read deterministic MiBolt demo configuration
+      description: Read deterministic MiBolt demo configuration
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoConfig'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /products:
+    get:
+      operationId: listProducts
+      tags:
+      - Catalog
+      summary: Search and filter product catalogue
+      description: 'Filters apply conjunctively to one SAME variant. Returned defaultVariant
+        is the cheapest matching variant with ID tie-break. Facet counts are disjunctive:
+        remove own facet and count distinct matching products under all others. total
+        counts products, never variants. Unknown query parameters return 400. An out-of-range
+        page returns empty items with unchanged total; UI canonicalizes to final valid
+        page with one refetch.'
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+        description: Case-insensitive NFC-normalized substring over brand/name; trimmed.
+        style: form
+        explode: true
+      - name: brand
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+        description: Repeat brand=A&brand=B; OR within this facet, AND across facets.
+        style: form
+        explode: true
+      - name: storageGb
+        in: query
+        schema:
+          type: array
+          items:
+            type: integer
+            enum:
+            - 128
+            - 256
+            - 512
+        description: Repeat parameter; OR within facet.
+        style: form
+        explode: true
+      - name: minPrice
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+        description: Whole HUF inclusive; evaluated against variants, not unrelated
+          cheapest variant.
+        style: form
+        explode: true
+      - name: maxPrice
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+        description: Must be >= minPrice.
+        style: form
+        explode: true
+      - name: inStock
+        in: query
+        schema:
+          type: boolean
+        description: ''
+        style: form
+        explode: true
+      - name: is5g
+        in: query
+        schema:
+          type: boolean
+        description: ''
+        style: form
+        explode: true
+      - name: featured
+        in: query
+        schema:
+          type: boolean
+        description: ''
+        style: form
+        explode: true
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - recommended
+          - price_asc
+          - price_desc
+          - name_asc
+          default: recommended
+        description: Stable product ID tie-break. Matching selected variant determines
+          price sorting.
+        style: form
+        explode: true
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+        description: ''
+        style: form
+        explode: true
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          enum:
+          - 12
+          - 24
+          default: 12
+        description: ''
+        style: form
+        explode: true
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /products/{slug}:
+    get:
+      operationId: getProduct
+      tags:
+      - Catalog
+      summary: Read product with complete variant matrix
+      description: Read product with complete variant matrix
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /carts:
+    post:
+      operationId: createCart
+      tags:
+      - Cart
+      summary: Create an empty demo cart
+      description: Create an empty demo cart
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCartRequest'
+  /carts/{cartId}:
+    get:
+      operationId: getCart
+      tags:
+      - Cart
+      summary: Restore the authoritative mock cart
+      description: Restore the authoritative mock cart
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/CartId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /carts/{cartId}/items:
+    post:
+      operationId: addCartItem
+      tags:
+      - Cart
+      summary: Add a variant or merge its quantity
+      description: A repeated variant merges into one line. Quantity is positive;
+        merged total <= min(stock,5). No silent clamping. One atomic successful mutation
+        increments version once and invalidates quote/payment.
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+  /carts/{cartId}/items/{itemId}:
+    patch:
+      operationId: setCartItemQuantity
+      tags:
+      - Cart
+      summary: Set the absolute quantity of a cart line
+      description: Set the absolute quantity of a cart line
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetCartItemQuantityRequest'
+    delete:
+      operationId: removeCartItem
+      tags:
+      - Cart
+      summary: Remove a cart line and return full updated cart
+      description: Remove a cart line and return full updated cart
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /checkout/options:
+    get:
+      operationId: getCheckoutOptions
+      tags:
+      - Checkout
+      summary: Read local delivery and simulated payment choices
+      description: Read local delivery and simulated payment choices
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutOptions'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /checkout/{cartId}:
+    get:
+      operationId: getCheckoutSession
+      tags:
+      - Checkout
+      summary: Read current in-memory checkout draft
+      description: Read current in-memory checkout draft
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/CartId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSession'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      operationId: updateCheckout
+      tags:
+      - Checkout
+      summary: Merge validated contact, delivery or payment sections
+      description: 'Uses cart version concurrency guard. Does not increment cart version:
+        successful checkout changes invalidate quote and payment. Client serializes
+        draft writes. Validate only supplied sections; partial state is permitted
+        until quote/order. home_delivery requires address; pickup rejects address.'
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSession'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCheckoutRequest'
+  /checkout/{cartId}/quote:
+    post:
+      operationId: createCheckoutQuote
+      tags:
+      - Checkout
+      summary: Revalidate stock and recompute final checkout quote
+      description: No request body. All contact/delivery/payment sections must be
+        complete and cart nonempty. Prices originate in mock catalogue. Quote lives
+        5 minutes. If catalogue prices changed, atomically update cart prices and
+        version, invalidate older quote and return 409 PRICE_CHANGED; require cart
+        refetch and explicit review before new key/quote. Do not silently accept the
+        new total.
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/IfMatch'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /payment-intents:
+    post:
+      operationId: createPaymentIntent
+      tags:
+      - Payment
+      summary: Simulate payment approval without collecting card data
+      description: Only permitted for demo_card and a current unexpired quote. Never
+        request PAN, CVV, card expiry, bank redirect or external API. Declined/pending
+        are valid states with 201, not server errors. New approved retry uses a new
+        payment key; ambiguous network retry retains original key.
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntent'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentIntentRequest'
+  /payment-intents/{paymentIntentId}:
+    get:
+      operationId: getPaymentIntent
+      tags:
+      - Payment
+      summary: Read a pending simulated payment result
+      description: Read a pending simulated payment result
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/PaymentIntentId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntent'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /orders:
+    post:
+      operationId: createOrder
+      tags:
+      - Orders
+      summary: Atomically commit one simulated order
+      description: Replay idempotency result before examining cart status or expiry.
+        Validate fresh quote/cart version, stock and consent; demo_card requires succeeded
+        matching intent, demo_cod forbids intent. Atomically reserve/decrement mock
+        stock, persist receipt and idempotency result, mark cart ordered and clear
+        volatile contact/address. No real payment/email/shipping. On uncertain response,
+        retry exact body/key; never create a new key automatically.
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderReceipt'
+        '400':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '410':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      tags:
+      - Orders
+      summary: Read persisted privacy-minimized demo order receipt
+      description: Read persisted privacy-minimized demo order receipt
+      parameters:
+      - $ref: '#/components/parameters/DemoSession'
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderReceipt'
+        '404':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Typed application or simulated transport failure; see Problem.code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  schemas:
+    Money:
+      type: object
+      additionalProperties: false
+      required:
+      - amount
+      - currency
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 100000000
+          description: Whole Hungarian forints, NOT ISO minor units; no floating point
+            or monthly fees.
+        currency:
+          type: string
+          enum:
+          - HUF
+    Image:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - src
+      - alt
+      - width
+      - height
+      properties:
+        id:
+          type: string
+        src:
+          type: string
+          pattern: ^/assets/
+        alt:
+          type: string
+          minLength: 1
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+    Availability:
+      type: string
+      enum:
+      - in_stock
+      - out_of_stock
+    Variant:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - colorCode
+      - colorName
+      - swatchHex
+      - storageGb
+      - price
+      - availability
+      - maxQuantity
+      - images
+      properties:
+        id:
+          type: string
+        colorCode:
+          type: string
+        colorName:
+          type: string
+        swatchHex:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
+        storageGb:
+          type: integer
+          enum:
+          - 128
+          - 256
+          - 512
+        price:
+          $ref: '#/components/schemas/Money'
+        availability:
+          $ref: '#/components/schemas/Availability'
+        maxQuantity:
+          type: integer
+          minimum: 0
+          maximum: 5
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+          minItems: 1
+    SpecRow:
+      type: object
+      additionalProperties: false
+      required:
+      - label
+      - value
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+    SpecGroup:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - title
+      - rows
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecRow'
+          minItems: 1
+    ProductSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - slug
+      - brand
+      - name
+      - highlights
+      - defaultVariant
+      - is5g
+      - isDemo
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        brand:
+          type: string
+        name:
+          type: string
+        highlights:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 2
+        defaultVariant:
+          $ref: '#/components/schemas/Variant'
+        is5g:
+          type: boolean
+        isDemo:
+          type: boolean
+          const: true
+    Product:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - slug
+      - brand
+      - name
+      - highlights
+      - defaultVariant
+      - is5g
+      - isDemo
+      - description
+      - variants
+      - specGroups
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        brand:
+          type: string
+        name:
+          type: string
+        highlights:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 2
+        defaultVariant:
+          $ref: '#/components/schemas/Variant'
+        is5g:
+          type: boolean
+        isDemo:
+          type: boolean
+          const: true
+        description:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Variant'
+          minItems: 1
+        specGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecGroup'
+          minItems: 1
+      examples:
+      - id: p-01
+        slug: demo-one-5g
+        brand: MiBolt Demo
+        name: Demo One 5G
+        highlights:
+        - 6,7″ kijelző
+        - 50 MP kamera
+        defaultVariant:
+          id: demo-one-5g-graphite-256
+          colorCode: graphite
+          colorName: Grafit
+          swatchHex: '#343B43'
+          storageGb: 256
+          price:
+            amount: 339990
+            currency: HUF
+          availability: in_stock
+          maxQuantity: 5
+          images:
+          - id: demo-one-5g-graphite-256-front
+            src: /assets/products/graphite-front.webp
+            alt: Demo One 5G, Grafit, 256 GB, elölnézet
+            width: 320
+            height: 400
+          - id: demo-one-5g-graphite-256-back
+            src: /assets/products/graphite-back.webp
+            alt: Demo One 5G, Grafit, 256 GB, hátulnézet
+            width: 320
+            height: 400
+        is5g: true
+        isDemo: true
+        description: Fiktív készülék a MiBolt webshop működésének bemutatásához. A
+          kép illusztráció, az ár demóadat.
+        variants:
+        - id: demo-one-5g-graphite-256
+          colorCode: graphite
+          colorName: Grafit
+          swatchHex: '#343B43'
+          storageGb: 256
+          price:
+            amount: 339990
+            currency: HUF
+          availability: in_stock
+          maxQuantity: 5
+          images:
+          - id: demo-one-5g-graphite-256-front
+            src: /assets/products/graphite-front.webp
+            alt: Demo One 5G, Grafit, 256 GB, elölnézet
+            width: 320
+            height: 400
+          - id: demo-one-5g-graphite-256-back
+            src: /assets/products/graphite-back.webp
+            alt: Demo One 5G, Grafit, 256 GB, hátulnézet
+            width: 320
+            height: 400
+        - id: demo-one-5g-graphite-512
+          colorCode: graphite
+          colorName: Grafit
+          swatchHex: '#343B43'
+          storageGb: 512
+          price:
+            amount: 378390
+            currency: HUF
+          availability: in_stock
+          maxQuantity: 5
+          images:
+          - id: demo-one-5g-graphite-512-front
+            src: /assets/products/graphite-front.webp
+            alt: Demo One 5G, Grafit, 512 GB, elölnézet
+            width: 320
+            height: 400
+          - id: demo-one-5g-graphite-512-back
+            src: /assets/products/graphite-back.webp
+            alt: Demo One 5G, Grafit, 512 GB, hátulnézet
+            width: 320
+            height: 400
+        - id: demo-one-5g-silver-256
+          colorCode: silver
+          colorName: Ezüst
+          swatchHex: '#C6C9CB'
+          storageGb: 256
+          price:
+            amount: 344990
+            currency: HUF
+          availability: in_stock
+          maxQuantity: 5
+          images:
+          - id: demo-one-5g-silver-256-front
+            src: /assets/products/silver-front.webp
+            alt: Demo One 5G, Ezüst, 256 GB, elölnézet
+            width: 320
+            height: 400
+          - id: demo-one-5g-silver-256-back
+            src: /assets/products/silver-back.webp
+            alt: Demo One 5G, Ezüst, 256 GB, hátulnézet
+            width: 320
+            height: 400
+        - id: demo-one-5g-silver-512
+          colorCode: silver
+          colorName: Ezüst
+          swatchHex: '#C6C9CB'
+          storageGb: 512
+          price:
+            amount: 383390
+            currency: HUF
+          availability: in_stock
+          maxQuantity: 5
+          images:
+          - id: demo-one-5g-silver-512-front
+            src: /assets/products/silver-front.webp
+            alt: Demo One 5G, Ezüst, 512 GB, elölnézet
+            width: 320
+            height: 400
+          - id: demo-one-5g-silver-512-back
+            src: /assets/products/silver-back.webp
+            alt: Demo One 5G, Ezüst, 512 GB, hátulnézet
+            width: 320
+            height: 400
+        specGroups:
+        - id: display
+          title: Kijelző és kialakítás
+          rows:
+          - label: Kijelző
+            value: 6,7″ • demóadat
+          - label: Képfrissítés
+            value: 120 Hz • demóadat
+        - id: connection
+          title: Kapcsolat és memória
+          rows:
+          - label: Kapcsolat
+            value: 5G / Wi-Fi / Bluetooth • demóadat
+          - label: Tárhely
+            value: Változattól függő • demóadat
+    FacetValue:
+      type: object
+      additionalProperties: false
+      required:
+      - value
+      - label
+      - count
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+    ProductPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - pageSize
+      - facets
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSummary'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          enum:
+          - 12
+          - 24
+        facets:
+          type: object
+          additionalProperties: false
+          required:
+          - brands
+          - storageGb
+          properties:
+            brands:
+              type: array
+              items:
+                $ref: '#/components/schemas/FacetValue'
+            storageGb:
+              type: array
+              items:
+                $ref: '#/components/schemas/FacetValue'
+    DemoConfig:
+      type: object
+      additionalProperties: false
+      required:
+      - providerId
+      - displayName
+      - currency
+      - isDemo
+      - termsVersion
+      - featuredSlugs
+      - maximumLineQuantity
+      properties:
+        providerId:
+          type: string
+          enum:
+          - mi-bolt
+        displayName:
+          type: string
+          enum:
+          - MiBolt
+        currency:
+          type: string
+          enum:
+          - HUF
+        isDemo:
+          type: boolean
+          const: true
+        termsVersion:
+          type: string
+          enum:
+          - demo-1
+        featuredSlugs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 4
+        maximumLineQuantity:
+          type: integer
+          const: 5
+      examples:
+      - providerId: mi-bolt
+        displayName: MiBolt
+        currency: HUF
+        isDemo: true
+        termsVersion: demo-1
+        featuredSlugs:
+        - demo-one-5g
+        - demo-air-5g
+        - demo-pro-5g
+        - demo-lite-5g
+        maximumLineQuantity: 5
+    ProblemCode:
+      type: string
+      enum:
+      - VALIDATION_FAILED
+      - NOT_FOUND
+      - CART_EXPIRED
+      - CART_VERSION_CONFLICT
+      - OUT_OF_STOCK
+      - QUANTITY_LIMIT
+      - PRICE_CHANGED
+      - QUOTE_EXPIRED
+      - CHECKOUT_INCOMPLETE
+      - PAYMENT_DECLINED
+      - PAYMENT_PENDING
+      - PAYMENT_REQUIRED
+      - IDEMPOTENCY_CONFLICT
+      - SERVICE_UNAVAILABLE
+    FieldError:
+      type: object
+      additionalProperties: false
+      required:
+      - path
+      - message
+      properties:
+        path:
+          type: string
+          description: JSON pointer in request body, e.g. /email or /address/postalCode
+        message:
+          type: string
+    Problem:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - title
+      - status
+      - code
+      - detail
+      - traceId
+      - fieldErrors
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URN such as urn:mi-bolt:problem:validation-failed
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        code:
+          $ref: '#/components/schemas/ProblemCode'
+        detail:
+          type: string
+        traceId:
+          type: string
+        fieldErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+      examples:
+      - type: urn:mi-bolt:problem:out-of-stock
+        title: A készülék nem rendelhető
+        status: 409
+        code: OUT_OF_STOCK
+        detail: A kiválasztott változat elfogyott. A kosár megmaradt.
+        traceId: demo-trace-001
+        fieldErrors: []
+    CartItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - productId
+      - productSlug
+      - productName
+      - variantId
+      - colorName
+      - storageGb
+      - image
+      - quantity
+      - unitPrice
+      - lineTotal
+      - availability
+      - maxQuantity
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        productSlug:
+          type: string
+        productName:
+          type: string
+        variantId:
+          type: string
+        colorName:
+          type: string
+        storageGb:
+          type: integer
+        image:
+          $ref: '#/components/schemas/Image'
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 5
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+        availability:
+          $ref: '#/components/schemas/Availability'
+        maxQuantity:
+          type: integer
+          minimum: 0
+          maximum: 5
+    Cart:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - version
+      - items
+      - itemCount
+      - subtotal
+      - status
+      - expiresAt
+      properties:
+        id:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        itemCount:
+          type: integer
+          minimum: 0
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+          enum:
+          - active
+          - ordered
+        expiresAt:
+          type: string
+          format: date-time
+      examples:
+      - id: cart-demo-001
+        version: 2
+        items:
+        - id: line-001
+          productId: p-01
+          productSlug: demo-one-5g
+          productName: Demo One 5G
+          variantId: demo-one-5g-graphite-256
+          colorName: Grafit
+          storageGb: 256
+          image:
+            id: demo-one-5g-graphite-256-front
+            src: /assets/products/one-front.webp
+            alt: Demo One 5G, Grafit, 256 GB, elölnézet
+            width: 320
+            height: 400
+          quantity: 1
+          unitPrice:
+            amount: 339990
+            currency: HUF
+          lineTotal:
+            amount: 339990
+            currency: HUF
+          availability: in_stock
+          maxQuantity: 5
+        itemCount: 1
+        subtotal:
+          amount: 339990
+          currency: HUF
+        status: active
+        expiresAt: '2026-09-15T10:00:00Z'
+    CreateCartRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - providerId
+      properties:
+        providerId:
+          type: string
+          enum:
+          - mi-bolt
+    AddCartItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - variantId
+      - quantity
+      properties:
+        variantId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 5
+    SetCartItemQuantityRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 5
+    Contact:
+      type: object
+      additionalProperties: false
+      required:
+      - fullName
+      - email
+      - phone
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          pattern: ^\+36[0-9]{8,9}$
+    Address:
+      type: object
+      additionalProperties: false
+      required:
+      - countryCode
+      - postalCode
+      - city
+      - line1
+      properties:
+        countryCode:
+          type: string
+          enum:
+          - HU
+        postalCode:
+          type: string
+          pattern: ^[1-9][0-9]{3}$
+        city:
+          type: string
+          minLength: 2
+          maxLength: 80
+        line1:
+          type: string
+          minLength: 3
+          maxLength: 120
+        line2:
+          type: string
+          maxLength: 120
+    DeliveryOption:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - label
+      - fee
+      - requiresAddress
+      - description
+      properties:
+        id:
+          type: string
+          enum:
+          - home_delivery
+          - demo_pickup
+        label:
+          type: string
+        fee:
+          $ref: '#/components/schemas/Money'
+        requiresAddress:
+          type: boolean
+        description:
+          type: string
+    CheckoutOptions:
+      type: object
+      additionalProperties: false
+      required:
+      - deliveryOptions
+      - paymentMethods
+      - termsVersion
+      properties:
+        deliveryOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryOption'
+          minItems: 1
+        paymentMethods:
+          type: array
+          items:
+            type: string
+            enum:
+            - demo_card
+            - demo_cod
+          minItems: 1
+        termsVersion:
+          type: string
+          enum:
+          - demo-1
+      examples:
+      - deliveryOptions:
+        - id: home_delivery
+          label: Házhoz szállítás – demó
+          fee:
+            amount: 1990
+            currency: HUF
+          requiresAddress: true
+          description: Fiktív szállítási díj; nem indul valódi kézbesítés.
+        - id: demo_pickup
+          label: Demó átvételi pont
+          fee:
+            amount: 0
+            currency: HUF
+          requiresAddress: false
+          description: Virtuális átvételi lehetőség; nincs valós üzletcím.
+        paymentMethods:
+        - demo_card
+        - demo_cod
+        termsVersion: demo-1
+    DeliverySelection:
+      type: object
+      additionalProperties: false
+      required:
+      - optionId
+      properties:
+        optionId:
+          type: string
+          enum:
+          - home_delivery
+          - demo_pickup
+        address:
+          $ref: '#/components/schemas/Address'
+      description: home_delivery requires address; demo_pickup MUST NOT include address.
+        Domain validation enforces this relationship.
+    Quote:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - cartId
+      - cartVersion
+      - subtotal
+      - shipping
+      - total
+      - expiresAt
+      properties:
+        id:
+          type: string
+        cartId:
+          type: string
+        cartVersion:
+          type: integer
+          minimum: 1
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        shipping:
+          $ref: '#/components/schemas/Money'
+        total:
+          $ref: '#/components/schemas/Money'
+        expiresAt:
+          type: string
+          format: date-time
+      examples:
+      - id: quote-demo-001
+        cartId: cart-demo-001
+        cartVersion: 2
+        subtotal:
+          amount: 339990
+          currency: HUF
+        shipping:
+          amount: 1990
+          currency: HUF
+        total:
+          amount: 341980
+          currency: HUF
+        expiresAt: '2026-09-14T10:05:00Z'
+    CheckoutSession:
+      type: object
+      additionalProperties: false
+      required:
+      - cartId
+      - cartVersion
+      properties:
+        cartId:
+          type: string
+        cartVersion:
+          type: integer
+          minimum: 1
+        contact:
+          $ref: '#/components/schemas/Contact'
+        delivery:
+          $ref: '#/components/schemas/DeliverySelection'
+        paymentMethod:
+          type: string
+          enum:
+          - demo_card
+          - demo_cod
+        quote:
+          $ref: '#/components/schemas/Quote'
+      description: Contact, delivery and payment method are optional until completed.
+        Quote exists only after revalidation. Contact/address are volatile and cleared
+        on full reload.
+      examples:
+      - cartId: cart-demo-001
+        cartVersion: 2
+        contact:
+          fullName: Teszt Elek
+          email: teszt@example.test
+          phone: '+36201234567'
+        delivery:
+          optionId: home_delivery
+          address:
+            countryCode: HU
+            postalCode: '1111'
+            city: Demóváros
+            line1: Példa utca 1.
+        paymentMethod: demo_cod
+        quote:
+          id: quote-demo-001
+          cartId: cart-demo-001
+          cartVersion: 2
+          subtotal:
+            amount: 339990
+            currency: HUF
+          shipping:
+            amount: 1990
+            currency: HUF
+          total:
+            amount: 341980
+            currency: HUF
+          expiresAt: '2026-09-14T10:05:00Z'
+    UpdateCheckoutRequest:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        contact:
+          $ref: '#/components/schemas/Contact'
+        delivery:
+          $ref: '#/components/schemas/DeliverySelection'
+        paymentMethod:
+          type: string
+          enum:
+          - demo_card
+          - demo_cod
+      minProperties: 1
+      description: Merge supplied sections only; retain absent sections. Never silently
+        add paid extras. Each accepted update invalidates quote and payment intent.
+    PaymentIntentRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - cartId
+      - quoteId
+      properties:
+        cartId:
+          type: string
+        quoteId:
+          type: string
+    PaymentIntent:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - cartId
+      - quoteId
+      - status
+      - isSimulation
+      - amount
+      properties:
+        id:
+          type: string
+        cartId:
+          type: string
+        quoteId:
+          type: string
+        status:
+          type: string
+          enum:
+          - succeeded
+          - declined
+          - pending
+        isSimulation:
+          type: boolean
+          const: true
+        amount:
+          $ref: '#/components/schemas/Money'
+    OrderRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - cartId
+      - quoteId
+      - termsVersion
+      - acceptedTerms
+      - acknowledgedSimulation
+      properties:
+        cartId:
+          type: string
+        quoteId:
+          type: string
+        paymentIntentId:
+          type: string
+        termsVersion:
+          type: string
+          enum:
+          - demo-1
+        acceptedTerms:
+          type: boolean
+          const: true
+        acknowledgedSimulation:
+          type: boolean
+          const: true
+      description: paymentIntentId is REQUIRED for demo_card, FORBIDDEN for demo_cod;
+        checked by mock domain rules. Price, delivery and contact are never accepted
+        from this request as an authority.
+    OrderLine:
+      type: object
+      additionalProperties: false
+      required:
+      - productName
+      - variantId
+      - colorName
+      - storageGb
+      - quantity
+      - unitPrice
+      - lineTotal
+      properties:
+        productName:
+          type: string
+        variantId:
+          type: string
+        colorName:
+          type: string
+        storageGb:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 5
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+    OrderReceipt:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - orderNumber
+      - createdAt
+      - status
+      - isSimulation
+      - items
+      - subtotal
+      - shipping
+      - total
+      - paymentMethod
+      - deliveryOptionId
+      - notice
+      properties:
+        id:
+          type: string
+        orderNumber:
+          type: string
+          pattern: ^DEMO-[0-9]{6}$
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - demo_confirmed
+        isSimulation:
+          type: boolean
+          const: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+          minItems: 1
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        shipping:
+          $ref: '#/components/schemas/Money'
+        total:
+          $ref: '#/components/schemas/Money'
+        paymentMethod:
+          type: string
+          enum:
+          - demo_card
+          - demo_cod
+        deliveryOptionId:
+          type: string
+          enum:
+          - home_delivery
+          - demo_pickup
+        notice:
+          type: string
+      description: Privacy-minimized durable receipt. Never contains contact or address.
+        No payment, fulfillment or email occurs.
+      examples:
+      - id: order-demo-001
+        orderNumber: DEMO-000001
+        createdAt: '2026-09-14T10:01:00Z'
+        status: demo_confirmed
+        isSimulation: true
+        items:
+        - productName: Demo One 5G
+          variantId: demo-one-5g-graphite-256
+          colorName: Grafit
+          storageGb: 256
+          quantity: 1
+          unitPrice:
+            amount: 339990
+            currency: HUF
+          lineTotal:
+            amount: 339990
+            currency: HUF
+        subtotal:
+          amount: 339990
+          currency: HUF
+        shipping:
+          amount: 1990
+          currency: HUF
+        total:
+          amount: 341980
+          currency: HUF
+        paymentMethod: demo_cod
+        deliveryOptionId: home_delivery
+        notice: A demórendelés elkészült. Nem történt valódi fizetés, rendelésküldés
+          vagy e-mail-küldés.
+  parameters:
+    CartId:
+      name: cartId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    PaymentIntentId:
+      name: paymentIntentId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    DemoSession:
+      name: X-Demo-Session
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: ^[a-zA-Z0-9_-]{8,80}$
+      description: Opaque tab-scoped namespace, injected by frontend interceptor.
+        NOT an authentication or authorization mechanism.
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: ^"[0-9]+"$
+      description: Quoted current cart version, e.g. "3". Atomic compare-and-swap;
+        mismatch returns 409 CART_VERSION_CONFLICT.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 100
+      description: Key scoped to method + path + demo session, retained 24 hours.
+        Same key and normalized body returns original result BEFORE current-version
+        checks. Different body yields 409.
+x-design-skill: mi-bolt-design
+x-money-unit: integer whole HUF
+x-provider-scope: mi-bolt only
+x-mock-only: true

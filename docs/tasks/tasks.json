@@ -1,0 +1,1754 @@
+[
+  {
+    "id": "T00",
+    "title": "Követelmények, verziózár és kötelező design-governance",
+    "dependsOn": [],
+    "area": "Foundation",
+    "files": [
+      "AGENTS.md",
+      "docs/mi-bolt/execution/decisions.md",
+      "docs/mi-bolt/execution/toolchain-lock.json",
+      "scripts/verify-toolchain.mjs",
+      "scripts/verify-skill-evidence.mjs",
+      "docs/mi-bolt/execution/skill-location.json"
+    ],
+    "interface": "Input: delivered specification and mi-bolt-design 1.0.1. Output: immutable project constraints, stable Angular-22 lock manifest and review evidence schema.",
+    "deliverable": "Reproducible environment and enforceable design-review policy.",
+    "acceptanceCriteria": [
+      {
+        "id": "T00-AC01",
+        "text": "Check npm metadata and official release notes; choose maximum non-prerelease Angular major 22, not latest across majors. Record exact Angular/CLI/build/CDK, Node, TypeScript, RxJS, MSW, Vitest, Playwright and ng-openapi-gen versions."
+      },
+      {
+        "id": "T00-AC02",
+        "text": "Use Angular 22.1.6 as the verified 2026-09-14 baseline, re-resolving newer stable 22.x at execution. Verify actual pinned peer dependencies and reject an unsupported Node/TypeScript version."
+      },
+      {
+        "id": "T00-AC03",
+        "text": "Resolve and validate the separately installed mi-bolt-design skill (approved version 1.0.1); record its actual location, SHA-256 and version in docs/mi-bolt/execution/skill-location.json. Do not copy or reinstall it from this documentation package. Missing skill or missing implementation/review evidence must fail the gate."
+      },
+      {
+        "id": "T00-AC04",
+        "text": "AGENTS.md explicitly makes mi-bolt-design mandatory for EVERY implementation and verification, including nonvisual tasks with reasoned not-applicable R-rules."
+      },
+      {
+        "id": "T00-AC05",
+        "text": "Record four screen families, three layout shells, fictional products, one provider, one-time HUF prices and optional 3D as the only open product decision."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "foundation"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Reproducible environment and enforceable design-review policy.",
+    "wave": 0
+  },
+  {
+    "id": "T01",
+    "title": "Angular 22 SPA és munkaterület",
+    "dependsOn": [
+      "T00"
+    ],
+    "area": "Foundation",
+    "files": [
+      "package.json",
+      "package-lock.json",
+      "angular.json",
+      "tsconfig.json",
+      "src/main.ts",
+      "src/app/app.ts",
+      "src/app/app.config.ts",
+      "src/app/app.routes.ts",
+      "src/index.html"
+    ],
+    "interface": "Output: standalone zoneless CSR app with explicit providers, strict TS and static hosting fallback contract.",
+    "deliverable": "Minimal Angular app that boots without a backend.",
+    "acceptanceCriteria": [
+      {
+        "id": "T01-AC01",
+        "text": "Official Angular CLI application builder and standalone bootstrap build successfully; strict mode and strictTemplates are enabled."
+      },
+      {
+        "id": "T01-AC02",
+        "text": "No server.ts, main.server.ts, app.config.server.ts, @angular/ssr, platform-server dependency, prerender target or zone.js polyfill exists."
+      },
+      {
+        "id": "T01-AC03",
+        "text": "Use Angular signals and @if/@for/@switch with stable track identity in authored templates; static lint disallows *ngIf/*ngFor/*ngSwitch and legacy @Input/@Output in authored application code."
+      },
+      {
+        "id": "T01-AC04",
+        "text": "Provide hu-HU locale and HttpClient. An explicit environment distinguishes demo and e2e builds; neither has a real-backend fallback."
+      },
+      {
+        "id": "T01-AC05",
+        "text": "The app boots under / and /mi-bolt/ with meaningful title and a fatal startup surface; no business feature is faked directly in a component."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "foundation"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Minimal Angular app that boots without a backend.",
+    "wave": 1
+  },
+  {
+    "id": "T02",
+    "title": "100% coverage és hálózati izoláció bizonyító teszt",
+    "dependsOn": [
+      "T01"
+    ],
+    "area": "Quality",
+    "files": [
+      "tests/setup-msw.ts",
+      "e2e/fixtures/test.ts",
+      "e2e/fixtures/coverage.ts",
+      "scripts/check-coverage.mjs",
+      "scripts/runtime-manifest.mjs",
+      "playwright.config.ts",
+      "tests/coverage-canary.spec.ts"
+    ],
+    "interface": "Output: unit and E2E coverage collectors; assertExactCoverage(manifest,report); deterministic ScenarioDescriptor; closed-world network policy.",
+    "deliverable": "Prove the hard quality gates before building features.",
+    "acceptanceCriteria": [
+      {
+        "id": "T02-AC01",
+        "text": "Build a tiny lazy-route canary with true/false branches and verify that leaving one branch unvisited fails UNIT and independently E2E thresholds of 100 for statements, branches, functions and lines."
+      },
+      {
+        "id": "T02-AC02",
+        "text": "An entirely unimported/unvisited handwritten runtime source must contribute zeros and fail both gates; deleting the report, NaN metrics or an empty manifest must fail."
+      },
+      {
+        "id": "T02-AC03",
+        "text": "Exercise a full browser reload and a lazy-loaded route; original TS paths and coverage counters survive segment merging. Do not rely only on resetOnNavigation:false."
+      },
+      {
+        "id": "T02-AC04",
+        "text": "Run browser MSW with serviceWorkers:allow. Unit setup uses setupServer. Never replace SDK/HttpClient with a spy or provideHttpClientTesting for business data."
+      },
+      {
+        "id": "T02-AC05",
+        "text": "Deliberately issue an unhandled /api/v1 request and an external fetch; both cause test failure. Assert MSW request ownership and no open sockets; route interception alone is insufficient for SW-owned traffic."
+      },
+      {
+        "id": "T02-AC06",
+        "text": "CI network namespace/firewall permits only the local static host after dependencies/browsers are installed. Browser CSP is an additional barrier, not the sole proof."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "foundation",
+      "coverage",
+      "isolation"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Prove the hard quality gates before building features.",
+    "wave": 2
+  },
+  {
+    "id": "T03",
+    "title": "OpenAPI 3.1 szerződés és fixture-k",
+    "dependsOn": [
+      "T00"
+    ],
+    "area": "Contract",
+    "files": [
+      "docs/mi-bolt/api/openapi.yaml",
+      "docs/mi-bolt/api/fixtures/products.json",
+      "docs/mi-bolt/api/fixtures/config.json",
+      "docs/mi-bolt/api/fixtures/checkout-options.json",
+      "scripts/validate-contract.mjs",
+      "tests/contract/schema.spec.ts"
+    ],
+    "interface": "Input: delivered 32 schemas and 16 operationIds. Output: validated docs/mi-bolt/api/openapi.yaml as sole wire-contract authority.",
+    "deliverable": "Complete typed commerce contract and fixed synthetic seed.",
+    "acceptanceCriteria": [
+      {
+        "id": "T03-AC01",
+        "text": "All 16 operationIds are unique, every reference resolves and request/response examples validate against the declared schemas."
+      },
+      {
+        "id": "T03-AC02",
+        "text": "Validate status codes, required headers, repeated query-array encoding, conditional shipping/payment rules and whole-HUF Money semantics."
+      },
+      {
+        "id": "T03-AC03",
+        "text": "Include 16 fictional products, multiple variants, >12 items for pagination, an out-of-stock combination and low-stock scenario; no operator price/logo is copied."
+      },
+      {
+        "id": "T03-AC04",
+        "text": "Preserve schema constraints in machine validation. Explicitly test business invariants that TypeScript interfaces and basic JSON Schema do not enforce."
+      },
+      {
+        "id": "T03-AC05",
+        "text": "Contract-breaking changes require a decision entry and regenerated SDK, handlers and test registry in one change."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "contract"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Complete typed commerce contract and fixed synthetic seed.",
+    "wave": 1
+  },
+  {
+    "id": "T04",
+    "title": "ng-openapi-gen SDK és adat-hozzáférés",
+    "dependsOn": [
+      "T01",
+      "T03"
+    ],
+    "area": "Contract",
+    "files": [
+      "ng-openapi-gen.json",
+      "src/app/api/generated/",
+      "src/app/core/api/api-root.ts",
+      "src/app/core/api/demo-session.interceptor.ts",
+      "tests/contract/sdk-transport.spec.ts"
+    ],
+    "interface": "Consumes OpenAPI. Produces generated Api.invoke(operation,params): Observable<T> using promises:false; one configurable same-origin API root.",
+    "deliverable": "Generated SDK with no hand-authored HTTP client duplication.",
+    "acceptanceCriteria": [
+      {
+        "id": "T04-AC01",
+        "text": "Use the ng-openapi-gen package, not ng-openapi or another similarly named generator; baseline 1.0.5, pin resolved version."
+      },
+      {
+        "id": "T04-AC02",
+        "text": "Configuration has module:false, services:false, apiService:Api, promises:false, enumStyle:alias. Import provideApiConfiguration from the generated api-configuration file, not an assumed barrel export."
+      },
+      {
+        "id": "T04-AC03",
+        "text": "Clean only src/app/api/generated before regeneration; generate twice and obtain byte-identical content. git diff --exit-code passes after generation."
+      },
+      {
+        "id": "T04-AC04",
+        "text": "Every operation sends its documented URL, method, body and headers through real HttpClient to MSW; repeated brand/storage parameters round-trip."
+      },
+      {
+        "id": "T04-AC05",
+        "text": "The API root respects document.baseURI. Namespace header is added centrally; components cannot override host or bypass the SDK."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "contract",
+      "sdk"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Generated SDK with no hand-authored HTTP client duplication.",
+    "wave": 2
+  },
+  {
+    "id": "T05",
+    "title": "MSW indítás, repository és forgatókönyvek",
+    "dependsOn": [
+      "T02",
+      "T03",
+      "T04"
+    ],
+    "area": "Mock",
+    "files": [
+      "src/mocks/browser.ts",
+      "src/mocks/node.ts",
+      "src/mocks/create-handlers.ts",
+      "src/mocks/repository.ts",
+      "src/mocks/persistence.ts",
+      "src/mocks/scenarios.ts",
+      "src/core/bootstrap-demo.ts"
+    ],
+    "interface": "createHandlers({repository,clock,ids,scenario,apiRoot}): RequestHandler[]. hydrateSnapshot(): MockSnapshot. startMocks(): Promise<void>.",
+    "deliverable": "One network-level mock implementation shared by demo, unit and E2E.",
+    "acceptanceCriteria": [
+      {
+        "id": "T05-AC01",
+        "text": "Await persistence hydration and worker.start() before bootstrapApplication; render explicit retryable fatal state if registration/startup fails."
+      },
+      {
+        "id": "T05-AC02",
+        "text": "Use the same handler factory in setupWorker and setupServer. Clock, IDs, delays and repository are injected, never unseeded randomness."
+      },
+      {
+        "id": "T05-AC03",
+        "text": "Persist only allowlisted non-PII snapshot fields in tab-scoped sessionStorage; clear malformed/expired/version-mismatched snapshots safely. Storage-denied mode remains functional in memory and announces no reload persistence."
+      },
+      {
+        "id": "T05-AC04",
+        "text": "Contact, address, draft, pending intent and raw idempotency payloads are not serialized. Persist privacy-minimized committed order receipts and order-key digests for uncertain-response recovery."
+      },
+      {
+        "id": "T05-AC05",
+        "text": "Unknown API endpoints cannot pass through; local app/media assets are explicitly allowed. External scripts, fonts, telemetry and business hosts are disallowed."
+      },
+      {
+        "id": "T05-AC06",
+        "text": "E2E scenario descriptor is read before worker setup, absent from demo UI, and creates an isolated repository for each test/context; controlled reload tests retain their own snapshot only."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "mock",
+      "isolation",
+      "persistence"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "One network-level mock implementation shared by demo, unit and E2E.",
+    "wave": 3
+  },
+  {
+    "id": "T06",
+    "title": "Katalógus mock és szűrési szemantika",
+    "dependsOn": [
+      "T05"
+    ],
+    "area": "Mock",
+    "files": [
+      "src/mocks/catalog/catalog.handlers.ts",
+      "src/mocks/catalog/filter-products.ts",
+      "src/mocks/catalog/facets.ts",
+      "tests/catalog-mock.spec.ts"
+    ],
+    "interface": "listProducts(params): ProductPage; getProduct(slug): Product. Pure predicates operate on fixture variants.",
+    "deliverable": "Deterministic catalogue, filters, facets and pagination.",
+    "acceptanceCriteria": [
+      {
+        "id": "T06-AC01",
+        "text": "AND across facets, OR inside one facet; price/storage/stock conditions must hold for the same variant, not three unrelated variants."
+      },
+      {
+        "id": "T06-AC02",
+        "text": "Return the cheapest matching defaultVariant with stable variant-ID tie-break. Sort price using that variant and product ID as the last stable key."
+      },
+      {
+        "id": "T06-AC03",
+        "text": "Facet counts remove their own filter and count distinct products; results/count/URL remain consistent."
+      },
+      {
+        "id": "T06-AC04",
+        "text": "Validate malformed/min>max/unknown query parameters; handle empty and out-of-range pages separately from 503/network errors."
+      },
+      {
+        "id": "T06-AC05",
+        "text": "All sort modes, query normalization, repeated parameters, feature filters, 12/24 pagination and product 404/error scenarios are deterministic."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "catalog"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Deterministic catalogue, filters, facets and pagination.",
+    "wave": 4
+  },
+  {
+    "id": "T07",
+    "title": "Állapottartó kosár mock",
+    "dependsOn": [
+      "T05"
+    ],
+    "area": "Mock",
+    "files": [
+      "src/mocks/cart/cart.handlers.ts",
+      "src/mocks/cart/cart-domain.ts",
+      "src/mocks/idempotency.ts",
+      "tests/cart-mock.spec.ts"
+    ],
+    "interface": "createCart/addCartItem/setCartItemQuantity/removeCartItem/getCart → Cart. Atomic mutation with If-Match and Idempotency-Key.",
+    "deliverable": "Authoritative simulated cart, not component-local fixture arrays.",
+    "acceptanceCriteria": [
+      {
+        "id": "T07-AC01",
+        "text": "Repeated variant merges; different variant remains separate. Add and absolute update reject quantity outside 1..min(stock,5); never silently clamp."
+      },
+      {
+        "id": "T07-AC02",
+        "text": "Only successful atomic cart mutations increment version once. A quote/payment is invalidated on mutation; totals are whole HUF from catalogue prices."
+      },
+      {
+        "id": "T07-AC03",
+        "text": "Same method/path/session/key and normalized payload replay before version checks; different payload returns IDEMPOTENCY_CONFLICT."
+      },
+      {
+        "id": "T07-AC04",
+        "text": "409 conflicts preserve visible cart until authoritative refetch; 410 expiry creates an explicit recovery choice, not silent checkout continuation."
+      },
+      {
+        "id": "T07-AC05",
+        "text": "No deletion/update succeeds on another session cart; session scoping is isolation, not production-grade authentication."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "cart",
+      "idempotency"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Authoritative simulated cart, not component-local fixture arrays.",
+    "wave": 4
+  },
+  {
+    "id": "T08",
+    "title": "Checkout draft, szállítás és árajánlat mock",
+    "dependsOn": [
+      "T07"
+    ],
+    "area": "Mock",
+    "files": [
+      "src/mocks/checkout/checkout.handlers.ts",
+      "src/mocks/checkout/validate-checkout.ts",
+      "src/mocks/checkout/quote-domain.ts",
+      "tests/checkout-mock.spec.ts"
+    ],
+    "interface": "getCheckoutSession/updateCheckout/getCheckoutOptions/createCheckoutQuote; Quote TTL = 5 minutes.",
+    "deliverable": "Server-like validation, shipping and final totals.",
+    "acceptanceCriteria": [
+      {
+        "id": "T08-AC01",
+        "text": "Merge only submitted draft sections; normalize names/email/phone consistently; return JSON-pointer field errors without erasing previous values."
+      },
+      {
+        "id": "T08-AC02",
+        "text": "Home delivery requires valid HU address; virtual pickup forbids an address. Shipping = 1990 HUF or 0 HUF from options, never a client-supplied price."
+      },
+      {
+        "id": "T08-AC03",
+        "text": "Quote requires nonempty cart, complete contact/delivery/payment and current stock; total = subtotal + shipping."
+      },
+      {
+        "id": "T08-AC04",
+        "text": "Quote expires after exactly 5 mock-clock minutes; stale cart version or draft updates invalidate it."
+      },
+      {
+        "id": "T08-AC05",
+        "text": "Catalogue price changes update cart/version atomically and return PRICE_CHANGED; UI must re-fetch and obtain explicit review of the new amount before order."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "checkout",
+      "quote"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Server-like validation, shipping and final totals.",
+    "wave": 5
+  },
+  {
+    "id": "T09",
+    "title": "Szimulált fizetés és idempotens rendelés mock",
+    "dependsOn": [
+      "T08"
+    ],
+    "area": "Mock",
+    "files": [
+      "src/mocks/payment/payment.handlers.ts",
+      "src/mocks/orders/order.handlers.ts",
+      "src/mocks/orders/commit-order.ts",
+      "tests/order-mock.spec.ts"
+    ],
+    "interface": "createPaymentIntent/getPaymentIntent/createOrder/getOrder → PaymentIntent / OrderReceipt.",
+    "deliverable": "One durable mock order per user intent with safe retry.",
+    "acceptanceCriteria": [
+      {
+        "id": "T09-AC01",
+        "text": "Only demo_card and demo_cod exist. No bank-card fields or third-party payment requests are accepted."
+      },
+      {
+        "id": "T09-AC02",
+        "text": "Card succeeds/declines/remains pending via deterministic scenarios; a succeeded intent must match cart, quote, amount and session. COD forbids a paymentIntentId."
+      },
+      {
+        "id": "T09-AC03",
+        "text": "Atomic order commit checks consent/version/stock/expiry, decrements simulated stock once, stores receipt plus idempotency replay and marks cart ordered."
+      },
+      {
+        "id": "T09-AC04",
+        "text": "A timeout-after-commit followed by exact key/body retry returns the same order without decrementing stock twice; different body with reused key returns 409."
+      },
+      {
+        "id": "T09-AC05",
+        "text": "Reload can recover the same privacy-minimized receipt. Contact/address are absent from persisted receipt, logs and browser screenshot evidence."
+      },
+      {
+        "id": "T09-AC06",
+        "text": "Success copy explicitly says no real payment, order transmission, email or delivery occurred."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "payment",
+      "order",
+      "idempotency"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "One durable mock order per user intent with safe retry.",
+    "wave": 6
+  },
+  {
+    "id": "T10",
+    "title": "Design tokenek és UI-alapelemek",
+    "dependsOn": [
+      "T01",
+      "T02"
+    ],
+    "area": "Design",
+    "files": [
+      "src/styles/tokens.css",
+      "src/app/shared/ui/",
+      "src/app/shared/ui/ui-states.spec.ts",
+      "e2e/design/primitives.spec.ts"
+    ],
+    "interface": "Inputs/outputs specified in docs/mi-bolt/spec/components.md; no shared component knows the SDK or mock repository.",
+    "deliverable": "Accessible MiBolt primitives based on the supplied skill.",
+    "acceptanceCriteria": [
+      {
+        "id": "T10-AC01",
+        "text": "Import semantic tokens from mi-bolt-design; dark header/footer, orange #FF6A00 primary with #171B1F text, 8px cards and 6px controls remain normative."
+      },
+      {
+        "id": "T10-AC02",
+        "text": "Implement Button, PriceBlock, ProductImage, ErrorState, LoadingState, EmptyState, FormFieldMessage, QuantityControl, AccessibleDialog and StatusMessage with applicable state contracts."
+      },
+      {
+        "id": "T10-AC03",
+        "text": "Every purchase control target is >=44x44 CSS px, keyboard-operable and visibly focused. Selection is not conveyed by color alone."
+      },
+      {
+        "id": "T10-AC04",
+        "text": "Dialog opens with intentional focus, traps focus, excludes background, closes on Escape/close and restores the trigger."
+      },
+      {
+        "id": "T10-AC05",
+        "text": "No social proof, account/newsletter dead controls, unverified warranty promise or full screenshot as page background."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "design",
+      "accessibility"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Accessible MiBolt primitives based on the supplied skill.",
+    "wave": 3
+  },
+  {
+    "id": "T11",
+    "title": "Három layout, navigáció és globális állapot",
+    "dependsOn": [
+      "T05",
+      "T10"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/layouts/marketing-layout.ts",
+      "src/app/layouts/shop-layout.ts",
+      "src/app/layouts/checkout-layout.ts",
+      "src/app/core/navigation/",
+      "src/app/shared/shell/"
+    ],
+    "interface": "MarketingLayout → Home; ShopLayout → Catalogue/Product; CheckoutLayout → cart/contact/delivery/review/success. AppShell receives cart count.",
+    "deliverable": "Shared responsive shell and route behavior.",
+    "acceptanceCriteria": [
+      {
+        "id": "T11-AC01",
+        "text": "Three layout shells, four screen families and exact routes in docs/mi-bolt/spec/screens.md exist. 404 is a utility state, not a fifth commerce screen."
+      },
+      {
+        "id": "T11-AC02",
+        "text": "Header/footer remain brand-consistent; Hungarian navigation links work. Checkout removes distracting search but retains return-to-shop navigation."
+      },
+      {
+        "id": "T11-AC03",
+        "text": "Skip link, one H1, route title updates and route-change focus work; browser back does not discard URL filters."
+      },
+      {
+        "id": "T11-AC04",
+        "text": "Mobile menu is a focus-managed dialog/drawer, not a scaled desktop header; full-width mobile search appears in shop layouts."
+      },
+      {
+        "id": "T11-AC05",
+        "text": "Demo notice remains visible; cart badge derives from CartFacade.itemCount, never static copy or a second state store."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "navigation",
+      "design"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Shared responsive shell and route behavior.",
+    "wave": 4
+  },
+  {
+    "id": "T12",
+    "title": "Katalógus URL-state és signal facade",
+    "dependsOn": [
+      "T04",
+      "T06",
+      "T11"
+    ],
+    "area": "State",
+    "files": [
+      "src/app/features/catalog/catalog-query.ts",
+      "src/app/features/catalog/catalog.facade.ts",
+      "src/app/features/catalog/catalog.facade.spec.ts"
+    ],
+    "interface": "CatalogQuery codec; CatalogFacade.vm: Signal<CatalogVm>; setFilters, setSort, setPage, setSearch, retry.",
+    "deliverable": "A single URL source of truth with cancellation-safe data reads.",
+    "acceptanceCriteria": [
+      {
+        "id": "T12-AC01",
+        "text": "Normalize empty/default/unknown query values with the documented canonical URL codec; round-trip brand arrays and storage arrays without duplicates."
+      },
+      {
+        "id": "T12-AC02",
+        "text": "Search debounces 300 ms; filter/sort changes reset page to 1. Use switchMap or equivalent cancellation for generated Observable reads."
+      },
+      {
+        "id": "T12-AC03",
+        "text": "A deliberately slow old response never overwrites a newer query; no effect loop causes duplicate requests."
+      },
+      {
+        "id": "T12-AC04",
+        "text": "Distinct loading/refreshing/success/empty/error states preserve existing useful content; errors never turn into zero results."
+      },
+      {
+        "id": "T12-AC05",
+        "text": "Browser back/forward and direct links restore search, applied filters, page and sort; mobile draft filters remain local until Apply."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "catalog",
+      "race"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "A single URL source of truth with cancellation-safe data reads.",
+    "wave": 5
+  },
+  {
+    "id": "T13",
+    "title": "Terméklista képernyő",
+    "dependsOn": [
+      "T10",
+      "T12"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/catalog/catalog-page.ts",
+      "src/app/features/catalog/catalog-page.html",
+      "src/app/features/catalog/filter-panel.ts",
+      "src/app/features/catalog/filter-drawer.ts",
+      "src/app/features/catalog/product-card.ts"
+    ],
+    "interface": "CatalogPage consumes CatalogFacade; ProductCard emits navigation only; FilterPanel emits complete filter drafts.",
+    "deliverable": "Responsive list with real filter, sort and pagination interactions.",
+    "acceptanceCriteria": [
+      {
+        "id": "T13-AC01",
+        "text": "Desktop >=1280: 264px sidebar + 3-column grid. 1024–1279: sidebar + 2-column grid. 640–1023: drawer + 2-column grid. <640: drawer + 1 column."
+      },
+      {
+        "id": "T13-AC02",
+        "text": "Implement search, brand/storage/price/5G/stock, removable applied chips, result count, sort and 12/24 page size; all tied to URL and API."
+      },
+      {
+        "id": "T13-AC03",
+        "text": "Mobile Apply commits one filter set; Cancel/Escape leaves current URL unchanged. Focus/scroll/background behaviors satisfy the skill."
+      },
+      {
+        "id": "T13-AC04",
+        "text": "Cards preserve 4:3 media frame, complete device aspect ratio, matching variant, whole-HUF one-time price and outlined Details CTA."
+      },
+      {
+        "id": "T13-AC05",
+        "text": "Design default, loading, no-result, service error, missing-image and selected-filter states at minimum 320/390/768/1024/1440/1920 widths."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "catalog",
+      "design"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Responsive list with real filter, sort and pagination interactions.",
+    "wave": 6
+  },
+  {
+    "id": "T14",
+    "title": "Főoldal",
+    "dependsOn": [
+      "T11",
+      "T12"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/home/home-page.ts",
+      "src/app/features/home/hero.ts",
+      "src/app/features/home/featured-products.ts",
+      "src/app/features/home/how-demo-works.ts"
+    ],
+    "interface": "Home loads config featuredSlugs and products through generated SDK; category links produce CatalogQuery.",
+    "deliverable": "Dark product hero and light shopping entry points.",
+    "acceptanceCriteria": [
+      {
+        "id": "T14-AC01",
+        "text": "Use approved charcoal/orange composition with live Hungarian copy and nonfunctional artwork only; no embedded raster CTA or Nexora text in functional UI."
+      },
+      {
+        "id": "T14-AC02",
+        "text": "Main CTA opens catalogue. Category shortcuts set valid 5G/inStock filters, featured Details opens the correct slug and variant."
+      },
+      {
+        "id": "T14-AC03",
+        "text": "Four featured products come from fixed fixture data; loading/error do not show made-up prices."
+      },
+      {
+        "id": "T14-AC04",
+        "text": "Three explanatory tiles describe browsing, cart and simulated order, not absent tariffs/internet/services."
+      },
+      {
+        "id": "T14-AC05",
+        "text": "Mobile content order is heading, message, CTA, illustration, shortcuts, product cards; no hero text is clipped."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "home",
+      "design"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Dark product hero and light shopping entry points.",
+    "wave": 6
+  },
+  {
+    "id": "T15",
+    "title": "Termék- és változatkezelő facade",
+    "dependsOn": [
+      "T04",
+      "T06"
+    ],
+    "area": "State",
+    "files": [
+      "src/app/features/product/product.facade.ts",
+      "src/app/features/product/variant-selection.ts",
+      "src/app/features/product/variant-selection.spec.ts"
+    ],
+    "interface": "ProductFacade.vm: Signal<ProductVm>; selectVariant(id), selectImage(id), setQuantity(n), retry.",
+    "deliverable": "Variant selection with atomic price/stock/image state.",
+    "acceptanceCriteria": [
+      {
+        "id": "T15-AC01",
+        "text": "Route slug loads the product; optional variant query selects a valid exact variant. Invalid variant is visibly explained and requires user selection before add."
+      },
+      {
+        "id": "T15-AC02",
+        "text": "Changing color/storage does not silently substitute an unavailable pair. Disabled combinations carry a textual reason."
+      },
+      {
+        "id": "T15-AC03",
+        "text": "Price, availability, max quantity and gallery all come from the same selected variant; existing gallery index resets to a valid image."
+      },
+      {
+        "id": "T15-AC04",
+        "text": "Out-of-stock changes disable add; pending add prevents duplicate click. A route change cancels obsolete product loading."
+      },
+      {
+        "id": "T15-AC05",
+        "text": "Quantity retains only a valid explicit selection; display validation rather than hidden clamping when variant stock becomes insufficient."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "product",
+      "race"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Variant selection with atomic price/stock/image state.",
+    "wave": 5
+  },
+  {
+    "id": "T16",
+    "title": "Termékoldal és képgaléria",
+    "dependsOn": [
+      "T10",
+      "T11",
+      "T15"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/product/product-page.ts",
+      "src/app/features/product/product-gallery.ts",
+      "src/app/features/product/variant-selector.ts",
+      "src/app/features/product/specification-accordion.ts"
+    ],
+    "interface": "Product page emits addRequested({variantId,quantity}); CartFacade integration is delivered by T18.",
+    "deliverable": "Precise two-column product page and mobile purchase controls.",
+    "acceptanceCriteria": [
+      {
+        "id": "T16-AC01",
+        "text": "Desktop gallery/buy panel uses 7/5 columns with 24px gap; <1024 stacks gallery, configuration and specifications."
+      },
+      {
+        "id": "T16-AC02",
+        "text": "Gallery has previous/next, thumbnail selection, image count, zoom dialog, keyboard control and image-error fallback. No automatic carousel."
+      },
+      {
+        "id": "T16-AC03",
+        "text": "Color and storage show label/checkmark/semantic selection; spec groups use accessible disclosures. Text and images refer to the chosen variant."
+      },
+      {
+        "id": "T16-AC04",
+        "text": "Mobile purchase rail has price and primary CTA with safe-area padding and does not obscure keyboard focus or page content."
+      },
+      {
+        "id": "T16-AC05",
+        "text": "Baseline has no 3D script and no inactive fake 3D button. Optional O01 is separately approved and independently tested."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "product",
+      "gallery",
+      "design"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Precise two-column product page and mobile purchase controls.",
+    "wave": 6
+  },
+  {
+    "id": "T17",
+    "title": "Globális kosár signal facade",
+    "dependsOn": [
+      "T04",
+      "T07"
+    ],
+    "area": "State",
+    "files": [
+      "src/app/features/cart/cart.facade.ts",
+      "src/app/features/cart/cart-mutation-queue.ts",
+      "src/app/features/cart/cart.facade.spec.ts"
+    ],
+    "interface": "CartFacade.ensureCart/addItem/setQuantity/removeItem/retry; readonly cart,itemCount,subtotal,pending,error signals.",
+    "deliverable": "One root-provided cart owner with serialized mutations.",
+    "acceptanceCriteria": [
+      {
+        "id": "T17-AC01",
+        "text": "Header, product add and checkout read the same root-scoped CartFacade; no sibling event bus or duplicate totals."
+      },
+      {
+        "id": "T17-AC02",
+        "text": "Serialize mutations and bind expected version to each actual dispatch, not enqueue time. Use new idempotency key for a new intent, same key only for retry."
+      },
+      {
+        "id": "T17-AC03",
+        "text": "Wait for authoritative mutation response before changing line totals; pending controls prevent contradictory writes."
+      },
+      {
+        "id": "T17-AC04",
+        "text": "409 requires re-fetch then explicit user correction; do not replay an absolute quantity against newer state without consent."
+      },
+      {
+        "id": "T17-AC05",
+        "text": "401 is not invented for this unauthenticated demo; documented 404/410/storage-loss paths yield explicit recovery."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "cart",
+      "race"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "One root-provided cart owner with serialized mutations.",
+    "wave": 5
+  },
+  {
+    "id": "T18",
+    "title": "Kosár képernyő és kosárba helyezés",
+    "dependsOn": [
+      "T11",
+      "T16",
+      "T17"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/cart/cart-page.ts",
+      "src/app/features/cart/cart-line.ts",
+      "src/app/features/cart/order-summary.ts",
+      "src/app/features/product/add-to-cart.ts"
+    ],
+    "interface": "CartLine quantityChanged(number), removeRequested(void); page invokes CartFacade.",
+    "deliverable": "End-to-end product selection to editable cart.",
+    "acceptanceCriteria": [
+      {
+        "id": "T18-AC01",
+        "text": "Adding confirms product, color, storage and quantity in an accessible status; badge and cart line match the mock response."
+      },
+      {
+        "id": "T18-AC02",
+        "text": "Cart shows image/name/variant/unit price/quantity/line total, remove action and subtotal. Shipping is not misrepresented as final before method choice."
+      },
+      {
+        "id": "T18-AC03",
+        "text": "Quantity increment/decrement/remove handle max/min/pending/failure and preserve cart on error. Removing last item produces explicit empty screen."
+      },
+      {
+        "id": "T18-AC04",
+        "text": "Continue is disabled for empty/invalid/pending cart and navigates to /penztar/adatok only after authoritative revalidation."
+      },
+      {
+        "id": "T18-AC05",
+        "text": "Display 339990 × 2 = 679980 HUF; with home delivery total = 681970 HUF. Use no monthly fee or hidden add-on."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "cart",
+      "design"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "End-to-end product selection to editable cart.",
+    "wave": 7
+  },
+  {
+    "id": "T19",
+    "title": "Checkout scope, Signal Forms és route guardok",
+    "dependsOn": [
+      "T08",
+      "T18"
+    ],
+    "area": "State",
+    "files": [
+      "src/app/features/checkout/checkout.facade.ts",
+      "src/app/features/checkout/checkout.routes.ts",
+      "src/app/features/checkout/checkout.guards.ts",
+      "src/app/features/checkout/checkout-form.model.ts"
+    ],
+    "interface": "CheckoutFacade scoped to checkout parent; state machine cart→contact→delivery→review→submitting→success with error return paths.",
+    "deliverable": "Stateful wizard with explicit recovery and validation.",
+    "acceptanceCriteria": [
+      {
+        "id": "T19-AC01",
+        "text": "Use stable Angular 22 Signal Forms from @angular/forms/signals; signals own form data and validity; no duplicate FormGroup/BehaviorSubject source."
+      },
+      {
+        "id": "T19-AC02",
+        "text": "Direct deep link or full reload of incomplete checkout redirects to earliest incomplete step with explanation; cart survives but contact/address are cleared on reload."
+      },
+      {
+        "id": "T19-AC03",
+        "text": "Back navigation preserves in-memory fields; a declined payment/order error does not reset contact, address, method or cart."
+      },
+      {
+        "id": "T19-AC04",
+        "text": "Each page can advance only after its own inputs validate and draft save succeeds. Editing earlier data invalidates quote/intent."
+      },
+      {
+        "id": "T19-AC05",
+        "text": "No guard submits an order or starts payment; all writes require explicit UI actions."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "checkout",
+      "guards"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Stateful wizard with explicit recovery and validation.",
+    "wave": 8
+  },
+  {
+    "id": "T20",
+    "title": "Kapcsolattartási adatok képernyőállapot",
+    "dependsOn": [
+      "T10",
+      "T19"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/checkout/contact-step.ts",
+      "src/app/features/checkout/contact-step.html",
+      "src/app/features/checkout/contact.schema.ts"
+    ],
+    "interface": "ContactStep binds fullName/email/phone Signal Form; continueRequested passes validated Contact to CheckoutFacade.",
+    "deliverable": "Accessible contact entry with synthetic-data guidance.",
+    "acceptanceCriteria": [
+      {
+        "id": "T20-AC01",
+        "text": "Full name 2..100 trimmed characters; email <=254 and valid syntax; phone normalizes spaces/hyphens to +36 and validates 8–9 national digits."
+      },
+      {
+        "id": "T20-AC02",
+        "text": "Labels/autocomplete/errors are associated; invalid submission focuses summary then first invalid field, and 422 server field errors target JSON-pointer paths."
+      },
+      {
+        "id": "T20-AC03",
+        "text": "No marketing checkbox or account requirement; demóadat notice discourages real personal data. Fixture values use example.test and fictitious address."
+      },
+      {
+        "id": "T20-AC04",
+        "text": "Pending save prevents duplicate advance; failure retains all typed fields and exposes Retry."
+      },
+      {
+        "id": "T20-AC05",
+        "text": "Provide default, touched-invalid, submitted-invalid, loading and server-error visual states on narrow and desktop views."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "contact",
+      "accessibility"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Accessible contact entry with synthetic-data guidance.",
+    "wave": 9
+  },
+  {
+    "id": "T21",
+    "title": "Szállítás és fizetési mód állapot",
+    "dependsOn": [
+      "T08",
+      "T20"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/checkout/delivery-step.ts",
+      "src/app/features/checkout/address-form.ts",
+      "src/app/features/checkout/payment-method-selector.ts"
+    ],
+    "interface": "DeliveryStep emits DeliverySelection + demo_card|demo_cod; consumes CheckoutOptions.",
+    "deliverable": "Two delivery choices and two explicitly simulated payment choices.",
+    "acceptanceCriteria": [
+      {
+        "id": "T21-AC01",
+        "text": "Home-delivery fields are required only for that option; virtual pickup removes address from the submitted payload and announces no real pickup place."
+      },
+      {
+        "id": "T21-AC02",
+        "text": "Postal code [1-9][0-9]{3}, city 2..80, line1 3..120, optional line2 <=120; country fixed HU with visible label."
+      },
+      {
+        "id": "T21-AC03",
+        "text": "Shipping fee visibly follows selected option: 1990 vs 0 HUF. No tariff, installments, insurance, actual card field or provider redirect."
+      },
+      {
+        "id": "T21-AC04",
+        "text": "Changing any option invalidates previous quote/intent and requires fresh review; selection is not indicated by color alone."
+      },
+      {
+        "id": "T21-AC05",
+        "text": "Options-load error has retry and cannot render a fabricated free-shipping default."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "delivery",
+      "payment"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Two delivery choices and two explicitly simulated payment choices.",
+    "wave": 10
+  },
+  {
+    "id": "T22",
+    "title": "Végső ellenőrzés és árváltozás",
+    "dependsOn": [
+      "T19",
+      "T21"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/checkout/review-step.ts",
+      "src/app/features/checkout/quote-state.ts",
+      "src/app/features/checkout/terms-dialog.ts"
+    ],
+    "interface": "ReviewStep consumes Quote + contact/delivery views; emits submitRequested after valid explicit consents.",
+    "deliverable": "Complete review including fresh totals and editable previous sections.",
+    "acceptanceCriteria": [
+      {
+        "id": "T22-AC01",
+        "text": "Enter review by creating fresh quote. Show items, one-time subtotal, shipping, total and method; back/edit links preserve fields."
+      },
+      {
+        "id": "T22-AC02",
+        "text": "Display two unchecked consents: demo purchase terms and acknowledgement that this is simulation. Demo terms open in accessible dialog; do not present as production legal compliance."
+      },
+      {
+        "id": "T22-AC03",
+        "text": "PRICE_CHANGED, QUOTE_EXPIRED and OUT_OF_STOCK have distinct messages and correction paths; old amount cannot be submitted."
+      },
+      {
+        "id": "T22-AC04",
+        "text": "Primary CTA is Demórendelés véglegesítése; disabled while quote/consent/state incomplete, accompanied by an explanation."
+      },
+      {
+        "id": "T22-AC05",
+        "text": "Render loading, ready, quote-expired, price-change and field-error states without erasing the order summary."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "review",
+      "quote",
+      "design"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Complete review including fresh totals and editable previous sections.",
+    "wave": 11
+  },
+  {
+    "id": "T23",
+    "title": "Rendelésvezérlés, retry és függő fizetés",
+    "dependsOn": [
+      "T09",
+      "T22"
+    ],
+    "area": "State",
+    "files": [
+      "src/app/features/checkout/order-submission.ts",
+      "src/app/features/checkout/payment-progress.ts",
+      "e2e/checkout/submit.spec.ts"
+    ],
+    "interface": "submitOrder(): starts payment only for demo_card, then createOrder; retryUnknownOutcome() reuses persisted safe order key and body references.",
+    "deliverable": "User-driven submission with no duplicate orders.",
+    "acceptanceCriteria": [
+      {
+        "id": "T23-AC01",
+        "text": "COD commits directly; card first creates mock intent, then only succeeded allows order. Declined remains on review with retry/change-method actions."
+      },
+      {
+        "id": "T23-AC02",
+        "text": "Pending intent uses GET polling every 1 second for at most 10 attempts with deterministic clock; timeout yields recoverable unknown state, not success or failure claim."
+      },
+      {
+        "id": "T23-AC03",
+        "text": "Double-click, browser retry and timeout-after-commit produce exactly one order/stock decrement. Exhaust in-flight submit, do not cancel a write to start another."
+      },
+      {
+        "id": "T23-AC04",
+        "text": "Unknown outcome retains identical order key and normalized request; reload recovery queries stored receipt or replays exact order request without persisting contact/address."
+      },
+      {
+        "id": "T23-AC05",
+        "text": "Expected failure leaves inputs/cart intact. Logs omit contact/address and payment-like data."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "payment",
+      "order",
+      "idempotency"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "User-driven submission with no duplicate orders.",
+    "wave": 12
+  },
+  {
+    "id": "T24",
+    "title": "Sikeroldal, visszatöltés és lezárás",
+    "dependsOn": [
+      "T11",
+      "T23"
+    ],
+    "area": "UI",
+    "files": [
+      "src/app/features/checkout/success-step.ts",
+      "src/app/features/checkout/order-receipt.ts",
+      "e2e/checkout/receipt.spec.ts"
+    ],
+    "interface": "Success route /penztar/siker/:orderId reads getOrder; receipt rendered only from API response.",
+    "deliverable": "Truthful final confirmation and a clean next shopping session.",
+    "acceptanceCriteria": [
+      {
+        "id": "T24-AC01",
+        "text": "Show DEMO order number, line items, final total, simulated method and notice that no real transaction/email/delivery occurred."
+      },
+      {
+        "id": "T24-AC02",
+        "text": "Refresh restores the same receipt and never POSTs another order. Unknown order ID yields 404 recovery, not fabricated success."
+      },
+      {
+        "id": "T24-AC03",
+        "text": "Cart badge resets from ordered-cart handling; a new shopping action creates a fresh cart, preserving past receipt replay."
+      },
+      {
+        "id": "T24-AC04",
+        "text": "Browser back to submitting/review cannot resubmit the committed cart; redirect to existing receipt or new-cart action."
+      },
+      {
+        "id": "T24-AC05",
+        "text": "Keyboard focus lands on success heading; no success relies solely on toast or animation."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "receipt",
+      "design"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Truthful final confirmation and a clean next shopping session.",
+    "wave": 13
+  },
+  {
+    "id": "T25",
+    "title": "Reszponzív, állapot- és akadálymentességi audit",
+    "dependsOn": [
+      "T13",
+      "T14",
+      "T16",
+      "T18",
+      "T20",
+      "T21",
+      "T22",
+      "T24"
+    ],
+    "area": "Quality",
+    "files": [
+      "e2e/design/viewport-matrix.spec.ts",
+      "e2e/design/state-matrix.spec.ts",
+      "e2e/a11y/keyboard.spec.ts",
+      "docs/mi-bolt/execution/design-review.md"
+    ],
+    "interface": "Input: every screen and relevant component state. Output: measured screenshots, axe results, keyboard/focus report and R01–R26 evidence.",
+    "deliverable": "Independent mi-bolt-design review across the complete flow.",
+    "acceptanceCriteria": [
+      {
+        "id": "T25-AC01",
+        "text": "All four families and five checkout states have no page-level horizontal overflow at 320,390,768,1024,1440,1920 CSS px."
+      },
+      {
+        "id": "T25-AC02",
+        "text": "Compare generated screenshots to supplied reference composition and tokens. Record necessary deviations: MiBolt live name, accessible dark orange-button labels, no fake operator promises or omitted-scope nav."
+      },
+      {
+        "id": "T25-AC03",
+        "text": "Keyboard completes browsing→variant→cart→checkout→success; drawer/zoom/terms manage focus and restore it."
+      },
+      {
+        "id": "T25-AC04",
+        "text": "Check 200% text enlargement, reduced motion, narrow reflow, 44px shopping targets, contrast and sticky-CTA focus visibility."
+      },
+      {
+        "id": "T25-AC05",
+        "text": "Automated axe results and manual keyboard checks are separate evidence; do not claim a WCAG certificate from screenshots or static validation."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "accessibility",
+      "design",
+      "responsive"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Independent mi-bolt-design review across the complete flow.",
+    "wave": 14
+  },
+  {
+    "id": "T26",
+    "title": "SDK–MSW szerződésparitás",
+    "dependsOn": [
+      "T04",
+      "T06",
+      "T07",
+      "T08",
+      "T09"
+    ],
+    "area": "Quality",
+    "files": [
+      "tests/contract/operation-matrix.spec.ts",
+      "tests/contract/response-validation.ts",
+      "scripts/check-operation-parity.mjs"
+    ],
+    "interface": "Input: operation inventory derived at validation time directly from docs/mi-bolt/api/openapi.yaml (no separate hand-maintained operation list), actual SDK request capture, handler registry and status matrix.",
+    "deliverable": "Zero drift between API specification, SDK and mock domain behavior.",
+    "acceptanceCriteria": [
+      {
+        "id": "T26-AC01",
+        "text": "Exactly all 16 operationIds map to handlers and SDK transport tests; missing/extra business routes fail CI."
+      },
+      {
+        "id": "T26-AC02",
+        "text": "Validate every request/response at test boundary against OpenAPI schema and every documented business error code against operation behavior."
+      },
+      {
+        "id": "T26-AC03",
+        "text": "Include missing required header, wrong type, quantity overflow, stock conflict, stale version/quote, reused key and conditional-address/payment violations."
+      },
+      {
+        "id": "T26-AC04",
+        "text": "Demo and Node mock share the same domain implementation; browser and Node fixtures produce equivalent responses for equivalent session/clock/state."
+      },
+      {
+        "id": "T26-AC05",
+        "text": "Changing a schema fixture incompatibly makes at least one contract test fail; generated interfaces alone are not accepted as runtime validation."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "contract",
+      "sdk"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Zero drift between API specification, SDK and mock domain behavior.",
+    "wave": 7
+  },
+  {
+    "id": "T27",
+    "title": "Teljes unit és E2E lefedettség lezárása",
+    "dependsOn": [
+      "T02",
+      "T25",
+      "T26"
+    ],
+    "area": "Quality",
+    "files": [
+      "e2e/",
+      "tests/",
+      "docs/mi-bolt/spec/coverage-policy.json",
+      "scripts/check-traceability.mjs",
+      "scripts/check-test-policy.mjs"
+    ],
+    "interface": "Outputs independent unit and browser E2E reports, scenario coverage report, file manifest and requirement traceability.",
+    "deliverable": "100% as an enforced gate, never a presentation label.",
+    "acceptanceCriteria": [
+      {
+        "id": "T27-AC01",
+        "text": "UNIT: every owned runtime executable file has exactly 100% statements, branches, functions and lines; no uncovered source omitted from denominator."
+      },
+      {
+        "id": "T27-AC02",
+        "text": "E2E: independent Chromium browser source coverage for the same browser-delivered owned runtime has exactly 100% in all four metrics; never merge with unit counters."
+      },
+      {
+        "id": "T27-AC03",
+        "text": "100% of scenario rows and component-state requirements have passing assertions. Coverage measures execution, not correctness, so negative assertions and boundary cases are mandatory."
+      },
+      {
+        "id": "T27-AC04",
+        "text": "Chromium/Firefox/WebKit run the complete applicable business scenario suite against MSW. Chrome-derived JS coverage is not falsely reported as cross-browser code coverage."
+      },
+      {
+        "id": "T27-AC05",
+        "text": "Run test-order randomization and repeat the release suite three times with retries disabled; no skip/todo/only, flaky quarantine or lowered threshold."
+      },
+      {
+        "id": "T27-AC06",
+        "text": "Every deliberate failure expected by a scenario is asserted; unexpected console errors, schema errors, unhandled calls, missing artifact or external egress fail the run."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "coverage",
+      "all"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "100% as an enforced gate, never a presentation label.",
+    "wave": 15
+  },
+  {
+    "id": "T28",
+    "title": "Statikus kiadás, teljesítmény és SW-életciklus",
+    "dependsOn": [
+      "T24",
+      "T25",
+      "T27"
+    ],
+    "area": "Release",
+    "files": [
+      "scripts/serve-static.mjs",
+      "docs/mi-bolt/execution/deployment.md",
+      "e2e/deployment/deep-links.spec.ts",
+      "scripts/check-budgets.mjs"
+    ],
+    "interface": "Output: optimized demo-only static dist, route fallback, MSW cache policy and no external runtime dependency.",
+    "deliverable": "Deployable CSR demo with reproducible resource budgets.",
+    "acceptanceCriteria": [
+      {
+        "id": "T28-AC01",
+        "text": "Host through HTTPS or localhost; file:// is not a valid deployment for Angular/MSW even though the design prototype can be opened offline."
+      },
+      {
+        "id": "T28-AC02",
+        "text": "Static SPA fallback works for all deep links under / and /mi-bolt/. API paths never silently fallback to index.html; MSW startup failure blocks business actions."
+      },
+      {
+        "id": "T28-AC03",
+        "text": "index.html and mockServiceWorker.js use no-cache; hashed app assets immutable. Do not register Angular PWA worker or delete unrelated origin workers."
+      },
+      {
+        "id": "T28-AC04",
+        "text": "Baseline design budgets: initial JS <=300 KiB gzip, total first-view transferred assets <=1 MiB excluding optional 3D, per-route lazy JS <=150 KiB gzip, CLS <=0.1; record measured local Lighthouse profile, not field-user metrics."
+      },
+      {
+        "id": "T28-AC05",
+        "text": "No analytics, social, chat, consent SaaS, remote font or production API enters the network log; check optimized build separately from coverage build."
+      },
+      {
+        "id": "T28-AC06",
+        "text": "Any approved 3D lives in deferred chunk and separate asset budget; baseline bundle must not include it."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "deployment",
+      "performance"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "Deployable CSR demo with reproducible resource budgets.",
+    "wave": 16
+  },
+  {
+    "id": "T29",
+    "title": "Végső elfogadás és átadás",
+    "dependsOn": [
+      "T27",
+      "T28"
+    ],
+    "area": "Release",
+    "files": [
+      "docs/mi-bolt/execution/acceptance-report.md",
+      "docs/mi-bolt/execution/traceability.md",
+      "docs/mi-bolt/execution/runbook.md",
+      "release-manifest.json"
+    ],
+    "interface": "Consumes all evidence; produces final signed decision/checklist and artifact manifest.",
+    "deliverable": "A release accepted only when every project and task criterion passes.",
+    "acceptanceCriteria": [
+      {
+        "id": "T29-AC01",
+        "text": "All baseline tasks and project-wide criteria are marked accepted with real evidence; optional 3D remains explicitly out of scope unless approved."
+      },
+      {
+        "id": "T29-AC02",
+        "text": "Independently reload and apply mi-bolt-design to the final build, not only earlier component screenshots."
+      },
+      {
+        "id": "T29-AC03",
+        "text": "From a clean checkout run dependency install, skill validation, contract validation, SDK generation/drift, lint, unit coverage, E2E coverage, cross-browser, design and production build gates."
+      },
+      {
+        "id": "T29-AC04",
+        "text": "Provide exact versions, source revision, command outputs, screenshots, coverage reports, API contract, mock seed/scenario registry, launch instructions and limitations."
+      },
+      {
+        "id": "T29-AC05",
+        "text": "Do not call the MVP production commerce: it persists only demo state, sends no order/email and collects no real payment."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "release"
+    ],
+    "status": "planned",
+    "optional": false,
+    "titleEnglish": "A release accepted only when every project and task criterion passes.",
+    "conditionalDependsOn": {
+      "when": "3d-approved",
+      "ids": [
+        "O01"
+      ]
+    },
+    "wave": 17
+  },
+  {
+    "id": "O01",
+    "title": "Opcionális 3D terméknézet – csak jóváhagyás után",
+    "dependsOn": [
+      "T02",
+      "T16"
+    ],
+    "area": "Optional",
+    "files": [
+      "docs/mi-bolt/execution/decisions/3d.md",
+      "src/app/features/product/product-3d-viewer.ts",
+      "src/app/features/product/model-viewer-adapter.ts",
+      "public/assets/models/",
+      "e2e/product/3d.spec.ts"
+    ],
+    "interface": "Input: approved scope and licensed local .glb + poster. Output: deferred <model-viewer> adapter with non-3D fallback.",
+    "deliverable": "A self-hosted 3D proof for ONE fictional/authorized device, not Binkies SaaS cloning.",
+    "acceptanceCriteria": [
+      {
+        "id": "O01-AC01",
+        "text": "Explicit approval and licensed model provenance must exist before adding dependency or CTA. Default plan does not include this task in baseline acceptance."
+      },
+      {
+        "id": "O01-AC02",
+        "text": "Use locally bundled @google/model-viewer, local model/poster/decoders and camera-controls; enable load only after user action; no AR, auto-rotation or analytics."
+      },
+      {
+        "id": "O01-AC03",
+        "text": "No external glTF texture/environment/decoder URL; aggregate compressed asset budget <=3 MiB for the single demo model, viewer JS measured separately."
+      },
+      {
+        "id": "O01-AC04",
+        "text": "Keyboard-accessible controls and static gallery fallback cover loading, progress, success, model fetch/decode error and unavailable WebGL."
+      },
+      {
+        "id": "O01-AC05",
+        "text": "Unit mock the viewer adapter, not the product facade/API; browser tests load deterministic local model through MSW asset scenario and test actual interaction. Application wrapper code joins both 100% coverage manifests."
+      },
+      {
+        "id": "O01-AC06",
+        "text": "Final release task gains O01 as dependency once approved; optional status cannot hide partially shipped, untested 3D code."
+      }
+    ],
+    "commonAcceptanceCriteria": [
+      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
+      "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
+      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
+      "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
+    ],
+    "testGroups": [
+      "3d"
+    ],
+    "status": "planned",
+    "optional": true,
+    "titleEnglish": "A self-hosted 3D proof for ONE fictional/authorized device, not Binkies SaaS cloning.",
+    "wave": 7
+  }
+]

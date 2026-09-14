@@ -1,0 +1,29 @@
+{
+  "deliveryOptions": [
+    {
+      "id": "home_delivery",
+      "label": "Házhoz szállítás – demó",
+      "fee": {
+        "amount": 1990,
+        "currency": "HUF"
+      },
+      "requiresAddress": true,
+      "description": "Fiktív szállítási díj; nem indul valódi kézbesítés."
+    },
+    {
+      "id": "demo_pickup",
+      "label": "Demó átvételi pont",
+      "fee": {
+        "amount": 0,
+        "currency": "HUF"
+      },
+      "requiresAddress": false,
+      "description": "Virtuális átvételi lehetőség; nincs valós üzletcím."
+    }
+  ],
+  "paymentMethods": [
+    "demo_card",
+    "demo_cod"
+  ],
+  "termsVersion": "demo-1"
+}
