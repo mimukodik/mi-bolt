@@ -70,7 +70,7 @@ function resolveOptions(
   };
   const ids = base.ids ?? createDeterministicIds(scenario.seed);
   const clock = base.clock ?? createFixedClock(new Date(0).toISOString());
-  const repository = base.repository ?? new Repository(scenario, ids);
+  const repository = base.repository ?? new Repository(scenario, ids, clock);
   return {
     repository,
     clock,

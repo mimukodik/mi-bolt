@@ -65,36 +65,40 @@ export function createStrictHandlers(options: CreateHandlersOptions): RequestHan
  */
 export function createHandlers(options: CreateHandlersOptions): RequestHandler[] {
   const handlers = createStrictHandlers(options);
-  handlers.push(createDispatcherShell(options));
+  handlers.push(...createDispatcherShell(options));
   return handlers;
 }
 
+function notFoundBody(options: CreateHandlersOptions) {
+  return {
+    type: 'urn:mi-bolt:problem:not-found',
+    title: 'A kért végpont nem található',
+    status: 404,
+    code: 'NOT_FOUND',
+    detail: 'A mock dispatcher nem talált kezelőt ehhez az útvonalhoz.',
+    traceId: `mock-trace-${options.scenario.name}`,
+    fieldErrors: [],
+  };
+}
+
 /**
- * Returns a catch-all handler that produces a `404 NOT_FOUND`
- * Problem JSON for any `/api/v1/*` route the business slices did not
- * register. The dispatcher also matches the bare `/api/v1` root so a
- * misrouted curl cannot bypass the apiRoot prefix.
+ * Returns catch-all handlers that produce a `404 NOT_FOUND` Problem
+ * JSON for any `/api/v1/*` route the business slices did not register.
+ * The shell also matches the bare `/api/v1` root (with no trailing
+ * slash) so a misrouted curl cannot bypass the apiRoot prefix — the
+ * wildcard alone would not claim the empty-path case.
  */
-function createDispatcherShell(options: CreateHandlersOptions): RequestHandler {
+function createDispatcherShell(options: CreateHandlersOptions): readonly RequestHandler[] {
   const base = options.apiRoot.endsWith('/')
     ? options.apiRoot.slice(0, -1)
     : options.apiRoot;
   const prefix = `${base}/`;
-  return http.all(`${prefix}*`, () =>
-    HttpResponse.json(
-      {
-        type: 'urn:mi-bolt:problem:not-found',
-        title: 'A kért végpont nem található',
-        status: 404,
-        code: 'NOT_FOUND',
-        detail: 'A mock dispatcher nem talált kezelőt ehhez az útvonalhoz.',
-        traceId: `mock-trace-${options.scenario.name}`,
-        fieldErrors: [],
-      },
-      {
-        status: 404,
-        headers: { 'content-type': 'application/problem+json' },
-      },
-    ),
-  );
+  const responseInit = {
+    status: 404,
+    headers: { 'content-type': 'application/problem+json' },
+  } as const;
+  return [
+    http.all(base, () => HttpResponse.json(notFoundBody(options), responseInit)),
+    http.all(`${prefix}*`, () => HttpResponse.json(notFoundBody(options), responseInit)),
+  ];
 }

@@ -46,7 +46,7 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const scenario = parseScenarioFromLocation();
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
-  const repository = new Repository(scenario, ids);
+  const repository = new Repository(scenario, ids, clock);
   return {
     repository,
     clock,

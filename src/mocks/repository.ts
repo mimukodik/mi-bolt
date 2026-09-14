@@ -50,7 +50,7 @@ export type OrderReceipt = {
   total: { amount: number; currency: string };
 };
 
-import type { Ids, ScenarioDescriptor } from './scenarios';
+import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 
 /**
  * The marketplace demo device is the single seed product. The full
@@ -80,6 +80,7 @@ export class Repository {
   constructor(
     private readonly scenario: ScenarioDescriptor,
     private readonly ids: Ids,
+    private readonly clock: Clock,
   ) {
     this.seed();
   }
@@ -108,7 +109,7 @@ export class Repository {
   createCart(sessionId: string): Cart {
     this.cartCounter += 1;
     const cartId = `cart-${this.scenario.name}-${this.cartCounter.toString(36)}-${this.ids.uuid()}`;
-    const now = new Date(Date.now() + this.scenario.clockOffsetMs).toISOString();
+    const now = this.clock.now();
     const cart: Cart = {
       id: cartId,
       version: 1,

@@ -27,10 +27,6 @@ import {
 const SCENARIO_KEY = 'test-scenario';
 const STORAGE_KEY = snapshotKey(SCENARIO_KEY);
 
-function withSessionStorage<T>(run: () => T): T {
-  return run();
-}
-
 function rawStorage(): Storage | null {
   return (globalThis as { sessionStorage?: Storage }).sessionStorage ?? null;
 }
@@ -59,7 +55,7 @@ function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
 describe('T05-AC02 handler factory', () => {
   it('returns a RequestHandler[] with the dispatcher shell and exposes the same factory for browser and node', () => {
     const options = {
-      repository: new Repository(DEFAULT_SCENARIO, createDeterministicIds(1)),
+      repository: new Repository(DEFAULT_SCENARIO, createDeterministicIds(1), createFixedClock('2026-09-14T10:00:00.000Z')),
       clock: createFixedClock('2026-09-14T10:00:00.000Z'),
       ids: createDeterministicIds(1),
       scenario: DEFAULT_SCENARIO,
@@ -142,7 +138,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
   });
 
   it('rejects malformed JSON and clears the corrupted entry', () => {
-    withSessionStorage(() => writeRaw('not-valid-json{{'));
+    writeRaw('not-valid-json{{');
     const persistence = createBrowserPersistence({
       nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
     });
@@ -207,8 +203,8 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
 
 describe('T05-AC06 scenario isolation', () => {
   it('two scenarios keep independent repositories and snapshot storage', () => {
-    const repoA = new Repository({ ...DEFAULT_SCENARIO, name: 'isolated-A' }, createDeterministicIds(1));
-    const repoB = new Repository({ ...DEFAULT_SCENARIO, name: 'isolated-B' }, createDeterministicIds(2));
+    const repoA = new Repository({ ...DEFAULT_SCENARIO, name: 'isolated-A' }, createDeterministicIds(1), createFixedClock('2026-09-14T10:00:00.000Z'));
+    const repoB = new Repository({ ...DEFAULT_SCENARIO, name: 'isolated-B' }, createDeterministicIds(2), createFixedClock('2026-09-14T10:00:00.000Z'));
     repoA.createCart('sess-a');
     expect(repoA.listCarts()).toHaveLength(1);
     expect(repoB.listCarts()).toHaveLength(0);

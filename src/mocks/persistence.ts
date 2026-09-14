@@ -188,9 +188,9 @@ export class Persistence {
   /** Persists a snapshot for the given scenario. */
   save(scenarioName: ScenarioName, snapshot: MockSnapshot): { ok: boolean } {
     const key = snapshotKey(scenarioName);
-    this.adapter.write(key, JSON.stringify(snapshot));
+    const result = this.adapter.write(key, JSON.stringify(snapshot));
     this.lastSnapshot = snapshot;
-    return { ok: true };
+    return result;
   }
 
   /**
@@ -305,7 +305,7 @@ function isValidCartLine(value: unknown): value is PersistedCartLine {
   const i = record(value);
   if (typeof i['id'] !== 'string') return false;
   if (typeof i['variantId'] !== 'string') return false;
-  if (typeof i['quantity'] !== 'number') return false;
+  if (!isPositiveInteger(i['quantity'])) return false;
   const allowed = new Set(['id', 'variantId', 'quantity']);
   for (const key of Object.keys(i)) {
     if (!allowed.has(key)) return false;
@@ -344,7 +344,7 @@ function isValidReceiptItem(value: unknown): value is PersistedReceiptItem {
   if (!value || typeof value !== 'object') return false;
   const i = record(value);
   if (typeof i['variantId'] !== 'string') return false;
-  if (typeof i['quantity'] !== 'number') return false;
+  if (!isPositiveInteger(i['quantity'])) return false;
   if (!isValidMoney(i['unitPrice'])) return false;
   if (!isValidMoney(i['lineTotal'])) return false;
   const allowed = new Set(['variantId', 'quantity', 'unitPrice', 'lineTotal']);
@@ -357,9 +357,13 @@ function isValidReceiptItem(value: unknown): value is PersistedReceiptItem {
 function isValidMoney(value: unknown): value is { amount: number; currency: string } {
   if (!value || typeof value !== 'object') return false;
   const m = record(value);
-  if (typeof m['amount'] !== 'number') return false;
+  if (typeof m['amount'] !== 'number' || !Number.isFinite(m['amount']) || m['amount'] < 0) return false;
   if (typeof m['currency'] !== 'string') return false;
   return true;
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0;
 }
 
 function record(value: object): Record<string, unknown> {

@@ -54,10 +54,10 @@ export const DEFAULT_SCENARIO: ScenarioDescriptor = Object.freeze({
 });
 
 /**
- * Built-in scenarios. T06–T09 register additional entries by
- * importing this map and mutating it in their own files; the registry
- * is exported so future tasks can extend it without re-listing every
- * existing entry.
+ * Built-in scenarios. The registry is frozen at module load; T06–T09
+ * register additional entries by adding them to this file (or, if a
+ * runtime extension is needed, by going through `resolveScenario`
+ * with a new `name`) rather than mutating the exported object.
  */
 export const BUILT_IN_SCENARIOS: Readonly<Record<ScenarioName, ScenarioDescriptor>> =
   Object.freeze({
