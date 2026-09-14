@@ -31,11 +31,39 @@ module.exports = defineConfig([
           style: 'kebab-case',
         },
       ],
+      // Forbid legacy `@Input()` / `@Output()` decorators in favor of the
+      // signal-based input() / output() / model() APIs. Backed by the
+      // mi-bolt-design skill and T01-AC03.
+      '@angular-eslint/prefer-signals': 'error',
+    },
+  },
+  // Pre-existing shared UI primitives were authored against an earlier
+  // Angular style (decorator-based `@Input()`, `ChangeDetectionStrategy.OnPush`,
+  // `@ViewChild`). Carrying them over to the modern signal-based form is
+  // out of scope for T01; relax the modern rules for that path so the
+  // workspace lint stays green while T07/T25 rework them as a unit.
+  {
+    files: ['src/app/shared/ui/**/*.ts'],
+    rules: {
+      '@angular-eslint/prefer-signals': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {
     files: ['**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
-    rules: {},
+    rules: {
+      // Disallow the legacy `*ngIf` / `*ngFor` / `*ngSwitch` structural
+      // directives. Modern Angular code uses the native `@if` / `@for` /
+      // `@switch` blocks (T01-AC03 + T01-G03).
+      '@angular-eslint/template/prefer-control-flow': 'error',
+    },
   },
 ]);

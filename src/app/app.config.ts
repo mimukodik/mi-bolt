@@ -1,10 +1,57 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { routes } from './app.routes';
+import {
+  ApplicationConfig,
+  EnvironmentProviders,
+  Provider,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
+import { APP_BASE_HREF } from '@angular/common';
+import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 
+import { routes } from './app.routes';
+import { environment } from '../environments/environment';
+
+/**
+ * Local production / development / e2e build providers. Each binding is
+ * kept as a named top-level constant so the call site is auditable
+ * in tests and remains a single source of truth: removing the constant
+ * deletes the call as well, and downstream tasks can extend the list by
+ * inserting a new `const _foo = provideX(...)` line.
+ */
+const _provideZoneless: EnvironmentProviders = provideZonelessChangeDetection();
+const _provideHttpWithFetch = provideHttpClient(withFetch());
+const _provideRouter = provideRouter(routes, withComponentInputBinding());
+const _provideBaseHref: Provider = {
+  provide: APP_BASE_HREF,
+  useValue: environment.apiBase === '/api/v1' ? '/' : '/mi-bolt/',
+};
+
+/**
+ * `appConfig` is the provider list passed to `bootstrapApplication`
+ * inside `main.ts`. `bootstrapApplication(App, appConfig)` is the
+ * only call into the Angular application surface in production builds.
+ */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes)
-  ]
+    _provideZoneless,
+    _provideHttpWithFetch,
+    _provideRouter,
+    _provideBaseHref,
+  ],
 };
+
+/**
+ * `providerManifest` is consumed by `app.spec.ts` to assert that each
+ * provider required by T01-AC01..AC04 was actually wired up. The
+ * exports are the live references returned by each provider function;
+ * removing the constant above breaks the build, which is the
+ * protection the manifest relies on.
+ */
+export const providerManifest = {
+  zonelessChangeDetection: _provideZoneless,
+  httpClientWithFetch: _provideHttpWithFetch,
+  router: _provideRouter,
+  baseHref: _provideBaseHref,
+} as const;
