@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, effect, inject, input } from '@angular/core';
+import { Component, DestroyRef, inject, input } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterOutlet } from '@angular/router';
 
 import { AppShell } from '../shared/shell/app-shell';
@@ -130,8 +131,9 @@ const STEP_ORDER: ReadonlyArray<CheckoutStep> = ['cart', 'contact', 'delivery', 
     `,
   ],
 })
-export class CheckoutLayout implements OnInit {
+export class CheckoutLayout {
   private readonly routeFocus = inject(RouteFocusService);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Active step in the flow. Default is cart. */
   readonly currentStep = input<CheckoutStep>('cart');
@@ -145,12 +147,10 @@ export class CheckoutLayout implements OnInit {
   ];
 
   constructor() {
-    effect(() => {
-      this.routeFocus.routeChange$;
-    });
-  }
-
-  ngOnInit(): void {
-    queueMicrotask(() => this.routeFocus.focusMainHeading());
+    this.routeFocus.navigationEnd$()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        queueMicrotask(() => this.routeFocus.focusMainHeading());
+      });
   }
 }

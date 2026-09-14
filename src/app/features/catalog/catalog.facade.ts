@@ -68,7 +68,13 @@ export interface CatalogVm {
   readonly total: number;
   readonly page: number;
   readonly pageSize: 12 | 24;
-  readonly facets: readonly FacetValue[] | null;
+  /** Brand and storage facet buckets kept separate so the UI can
+   *  render them under their own headings without inferring the kind
+   *  from each value. `null` until the first successful response. */
+  readonly facets: {
+    readonly brands: readonly FacetValue[];
+    readonly storageGb: readonly FacetValue[];
+  } | null;
   readonly error: string | null;
 };
 
@@ -78,7 +84,13 @@ interface CatalogResult {
   readonly total: number;
   readonly page: number;
   readonly pageSize: 12 | 24;
-  readonly facets: readonly FacetValue[];
+  /** Brand and storage facet counts live in separate buckets so the UI
+   *  can render them under their own headings without guessing which
+   *  bucket a flattened `FacetValue` came from. */
+  readonly facets: {
+    readonly brands: readonly FacetValue[];
+    readonly storageGb: readonly FacetValue[];
+  };
 }
 
 /**
@@ -207,7 +219,10 @@ export class CatalogFacade {
             total: event.page.total,
             page: event.page.page,
             pageSize: event.page.pageSize,
-            facets: event.page.facets.brands.concat(event.page.facets.storageGb),
+            facets: {
+              brands: event.page.facets.brands,
+              storageGb: event.page.facets.storageGb,
+            },
           });
         } else {
           this.errorSignal.set(event.error);

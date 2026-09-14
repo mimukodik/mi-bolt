@@ -313,6 +313,24 @@ export class CartFacade {
     });
   }
 
+  /**
+   * Test seam: replaces the local cart snapshot with one the unit
+   * suite supplied. Production code does not call this; the layout
+   * spec uses it to drive `itemCount` without standing up the full
+   * create / mutate / refetch lifecycle.
+   */
+  _seedCart(snapshot: Partial<Cart> & { id: string; itemCount: number }): void {
+    this.cartWritable.set({
+      id: snapshot.id,
+      version: snapshot.version ?? 1,
+      items: snapshot.items ?? [],
+      itemCount: snapshot.itemCount,
+      subtotal: snapshot.subtotal ?? { ...ZERO_MONEY },
+      status: snapshot.status ?? 'active',
+      expiresAt: snapshot.expiresAt ?? '2026-12-31T23:59:59.000Z',
+    });
+  }
+
   // -------------------------------------------------------------------------
   // Dispatch helpers — wire the SDK + interceptor + Problem mapping into the
   // queue. Each helper returns a typed `DispatchResult` so the queue never
@@ -320,7 +338,6 @@ export class CartFacade {
   // -------------------------------------------------------------------------
 
   private async dispatchCreate(inputs: DispatchInputs): Promise<DispatchResult> {
-    void inputs;
     try {
       const response = await firstValueFrom(
         this.api.invoke(
@@ -333,7 +350,10 @@ export class CartFacade {
       );
       return { ok: true, cart: response, replayed: false };
     } catch (err) {
-      return mapError(err);
+      // Route the failure through `handleError` so a 409/410/404 on
+      // create surfaces in the same `conflict` / `cartGone` /
+      // `cartExpired` signals the rest of the mutation API uses.
+      return this.handleError(inputs, err);
     }
   }
 
@@ -430,7 +450,10 @@ export class CartFacade {
       );
       return { ok: true, cart: response, replayed: false };
     } catch (err) {
-      return mapError(err);
+      // Funnel refetch failures through `handleError` too: a 404 here
+      // means the cart disappeared between the original conflict and
+      // the refetch, which the UI must surface as `cartGone`.
+      return this.handleError(inputs, err);
     }
   }
 
@@ -469,11 +492,19 @@ export class CartFacade {
       return;
     }
     if (result.code === 'CART_EXPIRED') {
+      // Drop the local snapshot so the next ensureCart() actually
+      // creates a fresh cart instead of seeing an "active" status the
+      // server will reject.
+      this.cartWritable.set(null);
       this.cartExpiredWritable.set(true);
       this.lastFailedIntent = null;
       return;
     }
     if (result.code === 'NOT_FOUND') {
+      // Same recovery rule: a 404 on any cart mutation means the cart
+      // no longer exists on the server, so the local snapshot must
+      // not block ensureCart() from starting over.
+      this.cartWritable.set(null);
       this.cartGoneWritable.set(true);
       this.lastFailedIntent = null;
       return;

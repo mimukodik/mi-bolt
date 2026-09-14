@@ -121,8 +121,17 @@ function idempotencyKeyOf(request: Request): string | null {
   return request.headers.get('Idempotency-Key');
 }
 
-function isNonEmpty(value: string): boolean {
-  return value.length >= 8 && value.length <= 100;
+/**
+ * Mirrors `CartDomain.HeaderRules.sessionPattern` so the checkout
+ * mock rejects the same malformed session ids the cart mock rejects.
+ * Without this, an id with the right length but wrong characters
+ * (e.g. spaces) would pass the handler and only fail later in the
+ * domain with a less specific error.
+ */
+const SESSION_PATTERN = /^[a-zA-Z0-9_-]{8,80}$/;
+
+function isValidSession(value: string): boolean {
+  return SESSION_PATTERN.test(value);
 }
 
 function badRequest(detail: string, traceId: string): HttpResponse<Record<string, unknown>> {
@@ -165,7 +174,7 @@ export function buildCheckoutHandlers(
     ({ request, params }) => {
       const sessionId = sessionOf(request);
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      if (!isNonEmpty(sessionId)) {
+      if (!isValidSession(sessionId)) {
         return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
       }
       const cartId = String(params['cartId']);
@@ -196,7 +205,7 @@ export function buildCheckoutHandlers(
     async ({ request, params }) => {
       const sessionId = sessionOf(request);
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      if (!isNonEmpty(sessionId)) {
+      if (!isValidSession(sessionId)) {
         return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
       }
       const idempotencyKey = idempotencyKeyOf(request);
@@ -234,7 +243,7 @@ export function buildCheckoutHandlers(
     ({ request, params }) => {
       const sessionId = sessionOf(request);
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      if (!isNonEmpty(sessionId)) {
+      if (!isValidSession(sessionId)) {
         return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
       }
       const idempotencyKey = idempotencyKeyOf(request);

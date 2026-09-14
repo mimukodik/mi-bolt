@@ -499,7 +499,7 @@ export class CartDomain {
     const firstImage = variant.images[0];
     const image: Image = firstImage ?? {
       id: `${variant.id}-placeholder`,
-      src: '/assets/products/placeholder.webp',
+      src: '/assets/placeholder.svg',
       alt: `${product.name}, ${variant.colorName}, ${variant.storageGb} GB`,
       width: 320,
       height: 400,

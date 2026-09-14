@@ -12,7 +12,6 @@ import { branch } from './canary';
 
 @Component({
   selector: 'app-coverage-canary',
-  standalone: true,
   template: `
     <main class="canary">
       <h1 data-testid="canary-title">Coverage canary</h1>

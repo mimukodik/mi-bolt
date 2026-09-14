@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, effect, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterOutlet } from '@angular/router';
 
 import { AppShell } from '../shared/shell/app-shell';
@@ -41,22 +42,19 @@ import { RouteFocusService } from '../core/navigation/route-focus';
     `,
   ],
 })
-export class MarketingLayout implements OnInit {
+export class MarketingLayout {
   private readonly routeFocus = inject(RouteFocusService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
-    // Re-focus the page H1 on every navigation. The directive below is
-    // attached to the H1 inside the lazy page, but the layout also
-    // forwards the route-change pulse through the focus service so
-    // navigation between lazy chunks always lands on the new heading.
-    effect(() => {
-      this.routeFocus.routeChange$;
-    });
-  }
-
-  ngOnInit(): void {
-    // Move focus to the first H1 inside the main landmark after the
-    // initial render. The lazy HomePage H1 is in the DOM at this point.
-    queueMicrotask(() => this.routeFocus.focusMainHeading());
+    // Move focus to the new H1 on every navigation so keyboard and
+    // screen-reader users land on the active page heading rather than
+    // staying on the previous one. A `queueMicrotask` defers the read
+    // until Angular has rendered the lazy chunk's H1.
+    this.routeFocus.navigationEnd$()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        queueMicrotask(() => this.routeFocus.focusMainHeading());
+      });
   }
 }

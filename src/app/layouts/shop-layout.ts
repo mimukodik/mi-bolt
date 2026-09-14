@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, effect, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterOutlet } from '@angular/router';
 
 import { AppShell } from '../shared/shell/app-shell';
@@ -49,16 +50,15 @@ import { RouteFocusService } from '../core/navigation/route-focus';
     `,
   ],
 })
-export class ShopLayout implements OnInit {
+export class ShopLayout {
   private readonly routeFocus = inject(RouteFocusService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
-    effect(() => {
-      this.routeFocus.routeChange$;
-    });
-  }
-
-  ngOnInit(): void {
-    queueMicrotask(() => this.routeFocus.focusMainHeading());
+    this.routeFocus.navigationEnd$()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        queueMicrotask(() => this.routeFocus.focusMainHeading());
+      });
   }
 }

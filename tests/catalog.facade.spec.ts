@@ -681,7 +681,7 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
     expect(vm.items).toEqual(items);
     expect(vm.total).toBe(1);
     expect(vm.facets).not.toBeNull();
-    expect(vm.facets?.some((f) => f.value === '128')).toBe(true);
+    expect(vm.facets?.storageGb.some((f) => f.value === '128')).toBe(true);
     expect(vm.error).toBeNull();
   });
 

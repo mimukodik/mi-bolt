@@ -360,8 +360,14 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     const f = TestBed.createComponent(AppShell);
     f.componentRef.setInput('variant', 'marketing');
     f.detectChanges();
-    const facade = TestBed.inject(CartCountFacade) as unknown as { count: { set: (v: number) => void } };
-    facade.count.set(3);
+    // T17 replaced the T11 stub with the real CartFacade: there is no
+    // writable `count` signal any more. Drive the badge through the
+    // authoritative cart snapshot — `_seedCart` is the test seam that
+    // points the facade at a known cart id.
+    const facade = TestBed.inject(CartCountFacade) as unknown as {
+      _seedCart: (input: { id: string; itemCount: number }) => void;
+    };
+    facade._seedCart({ id: 'cart-test-001', itemCount: 3 });
     f.detectChanges();
     const badge = f.nativeElement.querySelector('[data-testid="cart-badge"]');
     const text = badge && badge.textContent ? badge.textContent.trim() : '';

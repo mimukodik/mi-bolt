@@ -505,8 +505,11 @@ describe('T17-AC05: 404/410/explicit recovery; no 401 path', () => {
 
     await facade.addItem(VARIANT_G256, 1).catch(() => undefined);
     expect(facade.cartExpired()).toBe(true);
-    // The local snapshot must reflect the cart id we created.
-    expect(facade.cart()?.id === cartId).toBe(true);
+    // The local snapshot is dropped on 410 so the next ensureCart()
+    // actually creates a fresh cart instead of seeing an "active"
+    // status the server will reject.
+    expect(facade.cart()).toBeNull();
+    expect(cartId).not.toBeNull();
   });
 
   it('does not invent a 401 signal — there is no auth surface in this demo', () => {
