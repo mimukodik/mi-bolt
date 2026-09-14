@@ -4,14 +4,23 @@ import localeHu from '@angular/common/locales/hu';
 
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
-import { environment } from './environments/environment';
-import { startMockWorker, worker } from './mocks/browser';
+import { prepareMocks } from './core/bootstrap-demo';
 
 // Register Hungarian locale data before bootstrap so the DatePipe,
 // CurrencyPipe and friends format Hungarian numbers, dates and
 // currency values. Locale data is referenced by `hu-HU` everywhere
 // in the application; redeclaring here is a no-op for re-imports.
 registerLocaleData(localeHu, 'hu-HU');
+
+// Re-export `prepareMocks` so E2E specs that bind handlers via the
+// global Playwright `page.exposeBinding` indirection can detect that
+// the demo is ready before continuing.
+export { prepareMocks };
+
+// Re-export the browser worker so E2E specs that bind handlers via
+// `page.exposeBinding` can reach the same MSW instance that the
+// service worker uses.
+export { worker } from './mocks/browser';
 
 /**
  * Boot the MSW service worker BEFORE Angular bootstraps so any
@@ -24,30 +33,17 @@ registerLocaleData(localeHu, 'hu-HU');
  * gate: a request that escapes the registered handlers fails the
  * surrounding test, both for the unit suite (msw/node setupServer)
  * and for the E2E suite (msw/browser setupWorker).
- */
-async function prepareMocks(): Promise<void> {
-  if (!environment.demo && !environment.e2e) return;
-  try {
-    await startMockWorker();
-  } catch (err) {
-    console.error('[MiBolt] MSW worker failed to start:', err);
-  }
-}
-
-/**
- * Bootstrap the MiBolt standalone zoneless CSR application. If
- * bootstrap throws — usually because a critical provider is missing
- * or the home route component failed to load — render the fatal
- * surface that lives in `app.html` instead of leaving a blank page.
+ *
+ * `prepareMocks()` (T05) hydrates the sessionStorage snapshot
+ * BEFORE starting the worker so the very first intercepted request
+ * can already read the cart/receipt state from the previous tab.
+ * If registration or startup throws, `showFatal` renders the
+ * fatal-startup surface defined in `app.html`.
  */
 prepareMocks()
+  .then(() => bootstrapApplication(App, appConfig))
   .catch((err) => {
-    console.error('[MiBolt] Mock preparation failed:', err);
-  })
-  .finally(() => {
-    bootstrapApplication(App, appConfig).catch((err) => {
-      showFatal(err);
-    });
+    showFatal(err);
   });
 
 function showFatal(err: unknown): void {
@@ -57,8 +53,3 @@ function showFatal(err: unknown): void {
     fatal.hidden = false;
   }
 }
-
-// Re-export `worker` for E2E specs that bind handlers via the
-// global Playwright `page.exposeBinding` indirection. The bundler
-// keeps the export alive even when unused at runtime.
-export { worker };

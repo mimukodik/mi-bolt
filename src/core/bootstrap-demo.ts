@@ -1,0 +1,62 @@
+/**
+ * T05 — bootstrap-demo entry point.
+ *
+ * `prepareMocks()` is the single public hook the rest of the
+ * application calls before `bootstrapApplication`. It:
+ *
+ *   1. Resolves the active scenario from `?mi-scenario=`.
+ *   2. Hydrates the sessionStorage snapshot via the persistence
+ *      adapter so the handler factory can read cart/receipt state
+ *      from a cold reload.
+ *   3. Starts the MSW service worker so any HTTP call made during
+ *      application initialisation is intercepted.
+ *
+ * Steps 2 and 3 run sequentially; if either fails the function
+ * throws so the caller (`src/main.ts`) can render the fatal-startup
+ * surface defined in `app.html`.
+ */
+
+import { environment } from '../environments/environment';
+import { startMockWorker } from '../mocks/browser';
+import { createBrowserPersistence } from '../mocks/persistence';
+import {
+  createRealClock,
+  parseScenarioFromLocation,
+} from '../mocks/scenarios';
+
+/** Tracks the last prepared scenario for diagnostics and E2E hooks. */
+let preparedScenario: string | null = null;
+
+/**
+ * Prepares the demo: hydrates the persistence snapshot and starts the
+ * MSW worker. Returns the active scenario name when it finishes so
+ * the caller can log it. Throws when either step fails; production
+ * builds short-circuit and return the default scenario unchanged.
+ */
+export async function prepareMocks(): Promise<string> {
+  if (!environment.demo && !environment.e2e) {
+    preparedScenario = 'production';
+    return preparedScenario;
+  }
+  const scenario = parseScenarioFromLocation();
+  const clock = createRealClock(scenario.clockOffsetMs);
+  const persistence = createBrowserPersistence({
+    nowMs: () => Date.parse(clock.now()),
+  });
+  // Hydrate BEFORE the worker starts so the very first intercepted
+  // request can already read the cart/receipt state.
+  persistence.hydrate(scenario.name);
+  await startMockWorker();
+  preparedScenario = scenario.name;
+  return preparedScenario;
+}
+
+/** Returns the scenario name resolved by the most recent `prepareMocks` call. */
+export function getPreparedScenario(): string | null {
+  return preparedScenario;
+}
+
+/** Test-only escape hatch that clears the cached scenario name. */
+export function resetPreparedScenarioForTests(): void {
+  preparedScenario = null;
+}
