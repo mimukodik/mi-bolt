@@ -15,6 +15,8 @@
     "coverage:manifest": "node scripts/runtime-manifest.mjs",
     "coverage:unit:check": "node scripts/check-coverage.mjs --unit",
     "coverage:e2e:check": "node scripts/check-coverage.mjs --e2e",
+    "check:traceability": "node scripts/check-traceability.mjs",
+    "check:test-policy": "node scripts/check-test-policy.mjs",
     "test:unit:coverage": "vitest run --coverage"
   },
   "private": true,
