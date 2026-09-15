@@ -35,6 +35,19 @@ module.exports = defineConfig([
       // signal-based input() / output() / model() APIs. Backed by the
       // mi-bolt-design skill and T01-AC03.
       '@angular-eslint/prefer-signals': 'error',
+      // Conventional guard / handler signatures take parameters the body
+      // does not consume; the `_`-prefix is the project convention to
+      // mark them as intentional. Mirror the same pattern for all source
+      // files so CanMatchFn / CanActivateFn can keep their unused
+      // injected params without tripping the rule.
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   // Pre-existing shared UI primitives were authored against an earlier

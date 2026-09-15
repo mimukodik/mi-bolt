@@ -35,7 +35,7 @@ import {
   validate,
   hidden,
 } from '@angular/forms/signals';
-import { signal, type WritableSignal } from '@angular/core';
+import type { WritableSignal } from '@angular/core';
 
 /** Allowed delivery option ids (matches OpenAPI `optionId` enum). */
 export type DeliveryOptionId = 'home_delivery' | 'demo_pickup' | '';

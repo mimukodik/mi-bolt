@@ -167,7 +167,7 @@ export const successGuard: CanActivateFn = (route): boolean | UrlTree => {
  * for tests that drive the guards directly without a Router.
  */
 export function guardForSegment(step: 'cart' | 'contact' | 'delivery' | 'review' | 'success') {
-  return (_segments: ReadonlyArray<UrlSegment>): boolean | UrlTree => {
+  return (_segments: readonly UrlSegment[]): boolean | UrlTree => {
     const checkout = inject(CheckoutFacade);
     const cart = inject(CartFacade);
     const cartSnapshot = cart.cart();
