@@ -26,7 +26,7 @@
  */
 
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { DestroyRef, Injectable, computed, inject, signal, type Signal } from '@angular/core';
+import { DestroyRef, Service, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
@@ -84,7 +84,7 @@ function freshIdempotencyKey(): string {
  * pending state are identical across the header, the product page,
  * and the checkout flow.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class CartFacade {
   private readonly api: Api;
   private readonly destroyRef = inject(DestroyRef);
@@ -309,7 +309,11 @@ export class CartFacade {
     };
     const result = await this.queue.enqueue(intent, (inputs) => this.dispatchRefetch(inputs));
     if (result.ok) {
-      this.applySuccess(result.cart);
+      // A post-conflict refetch must NOT clear `lastFailedIntent` —
+      // the user has not yet pressed Retry, and clearing it would
+      // turn the Retry button into a no-op as soon as the refetch
+      // settles. See cart.facade.ts:577 (applySuccess).
+      this.applySuccess(result.cart, { fromRefetch: true });
     }
   }
 
@@ -377,7 +381,13 @@ export class CartFacade {
   private async dispatchAddItem(inputs: DispatchInputs): Promise<DispatchResult> {
     const cartId = this.cartWritable()?.id;
     if (cartId === undefined) {
-      return mapMissingCart();
+      // Route the missing-cart path through recordFailure so the
+      // `cartGone` signal flips the same way a 404 from the server
+      // would; otherwise the caller silently rejects with a NOT_FOUND
+      // result while the UI still believes the cart is alive.
+      const result = mapMissingCart();
+      this.recordFailure(inputs.intent, result);
+      return result;
     }
     const payload = inputs.intent.payload as { variantId: string; quantity: number };
     const context = inputs.expectedVersion === null
@@ -404,7 +414,9 @@ export class CartFacade {
   private async dispatchSetQuantity(inputs: DispatchInputs): Promise<DispatchResult> {
     const cartId = this.cartWritable()?.id;
     if (cartId === undefined) {
-      return mapMissingCart();
+      const result = mapMissingCart();
+      this.recordFailure(inputs.intent, result);
+      return result;
     }
     const payload = inputs.intent.payload as { itemId: string; quantity: number };
     const context = inputs.expectedVersion === null
@@ -432,7 +444,9 @@ export class CartFacade {
   private async dispatchRemoveItem(inputs: DispatchInputs): Promise<DispatchResult> {
     const cartId = this.cartWritable()?.id;
     if (cartId === undefined) {
-      return mapMissingCart();
+      const result = mapMissingCart();
+      this.recordFailure(inputs.intent, result);
+      return result;
     }
     const payload = inputs.intent.payload as { itemId: string };
     const context = inputs.expectedVersion === null
@@ -566,15 +580,20 @@ export class CartFacade {
   /**
    * Commits the authoritative cart snapshot. Clears transient
    * failure signals so the UI returns to a clean state on the
-   * next successful dispatch.
+   * next successful dispatch. The `lastFailedIntent` is preserved
+   * when this is a post-conflict refetch: the user has not yet
+   * pressed Retry, and clearing it now would make the Retry button
+   * a no-op as soon as the refetch settles.
    */
-  private applySuccess(cart: Cart): void {
+  private applySuccess(cart: Cart, options: { fromRefetch?: boolean } = {}): void {
     this.cartWritable.set(cart);
     this.conflictWritable.set(null);
     this.cartGoneWritable.set(false);
     this.cartExpiredWritable.set(false);
     this.errorWritable.set(null);
-    this.lastFailedIntent = null;
+    if (!options.fromRefetch) {
+      this.lastFailedIntent = null;
+    }
   }
 }
 

@@ -39,6 +39,14 @@ import type { Image } from '../../api/generated/models/image';
 import type { Product } from '../../api/generated/models/product';
 import type { Variant } from '../../api/generated/models/variant';
 
+/**
+ * Maximum quantity the cart backend accepts for a single line. The
+ * server-side cart-domain clamps every line to this value, regardless
+ * of the variant's advertised `maxQuantity` — keep this in sync with
+ * `MAX_LINE_QUANTITY` in `src/mocks/cart/cart-domain.ts`.
+ */
+export const MAX_LINE_QUANTITY = 5;
+
 /** A (colorCode, storageGb) pair that has no matching variant. */
 export interface DisabledCombination {
   readonly colorCode: string;
@@ -280,9 +288,15 @@ export function computeAddToCartState(input: {
     return { enabled: false, reason: 'A mennyiségnek legalább 1 darabnak kell lennie.' };
   }
   if (quantityValidation.overMax) {
+    // Surface the effective cap (the variant's maxQuantity clamped to the
+    // server-side MAX_LINE_QUANTITY) so the message matches the value the
+    // mock actually accepts. Without this, a fixture advertising
+    // maxQuantity > 5 would tell the user "Maximum 10 darab rendelhető"
+    // and the cart would reject the value as QUANTITY_LIMIT.
+    const effectiveMax = Math.min(variant.maxQuantity, MAX_LINE_QUANTITY);
     return {
       enabled: false,
-      reason: `Maximum ${variant.maxQuantity} darab rendelhető ebből a változatból.`,
+      reason: `Maximum ${effectiveMax} darab rendelhető ebből a változatból.`,
     };
   }
   return { enabled: true, reason: null };

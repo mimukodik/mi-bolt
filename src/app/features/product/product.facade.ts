@@ -27,7 +27,7 @@
  * tested directly.
  */
 
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import {
   catchError,
   distinctUntilChanged,
@@ -97,7 +97,7 @@ function describeError(err: unknown): string {
  * inject it directly (no token wrapper) so swapping the facade for
  * a test stub is a single TestBed provider line.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ProductFacade {
   private readonly api = inject(Api);
   private readonly destroyRef = inject(DestroyRef);

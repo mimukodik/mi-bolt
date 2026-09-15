@@ -37,13 +37,22 @@ export { worker } from './mocks/browser';
  * `prepareMocks()` (T05) hydrates the sessionStorage snapshot
  * BEFORE starting the worker so the very first intercepted request
  * can already read the cart/receipt state from the previous tab.
- * If registration or startup throws, `showFatal` renders the
- * fatal-startup surface defined in `app.html`.
+ *
+ * A failure to start the worker is logged but does NOT block
+ * bootstrap: a service-worker registration rejection, an empty
+ * sessionStorage under Safari private mode, or a malformed demo
+ * scenario must not prevent the application from rendering. The
+ * worker is a development convenience; the app should still boot
+ * without it.
  */
 prepareMocks()
-  .then(() => bootstrapApplication(App, appConfig))
   .catch((err) => {
-    showFatal(err);
+    console.error('[MiBolt] Mock preparation failed; continuing without mocks:', err);
+  })
+  .finally(() => {
+    bootstrapApplication(App, appConfig).catch((err) => {
+      showFatal(err);
+    });
   });
 
 function showFatal(err: unknown): void {

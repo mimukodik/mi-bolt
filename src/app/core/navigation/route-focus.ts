@@ -1,4 +1,4 @@
-import { Injectable, afterNextRender, inject } from '@angular/core';
+import { Service, afterNextRender, inject } from '@angular/core';
 import { NavigationEnd, Router, type Event } from '@angular/router';
 import { Observable, filter } from 'rxjs';
 
@@ -18,7 +18,7 @@ import { Observable, filter } from 'rxjs';
  * The service is provided in root so any feature component can inject
  * it without an extra provider entry.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class RouteFocusService {
   private readonly router = inject(Router);
 

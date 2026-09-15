@@ -89,7 +89,7 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
         </p>
       </div>
       <ol class="thumbs" aria-label="Galéria indexképei">
-        @for (image of images(); track i; let i = $index) {
+        @for (image of images(); let i = $index; track i) {
           <li>
             <button
               type="button"
