@@ -34,6 +34,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { IdempotencyStore } from '../idempotency';
+import { getSharedStores } from '../orders/commit-order';
 
 import {
   QuoteDomain,
@@ -157,8 +158,12 @@ export function buildCheckoutHandlers(
   // Node MSW server (which defaults to `http://127.0.0.1`) and the
   // browser worker (which uses `location.origin`) both intercept.
   const wildcard = `*${base}`;
-  const idempotency = new IdempotencyStore(clock);
-  const domain = new QuoteDomain(repository, clock, ids, idempotency);
+  // The QuoteDomain is shared with the payment + order handlers so the
+  // draft / quote state is observable across slices. The IdempotencyStore
+  // is owned by the shared store — checkout writes are visible to
+  // payment + order replays too.
+  const shared = getSharedStores(repository, clock, ids, new IdempotencyStore(clock));
+  const domain: QuoteDomain = shared.quoteDomain;
 
   const getCheckoutOptions: RequestHandler = http.get(
     `${wildcard}/checkout/options`,

@@ -361,6 +361,17 @@ export class QuoteDomain {
   }
 
   /**
+   * T09 — read the draft for `cartId` without touching the quote cache.
+   * `getSession` calls `getActiveQuote` which deletes a quote whose
+   * cartVersion does not match the supplied one. The payment handler
+   * does not have the cart version yet at draft-lookup time, so it
+   * uses this dedicated accessor to avoid the side-effect.
+   */
+  getDraft(cartId: string): CheckoutDraft {
+    return this.drafts.get(cartId)?.draft ?? {};
+  }
+
+  /**
    * Returns the stored quote for `cartId` only when its cart version
    * matches the supplied one and the TTL has not expired. Stale or
    * expired entries are removed so memory does not leak across
@@ -384,6 +395,15 @@ export class QuoteDomain {
    *  that the domain itself did not trigger (kept for symmetry / future tests). */
   invalidateQuote(cartId: string): void {
     this.quotes.delete(cartId);
+  }
+
+  /** T09 — drop the volatile draft after a successful order commit so
+   *  reload cannot recover contact/address. The cart is already marked
+   *  ordered by the repository; clearing the draft is the second half
+   *  of the "clear volatile PII" promise.
+   */
+  clearDraft(cartId: string): void {
+    this.drafts.delete(cartId);
   }
 
   // -------------------------------------------------------------------------
