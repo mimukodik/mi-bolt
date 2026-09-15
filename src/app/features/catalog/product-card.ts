@@ -262,7 +262,11 @@ export class ProductCard {
   );
 
   /** Router link to the product page, including the matching variant id. */
-  readonly detailsLink = computed(() => ['/telefonok', this.product().slug]);
+  readonly detailsLink = computed(() => {
+    const slug = this.product().slug;
+    const variantId = this.variant().id;
+    return ['/telefonok', slug, { variant: variantId }];
+  });
 
   /** Concatenated accessible name for the image link. */
   readonly ariaLabel = computed(() => {

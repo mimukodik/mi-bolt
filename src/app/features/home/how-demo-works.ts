@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { Component } from '@angular/core';
 
 /**
  * `HowDemoWorks` — three explanatory tiles for the home page.
@@ -216,7 +216,6 @@ const TILES: readonly TileCopy[] = [
       }
     `,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HowDemoWorks {
   readonly tiles = TILES;

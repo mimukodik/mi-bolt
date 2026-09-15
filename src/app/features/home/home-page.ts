@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { take } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
@@ -63,7 +63,6 @@ const DOCUMENTED_FEATURED_SLUGS = [
       }
     `,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage {
   private readonly api = inject(Api);

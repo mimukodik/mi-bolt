@@ -26,7 +26,7 @@
  */
 
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject, signal, type Signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
@@ -87,6 +87,7 @@ function freshIdempotencyKey(): string {
 @Injectable({ providedIn: 'root' })
 export class CartFacade {
   private readonly api: Api;
+  private readonly destroyRef = inject(DestroyRef);
   private readonly queue = new CartMutationQueue();
 
   /** Internal writable snapshot of the authoritative cart state. */
@@ -145,6 +146,7 @@ export class CartFacade {
     // `provideHttpClient(withFetch(), withInterceptors(...))`.
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
     this.queue.setVersionProvider(() => this.cartWritable()?.version ?? null);
+    this.destroyRef.onDestroy(() => this.queue.destroy());
   }
 
   /**
@@ -158,7 +160,10 @@ export class CartFacade {
 
   /**
    * Creates the cart if none exists. Safe to call multiple times; the
-   * second call is a no-op when an active cart is already loaded.
+   * second call is a no-op when an active cart is already loaded. The
+   * `cartWritable` snapshot is re-checked inside the dispatch callback
+   * so two near-simultaneous calls collapse into a single server-side
+   * `POST /carts` instead of leaking an orphan cart.
    */
   async ensureCart(): Promise<void> {
     if (this.cartWritable() !== null && this.cartWritable()?.status === 'active') {
@@ -170,7 +175,19 @@ export class CartFacade {
       retry: false,
       payload: { providerId: 'mi-bolt' },
     };
-    const result = await this.queue.enqueue(intent, (inputs) => this.dispatchCreate(inputs));
+    const result = await this.queue.enqueue(intent, (inputs) => {
+      // Re-check inside the queue callback so a second ensureCart() that
+      // landed in the same microtask sees the cart the first call
+      // already created and short-circuits to a no-op dispatch.
+      if (this.cartWritable() !== null && this.cartWritable()?.status === 'active') {
+        return Promise.resolve({
+          ok: true as const,
+          cart: this.cartWritable()!,
+          replayed: false,
+        });
+      }
+      return this.dispatchCreate(inputs);
+    });
     if (result.ok) {
       this.applySuccess(result.cart);
     }
@@ -479,12 +496,20 @@ export class CartFacade {
         detail: result.detail,
         idempotencyKey: intent.idempotencyKey,
         intentKind: intent.kind,
-        // The refetch runs in the background; for the conflict
-        // payload we report the last known version. The refetch
-        // settles asynchronously and updates `cart()` itself.
+        // The refetch runs in the background and will overwrite this
+        // with the post-refetch version. We report the last known
+        // version here so a synchronous UI consumer has a value, but
+        // the doc on `CartConflict.serverVersion` warns it lags the
+        // server until the refetch settles.
         serverVersion: this.cartWritable()?.version ?? 0,
       };
       this.conflictWritable.set(conflict);
+      // A subsequent failure of a different kind must clear the
+      // stale conflict overlay; we keep `lastFailedIntent` set so the
+      // user still has a retry affordance.
+      this.errorWritable.set(null);
+      this.cartGoneWritable.set(false);
+      this.cartExpiredWritable.set(false);
       // Fire-and-forget refetch so the next dispatch binds to a
       // fresh version. We do not await it here so the failed intent
       // resolves immediately and the queue can move on.
@@ -497,6 +522,9 @@ export class CartFacade {
       // server will reject.
       this.cartWritable.set(null);
       this.cartExpiredWritable.set(true);
+      this.conflictWritable.set(null);
+      this.errorWritable.set(null);
+      this.cartGoneWritable.set(false);
       this.lastFailedIntent = null;
       return;
     }
@@ -506,15 +534,33 @@ export class CartFacade {
       // not block ensureCart() from starting over.
       this.cartWritable.set(null);
       this.cartGoneWritable.set(true);
+      this.conflictWritable.set(null);
+      this.cartExpiredWritable.set(false);
+      this.errorWritable.set(null);
       this.lastFailedIntent = null;
       return;
     }
-    this.errorWritable.set({
-      code: result.code,
-      status: result.status,
-      detail: result.detail,
-    });
-    this.lastFailedIntent = null;
+    // Generic failure branch: keep the lastFailedIntent if a conflict
+    // is currently surfaced so the retry affordance survives a
+    // transient error; otherwise discard it. Clear the stale conflict
+    // overlay so the UI doesn't accumulate error states.
+    if (this.conflictWritable() !== null) {
+      this.errorWritable.set({
+        code: result.code,
+        status: result.status,
+        detail: result.detail,
+      });
+    } else {
+      this.errorWritable.set({
+        code: result.code,
+        status: result.status,
+        detail: result.detail,
+      });
+      this.lastFailedIntent = null;
+    }
+    this.conflictWritable.set(null);
+    this.cartGoneWritable.set(false);
+    this.cartExpiredWritable.set(false);
   }
 
   /**

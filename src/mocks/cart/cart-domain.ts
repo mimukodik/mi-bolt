@@ -202,11 +202,11 @@ export class CartDomain {
     if (cart.status !== 'active') {
       return err(CartDomain.notFound());
     }
-    if (cart.version !== ifMatch.value) {
-      return err(CartDomain.versionConflict());
-    }
     if (!lookup) {
       return err(CartDomain.notFound());
+    }
+    if (cart.version !== ifMatch.value) {
+      return err(CartDomain.versionConflict());
     }
     const quantityCheck = this.validateQuantity(input.quantity, lookup.variant);
     if (!quantityCheck.ok) return quantityCheck;

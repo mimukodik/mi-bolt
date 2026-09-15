@@ -58,7 +58,7 @@ export class ShopLayout {
     this.routeFocus.navigationEnd$()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        queueMicrotask(() => this.routeFocus.focusMainHeading());
+        this.routeFocus.scheduleFocus();
       });
   }
 }

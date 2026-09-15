@@ -51,7 +51,10 @@ const tsLegacyDecoratorsPlugin = (): PluginOption => ({
   name: 'mi-bolt:ts-legacy-decorators',
   enforce: 'pre',
   transform(code, id) {
-    if (!id.endsWith('.ts') || id.includes('node_modules')) {
+    // Only `.ts` source files need the decorator lowering; `.tsx` would
+    // require a JSX-aware compiler and we have none in this workspace.
+    // `node_modules` is left to the rolldown/oxc pipeline.
+    if (!id.endsWith('.ts') || id.endsWith('.d.ts') || id.includes('node_modules')) {
       return null;
     }
     const result = ts.transpileModule(code, {
@@ -61,11 +64,12 @@ const tsLegacyDecoratorsPlugin = (): PluginOption => ({
         target: ts.ScriptTarget.ES2022,
         module: ts.ModuleKind.ESNext,
         emitDecoratorMetadata: true,
+        sourceMap: true,
         importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove,
       },
       fileName: id,
     });
-    return { code: result.outputText, map: undefined };
+    return { code: result.outputText, map: result.sourceMapText };
   },
 });
 

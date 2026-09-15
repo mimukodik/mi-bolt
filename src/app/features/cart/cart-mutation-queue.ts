@@ -97,6 +97,12 @@ export class CartMutationQueue {
 
   private tail: Promise<void> = Promise.resolve();
   private versionProvider: () => number | null = () => null;
+  /**
+   * Cancellation flag flipped on destroy so a queued dispatch that
+   * resolves AFTER the queue (and its facade owner) is torn down
+   * does not write to a destroyed signal.
+   */
+  private destroyed = false;
 
   /**
    * Installs the version provider. The provider is called inside
@@ -118,6 +124,9 @@ export class CartMutationQueue {
     intent: MutationIntent,
     dispatch: (inputs: DispatchInputs) => Promise<DispatchResult>,
   ): Promise<DispatchResult> {
+    if (this.destroyed) {
+      return Promise.resolve({ ok: false, code: 'SERVICE_UNAVAILABLE', status: 0, detail: 'queue destroyed' } as DispatchResult);
+    }
     this.pendingWritable.update((n) => n + 1);
     const next = this.tail.then(() => {
       const expectedVersion = this.versionProvider();
@@ -128,8 +137,14 @@ export class CartMutationQueue {
       () => undefined,
     );
     void next.then(
-      () => this.pendingWritable.update((n) => n - 1),
-      () => this.pendingWritable.update((n) => n - 1),
+      () => {
+        if (this.destroyed) return;
+        this.pendingWritable.update((n) => n - 1);
+      },
+      () => {
+        if (this.destroyed) return;
+        this.pendingWritable.update((n) => n - 1);
+      },
     );
     return next;
   }
@@ -142,6 +157,15 @@ export class CartMutationQueue {
    */
   async settle(): Promise<void> {
     await this.tail;
+  }
+
+  /**
+   * Mark the queue as destroyed so any dispatch that resolves after
+   * teardown is a no-op. The facade wires this to its own `DestroyRef`
+   * so the queue's signal writes cannot outlive the owning service.
+   */
+  destroy(): void {
+    this.destroyed = true;
   }
 }
 

@@ -106,6 +106,7 @@ export class ProductFacade {
     kind: 'load' | 'retry';
     slug: string;
     variantQuery: string | null;
+    retryNonce?: number;
   }>();
 
   private readonly productSignal = signal<Product | null>(null);
@@ -118,6 +119,8 @@ export class ProductFacade {
   private readonly invalidQuerySignal = signal<string | null>(null);
   private readonly variantQuerySignal = signal<string | null>(null);
   private readonly slugSignal = signal<string | null>(null);
+  /** Monotonic counter so rapid retry clicks survive distinctUntilChanged. */
+  private retryNonceCounter = 0;
 
   /** Read-only view of the current view model — UI binds to this. */
   readonly vm = computed<ProductVm>(() => this.buildVm());
@@ -129,7 +132,8 @@ export class ProductFacade {
           (a, b) =>
             a.kind === b.kind &&
             a.slug === b.slug &&
-            a.variantQuery === b.variantQuery,
+            a.variantQuery === b.variantQuery &&
+            a.retryNonce === b.retryNonce,
         ),
         tap(({ slug, variantQuery }) => {
           this.slugSignal.set(slug);
@@ -198,6 +202,7 @@ export class ProductFacade {
       kind: 'retry',
       slug,
       variantQuery: this.variantQuerySignal(),
+      retryNonce: ++this.retryNonceCounter,
     });
   }
 

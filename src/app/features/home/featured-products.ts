@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-  output,
-} from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import type { Product } from '../../api/generated/models/product';
@@ -59,7 +53,7 @@ export interface FeaturedSlot {
           </p>
         </header>
         @if (allErrored()) {
-          <div class="featured__grid-error" data-testid="error-state" role="alert" aria-live="polite">
+          <div class="featured__grid-error" data-testid="error-state" role="status" aria-live="polite">
             <p class="featured__error-title">A kiemelt termékek nem tölthetők be</p>
             <p class="featured__error-message">{{ errorMessage() }}</p>
             <button
@@ -175,7 +169,6 @@ export interface FeaturedSlot {
     `,
   ],
   styleUrl: './featured-products.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FeaturedProducts {
   /** Slots from the orchestrator. */

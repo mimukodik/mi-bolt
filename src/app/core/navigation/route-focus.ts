@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, afterNextRender, inject } from '@angular/core';
 import { NavigationEnd, Router, type Event } from '@angular/router';
 import { Observable, filter } from 'rxjs';
 
@@ -41,6 +41,15 @@ export class RouteFocusService {
     if (!(heading instanceof HTMLElement)) return;
     heading.setAttribute('tabindex', '-1');
     heading.focus({ preventScroll: false });
+  }
+
+  /**
+   * Schedule the focus move after the next render so the lazy-loaded
+   * route's H1 has a chance to mount. `afterNextRender` only fires on
+   * the browser, so server contexts remain a no-op.
+   */
+  scheduleFocus(): void {
+    afterNextRender(() => this.focusMainHeading());
   }
 
   /**

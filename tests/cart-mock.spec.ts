@@ -8,7 +8,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createHandlers, registerBusinessHandlers } from '../src/mocks/create-handlers';
+import { createHandlers } from '../src/mocks/create-handlers';
 // Side-effect import — registers cart handlers in the T05 registry.
 import {
   DEMO_PRODUCT,

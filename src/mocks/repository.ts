@@ -111,6 +111,7 @@ const CART_EXPIRY_MS = 24 * 60 * 60 * 1000;
 export class Repository {
   private readonly products = new Map<string, Product>();
   private readonly productsBySlug = new Map<string, Product>();
+  private readonly variantsById = new Map<string, { product: Product; variant: Variant }>();
   private readonly carts = new Map<string, Cart>();
   private readonly cartsBySession = new Map<string, string>();
   private readonly orders = new Map<string, OrderReceipt>();
@@ -139,9 +140,13 @@ export class Repository {
   loadProducts(fixtures: readonly Product[]): void {
     this.products.clear();
     this.productsBySlug.clear();
+    this.variantsById.clear();
     for (const product of fixtures) {
       this.products.set(product.id, product);
       this.productsBySlug.set(product.slug, product);
+      for (const variant of product.variants) {
+        this.variantsById.set(variant.id, { product, variant });
+      }
     }
   }
 
@@ -211,14 +216,7 @@ export class Repository {
 
   /** Looks up a variant by id across every loaded product. */
   getVariant(variantId: string): { product: Product; variant: Variant } | undefined {
-    for (const product of this.products.values()) {
-      for (const variant of product.variants) {
-        if (variant.id === variantId) {
-          return { product, variant };
-        }
-      }
-    }
-    return undefined;
+    return this.variantsById.get(variantId);
   }
 
   /** Lists every cart owned by the scenario. Tests use it for isolation checks. */

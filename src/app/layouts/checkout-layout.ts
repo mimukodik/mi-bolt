@@ -1,6 +1,6 @@
-import { Component, DestroyRef, inject, input } from '@angular/core';
+import { Component, DestroyRef, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 
 import { AppShell } from '../shared/shell/app-shell';
 import { RouteFocusService } from '../core/navigation/route-focus';
@@ -133,10 +133,25 @@ const STEP_ORDER: ReadonlyArray<CheckoutStep> = ['cart', 'contact', 'delivery', 
 })
 export class CheckoutLayout {
   private readonly routeFocus = inject(RouteFocusService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Active step in the flow. Default is cart. */
-  readonly currentStep = input<CheckoutStep>('cart');
+  /**
+   * Active step in the flow. Derived from the current URL rather than
+   * a `data` input: the `data: { step }` is attached to each child
+   * route, but withComponentInputBinding() cannot reach the parent
+   * component from child routes, and the key name would not match the
+   * `currentStep` input. Walking the URL is robust to both.
+   */
+  readonly currentStep = computed<CheckoutStep>(() => {
+    const url = this.router.url;
+    if (url.includes('/penztar/adatok')) return 'contact';
+    if (url.includes('/penztar/szallitas')) return 'delivery';
+    if (url.includes('/penztar/ellenorzes')) return 'review';
+    if (url.includes('/penztar/siker')) return 'success';
+    return 'cart';
+  });
 
   /** Ordered step labels for the indicator. */
   readonly steps: ReadonlyArray<{ key: CheckoutStep; label: string }> = [
@@ -150,7 +165,7 @@ export class CheckoutLayout {
     this.routeFocus.navigationEnd$()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        queueMicrotask(() => this.routeFocus.focusMainHeading());
+        this.routeFocus.scheduleFocus();
       });
   }
 }

@@ -1,4 +1,4 @@
-import { Component, ElementRef, computed, effect, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
 import type { FacetValue } from '../../api/generated/models/facet-value';
@@ -401,17 +401,16 @@ export class FilterDrawer {
   private readonly draftMin = signal<string>('');
   private readonly draftMax = signal<string>('');
 
-  /** Element that should regain focus when the dialog closes. */
-  private readonly restoreTrigger = viewChild<ElementRef<HTMLElement>>('restore');
-
   /** Storage buckets exposed by the documented storage enum. */
   readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => [128, 256, 512]);
 
   /** Brand facets, falling back to an empty list when none are present. */
   readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
 
-  /** Hint element for focus restoration (the parent owns the trigger). */
-  readonly restoreEl = computed<HTMLElement | null>(() => this.restoreTrigger()?.nativeElement ?? null);
+  /** Element that should regain focus when the dialog closes. The parent
+   *  passes its own trigger button through this input so WCAG focus
+   *  restoration always lands on the control that opened the drawer. */
+  readonly restoreEl = input<HTMLElement | null>(null);
 
   readonly minDraft = computed<string>(() => this.draftMin());
 

@@ -1,7 +1,6 @@
 import {
   Component,
   ElementRef,
-  HostListener,
   OnInit,
   computed,
   input,
@@ -42,6 +41,9 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
 @Component({
   selector: 'app-product-gallery',
   imports: [AccessibleDialog, ProductImage],
+  host: {
+    '(document:keydown)': 'onDocumentKeydown($event)',
+  },
   template: `
     <section
       class="root"
@@ -368,7 +370,6 @@ export class ProductGallery implements OnInit {
    * Listen for keyboard input on the document so that arrow keys work
    * when the gallery surface itself is focused.
    */
-  @HostListener('document:keydown', ['$event'])
   onDocumentKeydown(event: KeyboardEvent): void {
     const frame = this.frame()?.nativeElement;
     if (!frame) return;

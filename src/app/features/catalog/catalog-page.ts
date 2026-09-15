@@ -6,13 +6,15 @@ import {
   signal,
   ElementRef,
   viewChild,
+  DestroyRef,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CatalogFacade } from './catalog.facade';
 import {
-  DEFAULT_CATALOG_QUERY,
   SORT_MODES,
+  serializeCatalogQuery,
   type CatalogQuery,
   type SortMode,
 } from './catalog-query';
@@ -93,6 +95,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                 type="button"
                 class="trigger"
                 data-testid="filter-trigger"
+                #filterTrigger
                 (click)="openDrawer()"
                 [attr.aria-expanded]="drawerOpened() ? 'true' : 'false'"
                 [attr.aria-controls]="'filter-drawer'"
@@ -238,6 +241,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
         [facets]="facade.vm().facets"
         [opened]="drawerOpened()"
         [disabled]="isRefreshing()"
+        [restoreEl]="filterTrigger()?.nativeElement ?? null"
         (filtersChanged)="onFiltersChanged($event)"
         (closed)="closeDrawer()"
       ></app-filter-drawer>
@@ -594,9 +598,13 @@ export class CatalogPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly facade = inject(CatalogFacade);
 
   private readonly searchEl = viewChild<ElementRef<HTMLInputElement>>('search');
+  /** Trigger button the catalog page opens the filter drawer with — passed
+   *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3). */
+  private readonly filterTrigger = viewChild<ElementRef<HTMLButtonElement>>('filterTrigger');
 
   /** Local UI flags that do NOT live in the URL. */
   readonly drawerOpened = signal<boolean>(false);
@@ -648,16 +656,18 @@ export class CatalogPage {
     // Mirror the URL query into the facade on every navigation. The
     // facade's own debounce + switchMap pipeline guarantees that a
     // back / forward jump never re-fires the SDK twice for the same
-    // canonical state.
-    effect(() => {
-      const params = this.route.snapshot.queryParamMap;
-      const search = new URLSearchParams();
-      params.keys.forEach((key) => {
-        const all = params.getAll(key);
-        for (const v of all) search.append(key, v);
+    // canonical state. We subscribe to the route's reactive
+    // queryParamMap (not the snapshot) so back / forward, deep links
+    // and manual URL edits all reach the facade.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const search = new URLSearchParams();
+        params.keys.forEach((key) => {
+          for (const v of params.getAll(key)) search.append(key, v);
+        });
+        this.facade.loadFromParams(search);
       });
-      this.facade.loadFromParams(search);
-    });
 
     // Mirror the facade back into the URL whenever the canonical
     // query changes (filter writes, sort, page). We use merge so we
@@ -777,7 +787,9 @@ export class CatalogPage {
   /**
    * Toggle the host's data-layout-mode based on the viewport width so
    * the CSS media queries can hide whichever filter mount is unused.
-   * Pure read of the actual DOM size — guard against SSR.
+   * Pure read of the actual DOM size — guard against SSR. The listener
+   * is removed on destroy so a long-lived SPA cannot accumulate stale
+   * references to torn-down components.
    */
   private applyLayoutMode(): void {
     if (typeof window === 'undefined') return;
@@ -788,6 +800,7 @@ export class CatalogPage {
     };
     apply();
     mql.addEventListener('change', apply);
+    this.destroyRef.onDestroy(() => mql.removeEventListener('change', apply));
   }
 }
 
@@ -826,20 +839,15 @@ function buildChips(q: CatalogQuery): readonly AppliedChip[] {
 
 /**
  * Convert a CatalogQuery into the bare Router `queryParams` argument.
- * Defaults (page=1, pageSize=12, sort=recommended) are dropped so the
- * URL stays canonical.
+ * Delegates to `serializeCatalogQuery` so the URL the facade emits and
+ * the URL the router writes stay byte-for-byte consistent.
  */
 function serializeForRouter(q: CatalogQuery): Record<string, string | string[] | null> {
+  const params = serializeCatalogQuery(q);
   const out: Record<string, string | string[] | null> = {};
-  out['q'] = q.q !== undefined && q.q.length > 0 ? q.q : null;
-  out['brand'] = q.brands !== undefined && q.brands.length > 0 ? [...q.brands] : null;
-  out['storageGb'] = q.storageGb !== undefined && q.storageGb.length > 0 ? q.storageGb.map(String) : null;
-  out['minPrice'] = q.minPrice !== undefined ? String(q.minPrice) : null;
-  out['maxPrice'] = q.maxPrice !== undefined ? String(q.maxPrice) : null;
-  out['inStock'] = q.inStock === true ? 'true' : null;
-  out['is5g'] = q.is5g === true ? 'true' : null;
-  out['sort'] = q.sort !== undefined ? q.sort : null;
-  out['page'] = q.page !== DEFAULT_CATALOG_QUERY.page ? String(q.page) : null;
-  out['pageSize'] = q.pageSize !== DEFAULT_CATALOG_QUERY.pageSize ? String(q.pageSize) : null;
+  for (const key of new Set<string>(params.keys())) {
+    const all = params.getAll(key);
+    out[key] = all.length > 1 ? all : (all[0] ?? null);
+  }
   return out;
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal, viewChild, type ElementRef } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { CartCountFacade } from './cart-count-facade';
@@ -165,7 +165,7 @@ export class HeaderNav {
   readonly drawerOpen = signal(false);
 
   /** Reference to the menu trigger button for focus restoration. */
-  private readonly menuTriggerRef = ViewChild('menuTrigger');
+  private readonly menuTriggerRef = viewChild<ElementRef<HTMLElement>>('menuTrigger');
 
   /** Stable trigger element handle that the drawer can read after view init. */
   readonly menuTriggerEl = computed<HTMLElement | null>(() => {

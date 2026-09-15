@@ -420,20 +420,36 @@ export class QuoteDomain {
     }
 
     const body = input.body ?? {};
+    const ALLOWED_SECTIONS = new Set(['contact', 'delivery', 'paymentMethod']);
     const presentSections: string[] = [];
-    if (Object.prototype.hasOwnProperty.call(body, 'contact')) {
-      presentSections.push('contact');
+    const unknownKeys: string[] = [];
+    for (const key of Object.keys(body)) {
+      if (ALLOWED_SECTIONS.has(key)) {
+        presentSections.push(key);
+      } else {
+        unknownKeys.push(key);
+      }
     }
-    if (Object.prototype.hasOwnProperty.call(body, 'delivery')) {
-      presentSections.push('delivery');
-    }
-    if (Object.prototype.hasOwnProperty.call(body, 'paymentMethod')) {
-      presentSections.push('paymentMethod');
+    if (unknownKeys.length > 0) {
+      return err({
+        status: 400,
+        code: 'VALIDATION_FAILED',
+        detail: 'A kérés ismeretlen mezőt tartalmaz.',
+        fieldErrors: unknownKeys.map((key) => ({
+          path: `/${key}`,
+          message: 'Ez a mező nem része a kérés tervének.',
+        })),
+      });
     }
     if (presentSections.length === 0) {
-      return err(validationError('A kérésnek legalább egy szekciót tartalmaznia kell.', [
-        { path: '', message: 'Adj meg legalább egy szekciót: contact, delivery, paymentMethod.' },
-      ]));
+      return err({
+        status: 400,
+        code: 'VALIDATION_FAILED',
+        detail: 'A kérésnek legalább egy szekciót tartalmaznia kell.',
+        fieldErrors: [
+          { path: '', message: 'Adj meg legalább egy szekciót: contact, delivery, paymentMethod.' },
+        ],
+      });
     }
 
     const fieldErrors: FieldError[] = [];
@@ -531,7 +547,7 @@ export class QuoteDomain {
     // 1. Empty cart => CHECKOUT_INCOMPLETE /cart
     if (cart.items.length === 0) {
       return err(checkoutIncomplete('A kosár üres, árajánlat nem készíthető.', [
-        { path: '/cart', message: 'A kosár nem üres.' },
+        { path: '/cart', message: 'A kosár jelenleg üres.' },
       ]));
     }
 
@@ -583,12 +599,11 @@ export class QuoteDomain {
       return { ...line, unitPrice: variantPrice };
     });
 
-    if (outOfStockLines.length > 0) {
-      return err(outOfStock());
-    }
-
     if (mismatchedLines.length > 0) {
       // Atomic cart update: rewrite affected line totals + bump version.
+      // Apply the price rewrite before any status check so a line that
+      // is both out-of-stock and price-changed keeps its new price in
+      // the cart even though the call still surfaces 409 OUT_OF_STOCK.
       let totalSubtotal = 0;
       const atomicItems: CartLine[] = updatedItems.map((line, idx) => {
         const mismatch = mismatchedLines.find((m) => m.lineIndex === idx);
@@ -610,6 +625,13 @@ export class QuoteDomain {
       };
       this.repository.updateCart(rewritten);
       this.quotes.delete(input.cartId);
+    }
+
+    if (outOfStockLines.length > 0) {
+      return err(outOfStock());
+    }
+
+    if (mismatchedLines.length > 0) {
       return err(priceChanged());
     }
 

@@ -94,12 +94,37 @@ interface CatalogResult {
 }
 
 /**
- * Two queries are equal when their canonical serialisations match.
- * The codec emits the canonical form, so this comparator matches
- * queries the router and the facade agree on.
+ * Two queries are equal when every documented field carries the same
+ * value. Field-level comparison avoids the `serializeCatalogQuery`
+ * allocation cost that the canonical-string approach paid on every
+ * keystroke through the debounced search pipeline.
  */
 function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
-  return serializeCatalogQuery(a).toString() === serializeCatalogQuery(b).toString();
+  if (a.q !== b.q) return false;
+  if (!arrayShallowEqual(a.brands, b.brands)) return false;
+  if (!arrayShallowEqual(a.storageGb, b.storageGb)) return false;
+  if (a.minPrice !== b.minPrice) return false;
+  if (a.maxPrice !== b.maxPrice) return false;
+  if (a.inStock !== b.inStock) return false;
+  if (a.is5g !== b.is5g) return false;
+  if (a.featured !== b.featured) return false;
+  if (a.sort !== b.sort) return false;
+  if (a.page !== b.page) return false;
+  if (a.pageSize !== b.pageSize) return false;
+  return true;
+}
+
+function arrayShallowEqual<T>(
+  a: readonly T[] | undefined,
+  b: readonly T[] | undefined,
+): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 /** Translate a `CatalogQuery` into the SDK's `ListProducts$Params`. */
