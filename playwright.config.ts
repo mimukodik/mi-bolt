@@ -50,11 +50,15 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    // The static server itself has no GUI surface; the headless
-    // flag is a Playwright concern. Setting PLAYWRIGHT_HEADLESS=1
-    // makes the convention visible to anything else that reads it
-    // (e.g. a future dev-server-launched Playwright driver).
-    command: `PLAYWRIGHT_HEADLESS=1 npx --yes http-server ${STATIC_DIR} -p 4200 --cors -a 127.0.0.1 -c-1 --proxy http://127.0.0.1:4200?`,
+    // T28 ships `scripts/serve-static.mjs` — the minimal
+    // localhost-only static host that owns the deployment
+    // contract for this repo. The host applies the SPA fallback,
+    // the `/api/*` 404 problem+json policy and the
+    // `no-cache`/`immutable` cache-control split the design
+    // review requires. The earlier `http-server` command is kept
+    // here only as a comment so a future operator understands
+    // what it replaced.
+    command: `PLAYWRIGHT_HEADLESS=1 PORT=4200 MI_BOLT_E2E_STATIC_DIR=${STATIC_DIR} node scripts/serve-static.mjs`,
     url: `${BASE_URL}/`,
     reuseExistingServer: !process.env['CI'],
     timeout: 180_000,
