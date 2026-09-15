@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 
@@ -138,6 +138,14 @@ export class CheckoutLayout {
   private readonly destroyRef = inject(DestroyRef);
 
   /**
+   * URL signal — `Router.url` is a plain getter, not a signal, so the
+   * indicator must subscribe to navigation events explicitly to stay
+   * in sync as the user moves between cart / contact / delivery /
+   * review / success without remounting the layout.
+   */
+  private readonly urlSignal = signal<string>(this.router.url);
+
+  /**
    * Active step in the flow. Derived from the current URL rather than
    * a `data` input: the `data: { step }` is attached to each child
    * route, but withComponentInputBinding() cannot reach the parent
@@ -145,7 +153,7 @@ export class CheckoutLayout {
    * `currentStep` input. Walking the URL is robust to both.
    */
   readonly currentStep = computed<CheckoutStep>(() => {
-    const url = this.router.url;
+    const url = this.urlSignal();
     if (url.includes('/penztar/adatok')) return 'contact';
     if (url.includes('/penztar/szallitas')) return 'delivery';
     if (url.includes('/penztar/ellenorzes')) return 'review';
@@ -166,6 +174,7 @@ export class CheckoutLayout {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.routeFocus.scheduleFocus();
+        this.urlSignal.set(this.router.url);
       });
   }
 }

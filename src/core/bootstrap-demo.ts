@@ -44,9 +44,13 @@ export async function prepareMocks(): Promise<string> {
     nowMs: () => Date.parse(clock.now()),
   });
   // Hydrate BEFORE the worker starts so the very first intercepted
-  // request can already read the cart/receipt state.
-  persistence.hydrate(scenario.name);
-  await startMockWorker();
+  // request can already read the cart/receipt state. The returned
+  // snapshot is forwarded into the worker so the in-memory
+  // Repository is seeded with the persisted cart; without this the
+  // cart is silently lost across reloads even though the snapshot
+  // survived.
+  const snapshot = persistence.hydrate(scenario.name);
+  await startMockWorker(snapshot);
   preparedScenario = scenario.name;
   return preparedScenario;
 }

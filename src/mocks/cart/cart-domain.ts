@@ -145,7 +145,20 @@ export class CartDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) return ok(replay.body as CartSnapshot);
+    if (replay) {
+      // The idempotency cache outlives the cart's own 24h expiry by
+      // design (the cache window and the cart window both start at
+      // creation time but live in separate state). A replay that
+      // crosses the cart's `expiresAt` would return a cart the
+      // server would refuse on the very next mutation, so we surface
+      // 410 CART_EXPIRED instead and let the caller start over with
+      // a fresh key.
+      const replayedCart = replay.body as CartSnapshot;
+      if (this.isExpired(replayedCart)) {
+        return err(CartDomain.cartExpired());
+      }
+      return ok(replayedCart);
+    }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return err(CartDomain.idempotencyConflict());
     }

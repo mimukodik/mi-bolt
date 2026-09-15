@@ -253,4 +253,50 @@ export class Repository {
   setIdempotency(key: string, value: unknown): void {
     this.idempotency.set(key, value);
   }
+
+  /**
+   * Restores a previously-persisted cart into the in-memory
+   * repository. Used by `bootstrap-demo` so a reload rehydrates the
+   * cart snapshot before the first intercepted request arrives.
+   * Lines whose `variantId` is unknown are silently dropped so a
+   * fixture removal between sessions never crashes the rehydrate.
+   */
+  loadPersistedCart(persisted: import('./persistence').PersistedCart): void {
+    const items: CartLine[] = [];
+    for (const line of persisted.items) {
+      const lookup = this.variantsById.get(line.variantId);
+      if (!lookup) continue;
+      const variant = lookup.variant;
+      const firstImage = variant.images[0];
+      if (!firstImage) continue;
+      items.push({
+        id: line.id,
+        productId: lookup.product.id,
+        productSlug: lookup.product.slug,
+        productName: lookup.product.name,
+        variantId: variant.id,
+        colorName: variant.colorName,
+        storageGb: variant.storageGb,
+        image: firstImage,
+        quantity: line.quantity,
+        unitPrice: variant.price,
+        lineTotal: {
+          amount: variant.price.amount * line.quantity,
+          currency: variant.price.currency,
+        },
+        availability: variant.availability,
+        maxQuantity: variant.maxQuantity,
+      });
+    }
+    const cart: Cart = {
+      id: persisted.id,
+      version: persisted.version,
+      status: 'active',
+      sessionId: '',
+      items,
+      createdAt: persisted.lastUpdatedAt,
+      expiresAt: new Date(Date.parse(persisted.lastUpdatedAt) + 24 * 60 * 60 * 1000).toISOString(),
+    };
+    this.carts.set(cart.id, cart);
+  }
 }

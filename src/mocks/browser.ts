@@ -34,6 +34,7 @@ import {
   createRealIds,
   parseScenarioFromLocation,
 } from './scenarios';
+import type { MockSnapshot } from './persistence';
 
 export const worker = setupWorker();
 
@@ -75,9 +76,15 @@ export function installBusinessRouteBypass(): void {
  * Returns the current handler list without starting the worker.
  * The bootstrap helper in `core/bootstrap-demo.ts` calls this when
  * it needs to register handlers before hydration or for testing.
+ * An optional snapshot seeds the in-memory repository with the
+ * previously-persisted cart so a reload restores state before the
+ * first intercepted request lands.
  */
-export function buildBrowserHandlers(): ReturnType<typeof createHandlers> {
+export function buildBrowserHandlers(snapshot: MockSnapshot | null = null): ReturnType<typeof createHandlers> {
   const options = resolveBrowserHandlerOptions();
+  if (snapshot?.cart) {
+    options.repository.loadPersistedCart(snapshot.cart);
+  }
   // The E2E configuration preserves the T02 network-isolation gate:
   // an unhandled `/api/v1/...` request must throw so the suite catches
   // the leak. The demo configuration adds the dispatcher shell so a
@@ -89,13 +96,15 @@ export function buildBrowserHandlers(): ReturnType<typeof createHandlers> {
  * Boots the MSW service worker. Production builds skip the boot
  * entirely; demo and e2e configurations register the handlers built
  * by `createHandlers` and start the worker with the strict
- * onUnhandledRequest policy.
+ * onUnhandledRequest policy. The optional snapshot is forwarded to
+ * `buildBrowserHandlers` so the repository is seeded with the
+ * persisted cart before the first request is dispatched.
  */
-export async function startMockWorker(): Promise<void> {
+export async function startMockWorker(snapshot: MockSnapshot | null = null): Promise<void> {
   if (!environment.demo && !environment.e2e) return;
 
   installBusinessRouteBypass();
-  for (const handler of buildBrowserHandlers()) {
+  for (const handler of buildBrowserHandlers(snapshot)) {
     worker.use(handler);
   }
   await worker.start({

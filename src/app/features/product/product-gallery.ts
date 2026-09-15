@@ -1,8 +1,8 @@
 import {
   Component,
   ElementRef,
-  OnInit,
   computed,
+  effect,
   input,
   output,
   signal,
@@ -268,7 +268,7 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
     `,
   ],
 })
-export class ProductGallery implements OnInit {
+export class ProductGallery {
   readonly images = input<readonly ImageLike[]>([]);
   readonly imageIndex = input<number>(0);
   readonly productName = input<string>('');
@@ -279,7 +279,10 @@ export class ProductGallery implements OnInit {
   private readonly frame = viewChild<ElementRef<HTMLElement>>('gallery-main');
 
   /** Mirror of `imageIndex()` so internal clicks do not lose state when
-   *  the parent re-emits the same value. */
+   *  the parent re-emits the same value. The reactive `effect` keeps
+   *  the mirror in sync whenever the parent pushes a new index (e.g.
+   *  on a variant switch), so a stale local value cannot win the
+   *  effective-index race against the new variant's image list. */
   private readonly localIndex = signal<number>(0);
 
   readonly zoomOpen = signal(false);
@@ -299,15 +302,13 @@ export class ProductGallery implements OnInit {
   });
 
   constructor() {
-    // Sync the mirror whenever the input changes (parent-driven updates).
-    queueMicrotask(() => this.localIndex.set(this.imageIndex()));
-  }
-
-  ngOnInit(): void {
-    // Re-sync on each input change. Angular calls the input setter on
-    // every change detection cycle; using a microtask avoids clobbering
-    // an in-flight user click.
-    this.localIndex.set(this.imageIndex());
+    // Re-sync the mirror on every change to `imageIndex()`. The effect
+    // also fires once on construction, replacing the previous
+    // queueMicrotask + ngOnInit pair with a single reactive source
+    // of truth.
+    effect(() => {
+      this.localIndex.set(this.imageIndex());
+    });
   }
 
   prev(): void {

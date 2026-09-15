@@ -136,6 +136,7 @@ export class ProductFacade {
             a.retryNonce === b.retryNonce,
         ),
         tap(({ slug, variantQuery }) => {
+          const isNewProduct = slug !== this.slugSignal();
           this.slugSignal.set(slug);
           this.variantQuerySignal.set(variantQuery);
           this.statusSignal.set('loading');
@@ -145,7 +146,14 @@ export class ProductFacade {
           this.selectedStorageGbSignal.set(null);
           this.galleryImageIdSignal.set(null);
           this.invalidQuerySignal.set(null);
-          this.quantitySignal.set(1);
+          // Only reset the quantity when navigating to a NEW product
+          // (slug change). A variant-only query change within the
+          // same product must preserve the user's typed quantity
+          // (AC05 — "the value is stored as written, never silently
+          // rewritten").
+          if (isNewProduct) {
+            this.quantitySignal.set(1);
+          }
         }),
         switchMap(({ slug }) =>
           this.api.invoke(getProduct, { slug }).pipe(

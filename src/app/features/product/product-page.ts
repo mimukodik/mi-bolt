@@ -529,12 +529,17 @@ export class ProductPage {
     });
 
     // Route navigation updates (e.g. browser back / forward) replay
-    // through `navigationEnd` so the page stays in sync with the URL
-    // even when the `slug` input is unchanged.
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+    // through `queryParamMap` so the page stays in sync with the URL
+    // even when the `slug` input is unchanged. We use the EMITTED
+    // `queryParamMap` (not the route snapshot) so subsequent query
+    // changes within the same component lifetime — e.g. picking a
+    // different variant via `?variant=...` without remounting the
+    // product page — re-parse the *current* params rather than the
+    // snapshot captured at mount time.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((queryParamMap) => {
       const slug = this.slug() || this.route.snapshot.paramMap.get('slug') || '';
       if (slug.length === 0) return;
-      const params = new URLSearchParams(this.route.snapshot.queryParamMap.toString());
+      const params = new URLSearchParams(queryParamMap.toString());
       this.facade.load(slug, params);
     });
 

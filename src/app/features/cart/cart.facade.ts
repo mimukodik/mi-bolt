@@ -503,7 +503,13 @@ export class CartFacade {
   private recordFailure(intent: MutationIntent, result: DispatchResult): void {
     if (result.ok) return;
     if (result.code === 'CART_VERSION_CONFLICT') {
-      this.lastFailedIntent = intent;
+      // A back-to-back conflict must keep the FIRST failed intent so
+      // `retry()` replays the user's original operation, not the
+      // second one. Only the first recordFailure for a fresh
+      // conflict surface gets to overwrite `lastFailedIntent`.
+      if (this.conflictWritable() === null) {
+        this.lastFailedIntent = intent;
+      }
       const conflict: CartConflict = {
         code: 'CART_VERSION_CONFLICT',
         status: 409,
@@ -533,13 +539,16 @@ export class CartFacade {
     if (result.code === 'CART_EXPIRED') {
       // Drop the local snapshot so the next ensureCart() actually
       // creates a fresh cart instead of seeing an "active" status the
-      // server will reject.
+      // server will reject. PRESERVE `lastFailedIntent`: the expired
+      // cart may have been caused by the refetch that followed the
+      // user's original conflict, not by the user's intent itself.
+      // Clearing it here would discard the recoverable Retry button
+      // the user is about to click (AC04).
       this.cartWritable.set(null);
       this.cartExpiredWritable.set(true);
       this.conflictWritable.set(null);
       this.errorWritable.set(null);
       this.cartGoneWritable.set(false);
-      this.lastFailedIntent = null;
       return;
     }
     if (result.code === 'NOT_FOUND') {
@@ -558,18 +567,12 @@ export class CartFacade {
     // is currently surfaced so the retry affordance survives a
     // transient error; otherwise discard it. Clear the stale conflict
     // overlay so the UI doesn't accumulate error states.
-    if (this.conflictWritable() !== null) {
-      this.errorWritable.set({
-        code: result.code,
-        status: result.status,
-        detail: result.detail,
-      });
-    } else {
-      this.errorWritable.set({
-        code: result.code,
-        status: result.status,
-        detail: result.detail,
-      });
+    this.errorWritable.set({
+      code: result.code,
+      status: result.status,
+      detail: result.detail,
+    });
+    if (this.conflictWritable() === null) {
       this.lastFailedIntent = null;
     }
     this.conflictWritable.set(null);
@@ -609,6 +612,12 @@ function mapError(err: unknown): DispatchResult {
     const detail = (body && body.detail) || err.message;
     if (err.status === 409 && code === 'CART_VERSION_CONFLICT') {
       return { ok: false, code: 'CART_VERSION_CONFLICT', status: 409, detail };
+    }
+    if (err.status === 409 && code === 'OUT_OF_STOCK') {
+      return { ok: false, code: 'OUT_OF_STOCK', status: 409, detail };
+    }
+    if (err.status === 409 && code === 'IDEMPOTENCY_CONFLICT') {
+      return { ok: false, code: 'IDEMPOTENCY_CONFLICT', status: 409, detail };
     }
     if (err.status === 410 && code === 'CART_EXPIRED') {
       return { ok: false, code: 'CART_EXPIRED', status: 410, detail };

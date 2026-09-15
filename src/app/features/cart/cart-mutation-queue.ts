@@ -163,9 +163,16 @@ export class CartMutationQueue {
    * Mark the queue as destroyed so any dispatch that resolves after
    * teardown is a no-op. The facade wires this to its own `DestroyRef`
    * so the queue's signal writes cannot outlive the owning service.
+   * The `tail` chain is also short-circuited so an in-flight dispatch
+   * whose result we no longer care about does not keep the queue's
+   * microtask alive until it settles.
    */
   destroy(): void {
     this.destroyed = true;
+    // Replace `tail` with an already-resolved promise so any further
+    // `.then(...)` chain in a pending enqueue short-circuits without
+    // invoking the dispatcher.
+    this.tail = Promise.resolve();
   }
 }
 

@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, signal, viewChild, type ElementRef } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { CartCountFacade } from './cart-count-facade';
 import { MobileDrawer } from './mobile-drawer';
@@ -82,6 +82,9 @@ const STANDARD_LINKS: ReadonlyArray<NavLink> = [
                 autocomplete="off"
                 inputmode="search"
                 data-testid="header-search-input"
+                [value]="searchDraft()"
+                (input)="onSearchDraftInput($event)"
+                (keydown.enter)="commitSearch()"
               />
             </label>
             <a
@@ -130,6 +133,9 @@ const STANDARD_LINKS: ReadonlyArray<NavLink> = [
                 autocomplete="off"
                 inputmode="search"
                 data-testid="mobile-search-input"
+                [value]="searchDraft()"
+                (input)="onSearchDraftInput($event)"
+                (keydown.enter)="commitSearch()"
               />
             </label>
           </div>
@@ -161,8 +167,16 @@ export class HeaderNav {
   /** Cart line-item total signal — provided in root by `CartCountFacade`. */
   readonly cartFacade = inject(CartCountFacade);
 
+  /** Router instance — used to send the header search to the catalog page. */
+  private readonly router = inject(Router);
+
   /** Mobile drawer open state. */
   readonly drawerOpen = signal(false);
+
+  /** Current draft of the header search input. Submitted to the
+   *  catalog on Enter; cleared after a successful navigation so a
+   *  second query does not see stale text. */
+  readonly searchDraft = signal<string>('');
 
   /** Reference to the menu trigger button for focus restoration. */
   private readonly menuTriggerRef = viewChild<ElementRef<HTMLElement>>('menuTrigger');
@@ -193,5 +207,21 @@ export class HeaderNav {
 
   closeDrawer(): void {
     this.drawerOpen.set(false);
+  }
+
+  /** Capture the typed search value into the draft signal. */
+  onSearchDraftInput(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    if (target === null) return;
+    this.searchDraft.set(target.value);
+  }
+
+  /** Submit the search draft to the catalog route. Empty drafts are
+   *  ignored so the user can blur the input without leaving the page. */
+  commitSearch(): void {
+    const q = this.searchDraft().trim();
+    if (q.length === 0) return;
+    void this.router.navigate(['/telefonok'], { queryParams: { q } });
+    this.searchDraft.set('');
   }
 }

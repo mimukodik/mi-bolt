@@ -752,6 +752,9 @@ export class CatalogPage {
       case 'maxPrice':
         this.facade.setPriceRange(this.facade.query().minPrice, undefined);
         break;
+      case 'featured':
+        this.facade.setFeatured(undefined);
+        break;
     }
   }
 
@@ -806,7 +809,7 @@ export class CatalogPage {
 
 interface AppliedChip {
   readonly id: string;
-  readonly kind: 'q' | 'brand' | 'storage' | 'inStock' | 'is5g' | 'minPrice' | 'maxPrice';
+  readonly kind: 'q' | 'brand' | 'storage' | 'inStock' | 'is5g' | 'minPrice' | 'maxPrice' | 'featured';
   readonly label: string;
   readonly value?: string | number;
 }
@@ -833,6 +836,9 @@ function buildChips(q: CatalogQuery): readonly AppliedChip[] {
   }
   if (q.is5g === true) {
     chips.push({ id: 'is5g', kind: 'is5g', label: 'Csak 5G' });
+  }
+  if (q.featured === true) {
+    chips.push({ id: 'featured', kind: 'featured', label: 'Kiemelt termékek' });
   }
   return chips;
 }
