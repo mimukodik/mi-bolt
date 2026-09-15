@@ -95,7 +95,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                 type="button"
                 class="trigger"
                 data-testid="filter-trigger"
-                #filterTrigger
+                #filterDrawerTrigger
                 (click)="openDrawer()"
                 [attr.aria-expanded]="drawerOpened() ? 'true' : 'false'"
                 [attr.aria-controls]="'filter-drawer'"
@@ -604,7 +604,7 @@ export class CatalogPage {
   private readonly searchEl = viewChild<ElementRef<HTMLInputElement>>('search');
   /** Trigger button the catalog page opens the filter drawer with — passed
    *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3). */
-  private readonly filterTrigger = viewChild<ElementRef<HTMLButtonElement>>('filterTrigger');
+  protected readonly filterTrigger = viewChild<ElementRef<HTMLButtonElement>>('filterDrawerTrigger');
 
   /** Local UI flags that do NOT live in the URL. */
   readonly drawerOpened = signal<boolean>(false);

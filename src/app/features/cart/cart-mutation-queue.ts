@@ -150,6 +150,18 @@ export class CartMutationQueue {
   }
 
   /**
+   * Resets the pending count to zero without touching the `tail`
+   * chain or the dispatcher callback. Used by
+   * `CartFacade.resetOrderedCart()` to drop the counter that was
+   * tracking intents queued against the just-ordered cart. The
+   * intents still in flight will eventually resolve, but their
+   * results must not resurrect the ordered cart.
+   */
+  clearPending(): void {
+    this.pendingWritable.set(0);
+  }
+
+  /**
    * Test seam: lets a test wait for every queued dispatch to
    * settle without depending on wall-clock timers. Production code
    * never calls this; tests that assert on `pendingCount` use it to

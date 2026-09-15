@@ -6,7 +6,14 @@
  * `?mi-scenario=`.
  */
 
-import type { Environment } from './environment';
+interface Environment {
+  readonly production: boolean;
+  readonly demo: boolean;
+  readonly e2e: boolean;
+  readonly apiBase: string;
+  readonly cartStorageKey: string;
+  readonly ordersStorageKey: string;
+}
 
 export const environment: Environment = {
   production: false,

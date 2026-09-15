@@ -318,6 +318,29 @@ export class CartFacade {
   }
 
   /**
+   * Drops the in-memory cart snapshot the moment an order lands, so
+   * the header badge reads 0 even though past-receipt replay remains
+   * available through the URL (T24-AC03). Synchronous and idempotent:
+   *   - clears the local cart snapshot,
+   *   - clears conflict / cartGone / cartExpired / error overlays,
+   *   - drops any pending intent that was queued against the ordered
+   *     cart (the user has moved on; replaying them now would resurrect
+   *     the just-ordered items),
+   *   - clears the retry affordance so the success page never offers
+   *     "Retry" against a server that already accepted the order.
+   * No network call is issued — the server already owns the truth.
+   */
+  resetOrderedCart(): void {
+    this.cartWritable.set(null);
+    this.conflictWritable.set(null);
+    this.cartGoneWritable.set(false);
+    this.cartExpiredWritable.set(false);
+    this.errorWritable.set(null);
+    this.lastFailedIntent = null;
+    this.queue.clearPending();
+  }
+
+  /**
    * Test seam: points the local cart snapshot at an id the server
    * has never seen, so the next mutation surfaces 404 and the
    * `cartGone` signal flips. Production code does not call this.

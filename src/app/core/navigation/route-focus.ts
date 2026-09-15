@@ -1,4 +1,4 @@
-import { Service, afterNextRender, inject } from '@angular/core';
+import { EnvironmentInjector, Service, afterNextRender, inject, runInInjectionContext } from '@angular/core';
 import { NavigationEnd, Router, type Event } from '@angular/router';
 import { Observable, filter } from 'rxjs';
 
@@ -21,6 +21,7 @@ import { Observable, filter } from 'rxjs';
 @Service()
 export class RouteFocusService {
   private readonly router = inject(Router);
+  private readonly injector = inject(EnvironmentInjector);
 
   /**
    * Re-emits Router events as they occur. The RouteHeadingDirective on
@@ -47,9 +48,17 @@ export class RouteFocusService {
    * Schedule the focus move after the next render so the lazy-loaded
    * route's H1 has a chance to mount. `afterNextRender` only fires on
    * the browser, so server contexts remain a no-op.
+   *
+   * `afterNextRender` requires an injection context, but this method
+   * is normally called from a `Router.events` subscription (which is
+   * not). The captured `EnvironmentInjector` is replayed via
+   * `runInInjectionContext` so the callback runs in the same DI scope
+   * as the service itself; without that, Angular throws NG0203.
    */
   scheduleFocus(): void {
-    afterNextRender(() => this.focusMainHeading());
+    runInInjectionContext(this.injector, () => {
+      afterNextRender(() => this.focusMainHeading());
+    });
   }
 
   /**

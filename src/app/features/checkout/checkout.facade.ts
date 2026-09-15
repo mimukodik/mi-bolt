@@ -534,6 +534,52 @@ export class CheckoutFacade {
   }
 
   // -------------------------------------------------------------------------
+  // Receipt hydration (T24-AC02).
+  // -------------------------------------------------------------------------
+
+  /**
+   * Fetches an order receipt by id. GET only — never POST — so a
+   * reload / deep-link / back+forward to the success URL can
+   * rehydrate the page without creating a duplicate order. The
+   * `If-Match` header is bound to the current cart version so the
+   * interceptor emits it, even though GET requests ignore it; this
+   * keeps the wire surface uniform with the rest of the facade.
+   *
+   * On success the receipt is committed to the `order` signal so
+   * the success page renders immediately. On 404 a structured
+   * `not_found` error is returned so the page can render its
+   * recovery state. Every other failure surfaces the canonical
+   * `CheckoutError` shape the rest of the facade uses.
+   */
+  async fetchOrder(orderId: string): Promise<CheckoutMutationResult<OrderReceipt>> {
+    const cartVersion = this.cartFacade.cart()?.version;
+    const context = cartVersion === undefined ? undefined : withIfMatch(cartVersion);
+    try {
+      const receipt = await firstValueFrom(
+        this.api.invoke(functions.getOrder, { orderId }, context),
+      );
+      this.orderWritable.set(receipt);
+      this.errorWritable.set(null);
+      return { ok: true, value: receipt };
+    } catch (err) {
+      const mapped = mapError(err);
+      if (mapped.status === 404) {
+        return {
+          ok: false,
+          error: {
+            code: 'not_found',
+            status: 404,
+            detail: mapped.detail,
+            fieldErrors: [],
+          },
+        };
+      }
+      this.recordFailure(mapped);
+      return { ok: false, error: mapped };
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Payment + order commit (explicit UI actions only).
   // -------------------------------------------------------------------------
 
