@@ -4,7 +4,7 @@ import localeHu from '@angular/common/locales/hu';
 
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
-import { prepareMocks } from './core/bootstrap-demo';
+import { environment } from './environments/environment';
 
 // Register Hungarian locale data before bootstrap so the DatePipe,
 // CurrencyPipe and friends format Hungarian numbers, dates and
@@ -12,22 +12,25 @@ import { prepareMocks } from './core/bootstrap-demo';
 // in the application; redeclaring here is a no-op for re-imports.
 registerLocaleData(localeHu, 'hu-HU');
 
-// Re-export `prepareMocks` so E2E specs that bind handlers via the
-// global Playwright `page.exposeBinding` indirection can detect that
-// the demo is ready before continuing.
-export { prepareMocks };
-
-// Re-export the browser worker so E2E specs that bind handlers via
-// `page.exposeBinding` can reach the same MSW instance that the
-// service worker uses.
-export { worker } from './mocks/browser';
-
 /**
  * Boot the MSW service worker BEFORE Angular bootstraps so any
  * HTTP call made during application initialisation is already
  * intercepted. The worker is only started when `environment.demo`
  * or `environment.e2e` is true so production builds never ship a
  * mocking surface.
+ *
+ * The MSW module graph (`./core/bootstrap-demo` -> `./mocks/browser`
+ * -> MSW handler factory) is loaded via `import()` so the production
+ * bundle's treeshaker can isolate the dependency chain into a chunk
+ * that is only fetched when `environment.production === false`. A
+ * static `import { prepareMocks }` would force the bundler to keep
+ * the module reachable as long as the binding is exported, which
+ * would leak MSW, `setupWorker`, `startMockWorker` and the
+ * `mockServiceWorker.js` URL into `main-*.js` even though the
+ * runtime short-circuits in production. The `bootstrap-demo.ts`
+ * module additionally throws `Error('MSW bootstrap called in
+ * production')` as a defensive gate so a stray call cannot
+ * silently bring the worker up in production.
  *
  * `onUnhandledRequest: 'error'` is the T02 network-isolation
  * gate: a request that escapes the registered handlers fails the
@@ -45,15 +48,19 @@ export { worker } from './mocks/browser';
  * worker is a development convenience; the app should still boot
  * without it.
  */
-prepareMocks()
-  .catch((err) => {
+const start = async (): Promise<void> => {
+  if (environment.production) {
+    bootstrapApplication(App, appConfig).catch(showFatal);
+    return;
+  }
+  const { prepareMocks } = await import('./core/bootstrap-demo');
+  await prepareMocks().catch((err) => {
     console.error('[MiBolt] Mock preparation failed; continuing without mocks:', err);
-  })
-  .finally(() => {
-    bootstrapApplication(App, appConfig).catch((err) => {
-      showFatal(err);
-    });
   });
+  bootstrapApplication(App, appConfig).catch(showFatal);
+};
+
+void start();
 
 function showFatal(err: unknown): void {
   console.error('[MiBolt] Bootstrap failed:', err);

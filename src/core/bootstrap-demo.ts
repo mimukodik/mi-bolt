@@ -34,6 +34,16 @@ let preparedScenario: string | null = null;
  * builds short-circuit and return the default scenario unchanged.
  */
 export async function prepareMocks(): Promise<string> {
+  if (environment.production) {
+    // Defensive production gate. `src/main.ts` is supposed to skip
+    // this module entirely via dynamic import, but if a stray call
+    // reaches us we want a loud failure rather than a silently
+    // bootstrapped MSW worker in production. The throw also gives
+    // the production treeshake an explicit unreachable call site
+    // for the `startMockWorker(...)` below, so the MSW graph can be
+    // dropped from the production chunk.
+    throw new Error('MSW bootstrap called in production');
+  }
   if (!environment.demo && !environment.e2e) {
     preparedScenario = 'production';
     return preparedScenario;
