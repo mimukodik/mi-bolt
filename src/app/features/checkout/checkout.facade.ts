@@ -614,21 +614,42 @@ export class CheckoutFacade {
     }
     const paymentIntent = this.paymentIntentWritable();
     const paymentMethod = this.modelWritable().paymentMethod;
+    const body = {
+      cartId,
+      quoteId: quote.id,
+      ...(paymentMethod === 'demo_card' && paymentIntent !== null
+        ? { paymentIntentId: paymentIntent.id }
+        : {}),
+      termsVersion: 'demo-1' as const,
+      acceptedTerms: true as const,
+      acknowledgedSimulation: true as const,
+    };
+    return this.commitOrderWithKey(freshIdempotencyKey(), body);
+  }
+
+  /**
+   * Commit with an externally supplied idempotency key. Used by
+   * `OrderSubmission` so the persisted safe-order record's key
+   * matches the one the mock's idempotency cache actually stores
+   * (T23-AC04). The body MUST match the wire contract — no PII.
+   */
+  async commitOrderWithKey(
+    idempotencyKey: string,
+    body: {
+      cartId: string;
+      quoteId: string;
+      paymentIntentId?: string;
+      termsVersion: 'demo-1';
+      acceptedTerms: true;
+      acknowledgedSimulation: true;
+    },
+  ): Promise<CheckoutMutationResult<OrderReceipt>> {
     this.busyWritable.set(true);
     try {
       const receipt = await firstValueFrom(
         this.api.invoke(functions.createOrder, {
-          'Idempotency-Key': freshIdempotencyKey(),
-          body: {
-            cartId,
-            quoteId: quote.id,
-            ...(paymentMethod === 'demo_card' && paymentIntent !== null
-              ? { paymentIntentId: paymentIntent.id }
-              : {}),
-            termsVersion: 'demo-1',
-            acceptedTerms: true,
-            acknowledgedSimulation: true,
-          },
+          'Idempotency-Key': idempotencyKey,
+          body,
         }),
       );
       this.orderWritable.set(receipt);
