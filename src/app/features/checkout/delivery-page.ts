@@ -1,18 +1,9 @@
-import { Component } from '@angular/core';
-
 /**
- * T11 placeholder for the delivery step (S4.3). The route is wired in
- * `app.routes.ts` so the navigation graph compiles; the real screen
- * belongs to T17. This minimal stub renders an H1 so the step
- * indicator has something to frame.
+ * Route entry for the delivery + payment step. The T21 `DeliveryStep`
+ * owns the implementation; this module re-exports it under the
+ * `DeliveryPage` name so `checkout.routes.ts` (T19) can keep its
+ * import binding (`import('./features/checkout/delivery-page').then(
+ * (m) => m.DeliveryPage)`) without touching the wizard when the
+ * screen arrives.
  */
-@Component({
-  selector: 'app-delivery-page',
-  template: `
-    <section class="delivery">
-      <h1>Szállítás és fizetés</h1>
-      <p>A teljes űrlap a T17 feladatban készül.</p>
-    </section>
-  `,
-})
-export class DeliveryPage {}
+export { DeliveryStep as DeliveryPage } from './delivery-step';
