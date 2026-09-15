@@ -59,42 +59,14 @@ export const routes: Routes = [
   {
     path: 'penztar',
     component: CheckoutLayout,
-    children: [
-      {
-        path: 'kosar',
-        loadComponent: () => import('./features/cart/cart-page').then((m) => m.CartPage),
-        title: 'MiBolt — Kosár',
-        data: { step: 'cart' },
-      },
-      {
-        path: 'adatok',
-        loadComponent: () =>
-          import('./features/checkout/contact-page').then((m) => m.ContactPage),
-        title: 'MiBolt — Kapcsolattartási adatok',
-        data: { step: 'contact' },
-      },
-      {
-        path: 'szallitas',
-        loadComponent: () =>
-          import('./features/checkout/delivery-page').then((m) => m.DeliveryPage),
-        title: 'MiBolt — Szállítás és fizetés',
-        data: { step: 'delivery' },
-      },
-      {
-        path: 'ellenorzes',
-        loadComponent: () =>
-          import('./features/checkout/review-page').then((m) => m.ReviewPage),
-        title: 'MiBolt — Rendelés ellenőrzése',
-        data: { step: 'review' },
-      },
-      {
-        path: 'siker/:orderId',
-        loadComponent: () =>
-          import('./features/checkout/success-page').then((m) => m.SuccessPage),
-        title: 'MiBolt — Demórendelés elkészült',
-        data: { step: 'success' },
-      },
-    ],
+    // The checkout subtree (guards + lazy steps) lives in
+    // `features/checkout/checkout.routes.ts`; mounting it through
+    // `loadChildren` is what actually wires `contactGuard`,
+    // `deliveryGuard`, `reviewGuard` and `successGuard` — without
+    // this indirection the inline `loadComponent`s below would skip
+    // every guard and the wizard would not enforce T19 / T24.
+    loadChildren: () =>
+      import('./features/checkout/checkout.routes').then((m) => m.checkoutRoutes),
   },
   // Utility 404 — wrapped in the ShopLayout chrome so the user keeps
   // the standard header/footer when an unknown URL is hit.

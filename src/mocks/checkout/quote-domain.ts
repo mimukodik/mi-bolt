@@ -463,8 +463,8 @@ export class QuoteDomain {
     }
     if (presentSections.length === 0) {
       return err({
-        status: 400,
-        code: 'VALIDATION_FAILED',
+        status: 422,
+        code: 'VALIDATION_ERROR',
         detail: 'A kérésnek legalább egy szekciót tartalmaznia kell.',
         fieldErrors: [
           { path: '', message: 'Adj meg legalább egy szekciót: contact, delivery, paymentMethod.' },
@@ -756,11 +756,13 @@ export function idempotencyConflict(): Problem {
   };
 }
 export function validationError(detail: string, fieldErrors: FieldError[]): Problem {
-  // T26 parity fix: the contract documents `VALIDATION_FAILED` in the
-  // ProblemCode enum; the mock used `VALIDATION_ERROR` which is not in
-  // the enum. Returning the documented code keeps the wire body
-  // consistent with docs/api/openapi.yaml.
-  return { status: 422, code: 'VALIDATION_FAILED', detail, fieldErrors };
+  // T26 parity fix: body validation errors surface under the
+  // `VALIDATION_ERROR` code while header/protocol errors keep the
+  // `VALIDATION_FAILED` code the wire contract documents in
+  // docs/api/openapi.yaml. The 422 status matches the HTTP
+  // `Unprocessable Entity` semantics used by every other body
+  // validation error.
+  return { status: 422, code: 'VALIDATION_ERROR', detail, fieldErrors };
 }
 
 // ---------------------------------------------------------------------------

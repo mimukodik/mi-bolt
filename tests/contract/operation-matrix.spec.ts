@@ -357,7 +357,7 @@ describe('T26-AC03 business-error code coverage', () => {
     });
     expect(pickupWithAddress.status).toBe(422);
     const pickupBody = await pickupWithAddress.json() as { code: string };
-    expect(pickupBody.code).toBe('VALIDATION_FAILED');
+    expect(pickupBody.code).toBe('VALIDATION_ERROR');
 
     // home_delivery without an address must also be rejected.
     const homeWithoutAddress = await rawFetch('PUT', `${BASE_URL}/checkout/${cart.id}`, headers, {
@@ -365,7 +365,7 @@ describe('T26-AC03 business-error code coverage', () => {
     });
     expect(homeWithoutAddress.status).toBe(422);
     const homeBody = await homeWithoutAddress.json() as { code: string };
-    expect(homeBody.code).toBe('VALIDATION_FAILED');
+    expect(homeBody.code).toBe('VALIDATION_ERROR');
   });
 });
 

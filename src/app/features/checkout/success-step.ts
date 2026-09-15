@@ -509,9 +509,14 @@ export class SuccessStep {
     //      but idempotent — `ensureCart` will create a fresh one);
     //   2. Call `ensureCart()` so the next add-to-cart hits a server-
     //      side cart instead of creating a phantom one locally;
-    //   3. Navigate to the shop so the user can keep shopping.
+    //   3. Clear the in-memory order receipt so the wizard guards
+    //      (T24-AC04) do not bounce the next review / contact /
+    //      delivery navigation back to this success URL — the user
+    //      is explicitly choosing to start a fresh purchase;
+    //   4. Navigate to the shop so the user can keep shopping.
     void this.cart
       .ensureCart()
+      .then(() => this.checkout.resetDraft())
       .then(() => this.router.navigate(['/telefonok']))
       .catch(() => this.router.navigate(['/penztar/kosar']))
       .finally(() => {

@@ -494,7 +494,7 @@ describe('T19 deep-link to /penztar/siker/:orderId without a receipt', () => {
     configureTestBed();
   });
 
-  it('redirects to /penztar/kosar when the in-memory order is missing', () => {
+  it('allows the navigation through so the page can hydrate the receipt', () => {
     const router = TestBed.inject(Router);
     const checkout = TestBed.inject(CheckoutFacade);
     expect(checkout.order()).toBeNull();
@@ -508,10 +508,10 @@ describe('T19 deep-link to /penztar/siker/:orderId without a receipt', () => {
       TestBed.inject(EnvironmentInjector),
       () => successGuard(route, state),
     );
-    expect(result).toBeInstanceOf(UrlTree);
-    const tree = result as UrlTree;
-    expect(tree.toString()).toContain('/penztar/kosar');
-    expect(tree.toString()).toContain('navigationReason=deep-link');
+    // T24-AC02: the success page owns hydration through fetchOrder.
+    // The guard lets the navigation through; the page renders the
+    // 404 recovery when the order is genuinely missing server-side.
+    expect(result).toBe(true);
     void router;
   });
 

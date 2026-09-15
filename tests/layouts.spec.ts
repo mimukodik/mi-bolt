@@ -21,6 +21,7 @@ import { Location } from '@angular/common';
 import { beforeAll } from 'vitest';
 
 import { routes } from '../src/app/app.routes';
+import { checkoutRoutes } from '../src/app/features/checkout/checkout.routes';
 import { App } from '../src/app/app';
 import { CartCountFacade } from '../src/app/core/navigation/cart-count-facade';
 import { RouteFocusService } from '../src/app/core/navigation/route-focus';
@@ -32,14 +33,15 @@ import { DemoNotice } from '../src/app/shared/shell/demo-notice';
 import { HeaderNav } from '../src/app/core/navigation/header-nav';
 import { MobileDrawer } from '../src/app/core/navigation/mobile-drawer';
 import { MobileDrawerHost } from '../src/app/core/navigation/mobile-drawer-host';
+import { AccessibleDialog } from '../src/app/shared/ui/accessible-dialog/accessible-dialog';
+import { FooterNav } from '../src/app/core/navigation/footer-nav';
 
-beforeAll(async () => {
+beforeAll(() => {
   TestBed.initTestEnvironment(
     BrowserDynamicTestingModule,
     platformBrowserDynamicTesting(),
     { teardown: { destroyAfterEach: true } },
   );
-  await TestBed.compileComponents();
 });
 
 const colon = String.fromCharCode(58);
@@ -98,13 +100,9 @@ describe('T11-AC01 layouts and route table', () => {
   it('checkout family includes cart, contact, delivery, review and success', () => {
     const expected = ['kosar', 'adatok', 'szallitas', 'ellenorzes'];
     let foundCount = 0;
-    routes.forEach((r) => {
-      if (r.path !== 'penztar') return;
-      if (!r.children) return;
-      r.children.forEach((c) => {
-        expected.forEach((e) => {
-          if (c.path === e) foundCount = foundCount + 1;
-        });
+    checkoutRoutes.forEach((c) => {
+      expected.forEach((e) => {
+        if (c.path === e) foundCount = foundCount + 1;
       });
     });
     const ok = foundCount - 3;
@@ -114,24 +112,32 @@ describe('T11-AC01 layouts and route table', () => {
   it('checkout success route uses the orderId child pattern', () => {
     let found = false;
     const orderIdLit = colon + 'orderId';
-    routes.forEach((r) => {
-      if (r.path !== 'penztar') return;
-      if (!r.children) return;
-      r.children.forEach((c) => {
-        const fullPath = 'siker' + '/' + orderIdLit;
-        if (c.path === fullPath) found = true;
-      });
+    const fullPath = 'siker' + '/' + orderIdLit;
+    checkoutRoutes.forEach((c) => {
+      if (c.path === fullPath) found = true;
     });
     expect(found).toBe(true);
   });
 });
 
 describe('T11-AC02 brand-consistent header and footer', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     document.body.innerHTML = '';
     TestBed.configureTestingModule({
+      imports: [
+        MarketingLayout,
+        ShopLayout,
+        CheckoutLayout,
+        AppShell,
+        HeaderNav,
+        FooterNav,
+        DemoNotice,
+        MobileDrawer,
+        AccessibleDialog,
+      ],
       providers: [provideRouter([]), provideZonelessChangeDetection()],
     });
+    await TestBed.compileComponents();
   });
 
   it('MarketingLayout header has dark shell and brand label', () => {
@@ -201,11 +207,24 @@ describe('T11-AC02 brand-consistent header and footer', () => {
 });
 
 describe('T11-AC03 skip link, single H1, route title, route-change focus, history', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     document.body.innerHTML = '';
     TestBed.configureTestingModule({
+      imports: [
+        App,
+        MarketingLayout,
+        ShopLayout,
+        CheckoutLayout,
+        AppShell,
+        HeaderNav,
+        FooterNav,
+        DemoNotice,
+        MobileDrawer,
+        AccessibleDialog,
+      ],
       providers: [provideRouter([]), provideZonelessChangeDetection()],
     });
+    await TestBed.compileComponents();
   });
 
   it('the root skip link points to main-content', () => {
@@ -291,11 +310,24 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
 });
 
 describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     document.body.innerHTML = '';
     TestBed.configureTestingModule({
+      imports: [
+        MobileDrawerHost,
+        MobileDrawer,
+        AccessibleDialog,
+        HeaderNav,
+        AppShell,
+        MarketingLayout,
+        ShopLayout,
+        CheckoutLayout,
+        FooterNav,
+        DemoNotice,
+      ],
       providers: [provideRouter([]), provideZonelessChangeDetection()],
     });
+    await TestBed.compileComponents();
   });
 
   it('MobileDrawer renders a focus-managed dialog', () => {
@@ -324,7 +356,16 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
   });
 
   it('MobileDrawer depends on the AccessibleDialog primitive', () => {
-    const deps = (MobileDrawer as unknown as { ɵcmp: { dependencies: readonly unknown[] } }).ɵcmp.dependencies;
+    // Angular 22 exposes `ɵcmp.dependencies` as either an array (AOT
+    // output) or a function that returns the array (JIT output). The
+    // test runner here goes through vitest + the Angular JIT compiler,
+    // so accept both forms.
+    const rawDeps = (MobileDrawer as unknown as {
+      ɵcmp: { dependencies: unknown };
+    }).ɵcmp.dependencies;
+    const deps = (typeof rawDeps === 'function'
+      ? (rawDeps as () => readonly unknown[])()
+      : (rawDeps as readonly unknown[]));
     let found = false;
     deps.forEach((d) => {
       if ((d as { name?: string }).name === 'AccessibleDialog') found = true;
@@ -334,11 +375,23 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
 });
 
 describe('T11-AC05 demo notice and cart badge wiring', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     document.body.innerHTML = '';
     TestBed.configureTestingModule({
+      imports: [
+        AppShell,
+        HeaderNav,
+        FooterNav,
+        DemoNotice,
+        MobileDrawer,
+        AccessibleDialog,
+        MarketingLayout,
+        ShopLayout,
+        CheckoutLayout,
+      ],
       providers: [provideRouter([]), provideZonelessChangeDetection()],
     });
+    await TestBed.compileComponents();
   });
 
   it('CartCountFacade is providedIn root and itemCount defaults to 0', () => {

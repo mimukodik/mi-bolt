@@ -220,14 +220,12 @@ export function buildPaymentHandlers(
   paymentIntents: PaymentIntentStore,
   quoteDomain: QuoteDomain,
 ): readonly RequestHandler[] {
-  const { repository, clock, ids, apiRoot, scenario } = options;
+  const { repository, clock, ids, scenario } = options;
   const traceId = traceIdFor(options);
-  const base = apiRoot.endsWith('/') ? apiRoot.slice(0, -1) : apiRoot;
-  const wildcard = `*${base}`;
   const idempotency = new IdempotencyStore(clock);
 
   const createPaymentIntent: RequestHandler = http.post(
-    `${wildcard}/payment-intents`,
+    '*/api/v1/payment-intents',
     async ({ request }) => {
       const session = validateSession(request.headers.get('X-Demo-Session'), traceId);
       if (!session.ok) return session.response;
@@ -314,7 +312,7 @@ export function buildPaymentHandlers(
   );
 
   const getPaymentIntent: RequestHandler = http.get(
-    `${wildcard}/payment-intents/:paymentIntentId`,
+    '*/api/v1/payment-intents/:paymentIntentId',
     ({ request, params }) => {
       const session = validateSession(request.headers.get('X-Demo-Session'), traceId);
       if (!session.ok) return session.response;

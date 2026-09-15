@@ -64,13 +64,21 @@ function stepPath(step: 'cart' | 'contact' | 'delivery' | 'review'): string {
 /**
  * Guard for `/penztar/adatok` (contact step).
  *
- * Rejects when the cart is empty (or has never been created) and
- * sends the user back to `/penztar/kosar`. This is the entry point
- * of the wizard so a deep link with no cart lands on the cart page
- * rather than an empty form (T19-AC02).
+ * Rejects and redirects to the earliest failure mode:
+ *   - an order is already in memory → /penztar/siker/{orderId}
+ *     so a back-navigation after a successful commit cannot reopen
+ *     the wizard (T24-AC04);
+ *   - the cart is empty (or has never been created) →
+ *     /penztar/kosar so a deep link with no cart lands on the
+ *     cart page rather than an empty form (T19-AC02).
  */
 export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
+  const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
+  const existingOrder = checkout.order();
+  if (existingOrder !== null) {
+    return redirectToSuccess(existingOrder.id);
+  }
   const cartSnapshot = cart.cart();
   if (cartSnapshot === null || cartSnapshot.items.length === 0) {
     return redirectToStep('cart', 'empty-cart');
@@ -81,14 +89,23 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
 /**
  * Guard for `/penztar/szallitas` (delivery + payment step).
  *
- * Rejects when the contact section has not been saved yet and
- * redirects to `/penztar/adatok`. A deep link to the delivery
- * step therefore lands the user on the contact form, where the
- * checkout facade hydrates whatever was saved server-side.
+ * Rejects and redirects to the earliest failure mode:
+ *   - an order is already in memory → /penztar/siker/{orderId}
+ *     so a back-navigation after a successful commit cannot reopen
+ *     the wizard (T24-AC04);
+ *   - the cart is empty → /penztar/kosar (T19-AC02);
+ *   - the contact section has not been saved yet →
+ *     /penztar/adatok so a deep link to the delivery step lands on
+ *     the contact form, where the checkout facade hydrates whatever
+ *     was saved server-side.
  */
 export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
+  const existingOrder = checkout.order();
+  if (existingOrder !== null) {
+    return redirectToSuccess(existingOrder.id);
+  }
   const cartSnapshot = cart.cart();
   if (cartSnapshot === null || cartSnapshot.items.length === 0) {
     return redirectToStep('cart', 'empty-cart');
@@ -104,7 +121,10 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
  * Guard for `/penztar/ellenorzes` (review step).
  *
  * Rejects and redirects to the earliest missing section. Covers
- * the three failure modes the spec calls out:
+ * the four failure modes the spec calls out:
+ *   - an order is already in memory → /penztar/siker/{orderId}
+ *     so a back-navigation after a successful commit cannot
+ *     resubmit the cart (T24-AC04).
  *   - no cart at all → /penztar/kosar (empty-cart)
  *   - contact missing → /penztar/adatok
  *   - delivery / paymentMethod missing → /penztar/szallitas
@@ -112,6 +132,13 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
 export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
+  // T24-AC04: when an order is already in memory the user must NOT
+  // be allowed back into the wizard — that path could resubmit the
+  // cart. Redirect them to the existing success URL instead.
+  const existingOrder = checkout.order();
+  if (existingOrder !== null) {
+    return redirectToSuccess(existingOrder.id);
+  }
   const cartSnapshot = cart.cart();
   if (cartSnapshot === null || cartSnapshot.items.length === 0) {
     return redirectToStep('cart', 'empty-cart');
@@ -127,38 +154,42 @@ export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =>
 };
 
 /**
+ * Builds a UrlTree pointing at the existing success page so a
+ * back-navigation attempt lands the user on the same receipt they
+ * already have, instead of re-opening the wizard.
+ */
+function redirectToSuccess(orderId: string): UrlTree {
+  const router = inject(Router);
+  return router.createUrlTree([`/penztar/siker/${orderId}`]);
+}
+
+/**
  * Guard for `/penztar/siker/:orderId`.
  *
- * Two paths:
+ * Three paths:
  *
  *   - The user navigated forward through the wizard, in which case
  *     `CheckoutFacade.order()` already carries the receipt and the
  *     guard matches.
- *   - The user reloaded / deep-linked to the URL, in which case the
- *     in-memory receipt is gone. The guard reads the `orderId`
- *     parameter from the URL and — because the spec forbids guards
- *     from creating orders but explicitly allows them to fetch —
- *     resolves the receipt through `CheckoutFacade.fetchOrder()`. A
- *     404 redirects to the cart page (T19-AC02).
- *
- * The success page never writes back to the wizard; it just renders
- * the receipt.
+ *   - The user reloaded / deep-linked to the URL with a valid
+ *     `orderId` parameter. The success page owns the hydration
+ *     through `CheckoutFacade.fetchOrder()`; the guard simply
+ *     allows the navigation through so the page can run its GET.
+ *   - The user deep-linked without an `orderId`. We send them back
+ *     to the cart page rather than rendering an empty receipt.
  */
 export const successGuard: CanActivateFn = (route): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   if (checkout.order() !== null) {
     return true;
   }
-  // The user reloaded the success URL or deep-linked without ever
-  // completing the wizard. We deliberately do NOT fetch the order
-  // from the server here: the success page owns that hydration, and
-  // the privacy contract for T19 keeps the cart the only thing that
-  // survives a hard reload. The user is sent back to the cart.
   const orderId = route.paramMap.get('orderId');
   if (orderId === null || orderId.length === 0) {
     return redirectToStep('cart', 'deep-link');
   }
-  return redirectToStep('cart', 'deep-link');
+  // T24-AC02: hydration belongs to the success page. The guard
+  // matches and the page resolves the receipt through GET.
+  return true;
 };
 
 /**

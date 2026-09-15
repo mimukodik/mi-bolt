@@ -63,7 +63,67 @@ import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
       </div>
     </ng-template>
   `,
-  styleUrl: './accessible-dialog.css',
+  styles: [
+    `
+      .panel {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        width: min(560px, calc(100vw - var(--space-7)));
+        max-height: calc(100vh - var(--space-7));
+        padding: var(--space-6);
+        background: var(--color-surface-light);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-card);
+        color: var(--color-text-primary);
+        box-sizing: border-box;
+        font-family: inherit;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+      }
+
+      .title {
+        font-size: var(--type-card-title);
+        font-weight: var(--weight-bold);
+        line-height: var(--line-height-heading);
+        margin: 0;
+        color: var(--color-text-primary);
+      }
+
+      .close {
+        min-width: var(--size-control);
+        min-height: var(--size-control);
+        border-radius: var(--radius-control);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--color-text-primary);
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .close:hover {
+        background: var(--color-surface-section);
+      }
+
+      .close:focus-visible {
+        outline: 2px solid var(--color-focus-light);
+        outline-offset: 2px;
+      }
+
+      .body {
+        font-size: var(--type-body);
+        line-height: var(--line-height-body);
+        color: var(--color-text-primary);
+      }
+    `,
+  ],
 })
 export class AccessibleDialog {
   private readonly dialog = inject(Dialog);
@@ -91,6 +151,14 @@ export class AccessibleDialog {
   /** Emits when the dialog closes by any mechanism (button, Escape, backdrop). */
   readonly closed = output<void>();
 
+  /**
+   * `@ViewChild` is the JIT-friendly view-query API: the JIT compiler
+   * (the only path available under vitest without an Angular linker)
+   * reads `propDecorators` for property-level `@ViewChild` and
+   * `@Input` annotations. The vitest transformer in `vitest.config.ts`
+   * ensures those entries reach the JIT compiler; signal-based
+   * `viewChild()` only works under AOT.
+   */
   @ViewChild('body', { static: true })
   private readonly body!: TemplateRef<unknown>;
 

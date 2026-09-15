@@ -68,7 +68,7 @@ export const checkoutRoutes: Routes = [
     path: 'siker/:orderId',
     canActivate: [successGuard],
     loadComponent: () =>
-      import('./success-page').then((m) => m.SuccessPage),
+      import('./success-step').then((m) => m.SuccessStep),
     title: 'MiBolt — Demórendelés elkészült',
     data: { step: 'success' },
   },

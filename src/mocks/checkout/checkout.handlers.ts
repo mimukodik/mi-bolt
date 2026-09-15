@@ -150,14 +150,8 @@ function badRequest(detail: string, traceId: string): HttpResponse<Record<string
 export function buildCheckoutHandlers(
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] {
-  const { repository, clock, ids, scenario, apiRoot } = options;
+  const { repository, clock, ids, scenario } = options;
   const traceId = traceIdFor(options);
-  const base = apiRoot.endsWith('/') ? apiRoot.slice(0, -1) : apiRoot;
-  // MSW 2.x matches paths against the request's origin. We anchor every
-  // checkout handler to both the configured origin AND `127.0.0.1` so the
-  // Node MSW server (which defaults to `http://127.0.0.1`) and the
-  // browser worker (which uses `location.origin`) both intercept.
-  const wildcard = `*${base}`;
   // The QuoteDomain is shared with the payment + order handlers so the
   // draft / quote state is observable across slices. The IdempotencyStore
   // is owned by the shared store — checkout writes are visible to
@@ -166,7 +160,7 @@ export function buildCheckoutHandlers(
   const domain: QuoteDomain = shared.quoteDomain;
 
   const getCheckoutOptions: RequestHandler = http.get(
-    `${wildcard}/checkout/options`,
+    '*/api/v1/checkout/options',
     () =>
       HttpResponse.json(CHECKOUT_OPTIONS, {
         status: 200,
@@ -175,7 +169,7 @@ export function buildCheckoutHandlers(
   );
 
   const getCheckoutSession: RequestHandler = http.get(
-    `${wildcard}/checkout/:cartId`,
+    '*/api/v1/checkout/:cartId',
     ({ request, params }) => {
       const sessionId = sessionOf(request);
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
@@ -206,7 +200,7 @@ export function buildCheckoutHandlers(
   );
 
   const updateCheckout: RequestHandler = http.put(
-    `${wildcard}/checkout/:cartId`,
+    '*/api/v1/checkout/:cartId',
     async ({ request, params }) => {
       const sessionId = sessionOf(request);
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
@@ -244,7 +238,7 @@ export function buildCheckoutHandlers(
   );
 
   const createCheckoutQuote: RequestHandler = http.post(
-    `${wildcard}/checkout/:cartId/quote`,
+    '*/api/v1/checkout/:cartId/quote',
     ({ request, params }) => {
       const sessionId = sessionOf(request);
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);

@@ -180,10 +180,6 @@ function withDefaultVariant(
 // Handler factory
 // ---------------------------------------------------------------------------
 
-function resolveApiRoot(apiRoot: string): string {
-  return apiRoot.endsWith('/') ? apiRoot.slice(0, -1) : apiRoot;
-}
-
 /**
  * Returns the catalog products currently held in the repository.
  * The bootstrap (browser or node entry) is responsible for calling
@@ -233,19 +229,17 @@ function buildListResponse(
 export function buildCatalogHandlers(
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] {
-  // MSW 2.x matches paths against the request's origin. The leading
-  // `*` wildcard anchors the path while leaving the origin open, so
-  // the browser worker (`location.origin`) and the Node runner
-  // (`http://localhost`) both intercept the same requests. The cart
-  // and checkout handlers use the same pattern.
-  const wildcard = `*${resolveApiRoot(options.apiRoot)}`;
+  // MSW 2.x in the browser resolves relative paths against
+  // `location.href`, so a literal `/api/v1/...` pattern matches
+  // the page's actual origin (e.g. http://127.0.0.1:4204). The
+  // cart / checkout handlers use the same pattern.
   const products = listCatalogProducts(options);
 
-  const getConfig = http.get(`${wildcard}/config`, () =>
+  const getConfig = http.get(`*/api/v1/config`, () =>
     HttpResponse.json(DEMO_CONFIG),
   );
 
-  const listProducts = http.get(`${wildcard}/products`, ({ request }) => {
+  const listProducts = http.get(`*/api/v1/products`, ({ request }) => {
     const url = new URL(request.url);
     const parsed = parseCatalogFilter(url.searchParams);
     if (!parsed.ok) {
@@ -259,7 +253,7 @@ export function buildCatalogHandlers(
     return buildListResponse(options, parsed.value, products, matches);
   });
 
-  const getProduct = http.get(`${wildcard}/products/:slug`, ({ params }) => {
+  const getProduct = http.get(`*/api/v1/products/:slug`, ({ params }) => {
     const slug = String(params['slug']);
     const product = options.repository.getProductBySlug(slug);
     if (!product) {

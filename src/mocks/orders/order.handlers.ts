@@ -222,10 +222,8 @@ export function buildOrderHandlers(
     stocks: StockTracker;
   },
 ): readonly RequestHandler[] {
-  const { repository, clock, ids, apiRoot, scenario } = options;
+  const { repository, clock, ids, scenario } = options;
   const traceId = traceIdFor(options);
-  const base = apiRoot.endsWith('/') ? apiRoot.slice(0, -1) : apiRoot;
-  const wildcard = `*${base}`;
   const idempotency = new IdempotencyStore(clock);
   const domain = new OrderDomain(
     repository,
@@ -239,7 +237,7 @@ export function buildOrderHandlers(
   );
 
   const createOrder: RequestHandler = http.post(
-    `${wildcard}/orders`,
+    '*/api/v1/orders',
     async ({ request }) => {
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
@@ -273,7 +271,7 @@ export function buildOrderHandlers(
   );
 
   const getOrder: RequestHandler = http.get(
-    `${wildcard}/orders/:orderId`,
+    '*/api/v1/orders/:orderId',
     ({ request, params }) => {
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);

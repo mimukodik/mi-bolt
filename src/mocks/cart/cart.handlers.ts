@@ -252,20 +252,14 @@ function readQuantity(body: unknown): { ok: true; value: number } | { ok: false;
  * entry plus the T06 catalog entry, in registry order.
  */
 export const cartHandlersEntry: BusinessHandlerEntry = (options: CreateHandlersOptions): readonly RequestHandler[] => {
-  const { repository, clock, ids, scenario, apiRoot } = options;
+  const { repository, clock, ids, scenario } = options;
   ensureFixture(repository);
 
-  const base = apiRoot.endsWith('/') ? apiRoot.slice(0, -1) : apiRoot;
   const idempotency = new IdempotencyStore(clock);
   const domain = new CartDomain(repository, clock, ids, idempotency);
   const traceId = `mock-trace-${scenario.name}`;
-  // MSW 2.x matches paths against the request's origin. In Node the
-  // origin defaults to `http://127.0.0.1` (or localhost), so a plain
-  // `/api/v1/carts` pattern misses; the leading `*` wildcard anchors
-  // the path while leaving the origin open.
-  const wildcard = `*${base}`;
 
-  const createCart: RequestHandler = http.post(`${wildcard}/carts`, ({ request }) => {
+  const createCart: RequestHandler = http.post('*/api/v1/carts', ({ request }) => {
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
     const idempotencyKey = request.headers.get('Idempotency-Key');
@@ -278,7 +272,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (options: CreateHandlersO
     });
   });
 
-  const getCart: RequestHandler = http.get(`${wildcard}/carts/:cartId`, ({ request, params }) => {
+  const getCart: RequestHandler = http.get('*/api/v1/carts/:cartId', ({ request, params }) => {
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
     const result = domain.getCart({ sessionId, cartId: String(params['cartId']) });
@@ -290,7 +284,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (options: CreateHandlersO
   });
 
   const addCartItem: RequestHandler = http.post(
-    `${wildcard}/carts/:cartId/items`,
+    '*/api/v1/carts/:cartId/items',
     async ({ request, params }) => {
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
@@ -320,7 +314,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (options: CreateHandlersO
   );
 
   const setCartItemQuantity: RequestHandler = http.patch(
-    `${wildcard}/carts/:cartId/items/:itemId`,
+    '*/api/v1/carts/:cartId/items/:itemId',
     async ({ request, params }) => {
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
@@ -348,7 +342,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (options: CreateHandlersO
   );
 
   const removeCartItem: RequestHandler = http.delete(
-    `${wildcard}/carts/:cartId/items/:itemId`,
+    '*/api/v1/carts/:cartId/items/:itemId',
     ({ request, params }) => {
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);

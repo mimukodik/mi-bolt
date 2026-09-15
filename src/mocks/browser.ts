@@ -23,12 +23,17 @@ import { http, passthrough, type HttpHandler } from 'msw';
 import { setupWorker } from 'msw/browser';
 
 import { environment } from '../environments/environment';
+// Static import keeps the JSON in the bundle. The browser worker
+// seeds the in-memory repository from this fixture on construction
+// so the catalog endpoint returns the demo data instead of an empty
+// items array.
+import productsFixture from '../../docs/api/fixtures/products.json';
 import {
   createHandlers,
   createStrictHandlers,
   type CreateHandlersOptions,
 } from './create-handlers';
-import { Repository } from './repository';
+import { Repository, type Product } from './repository';
 import {
   createRealClock,
   createRealIds,
@@ -36,7 +41,32 @@ import {
 } from './scenarios';
 import type { MockSnapshot } from './persistence';
 
+// Force-load the slice handler modules so their module-level
+// registerBusinessHandlers(...) calls populate the create-handlers
+// registry before buildBrowserHandlers() reads it.
+import './catalog/catalog.handlers';
+import './cart/cart.handlers';
+import './checkout/checkout.handlers';
+import './payment/payment.handlers';
+import './orders/order.handlers';
+
 export const worker = setupWorker();
+
+/**
+ * The `production` scenario is the only one that runs with an empty
+ * catalog: every demo / e2e / happy-path / out-of-stock /
+ * payment-declined variant expects the fixture to be present so the
+ * page renders the catalogue rather than an empty state.
+ */
+const PRODUCTION_SCENARIO_NAME = 'production';
+
+function loadCatalogFixture(repository: Repository, scenarioName: string): void {
+  if (scenarioName === PRODUCTION_SCENARIO_NAME) {
+    repository.loadProducts([]);
+    return;
+  }
+  repository.loadProducts(productsFixture as readonly Product[]);
+}
 
 /**
  * Build the handler factory options the browser worker uses. T05
@@ -48,6 +78,7 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
   const repository = new Repository(scenario, ids, clock);
+  loadCatalogFixture(repository, scenario.name);
   return {
     repository,
     clock,

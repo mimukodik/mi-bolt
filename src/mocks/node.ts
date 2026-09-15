@@ -15,9 +15,19 @@
 
 import { setupServer, type SetupServer } from 'msw/node';
 
+import productsFixture from '../../docs/api/fixtures/products.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
-import { Repository } from './repository';
+import { Repository, type Product } from './repository';
 import { createDeterministicIds, createFixedClock } from './scenarios';
+
+// Force-load the slice handler modules so their module-level
+// registerBusinessHandlers(...) calls populate the create-handlers
+// registry before createHandlers() reads it.
+import './catalog/catalog.handlers';
+import './cart/cart.handlers';
+import './checkout/checkout.handlers';
+import './payment/payment.handlers';
+import './orders/order.handlers';
 
 export type NodeServerHandle = {
   readonly server: SetupServer;
@@ -25,6 +35,23 @@ export type NodeServerHandle = {
   listen(): void;
   close(): Promise<void>;
 };
+
+/**
+ * The `production` scenario is the only one that runs with an empty
+ * catalog: every demo / e2e / happy-path / out-of-stock /
+ * payment-declined variant expects the fixture to be present so the
+ * catalog endpoint returns the demo data instead of an empty items
+ * array.
+ */
+const PRODUCTION_SCENARIO_NAME = 'production';
+
+function loadCatalogFixture(repository: Repository, scenarioName: string): void {
+  if (scenarioName === PRODUCTION_SCENARIO_NAME) {
+    repository.loadProducts([]);
+    return;
+  }
+  repository.loadProducts(productsFixture as readonly Product[]);
+}
 
 /**
  * Bootstraps a node server bound to the supplied handler options.
@@ -57,7 +84,10 @@ export function createNodeServer(
  * Resolves missing options with deterministic defaults. The Node
  * path never reads `globalThis.location` or `globalThis.sessionStorage`
  * — every dependency is supplied explicitly to keep the path
- * identical between Node and the browser.
+ * identical between Node and the browser. When the caller does not
+ * supply a repository, the fixture is loaded into the freshly built
+ * one so any node-side integration that relies on `listProducts()`
+ * sees the demo catalog out of the box.
  */
 function resolveOptions(
   base: Partial<CreateHandlersOptions> & Pick<CreateHandlersOptions, 'apiRoot'>,
@@ -71,6 +101,9 @@ function resolveOptions(
   const ids = base.ids ?? createDeterministicIds(scenario.seed);
   const clock = base.clock ?? createFixedClock(new Date(0).toISOString());
   const repository = base.repository ?? new Repository(scenario, ids, clock);
+  if (!base.repository) {
+    loadCatalogFixture(repository, scenario.name);
+  }
   return {
     repository,
     clock,

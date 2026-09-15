@@ -1,20 +1,8 @@
-import { Component, input } from '@angular/core';
-
 /**
- * T11 placeholder for the success step (S4.5). The route is wired in
- * `app.routes.ts` so the navigation graph compiles; the real screen
- * belongs to T19. This minimal stub renders an H1 so the layout
- * chrome has something to frame.
+ * Re-export of the T24 `SuccessStep` under the `SuccessPage` name the
+ * lazy route resolves. The real implementation lives in
+ * `success-step.ts`; keeping the route's import target stable means
+ * the route table never has to change when the implementation file
+ * is renamed.
  */
-@Component({
-  selector: 'app-success-page',
-  template: `
-    <section class="success">
-      <h1>Demórendelés elkészült</h1>
-      <p>A teljes összegző nézet a T19 feladatban készül.</p>
-    </section>
-  `,
-})
-export class SuccessPage {
-  readonly orderId = input<string>('');
-}
+export { SuccessStep as SuccessPage } from './success-step';

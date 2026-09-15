@@ -40,7 +40,10 @@ import { MobileDrawer } from './mobile-drawer';
 export class MobileDrawerHost {
   readonly opened = signal(false);
   readonly closed = signal(false);
-  readonly trigger = viewChild.required<ElementRef<HTMLElement>>('trigger');
+  // `viewChild` (non-required) returns `undefined` until the view is
+  // attached; the optional form lets `afterNextRender` defer the read
+  // safely across the test-bed's first change-detection pass.
+  readonly trigger = viewChild<ElementRef<HTMLElement>>('trigger');
 
   readonly navLinks = input<ReadonlyArray<{ label: string; routerLink: string }>>([
     { label: 'Mobiltelefonok', routerLink: '/telefonok' },
@@ -50,14 +53,11 @@ export class MobileDrawerHost {
   readonly triggerEl = signal<HTMLElement | null>(null);
 
   constructor() {
-    // Resolve the trigger after the view has rendered. Reading
-    // `this.trigger()` from the constructor throws NG0951 because the
-    // required view child has not been attached yet; deferring to
-    // `afterNextRender` makes the read safe in both the Angular test
-    // bed (which calls it in `provideZonelessChangeDetection` mode) and
-    // the production runtime.
     afterNextRender(() => {
-      this.triggerEl.set(this.trigger().nativeElement);
+      const trigger = this.trigger();
+      if (trigger !== undefined) {
+        this.triggerEl.set(trigger.nativeElement);
+      }
     });
   }
 }

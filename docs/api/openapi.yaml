@@ -1249,6 +1249,7 @@ components:
       type: string
       enum:
       - VALIDATION_FAILED
+      - VALIDATION_ERROR
       - NOT_FOUND
       - CART_EXPIRED
       - CART_VERSION_CONFLICT

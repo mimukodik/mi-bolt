@@ -3,10 +3,12 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": []
+    "types": [],
+    "resolveJsonModule": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "docs/api/fixtures/products.json"
   ],
   "exclude": [
     "src/**/*.spec.ts",

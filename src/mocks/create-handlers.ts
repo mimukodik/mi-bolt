@@ -60,13 +60,17 @@ export function createStrictHandlers(options: CreateHandlersOptions): RequestHan
 
 /**
  * Builds the production handler list. The dispatcher shell is
- * appended last so any registered business handler claims its path
- * first; the shell only fires for routes no slice has wired up.
+ * placed FIRST in the returned array. MSW's experimental
+ * `worker.use()` prepends, so when `browser.ts` registers the
+ * returned handlers one-by-one in array order the business
+ * handlers land at the front of the worker queue and the shell
+ * stays at the back as the `/api/v1/...` 404 fallback.
  */
 export function createHandlers(options: CreateHandlersOptions): RequestHandler[] {
-  const handlers = createStrictHandlers(options);
-  handlers.push(...createDispatcherShell(options));
-  return handlers;
+  return [
+    ...createDispatcherShell(options),
+    ...createStrictHandlers(options),
+  ];
 }
 
 function notFoundBody(options: CreateHandlersOptions) {
