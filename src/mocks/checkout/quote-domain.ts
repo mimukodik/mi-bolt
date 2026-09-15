@@ -756,7 +756,11 @@ export function idempotencyConflict(): Problem {
   };
 }
 export function validationError(detail: string, fieldErrors: FieldError[]): Problem {
-  return { status: 422, code: 'VALIDATION_ERROR', detail, fieldErrors };
+  // T26 parity fix: the contract documents `VALIDATION_FAILED` in the
+  // ProblemCode enum; the mock used `VALIDATION_ERROR` which is not in
+  // the enum. Returning the documented code keeps the wire body
+  // consistent with docs/api/openapi.yaml.
+  return { status: 422, code: 'VALIDATION_FAILED', detail, fieldErrors };
 }
 
 // ---------------------------------------------------------------------------
