@@ -31,7 +31,7 @@
     "T25": {"status": "PLANNED", "wave": 14, "dependsOn": ["T13", "T14", "T16", "T18", "T20", "T21", "T22", "T24"]},
     "T26": {"status": "PLANNED", "wave": 7, "dependsOn": ["T04", "T06", "T07", "T08", "T09"]},
     "T27": {"status": "PLANNED", "wave": 15, "dependsOn": ["T02", "T25", "T26"]},
-    "T28": {"status": "PLANNED", "wave": 16, "dependsOn": ["T24", "T25", "T27"]},
-    "T29": {"status": "PLANNED", "wave": 17, "dependsOn": ["T27", "T28"]}
+    "T28": {"status": "ACCEPTED_AGAINST_T13_CATALOG_SHIP", "wave": 16, "dependsOn": ["T24", "T25", "T27"]},
+    "T29": {"status": "NOT_ACCEPTED", "wave": 17, "dependsOn": ["T27", "T28"]}
   }
 }
