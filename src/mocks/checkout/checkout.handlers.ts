@@ -171,12 +171,21 @@ export function buildCheckoutHandlers(
   const getCheckoutSession: RequestHandler = http.get(
     '*/api/v1/checkout/:cartId',
     ({ request, params }) => {
+      const cartId = String(params['cartId']);
+      // The literal `getCheckoutOptions` handler owns
+      // `/api/v1/checkout/options`. The path-to-regexp `:cartId`
+      // pattern captures `options` as a cartId by accident, so the
+      // parameterised handler matches the literal URL too. Defer
+      // to the literal handler — returning nothing (undefined)
+      // tells MSW to keep looking for the next matching handler,
+      // which is the contract for falling through to the next
+      // registration in the queue.
+      if (cartId === 'options') return;
       const sessionId = sessionOf(request);
       if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
       if (!isValidSession(sessionId)) {
         return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
       }
-      const cartId = String(params['cartId']);
       const cart = repository.getCart(cartId);
       if (!cart || cart.sessionId !== sessionId) {
         return problemResponse(

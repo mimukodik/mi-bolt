@@ -55,11 +55,14 @@ import {
   signal,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
 import * as operations from '../../api/generated/functions';
+
+import { CheckoutFacade } from './checkout.facade';
 
 import { Button } from '../../shared/ui/button/button';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
@@ -570,6 +573,8 @@ type LoadState =
 })
 export class DeliveryStep {
   private readonly http = inject(HttpClient);
+  private readonly checkoutFacade = inject(CheckoutFacade);
+  private readonly router = inject(Router);
   private readonly api: Api;
 
   /** Current load state. `loading` until the first fetch resolves,
@@ -751,13 +756,80 @@ export class DeliveryStep {
     this.paymentMethod.set(method);
   }
 
-  onConfirm(): void {
+  async onConfirm(): Promise<void> {
     if (!this.canConfirm()) return;
+    const selection = this.snapshotChange(false);
     this.confirmPending.set(true);
     // Emit the final selection once more, WITHOUT the
     // `requiresFreshReview` flag — the parent will use this as the
     // green light to advance to /penztar/ellenorzes.
-    this.selectionChanged.set(this.snapshotChange(false));
+    this.selectionChanged.set(selection);
+
+    // Mirror the user's selection into the wizard facade's
+    // Signal Form model so the review step, the review guard,
+    // and any future checkout summary read the same source of
+    // truth. The facade then issues two PUTs against
+    // `/api/v1/checkout/{cartId}` to persist the delivery and
+    // paymentMethod sections; on success the route advances to
+    // `/penztar/ellenorzes` where the cart summary and the
+    // fresh-quote / consents flow take over.
+    try {
+      this.syncFacadeForm(selection);
+      const deliveryResult = await this.checkoutFacade.saveDeliverySection();
+      if (!deliveryResult.ok) {
+        this.confirmPending.set(false);
+        return;
+      }
+      const paymentResult = await this.checkoutFacade.savePaymentMethod();
+      if (!paymentResult.ok) {
+        this.confirmPending.set(false);
+        return;
+      }
+      await this.router.navigate(['/penztar/ellenorzes']);
+    } finally {
+      this.confirmPending.set(false);
+    }
+  }
+
+  /**
+   * Copies this step's local selection onto the
+   * `CheckoutFacade.form` FieldTree so the wizard as a whole sees
+   * the user's choice. Only the fields the user touched are
+   * updated — other sections (contact, consents) keep whatever
+   * hydrate brought in. The demo `address` is reset to an empty
+   * but valid shape when the user picked `demo_pickup` so a
+   * later round trip back to home_delivery does not surface
+   * stale city/line values.
+   */
+  private syncFacadeForm(selection: DeliverySelectionChange): void {
+    const form = this.checkoutFacade.form;
+    const optionId = selection.delivery.optionId;
+    form.deliveryOptionId().value.set(optionId);
+    form.paymentMethod().value.set(selection.paymentMethod);
+    const addressFields = {
+      postalCode: form.address.postalCode,
+      city: form.address.city,
+      line1: form.address.line1,
+      line2: form.address.line2,
+    };
+    if (optionId === 'home_delivery') {
+      const address = selection.delivery.address;
+      if (address !== undefined) {
+        addressFields.postalCode().value.set(address.postalCode);
+        addressFields.city().value.set(address.city);
+        addressFields.line1().value.set(address.line1);
+        addressFields.line2().value.set(address.line2 ?? '');
+      }
+    } else {
+      // Pickup path: zero the address fields so a future
+      // home_delivery round trip does not auto-fill with the
+      // previous selection. Country stays 'HU' — the only value
+      // the schema accepts.
+      addressFields.postalCode().value.set('');
+      addressFields.city().value.set('');
+      addressFields.line1().value.set('');
+      addressFields.line2().value.set('');
+    }
   }
 
   onBack(): void {

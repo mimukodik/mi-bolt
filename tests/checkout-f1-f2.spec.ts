@@ -1,0 +1,74 @@
+/**
+ * F1 regression pin: `GET /api/v1/checkout/options` returns 200
+ * when handlers are registered one-by-one via `server.use(handler)`
+ * — the production browser pattern. Without the early-return guard
+ * in `getCheckoutSession` for `cartId === 'options'`, the
+ * parameterised handler shadows the literal one and MSW returns
+ * 404 "A kosár nem található.".
+ */
+import { describe, expect, it } from 'vitest';
+
+import { createHandlers, registerBusinessHandlers } from '../src/mocks/create-handlers';
+// Side-effect imports — register cart + checkout handlers in the
+// T05 registry so `createHandlers` builds them in the same order
+// the live application does.
+import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
+import { CHECKOUT_OPTIONS, checkoutHandlersEntry } from '../src/mocks/checkout/checkout.handlers';
+import { Repository } from '../src/mocks/repository';
+import {
+  createDeterministicIds,
+  createFixedClock,
+} from '../src/mocks/scenarios';
+import { server } from './setup-msw';
+
+// Force-register the checkout entry. The `import { CHECKOUT_OPTIONS
+// }` triggers the side-effect when this spec is loaded once, but
+// vitest can hoist the import and the bare import alone is not
+// robust across all run orderings.
+registerBusinessHandlers(checkoutHandlersEntry);
+
+describe('F1 — checkout.options responds 200 when handlers are added individually', () => {
+  it('returns 200 from GET /checkout/options (browser-style registration)', async () => {
+    const clock = createFixedClock(
+      new Date('2026-09-16T00:00:00.000Z').toISOString(),
+    );
+    const ids = createDeterministicIds(7);
+    const scenario = {
+      name: 'f1-f2-suite',
+      seed: 7,
+      clockOffsetMs: 0,
+      isolated: true,
+    };
+    const repository = new Repository(scenario, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+    const handlers = createHandlers({
+      repository,
+      clock,
+      ids,
+      scenario,
+      apiRoot: '/api/v1',
+    });
+
+    // Match `browser.ts` exactly: each handler is registered via
+    // its own server.use() call so the worker queue ends up with
+    // handlers in registration order (the dispatcher shell lands
+    // at the back and the literal `getCheckoutOptions` handler
+    // ends up before the parameterised `getCheckoutSession`).
+    for (const handler of handlers) {
+      server.use(handler);
+    }
+
+    const response = await fetch('http://127.0.0.1/api/v1/checkout/options');
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as {
+      deliveryOptions: { id: string }[];
+      paymentMethods: string[];
+    };
+    expect(body.deliveryOptions.map((d) => d.id)).toEqual([
+      'home_delivery',
+      'demo_pickup',
+    ]);
+    expect(body.paymentMethods).toEqual(['demo_card', 'demo_cod']);
+  });
+});
