@@ -465,8 +465,43 @@ const tsLegacyDecoratorsPlugin = (): PluginOption => ({
   },
 });
 
+/**
+ * Vitest plugin: resolve `.html` and `.scss` imports to their raw
+ * text content so Angular's JIT compiler can read templateUrl /
+ * styleUrl references that point at component-local files.
+ *
+ * Without this plugin the JIT compiler emits NG0308 ("Couldn't
+ * resolve resource") the moment a component is instantiated through
+ * TestBed because vite/rolldown otherwise hands back a path string
+ * for the URL rather than the file body. Tests that use
+ * `TestBed.overrideComponent({ template: '...' })` to swap in an
+ * in-memory template still depend on the JIT compiler being able to
+ * resolve the original `templateUrl` once first.
+ */
+const rawResourcePlugin = (): PluginOption => ({
+  name: 'mi-bolt:raw-resource',
+  enforce: 'pre',
+  load(id) {
+    if (id.endsWith('?raw-html')) {
+      const real = id.slice(0, -'?raw-html'.length);
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('node:fs') as typeof import('node:fs');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const path = require('node:path') as typeof import('node:path');
+      return fs.readFileSync(path.resolve(real), 'utf8');
+    }
+    if (id.endsWith('?raw-scss')) {
+      const real = id.slice(0, -'?raw-scss'.length);
+      const fs = require('node:fs') as typeof import('node:fs');
+      const path = require('node:path') as typeof import('node:path');
+      return fs.readFileSync(path.resolve(real), 'utf8');
+    }
+    return null;
+  },
+});
+
 export default defineConfig({
-  plugins: [tsLegacyDecoratorsPlugin()],
+  plugins: [tsLegacyDecoratorsPlugin(), rawResourcePlugin()],
   test: {
     include: ['tests/**/*.spec.ts'],
     environment: 'node',

@@ -64,19 +64,19 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
     LoadingState,
   ],
   template: `
-    <section class="catalog" data-layout-mode="sidebar">
-      <header class="heading">
-        <nav class="breadcrumbs" aria-label="Navigáció">
-          <a routerLink="/" class="breadcrumb">Főoldal</a>
+    <section class="catalog flex flex-col gap-7 mx-auto p-6" data-layout-mode="sidebar">
+      <header class="heading flex flex-col gap-2">
+        <nav class="breadcrumbs flex gap-2 items-center" aria-label="Navigáció">
+          <a routerLink="/" class="breadcrumb no-underline">Főoldal</a>
           <span aria-hidden="true" class="breadcrumb__sep">/</span>
           <span class="breadcrumb is-current" aria-current="page">Mobiltelefonok</span>
         </nav>
-        <h1 class="title">Mobiltelefonok</h1>
-        <p class="lede">A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en keresztül.</p>
+        <h1 class="title m-0">Mobiltelefonok</h1>
+        <p class="lede m-0 max-w-prose">A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en keresztül.</p>
       </header>
 
-      <div class="layout">
-        <aside class="sidebar" data-testid="filter-sidebar">
+      <div class="layout gap-6">
+        <aside class="sidebar hidden lg:block" data-testid="filter-sidebar">
           <app-filter-panel
             [value]="facade.query()"
             [facets]="facade.vm().facets"
@@ -85,25 +85,25 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
           ></app-filter-panel>
         </aside>
 
-        <div class="results">
-          <div class="toolbar">
+        <div class="results flex flex-col gap-5 min-w-0">
+          <div class="toolbar flex flex-wrap items-center justify-between gap-3">
             <div class="result-count" data-testid="result-count">
               {{ resultCountLabel() }}
             </div>
-            <div class="toolbar__controls">
+            <div class="toolbar__controls flex items-center gap-3 flex-wrap">
               <button
                 type="button"
-                class="trigger"
+                class="trigger hidden lg:inline-flex items-center min-h-10 px-4 rounded font-medium cursor-pointer"
                 data-testid="filter-trigger"
                 #filterDrawerTrigger
                 (click)="openDrawer()"
                 [attr.aria-expanded]="drawerOpened() ? 'true' : 'false'"
                 [attr.aria-controls]="'filter-drawer'"
               >Szűrők{{ appliedChipCount() > 0 ? ' (' + appliedChipCount() + ')' : '' }}</button>
-              <label class="sort">
+              <label class="sort inline-flex items-center gap-2">
                 <span class="sort__label">Rendezés</span>
                 <select
-                  class="select"
+                  class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
                   data-testid="catalog-sort"
                   [value]="currentSort()"
                   [disabled]="isRefreshing()"
@@ -114,10 +114,10 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                   }
                 </select>
               </label>
-              <label class="page-size">
+              <label class="page-size inline-flex items-center gap-2">
                 <span class="sort__label">Oldalméret</span>
                 <select
-                  class="select"
+                  class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
                   data-testid="catalog-page-size"
                   [value]="currentPageSize()"
                   [disabled]="isRefreshing()"
@@ -131,13 +131,13 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
           </div>
 
           @if (appliedQuery().appliedChips.length > 0) {
-            <div class="chips" data-testid="applied-filters">
+            <div class="chips flex flex-wrap gap-2 items-center" data-testid="applied-filters">
               @for (chip of appliedQuery().appliedChips; track chip.id) {
-                <span class="chip" [attr.data-testid]="'applied-chip'">
+                <span class="chip inline-flex items-center gap-2 px-2 rounded-full leading-snug" [attr.data-testid]="'applied-chip'">
                   <span class="chip__label">{{ chip.label }}</span>
                   <button
                     type="button"
-                    class="chip__remove"
+                    class="chip__remove bg-transparent border-0 cursor-pointer px-1 min-h-10 leading-none"
                     [attr.aria-label]="'Szűrő eltávolítása: ' + chip.label"
                     [attr.data-testid]="'applied-chip-remove-' + chip.kind"
                     (click)="onChipRemoved(chip.kind, chip.value)"
@@ -146,7 +146,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
               }
               <button
                 type="button"
-                class="chip-clear"
+                class="chip-clear bg-transparent border-0 font-inherit cursor-pointer px-2 py-1 min-h-10"
                 data-testid="applied-filters-clear"
                 (click)="onClearAll()"
               >Összes szűrő törlése</button>
@@ -154,13 +154,13 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
           }
 
           <div
-            class="grid"
+            class="grid gap-5"
             [class.grid--refreshing]="isRefreshing() && facade.vm().items.length > 0"
             data-testid="catalog-grid"
           >
             @switch (facade.vm().status) {
               @case ('loading') {
-                <div class="state state--loading" data-testid="catalog-loading">
+                <div class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-loading">
                   <app-loading-state variant="card" label="Katalógus betöltése"></app-loading-state>
                 </div>
               }
@@ -170,13 +170,13 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                     <app-product-card [product]="item"></app-product-card>
                   }
                 } @else {
-                  <div class="state state--loading">
+                  <div class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60">
                     <app-loading-state variant="card" label="Katalógus frissítése"></app-loading-state>
                   </div>
                 }
               }
               @case ('empty') {
-                <div class="state state--empty" data-testid="catalog-empty">
+                <div class="state state--empty col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-empty">
                   <app-empty-state
                     title="Nincs a szűrőknek megfelelő készülék."
                     message="Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket."
@@ -189,7 +189,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                 </div>
               }
               @case ('error') {
-                <div class="state state--error" data-testid="catalog-error">
+                <div class="state state--error col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-error">
                   <app-error-state
                     title="Nem sikerült betölteni a katalógust."
                     [message]="facade.vm().error ?? 'Ismeretlen hiba a katalógus lekérdezése közben.'"
@@ -211,21 +211,21 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 
           @if (shouldShowPagination()) {
             <nav
-              class="pagination"
+              class="pagination flex items-center justify-center gap-3 pt-4"
               data-testid="catalog-pagination"
               aria-label="Lapozás"
             >
               <button
                 type="button"
-                class="page"
+                class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
                 data-testid="pagination-prev"
                 [disabled]="currentPage() <= 1 || isRefreshing()"
                 (click)="onPageChanged(currentPage() - 1)"
               >Előző</button>
-              <span class="page page--current" aria-current="page">{{ currentPage() }} / {{ totalPages() }}</span>
+              <span class="page page--current font-bold cursor-default" aria-current="page">{{ currentPage() }} / {{ totalPages() }}</span>
               <button
                 type="button"
-                class="page"
+                class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
                 data-testid="pagination-next"
                 [disabled]="currentPage() >= totalPages() || isRefreshing()"
                 (click)="onPageChanged(currentPage() + 1)"
@@ -249,7 +249,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
       <input
         #search
         type="search"
-        class="sr-only"
+        class="sr-only absolute w-px h-px overflow-hidden"
         data-testid="catalog-search"
         [value]="facade.query().q ?? ''"
         (input)="onSearchInput($event)"
@@ -257,7 +257,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
       <button
         #searchCommit
         type="button"
-        class="sr-only"
+        class="sr-only absolute w-px h-px overflow-hidden"
         data-testid="search-commit"
         (click)="commitSearch()"
       >commit</button>
@@ -345,6 +345,17 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
         gap: var(--space-6);
       }
 
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: var(--space-5);
+        min-height: 240px;
+      }
+
+      .grid--refreshing {
+        opacity: 0.85;
+      }
+
       @media (min-width: 640px) {
         .grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -364,13 +375,13 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
         }
       }
 
+      .sidebar { display: block; }
+
       @media (max-width: 1023px) {
         .sidebar {
           display: none;
         }
       }
-
-      .sidebar { display: block; }
 
       .results {
         display: flex;
@@ -512,17 +523,6 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
         outline: 2px solid var(--color-focus-light);
         outline-offset: 2px;
         border-radius: var(--radius-control);
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(1, minmax(0, 1fr));
-        gap: var(--space-5);
-        min-height: 240px;
-      }
-
-      .grid--refreshing {
-        opacity: 0.85;
       }
 
       .state {

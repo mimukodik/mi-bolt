@@ -5,6 +5,12 @@ import { Component } from '@angular/core';
  * page renders a one-line Hungarian welcome placeholder; business
  * data, real catalogue tiles and the catalogue shortcut live in
  * later task packets.
+ *
+ * The template and styles live inline so the JIT compiler can resolve
+ * this component during vitest runs (the lazy import queues the
+ * component after `tests/setup-msw.ts` has already drained the
+ * templateUrl resolution queue, so external `templateUrl` /
+ * `styleUrl` references cannot be fetched).
  */
 @Component({
   selector: 'app-home-page',

@@ -26,7 +26,84 @@ import { CheckoutLayout } from './layouts/checkout-layout';
  *
  * The internal showcase route `/primitives` (T10 design) and the
  * coverage canary `/canary` (T02 gate) remain in the table.
+ *
+ * `resolveLazyResources()` is wrapped around each lazy `loadComponent`
+ * callback so vitest's Angular JIT compiler can drain the
+ * `templateUrl` / `styleUrl` queue from disk after a dynamic import.
+ * In production the components are pre-compiled (AOT) and the JIT
+ * queue stays empty, so the call is a no-op; in test the call
+ * resolves the templates from disk before the Router's own
+ * `_resolveComponentResources(fetch)` — which fails for relative
+ * `templateUrl`s against vitest's jsdom `about:blank` base URL — ever
+ * runs.
+ *
+ * The Node-only branches live behind string concatenation so the
+ * production bundler never sees the `node:fs` / `node:path` literals;
+ * browser builds skip the whole body via the `process` guard.
  */
+async function resolveLazyResources(): Promise<void> {
+  const proc = (globalThis as { process?: { versions?: { node?: string }; cwd?: () => string } }).process;
+  if (!proc || !proc.versions || !proc.versions.node) return;
+  const core = await import('@angular/core');
+  // The `node:fs` / `node:path` module specifiers are concatenated so
+  // the production bundler never sees the literals; in the browser the
+  // call resolves to a 404 module and the `as unknown` cast lets the
+  // typed access below stay under TypeScript's control without
+  // triggering the missing-node-types diagnostics.
+  const fsMod = 'node' + ':fs';
+  const pathMod = 'node' + ':path';
+  const fs = (await (import(fsMod) as Promise<unknown>)) as {
+    readdirSync: (
+      p: string,
+      opts: { withFileTypes: true },
+    ) => { name: string; isDirectory: () => boolean }[];
+    readFileSync: (p: string, enc: 'utf-8') => string;
+  };
+  const path = (await (import(pathMod) as Promise<unknown>)) as {
+    join: (...parts: string[]) => string;
+  };
+  const cache = new Map<string, string>();
+  const workspaceRoot = proc.cwd ? proc.cwd() : '';
+  function findFile(filename: string): string | null {
+    const queue: string[] = [workspaceRoot];
+    while (queue.length > 0) {
+      const dir = queue.shift() as string;
+      let entries: ReturnType<typeof fs.readdirSync>;
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const entry of entries) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
+          continue;
+        }
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          queue.push(full);
+        } else if (entry.name === filename) {
+          return full;
+        }
+      }
+    }
+    return null;
+  }
+  const resolver = async (url: string): Promise<string> => {
+    const cached = cache.get(url);
+    if (cached !== undefined) return cached;
+    const filename = url.startsWith('./') ? url.slice(2) : url;
+    const absolute = findFile(filename);
+    if (absolute === null) {
+      cache.set(url, '');
+      return '';
+    }
+    const content = fs.readFileSync(absolute, 'utf-8');
+    cache.set(url, content);
+    return content;
+  };
+  await core.ɵresolveComponentResources(resolver);
+}
+
 export const routes: Routes = [
   {
     path: '',
@@ -35,7 +112,11 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        loadComponent: () => import('./home/home-page').then((m) => m.HomePage),
+        loadComponent: async () => {
+          const m = await import('./features/home/home-page');
+          await resolveLazyResources();
+          return m.HomePage;
+        },
         title: 'MiBolt — Kezdőlap',
       },
     ],
@@ -46,14 +127,20 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        loadComponent: () =>
-          import('./features/catalog/catalog-page').then((m) => m.CatalogPage),
+        loadComponent: async () => {
+          const m = await import('./features/catalog/catalog-page');
+          await resolveLazyResources();
+          return m.CatalogPage;
+        },
         title: 'MiBolt — Mobiltelefonok',
       },
       {
         path: ':slug',
-        loadComponent: () =>
-          import('./features/product/product-page').then((m) => m.ProductPage),
+        loadComponent: async () => {
+          const m = await import('./features/product/product-page');
+          await resolveLazyResources();
+          return m.ProductPage;
+        },
         title: 'MiBolt — Termék',
       },
     ],
