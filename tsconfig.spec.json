@@ -5,9 +5,7 @@
   "compilerOptions": {
     "types": [
       "vitest/globals"
-    ],
-    "resolveJsonModule": true,
-    "esModuleInterop": true
+    ]
   },
   "include": [
     "src/**/*.d.ts",
