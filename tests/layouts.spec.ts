@@ -29,7 +29,6 @@ import { MarketingLayout } from '../src/app/layouts/marketing-layout';
 import { ShopLayout } from '../src/app/layouts/shop-layout';
 import { CheckoutLayout } from '../src/app/layouts/checkout-layout';
 import { AppShell } from '../src/app/shared/shell/app-shell';
-import { DemoNotice } from '../src/app/shared/shell/demo-notice';
 import { HeaderNav } from '../src/app/core/navigation/header-nav';
 import { MobileDrawer } from '../src/app/core/navigation/mobile-drawer';
 import { MobileDrawerHost } from '../src/app/core/navigation/mobile-drawer-host';
@@ -131,7 +130,6 @@ describe('T11-AC02 brand-consistent header and footer', () => {
         AppShell,
         HeaderNav,
         FooterNav,
-        DemoNotice,
         MobileDrawer,
         AccessibleDialog,
       ],
@@ -218,7 +216,6 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
         AppShell,
         HeaderNav,
         FooterNav,
-        DemoNotice,
         MobileDrawer,
         AccessibleDialog,
       ],
@@ -323,7 +320,6 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
         ShopLayout,
         CheckoutLayout,
         FooterNav,
-        DemoNotice,
       ],
       providers: [provideRouter([]), provideZonelessChangeDetection()],
     });
@@ -374,7 +370,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
   });
 });
 
-describe('T11-AC05 demo notice and cart badge wiring', () => {
+describe('T11-AC05 cart badge wiring', () => {
   beforeEach(async () => {
     document.body.innerHTML = '';
     TestBed.configureTestingModule({
@@ -382,7 +378,6 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
         AppShell,
         HeaderNav,
         FooterNav,
-        DemoNotice,
         MobileDrawer,
         AccessibleDialog,
         MarketingLayout,
@@ -425,32 +420,5 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     const badge = f.nativeElement.querySelector('[data-testid="cart-badge"]');
     const text = badge && badge.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('3');
-  });
-
-  it('the demo notice is visible in every layout', () => {
-    const layouts = [MarketingLayout, ShopLayout, CheckoutLayout];
-    layouts.forEach((L) => {
-      const f = TestBed.createComponent(L);
-      f.detectChanges();
-      const notice = f.nativeElement.querySelector('[data-testid="demo-notice"]');
-      expect(notice).not.toBeNull();
-      const text = notice && notice.textContent ? notice.textContent : '';
-      const has1 = text.indexOf('MiBolt demó') >= 0;
-      const has2 = text.indexOf('nincs valódi vásárlás') >= 0;
-      expect(has1).toBe(true);
-      expect(has2).toBe(true);
-      f.destroy();
-    });
-  });
-
-  it('DemoNotice uses a status role and respects reduced motion', () => {
-    const f = TestBed.createComponent(DemoNotice);
-    f.detectChanges();
-    const root = f.nativeElement.querySelector('.demo-notice');
-    const role = root ? root.getAttribute('role') : '';
-    const isOk = role === 'note' ? role === 'note' : role === 'status';
-    expect(isOk).toBe(true);
-    const css = (DemoNotice as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join(' ');
-    expect(css.indexOf('prefers-reduced-motion') >= 0).toBe(true);
   });
 });

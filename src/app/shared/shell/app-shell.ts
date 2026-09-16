@@ -2,14 +2,13 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
 import { FooterNav } from '../../core/navigation/footer-nav';
-import { DemoNotice } from './demo-notice';
 import { CartCountFacade } from '../../core/navigation/cart-count-facade';
 
 /**
- * `AppShell` is the shared chrome (demo notice + header + footer)
- * rendered around every page. The three layout shells — Marketing,
- * Shop and Checkout — wrap their `<router-outlet>` in `AppShell` and
- * supply the variant that drives the header.
+ * `AppShell` is the shared chrome (header + footer) rendered around
+ * every page. The three layout shells — Marketing, Shop and Checkout —
+ * wrap their `<router-outlet>` in `AppShell` and supply the variant
+ * that drives the header.
  *
  * The shell receives the cart count from the `CartCountFacade` token
  * (root-provided). T17 will replace the facade with the real cart
@@ -21,9 +20,8 @@ import { CartCountFacade } from '../../core/navigation/cart-count-facade';
  */
 @Component({
   selector: 'app-app-shell',
-  imports: [HeaderNav, FooterNav, DemoNotice],
+  imports: [HeaderNav, FooterNav],
   template: `
-    <app-demo-notice />
     <app-header-nav [variant]="variant()" />
     <ng-content></ng-content>
     @if (showFooter()) {

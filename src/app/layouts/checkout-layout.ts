@@ -13,8 +13,8 @@ import { RouteFocusService } from '../core/navigation/route-focus';
  * - Compact dark header with brand left, "Demó pénztár" label center
  *   and a single "Vissza a shopba" link on the right. No search bar.
  * - A four-step numbered indicator (Kosár / Adatok / Szállítás /
- *   Ellenőrzés) sits between the demo notice and the page content so
- *   the user always knows which step they are on.
+ *   Ellenőrzés) sits below the header so the user always knows
+ *   which step they are on.
  * - The standard footer is suppressed — the demo terms dialog inside
  *   the review step carries the legal copy.
  *

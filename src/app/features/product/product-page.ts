@@ -16,6 +16,8 @@ import { ProductGallery } from './product-gallery';
 import { VariantSelector } from './variant-selector';
 import { SpecificationAccordion } from './specification-accordion';
 
+import { CartFacade } from '../cart/cart.facade';
+
 import { Button } from '../../shared/ui/button/button';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
 import { QuantityControl } from '../../shared/ui/quantity-control/quantity-control';
@@ -422,6 +424,7 @@ export class ProductPage {
   readonly addRequested = output<{ variantId: string; quantity: number }>();
 
   private readonly facade = inject(ProductFacade);
+  private readonly cartFacade = inject(CartFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -591,6 +594,18 @@ export class ProductPage {
     this.addRequested.emit({
       variantId: v.selectedVariant.id,
       quantity: v.quantity,
+    });
+    // The T17 CartFacade is the single owner of the cart mutation
+    // queue (If-Match binding, idempotency, conflict replay) and the
+    // authoritative snapshot the header / cart page read. Wires the
+    // "Kosárba teszem" CTA on this page to the real backend so a
+    // click lands a POST /api/v1/carts/:id/items intent. The facade
+    // surfaces non-recoverable failures on its `error` / `conflict`
+    // / `cartGone` / `cartExpired` signals — it does not throw on
+    // HTTP errors — so a fire-and-forget `addItem()` is the right
+    // call shape here.
+    void this.cartFacade.ensureCart().then(() => {
+      void this.cartFacade.addItem(v.selectedVariant!.id, v.quantity);
     });
   }
 

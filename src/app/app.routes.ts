@@ -11,7 +11,9 @@ import { CheckoutLayout } from './layouts/checkout-layout';
  * mounted behind the three reusable layout shells:
  *
  *   - MarketingLayout: `/` (Home)
- *   - ShopLayout: `/telefonok`, `/telefonok/:slug`, `**` (utility 404)
+ *   - ShopLayout: `/telefonok`, `/telefonok/:slug`, `/kosar`
+ *                 (shortcut redirect to the checkout cart), `**`
+ *                 (utility 404)
  *   - CheckoutLayout: `/penztar/kosar`, `/penztar/adatok`,
  *                     `/penztar/szallitas`, `/penztar/ellenorzes`,
  *                     `/penztar/siker/:orderId`
@@ -53,6 +55,24 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/product/product-page').then((m) => m.ProductPage),
         title: 'MiBolt — Termék',
+      },
+    ],
+  },
+  // Shop cart shortcut: `/kosar` is the Hungarian word for "cart" used
+  // in the user-facing nav, but the wizard itself lives under the
+  // checkout subtree at `/penztar/kosar`. Redirecting here keeps a
+  // single source of truth for the cart route while letting visitors
+  // hit the cart from the shop chrome. The redirect fires before any
+  // component mounts, so the user lands on the CheckoutLayout cart
+  // without the ShopLayout ever flashing in between.
+  {
+    path: 'kosar',
+    component: ShopLayout,
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: '/penztar/kosar',
       },
     ],
   },
