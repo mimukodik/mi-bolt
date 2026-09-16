@@ -66,6 +66,44 @@ import * as functions from '../../api/generated/functions';
 
 import { CartFacade } from '../cart/cart.facade';
 
+/**
+ * The mock's in-memory `OrderRepository` is rebuilt whenever MSW
+ * re-registers its service worker (page reload, viewport change, dev
+ * server restart). Without a client-side copy the success page
+ * 404s on `GET /orders/{orderId}` after any of those transitions.
+ *
+ * The receipt is privacy-minimized at the wire boundary (no
+ * contact / address / card data), so writing it to
+ * `sessionStorage` is safe — it matches the allowlist the mock
+ * already enforces on its own persistence layer.
+ */
+const ORDER_RECEIPT_STORAGE_KEY = 'mi-bolt.lastOrderReceipt';
+
+function persistReceipt(receipt: OrderReceipt): void {
+  if (typeof globalThis.sessionStorage === 'undefined') return;
+  try {
+    globalThis.sessionStorage.setItem(ORDER_RECEIPT_STORAGE_KEY, JSON.stringify(receipt));
+  } catch {
+    // Storage denied (private mode, quota). The receipt still
+    // lives in `orderWritable` for the current navigation; the
+    // success page falls back to "A rendelés nem található"
+    // rather than crashing.
+  }
+}
+
+function readPersistedReceipt(orderId: string): OrderReceipt | null {
+  if (typeof globalThis.sessionStorage === 'undefined') return null;
+  try {
+    const raw = globalThis.sessionStorage.getItem(ORDER_RECEIPT_STORAGE_KEY);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw) as { id?: unknown } | null;
+    if (!parsed || typeof parsed !== 'object' || parsed.id !== orderId) return null;
+    return parsed as OrderReceipt;
+  } catch {
+    return null;
+  }
+}
+
 import {
   PHONE_PATTERN,
   POSTAL_CODE_PATTERN,
@@ -561,10 +599,21 @@ export class CheckoutFacade {
       );
       this.orderWritable.set(receipt);
       this.errorWritable.set(null);
+      persistReceipt(receipt);
       return { ok: true, value: receipt };
     } catch (err) {
       const mapped = mapError(err);
       if (mapped.status === 404) {
+        // The mock store may have lost the order (worker restart
+        // after viewport change / dev-server refresh). The
+        // privacy-minimized copy we wrote on commit survives in
+        // sessionStorage; surface it so the success page can
+        // render the existing receipt rather than 404.
+        const cached = readPersistedReceipt(orderId);
+        if (cached !== null) {
+          this.orderWritable.set(cached);
+          return { ok: true, value: cached };
+        }
         return {
           ok: false,
           error: {
@@ -701,6 +750,7 @@ export class CheckoutFacade {
       );
       this.orderWritable.set(receipt);
       this.errorWritable.set(null);
+      persistReceipt(receipt);
       return { ok: true, value: receipt };
     } catch (err) {
       const mapped = mapError(err);
