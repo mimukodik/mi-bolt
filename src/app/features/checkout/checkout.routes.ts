@@ -46,6 +46,7 @@ import { withIfMatch } from '../../core/api/demo-session.interceptor';
 import { updateCheckout } from '../../api/generated/fn/checkout/update-checkout';
 
 import { CartFacade } from '../cart/cart.facade';
+import { CheckoutFacade } from './checkout.facade';
 
 import {
   CONTACT_DRAFT_SAVER,
@@ -130,13 +131,24 @@ function mapErrorToSaveResult(err: unknown): ContactSaveResult {
  * `loadSession()` step — the contact page does not require the
  * session to be loaded yet to persist a draft.
  *
+ * After the PUT succeeds the returned `CheckoutSession` body is
+ * fed back into the root `CheckoutFacade` via `loadSession()` so
+ * the wizard's `session` signal carries the new contact section.
+ * Without this step the `deliveryGuard` would still see
+ * `session.contact === undefined` and reject navigation to
+ * `/penztar/szallitas`, leaving the user stuck on the contact
+ * step even after a successful draft save (F2 fix).
+ *
  * `useFactory` factories run inside an injection context, so
  * `inject()` is safe to call here even though this is a plain
  * function — same pattern `CartFacade` / `CheckoutFacade` use to
  * manually wire the generated SDK because Vitest's esbuild
  * pipeline does not emit `@Injectable()` decorator metadata.
  */
-function buildContactDraftSaver(cartFacade: CartFacade): ContactDraftSaver {
+function buildContactDraftSaver(
+  cartFacade: CartFacade,
+  checkoutFacade: CheckoutFacade,
+): ContactDraftSaver {
   const api = new Api(inject(ApiConfiguration), inject(HttpClient));
   return async (contact: ContactSubmission): Promise<ContactSaveResult> => {
     const cart = cartFacade.cart();
@@ -161,6 +173,10 @@ function buildContactDraftSaver(cartFacade: CartFacade): ContactDraftSaver {
           withIfMatch(cart.version),
         ),
       );
+      // PUT 200 — mirror the server-side session into the wizard
+      // facade so `deliveryGuard` reads `session.contact` and lets
+      // the user advance to the delivery step.
+      await checkoutFacade.loadSession(cart.id, { clearOnLoad: false });
       return { ok: true };
     } catch (err) {
       return mapErrorToSaveResult(err);
@@ -194,7 +210,7 @@ export const checkoutRoutes: Routes = [
       {
         provide: CONTACT_DRAFT_SAVER,
         useFactory: buildContactDraftSaver,
-        deps: [CartFacade],
+        deps: [CartFacade, CheckoutFacade],
       },
     ],
     title: 'MiBolt — Kapcsolattartási adatok',
