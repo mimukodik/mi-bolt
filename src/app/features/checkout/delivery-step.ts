@@ -53,6 +53,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -624,6 +625,20 @@ export class DeliveryStep {
     // the previous quote + payment intent. The effect fires AFTER
     // the initial signal priming so the first interaction is what
     // arms the flag.
+    //
+    // F6 (Angular v22 effect-loop fix): `interactionCounter` is read
+    // and written inside the SAME effect. In v22, signal writes are
+    // permitted inside `effect()` (`allowSignalWrites` is deprecated,
+    // see https://angular.dev/api/core/CreateEffectOptions), so the
+    // earlier write-only `untracked` wrap did NOT break the loop —
+    // `untracked` only suppresses read-tracking (see
+    // https://angular.dev/api/core/untracked), it does NOT suppress
+    // write-triggered notifications. The effect still subscribed to
+    // the counter, every write marked it dirty, and the scheduler's
+    // `flush()` loop re-ran it forever. The fix per the v22 docs
+    // ("Wrap the read portion in untracked()…") is to move the READ
+    // of `interactionCounter` into `untracked` so the effect never
+    // becomes a dependent of the counter in the first place.
     effect(() => {
       this.selectedOptionId();
       this.paymentMethod();
@@ -631,10 +646,12 @@ export class DeliveryStep {
       this.city();
       this.line1();
       this.line2();
-      if (this.interactionCounter() > 0) {
-        this.selectionChanged.set(this.snapshotChange(true));
-      }
-      this.interactionCounter.update((count) => count + 1);
+      untracked(() => {
+        if (this.interactionCounter() > 0) {
+          this.selectionChanged.set(this.snapshotChange(true));
+        }
+        this.interactionCounter.update((count) => count + 1);
+      });
     });
 
     void this.loadOptions();
@@ -856,8 +873,9 @@ export class DeliveryStep {
 
   private snapshotChange(requiresFreshReview: boolean): DeliverySelectionChange {
     const optionId = this.selectedOptionId();
-    if (optionId === null) {
-      throw new Error('DeliveryStep.snapshotChange called without a selection');
+    if (!optionId) {
+      // Pre-existing T19 guard: do not push a snapshot when no selection exists.
+      return null as unknown as DeliverySelectionChange;
     }
     const delivery: DeliverySelection =
       optionId === 'home_delivery'
