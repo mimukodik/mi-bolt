@@ -317,3 +317,5 @@ coverage/
 dist/
 node_modules/
 .visual-screenshots/
+docs/mi-bolt/execution/evidence/screenshots/
+e2e/checkout-f8-screenshots/
