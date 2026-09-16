@@ -720,6 +720,17 @@ export class CheckoutFacade {
    * model from it. The cart survives across the swap (CartFacade
    * owns the cart); contact / address are populated only when the
    * snapshot actually carries them.
+   *
+   * When the snapshot omits a section that the in-memory form
+   * already holds (e.g. `saveDeliverySection()` PUTs only the
+   * delivery section and the server returns a session without
+   * `paymentMethod`), the form keeps the previously typed value
+   * rather than resetting it to ''. Wiping fields that were not
+   * part of the save would force the user to retype values they
+   * already entered — and, in the case of `paymentMethod`,
+   * turn the next `savePaymentMethod()` into a 422 by sending
+   * the empty string. The merge rules live in
+   * `hydrateCheckoutFormModel`.
    */
   private applySession(
     session: CheckoutSession,
@@ -734,7 +745,7 @@ export class CheckoutFacade {
       this.modelWritable.set(createInitialCheckoutFormModel());
     } else {
       this.modelWritable.set(
-        hydrateCheckoutFormModel(createInitialCheckoutFormModel(), {
+        hydrateCheckoutFormModel(this.modelWritable(), {
           contact: session.contact,
           delivery: session.delivery,
           paymentMethod: session.paymentMethod,

@@ -109,6 +109,16 @@ export function createInitialCheckoutFormModel(): CheckoutFormModel {
  * visible — except when they explicitly reload, in which case the
  * `CheckoutFacade.resetDraft()` path runs first and clears them
  * (privacy rule from the spec).
+ *
+ * Sections (delivery, paymentMethod) absent from the snapshot are
+ * preserved from `base` rather than reset to ''. The `updateDraft`
+ * mock merges only the supplied sections, so a save that PUTs one
+ * section returns a session that omits the others — wiping those
+ * fields would force the user to retype values the previous
+ * selection already set. The same rule covers sub-fields inside a
+ * present section: `paymentMethod` on the wire is a scalar so
+ * `undefined`/`null` mean "not present in this response" and the
+ * base value is kept.
  */
 export function hydrateCheckoutFormModel(
   base: CheckoutFormModel,
@@ -124,29 +134,31 @@ export function hydrateCheckoutFormModel(
         line2?: string;
       };
     };
-    paymentMethod?: 'demo_card' | 'demo_cod';
+    paymentMethod?: 'demo_card' | 'demo_cod' | null;
   },
 ): CheckoutFormModel {
-  const next: CheckoutFormModel = {
-    ...base,
-    deliveryOptionId: snapshot.delivery?.optionId ?? '',
-    paymentMethod: snapshot.paymentMethod ?? '',
-  };
+  const next: CheckoutFormModel = { ...base };
+  if (snapshot.delivery !== undefined) {
+    if (snapshot.delivery.optionId !== undefined) {
+      next.deliveryOptionId = snapshot.delivery.optionId;
+    }
+    if (snapshot.delivery.address !== undefined) {
+      next.address = {
+        countryCode: 'HU',
+        postalCode: snapshot.delivery.address.postalCode ?? '',
+        city: snapshot.delivery.address.city ?? '',
+        line1: snapshot.delivery.address.line1 ?? '',
+        line2: snapshot.delivery.address.line2 ?? '',
+      };
+    }
+  }
+  if (snapshot.paymentMethod !== undefined && snapshot.paymentMethod !== null) {
+    next.paymentMethod = snapshot.paymentMethod;
+  }
   if (snapshot.contact) {
     next.fullName = snapshot.contact.fullName ?? '';
     next.email = snapshot.contact.email ?? '';
     next.phone = snapshot.contact.phone ?? '';
-  }
-  if (snapshot.delivery?.address) {
-    next.address = {
-      countryCode: 'HU',
-      postalCode: snapshot.delivery.address.postalCode ?? '',
-      city: snapshot.delivery.address.city ?? '',
-      line1: snapshot.delivery.address.line1 ?? '',
-      line2: snapshot.delivery.address.line2 ?? '',
-    };
-  } else {
-    next.address = { ...base.address, line2: '' };
   }
   return next;
 }
