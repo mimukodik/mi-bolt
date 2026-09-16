@@ -1,0 +1,23 @@
+<ng-template #body>
+  <div
+    class="panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="label()"
+    [attr.aria-labelledby]="labelledBy()"
+  >
+    <header class="header">
+      <h2 class="title" id="dialog-title">{{ label() }}</h2>
+      <button
+        type="button"
+        class="close"
+        aria-label="Bezárás"
+        data-testid="dialog-close"
+        (click)="close()"
+      >×</button>
+    </header>
+    <div class="body">
+      <ng-content></ng-content>
+    </div>
+  </div>
+</ng-template>

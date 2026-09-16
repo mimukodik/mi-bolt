@@ -17,25 +17,8 @@ import { MobileDrawer } from './mobile-drawer';
 @Component({
   selector: 'app-mobile-drawer-host',
   imports: [MobileDrawer],
-  template: `
-    <app-mobile-drawer
-      [opened]="opened()"
-      [triggerEl]="triggerEl()"
-      (closed)="closed.set(true)"
-    >
-      @for (link of navLinks(); track link.label) {
-        <a [href]="link.routerLink">{{ link.label }}</a>
-      }
-    </app-mobile-drawer>
-    <button #trigger type="button" data-testid="drawer-trigger">Menü</button>
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-    `,
-  ],
+  templateUrl: './mobile-drawer-host.html',
+  styleUrl: './mobile-drawer-host.css',
 })
 export class MobileDrawerHost {
   readonly opened = signal(false);
