@@ -156,9 +156,21 @@ export function hydrateCheckoutFormModel(
     next.paymentMethod = snapshot.paymentMethod;
   }
   if (snapshot.contact) {
-    next.fullName = snapshot.contact.fullName ?? '';
-    next.email = snapshot.contact.email ?? '';
-    next.phone = snapshot.contact.phone ?? '';
+    // Sub-fields inside a present `contact` follow the same
+    // "preserve base on absence" rule the delivery / paymentMethod
+    // branches apply. A PUT that round-trips only one field (e.g.
+    // phone) returns a session whose other contact sub-fields are
+    // absent; wiping them would force the user to retype values
+    // they already entered.
+    if (snapshot.contact.fullName !== undefined) {
+      next.fullName = snapshot.contact.fullName;
+    }
+    if (snapshot.contact.email !== undefined) {
+      next.email = snapshot.contact.email;
+    }
+    if (snapshot.contact.phone !== undefined) {
+      next.phone = snapshot.contact.phone;
+    }
   }
   return next;
 }

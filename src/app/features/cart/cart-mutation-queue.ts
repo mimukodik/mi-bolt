@@ -103,6 +103,15 @@ export class CartMutationQueue {
    * does not write to a destroyed signal.
    */
   private destroyed = false;
+  /**
+   * Monotonic counter bumped on every `clearPending()` call. A
+   * dispatch captures the current value at enqueue time and skips
+   * its post-completion `pendingWritable.update(n => n - 1)` when
+   * the snapshot no longer matches — otherwise the counter would
+   * drift negative as in-flight intents settle against a queue that
+   * was already zeroed.
+   */
+  private clearGeneration = 0;
 
   /**
    * Installs the version provider. The provider is called inside
@@ -127,6 +136,7 @@ export class CartMutationQueue {
     if (this.destroyed) {
       return Promise.resolve({ ok: false, code: 'SERVICE_UNAVAILABLE', status: 0, detail: 'queue destroyed' } as DispatchResult);
     }
+    const clearGeneration = this.clearGeneration;
     this.pendingWritable.update((n) => n + 1);
     const next = this.tail.then(() => {
       const expectedVersion = this.versionProvider();
@@ -139,10 +149,12 @@ export class CartMutationQueue {
     void next.then(
       () => {
         if (this.destroyed) return;
+        if (clearGeneration !== this.clearGeneration) return;
         this.pendingWritable.update((n) => n - 1);
       },
       () => {
         if (this.destroyed) return;
+        if (clearGeneration !== this.clearGeneration) return;
         this.pendingWritable.update((n) => n - 1);
       },
     );
@@ -155,9 +167,13 @@ export class CartMutationQueue {
    * `CartFacade.resetOrderedCart()` to drop the counter that was
    * tracking intents queued against the just-ordered cart. The
    * intents still in flight will eventually resolve, but their
-   * results must not resurrect the ordered cart.
+   * results must not resurrect the ordered cart — that gate lives on
+   * the facade (`shouldApplyResult`); the queue just bumps its
+   * generation so in-flight dispatches skip their post-completion
+   * decrement and the counter does not drift negative.
    */
   clearPending(): void {
+    this.clearGeneration++;
     this.pendingWritable.set(0);
   }
 

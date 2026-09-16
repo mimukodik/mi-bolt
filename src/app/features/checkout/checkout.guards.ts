@@ -65,9 +65,12 @@ function stepPath(step: 'cart' | 'contact' | 'delivery' | 'review'): string {
  * Guard for `/penztar/adatok` (contact step).
  *
  * Rejects and redirects to the earliest failure mode:
- *   - an order is already in memory → /penztar/siker/{orderId}
- *     so a back-navigation after a successful commit cannot reopen
- *     the wizard (T24-AC04);
+ *   - an order is already in memory AND the cart is empty →
+ *     /penztar/siker/{orderId} so a back-navigation after a
+ *     successful commit cannot reopen the wizard (T24-AC04). When
+ *     the cart has items the user is starting a fresh purchase —
+ *     the new cart id differs from the ordered one — and the
+ *     wizard must proceed;
  *   - the cart is empty (or has never been created) →
  *     /penztar/kosar so a deep link with no cart lands on the
  *     cart page rather than an empty form (T19-AC02).
@@ -75,12 +78,12 @@ function stepPath(step: 'cart' | 'contact' | 'delivery' | 'review'): string {
 export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
-  const existingOrder = checkout.order();
-  if (existingOrder !== null) {
-    return redirectToSuccess(existingOrder.id);
-  }
   const cartSnapshot = cart.cart();
   if (cartSnapshot === null || cartSnapshot.items.length === 0) {
+    const existingOrder = checkout.order();
+    if (existingOrder !== null) {
+      return redirectToSuccess(existingOrder.id);
+    }
     return redirectToStep('cart', 'empty-cart');
   }
   return true;
@@ -90,9 +93,8 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
  * Guard for `/penztar/szallitas` (delivery + payment step).
  *
  * Rejects and redirects to the earliest failure mode:
- *   - an order is already in memory → /penztar/siker/{orderId}
- *     so a back-navigation after a successful commit cannot reopen
- *     the wizard (T24-AC04);
+ *   - the cart is empty AND an order is in memory →
+ *     /penztar/siker/{orderId} (T24-AC04);
  *   - the cart is empty → /penztar/kosar (T19-AC02);
  *   - the contact section has not been saved yet →
  *     /penztar/adatok so a deep link to the delivery step lands on
@@ -102,12 +104,12 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
 export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
-  const existingOrder = checkout.order();
-  if (existingOrder !== null) {
-    return redirectToSuccess(existingOrder.id);
-  }
   const cartSnapshot = cart.cart();
   if (cartSnapshot === null || cartSnapshot.items.length === 0) {
+    const existingOrder = checkout.order();
+    if (existingOrder !== null) {
+      return redirectToSuccess(existingOrder.id);
+    }
     return redirectToStep('cart', 'empty-cart');
   }
   const session = checkout.session();
@@ -122,9 +124,10 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
  *
  * Rejects and redirects to the earliest missing section. Covers
  * the four failure modes the spec calls out:
- *   - an order is already in memory → /penztar/siker/{orderId}
+ *   - no cart AND an order is in memory → /penztar/siker/{orderId}
  *     so a back-navigation after a successful commit cannot
- *     resubmit the cart (T24-AC04).
+ *     resubmit the cart (T24-AC04). When the cart has items the
+ *     user is starting a fresh purchase and the wizard proceeds;
  *   - no cart at all → /penztar/kosar (empty-cart)
  *   - contact missing → /penztar/adatok
  *   - delivery / paymentMethod missing → /penztar/szallitas
@@ -132,15 +135,12 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
 export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
-  // T24-AC04: when an order is already in memory the user must NOT
-  // be allowed back into the wizard — that path could resubmit the
-  // cart. Redirect them to the existing success URL instead.
-  const existingOrder = checkout.order();
-  if (existingOrder !== null) {
-    return redirectToSuccess(existingOrder.id);
-  }
   const cartSnapshot = cart.cart();
   if (cartSnapshot === null || cartSnapshot.items.length === 0) {
+    const existingOrder = checkout.order();
+    if (existingOrder !== null) {
+      return redirectToSuccess(existingOrder.id);
+    }
     return redirectToStep('cart', 'empty-cart');
   }
   const session = checkout.session();

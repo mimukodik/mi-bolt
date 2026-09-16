@@ -136,6 +136,24 @@ export class CartFacade {
    */
   private lastFailedIntent: MutationIntent | null = null;
 
+  /**
+   * Monotonic counter incremented before every mutation is enqueued.
+   * Each dispatch captures its token locally and only applies the
+   * result when the token is still strictly newer than
+   * `postOrderToken` — otherwise the result belongs to the cart that
+   * was just ordered and must NOT be written back to the in-memory
+   * snapshot. See `resetOrderedCart` for the sentinel and
+   * `shouldApplyResult` for the comparison.
+   */
+  private dispatchToken = 0;
+  /**
+   * Snapshot of `dispatchToken` at the moment `resetOrderedCart` runs.
+   * Dispatches that started before this value resolve against the
+   * ordered cart and are discarded; dispatches that start after the
+   * reset belong to a fresh purchase and are applied normally.
+   */
+  private postOrderToken = -1;
+
   constructor() {
     // The generated `Api` class relies on Angular decorator metadata
     // for constructor injection. Vitest's esbuild pipeline does not
@@ -169,6 +187,7 @@ export class CartFacade {
     if (this.cartWritable() !== null && this.cartWritable()?.status === 'active') {
       return;
     }
+    const token = ++this.dispatchToken;
     const intent: MutationIntent = {
       kind: 'create',
       idempotencyKey: freshIdempotencyKey(),
@@ -188,6 +207,7 @@ export class CartFacade {
       }
       return this.dispatchCreate(inputs);
     });
+    if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
     }
@@ -200,6 +220,7 @@ export class CartFacade {
    * been created yet (call `ensureCart()` first).
    */
   async addItem(variantId: string, quantity: number): Promise<void> {
+    const token = ++this.dispatchToken;
     const intent: MutationIntent = {
       kind: 'addItem',
       idempotencyKey: freshIdempotencyKey(),
@@ -207,6 +228,7 @@ export class CartFacade {
       payload: { variantId, quantity },
     };
     const result = await this.queue.enqueue(intent, (inputs) => this.dispatchAddItem(inputs));
+    if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
     }
@@ -220,6 +242,7 @@ export class CartFacade {
    * `cartGone`.
    */
   async setQuantity(itemId: string, quantity: number): Promise<void> {
+    const token = ++this.dispatchToken;
     const intent: MutationIntent = {
       kind: 'setQuantity',
       idempotencyKey: freshIdempotencyKey(),
@@ -230,6 +253,7 @@ export class CartFacade {
       intent,
       async (inputs) => this.dispatchSetQuantity(inputs),
     );
+    if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
     }
@@ -241,6 +265,7 @@ export class CartFacade {
    * enqueue and dispatch.
    */
   async removeItem(itemId: string): Promise<void> {
+    const token = ++this.dispatchToken;
     const intent: MutationIntent = {
       kind: 'removeItem',
       idempotencyKey: freshIdempotencyKey(),
@@ -251,6 +276,7 @@ export class CartFacade {
       intent,
       async (inputs) => this.dispatchRemoveItem(inputs),
     );
+    if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
     }
@@ -270,6 +296,7 @@ export class CartFacade {
     // Clear the recorded conflict so a subsequent failure re-arms
     // retry() instead of letting stale state persist.
     this.lastFailedIntent = null;
+    const token = ++this.dispatchToken;
     const retryIntent: MutationIntent = { ...failed, retry: true };
     const result = await this.queue.enqueue(retryIntent, (inputs) => {
       switch (inputs.intent.kind) {
@@ -285,6 +312,7 @@ export class CartFacade {
           return this.dispatchRefetch(inputs);
       }
     });
+    if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
     }
@@ -301,6 +329,7 @@ export class CartFacade {
     if (cartId === undefined) {
       return;
     }
+    const token = ++this.dispatchToken;
     const intent: MutationIntent = {
       kind: 'refetch',
       idempotencyKey: freshIdempotencyKey(),
@@ -308,6 +337,7 @@ export class CartFacade {
       payload: { cartId },
     };
     const result = await this.queue.enqueue(intent, (inputs) => this.dispatchRefetch(inputs));
+    if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       // A post-conflict refetch must NOT clear `lastFailedIntent` —
       // the user has not yet pressed Retry, and clearing it would
@@ -331,6 +361,14 @@ export class CartFacade {
    * No network call is issued — the server already owns the truth.
    */
   resetOrderedCart(): void {
+    // Freeze the token at the moment the order lands so any dispatch
+    // that is still in flight against the just-ordered cart is
+    // discarded by `shouldApplyResult`. Without this the in-flight
+    // `addItem` the user issued before pressing "Demórendelés
+    // véglegesítése" would resolve after `cartWritable.set(null)` and
+    // resurrect the ordered cart — defeating T24-AC03's header-badge
+    // contract.
+    this.postOrderToken = this.dispatchToken;
     this.cartWritable.set(null);
     this.conflictWritable.set(null);
     this.cartGoneWritable.set(false);
@@ -338,6 +376,17 @@ export class CartFacade {
     this.errorWritable.set(null);
     this.lastFailedIntent = null;
     this.queue.clearPending();
+  }
+
+  /**
+   * True when a dispatch captured `token` BEFORE the most recent
+   * `resetOrderedCart()`. Such a dispatch belongs to the cart that
+   * was just ordered; the result must not be written back to the
+   * in-memory snapshot, otherwise the user would see the items they
+   * already ordered reappear in the header badge.
+   */
+  private shouldApplyResult(token: number): boolean {
+    return token > this.postOrderToken;
   }
 
   /**

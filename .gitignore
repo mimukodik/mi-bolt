@@ -316,3 +316,4 @@ coverage/
 .angular/
 dist/
 node_modules/
+.visual-screenshots/

@@ -552,11 +552,12 @@ export class CheckoutFacade {
    * `CheckoutError` shape the rest of the facade uses.
    */
   async fetchOrder(orderId: string): Promise<CheckoutMutationResult<OrderReceipt>> {
-    const cartVersion = this.cartFacade.cart()?.version;
-    const context = cartVersion === undefined ? undefined : withIfMatch(cartVersion);
+    // GET carries no `If-Match` — the receipt is keyed by orderId,
+    // not by cart version, and a stale cart version should not turn
+    // a deep-link reload into a 412.
     try {
       const receipt = await firstValueFrom(
-        this.api.invoke(functions.getOrder, { orderId }, context),
+        this.api.invoke(functions.getOrder, { orderId }),
       );
       this.orderWritable.set(receipt);
       this.errorWritable.set(null);

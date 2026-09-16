@@ -873,9 +873,14 @@ export class DeliveryStep {
 
   private snapshotChange(requiresFreshReview: boolean): DeliverySelectionChange {
     const optionId = this.selectedOptionId();
-    if (!optionId) {
-      // Pre-existing T19 guard: do not push a snapshot when no selection exists.
-      return null as unknown as DeliverySelectionChange;
+    if (optionId === null) {
+      // Callers (the selection-changed effect and `onConfirm`) gate on
+      // `canConfirm()` or `interactionCounter > 0` before reaching here.
+      // A null optionId is a contract violation; surface it loudly so
+      // the failure is debuggable rather than masked by a type lie that
+      // crashes later in `syncFacadeForm(selection)` with "cannot read
+      // delivery of null".
+      throw new Error('DeliveryStep.snapshotChange called without a selection');
     }
     const delivery: DeliverySelection =
       optionId === 'home_delivery'

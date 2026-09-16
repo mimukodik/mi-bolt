@@ -524,8 +524,42 @@ describe('T17-AC05: 404/410/explicit recovery; no 401 path', () => {
 });
 
 // ---------------------------------------------------------------------------
-// CartMutationQueue — unit-level coverage of the serialized dispatcher.
+// T24-AC03 regression: in-flight mutations against the just-ordered
+// cart must not resurrect the cleared snapshot. A click on "Kosárba
+// teszem" immediately before pressing "Demórendelés véglegesítése"
+// can land an `addItem` intent in the queue at the exact moment the
+// success page calls `resetOrderedCart()`; without a token gate the
+// dispatch's successful resolution would call `applySuccess(...)` and
+// the header would show the items the user already ordered.
 // ---------------------------------------------------------------------------
+describe('T24-AC03: in-flight mutation results are dropped after resetOrderedCart', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('does not resurrect the cart when an addItem resolves after resetOrderedCart', async () => {
+    const facade = TestBed.inject(CartFacade);
+    await facade.ensureCart();
+    const cartIdBefore = facade.cartId;
+    expect(cartIdBefore).not.toBeNull();
+
+    // Kick the in-flight addItem but do NOT await it yet — we want to
+    // call `resetOrderedCart()` while the dispatch is in flight, so
+    // the `applySuccess(...)` path is exercised AFTER the reset.
+    const inFlight = facade.addItem(VARIANT_G256, 1);
+    facade.resetOrderedCart();
+    await inFlight;
+
+    // The cart snapshot stays cleared; the header badge reads 0.
+    expect(facade.cart()).toBeNull();
+    expect(facade.itemCount()).toBe(0);
+    // A fresh ensureCart() rebuilds the cart with a different id so
+    // the post-reset purchase does not collide with the ordered one.
+    await facade.ensureCart();
+    expect(facade.cartId).not.toBe(cartIdBefore);
+    expect(facade.itemCount()).toBe(0);
+  });
+});
 describe('CartMutationQueue: serialized dispatch + pending count', () => {
   it('runs intents strictly in order and binds the version provided at dispatch time', async () => {
     const queue = new CartMutationQueue();
