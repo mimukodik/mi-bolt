@@ -98,22 +98,38 @@ afterEach(() => {
 // refactor that breaks a documented contract makes the regex fail.
 // ---------------------------------------------------------------------------
 
-const homePageSource = readFileSync(
-  resolvePath(workspaceRoot, 'src/app/features/home/home-page.ts'),
-  'utf8',
-);
-const heroSource = readFileSync(
-  resolvePath(workspaceRoot, 'src/app/features/home/hero.ts'),
-  'utf8',
-);
-const featuredProductsSource = readFileSync(
-  resolvePath(workspaceRoot, 'src/app/features/home/featured-products.ts'),
-  'utf8',
-);
-const howDemoWorksSource = readFileSync(
-  resolvePath(workspaceRoot, 'src/app/features/home/how-demo-works.ts'),
-  'utf8',
-);
+const homePageSource = [
+  'src/app/features/home/home-page.ts',
+  'src/app/features/home/home-page.html',
+  'src/app/features/home/home-page.scss',
+].map((p) => {
+  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+  catch { return ''; }
+}).join('\n');
+const heroSource = [
+  'src/app/features/home/hero.ts',
+  'src/app/features/home/hero.html',
+  'src/app/features/home/hero.scss',
+].map((p) => {
+  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+  catch { return ''; }
+}).join('\n');
+const featuredProductsSource = [
+  'src/app/features/home/featured-products.ts',
+  'src/app/features/home/featured-products.html',
+  'src/app/features/home/featured-products.scss',
+].map((p) => {
+  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+  catch { return ''; }
+}).join('\n');
+const howDemoWorksSource = [
+  'src/app/features/home/how-demo-works.ts',
+  'src/app/features/home/how-demo-works.html',
+  'src/app/features/home/how-demo-works.scss',
+].map((p) => {
+  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+  catch { return ''; }
+}).join('\n');
 
 // ---------------------------------------------------------------------------
 // Stub Api — exposes the same surface the production home page uses

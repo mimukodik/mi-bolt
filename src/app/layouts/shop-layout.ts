@@ -22,33 +22,8 @@ import { RouteFocusService } from '../core/navigation/route-focus';
 @Component({
   selector: 'app-shop-layout',
   imports: [AppShell, RouterOutlet],
-  template: `
-    <app-app-shell variant="shop">
-      <main id="main-content" tabindex="-1" class="layout-main">
-        <router-outlet />
-      </main>
-    </app-app-shell>
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-
-      .layout-main {
-        display: block;
-        background: var(--color-surface-light);
-        color: var(--color-text-primary);
-        scroll-margin-top: 80px;
-      }
-
-      @media (max-width: 640px) {
-        .layout-main {
-          padding-bottom: var(--space-7);
-        }
-      }
-    `,
-  ],
+  templateUrl: './shop-layout.html',
+  styleUrl: './shop-layout.scss',
 })
 export class ShopLayout {
   private readonly routeFocus = inject(RouteFocusService);

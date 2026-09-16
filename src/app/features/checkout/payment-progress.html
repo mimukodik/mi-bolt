@@ -1,0 +1,26 @@
+@if (state() !== null) {
+  <section
+    class="payment-progress flex flex-col gap-2 p-4 rounded"
+    role="status"
+    aria-live="polite"
+    [attr.data-state]="state()"
+  >
+    <h2>{{ heading() }}</h2>
+    @if (state() === 'pending' || state() === 'attempt') {
+      <p>{{ attemptLabel() }}</p>
+      <progress
+        max="{{ maxAttempts() }}"
+        [value]="attempt()"
+        aria-label="Fizetési szándék ellenőrzése"
+      ></progress>
+    } @else if (state() === 'declined') {
+      <p>A szimulált fizetés elutasítva.</p>
+      <p>A fizetési módot módosíthatod, vagy újra próbálkozhatsz.</p>
+    } @else if (state() === 'timeout') {
+      <p>Nem kaptunk egyértelmű választ 10 másodperc alatt.</p>
+      <p>Újra megpróbálhatjuk, vagy később is ránézhetünk.</p>
+    } @else if (state() === 'succeeded') {
+      <p>A fizetés sikeres.</p>
+    }
+  </section>
+}

@@ -39,7 +39,7 @@ import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
   imports: [DialogModule],
   selector: 'app-accessible-dialog',
   templateUrl: './accessible-dialog.html',
-  styleUrl: './accessible-dialog.css',
+  styleUrl: './accessible-dialog.scss',
 })
 export class AccessibleDialog {
   private readonly dialog = inject(Dialog);

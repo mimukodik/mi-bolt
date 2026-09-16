@@ -32,7 +32,6 @@ import {
   type IdempotencyStore,
 } from '../idempotency';
 import {
-  type Cart,
   type CartLine,
   type Money,
   type Variant,
@@ -41,9 +40,7 @@ import {
 import type { Clock, Ids } from '../scenarios';
 import {
   QUOTE_TTL_MS,
-  type CheckoutDraft,
   type DeliveryOptionId,
-  type QuoteSnapshot,
   QuoteDomain,
 } from '../checkout/quote-domain';
 
@@ -170,9 +167,9 @@ export class StockTracker {
    * entry has the requested quantity plus the available stock so the
    * handler can surface a precise problem detail.
    */
-  findShortages(lines: readonly CartLine[]): Array<{ variantId: string; available: number; requested: number }> {
+  findShortages(lines: readonly CartLine[]): { variantId: string; available: number; requested: number }[] {
     this.ensureInitialized();
-    const shortages: Array<{ variantId: string; available: number; requested: number }> = [];
+    const shortages: { variantId: string; available: number; requested: number }[] = [];
     for (const line of lines) {
       const available = this.stocks.get(line.variantId) ?? 0;
       if (available < line.quantity) {
@@ -475,7 +472,7 @@ export class OrderDomain {
     if (!session.ok) return session;
     const stored = this.repository.getOrder(input.orderId);
     if (!stored) return err(notFound('A rendelés nem található.'));
-    return ok(stripSession(stored));
+    return ok(stripSession(stored as unknown as { sessionId?: string } & Record<string, unknown>));
   }
 
   // -------------------------------------------------------------------------
@@ -632,7 +629,7 @@ export function quoteExpired(): OrderProblem {
   return { status: 409, code: 'QUOTE_EXPIRED', detail: 'Az árajánlat lejárt vagy érvénytelen.', fieldErrors: [] };
 }
 
-export function outOfStock(shortages: ReadonlyArray<{ variantId: string; available: number; requested: number }>): OrderProblem {
+export function outOfStock(shortages: readonly { variantId: string; available: number; requested: number }[]): OrderProblem {
   const detail = shortages.length === 1
     ? `A(z) ${shortages[0]!.variantId} változatból már csak ${shortages[0]!.available} darab elérhető.`
     : 'Egy vagy több változatból nincs elegendő készlet.';

@@ -21,13 +21,13 @@ import { Repository } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 
 /** Inputs passed by both `setupWorker` and `setupServer` paths. */
-export type CreateHandlersOptions = {
+export interface CreateHandlersOptions {
   repository: Repository;
   clock: Clock;
   ids: Ids;
   scenario: ScenarioDescriptor;
   apiRoot: string;
-};
+}
 
 /**
  * A business handler entry. T06–T09 each export one or more entries

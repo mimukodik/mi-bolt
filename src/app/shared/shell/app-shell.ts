@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
 import { FooterNav } from '../../core/navigation/footer-nav';
@@ -21,37 +21,15 @@ import { CartCountFacade } from '../../core/navigation/cart-count-facade';
 @Component({
   selector: 'app-app-shell',
   imports: [HeaderNav, FooterNav],
-  template: `
-    <app-header-nav [variant]="variant()" />
-    <ng-content></ng-content>
-    @if (showFooter()) {
-      <app-footer-nav />
-    }
-  `,
-  styles: [
-    `
-      :host {
-        display: flex;
-        flex-direction: column;
-        min-height: 100dvh;
-      }
-
-      :host > :nth-child(2) {
-        flex: 1 1 auto;
-      }
-
-      :host > ng-content {
-        display: contents;
-      }
-    `,
-  ],
+  templateUrl: './app-shell.html',
+  styleUrl: './app-shell.scss',
 })
 export class AppShell {
   /** Header variant — drives which chrome appears. */
   readonly variant = input.required<HeaderVariant>();
 
   /** Cart count source-of-truth. Injected here so the shell owns the wiring. */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   private readonly cart = inject(CartCountFacade);
 
   /** Whether to render the standard footer. Checkout uses a compact footer. */

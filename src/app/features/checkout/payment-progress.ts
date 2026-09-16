@@ -140,50 +140,8 @@ export interface SubmitOutcomeSnapshot {
 @Component({
   selector: 'app-payment-progress',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (state() !== null) {
-      <section
-        class="payment-progress"
-        role="status"
-        aria-live="polite"
-        [attr.data-state]="state()"
-      >
-        <h2>{{ heading() }}</h2>
-        @if (state() === 'pending' || state() === 'attempt') {
-          <p>{{ attemptLabel() }}</p>
-          <progress
-            max="{{ maxAttempts() }}"
-            [value]="attempt()"
-            aria-label="Fizetési szándék ellenőrzése"
-          ></progress>
-        } @else if (state() === 'declined') {
-          <p>A szimulált fizetés elutasítva.</p>
-          <p>A fizetési módot módosíthatod, vagy újra próbálkozhatsz.</p>
-        } @else if (state() === 'timeout') {
-          <p>Nem kaptunk egyértelmű választ 10 másodperc alatt.</p>
-          <p>Újra megpróbálhatjuk, vagy később is ránézhetünk.</p>
-        } @else if (state() === 'succeeded') {
-          <p>A fizetés sikeres.</p>
-        }
-      </section>
-    }
-  `,
-  styles: [
-    `
-      .payment-progress {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding: 16px;
-        border-radius: 8px;
-        background: #f5f6f7;
-      }
-      .payment-progress progress {
-        width: 100%;
-        height: 8px;
-      }
-    `,
-  ],
+  templateUrl: './payment-progress.html',
+  styleUrl: './payment-progress.scss',
 })
 export class PaymentProgress implements OnDestroy {
   private readonly submission = inject(OrderSubmission);

@@ -61,54 +61,54 @@ export type ProblemCode =
   | 'QUANTITY_LIMIT'
   | 'IDEMPOTENCY_CONFLICT';
 
-export type FieldError = { path: string; message: string };
+export interface FieldError { path: string; message: string }
 
-export type Problem = {
+export interface Problem {
   status: 400 | 404 | 409 | 410 | 422;
   code: ProblemCode;
   detail: string;
   fieldErrors: FieldError[];
-};
+}
 
 /** Result of a cart operation — discriminated union. */
 export type CartResult<T> = { ok: true; value: T } | { ok: false; problem: Problem };
 
 /** Inputs grouped per operation; the handler layer maps HTTP into these. */
-export type CreateCartInput = {
+export interface CreateCartInput {
   sessionId: string;
   idempotencyKey: string;
-};
+}
 
-export type GetCartInput = {
+export interface GetCartInput {
   sessionId: string;
   cartId: string;
-};
+}
 
-export type AddCartItemInput = {
+export interface AddCartItemInput {
   sessionId: string;
   cartId: string;
   ifMatch: string | null;
   idempotencyKey: string | null;
   variantId: string;
   quantity: number;
-};
+}
 
-export type SetCartItemQuantityInput = {
+export interface SetCartItemQuantityInput {
   sessionId: string;
   cartId: string;
   itemId: string;
   ifMatch: string | null;
   idempotencyKey: string | null;
   quantity: number;
-};
+}
 
-export type RemoveCartItemInput = {
+export interface RemoveCartItemInput {
   sessionId: string;
   cartId: string;
   itemId: string;
   ifMatch: string | null;
   idempotencyKey: string | null;
-};
+}
 
 /**
  * Header validation results — separated from cart logic so the

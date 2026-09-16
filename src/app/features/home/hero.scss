@@ -1,0 +1,173 @@
+/* hero.scss — extracted from inline styles.
+   Tailwind v4 utility classes live alongside the scoped selectors below. */
+
+
+      /* T14 — Hero (S1).
+       *
+       * Dark shell hero for the marketing entry screen. Layout contract:
+       *   - mobile source order: heading, message, CTA, illustration, shortcuts
+       *   - desktop: two columns + shortcuts in their own row
+       * The DOM order is fixed; CSS only repositions on wide viewports so the
+       * order assertion in T14-AC05 is meaningful.
+       */
+
+      .hero {
+        background: var(--color-shell-dark);
+        color: var(--color-text-inverse);
+        padding: var(--space-9) var(--layout-gutter-mobile);
+      }
+
+      .hero__inner {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+        max-width: var(--layout-container-max);
+        margin: 0 auto;
+      }
+
+      .hero__title {
+        font-size: var(--type-page-title-mobile);
+        line-height: var(--line-height-heading);
+        font-weight: var(--weight-bold);
+        color: var(--color-text-inverse);
+        margin: 0;
+        overflow-wrap: anywhere;
+        hyphens: auto;
+      }
+
+      .hero__message {
+        font-size: var(--type-body);
+        line-height: var(--line-height-body);
+        color: var(--color-text-inverse-muted);
+        margin: 0;
+        max-width: 56ch;
+        overflow-wrap: anywhere;
+      }
+
+      .hero__cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+      }
+
+      .hero__cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: var(--size-control);
+        padding: 0 var(--space-6);
+        background: var(--color-brand-accent);
+        color: var(--color-text-primary);
+        font-size: var(--type-body);
+        font-weight: var(--weight-bold);
+        text-decoration: none;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--color-brand-accent);
+        transition: background-color var(--motion-fast) ease;
+        min-width: 44px;
+      }
+
+      .hero__cta:hover {
+        background: var(--color-brand-accent-hover);
+      }
+
+      .hero__cta:focus-visible {
+        outline: 3px solid var(--color-focus-dark);
+        outline-offset: 2px;
+      }
+
+      .hero__illustration {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .hero__art {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .hero__shortcuts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        padding-top: var(--space-2);
+      }
+
+      .hero__shortcut {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: var(--size-control);
+        padding: 0 var(--space-5);
+        background: transparent;
+        color: var(--color-text-inverse);
+        font-size: var(--type-body);
+        font-weight: var(--weight-medium);
+        text-decoration: none;
+        border-radius: var(--radius-control);
+        border: 1px solid var(--color-text-inverse-muted);
+        min-width: 44px;
+        transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+      }
+
+      .hero__shortcut:hover {
+        background: var(--color-brand-accent);
+        color: var(--color-text-primary);
+        border-color: var(--color-brand-accent);
+      }
+
+      .hero__shortcut:focus-visible {
+        outline: 3px solid var(--color-focus-dark);
+        outline-offset: 2px;
+      }
+
+      @media (min-width: 720px) {
+        .hero {
+          padding: var(--space-10) var(--layout-gutter-desktop);
+        }
+
+        .hero__title {
+          font-size: var(--type-page-title);
+        }
+
+        .hero__inner {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          grid-template-areas:
+            "heading  illustration"
+            "message  illustration"
+            "cta      illustration"
+            "shortcuts shortcuts";
+          column-gap: var(--space-8);
+          row-gap: var(--space-6);
+          align-items: start;
+        }
+
+        .hero__title {
+          grid-area: heading;
+        }
+
+        .hero__message {
+          grid-area: message;
+        }
+
+        .hero__cta-row {
+          grid-area: cta;
+        }
+
+        .hero__illustration {
+          grid-area: illustration;
+          align-self: center;
+        }
+
+        .hero__shortcuts {
+          grid-area: shortcuts;
+          border-top: 1px solid #2a3035;
+          padding-top: var(--space-5);
+        }
+      }
+    

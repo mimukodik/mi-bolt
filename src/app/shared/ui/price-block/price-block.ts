@@ -32,38 +32,8 @@ export interface Money {
  */
 @Component({
   selector: 'app-price-block',
-  template: `
-    <div class="root" [attr.data-status]="status()">
-      <span class="label">{{ label() }}</span>
-      @switch (status()) {
-        @case ('loading') {
-          <span class="skeleton" aria-hidden="true" data-testid="price-skeleton"></span>
-          <span class="sr-only">Ár betöltése…</span>
-        }
-        @case ('success') {
-          @if (amountText()) {
-            <span class="amount" data-testid="price-amount">{{ amountText() }}</span>
-            <span class="currency" aria-hidden="true">Ft</span>
-          } @else {
-            <span class="amount amount--error" data-testid="price-empty">—</span>
-            <span class="sr-only">Az ár nem áll rendelkezésre.</span>
-          }
-        }
-        @case ('error') {
-          <span class="amount amount--error" data-testid="price-error">—</span>
-          <span class="sr-only">Az ár betöltése sikertelen.</span>
-        }
-        @case ('empty') {
-          <span class="amount amount--error" data-testid="price-empty">—</span>
-          <span class="sr-only">Nincs megjeleníthető ár.</span>
-        }
-        @default {
-          <span class="amount amount--placeholder" data-testid="price-idle">—</span>
-        }
-      }
-    </div>
-  `,
-  styleUrl: './price-block.css',
+  templateUrl: './price-block.html',
+  styleUrl: './price-block.scss',
 })
 export class PriceBlock {
   readonly money = input<Money | null>(null);

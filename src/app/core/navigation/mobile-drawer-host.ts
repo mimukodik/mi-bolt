@@ -1,5 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, inject, input, signal, viewChild } from '@angular/core';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { Component, ElementRef, afterNextRender, input, signal, viewChild } from '@angular/core';
 
 import { MobileDrawer } from './mobile-drawer';
 
@@ -18,7 +17,7 @@ import { MobileDrawer } from './mobile-drawer';
   selector: 'app-mobile-drawer-host',
   imports: [MobileDrawer],
   templateUrl: './mobile-drawer-host.html',
-  styleUrl: './mobile-drawer-host.css',
+  styleUrl: './mobile-drawer-host.scss',
 })
 export class MobileDrawerHost {
   readonly opened = signal(false);
@@ -28,7 +27,7 @@ export class MobileDrawerHost {
   // safely across the test-bed's first change-detection pass.
   readonly trigger = viewChild<ElementRef<HTMLElement>>('trigger');
 
-  readonly navLinks = input<ReadonlyArray<{ label: string; routerLink: string }>>([
+  readonly navLinks = input<readonly { label: string; routerLink: string }[]>([
     { label: 'Mobiltelefonok', routerLink: '/telefonok' },
     { label: 'A demóról', routerLink: '/' },
   ]);

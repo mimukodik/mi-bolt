@@ -32,40 +32,40 @@ export const SNAPSHOT_SCHEMA_VERSION = 1;
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Minimal cart line kept across reload. */
-export type PersistedCartLine = {
+export interface PersistedCartLine {
   id: string;
   variantId: string;
   quantity: number;
-};
+}
 
 /** Cart snapshot — line ids, variant ids, quantities, version. */
-export type PersistedCart = {
+export interface PersistedCart {
   id: string;
   version: number;
   items: readonly PersistedCartLine[];
   lastUpdatedAt: string;
-};
+}
 
 /** Single committed order line in a privacy-minimized receipt. */
-export type PersistedReceiptItem = {
+export interface PersistedReceiptItem {
   variantId: string;
   quantity: number;
   unitPrice: { amount: number; currency: string };
   lineTotal: { amount: number; currency: string };
-};
+}
 
 /** Receipt kept across reload — order id, total, items, method, date. */
-export type PersistedReceipt = {
+export interface PersistedReceipt {
   id: string;
   orderNumber: string;
   total: { amount: number; currency: string };
   paymentMethod: 'demo_card' | 'demo_cod';
   createdAt: string;
   items: readonly PersistedReceiptItem[];
-};
+}
 
 /** Root snapshot written under `${SNAPSHOT_KEY_PREFIX}${scenarioName}`. */
-export type MockSnapshot = {
+export interface MockSnapshot {
   schemaVersion: number;
   providerId: 'mi-bolt';
   simulatedSessionId: string;
@@ -73,14 +73,14 @@ export type MockSnapshot = {
   expiresAt: string;
   cart?: PersistedCart;
   receipts: readonly PersistedReceipt[];
-};
+}
 
-export type PersistenceOptions = {
+export interface PersistenceOptions {
   /** Injectable clock so tests can exercise age/v expiry deterministically. */
   nowMs: () => number;
   /** Injectable storage adapter; defaults to `globalThis.sessionStorage`. */
   storage?: StorageLike | null;
-};
+}
 
 /** Storage shape used by the adapter — works for both `Storage` and stubs. */
 export interface StorageLike {

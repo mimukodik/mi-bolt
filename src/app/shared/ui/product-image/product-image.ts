@@ -33,41 +33,8 @@ export interface ImageLike {
  */
 @Component({
   selector: 'app-product-image',
-  template: `
-    <div
-      class="root"
-      [style.aspect-ratio]="aspectRatio()"
-      [attr.data-status]="status()"
-      role="img"
-      [attr.aria-label]="image().alt"
-    >
-      @switch (status()) {
-        @case ('loading') {
-          <span class="skeleton" aria-hidden="true" data-testid="image-skeleton"></span>
-        }
-        @case ('loaded') {
-          <img
-            class="photo"
-            [src]="image().src"
-            [alt]="image().alt"
-            [attr.width]="image().width ?? null"
-            [attr.height]="image().height ?? null"
-            decoding="async"
-            loading="lazy"
-            data-testid="image-photo"
-            (error)="onError()"
-          />
-        }
-        @case ('error') {
-          <div class="fallback" aria-hidden="true" data-testid="image-fallback">
-            <span class="fallback-mark">{{ initial() }}</span>
-          </div>
-        }
-      }
-      <span class="sr-only">{{ image().alt }}</span>
-    </div>
-  `,
-  styleUrl: './product-image.css',
+  templateUrl: './product-image.html',
+  styleUrl: './product-image.scss',
 })
 export class ProductImage {
   readonly image = input.required<ImageLike>();

@@ -35,16 +35,43 @@ import { describe, expect, it } from 'vitest';
 const workspaceRoot = resolvePath(process.cwd());
 
 function read(relative: string): string {
-  return readFileSync(resolvePath(workspaceRoot, relative), 'utf8');
+  const base = relative.replace(/\.ts$/, '');
+  const sources = [relative, `${base}.html`, `${base}.scss`];
+  return sources
+    .map((p) => {
+      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+      catch { return ''; }
+    })
+    .join('\n');
 }
 
 const cartPageSource = read('src/app/features/cart/cart-page.ts');
 const cartLineSource = read('src/app/features/cart/cart-line.ts');
 const orderSummarySource = read('src/app/features/cart/order-summary.ts');
 
-function componentStyles(componentSource: string): string {
-  const match = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  return match ? match[1] ?? '' : '';
+function componentStyles(componentSource: string, scssPath?: string): string {
+  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
+  if (inline) return inline[1] ?? '';
+  if (scssPath) {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
+    } catch {
+      return '';
+    }
+  }
+  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  if (htmlMatch) {
+    const derivedScss = htmlMatch[1].replace(/\.html$/, '.scss');
+    try {
+      return readFileSync(
+        resolvePath(workspaceRoot, derivedScss),
+        'utf8',
+      );
+    } catch {
+      return '';
+    }
+  }
+  return '';
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +228,7 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
   });
 
   it('styles declare a desktop two-column layout (items + summary)', () => {
-    const css = componentStyles(cartPageSource);
+    const css = componentStyles(cartPageSource, 'src/app/features/cart/cart-page.scss');
     // Two-column layout for the items column and the order summary
     // sits side-by-side on desktop (>= 1024 px).
     expect(css).toMatch(/@media\s*\(min-width:\s*1024px\)/);

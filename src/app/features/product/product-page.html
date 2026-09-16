@@ -1,0 +1,144 @@
+
+    <main class="page" data-testid="product-page">
+      <article class="card">
+        @switch (state()) {
+          @case ('loading') {
+            <div class="loading" data-testid="product-loading">
+              <app-loading-state variant="card" label="Termék betöltése"></app-loading-state>
+            </div>
+          }
+          @case ('error') {
+            <app-error-state
+              [title]="'A termék nem tölthető be'"
+              [message]="errorMessage()"
+              [retryLabel]="'Újrapróbálom'"
+              [pending]="false"
+              [preserving]="true"
+              (retryRequested)="onRetry()"
+            ></app-error-state>
+          }
+          @default {
+            <div class="layout">
+              <div class="gallery">
+                <app-product-gallery
+                  [images]="gallery()"
+                  [imageIndex]="galleryIndex()"
+                  [productName]="productName()"
+                  (imageChange)="onImageChange($event)"
+                  (zoomChange)="onZoomChange($event)"
+                ></app-product-gallery>
+                @if (highlights().length > 0) {
+                  <ul class="highlights" aria-label="A termék fő jellemzői">
+                    @for (item of highlights(); track item) {
+                      <li>{{ item }}</li>
+                    }
+                  </ul>
+                }
+              </div>
+
+              <div class="buy">
+                <header class="buy-header">
+                  <p class="brand">{{ brand() }}</p>
+                  <h1 class="name" data-testid="product-name">{{ productName() }}</h1>
+                  @if (selectedColorName() !== null) {
+                    <p class="meta">
+                      <span class="meta-label">Szín:</span>
+                      <span class="meta-value">{{ selectedColorName() }}</span>
+                      <span class="meta-sep" aria-hidden="true">·</span>
+                      <span class="meta-label">Tárhely:</span>
+                      <span class="meta-value">{{ selectedStorageLabel() }}</span>
+                    </p>
+                  }
+                </header>
+
+                <section class="prices" aria-label="Árak">
+                  <app-price-block
+                    [money]="devicePrice()"
+                    [label]="'Készülékár'"
+                    [status]="devicePriceStatus()"
+                  ></app-price-block>
+                </section>
+
+                <app-variant-selector
+                  [product]="product()!"
+                  [selectedColorCode]="selectedColorCode()"
+                  [selectedStorageGb]="selectedStorageGb()"
+                  [disabledCombinations]="disabledCombinations()"
+                  (colorChange)="onColorChange($event)"
+                  (storageChange)="onStorageChange($event)"
+                ></app-variant-selector>
+
+                <div class="quantity">
+                  <label class="qty-label" [attr.for]="quantityControlId()">Darabszám</label>
+                  <app-quantity-control
+                    [id]="quantityControlId()"
+                    [value]="quantity()"
+                    [min]="1"
+                    [max]="maxQuantity()"
+                    [label]="'Darabszám'"
+                    (quantityChanged)="onQuantityChanged($event)"
+                  ></app-quantity-control>
+                  @if (quantityOverMax()) {
+                    <p class="hint hint--error" role="status">
+                      Maximum {{ maxQuantity() }} darab rendelhető ebből a változatból.
+                    </p>
+                  }
+                </div>
+
+                <div class="cta-desktop">
+                  <app-button
+                    [variant]="'primary'"
+                    [size]="'comfortable'"
+                    [label]="'Kosárba teszem'"
+                    [loadingLabel]="'Hozzáadás…'"
+                    [disabled]="!addToCartEnabled()"
+                    (pressed)="onAddToCart()"
+                  ></app-button>
+                  @if (addToCartReason() !== null && !addToCartEnabled()) {
+                    <p class="hint" role="status">{{ addToCartReason() }}</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <section class="spec" aria-label="Műszaki adatok">
+              <h2 class="section-title">Műszaki adatok</h2>
+              <app-specification-accordion
+                [groups]="specGroups()"
+              ></app-specification-accordion>
+            </section>
+
+            @if (invalidQuery() !== null) {
+              <p class="hint hint--error" role="status">
+                A linkben megadott változat nem található: {{ invalidQuery() }}.
+                Válassz a fenti listából.
+              </p>
+            }
+          }
+        }
+      </article>
+
+      @if (showStickyRail()) {
+        <aside class="rail" data-testid="purchase-rail" aria-label="Kosárba helyezés">
+          <div class="rail-price">
+            <app-price-block
+              [money]="devicePrice()"
+              [label]="'Készülékár'"
+              [status]="devicePriceStatus()"
+            ></app-price-block>
+          </div>
+          <div class="rail-cta">
+            <app-button
+              data-testid="purchase-cta"
+              [variant]="'primary'"
+              [size]="'comfortable'"
+              [label]="'Kosárba teszem'"
+              [loadingLabel]="'Hozzáadás…'"
+              [disabled]="!addToCartEnabled()"
+              (pressed)="onAddToCart()"
+            ></app-button>
+          </div>
+        </aside>
+      }
+    </main>
+  

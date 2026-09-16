@@ -34,21 +34,8 @@ export interface FieldError {
  */
 @Component({
   selector: 'app-form-field-message',
-  template: `
-    @if (showMessage()) {
-      <p
-        class="root"
-        [class.is-help]="severity() === 'help'"
-        [class.is-error]="severity() === 'error'"
-        [id]="describedById()"
-        [attr.data-pointer]="dataPointer()"
-        data-testid="form-field-message"
-      >
-        {{ visibleText() }}
-      </p>
-    }
-  `,
-  styleUrl: './form-field-message.css',
+  templateUrl: './form-field-message.html',
+  styleUrl: './form-field-message.scss',
 })
 export class FormFieldMessage {
   readonly fieldId = input.required<string>();

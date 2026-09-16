@@ -1,0 +1,199 @@
+/* product-page.scss — extracted from inline styles.
+   Tailwind v4 utility classes live alongside the scoped selectors below. */
+
+
+      :host { display: block; }
+
+      .page {
+        position: relative;
+        display: block;
+        max-width: var(--layout-container-max);
+        margin: 0 auto;
+        padding: var(--space-6) var(--layout-gutter-mobile) var(--space-10);
+        background: var(--color-surface-light);
+        color: var(--color-text-primary);
+        box-sizing: border-box;
+      }
+
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-7);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+        gap: var(--space-6);
+        align-items: start;
+      }
+
+      .gallery,
+      .buy {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-5);
+        min-width: 0;
+      }
+
+      .buy-header {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .brand {
+        margin: 0;
+        font-size: var(--type-helper);
+        color: var(--color-text-secondary);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .name {
+        margin: 0;
+        font-size: var(--type-section-title-mobile);
+        font-weight: var(--weight-bold);
+        line-height: var(--line-height-heading);
+      }
+
+      @media (min-width: 640px) {
+        .name { font-size: var(--type-section-title); }
+      }
+
+      .meta {
+        margin: 0;
+        font-size: var(--type-helper);
+        color: var(--color-text-secondary);
+      }
+
+      .meta-value {
+        margin-left: var(--space-1);
+        color: var(--color-text-primary);
+        font-weight: var(--weight-medium);
+      }
+
+      .meta-sep { margin: 0 var(--space-2); }
+
+      .highlights {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .highlights li {
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-badge);
+        background: var(--color-surface-section);
+        color: var(--color-text-primary);
+        font-size: var(--type-helper);
+      }
+
+      .prices {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+      }
+
+      .quantity {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .qty-label {
+        font-size: var(--type-helper);
+        color: var(--color-text-secondary);
+      }
+
+      .cta-desktop {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+
+      .spec {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+
+      .section-title {
+        margin: 0;
+        font-size: var(--type-section-title-mobile);
+        font-weight: var(--weight-bold);
+        line-height: var(--line-height-heading);
+      }
+
+      @media (min-width: 640px) {
+        .section-title { font-size: var(--type-section-title); }
+      }
+
+      .hint {
+        margin: 0;
+        font-size: var(--type-helper);
+        color: var(--color-text-secondary);
+      }
+
+      .hint--error { color: var(--color-status-error); }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 24rem;
+      }
+
+      .rail {
+        display: none;
+      }
+
+      /* T16-AC04 — mobile purchase rail.
+         The rail sticks to the bottom of the viewport with safe-area
+         padding so the primary CTA stays reachable on iOS / Android
+         notch devices. The page main adds matching padding-bottom so
+         the rail never covers keyboard focus or page content. */
+      @media (max-width: 1023px) {
+        .page {
+          padding-bottom: calc(env(safe-area-inset-bottom) + 8rem);
+        }
+
+        .rail {
+          display: flex;
+          align-items: center;
+          gap: var(--space-4);
+          position: sticky;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: var(--space-3) var(--layout-gutter-mobile);
+          padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-3));
+          background: var(--color-surface-light);
+          border-top: 1px solid var(--color-border-subtle);
+          box-shadow: 0 -2px 8px rgba(23, 27, 31, 0.04);
+          z-index: 10;
+        }
+
+        .rail-price { flex: 0 0 auto; }
+        .rail-cta { flex: 1 1 auto; display: flex; justify-content: flex-end; }
+      }
+
+      /* T16-AC01 — desktop layout. */
+      @media (min-width: 1024px) {
+        .page {
+          padding: var(--space-8) var(--layout-gutter-desktop) var(--space-10);
+        }
+
+        .layout {
+          grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+          gap: var(--space-6);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        :host { animation: none; }
+      }
+    

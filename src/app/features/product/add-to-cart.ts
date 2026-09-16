@@ -50,53 +50,8 @@ export interface AddToCartSelection {
 @Component({
   selector: 'app-add-to-cart',
   imports: [Button, StatusMessage],
-  template: `
-    <div class="root" [attr.aria-busy]="pending() ? 'true' : null" data-testid="add-to-cart">
-      <app-button
-        [variant]="'primary'"
-        [size]="'comfortable'"
-        [label]="'Kosárba teszem'"
-        [loadingLabel]="'Hozzáadás…'"
-        [disabled]="!enabled() || pending()"
-        [loading]="pending()"
-        (pressed)="onAdd()"
-        data-testid="add-to-cart-button"
-      ></app-button>
-
-      @if (statusBanner(); as banner) {
-        <div class="status">
-          <app-status-message
-            [message]="banner.text"
-            [severity]="severity()"
-            (dismissed)="dismissBanner()"
-          ></app-status-message>
-        </div>
-      }
-    </div>
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-
-      .root {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-3);
-      }
-
-      .status {
-        display: flex;
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .root {
-          transition: none;
-        }
-      }
-    `,
-  ],
+  templateUrl: './add-to-cart.html',
+  styleUrl: './add-to-cart.scss',
 })
 export class AddToCart {
   private readonly facade = inject(CartFacade);

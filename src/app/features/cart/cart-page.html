@@ -1,0 +1,105 @@
+<section class="cart flex flex-col gap-6" data-testid="cart-page">
+  <header class="heading flex flex-col gap-3">
+    <nav class="breadcrumbs flex flex-wrap gap-2" aria-label="Navigáció">
+      <a routerLink="/" class="breadcrumb no-underline">Főoldal</a>
+      <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
+      <span class="breadcrumb is-current font-medium" aria-current="page">Kosár</span>
+    </nav>
+    <h1 class="title m-0 font-bold">Kosár</h1>
+  </header>
+
+  @if (statusMessage(); as message) {
+    <div class="status flex">
+      <app-status-message
+        [message]="message.text"
+        [severity]="message.severity"
+        (dismissed)="dismissStatusMessage()"
+      ></app-status-message>
+    </div>
+  }
+
+  @switch (state()) {
+    @case ('loading') {
+      <div class="loading flex items-center justify-center min-h-72" data-testid="cart-loading">
+        <app-loading-state
+          variant="card"
+          label="Kosár betöltése"
+        ></app-loading-state>
+      </div>
+    }
+    @case ('error') {
+      <app-error-state
+        [title]="'A kosár nem érhető el'"
+        [message]="errorMessage()"
+        [retryLabel]="'Újrapróbálom'"
+        [pending]="revalidating()"
+        [preserving]="true"
+        (retryRequested)="onRetry()"
+      ></app-error-state>
+    }
+    @case ('empty') {
+      <app-empty-state
+        [title]="'A kosarad üres'"
+        [message]="'Vegyél fel termékeket a kínálatból, és itt folytathatod a vásárlást.'"
+        [actionLabel]="'Vásárlás folytatása'"
+        [actionVariant]="'primary'"
+        (actionRequested)="onContinueShopping()"
+      ></app-empty-state>
+    }
+    @default {
+      <div class="layout flex flex-col gap-5 lg:grid lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start" data-testid="cart-layout">
+        <div class="lines">
+          <ul class="lines-list m-0 p-0 list-none flex flex-col gap-3">
+            @for (item of items(); track item.id) {
+              <li>
+                <app-cart-line
+                  [line]="item"
+                  [pending]="pendingItemIds().has(item.id)"
+                  (quantityChanged)="onQuantityChanged(item, $event)"
+                  (removeRequested)="onRemoveRequested($event)"
+                ></app-cart-line>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <app-order-summary
+          [subtotal]="subtotal()"
+          [shipping]="null"
+          [footnote]="summaryFootnote()"
+        ></app-order-summary>
+      </div>
+
+      <footer class="footer flex flex-col gap-4 p-5 rounded lg:flex-row lg:items-center lg:justify-between lg:gap-6" data-testid="cart-footer">
+        <div class="footer-meta flex flex-col gap-2">
+          <app-price-block
+            [money]="subtotal()"
+            [label]="'Részösszeg'"
+            [status]="'success'"
+          ></app-price-block>
+          <p class="footer-hint m-0">
+            A szállítási díj a pénztárban kerül kiszámításra.
+          </p>
+        </div>
+        <div class="footer-actions flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center lg:flex-0 lg:flex-shrink-0">
+          <app-button
+            variant="secondary"
+            size="comfortable"
+            label="Vásárlás folytatása"
+            (pressed)="onContinueShopping()"
+          ></app-button>
+          <app-button
+            variant="primary"
+            size="comfortable"
+            label="Tovább a pénztárhoz"
+            [loadingLabel]="'Ellenőrzés…'"
+            [loading]="continuing()"
+            [disabled]="!canContinue()"
+            (pressed)="onContinue()"
+            data-testid="cart-continue"
+          ></app-button>
+        </div>
+      </footer>
+    }
+  }
+</section>

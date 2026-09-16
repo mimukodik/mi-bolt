@@ -20,17 +20,17 @@ import {
 } from './filter-products';
 
 /** One entry in a facet response: value, label and the count of products. */
-export type FacetValue = {
+export interface FacetValue {
   value: string;
   label: string;
   count: number;
-};
+}
 
 /** Brand + storage facet bundle the OpenAPI `ProductPage.facets` carries. */
-export type ProductFacets = {
+export interface ProductFacets {
   brands: readonly FacetValue[];
   storageGb: readonly FacetValue[];
-};
+}
 
 /**
  * Counts distinct products per brand after applying every facet

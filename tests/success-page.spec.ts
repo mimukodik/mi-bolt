@@ -88,12 +88,39 @@ import {
 const workspaceRoot = resolvePath(process.cwd());
 
 function read(relative: string): string {
-  return readFileSync(resolvePath(workspaceRoot, relative), 'utf8');
+  const base = relative.replace(/\.ts$/, '');
+  const sources = [relative, `${base}.html`, `${base}.scss`];
+  return sources
+    .map((p) => {
+      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+      catch { return ''; }
+    })
+    .join('\n');
 }
 
-function componentStyles(componentSource: string): string {
-  const match = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  return match ? (match[1] ?? '') : '';
+function componentStyles(componentSource: string, explicitScssPath?: string): string {
+  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
+  if (inline) return inline[1] ?? '';
+  if (explicitScssPath) {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
+    } catch {
+      return '';
+    }
+  }
+  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  if (htmlMatch) {
+    const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
+    try {
+      return readFileSync(
+        resolvePath(workspaceRoot, scssPath),
+        'utf8',
+      );
+    } catch {
+      return '';
+    }
+  }
+  return '';
 }
 
 const BASE_URL = 'http://localhost/api/v1';
@@ -266,13 +293,13 @@ describe('T24 route + module wiring', () => {
   });
 
   it('responsive layout: mobile-first stack with a desktop two-column split at >= 1024px', () => {
-    const css = componentStyles(successStepSource);
+    const css = componentStyles(successStepSource, 'src/app/features/checkout/success-step.scss');
     expect(css).toMatch(/@media\s*\(min-width:\s*1024px\)/);
     expect(css).toMatch(/grid-template-columns/);
   });
 
   it('prefers-reduced-motion disables any success-only animation', () => {
-    const css = componentStyles(successStepSource);
+    const css = componentStyles(successStepSource, 'src/app/features/checkout/success-step.scss');
     expect(css).toMatch(/prefers-reduced-motion/);
   });
 });

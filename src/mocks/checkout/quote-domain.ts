@@ -51,12 +51,10 @@ import {
 export const QUOTE_TTL_MS = 5 * 60 * 1000;
 
 /** Allowed payment methods (matches OpenAPI `paymentMethod` enum). */
-const PAYMENT_METHODS = ['demo_card', 'demo_cod'] as const;
-type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+type PaymentMethod = 'demo_card' | 'demo_cod';
 
 /** Allowed delivery option ids (matches OpenAPI `optionId` enum). */
-const DELIVERY_OPTIONS = ['home_delivery', 'demo_pickup'] as const;
-export type DeliveryOptionId = (typeof DELIVERY_OPTIONS)[number];
+export type DeliveryOptionId = 'home_delivery' | 'demo_pickup';
 
 /** Issue codes used by the mock domain; mirrors `ProblemCode`. */
 export type ProblemCode =
@@ -72,14 +70,14 @@ export type ProblemCode =
   | 'IDEMPOTENCY_CONFLICT'
   | 'QUOTE_INVALIDATED';
 
-export type FieldError = { path: string; message: string };
+export interface FieldError { path: string; message: string }
 
-export type Problem = {
+export interface Problem {
   status: 400 | 404 | 409 | 410 | 422;
   code: ProblemCode;
   detail: string;
   fieldErrors: FieldError[];
-};
+}
 
 export type Result<T> =
   | { ok: true; value: T }
@@ -588,11 +586,11 @@ export class QuoteDomain {
     }
 
     // 3. Stock recheck + price recheck
-    const mismatchedLines: Array<{
+    const mismatchedLines: {
       lineId: string;
       newPrice: Money;
       lineIndex: number;
-    }> = [];
+    }[] = [];
     const outOfStockLines: string[] = [];
 
     let subtotal = 0;
@@ -624,18 +622,15 @@ export class QuoteDomain {
       // Apply the price rewrite before any status check so a line that
       // is both out-of-stock and price-changed keeps its new price in
       // the cart even though the call still surfaces 409 OUT_OF_STOCK.
-      let totalSubtotal = 0;
       const atomicItems: CartLine[] = updatedItems.map((line, idx) => {
         const mismatch = mismatchedLines.find((m) => m.lineIndex === idx);
         if (!mismatch) {
-          totalSubtotal += line.unitPrice.amount * line.quantity;
           return line;
         }
         const lineTotal: Money = {
           amount: mismatch.newPrice.amount * line.quantity,
           currency: 'HUF',
         };
-        totalSubtotal += mismatch.newPrice.amount * line.quantity;
         return { ...line, unitPrice: mismatch.newPrice, lineTotal };
       });
       const rewritten: Cart = {

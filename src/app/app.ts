@@ -16,6 +16,6 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './app.html',
-  styleUrl: './app.css',
+  styleUrl: './app.scss',
 })
 export class App {}

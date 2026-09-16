@@ -20,27 +20,8 @@ import { RouteFocusService } from '../core/navigation/route-focus';
 @Component({
   selector: 'app-marketing-layout',
   imports: [AppShell, RouterOutlet],
-  template: `
-    <app-app-shell variant="marketing">
-      <main id="main-content" tabindex="-1" class="layout-main">
-        <router-outlet />
-      </main>
-    </app-app-shell>
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-
-      .layout-main {
-        display: block;
-        background: var(--color-surface-light);
-        color: var(--color-text-primary);
-        scroll-margin-top: 80px;
-      }
-    `,
-  ],
+  templateUrl: './marketing-layout.html',
+  styleUrl: './marketing-layout.scss',
 })
 export class MarketingLayout {
   private readonly routeFocus = inject(RouteFocusService);

@@ -34,7 +34,14 @@ import { describe, expect, it } from 'vitest';
 const workspaceRoot = resolvePath(process.cwd());
 
 function read(relative: string): string {
-  return readFileSync(resolvePath(workspaceRoot, relative), 'utf8');
+  const base = relative.replace(/\.ts$/, '');
+  const sources = [relative, `${base}.html`, `${base}.scss`];
+  return sources
+    .map((p) => {
+      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+      catch { return ''; }
+    })
+    .join('\n');
 }
 
 const reviewStepSource = read('src/app/features/checkout/review-step.ts');
@@ -43,24 +50,46 @@ const termsDialogSource = read('src/app/features/checkout/terms-dialog.ts');
 const reviewPageSource = read('src/app/features/checkout/review-page.ts');
 const checkoutRoutesSource = read('src/app/features/checkout/checkout.routes.ts');
 
-function componentStyles(componentSource: string): string {
-  // Find the `styles:` array opener and walk the source until the
-  // matching closing bracket — naive `[...]` matching breaks on
-  // CSS attribute selectors like `[data-state='x']` that appear
-  // inside the styles block.
+function componentStyles(componentSource: string, explicitScssPath?: string): string {
+  // First try the inline `styles: [...]` block (legacy / not-yet-migrated components).
   const start = componentSource.search(/styles:\s*\[/);
-  if (start === -1) return '';
-  let index = componentSource.indexOf('[', start);
-  if (index === -1) return '';
-  let depth = 0;
-  for (let cursor = index; cursor < componentSource.length; cursor++) {
-    const ch = componentSource[cursor];
-    if (ch === '[') depth++;
-    else if (ch === ']') {
-      depth--;
-      if (depth === 0) {
-        return componentSource.slice(index + 1, cursor);
+  if (start !== -1) {
+    let index = componentSource.indexOf('[', start);
+    if (index !== -1) {
+      let depth = 0;
+      for (let cursor = index; cursor < componentSource.length; cursor++) {
+        const ch = componentSource[cursor];
+        if (ch === '[') depth++;
+        else if (ch === ']') {
+          depth--;
+          if (depth === 0) {
+            return componentSource.slice(index + 1, cursor);
+          }
+        }
       }
+    }
+  }
+  // After the templateUrl/styleUrl split, styles live in a sibling .scss file.
+  // If the caller passes an explicit path (workspace-relative), prefer it
+  // so the function works regardless of where the .scss sits relative
+  // to the .ts source.
+  if (explicitScssPath) {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
+    } catch {
+      return '';
+    }
+  }
+  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  if (htmlMatch) {
+    const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
+    try {
+      return readFileSync(
+        resolvePath(workspaceRoot, scssPath),
+        'utf8',
+      );
+    } catch {
+      return '';
     }
   }
   return '';
@@ -317,7 +346,7 @@ describe('T22 wiring — ReviewStep uses T10 primitives and owns the demo-aware 
   });
 
   it('declares a desktop layout breakpoint so the narrow / desktop matrices differ', () => {
-    const css = componentStyles(reviewStepSource);
+    const css = componentStyles(reviewStepSource, 'src/app/features/checkout/review-step.scss');
     expect(css).toMatch(/@media\s*\(min-width:\s*1024px\)/);
     expect(css).toMatch(/@media\s*\(min-width:\s*640px\)/);
   });

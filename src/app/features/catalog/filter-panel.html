@@ -1,0 +1,149 @@
+<section
+  class="panel flex flex-col gap-6 p-5 rounded"
+  [attr.aria-busy]="disabled() ? 'true' : null"
+  data-testid="filter-panel"
+>
+  <header class="header flex items-center justify-between gap-3">
+    <h2 class="title m-0">Szűrők</h2>
+    <app-button
+      variant="secondary"
+      size="standard"
+      label="Szűrők törlése"
+      data-testid="filter-reset"
+      [disabled]="disabled() || !hasActiveFilters()"
+      (pressed)="resetAll()"
+    ></app-button>
+  </header>
+
+  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-search">
+    <legend class="legend uppercase tracking-wider">Keresés</legend>
+    <label class="search block">
+      <span class="sr-only">Keresés a telefonok között</span>
+      <input
+        type="search"
+        class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+        data-testid="filter-search-input"
+        [value]="searchDraft()"
+        (input)="onSearchInput($event)"
+        placeholder="pl. Demo 5G"
+        [disabled]="disabled()"
+      />
+    </label>
+  </fieldset>
+
+  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-brand">
+    <legend class="legend uppercase tracking-wider">Márka</legend>
+    <ul class="options flex flex-col gap-2 m-0 p-0 list-none" role="list">
+      @for (brand of brandFacets(); track brand.value) {
+        <li>
+          <button
+            type="button"
+            class="option inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
+            [class.is-selected]="isBrandSelected(brand.value)"
+            [attr.data-testid]="'filter-brand-' + brand.value"
+            [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
+            [disabled]="disabled() || brand.count === 0"
+            (click)="toggleBrand(brand.value)"
+          >
+            <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isBrandSelected(brand.value) ? '✓' : '' }}</span>
+            <span class="option__label flex-1">{{ brand.label }}</span>
+            <span class="option__count" aria-label="találatok száma">{{ brand.count }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </fieldset>
+
+  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-storage">
+    <legend class="legend uppercase tracking-wider">Tárhely</legend>
+    <ul class="options options--row flex flex-wrap gap-2 m-0 p-0 list-none" role="list">
+      @for (bucket of storageBuckets(); track bucket) {
+        <li>
+          <button
+            type="button"
+            class="option option--chip inline-flex items-center gap-2 min-h-10 px-3 rounded font-inherit cursor-pointer"
+            [class.is-selected]="isStorageSelected(bucket)"
+            [attr.data-testid]="'filter-storage-' + bucket"
+            [attr.aria-pressed]="isStorageSelected(bucket) ? 'true' : 'false'"
+            [disabled]="disabled()"
+            (click)="toggleStorage(bucket)"
+          >
+            <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isStorageSelected(bucket) ? '✓' : '' }}</span>
+            <span>{{ bucket }} GB</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </fieldset>
+
+  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-price">
+    <legend class="legend uppercase tracking-wider">Ár (Ft, egész szám)</legend>
+    <div class="price grid grid-cols-2 gap-2">
+      <label class="price__field flex flex-col gap-1">
+        <span class="price__label">Min.</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="1000"
+          class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+          data-testid="filter-min-price"
+          [value]="minDraft()"
+          (input)="onMinInput($event)"
+          [disabled]="disabled()"
+        />
+      </label>
+      <label class="price__field flex flex-col gap-1">
+        <span class="price__label">Max.</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="1000"
+          class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+          data-testid="filter-max-price"
+          [value]="maxDraft()"
+          (input)="onMaxInput($event)"
+          [disabled]="disabled()"
+        />
+      </label>
+    </div>
+    @if (priceError()) {
+      <app-form-field-message
+        data-testid="filter-price-error"
+        [errors]="[{ code: 'INVALID_PRICE', message: priceError()!, pointer: 'price' }]"
+        [touched]="true"
+        severity="error"
+        fieldId="filter-price"
+      ></app-form-field-message>
+    }
+  </fieldset>
+
+  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-flags">
+    <legend class="legend uppercase tracking-wider">További szűrők</legend>
+    <button
+      type="button"
+      class="option option--toggle inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
+      [class.is-selected]="isInStockSelected()"
+      [attr.data-testid]="'filter-inStock'"
+      [attr.aria-pressed]="isInStockSelected() ? 'true' : 'false'"
+      [disabled]="disabled()"
+      (click)="toggleInStock()"
+    >
+      <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isInStockSelected() ? '✓' : '' }}</span>
+      <span>Csak raktáron</span>
+    </button>
+    <button
+      type="button"
+      class="option option--toggle inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
+      [class.is-selected]="isFiveGSelected()"
+      [attr.data-testid]="'filter-is5g'"
+      [attr.aria-pressed]="isFiveGSelected() ? 'true' : 'false'"
+      [disabled]="disabled()"
+      (click)="toggleFiveG()"
+    >
+      <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isFiveGSelected() ? '✓' : '' }}</span>
+      <span>Csak 5G</span>
+    </button>
+  </fieldset>
+</section>

@@ -23,7 +23,10 @@ export function resolveApiRoot(documentLike?: Document): string {
   try {
     origin = new URL(baseUri).origin;
   } catch (err) {
-    throw new Error(`[mi-bolt] resolveApiRoot(): cannot parse document.baseURI "${baseUri}" as a URL (${String(err)})`);
+    throw new Error(
+      `[mi-bolt] resolveApiRoot(): cannot parse document.baseURI "${baseUri}" as a URL (${String(err)})`,
+      { cause: err },
+    );
   }
   return `${origin}${API_PATH}`;
 }

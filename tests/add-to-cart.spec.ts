@@ -31,7 +31,14 @@ import { describe, expect, it } from 'vitest';
 const workspaceRoot = resolvePath(process.cwd());
 
 function read(relative: string): string {
-  return readFileSync(resolvePath(workspaceRoot, relative), 'utf8');
+  const base = relative.replace(/\.ts$/, '');
+  const sources = [relative, `${base}.html`, `${base}.scss`];
+  return sources
+    .map((p) => {
+      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+      catch { return ''; }
+    })
+    .join('\n');
 }
 
 const addToCartSource = read('src/app/features/product/add-to-cart.ts');

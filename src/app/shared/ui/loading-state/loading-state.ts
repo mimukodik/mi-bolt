@@ -18,35 +18,8 @@ export type LoadingVariant = 'block' | 'lines' | 'card';
  */
 @Component({
   selector: 'app-loading-state',
-  template: `
-    <div
-      class="root"
-      [class.is-lines]="variant() === 'lines'"
-      [class.is-card]="variant() === 'card'"
-      [attr.aria-busy]="true"
-      [attr.role]="role()"
-      [attr.aria-label]="label()"
-      data-testid="loading-state"
-    >
-      @switch (variant()) {
-        @case ('lines') {
-          <span class="line line--wide" aria-hidden="true"></span>
-          <span class="line line--medium" aria-hidden="true"></span>
-          <span class="line line--narrow" aria-hidden="true"></span>
-        }
-        @case ('card') {
-          <span class="block block--image" aria-hidden="true"></span>
-          <span class="block block--title" aria-hidden="true"></span>
-          <span class="block block--price" aria-hidden="true"></span>
-        }
-        @default {
-          <span class="block block--single" aria-hidden="true"></span>
-        }
-      }
-      <span class="sr-only">{{ label() }}</span>
-    </div>
-  `,
-  styleUrl: './loading-state.css',
+  templateUrl: './loading-state.html',
+  styleUrl: './loading-state.scss',
 })
 export class LoadingState {
   readonly variant = input<LoadingVariant>('block');

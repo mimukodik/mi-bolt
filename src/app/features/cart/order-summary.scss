@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface-section);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  color: var(--color-text-primary);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--type-card-title);
+  font-weight: var(--weight-bold);
+  line-height: var(--line-height-heading);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row--subtotal,
+.row--total {
+  gap: 0;
+}
+
+.row--total app-price-block {
+  --price-size: var(--type-price-mobile);
+}
+
+.row--shipping .label {
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+}
+
+.placeholder {
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-body);
+}
+
+.footnote {
+  margin: 0;
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-body);
+}
+
+@media (min-width: 640px) {
+  .summary {
+    padding: var(--space-6);
+  }
+}

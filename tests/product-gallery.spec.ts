@@ -41,18 +41,30 @@ import { resolve as resolvePath } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const workspaceRoot = resolvePath(process.cwd());
-const gallerySource = readFileSync(
-  resolvePath(workspaceRoot, 'src/app/features/product/product-gallery.ts'),
-  'utf8',
-);
-const productImageSource = readFileSync(
-  resolvePath(workspaceRoot, 'src/app/shared/ui/product-image/product-image.ts'),
-  'utf8',
-);
-const accessibleDialogSource = readFileSync(
-  resolvePath(workspaceRoot, 'src/app/shared/ui/accessible-dialog/accessible-dialog.ts'),
-  'utf8',
-);
+const gallerySource = [
+  'src/app/features/product/product-gallery.ts',
+  'src/app/features/product/product-gallery.html',
+  'src/app/features/product/product-gallery.scss',
+].map((p) => {
+  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+  catch { return ''; }
+}).join('\n');
+const productImageSource = [
+  'src/app/shared/ui/product-image/product-image.ts',
+  'src/app/shared/ui/product-image/product-image.html',
+  'src/app/shared/ui/product-image/product-image.scss',
+].map((p) => {
+  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+  catch { return ''; }
+}).join('\n');
+const accessibleDialogSource = [
+  'src/app/shared/ui/accessible-dialog/accessible-dialog.ts',
+  'src/app/shared/ui/accessible-dialog/accessible-dialog.html',
+  'src/app/shared/ui/accessible-dialog/accessible-dialog.scss',
+].map((p) => {
+  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+  catch { return ''; }
+}).join('\n');
 
 // ---------------------------------------------------------------------------
 // T16-AC02 — gallery: prev/next, thumbnail, count, zoom, keyboard,

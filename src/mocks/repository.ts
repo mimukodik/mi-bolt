@@ -14,22 +14,22 @@
  */
 
 /** Money in whole HUF, no minor units. */
-export type Money = { amount: number; currency: 'HUF' };
+export interface Money { amount: number; currency: 'HUF' }
 
 /** Single product image rendered by the catalogue and PDP. */
-export type Image = {
+export interface Image {
   id: string;
   src: string;
   alt: string;
   width: number;
   height: number;
-};
+}
 
 /** Stock state of a single variant. */
 export type Availability = 'in_stock' | 'out_of_stock';
 
 /** One SKU of a product (color × storage). */
-export type Variant = {
+export interface Variant {
   id: string;
   colorCode: string;
   colorName: string;
@@ -39,20 +39,20 @@ export type Variant = {
   availability: Availability;
   maxQuantity: number;
   images: readonly Image[];
-};
+}
 
 /** One spec row in a spec group. */
-export type SpecRow = { label: string; value: string };
+export interface SpecRow { label: string; value: string }
 
 /** One spec group shown on the product page. */
-export type SpecGroup = {
+export interface SpecGroup {
   id: string;
   title: string;
   rows: readonly SpecRow[];
-};
+}
 
 /** Full catalogue product — matches the OpenAPI `Product` schema. */
-export type Product = {
+export interface Product {
   id: string;
   slug: string;
   brand: string;
@@ -64,10 +64,10 @@ export type Product = {
   description: string;
   variants: readonly Variant[];
   specGroups: readonly SpecGroup[];
-};
+}
 
 /** Full Cart shape — T07 owns version, totals, expiry. */
-export type Cart = {
+export interface Cart {
   id: string;
   version: number;
   status: 'active' | 'ordered';
@@ -75,10 +75,10 @@ export type Cart = {
   items: readonly CartLine[];
   createdAt: string;
   expiresAt: string;
-};
+}
 
 /** Full Cart line — T07 carries the variant snapshot the client renders. */
-export type CartLine = {
+export interface CartLine {
   id: string;
   productId: string;
   productSlug: string;
@@ -92,16 +92,16 @@ export type CartLine = {
   lineTotal: Money;
   availability: Availability;
   maxQuantity: number;
-};
+}
 
 /** Minimal OrderReceipt shape — T09 expands with full receipt items. */
-export type OrderReceipt = {
+export interface OrderReceipt {
   id: string;
   orderNumber: string;
   sessionId: string;
   createdAt: string;
   total: { amount: number; currency: string };
-};
+}
 
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 

@@ -23,30 +23,8 @@ export type StatusSeverity = 'info' | 'error' | 'success';
 @Component({
   selector: 'app-status-message',
   imports: [Button],
-  template: `
-    <div
-      class="root"
-      [class.is-info]="severity() === 'info'"
-      [class.is-success]="severity() === 'success'"
-      [class.is-error]="severity() === 'error'"
-      [attr.role]="severity() === 'error' ? 'alert' : 'status'"
-      [attr.aria-live]="severity() === 'error' ? 'assertive' : 'polite'"
-      data-testid="status-message"
-    >
-      <p class="message">{{ message() }}</p>
-      @if (!persistent()) {
-        <div class="actions">
-          <app-button
-            variant="secondaryOnDark"
-            size="standard"
-            label="Bezárás"
-            (pressed)="dismissed.emit()"
-          ></app-button>
-        </div>
-      }
-    </div>
-  `,
-  styleUrl: './status-message.css',
+  templateUrl: './status-message.html',
+  styleUrl: './status-message.scss',
 })
 export class StatusMessage {
   readonly message = input.required<string>();

@@ -47,16 +47,43 @@ import {
 const workspaceRoot = resolvePath(process.cwd());
 
 function read(relative: string): string {
-  return readFileSync(resolvePath(workspaceRoot, relative), 'utf8');
+  const base = relative.replace(/\.ts$/, '');
+  const sources = [relative, `${base}.html`, `${base}.scss`];
+  return sources
+    .map((p) => {
+      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+      catch { return ''; }
+    })
+    .join('\n');
 }
 
 const stepSource = read('src/app/features/checkout/contact-step.ts');
 const schemaSource = read('src/app/features/checkout/contact.schema.ts');
 const pageSource = read('src/app/features/checkout/contact-page.ts');
 
-function componentStyles(componentSource: string): string {
-  const match = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  return match ? match[1] ?? '' : '';
+function componentStyles(componentSource: string, explicitScssPath?: string): string {
+  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
+  if (inline) return inline[1] ?? '';
+  if (explicitScssPath) {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
+    } catch {
+      return '';
+    }
+  }
+  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  if (htmlMatch) {
+    const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
+    try {
+      return readFileSync(
+        resolvePath(workspaceRoot, scssPath),
+        'utf8',
+      );
+    } catch {
+      return '';
+    }
+  }
+  return '';
 }
 
 function stripComments(source: string): string {
@@ -371,7 +398,7 @@ describe('T20-AC05 visual states across narrow and desktop views', () => {
   });
 
   it('declares a desktop layout at >= 1024 px and a narrower mobile layout', () => {
-    const css = componentStyles(stepSource);
+    const css = componentStyles(stepSource, 'src/app/features/checkout/contact-step.scss');
     expect(css).toMatch(/@media\s*\(min-width:\s*1024px\)/);
     expect(css).toMatch(/max-width|grid-template-columns/);
   });

@@ -32,16 +32,43 @@ import { describe, expect, it } from 'vitest';
 const workspaceRoot = resolvePath(process.cwd());
 
 function read(relative: string): string {
-  return readFileSync(resolvePath(workspaceRoot, relative), 'utf8');
+  const base = relative.replace(/\.ts$/, '');
+  const sources = [relative, `${base}.html`, `${base}.scss`];
+  return sources
+    .map((p) => {
+      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+      catch { return ''; }
+    })
+    .join('\n');
 }
 
 const deliveryStepSource = read('src/app/features/checkout/delivery-step.ts');
 const addressFormSource = read('src/app/features/checkout/address-form.ts');
 const paymentSelectorSource = read('src/app/features/checkout/payment-method-selector.ts');
 
-function componentStyles(componentSource: string): string {
-  const match = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  return match ? match[1] ?? '' : '';
+function componentStyles(componentSource: string, explicitScssPath?: string): string {
+  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
+  if (inline) return inline[1] ?? '';
+  if (explicitScssPath) {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
+    } catch {
+      return '';
+    }
+  }
+  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  if (htmlMatch) {
+    const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
+    try {
+      return readFileSync(
+        resolvePath(workspaceRoot, scssPath),
+        'utf8',
+      );
+    } catch {
+      return '';
+    }
+  }
+  return '';
 }
 
 // ---------------------------------------------------------------------------
@@ -277,7 +304,7 @@ describe('T21 wiring — owned files use the documented T10 primitives', () => {
   });
 
   it('AddressForm styles follow the desktop/mobile breakpoint rule (R22 narrow layout)', () => {
-    const css = componentStyles(addressFormSource);
+    const css = componentStyles(addressFormSource, 'src/app/features/checkout/address-form.scss');
     expect(css).toMatch(/@media\s*\(min-width:\s*640px\)/);
   });
 });

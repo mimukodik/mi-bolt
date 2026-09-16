@@ -1,0 +1,15 @@
+/* MiBolt FormFieldMessage primitive. */
+
+.root {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--type-helper);
+  line-height: var(--line-height-body);
+}
+
+.root.is-error {
+  color: var(--color-status-error);
+}
+
+.root.is-help {
+  color: var(--color-text-secondary);
+}

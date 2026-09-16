@@ -16,27 +16,8 @@ import { Button } from '../button/button';
 @Component({
   selector: 'app-empty-state',
   imports: [Button],
-  template: `
-    <section
-      class="root"
-      role="status"
-      aria-live="polite"
-      data-testid="empty-state"
-    >
-      <h2 class="title">{{ title() }}</h2>
-      <p class="message">{{ message() }}</p>
-      @if (actionLabel()) {
-        <div class="actions">
-          <app-button
-            [variant]="actionVariant()"
-            [label]="actionLabel()!"
-            (pressed)="actionRequested.emit()"
-          ></app-button>
-        </div>
-      }
-    </section>
-  `,
-  styleUrl: './empty-state.css',
+  templateUrl: './empty-state.html',
+  styleUrl: './empty-state.scss',
 })
 export class EmptyState {
   readonly title = input.required<string>();

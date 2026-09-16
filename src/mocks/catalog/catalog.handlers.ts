@@ -72,7 +72,7 @@ export const DEMO_CONFIG = {
 // Response shapes
 // ---------------------------------------------------------------------------
 
-type ProductSummary = {
+interface ProductSummary {
   id: string;
   slug: string;
   brand: string;
@@ -81,17 +81,17 @@ type ProductSummary = {
   defaultVariant: Variant;
   is5g: boolean;
   isDemo: true;
-};
+}
 
-type ProductPage = {
+interface ProductPage {
   items: readonly ProductSummary[];
   total: number;
   page: number;
   pageSize: 12 | 24;
   facets: ProductFacets;
-};
+}
 
-type ProblemBody = {
+interface ProblemBody {
   type: string;
   title: string;
   status: number;
@@ -99,7 +99,7 @@ type ProblemBody = {
   detail: string;
   traceId: string;
   fieldErrors: readonly { path: string; message: string }[];
-};
+}
 
 const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
 

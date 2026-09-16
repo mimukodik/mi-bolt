@@ -28,29 +28,8 @@ import {
  */
 @Component({
   selector: 'app-button',
-  template: `
-    <button
-      type="button"
-      class="root"
-      [class.is-primary]="variant() === 'primary'"
-      [class.is-secondary]="variant() === 'secondary'"
-      [class.is-secondary-on-dark]="variant() === 'secondaryOnDark'"
-      [class.is-comfortable]="size() === 'comfortable'"
-      [attr.aria-busy]="loading() ? 'true' : null"
-      [attr.aria-disabled]="disabled() ? 'true' : null"
-      [disabled]="disabled() || loading()"
-      (click)="onClick($event)"
-    >
-      @if (loading()) {
-        <span class="sr-only">Loading:</span>
-        <span aria-hidden="true" class="spinner" data-testid="button-spinner"></span>
-        <span class="label">{{ loadingLabel() }}</span>
-      } @else {
-        <span class="label">{{ label() }}</span>
-      }
-    </button>
-  `,
-  styleUrl: './button.css',
+  templateUrl: './button.html',
+  styleUrl: './button.scss',
 })
 export class Button {
   readonly variant = input<'primary' | 'secondary' | 'secondaryOnDark'>('primary');

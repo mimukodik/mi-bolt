@@ -10,14 +10,6 @@ import { RouterLink } from '@angular/router';
 @Component({
   selector: 'app-not-found-page',
   imports: [RouterLink],
-  template: `
-    <section class="not-found">
-      <h1>Az oldal nem található</h1>
-      <p>A keresett oldal nem érhető el a MiBolt demóban.</p>
-      <nav aria-label="Hasznos linkek">
-        <a routerLink="/">Vissza a főoldalra</a>
-      </nav>
-    </section>
-  `,
+  templateUrl: './not-found-page.html',
 })
 export class NotFoundPage {}

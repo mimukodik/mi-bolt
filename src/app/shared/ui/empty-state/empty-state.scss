@@ -1,0 +1,31 @@
+/* MiBolt EmptyState primitive. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-4);
+  background: var(--color-surface-section);
+  border-radius: var(--radius-card);
+  color: var(--color-text-primary);
+}
+
+.title {
+  font-size: var(--type-card-title);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-heading);
+}
+
+.message {
+  font-size: var(--type-body);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-body);
+  max-width: 32em;
+}
+
+.actions {
+  margin-top: var(--space-2);
+}

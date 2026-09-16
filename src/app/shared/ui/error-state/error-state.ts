@@ -18,26 +18,8 @@ import { Button } from '../button/button';
 @Component({
   selector: 'app-error-state',
   imports: [Button],
-  template: `
-    <section class="root" role="alert" aria-live="polite" data-testid="error-state">
-      <h2 class="title">{{ title() }}</h2>
-      <p class="message">{{ message() }}</p>
-      @if (preserving()) {
-        <p class="hint" data-testid="error-hint">A korábban megadott értékeket megőrizzük.</p>
-      }
-      <div class="actions">
-        <app-button
-          variant="primary"
-          size="standard"
-          [label]="pending() ? 'Újrapróbálom…' : retryLabel()"
-          [loading]="pending()"
-          [loadingLabel]="'Újrapróbálom…'"
-          (pressed)="retryRequested.emit()"
-        ></app-button>
-      </div>
-    </section>
-  `,
-  styleUrl: './error-state.css',
+  templateUrl: './error-state.html',
+  styleUrl: './error-state.scss',
 })
 export class ErrorState {
   readonly title = input<string>('Hiba történt');

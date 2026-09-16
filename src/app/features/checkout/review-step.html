@@ -1,0 +1,348 @@
+
+    <section
+      class="review"
+      [attr.data-status]="stateKind()"
+      data-testid="review-page"
+    >
+      <header class="heading">
+        <nav class="breadcrumbs" aria-label="Navigáció">
+          <a routerLink="/" class="breadcrumb">Főoldal</a>
+          <span aria-hidden="true" class="breadcrumb__sep">/</span>
+          <a routerLink="/penztar/kosar" class="breadcrumb">Kosár</a>
+          <span aria-hidden="true" class="breadcrumb__sep">/</span>
+          <a routerLink="/penztar/adatok" class="breadcrumb">Adatok</a>
+          <span aria-hidden="true" class="breadcrumb__sep">/</span>
+          <a routerLink="/penztar/szallitas" class="breadcrumb">Szállítás</a>
+          <span aria-hidden="true" class="breadcrumb__sep">/</span>
+          <span class="breadcrumb is-current" aria-current="page">
+            Ellenőrzés
+          </span>
+        </nav>
+        <h1 class="title">Rendelés véglegesítése</h1>
+        <p class="demo-notice" data-testid="review-demo-notice" role="note">
+          <strong>Demó pénztár.</strong>
+          A rendelés leadása nem küld valódi megrendelést, nem
+          indít valódi fizetést, és nem küld e-mailt. Az adatok a
+          böngésző memóriájában maradnak.
+        </p>
+      </header>
+
+      <div class="layout" data-testid="review-layout">
+        <div class="column">
+          <article class="card" data-testid="review-contact">
+            <header class="card-header">
+              <h2 class="card-title">Kapcsolattartási adatok</h2>
+              <a
+                routerLink="/penztar/adatok"
+                class="edit-link"
+                data-testid="review-edit-contact"
+                (click)="onEditContact()"
+              >
+                Szerkesztés
+              </a>
+            </header>
+            <dl class="data-list">
+              <div class="row">
+                <dt>Név</dt>
+                <dd>{{ contactName() }}</dd>
+              </div>
+              <div class="row">
+                <dt>E-mail</dt>
+                <dd>{{ contactEmail() }}</dd>
+              </div>
+              <div class="row">
+                <dt>Telefon</dt>
+                <dd>{{ contactPhone() }}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="card" data-testid="review-delivery">
+            <header class="card-header">
+              <h2 class="card-title">Szállítási és fizetési mód</h2>
+              <a
+                routerLink="/penztar/szallitas"
+                class="edit-link"
+                data-testid="review-edit-delivery"
+                (click)="onEditDelivery()"
+              >
+                Szerkesztés
+              </a>
+            </header>
+            <dl class="data-list">
+              <div class="row">
+                <dt>Szállítási mód</dt>
+                <dd>{{ deliveryLabel() }}</dd>
+              </div>
+              @if (deliveryAddress() !== null) {
+                <div class="row" data-testid="review-delivery-address">
+                  <dt>Cím</dt>
+                  <dd>
+                    {{ deliveryAddress()!.line1 }}<br />
+                    @if (deliveryAddress()!.line2) {
+                      {{ deliveryAddress()!.line2 }}<br />
+                    }
+                    {{ deliveryAddress()!.postalCode }}
+                    {{ deliveryAddress()!.city }}
+                  </dd>
+                </div>
+              }
+              <div class="row">
+                <dt>Fizetési mód</dt>
+                <dd>{{ paymentLabel() }}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article class="card" data-testid="review-items">
+            <header class="card-header">
+              <h2 class="card-title">Kosár tartalma</h2>
+              <span class="card-hint">{{ items().length }} tétel</span>
+            </header>
+            @if (items().length === 0) {
+              <p class="empty" data-testid="review-items-empty">
+                A kosár jelenleg üres.
+              </p>
+            } @else {
+              <ul class="line-list">
+                @for (line of lines(); track line.id) {
+                  <li class="line" data-testid="review-line">
+                    <div class="line-body">
+                      <p class="line-name">{{ line.productName }}</p>
+                      <p class="line-variant">{{ line.variantLabel }}</p>
+                      <p class="line-quantity">
+                        {{ line.quantity }} ×
+                        <app-price-block
+                          [money]="line.unitPrice"
+                          [label]="'Egységár'"
+                          [status]="'success'"
+                        ></app-price-block>
+                      </p>
+                    </div>
+                    <div class="line-total">
+                      <app-price-block
+                        [money]="line.lineTotal"
+                        [label]="'Sor végösszeg'"
+                        [status]="'success'"
+                      ></app-price-block>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </article>
+
+          @if (state() !== null) {
+            <div class="status-row" data-testid="review-status">
+              @switch (state()!.kind) {
+                @case ('loading') {
+                  <app-loading-state
+                    variant="lines"
+                    label="Árajánlat frissítése"
+                  ></app-loading-state>
+                }
+                @case ('price-changed') {
+                  <app-status-message
+                    [message]="priceChangedMessage()"
+                    severity="error"
+                    [persistent]="true"
+                    (dismissed)="onDismissStatus()"
+                  ></app-status-message>
+                }
+                @case ('quote-expired') {
+                  <app-status-message
+                    [message]="quoteExpiredMessage()"
+                    severity="error"
+                    [persistent]="true"
+                    (dismissed)="onDismissStatus()"
+                  ></app-status-message>
+                }
+                @case ('out-of-stock') {
+                  <app-status-message
+                    [message]="outOfStockMessage()"
+                    severity="error"
+                    [persistent]="true"
+                    (dismissed)="onDismissStatus()"
+                  ></app-status-message>
+                }
+                @case ('field-error') {
+                  <app-status-message
+                    [message]="fieldErrorMessage()"
+                    severity="error"
+                    [persistent]="true"
+                    (dismissed)="onDismissStatus()"
+                  ></app-status-message>
+                }
+              }
+            </div>
+          }
+
+          <article class="card" data-testid="review-consents">
+            <h2 class="card-title">Demó feltételek</h2>
+            <p class="hint">
+              Mindkét jelölőnégyzet elfogadása kötelező a
+              demórendelés leadásához.
+            </p>
+
+            <div
+              class="consent"
+              [attr.data-state]="termsConsentState()"
+              data-testid="review-consent-terms"
+            >
+              <label class="consent-label" for="review-consent-terms-input">
+                <input
+                  id="review-consent-terms-input"
+                  type="checkbox"
+                  class="checkbox"
+                  [formField]="reviewForm.acceptedTerms"
+                  data-testid="review-consent-terms-input"
+                />
+                <span class="consent-text">
+                  Elfogadom a
+                  <button
+                    type="button"
+                    class="terms-link"
+                    (click)="openTerms()"
+                    data-testid="review-consent-terms-button"
+                  >
+                    demó vásárlási feltételeket
+                  </button>
+                  (szimulált folyamat, nem valós szerződés).
+                </span>
+              </label>
+              @if (termsConsentMessage() !== null) {
+                <p
+                  class="consent-message"
+                  id="review-consent-terms-message"
+                  data-testid="review-consent-terms-message"
+                  role="alert"
+                >
+                  {{ termsConsentMessage() }}
+                </p>
+              }
+            </div>
+
+            <div
+              class="consent"
+              [attr.data-state]="simulationConsentState()"
+              data-testid="review-consent-simulation"
+            >
+              <label
+                class="consent-label"
+                for="review-consent-simulation-input"
+              >
+                <input
+                  id="review-consent-simulation-input"
+                  type="checkbox"
+                  class="checkbox"
+                  [formField]="reviewForm.acknowledgedSimulation"
+                  data-testid="review-consent-simulation-input"
+                />
+                <span class="consent-text">
+                  Tudomásul veszem, hogy ez egy szimuláció: nem
+                  történik valódi rendelés, fizetés vagy e-mail
+                  küldés.
+                </span>
+              </label>
+              @if (simulationConsentMessage() !== null) {
+                <p
+                  class="consent-message"
+                  id="review-consent-simulation-message"
+                  data-testid="review-consent-simulation-message"
+                  role="alert"
+                >
+                  {{ simulationConsentMessage() }}
+                </p>
+              }
+            </div>
+          </article>
+
+          <div class="actions" data-testid="review-actions">
+            <app-button
+              variant="secondary"
+              size="comfortable"
+              label="Vissza a szállításhoz"
+              (pressed)="onBack()"
+              data-testid="review-back"
+            ></app-button>
+            <app-button
+              variant="primary"
+              size="comfortable"
+              [label]="'Demórendelés véglegesítése'"
+              [loadingLabel]="'Véglegesítés…'"
+              [loading]="submitting()"
+              [disabled]="!canSubmit()"
+              (pressed)="onSubmit()"
+              data-testid="review-submit"
+            ></app-button>
+          </div>
+
+          @if (ctaExplanation() !== null) {
+            <p
+              class="cta-explanation"
+              data-testid="review-cta-explanation"
+              role="note"
+            >
+              {{ ctaExplanation() }}
+            </p>
+          }
+        </div>
+
+        <aside class="summary" aria-label="Rendelés végösszege" data-testid="review-summary">
+          <h2 class="summary-title">Rendelés végösszege</h2>
+
+          @if (readySummary() !== null) {
+            <app-order-summary
+              [subtotal]="readySummary()!.subtotal"
+              [shipping]="readySummary()!.shipping"
+              [footnote]="summaryFootnote()"
+            ></app-order-summary>
+          } @else {
+            <div class="summary-loading" data-testid="review-summary-loading">
+              <app-loading-state
+                variant="lines"
+                label="Árajánlat betöltése"
+              ></app-loading-state>
+            </div>
+          }
+
+          <dl class="summary-rows">
+            <div class="row">
+              <dt>Fizetési mód</dt>
+              <dd data-testid="review-payment">{{ paymentLabel() }}</dd>
+            </div>
+            <div class="row">
+              <dt>Szállítási mód</dt>
+              <dd>{{ deliveryLabel() }}</dd>
+            </div>
+            <div class="row">
+              <dt>Demórendelés státusza</dt>
+              <dd>
+                <span
+                  class="badge badge--demo"
+                  data-testid="review-demo-badge"
+                >
+                  Demó
+                </span>
+              </dd>
+            </div>
+          </dl>
+
+          <button
+            type="button"
+            class="refresh"
+            (click)="onRefresh()"
+            [disabled]="busy()"
+            data-testid="review-refresh"
+          >
+            Árajánlat frissítése
+          </button>
+        </aside>
+      </div>
+
+      <app-terms-dialog
+        [opened]="termsOpened()"
+        (closed)="closeTerms()"
+      ></app-terms-dialog>
+    </section>
+  

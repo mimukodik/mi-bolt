@@ -1,36 +1,37 @@
 @if (variant() === 'checkout') {
   <header
-    class="header header--checkout"
+    class="header header--checkout sticky top-0 z-50 flex w-full"
     data-testid="checkout-header"
     role="banner"
   >
-    <div class="header__inner">
-      <a routerLink="/" class="brand" aria-label="MiBolt kezdőlap">
-        <span class="brand__mark" aria-hidden="true">M</span>
-        <span class="brand__word">MiBolt</span>
+    <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
+      <a routerLink="/" class="brand inline-flex items-center gap-2 no-underline min-h-10" aria-label="MiBolt kezdőlap">
+        <span class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold" aria-hidden="true">M</span>
+        <span class="brand__word font-bold tracking-wide">MiBolt</span>
       </a>
-      <span class="header__label" aria-label="Demó pénztár">Demó pénztár</span>
+      <span class="header__label uppercase tracking-wider" aria-label="Demó pénztár">Demó pénztár</span>
       <a
         routerLink="/telefonok"
-        class="header__back"
+        class="header__back inline-flex items-center no-underline min-h-10 rounded"
         data-testid="back-to-shop"
       >Vissza a shopba</a>
     </div>
   </header>
 } @else {
   <header
-    class="header header--default"
+    class="header header--default sticky top-0 z-50 w-full"
     data-testid="main-header"
     role="banner"
   >
-    <div class="header__inner">
-      <a routerLink="/" class="brand" aria-label="MiBolt kezdőlap">
-        <span class="brand__mark" aria-hidden="true">M</span>
-        <span class="brand__word">MiBolt</span>
+    <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
+      <a routerLink="/" class="brand inline-flex items-center gap-2 no-underline min-h-10" aria-label="MiBolt kezdőlap">
+        <span class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold" aria-hidden="true">M</span>
+        <span class="brand__word font-bold tracking-wide">MiBolt</span>
       </a>
-      <nav class="header__nav" aria-label="Fő navigáció">
+      <nav class="header__nav hidden gap-4 flex-1 justify-center lg:flex" aria-label="Fő navigáció">
         @for (link of navLinks(); track link.label) {
           <a
+            class="inline-flex items-center no-underline min-h-10 rounded"
             [routerLink]="link.routerLink"
             [fragment]="link.fragment"
             routerLinkActive="is-active"
@@ -38,10 +39,11 @@
           >{{ link.label }}</a>
         }
       </nav>
-      <div class="header__actions">
-        <label class="header__search" data-testid="header-search">
+      <div class="header__actions flex items-center gap-2 ml-auto">
+        <label class="header__search hidden items-center rounded min-h-10 px-3 lg:flex" data-testid="header-search">
           <span class="sr-only">Keresés a telefonok között</span>
           <input
+            class="bg-transparent border-0 outline-none min-w-50 font-inherit h-10"
             type="search"
             name="q"
             placeholder="Keresés…"
@@ -55,11 +57,11 @@
         </label>
         <a
           routerLink="/penztar/kosar"
-          class="cart"
+          class="cart relative inline-flex items-center gap-2 no-underline min-h-10 px-3 rounded"
           [attr.aria-label]="cartLabel()"
           data-testid="cart-link"
         >
-          <span class="cart__icon" aria-hidden="true">
+          <span class="cart__icon inline-flex" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true">
               <path
                 fill="currentColor"
@@ -67,19 +69,19 @@
               />
             </svg>
           </span>
-          <span class="cart__label">Kosár</span>
+          <span class="cart__label hidden lg:inline">Kosár</span>
           @if (cartFacade.itemCount() > 0) {
-            <span class="cart__badge" data-testid="cart-badge" aria-hidden="true">
+            <span class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold" data-testid="cart-badge" aria-hidden="true">
               {{ cartFacade.itemCount() }}
             </span>
           } @else {
-            <span class="cart__badge" data-testid="cart-badge" aria-hidden="true">0</span>
+            <span class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold" data-testid="cart-badge" aria-hidden="true">0</span>
           }
         </a>
         <button
           #menuTrigger
           type="button"
-          class="menu-trigger"
+          class="menu-trigger inline-flex items-center justify-center w-10 h-10 rounded border border-transparent bg-transparent cursor-pointer text-xl lg:hidden"
           [attr.aria-expanded]="drawerOpen()"
           aria-controls="mobile-drawer"
           aria-label="Menü megnyitása"
@@ -89,10 +91,11 @@
       </div>
     </div>
     @if (variant() === 'shop') {
-      <div class="mobile-search" data-testid="mobile-search" role="search">
-        <label class="mobile-search__field">
+      <div class="mobile-search block px-4 pb-3 pt-2 border-t" data-testid="mobile-search" role="search">
+        <label class="mobile-search__field block">
           <span class="sr-only">Keresés a telefonok között</span>
           <input
+            class="w-full min-h-10 px-3 bg-transparent border border-transparent rounded font-inherit"
             type="search"
             name="q-mobile"
             placeholder="Keresés a telefonok között…"
@@ -116,6 +119,7 @@
   >
     @for (link of navLinks(); track link.label) {
       <a
+        class="block no-underline"
         [routerLink]="link.routerLink"
         [fragment]="link.fragment"
         (click)="closeDrawer()"

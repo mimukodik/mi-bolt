@@ -23,7 +23,7 @@ interface NavLink {
   readonly fragment?: string;
 }
 
-const STANDARD_LINKS: ReadonlyArray<NavLink> = [
+const STANDARD_LINKS: readonly NavLink[] = [
   { label: 'Mobiltelefonok', routerLink: '/telefonok' },
   { label: 'A demóról', routerLink: '/', fragment: 'demo' },
 ];
@@ -32,7 +32,7 @@ const STANDARD_LINKS: ReadonlyArray<NavLink> = [
   selector: 'app-header-nav',
   imports: [RouterLink, RouterLinkActive, MobileDrawer],
   templateUrl: './header-nav.html',
-  styleUrl: './header-nav.css',
+  styleUrl: './header-nav.scss',
 })
 export class HeaderNav {
   /** Variant decides which chrome the header exposes. */
@@ -62,7 +62,7 @@ export class HeaderNav {
   });
 
   /** Links rendered in the nav and the mobile drawer. */
-  readonly navLinks = computed<ReadonlyArray<NavLink>>(() => {
+  readonly navLinks = computed<readonly NavLink[]>(() => {
     if (this.variant() === 'checkout') return [];
     return STANDARD_LINKS;
   });

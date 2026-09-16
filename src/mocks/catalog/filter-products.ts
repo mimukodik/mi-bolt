@@ -26,7 +26,7 @@ import type { Product, Variant } from '../repository';
 export type SortMode = 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
 
 /** Filter shape produced by `parseCatalogFilter`. */
-export type CatalogFilter = {
+export interface CatalogFilter {
   q?: string;
   brands?: readonly string[];
   storageGb?: readonly number[];
@@ -38,21 +38,21 @@ export type CatalogFilter = {
   sort?: SortMode;
   page: number;
   pageSize: 12 | 24;
-};
+}
 
 /** A single product paired with the variant that satisfied its filter. */
-export type ProductMatch = {
+export interface ProductMatch {
   product: Product;
   matchingVariant: Variant;
-};
+}
 
 /** A page of matches sliced from the sorted match list. */
-export type PaginatedMatches = {
+export interface PaginatedMatches {
   items: readonly ProductMatch[];
   total: number;
   page: number;
   pageSize: 12 | 24;
-};
+}
 
 /** Default page size when the client omits `pageSize`. */
 export const DEFAULT_PAGE_SIZE: 12 | 24 = 12;

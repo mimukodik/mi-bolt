@@ -169,12 +169,12 @@ async function readJsonBody(request: Request): Promise<unknown> {
   }
 }
 
-type ProblemLike = {
+interface ProblemLike {
   status: number;
   code: string;
   detail: string;
   fieldErrors: { path: string; message: string }[];
-};
+}
 
 /**
  * Builds the wire-shaped Cart JSON from the in-memory Cart. The

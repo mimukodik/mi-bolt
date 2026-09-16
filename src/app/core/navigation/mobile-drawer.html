@@ -1,0 +1,10 @@
+<app-accessible-dialog
+  [opened]="opened()"
+  [label]="label()"
+  [restoreTarget]="triggerEl() ?? null"
+  (closed)="closed.emit()"
+>
+  <nav class="drawer-nav flex flex-col gap-2" aria-label="Mobil navigáció">
+    <ng-content></ng-content>
+  </nav>
+</app-accessible-dialog>

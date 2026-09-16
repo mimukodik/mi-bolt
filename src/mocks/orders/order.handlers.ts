@@ -46,14 +46,6 @@ const IDEMPOTENCY_MAX = 100;
 
 const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
 
-interface OrderProblemWire {
-  status: number;
-  code: string;
-  detail: string;
-  traceId: string;
-  fieldErrors: { path: string; message: string }[];
-}
-
 function problemResponse(
   problem: OrderProblem,
   traceId: string,

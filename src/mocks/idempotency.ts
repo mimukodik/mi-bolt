@@ -23,10 +23,10 @@ import type { Clock } from './scenarios';
 export const IDEMPOTENCY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /** Outcome cached for a successful (or domain-rejected) replay. */
-export type IdempotencyOutcome = {
+export interface IdempotencyOutcome {
   status: number;
   body: unknown;
-};
+}
 
 /** Internal record — payload hash + expiry so replays do not leak. */
 type IdempotencyRecord = IdempotencyOutcome & {

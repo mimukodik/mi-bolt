@@ -1,0 +1,5 @@
+<app-header-nav [variant]="variant()" />
+<ng-content></ng-content>
+@if (showFooter()) {
+  <app-footer-nav />
+}

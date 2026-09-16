@@ -29,12 +29,12 @@ import './checkout/checkout.handlers';
 import './payment/payment.handlers';
 import './orders/order.handlers';
 
-export type NodeServerHandle = {
+export interface NodeServerHandle {
   readonly server: SetupServer;
   rerun(options: CreateHandlersOptions): void;
   listen(): void;
   close(): Promise<void>;
-};
+}
 
 /**
  * The `production` scenario is the only one that runs with an empty

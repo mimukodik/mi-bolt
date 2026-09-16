@@ -114,16 +114,8 @@
           "builder": "@angular-eslint/builder:lint",
           "options": {
             "lintFilePatterns": [
-              "src/app/app.ts",
-              "src/app/app.html",
-              "src/app/app.config.ts",
-              "src/app/app.routes.ts",
-              "src/app/app.spec.ts",
-              "src/app/home/**/*.ts",
-              "src/app/shared/ui/**/*.ts",
-              "src/app/features/**/*.ts",
-              "src/environments/**/*.ts",
-              "src/main.ts"
+              "src/**/*.ts",
+              "src/**/*.html"
             ]
           }
         }

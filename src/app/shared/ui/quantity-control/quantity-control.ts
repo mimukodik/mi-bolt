@@ -27,45 +27,8 @@ import {
  */
 @Component({
   selector: 'app-quantity-control',
-  template: `
-    <div class="root" [class.is-disabled]="disabled()" [class.is-invalid]="invalid()" data-testid="quantity-control">
-      <button
-        type="button"
-        class="step"
-        [attr.aria-label]="'Darabszám csökkentése'"
-        [disabled]="decrementDisabled()"
-        (click)="decrement()"
-        data-testid="quantity-decrement"
-      >−</button>
-      <input
-        type="text"
-        inputmode="numeric"
-        class="value"
-        [attr.aria-label]="label()"
-        [attr.aria-invalid]="invalid() ? 'true' : 'false'"
-        [attr.aria-describedby]="invalid() ? describedById : null"
-        [value]="value()"
-        [disabled]="disabled()"
-        (input)="onInput($event)"
-        (blur)="onBlur()"
-        data-testid="quantity-input"
-      />
-      <button
-        type="button"
-        class="step"
-        [attr.aria-label]="'Darabszám növelése'"
-        [disabled]="incrementDisabled()"
-        (click)="increment()"
-        data-testid="quantity-increment"
-      >+</button>
-      @if (invalid() && message()) {
-        <p class="message" [id]="describedById" role="status" aria-live="polite" data-testid="quantity-message">
-          {{ message() }}
-        </p>
-      }
-    </div>
-  `,
-  styleUrl: './quantity-control.css',
+  templateUrl: './quantity-control.html',
+  styleUrl: './quantity-control.scss',
 })
 export class QuantityControl {
   readonly value = input.required<number>();

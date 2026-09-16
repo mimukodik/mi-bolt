@@ -37,7 +37,14 @@ import { describe, expect, it } from 'vitest';
 const workspaceRoot = resolvePath(process.cwd());
 
 function read(relative: string): string {
-  return readFileSync(resolvePath(workspaceRoot, relative), 'utf8');
+  const base = relative.replace(/\.ts$/, '');
+  const sources = [relative, `${base}.html`, `${base}.scss`];
+  return sources
+    .map((p) => {
+      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
+      catch { return ''; }
+    })
+    .join('\n');
 }
 
 const productPageSource = read('src/app/features/product/product-page.ts');
@@ -48,9 +55,29 @@ const productGallerySource = read('src/app/features/product/product-gallery.ts')
 /** Returns the joined inline-styles block of a component, or '' when
  *  the component uses an external styleUrl (the cli build bundles it
  *  and the runtime serves it). */
-function componentStyles(componentSource: string): string {
-  const match = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  return match ? match[1] ?? '' : '';
+function componentStyles(componentSource: string, explicitScssPath?: string): string {
+  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
+  if (inline) return inline[1] ?? '';
+  if (explicitScssPath) {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
+    } catch {
+      return '';
+    }
+  }
+  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  if (htmlMatch) {
+    const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
+    try {
+      return readFileSync(
+        resolvePath(workspaceRoot, scssPath),
+        'utf8',
+      );
+    } catch {
+      return '';
+    }
+  }
+  return '';
 }
 
 // ---------------------------------------------------------------------------
@@ -58,7 +85,7 @@ function componentStyles(componentSource: string): string {
 // ---------------------------------------------------------------------------
 describe('T16-AC01 product-page responsive two-column layout', () => {
   it('desktop chrome declares a 7/5 column split with a 24px gap', () => {
-    const css = componentStyles(productPageSource);
+    const css = componentStyles(productPageSource, 'src/app/features/product/product-page.scss');
     // 12-fraction grid (7 + 5 = 12) at >= 1024 px.
     expect(css).toMatch(/grid-template-columns:\s*minmax\(0,\s*7fr\)\s*minmax\(0,\s*5fr\)/);
     // 24 px gap -> tokens.css uses --space-6 for 24 px.
@@ -128,7 +155,7 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
 // ---------------------------------------------------------------------------
 describe('T16-AC04 product-page mobile purchase rail', () => {
   it('declares safe-area padding and sticky positioning so the rail does not overlap content', () => {
-    const css = componentStyles(productPageSource);
+    const css = componentStyles(productPageSource, 'src/app/features/product/product-page.scss');
     expect(css).toMatch(/safe-area-inset-bottom/);
     expect(css).toMatch(/position:\s*sticky/);
     // The page main has bottom padding so the sticky rail never

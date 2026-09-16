@@ -150,7 +150,7 @@ function badRequest(detail: string, traceId: string): HttpResponse<Record<string
 export function buildCheckoutHandlers(
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] {
-  const { repository, clock, ids, scenario } = options;
+  const { repository, clock, ids } = options;
   const traceId = traceIdFor(options);
   // The QuoteDomain is shared with the payment + order handlers so the
   // draft / quote state is observable across slices. The IdempotencyStore
