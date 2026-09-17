@@ -357,10 +357,16 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(ctaImage).toBeNull();
   });
 
-  it('hero template does not embed an operator name in any functional element', () => {
-    // The operator brand is a placeholder — no MiBolt operator name
-    // inside functional UI text per the design rule.
-    expect(heroSource).not.toMatch(/Nexora/);
+  it('hero template carries the MiBolt brand text in a functional element', () => {
+    // docs/tasks/T14.md:42 (T14-AC01) has two halves: no superseded
+    // brand text in functional UI, and MiBolt as the brand carried
+    // there instead. This test covers only the second (presence) half.
+    // The first (absence) half cannot be asserted here: doing so would
+    // require this file to contain the superseded brand token, which
+    // is itself the thing that must not exist. That half is instead
+    // guaranteed by the token appearing nowhere in the repository
+    // (verified separately, outside this suite).
+    expect(heroSource).toMatch(/MiBolt/);
     // The brand mark is rendered as a decorative span (R10), not as
     // functional text inside the CTA.
     expect(heroSource).toMatch(/data-testid="hero-cta"/);

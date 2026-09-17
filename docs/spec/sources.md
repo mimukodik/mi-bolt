@@ -114,7 +114,7 @@ Web component supporting glTF/GLB; AR exists but is explicitly excluded from thi
 
 Separately installed `mi-bolt-design`, resolved during T00; deliberately not bundled.
 
-User-provided normative design rules. Original raster remains unchanged and still has old Nexora text.
+User-provided normative design rules. Original raster remains unchanged and still has superseded brand text.
 
 ## U02 — Uploaded Telekom reverse engineering report
 

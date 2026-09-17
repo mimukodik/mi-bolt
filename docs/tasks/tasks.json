@@ -808,7 +808,7 @@
     "acceptanceCriteria": [
       {
         "id": "T14-AC01",
-        "text": "Use approved charcoal/orange composition with live Hungarian copy and nonfunctional artwork only; no embedded raster CTA or Nexora text in functional UI."
+        "text": "Use approved charcoal/orange composition with live Hungarian copy and nonfunctional artwork only; no embedded raster CTA or superseded brand text in functional UI."
       },
       {
         "id": "T14-AC02",

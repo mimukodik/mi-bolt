@@ -6,7 +6,7 @@ These files under docs/mi-bolt are a planning handoff inside the application rep
 
 **Using `mi-bolt-design` is STRICTLY MANDATORY for every implementation execution and every verification/review, without exception.** Resolve the separately installed skill using the harness's actual skill discovery or existing configured skill locations. Record its entrypoint, root, approved version 1.0.1 and SHA-256 in `docs/mi-bolt/execution/skill-location.json`. Read the skill and task-relevant references before implementation, and independently before each acceptance/re-review. Do not copy, reinstall, recreate or embed the skill inside this documentation package. A missing skill is a real blocker, not permission to invent its content. No API/testing/build task may skip the rule: mark individual visual rules not applicable with a reason, while retaining demo-data, truthfulness and review constraints.
 
-The separately managed skill and all its related textual files stay in English. Public demo UI stays Hungarian. The original reference raster still contains old Nexora text; it remains immutable evidence, not live website text. Render the current brand as MiBolt in all functional UI.
+The separately managed skill and all its related textual files stay in English. Public demo UI stays Hungarian. The original reference raster still contains superseded brand text; it remains immutable evidence, not live website text. Render the current brand as MiBolt in all functional UI.
 
 ## Non-negotiable engineering boundaries
 
