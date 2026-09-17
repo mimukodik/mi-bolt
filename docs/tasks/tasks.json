@@ -8,7 +8,6 @@
       "AGENTS.md",
       "docs/mi-bolt/execution/decisions.md",
       "docs/mi-bolt/execution/toolchain-lock.json",
-      "scripts/verify-toolchain.mjs",
       "scripts/verify-skill-evidence.mjs",
       "docs/mi-bolt/execution/skill-location.json"
     ],
