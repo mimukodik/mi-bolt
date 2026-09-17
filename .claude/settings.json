@@ -53,6 +53,7 @@
   "env": {
     "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
   },
+  "feedbackDrafts": false,
   "outputStyle": "Concise",
   "enabledMcpjsonServers": [
     "chrome-devtools"
