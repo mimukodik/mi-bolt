@@ -91,6 +91,9 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "runnerConfig": "vitest.config.ts",
+            "setupFiles": [
+              "tests/setup-msw.ts"
+            ],
             "coverage": true,
             "coverageInclude": [
               "src/**/*.ts"

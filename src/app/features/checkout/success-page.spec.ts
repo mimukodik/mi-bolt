@@ -58,32 +58,32 @@ import {
   provideRouter,
 } from '@angular/router';
 
-import { Api } from '../src/app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import * as functions from '../src/app/api/generated/functions';
+import { Api } from '../../../app/api/generated/api';
+import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import * as functions from '../../../app/api/generated/functions';
 
-import { demoSessionInterceptor } from '../src/app/core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../src/mocks/idempotency';
-import { Repository } from '../src/mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../src/mocks/scenarios';
+import { createHandlers } from '../../../mocks/create-handlers';
+import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import { IdempotencyStore } from '../../../mocks/idempotency';
+import { Repository } from '../../../mocks/repository';
+import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
-// Side-effect imports — register cart / checkout / payment / order handlers in the T05 dispatcher registry.
-import '../src/mocks/cart/cart.handlers';
-import '../src/mocks/checkout/checkout.handlers';
-import '../src/mocks/payment/payment.handlers';
-import '../src/mocks/orders/order.handlers';
+// Side-effect imports - register cart / checkout / payment / order handlers in the T05 dispatcher registry.
+import '../../../mocks/cart/cart.handlers';
+import '../../../mocks/checkout/checkout.handlers';
+import '../../../mocks/payment/payment.handlers';
+import '../../../mocks/orders/order.handlers';
 
-import { CartFacade } from '../src/app/features/cart/cart.facade';
-import { CheckoutFacade } from '../src/app/features/checkout/checkout.facade';
+import { CartFacade } from '../../../app/features/cart/cart.facade';
+import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
 import {
   contactGuard,
   deliveryGuard,
   reviewGuard,
   successGuard,
-} from '../src/app/features/checkout/checkout.guards';
+} from '../../../app/features/checkout/checkout.guards';
 
 const workspaceRoot = resolvePath(process.cwd());
 
@@ -180,7 +180,7 @@ describe('T24-AC02 refresh restores the receipt and never POSTs another order', 
     // fetchOrder itself never references createOrder; the commit path
     // stays the only place that may invoke createOrder, but that is a
     // separate method (out of scope here).
-    const fetchMatch = checkoutFacadeSource.match(/async fetchOrder[\s\S]*?\n  \}/);
+    const fetchMatch = checkoutFacadeSource.match(/async fetchOrder[\s\S]*?\n {2}\}/);
     expect(fetchMatch).not.toBeNull();
     const fetchBody = fetchMatch?.[0] ?? '';
     expect(fetchBody).toMatch(/getOrder/);
@@ -505,7 +505,7 @@ describe('T24 runtime: success step wire-level behaviour', () => {
     const route = {} as Parameters<typeof reviewGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments),
+      () => reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     const tree = result as UrlTree;

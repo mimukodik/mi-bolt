@@ -8,18 +8,18 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { createHandlers, registerBusinessHandlers } from '../src/mocks/create-handlers';
-// Side-effect imports — register cart + checkout handlers in the
+import { createHandlers, registerBusinessHandlers } from '../../mocks/create-handlers';
+// Side-effect imports - register cart + checkout handlers in the
 // T05 registry so `createHandlers` builds them in the same order
 // the live application does.
-import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
-import { CHECKOUT_OPTIONS, checkoutHandlersEntry } from '../src/mocks/checkout/checkout.handlers';
-import { Repository } from '../src/mocks/repository';
+import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
+import { CHECKOUT_OPTIONS, checkoutHandlersEntry } from '../../mocks/checkout/checkout.handlers';
+import { Repository } from '../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
-} from '../src/mocks/scenarios';
-import { server } from './setup-msw';
+} from '../../mocks/scenarios';
+import { server } from '../../../tests/setup-msw';
 
 // Force-register the checkout entry. The `import { CHECKOUT_OPTIONS
 // }` triggers the side-effect when this spec is loaded once, but

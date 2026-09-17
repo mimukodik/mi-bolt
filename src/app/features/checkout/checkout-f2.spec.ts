@@ -32,12 +32,12 @@ import {
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
-import { provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../src/app/core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
-import { CartFacade } from '../src/app/features/cart/cart.facade';
-import { CheckoutFacade } from '../src/app/features/checkout/checkout.facade';
-import { DeliveryStep } from '../src/app/features/checkout/delivery-step';
+import { CartFacade } from '../../../app/features/cart/cart.facade';
+import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
+import { DeliveryStep } from '../../../app/features/checkout/delivery-step';
 
 const BASE_URL = 'http://localhost/api/v1';
 
@@ -109,9 +109,9 @@ describe('F2 — DeliveryStep.onConfirm persists selection and navigates', () =>
         id: 'cart-f2-test',
         version: 1,
         items: [],
-        provider: 'mi-bolt',
+        itemCount: 0,
+        subtotal: { amount: 0, currency: 'HUF' },
         status: 'active',
-        createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
       });
 

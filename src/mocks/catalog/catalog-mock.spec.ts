@@ -14,7 +14,7 @@ import { resolve } from 'node:path';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { buildCatalogHandlers } from '../src/mocks/catalog/catalog.handlers';
+import { buildCatalogHandlers } from '../../mocks/catalog/catalog.handlers';
 import {
   DEFAULT_PAGE_SIZE,
   FACET_STORAGE_GB,
@@ -29,11 +29,11 @@ import {
   sortMatches,
   type CatalogFilter,
   type ProductMatch,
-} from '../src/mocks/catalog/filter-products';
-import { buildFacets } from '../src/mocks/catalog/facets';
-import type { Money, Product, Variant } from '../src/mocks/repository';
-import { Repository } from '../src/mocks/repository';
-import type { CreateHandlersOptions } from '../src/mocks/create-handlers';
+} from '../../mocks/catalog/filter-products';
+import { buildFacets } from '../../mocks/catalog/facets';
+import type { Money, Product, Variant } from '../../mocks/repository';
+import { Repository } from '../../mocks/repository';
+import type { CreateHandlersOptions } from '../../mocks/create-handlers';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -41,8 +41,8 @@ import {
   type Clock,
   type Ids,
   type ScenarioDescriptor,
-} from '../src/mocks/scenarios';
-import { server } from './setup-msw';
+} from '../../mocks/scenarios';
+import { server } from '../../../tests/setup-msw';
 
 // ---------------------------------------------------------------------------
 // Tiny product factories for the predicate tests
@@ -656,7 +656,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     // product id. We assert the order is monotonic in (price, id).
     const response = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
     const body = await response.json();
-    type Row = { id: string; price: number };
+    interface Row { id: string; price: number; }
     const rows: Row[] = body.items.map((i: { id: string; defaultVariant: { price: { amount: number } } }) => ({
       id: i.id,
       price: i.defaultVariant.price.amount,

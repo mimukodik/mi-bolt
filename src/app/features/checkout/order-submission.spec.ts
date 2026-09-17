@@ -46,37 +46,37 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 
-import { ApiConfiguration, provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../src/app/core/api/demo-session.interceptor';
+import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../src/mocks/idempotency';
-import { Repository } from '../src/mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../src/mocks/scenarios';
+import { createHandlers } from '../../../mocks/create-handlers';
+import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import { IdempotencyStore } from '../../../mocks/idempotency';
+import { Repository } from '../../../mocks/repository';
+import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
-import '../src/mocks/cart/cart.handlers';
-import '../src/mocks/checkout/checkout.handlers';
-import '../src/mocks/payment/payment.handlers';
-import '../src/mocks/orders/order.handlers';
+import '../../../mocks/cart/cart.handlers';
+import '../../../mocks/checkout/checkout.handlers';
+import '../../../mocks/payment/payment.handlers';
+import '../../../mocks/orders/order.handlers';
 
-import { CartFacade } from '../src/app/features/cart/cart.facade';
-import { CheckoutFacade } from '../src/app/features/checkout/checkout.facade';
+import { CartFacade } from '../../../app/features/cart/cart.facade';
+import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
 import {
   OrderSubmission,
   SafeLogger,
-  type PaymentProgressTick,
   type SubmitOutcome,
   SAFE_ORDER_STORAGE_PREFIX,
   type SafeOrderStorage,
   type SafeLogContext,
-} from '../src/app/features/checkout/order-submission';
+} from '../../../app/features/checkout/order-submission';
 import {
   PAYMENT_POLL_INTERVAL_MS,
   PAYMENT_POLL_MAX_ATTEMPTS,
   type FakeClock,
   type FakeClockLike,
-} from '../src/app/features/checkout/payment-progress';
+  type PaymentProgressTick,
+} from '../../../app/features/checkout/payment-progress';
 
 const BASE_URL = 'http://localhost/api/v1';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';
@@ -956,15 +956,15 @@ describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () 
     expect(json).not.toMatch(/4111/);
     expect(json).not.toMatch(/cvc-999/);
     // The safe fields must survive.
-    expect(safe.cartId).toBe('cart-redact');
-    expect(safe.quoteId).toBe('quote-abc');
-    expect(safe.paymentIntentId).toBe('pi-xyz');
+    expect(safe['cartId']).toBe('cart-redact');
+    expect(safe['quoteId']).toBe('quote-abc');
+    expect(safe['paymentIntentId']).toBe('pi-xyz');
   });
 
   it('submitOrder logs through the safe logger and never writes a raw contact field', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
     const submission = TestBed.inject(OrderSubmission);
-    const sink: SafeLogContext[][] = [];
+    const sink: (readonly SafeLogContext[])[] = [];
     submission.bindSafeLogger((entries) => sink.push(entries));
     submission.bindClock(makeFakeClock());
     bindInMemoryStorageOn(submission);

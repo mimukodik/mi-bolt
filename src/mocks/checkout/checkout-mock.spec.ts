@@ -8,25 +8,25 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-// Side-effect import — registers cart handlers in the T05 registry so the
+import { createHandlers } from '../../mocks/create-handlers';
+// Side-effect import - registers cart handlers in the T05 registry so the
 // checkout wire tests can drive `addCartItem` between quote attempts.
-import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
-import { CartDomain } from '../src/mocks/cart/cart-domain';
-import { IdempotencyStore } from '../src/mocks/idempotency';
-import type { Product, Variant } from '../src/mocks/repository';
-import { Repository } from '../src/mocks/repository';
+import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
+import { CartDomain } from '../../mocks/cart/cart-domain';
+import { IdempotencyStore } from '../../mocks/idempotency';
+import type { Product, Variant } from '../../mocks/repository';
+import { Repository } from '../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
-} from '../src/mocks/scenarios';
+} from '../../mocks/scenarios';
 import {
   CHECKOUT_OPTIONS,
-} from '../src/mocks/checkout/checkout.handlers';
+} from '../../mocks/checkout/checkout.handlers';
 import {
   QUOTE_TTL_MS,
   QuoteDomain,
-} from '../src/mocks/checkout/quote-domain';
+} from '../../mocks/checkout/quote-domain';
 import {
   normalizeAddressCity,
   normalizeAddressLine1,
@@ -35,8 +35,8 @@ import {
   normalizeContactEmail,
   normalizeContactFullName,
   normalizeContactPhone,
-} from '../src/mocks/checkout/validate-checkout';
-import { server } from './setup-msw';
+} from '../../mocks/checkout/validate-checkout';
+import { server } from '../../../tests/setup-msw';
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';

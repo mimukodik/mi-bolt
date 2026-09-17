@@ -54,7 +54,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
   // First try the inline `styles: [...]` block (legacy / not-yet-migrated components).
   const start = componentSource.search(/styles:\s*\[/);
   if (start !== -1) {
-    let index = componentSource.indexOf('[', start);
+    const index = componentSource.indexOf('[', start);
     if (index !== -1) {
       let depth = 0;
       for (let cursor = index; cursor < componentSource.length; cursor++) {

@@ -47,6 +47,7 @@ import {
   EnvironmentInjector,
   provideZonelessChangeDetection,
   runInInjectionContext,
+  signal,
 } from '@angular/core';
 import {
   ActivatedRouteSnapshot,
@@ -58,29 +59,29 @@ import {
   provideRouter,
 } from '@angular/router';
 
-import { Api } from '../src/app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import * as functions from '../src/app/api/generated/functions';
-import { demoSessionInterceptor, withIfMatch } from '../src/app/core/api/demo-session.interceptor';
+import { Api } from '../../../app/api/generated/api';
+import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import * as functions from '../../../app/api/generated/functions';
+import { demoSessionInterceptor, withIfMatch } from '../../../app/core/api/demo-session.interceptor';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../src/mocks/idempotency';
-import { Repository } from '../src/mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../src/mocks/scenarios';
+import { createHandlers } from '../../../mocks/create-handlers';
+import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import { IdempotencyStore } from '../../../mocks/idempotency';
+import { Repository } from '../../../mocks/repository';
+import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
-// Side-effect imports — register cart / checkout / payment / order
+// Side-effect imports - register cart / checkout / payment / order
 // handlers in the T05 dispatcher registry so MSW routes the requests.
-import '../src/mocks/cart/cart.handlers';
-import '../src/mocks/checkout/checkout.handlers';
-import '../src/mocks/payment/payment.handlers';
-import '../src/mocks/orders/order.handlers';
+import '../../../mocks/cart/cart.handlers';
+import '../../../mocks/checkout/checkout.handlers';
+import '../../../mocks/payment/payment.handlers';
+import '../../../mocks/orders/order.handlers';
 
-import { CartFacade } from '../src/app/features/cart/cart.facade';
+import { CartFacade } from '../../../app/features/cart/cart.facade';
 import {
   CheckoutFacade,
   type CheckoutStep,
-} from '../src/app/features/checkout/checkout.facade';
+} from '../../../app/features/checkout/checkout.facade';
 import {
   checkoutFormSchema,
   createInitialCheckoutFormModel,
@@ -88,13 +89,13 @@ import {
   PHONE_PATTERN,
   POSTAL_CODE_PATTERN,
   type CheckoutFormModel,
-} from '../src/app/features/checkout/checkout-form.model';
+} from '../../../app/features/checkout/checkout-form.model';
 import {
   contactGuard,
   deliveryGuard,
   reviewGuard,
   successGuard,
-} from '../src/app/features/checkout/checkout.guards';
+} from '../../../app/features/checkout/checkout.guards';
 
 const BASE_URL = 'http://localhost/api/v1';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';
@@ -260,7 +261,6 @@ describe('checkoutFormSchema binds to a writable signal', () => {
       const modelSig = (function mk() {
         // Plain writable signal via the Angular signal() helper.
         // The schema is non-reactive so we can build the tree once.
-        const { signal } = require('@angular/core') as typeof import('@angular/core');
         return signal<CheckoutFormModel>(createInitialCheckoutFormModel());
       })();
       const tree = buildCheckoutForm(modelSig);
@@ -569,7 +569,7 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
     const route = {} as Parameters<typeof reviewGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments),
+      () => reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     const tree = result as UrlTree;
@@ -594,7 +594,7 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
     const route = {} as Parameters<typeof reviewGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments),
+      () => reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     expect((result as UrlTree).toString()).toContain('/penztar/szallitas');
@@ -609,7 +609,7 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
     const route = {} as Parameters<typeof reviewGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments),
+      () => reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     expect((result as UrlTree).toString()).toContain('/penztar/kosar');
@@ -633,7 +633,7 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
     const route = {} as Parameters<typeof reviewGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments),
+      () => reviewGuard(route, segments, {} as never),
     );
     expect(result).toBe(true);
   });
@@ -656,7 +656,7 @@ describe('T19-AC05 guards do not call the network', () => {
     const route = {} as Parameters<typeof contactGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => contactGuard(route, segments),
+      () => contactGuard(route, segments, {} as never),
     );
     expect(result).toBe(true);
   });
@@ -674,7 +674,7 @@ describe('T19-AC05 guards do not call the network', () => {
     const route = {} as Parameters<typeof deliveryGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => deliveryGuard(route, segments),
+      () => deliveryGuard(route, segments, {} as never),
     );
     expect(result).toBe(true);
   });
@@ -685,7 +685,7 @@ describe('T19-AC05 guards do not call the network', () => {
     const route = {} as Parameters<typeof deliveryGuard>[0];
     const result = runInInjectionContext(
       TestBed.inject(EnvironmentInjector),
-      () => deliveryGuard(route, segments),
+      () => deliveryGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     expect((result as UrlTree).toString()).toContain('/penztar/adatok');

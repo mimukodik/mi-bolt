@@ -15,25 +15,25 @@ import {
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting,
 } from '@angular/platform-browser-dynamic/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, type Type } from '@angular/core';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { beforeAll } from 'vitest';
 
-import { routes } from '../src/app/app.routes';
-import { checkoutRoutes } from '../src/app/features/checkout/checkout.routes';
-import { App } from '../src/app/app';
-import { CartCountFacade } from '../src/app/core/navigation/cart-count-facade';
-import { RouteFocusService } from '../src/app/core/navigation/route-focus';
-import { MarketingLayout } from '../src/app/layouts/marketing-layout';
-import { ShopLayout } from '../src/app/layouts/shop-layout';
-import { CheckoutLayout } from '../src/app/layouts/checkout-layout';
-import { AppShell } from '../src/app/shared/shell/app-shell';
-import { HeaderNav } from '../src/app/core/navigation/header-nav';
-import { MobileDrawer } from '../src/app/core/navigation/mobile-drawer';
-import { MobileDrawerHost } from '../src/app/core/navigation/mobile-drawer-host';
-import { AccessibleDialog } from '../src/app/shared/ui/accessible-dialog/accessible-dialog';
-import { FooterNav } from '../src/app/core/navigation/footer-nav';
+import { routes } from '../../app/app.routes';
+import { checkoutRoutes } from '../../app/features/checkout/checkout.routes';
+import { App } from '../../app/app';
+import { CartCountFacade } from '../../app/core/navigation/cart-count-facade';
+import { RouteFocusService } from '../../app/core/navigation/route-focus';
+import { MarketingLayout } from '../../app/layouts/marketing-layout';
+import { ShopLayout } from '../../app/layouts/shop-layout';
+import { CheckoutLayout } from '../../app/layouts/checkout-layout';
+import { AppShell } from '../../app/shared/shell/app-shell';
+import { HeaderNav } from '../../app/core/navigation/header-nav';
+import { MobileDrawer } from '../../app/core/navigation/mobile-drawer';
+import { MobileDrawerHost } from '../../app/core/navigation/mobile-drawer-host';
+import { AccessibleDialog } from '../../app/shared/ui/accessible-dialog/accessible-dialog';
+import { FooterNav } from '../../app/core/navigation/footer-nav';
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
@@ -234,7 +234,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
   });
 
   it('each layout renders a main with id=main-content', () => {
-    const layouts = [MarketingLayout, ShopLayout, CheckoutLayout];
+    const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
     layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
       f.detectChanges();
@@ -245,7 +245,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
   });
 
   it('layouts expose zero H1s by themselves', () => {
-    const layouts = [MarketingLayout, ShopLayout, CheckoutLayout];
+    const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
     layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
       f.detectChanges();

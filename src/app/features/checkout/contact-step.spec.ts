@@ -42,7 +42,7 @@ import {
   normalizeContact,
   validateContact,
   type ContactInput,
-} from '../src/app/features/checkout/contact.schema';
+} from '../../../app/features/checkout/contact.schema';
 
 const workspaceRoot = resolvePath(process.cwd());
 

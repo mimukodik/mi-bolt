@@ -52,11 +52,11 @@ import {
 } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 
-import { provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../src/app/core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
-import { CheckoutFacade } from '../src/app/features/checkout/checkout.facade';
-import { DeliveryStep } from '../src/app/features/checkout/delivery-step';
+import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
+import { DeliveryStep } from '../../../app/features/checkout/delivery-step';
 
 const BASE_URL = 'http://localhost/api/v1';
 

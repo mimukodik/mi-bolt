@@ -54,27 +54,27 @@ import {
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
-import { provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../src/app/core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import {
   createInitialCheckoutFormModel,
   hydrateCheckoutFormModel,
-} from '../src/app/features/checkout/checkout-form.model';
+} from '../../../app/features/checkout/checkout-form.model';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../src/mocks/idempotency';
-import { Repository } from '../src/mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../src/mocks/scenarios';
+import { createHandlers } from '../../../mocks/create-handlers';
+import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import { IdempotencyStore } from '../../../mocks/idempotency';
+import { Repository } from '../../../mocks/repository';
+import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
-import '../src/mocks/cart/cart.handlers';
-import '../src/mocks/checkout/checkout.handlers';
-import '../src/mocks/payment/payment.handlers';
-import '../src/mocks/orders/order.handlers';
+import '../../../mocks/cart/cart.handlers';
+import '../../../mocks/checkout/checkout.handlers';
+import '../../../mocks/payment/payment.handlers';
+import '../../../mocks/orders/order.handlers';
 
-import { CartFacade } from '../src/app/features/cart/cart.facade';
-import { CheckoutFacade } from '../src/app/features/checkout/checkout.facade';
+import { CartFacade } from '../../../app/features/cart/cart.facade';
+import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
 
 const BASE_URL = 'http://localhost/api/v1';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';

@@ -64,18 +64,18 @@ import {
   it,
 } from 'vitest';
 
-import { Api } from '../src/app/api/generated/api';
-import { getConfig } from '../src/app/api/generated/fn/configuration/get-config';
-import { getProduct } from '../src/app/api/generated/fn/catalog/get-product';
-import type { DemoConfig } from '../src/app/api/generated/models/demo-config';
-import type { Image } from '../src/app/api/generated/models/image';
-import type { Product } from '../src/app/api/generated/models/product';
-import type { Variant } from '../src/app/api/generated/models/variant';
+import { Api } from '../../../app/api/generated/api';
+import { getConfig } from '../../../app/api/generated/fn/configuration/get-config';
+import { getProduct } from '../../../app/api/generated/fn/catalog/get-product';
+import type { DemoConfig } from '../../../app/api/generated/models/demo-config';
+import type { Image } from '../../../app/api/generated/models/image';
+import type { Product } from '../../../app/api/generated/models/product';
+import type { Variant } from '../../../app/api/generated/models/variant';
 
-import { Hero } from '../src/app/features/home/hero';
-import { HowDemoWorks } from '../src/app/features/home/how-demo-works';
-import { HomePage } from '../src/app/features/home/home-page';
-import { FeaturedProducts } from '../src/app/features/home/featured-products';
+import { Hero } from '../../../app/features/home/hero';
+import { HowDemoWorks } from '../../../app/features/home/how-demo-works';
+import { HomePage } from '../../../app/features/home/home-page';
+import { FeaturedProducts } from '../../../app/features/home/featured-products';
 
 const workspaceRoot = resolvePath(process.cwd());
 
@@ -291,7 +291,7 @@ function makeProduct(
   };
 }
 
-const PRODUCT_FIXTURES: ReadonlyArray<readonly [string, string, string, number]> = [
+const PRODUCT_FIXTURES: readonly (readonly [string, string, string, number])[] = [
   ['demo-one-5g', 'Demo One 5G', 'MiBolt Demo', 339_990],
   ['demo-air-5g', 'Demo Air 5G', 'MiBolt Demo', 219_990],
   ['demo-pro-5g', 'Demo Pro 5G', 'MiBolt Demo', 499_990],

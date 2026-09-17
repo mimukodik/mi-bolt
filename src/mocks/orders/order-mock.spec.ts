@@ -13,27 +13,27 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-// Side-effect imports — register cart + checkout + payment + order handlers.
-import '../src/mocks/cart/cart.handlers';
-import '../src/mocks/checkout/checkout.handlers';
-import '../src/mocks/payment/payment.handlers';
-import '../src/mocks/orders/order.handlers';
-import { DEMO_PRODUCT } from '../src/mocks/cart/cart.handlers';
-import { CartDomain } from '../src/mocks/cart/cart-domain';
-import { IdempotencyStore } from '../src/mocks/idempotency';
-import { Repository, type Product, type Variant } from '../src/mocks/repository';
+import { createHandlers } from '../../mocks/create-handlers';
+// Side-effect imports - register cart + checkout + payment + order handlers.
+import '../../mocks/cart/cart.handlers';
+import '../../mocks/checkout/checkout.handlers';
+import '../../mocks/payment/payment.handlers';
+import '../../mocks/orders/order.handlers';
+import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
+import { CartDomain } from '../../mocks/cart/cart-domain';
+import { IdempotencyStore } from '../../mocks/idempotency';
+import { Repository, type Product, type Variant } from '../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
   type Clock,
   type Ids,
   type ScenarioDescriptor,
-} from '../src/mocks/scenarios';
+} from '../../mocks/scenarios';
 import {
   QuoteDomain,
   type DeliveryOptionId,
-} from '../src/mocks/checkout/quote-domain';
+} from '../../mocks/checkout/quote-domain';
 import {
   OrderDomain,
   PaymentIntentStore,
@@ -41,9 +41,9 @@ import {
   StockTracker,
   getSharedStores,
   type OrderReceipt,
-} from '../src/mocks/orders/commit-order';
-import { CHECKOUT_OPTIONS as checkoutOptionsRuntime } from '../src/mocks/checkout/checkout.handlers';
-import { server } from './setup-msw';
+} from '../../mocks/orders/commit-order';
+import { CHECKOUT_OPTIONS as checkoutOptionsRuntime } from '../../mocks/checkout/checkout.handlers';
+import { server } from '../../../tests/setup-msw';
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const SESSION_B = 'session-bbbbbbbbbbbb';

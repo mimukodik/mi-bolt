@@ -34,11 +34,11 @@ import {
   it,
 } from 'vitest';
 
-import { Api } from '../src/app/api/generated/api';
-import { listProducts } from '../src/app/api/generated/fn/catalog/list-products';
+import { Api } from '../../../app/api/generated/api';
+import { listProducts } from '../../../app/api/generated/fn/catalog/list-products';
 import {
   CatalogFacade,
-} from '../src/app/features/catalog/catalog.facade';
+} from '../../../app/features/catalog/catalog.facade';
 import {
   ALLOWED_PAGE_SIZES,
   ALLOWED_STORAGE_GB,
@@ -51,11 +51,11 @@ import {
   SORT_MODES,
   type CatalogQuery,
   type SortMode,
-} from '../src/app/features/catalog/catalog-query';
-import type { FacetValue } from '../src/app/api/generated/models/facet-value';
-import type { ProductPage } from '../src/app/api/generated/models/product-page';
-import type { ProductSummary } from '../src/app/api/generated/models/product-summary';
-import type { Variant } from '../src/app/api/generated/models/variant';
+} from '../../../app/features/catalog/catalog-query';
+import type { FacetValue } from '../../../app/api/generated/models/facet-value';
+import type { ProductPage } from '../../../app/api/generated/models/product-page';
+import type { ProductSummary } from '../../../app/api/generated/models/product-summary';
+import type { Variant } from '../../../app/api/generated/models/variant';
 
 beforeAll(async () => {
   TestBed.initTestEnvironment(

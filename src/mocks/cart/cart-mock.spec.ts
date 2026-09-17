@@ -8,29 +8,29 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-// Side-effect import — registers cart handlers in the T05 registry.
+import { createHandlers } from '../../mocks/create-handlers';
+// Side-effect import - registers cart handlers in the T05 registry.
 import {
   DEMO_PRODUCT,
   cartHandlersEntry,
-} from '../src/mocks/cart/cart.handlers';
+} from '../../mocks/cart/cart.handlers';
 import {
   CART_DURATION_MS,
   CartDomain,
   MAX_LINE_QUANTITY,
-} from '../src/mocks/cart/cart-domain';
+} from '../../mocks/cart/cart-domain';
 import {
   IDEMPOTENCY_WINDOW_MS,
   IdempotencyStore,
   deriveIdempotencyKey,
   hashPayload,
-} from '../src/mocks/idempotency';
-import { Repository } from '../src/mocks/repository';
+} from '../../mocks/idempotency';
+import { Repository } from '../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
-} from '../src/mocks/scenarios';
-import { server } from './setup-msw';
+} from '../../mocks/scenarios';
+import { server } from '../../../tests/setup-msw';
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const SESSION_B = 'session-bbbbbbbbbbbb';

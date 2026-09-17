@@ -43,14 +43,14 @@ import {
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
-import { Api } from '../src/app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import type { Image } from '../src/app/api/generated/models/image';
-import type { Product } from '../src/app/api/generated/models/product';
-import type { Variant } from '../src/app/api/generated/models/variant';
+import { Api } from '../../../app/api/generated/api';
+import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import type { Image } from '../../../app/api/generated/models/image';
+import type { Product } from '../../../app/api/generated/models/product';
+import type { Variant } from '../../../app/api/generated/models/variant';
 
-import { demoSessionInterceptor } from '../src/app/core/api/demo-session.interceptor';
-import { ProductFacade } from '../src/app/features/product/product.facade';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import { ProductFacade } from '../../../app/features/product/product.facade';
 import {
   computeAddToCartState,
   computeDisabledCombinations,
@@ -60,7 +60,7 @@ import {
   selectVariantByPair,
   serializeVariantQuery,
   validateQuantity,
-} from '../src/app/features/product/variant-selection';
+} from '../../../app/features/product/variant-selection';
 
 const BASE_URL = 'http://localhost/api/v1';
 
@@ -101,7 +101,7 @@ function makeVariant(
     price: money(price),
     availability,
     maxQuantity,
-    images: images ?? [makeImage(`${id}-front`)],
+    images: images ? [...images] : [makeImage(`${id}-front`)],
   };
 }
 

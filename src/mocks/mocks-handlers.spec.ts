@@ -9,20 +9,20 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createHandlers } from '../src/mocks/create-handlers';
-import { Repository } from '../src/mocks/repository';
+import { createHandlers } from '../mocks/create-handlers';
+import { Repository } from '../mocks/repository';
 import {
   createBrowserPersistence,
   snapshotKey,
   type MockSnapshot,
-} from '../src/mocks/persistence';
+} from '../mocks/persistence';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
   parseScenarioFromLocation,
   resolveScenario,
-} from '../src/mocks/scenarios';
+} from '../mocks/scenarios';
 
 const SCENARIO_KEY = 'test-scenario';
 const STORAGE_KEY = snapshotKey(SCENARIO_KEY);
@@ -169,7 +169,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
   });
 
   it('storage-denied mode keeps state in memory and warns once', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => { /* suppress expected warning */ });
     const original = rawStorage();
     const denial: Storage = {
       length: 0,
@@ -195,7 +195,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
       // Hydrate returns the in-memory copy.
       expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
     } finally {
-      (globalThis as { sessionStorage?: Storage }).sessionStorage = original;
+      (globalThis as { sessionStorage?: Storage | null }).sessionStorage = original;
       warn.mockRestore();
     }
   });

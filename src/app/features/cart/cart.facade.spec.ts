@@ -37,28 +37,28 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 import { setupServer } from 'msw/node';
 import { firstValueFrom } from 'rxjs';
 
-import { Api } from '../src/app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../src/app/api/generated/api-configuration';
-import * as operations from '../src/app/api/generated/functions';
-import { demoSessionInterceptor, withIfMatch } from '../src/app/core/api/demo-session.interceptor';
+import { Api } from '../../../app/api/generated/api';
+import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import * as operations from '../../../app/api/generated/functions';
+import { demoSessionInterceptor, withIfMatch } from '../../../app/core/api/demo-session.interceptor';
 
-import { DEMO_PRODUCT, cartHandlersEntry } from '../src/mocks/cart/cart.handlers';
-import { CART_DURATION_MS, CartDomain } from '../src/mocks/cart/cart-domain';
-import { IdempotencyStore } from '../src/mocks/idempotency';
-import { Repository } from '../src/mocks/repository';
+import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
+import { CART_DURATION_MS, CartDomain } from '../../../mocks/cart/cart-domain';
+import { IdempotencyStore } from '../../../mocks/idempotency';
+import { Repository } from '../../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
-} from '../src/mocks/scenarios';
+} from '../../../mocks/scenarios';
 
-import { CartFacade } from '../src/app/features/cart/cart.facade';
-import { CartCountFacade } from '../src/app/core/navigation/cart-count-facade';
+import { CartFacade } from '../../../app/features/cart/cart.facade';
+import { CartCountFacade } from '../../../app/core/navigation/cart-count-facade';
 import {
   CartMutationQueue,
   settleQueue,
   type MutationIntent,
   type DispatchResult,
-} from '../src/app/features/cart/cart-mutation-queue';
+} from '../../../app/features/cart/cart-mutation-queue';
 
 const BASE_URL = 'http://localhost/api/v1';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';
@@ -68,12 +68,12 @@ const VARIANT_S256 = 'demo-one-5g-silver-256';
 // ---------------------------------------------------------------------------
 // Capture every outgoing request so AC02 can assert header values.
 // ---------------------------------------------------------------------------
-type CapturedRequest = {
+interface CapturedRequest {
   readonly method: string;
   readonly url: string;
   readonly headers: Record<string, string>;
   readonly body: string;
-};
+}
 const captures: CapturedRequest[] = [];
 
 function captureRequest(request: Request, body: string): void {
@@ -609,7 +609,9 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
   it('pendingCount signal reflects the queue depth', async () => {
     const queue = new CartMutationQueue();
     queue.setVersionProvider(() => 1);
-    let resolveDispatch: (() => void) | null = null;
+    let resolveDispatch: () => void = () => {
+      // noop
+    };
     const dispatcher = (): Promise<DispatchResult> =>
       new Promise<DispatchResult>((resolve) => {
         resolveDispatch = () =>
@@ -634,7 +636,7 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
     );
     await Promise.resolve();
     expect(queue.pendingCount()).toBe(1);
-    if (resolveDispatch) resolveDispatch();
+    resolveDispatch();
     await p;
     expect(queue.pendingCount()).toBe(0);
   });
