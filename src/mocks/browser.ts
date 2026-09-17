@@ -5,7 +5,7 @@
  * browser. Playwright's request observer cannot see requests that
  * are intercepted by the service worker, so the gate combines
  * MSW's `unhandled` event, Playwright's request log and the
- * "open sockets" check in `e2e/fixtures/coverage.ts` to prove the
+ * "open sockets" check, now in `e2e/network-isolation.spec.ts`, to prove the
  * page is not reaching the network for any business call.
  *
  * Static assets (Vite dev server chunks, `/mockServiceWorker.js`,

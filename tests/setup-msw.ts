@@ -1,5 +1,5 @@
 /**
- * MSW unit setup — boots the Node service worker for the canary and
+ * MSW unit setup - boots the Node service worker for the
  * contract-layer test runs.
  *
  * Lifecycle:

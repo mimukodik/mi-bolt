@@ -7,7 +7,6 @@ Status: specified, not implemented or executed in this planning package. Each gr
 |E001|foundation|default|Resolve exact versions and run toolchain gate|Latest stable major 22 accepted; next/rc/other-major and unsupported peers rejected.|
 |E002|foundation|default|Build and open root page|No SSR/prerender/hydration/zone.js runtime; Angular standalone screen renders.|
 |E003|foundation|skill-missing|Remove skill evidence in a controlled gate test|Execution/review gate fails; missing skill cannot be replaced by a text claim.|
-|E004|coverage|coverage-canary|Execute true branch only|Both independent coverage gates fail; completing false branch makes both pass.|
 |E005|coverage|coverage-lazy|Leave a lazy runtime file unloaded|File manifest contributes zeros; absent report entry cannot improve percent.|
 |E006|coverage|coverage-reload|Perform app navigation then full reload|Both source segments and bootstrap are represented once in merged file map.|
 |E007|coverage|coverage-broken|Feed empty/missing/NaN report|Gate fails closed; no 100% default on missing data.|

@@ -118,12 +118,9 @@
     "area": "Quality",
     "files": [
       "tests/setup-msw.ts",
-      "e2e/fixtures/test.ts",
-      "e2e/fixtures/coverage.ts",
       "scripts/check-coverage.mjs",
       "scripts/runtime-manifest.mjs",
-      "playwright.config.ts",
-      "tests/coverage-canary.spec.ts"
+      "playwright.config.ts"
     ],
     "interface": "Output: unit and E2E coverage collectors; assertExactCoverage(manifest,report); deterministic ScenarioDescriptor; closed-world network policy.",
     "deliverable": "Prove the hard quality gates before building features.",

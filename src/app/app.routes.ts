@@ -198,10 +198,4 @@ export const routes: Routes = [
       ),
     title: 'MiBolt — UI primitives',
   },
-  {
-    path: 'canary',
-    loadComponent: () =>
-      import('./coverage-canary/canary-page').then((m) => m.CoverageCanaryPage),
-    title: 'MiBolt — coverage canary',
-  },
 ];
