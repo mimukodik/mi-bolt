@@ -1,3 +1,5 @@
+/goal Execute every task in docs/fix/, in the order docs/fix/README.md section 4 gives, one commit per task, and stop only if an acceptance criterion cannot be made to pass.
+
 You are executing the whole MiBolt repair package in this repository: 74 prepared task
 files under docs/fix/, one after another, in one run, without asking for permission
 between tasks.
