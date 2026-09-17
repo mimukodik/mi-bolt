@@ -17,4 +17,4 @@ npm run api:generate
 
 Ennek a T04-ben létrehozott package scriptnek a tartalma: `ng-openapi-gen --config ng-openapi-gen.json`. Ez előírt megvalósítási lépés, nem már létező vagy itt lefuttatott alkalmazásparancs. A teszt- és release-parancsok teljes listája: [tesztstratégia](../spec/testing.md).
 
-> **Megjegyzés (D08):** A korábbi `docs/mi-bolt/api/openapi.yaml` útvonal nem létezik; a valódi forrás a fenti `docs/api/openapi.yaml`. A `scripts/validate-contract.mjs` és az új `scripts/api-drift.mjs` is ezt használja, ahogy a projekt gyökerében lévő `ng-openapi-gen.json` `input` mezője is.
+> **Megjegyzés (D08):** A korábbi `docs/mi-bolt/api/openapi.yaml` útvonal nem létezik; a valódi forrás a fenti `docs/api/openapi.yaml`. A `scripts/validate-contract.mjs` és a `scripts/api-drift.mjs` a D17 döntés nyomán megszűnt. A szerződést ma az `npm run api:generate` (`ng-openapi-gen.json` `input` mezője), az `npm run api:drift` (ugyanaz a generálás, majd `git diff --exit-code` és `git ls-files --others --exclude-standard`) és a `tests/contract/` alatti vitest-tesztek olvassák.

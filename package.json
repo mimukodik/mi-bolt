@@ -10,7 +10,7 @@
     "lint": "ng lint",
     "contract:validate": "node scripts/validate-contract.mjs",
     "api:generate": "ng-openapi-gen --config ng-openapi-gen.json",
-    "api:drift": "node scripts/api-drift.mjs",
+    "api:drift": "npm run api:generate && git diff --exit-code -- src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- src/app/api/generated)\"",
     "api:validate": "node scripts/validate-contract.mjs && node scripts/api-drift.mjs",
     "coverage:manifest": "node scripts/runtime-manifest.mjs",
     "coverage:unit:check": "node scripts/check-coverage.mjs --unit",
