@@ -17,14 +17,7 @@
  * events and the resulting URL after the action.
  */
 
-// @vitest-environment jsdom
-import 'reflect-metadata';
-import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
 import { HttpClient, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { Location } from '@angular/common';
 import { ActivatedRoute, provideRouter, Router, type Params } from '@angular/router';
@@ -114,11 +107,6 @@ interface Harness {
 const server = setupServer();
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
   server.listen({ onUnhandledRequest: 'error' });
 
   await TestBed.configureTestingModule({

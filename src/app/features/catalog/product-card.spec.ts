@@ -21,14 +21,7 @@
  * and find this one in the same shape.
  */
 
-// @vitest-environment jsdom
-import 'reflect-metadata';
-import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
 import { provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import {
@@ -46,11 +39,6 @@ import type { Money } from '../../shared/ui/price-block/price-block';
 import { ProductCard } from './product-card';
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
   await TestBed.compileComponents();
 });
 
