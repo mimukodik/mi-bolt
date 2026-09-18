@@ -417,15 +417,6 @@ describe('T26-AC03 business-error code coverage', () => {
 // ---------------------------------------------------------------------------
 
 describe('T26-AC04 demo and node mock share the domain', () => {
-  it('createHandlers and createStrictHandlers share the same registry', async () => {
-    const browserSource = await readFile(resolve(__dirname, '../../src/mocks/browser.ts'), 'utf8');
-    const nodeSource = await readFile(resolve(__dirname, '../../src/mocks/node.ts'), 'utf8');
-    expect(
-      browserSource.includes('createHandlers') || browserSource.includes('createStrictHandlers'),
-    ).toBe(true);
-    expect(nodeSource.includes('createHandlers')).toBe(true);
-  });
-
   it('handler list produced for the browser options equals the list produced for the node options with equivalent state', () => {
     const scenario: ScenarioDescriptor = { ...DEFAULT_SCENARIO, name: 'parity-scenario' };
     const browserOptions = makeOptions(scenario);

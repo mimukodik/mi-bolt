@@ -11,8 +11,8 @@
  *
  * The factory is deliberately side-effect-free: it never touches
  * `globalThis`, never reads from `sessionStorage`, never starts the
- * worker. The browser entry (`mocks/browser.ts`) and the node entry
- * (`mocks/node.ts`) own the worker lifecycle.
+ * worker. The browser entry (`mocks/browser.ts`) owns the worker
+ * lifecycle.
  */
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
