@@ -162,13 +162,6 @@ export class ProductGallery {
     this.imageFailed.set(true);
   }
 
-  /** Render the thumbnail label as the human index — keeps the
-   *  selection readable for screen readers and for users who cannot
-   *  perceive the swatch alone (R03 — selection is not conveyed by
-   *  color alone). */
-  thumbLabel(index: number): string {
-    return String(index + 1);
-  }
 
   private effectiveIndex(): number {
     const input = this.imageIndex();

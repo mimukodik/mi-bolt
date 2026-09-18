@@ -108,23 +108,20 @@ app-product-image {
 
 .thumb {
   position: relative;
+  width: var(--space-10);
   min-width: var(--size-control);
   min-height: var(--size-control);
-  padding: 0 var(--space-3);
+  padding: 0;
+  overflow: hidden;
   border-radius: var(--radius-control);
   border: 1px solid var(--color-border-subtle);
   background: var(--color-surface-light);
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--type-helper);
-  font-weight: var(--weight-medium);
   cursor: pointer;
 }
 
 .thumb[aria-current='true'] {
   border-color: var(--color-brand-ink);
   background: var(--color-brand-accent-soft);
-  color: var(--color-brand-ink);
 }
 
 .thumb:focus-visible {
@@ -132,22 +129,25 @@ app-product-image {
   outline-offset: 2px;
 }
 
-.thumb-mark {
-  display: inline-block;
+.thumb-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
 }
 
 .thumb-check {
   display: none;
-  margin-left: var(--space-2);
+  position: absolute;
+  inset-block-end: var(--space-1);
+  inset-inline-end: var(--space-1);
+  margin-left: 0;
   font-weight: var(--weight-bold);
 }
 
 .thumb[aria-current='true'] .thumb-check {
   display: inline-block;
-}
-
-.thumb[aria-current='true'] .thumb-mark {
-  display: none;
 }
 
 @media (max-width: 640px) {

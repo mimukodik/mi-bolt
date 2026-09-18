@@ -58,7 +58,16 @@
           [attr.aria-label]="'Ugrás a(z) ' + (i + 1) + '. képre'"
           (click)="goTo(i)"
         >
-          <span class="thumb-mark" aria-hidden="true">{{ thumbLabel(i) }}</span>
+          <img
+            class="thumb-img"
+            [src]="image.src"
+            alt=""
+            aria-hidden="true"
+            [attr.width]="image.width ?? null"
+            [attr.height]="image.height ?? null"
+            decoding="async"
+            loading="lazy"
+          />
           <span class="thumb-check" aria-hidden="true">✓</span>
         </button>
       </li>

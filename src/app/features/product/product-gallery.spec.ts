@@ -243,6 +243,15 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     expect(thumb1.getAttribute('aria-current')).toBe('false');
     expect(thumb2.getAttribute('aria-current')).toBe('false');
     expect(thumb0.getAttribute('aria-label')).toBe('Ugrás a(z) 1. képre');
+
+    sampleImages.forEach((image, index) => {
+      const thumb = queryButton(root, `[data-testid="gallery-thumb-${index}"]`);
+      const img = queryImage(thumb, 'img.thumb-img');
+      expect(img.getAttribute('src')).toBe(image.src);
+      expect(thumb.querySelector('.thumb-' + 'mark')).toBeNull();
+      expect(thumb.textContent).not.toContain(String(index + 1));
+      expect(thumb.getAttribute('aria-current')).toBe(index === 0 ? 'true' : 'false');
+    });
   });
 
   it('T16-AC02: clicking a thumbnail emits imageChange with that index and selects it', async () => {
