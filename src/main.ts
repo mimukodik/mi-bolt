@@ -41,12 +41,8 @@ registerLocaleData(localeHu, 'hu-HU');
  * BEFORE starting the worker so the very first intercepted request
  * can already read the cart/receipt state from the previous tab.
  *
- * A failure to start the worker is logged but does NOT block
- * bootstrap: a service-worker registration rejection, an empty
- * sessionStorage under Safari private mode, or a malformed demo
- * scenario must not prevent the application from rendering. The
- * worker is a development convenience; the app should still boot
- * without it.
+ * A failure to start the worker renders the retryable fatal state
+ * and does not bootstrap, satisfying T05-AC01.
  */
 const start = async (): Promise<void> => {
   if (environment.production) {
@@ -54,9 +50,16 @@ const start = async (): Promise<void> => {
     return;
   }
   const { prepareMocks } = await import('./core/bootstrap-demo');
-  await prepareMocks().catch((err: unknown) => {
-    console.error('[MiBolt] Mock preparation failed; continuing without mocks:', err);
-  });
+  try {
+    await prepareMocks();
+  } catch (err: unknown) {
+    // MSW is the application's entire data layer, not a development
+    // convenience: every screen would render an error or an empty
+    // state with no explanation. T05-AC01 requires an explicit,
+    // retryable fatal state instead of a half-booted application.
+    showFatal(err);
+    return;
+  }
   bootstrapApplication(App, appConfig).catch(showFatal);
 };
 
@@ -64,8 +67,17 @@ void start();
 
 function showFatal(err: unknown): void {
   console.error('[MiBolt] Bootstrap failed:', err);
-  const fatal = document.querySelector<HTMLElement>('app-fatal');
-  if (fatal) {
-    fatal.hidden = false;
+  const template = document.querySelector<HTMLTemplateElement>('#mi-bolt-fatal');
+  if (template === null) {
+    throw new Error(
+      '[MiBolt] fatal surface template #mi-bolt-fatal is missing from src/index.html',
+    );
   }
+  const fragment = template.content.cloneNode(true);
+  document.body.appendChild(fragment);
+  document
+    .querySelector<HTMLButtonElement>('[data-testid="fatal-retry"]')
+    ?.addEventListener('click', () => {
+      globalThis.location.reload();
+    });
 }

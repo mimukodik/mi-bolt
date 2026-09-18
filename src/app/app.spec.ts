@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 
 import { App } from './app';
 import { routes } from './app.routes';
@@ -14,16 +14,43 @@ function hasInternalProviders(value: unknown): value is { ɵproviders: unknown[]
   );
 }
 
+function hasNameProperty(value: unknown): value is { name: string } {
+  return (
+    typeof value === 'object' && value !== null && 'name' in value && typeof value.name === 'string'
+  );
+}
+
+function hasProvideProperty(value: unknown): value is { provide: unknown } {
+  return typeof value === 'object' && value !== null && 'provide' in value;
+}
+
 function hasProvToken(entry: unknown, expectedToken: string): boolean {
+  if (typeof entry === 'function' && entry.name === expectedToken) {
+    return true;
+  }
   if (typeof entry !== 'object' || entry === null) return false;
-  if (!('ɵprov' in entry)) return false;
-  const prov = entry.ɵprov;
-  if (typeof prov !== 'object' || prov === null) return false;
-  if (!('token' in prov)) return false;
-  const token = prov.token;
-  if (typeof token !== 'object' || token === null) return false;
-  if (!('name' in token)) return false;
-  return token.name === expectedToken;
+  if ('ɵprov' in entry) {
+    const prov = entry.ɵprov;
+    if (typeof prov === 'object' && prov !== null && 'token' in prov) {
+      const token = prov.token;
+      if (typeof token === 'function' && token.name === expectedToken) {
+        return true;
+      }
+      if (hasNameProperty(token) && token.name === expectedToken) {
+        return true;
+      }
+    }
+  }
+  if (hasProvideProperty(entry)) {
+    const provide = entry.provide;
+    if (typeof provide === 'function' && provide.name === expectedToken) {
+      return true;
+    }
+    if (hasNameProperty(provide) && provide.name === expectedToken) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function hasUseValue(value: unknown): value is { useValue: string } {
@@ -49,7 +76,9 @@ describe('T01-AC05: root component', () => {
   });
 
   it('renders the Hungarian welcome h1 inside the home route', async () => {
+    const router = TestBed.inject(Router);
     const root = TestBed.createComponent(App);
+    await router.navigateByUrl('/');
     root.autoDetectChanges();
     await root.whenStable();
     const raw: unknown = root.nativeElement;
@@ -59,14 +88,14 @@ describe('T01-AC05: root component', () => {
     expect(heading?.textContent).toContain('MiBolt');
   });
 
-  it('exposes a fatal-startup fallback element, hidden by default', () => {
+  it('does not expose a fatal-startup element in the component tree', () => {
     const root = TestBed.createComponent(App);
     root.detectChanges();
     const raw: unknown = root.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const fatal = raw.querySelector('app-fatal');
-    expect(fatal).toBeTruthy();
-    expect(fatal?.hasAttribute('hidden')).toBe(true);
+    expect(fatal).toBeNull();
+    expect(raw.querySelectorAll('h1').length).toBe(0);
   });
 
   it('renders a skip-link to the main content', () => {

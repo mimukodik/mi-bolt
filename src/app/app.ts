@@ -1,4 +1,4 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 /**
@@ -6,15 +6,10 @@ import { RouterOutlet } from '@angular/router';
  * outlet and the fatal-startup fallback. The class is intentionally
  * thin: every behaviour is colocated with the route or feature it
  * serves, and providers are wired in `appConfig`.
- *
- * The `<app-fatal>` element is a custom-element name the runtime
- * resolves through `CUSTOM_ELEMENTS_SCHEMA`; `main.ts` toggles its
- * `hidden` attribute when bootstrap rejects.
  */
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

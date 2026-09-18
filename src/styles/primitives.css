@@ -81,3 +81,29 @@ p {
     scroll-behavior: auto !important;
   }
 }
+
+/* Fatal bootstrap surface (FIX-12) */
+.app-fatal {
+  display: block;
+  padding: 1.5rem 1rem;
+  background: #fdecea;
+  color: #171b1f;
+  border: 1px solid #b3261e;
+}
+
+.app-fatal__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.app-fatal__body {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.app-fatal__retry {
+  min-height: var(--size-control);
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-4);
+  cursor: pointer;
+}

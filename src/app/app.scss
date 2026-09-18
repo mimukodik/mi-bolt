@@ -29,25 +29,3 @@
   top: 0.5rem;
   outline: 2px solid #ff6a00;
 }
-
-app-fatal {
-  display: block;
-  padding: 1.5rem 1rem;
-  background: #fdecea;
-  color: #171b1f;
-  border: 1px solid #b3261e;
-}
-
-app-fatal[hidden] {
-  display: none;
-}
-
-app-fatal h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.25rem;
-}
-
-app-fatal p {
-  margin: 0;
-  line-height: 1.5;
-}

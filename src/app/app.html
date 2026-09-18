@@ -1,20 +1,9 @@
 <!--
   Root component template. The meaningful page title lives in
-  index.html `<head>`. The `<app-fatal>` custom element is the
-  startup-error fallback surfaced by `main.ts` when bootstrap
-  rejects; it stays hidden during the normal flow and is shown
-  by toggling its `hidden` attribute in the catch handler.
+  index.html `<head>`.
 -->
 <a class="skip-link absolute left-0 top-0 z-50 no-underline" href="#main-content"
   >Ugrás a tartalomhoz</a
 >
-
-<app-fatal class="block" role="alert" aria-live="assertive" hidden>
-  <h1 class="m-0 mb-2 text-xl font-semibold">A MiBolt demó indítása sikertelen</h1>
-  <p class="m-0 leading-relaxed">
-    A bemutató nem tudott elindulni. Frissítsd az oldalt, vagy ellenőrizd a böngésző konzolját a
-    részletekért.
-  </p>
-</app-fatal>
 
 <router-outlet />

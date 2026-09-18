@@ -338,7 +338,7 @@ export class Repository {
     sessionId: string,
   ): void {
     for (const r of receipts) {
-      const items = (r.items ?? []).map((it) => {
+      const items = r.items.map((it) => {
         const lookup = this.variantsById.get(it.variantId);
         return {
           productName: lookup?.product.name ?? '',
@@ -350,9 +350,9 @@ export class Repository {
           lineTotal: it.lineTotal,
         };
       });
-      const subtotalAmount = items.reduce((sum, it) => sum + (it.lineTotal?.amount ?? 0), 0);
+      const subtotalAmount = items.reduce((sum, it) => sum + it.lineTotal.amount, 0);
       const shippingAmount = Math.max(0, r.total.amount - subtotalAmount);
-      const currency = (r.total.currency ?? 'HUF') as 'HUF';
+      const currency = r.total.currency as 'HUF';
       const order: OrderReceipt = {
         id: r.id,
         orderNumber: r.orderNumber,
@@ -364,7 +364,7 @@ export class Repository {
         items,
         subtotal: { amount: subtotalAmount, currency },
         shipping: { amount: shippingAmount, currency },
-        paymentMethod: r.paymentMethod ?? 'demo_card',
+        paymentMethod: r.paymentMethod,
         deliveryOptionId: shippingAmount > 0 ? 'home_delivery' : 'demo_pickup',
         notice:
           'A demórendelés elkészült. Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés.',
