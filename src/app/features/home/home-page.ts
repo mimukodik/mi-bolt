@@ -45,24 +45,8 @@ const DOCUMENTED_FEATURED_SLUGS = [
 @Component({
   selector: 'app-home-page',
   imports: [Hero, FeaturedProducts, HowDemoWorks],
-  template: `
-    <app-hero data-testid="hero" />
-    <app-featured-products
-      data-testid="featured"
-      [slots]="slots()"
-      (retryRequested)="retryFeatured()"
-    />
-    <app-how-demo-works data-testid="how-demo-works" />
-  `,
-  styles: [
-    `
-      :host {
-        display: block;
-        background: var(--color-surface-light);
-        color: var(--color-text-primary);
-      }
-    `,
-  ],
+  templateUrl: './home-page.html',
+  styleUrl: './home-page.scss',
 })
 export class HomePage {
   private readonly api = inject(Api);

@@ -1,0 +1,7 @@
+<app-hero data-testid="hero" />
+<app-featured-products
+  data-testid="featured"
+  [slots]="slots()"
+  (retryRequested)="retryFeatured()"
+/>
+<app-how-demo-works data-testid="how-demo-works" />
