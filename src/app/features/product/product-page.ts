@@ -25,6 +25,7 @@ import { ProductFacade } from './product.facade';
 import { ProductGallery } from './product-gallery';
 import { VariantSelector } from './variant-selector';
 import { SpecificationAccordion } from './specification-accordion';
+import { AddToCart, type AddToCartSelection } from './add-to-cart';
 
 import { CartFacade } from '../cart/cart.facade';
 
@@ -78,6 +79,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
     QuantityControl,
     ErrorState,
     LoadingState,
+    AddToCart,
   ],
   templateUrl: './product-page.html',
   styleUrl: './product-page.scss',
@@ -180,6 +182,20 @@ export class ProductPage {
 
   readonly addToCartEnabled = computed(() => this.vm().addToCart.enabled);
   readonly addToCartReason = computed<string | null>(() => this.vm().addToCart.reason);
+
+  /** Selection handed to AddToCart. Null until a variant is chosen. */
+  readonly addToCartSelection = computed<AddToCartSelection | null>(() => {
+    const v = this.vm();
+    const variant = v.selectedVariant;
+    if (variant === null) return null;
+    return {
+      variantId: variant.id,
+      quantity: v.quantity,
+      productName: v.product?.name ?? '',
+      colorName: variant.colorName,
+      storageGb: variant.storageGb,
+    };
+  });
 
   readonly invalidQuery = computed<string | null>(() => this.vm().invalidVariantQuery);
 

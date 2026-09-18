@@ -85,14 +85,20 @@
             </div>
 
             <div class="cta-desktop">
-              <app-button
-                [variant]="'primary'"
-                [size]="'comfortable'"
-                [label]="'Kosárba teszem'"
-                [loadingLabel]="'Hozzáadás…'"
-                [disabled]="!addToCartEnabled()"
-                (pressed)="onAddToCart()"
-              ></app-button>
+              @if (addToCartSelection(); as selection) {
+                <app-add-to-cart
+                  [selection]="selection"
+                  [enabled]="addToCartEnabled()"
+                />
+              } @else {
+                <app-button
+                  [variant]="'primary'"
+                  [size]="'comfortable'"
+                  [label]="'Kosárba teszem'"
+                  [loadingLabel]="'Hozzáadás…'"
+                  [disabled]="true"
+                ></app-button>
+              }
               @if (addToCartReason() !== null && !addToCartEnabled()) {
                 <p class="hint" role="status">{{ addToCartReason() }}</p>
               }

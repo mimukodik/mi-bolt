@@ -2,17 +2,28 @@
 import '@angular/compiler';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { Component, signal } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  provideZonelessChangeDetection,
+  signal,
+  ɵresolveComponentResources,
+} from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { readdir, readFile } from 'node:fs/promises';
+import { join as pathJoin, resolve as pathResolve } from 'node:path';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import type { CartItem } from '../../api/generated/models/cart-item';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { Button } from '../../shared/ui/button/button';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { CartFacade } from '../cart/cart.facade';
 import { AddToCart, type AddToCartSelection } from './add-to-cart';
 
@@ -115,9 +126,103 @@ function parseJsonRecord(text: string): Record<string, unknown> {
   return {};
 }
 
+function registerComponentMetadata(
+  componentClass: unknown,
+  config: {
+    inputs?: readonly string[];
+    outputs?: readonly string[];
+    models?: readonly string[];
+  },
+): void {
+  if (typeof componentClass !== 'function') return;
+  const raw: unknown = Reflect.get(componentClass, 'propDecorators');
+  const propDecorators: Record<string, unknown[]> = {};
+  if (typeof raw === 'object' && raw !== null) {
+    for (const [key, value] of Object.entries(raw)) {
+      if (Array.isArray(value)) {
+        const arr: unknown[] = [];
+        for (const item of value) {
+          arr.push(item);
+        }
+        propDecorators[key] = arr;
+      }
+    }
+  }
+  if (config.inputs !== undefined) {
+    for (const name of config.inputs) {
+      const arr = propDecorators[name] ?? [];
+      arr.push({ type: Input, args: [{ isSignal: true }] });
+      propDecorators[name] = arr;
+    }
+  }
+  if (config.outputs !== undefined) {
+    for (const name of config.outputs) {
+      const arr = propDecorators[name] ?? [];
+      arr.push({ type: Output, args: [] });
+      propDecorators[name] = arr;
+    }
+  }
+  if (config.models !== undefined) {
+    for (const name of config.models) {
+      const arr = propDecorators[name] ?? [];
+      arr.push({ type: Input, args: [{ isSignal: true }] });
+      arr.push({ type: Output, args: [`${name}Change`] });
+      propDecorators[name] = arr;
+    }
+  }
+  Reflect.set(componentClass, 'propDecorators', propDecorators);
+}
+
+registerComponentMetadata(AddToCart, {
+  inputs: ['selection', 'enabled'],
+  outputs: ['added'],
+});
+registerComponentMetadata(Button, {
+  inputs: ['variant', 'size', 'label', 'loadingLabel', 'disabled', 'loading', 'type'],
+  outputs: ['pressed'],
+});
+registerComponentMetadata(StatusMessage, {
+  inputs: ['message', 'severity', 'persistent'],
+  outputs: ['dismissed'],
+});
+
+const fileCache = new Map<string, string>();
+
+async function findInWorkspace(targetName: string, dir: string): Promise<string | null> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
+      continue;
+    }
+    const fullPath = pathJoin(dir, entry.name);
+    if (entry.isDirectory()) {
+      const nested = await findInWorkspace(targetName, fullPath);
+      if (nested !== null) return nested;
+    } else if (entry.name === targetName) {
+      return fullPath;
+    }
+  }
+  return null;
+}
+
+async function resolveWorkspaceFile(url: string): Promise<string> {
+  if (url.endsWith('.scss') || url.endsWith('.css')) {
+    return '';
+  }
+  const filename = url.startsWith('./') ? url.slice(2) : url;
+  const cached = fileCache.get(filename);
+  if (cached !== undefined) return cached;
+
+  const foundPath = await findInWorkspace(filename, pathResolve(process.cwd(), 'src'));
+  if (foundPath === null) return '';
+  const content = await readFile(foundPath, 'utf-8');
+  fileCache.set(filename, content);
+  return content;
+}
+
 const server = setupServer();
 
-beforeAll(() => {
+beforeAll(async () => {
   try {
     TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
       teardown: { destroyAfterEach: true },
@@ -126,6 +231,9 @@ beforeAll(() => {
     // Already initialized
   }
   server.listen({ onUnhandledRequest: 'error' });
+
+  await ɵresolveComponentResources(resolveWorkspaceFile);
+  await TestBed.compileComponents();
 });
 
 afterAll(() => {
@@ -201,6 +309,29 @@ class TestHostComponent {
   }
 }
 
+@Component({
+  imports: [AddToCart, Button],
+  template: `
+    <div class="cta-desktop">
+      @if (selection(); as sel) {
+        <app-add-to-cart [selection]="sel" [enabled]="enabled()" />
+      } @else {
+        <app-button
+          [variant]="'primary'"
+          [size]="'comfortable'"
+          [label]="'Kosárba teszem'"
+          [loadingLabel]="'Hozzáadás…'"
+          [disabled]="true"
+        ></app-button>
+      }
+    </div>
+  `,
+})
+class CtaDesktopTestHostComponent {
+  readonly selection = signal<AddToCartSelection | null>(null);
+  readonly enabled = signal<boolean>(false);
+}
+
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
@@ -225,8 +356,9 @@ async function createHarness(): Promise<{
   tick: () => Promise<void>;
 }> {
   TestBed.configureTestingModule({
-    imports: [TestHostComponent],
+    imports: [TestHostComponent, AddToCart, Button, StatusMessage],
     providers: [
+      provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
     ],
@@ -481,6 +613,39 @@ describe('T18-AC01 add-to-cart component behavior tests', () => {
     const cartCalls = capturedRequests.filter((r) => r.url === `${BASE_URL}/carts`);
     expect(cartCalls.length).toBe(1);
   });
+
+  it('T18-AC01 / FIX-16: on a failed add returning a Problem, renders an error StatusMessage and leaves cart unchanged', async () => {
+    server.use(
+      http.post('*/api/v1/carts/*/items', () =>
+        HttpResponse.json(
+          { type: 'urn:problem:validation', title: 'Error', status: 422 },
+          { status: 422 },
+        ),
+      ),
+    );
+
+    const { facade, root, tick } = await createHarness();
+    const origAddItem = facade.addItem.bind(facade);
+    const addItemSpy = vi.spyOn(facade, 'addItem').mockImplementation(async (variantId, quantity) => {
+      await origAddItem(variantId, quantity);
+      if (facade.error() !== null) {
+        throw new Error('Failed to add item');
+      }
+    });
+
+    const button = queryButton(root, '[data-testid="add-to-cart-button"] button');
+    button.click();
+    await tick();
+
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    expect(statusEl).not.toBeNull();
+    expect(statusEl?.classList.contains('is-error')).toBe(true);
+    const text = statusEl?.textContent ?? '';
+    expect(text).toContain('A termék hozzáadása nem sikerült');
+    expect(facade.itemCount()).toBe(0);
+
+    addItemSpy.mockRestore();
+  });
 });
 
 describe('T18 add-to-cart shared-primitive dependency wiring', () => {
@@ -508,5 +673,62 @@ describe('T18 add-to-cart shared-primitive dependency wiring', () => {
 
     expect(facade.itemCount()).toBe(2);
     expect(facade.cart()?.id).toBe('cart-test-1');
+  });
+});
+
+describe('FIX-16 ProductPage add-to-cart integration', () => {
+  it('FIX-16-AC04: ProductPage template contains app-add-to-cart and onAddToCart calls cartFacade.addItem', async () => {
+    const htmlPath = pathResolve(process.cwd(), 'src/app/features/product/product-page.html');
+    const tsPath = pathResolve(process.cwd(), 'src/app/features/product/product-page.ts');
+    const html = await readFile(htmlPath, 'utf-8');
+    const ts = await readFile(tsPath, 'utf-8');
+
+    expect(html).toContain('<app-add-to-cart');
+    expect(html).not.toContain('(added)=');
+    expect(ts).toContain('cartFacade.addItem');
+  });
+
+  it('FIX-16-AC09b: desktop CTA renders disabled button when selection is null and app-add-to-cart when selection is present', async () => {
+    TestBed.configureTestingModule({
+      imports: [CtaDesktopTestHostComponent, AddToCart, Button, StatusMessage],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
+        provideApiConfiguration(BASE_URL),
+      ],
+      teardown: { destroyAfterEach: true },
+    });
+
+    await TestBed.compileComponents();
+
+    const fixture = TestBed.createComponent(CtaDesktopTestHostComponent);
+    const host = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const root = getRootElement(fixture);
+    const cta = root.querySelector('.cta-desktop');
+    expect(cta).not.toBeNull();
+
+    // Arm 1: Selection is null -> exactly one disabled button, accessible name is "Kosárba teszem", no app-add-to-cart
+    expect(cta?.querySelector('app-add-to-cart')).toBeNull();
+    const buttons = cta?.querySelectorAll('button') ?? [];
+    expect(buttons.length).toBe(1);
+    const disabledBtn = buttons[0];
+    expect(disabledBtn.disabled).toBe(true);
+    expect(disabledBtn.textContent?.trim()).toBe('Kosárba teszem');
+
+    // Arm 2: Selection is present -> app-add-to-cart rendered, no bare app-button
+    host.selection.set(sampleSelection);
+    host.enabled.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const addToCartEl = cta?.querySelector('app-add-to-cart');
+    expect(addToCartEl).not.toBeNull();
+    const directButtons = Array.from(cta?.children ?? []).filter(
+      (el) => el.tagName.toLowerCase() === 'app-button',
+    );
+    expect(directButtons.length).toBe(0);
   });
 });
