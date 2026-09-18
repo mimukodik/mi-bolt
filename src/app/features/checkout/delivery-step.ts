@@ -47,14 +47,7 @@
  *               fallback option or fabricates a free-shipping default.
  */
 
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-} from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -76,10 +69,7 @@ import type { DeliveryOption } from '../../api/generated/models/delivery-option'
 import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
 
 import { AddressForm } from './address-form';
-import {
-  PaymentMethodSelector,
-  type PaymentMethod,
-} from './payment-method-selector';
+import { PaymentMethodSelector, type PaymentMethod } from './payment-method-selector';
 
 export interface DeliverySelectionChange {
   readonly delivery: DeliverySelection;
@@ -97,14 +87,7 @@ type LoadState =
 
 @Component({
   selector: 'app-delivery-step',
-  imports: [
-    AddressForm,
-    Button,
-    ErrorState,
-    LoadingState,
-    PaymentMethodSelector,
-    PriceBlock,
-  ],
+  imports: [AddressForm, Button, ErrorState, LoadingState, PaymentMethodSelector, PriceBlock],
   templateUrl: './delivery-step.html',
   styleUrl: './delivery-step.scss',
 })
@@ -253,9 +236,7 @@ export class DeliveryStep {
 
   async loadOptions(): Promise<void> {
     try {
-      const response = await firstValueFrom(
-        this.api.invoke(operations.getCheckoutOptions, {}),
-      );
+      const response = await firstValueFrom(this.api.invoke(operations.getCheckoutOptions, {}));
       // The page never silently picks a default option. The radio
       // list iterates over the wire response so the user sees ONLY
       // what the server told them is available.
@@ -418,9 +399,7 @@ export class DeliveryStep {
       throw new Error('DeliveryStep.snapshotChange called without a selection');
     }
     const delivery: DeliverySelection =
-      optionId === 'home_delivery'
-        ? { optionId, address: this.snapshotAddress() }
-        : { optionId };
+      optionId === 'home_delivery' ? { optionId, address: this.snapshotAddress() } : { optionId };
     return {
       delivery,
       paymentMethod: this.paymentMethod(),

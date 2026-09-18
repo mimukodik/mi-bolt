@@ -154,8 +154,7 @@ export function snapshotKey(scenarioName: ScenarioName): string {
 
 /** Detects Node and other non-DOM environments where sessionStorage is missing. */
 function resolveDefaultStorage(): StorageLike | null {
-  const candidate = (globalThis as { sessionStorage?: StorageLike | undefined })
-    .sessionStorage;
+  const candidate = (globalThis as { sessionStorage?: StorageLike | undefined }).sessionStorage;
   if (!candidate) return null;
   return candidate;
 }
@@ -323,14 +322,7 @@ function isValidReceipt(value: unknown): value is PersistedReceipt {
   if (method !== 'demo_card' && method !== 'demo_cod') return false;
   if (!isValidMoney(r['total'])) return false;
   if (!Array.isArray(r['items'])) return false;
-  const allowed = new Set([
-    'id',
-    'orderNumber',
-    'total',
-    'paymentMethod',
-    'createdAt',
-    'items',
-  ]);
+  const allowed = new Set(['id', 'orderNumber', 'total', 'paymentMethod', 'createdAt', 'items']);
   for (const key of Object.keys(r)) {
     if (!allowed.has(key)) return false;
   }
@@ -357,13 +349,16 @@ function isValidReceiptItem(value: unknown): value is PersistedReceiptItem {
 function isValidMoney(value: unknown): value is { amount: number; currency: string } {
   if (!value || typeof value !== 'object') return false;
   const m = record(value);
-  if (typeof m['amount'] !== 'number' || !Number.isFinite(m['amount']) || m['amount'] < 0) return false;
+  if (typeof m['amount'] !== 'number' || !Number.isFinite(m['amount']) || m['amount'] < 0)
+    return false;
   if (typeof m['currency'] !== 'string') return false;
   return true;
 }
 
 function isPositiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0;
+  return (
+    typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
+  );
 }
 
 function record(value: object): Record<string, unknown> {

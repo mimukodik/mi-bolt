@@ -21,8 +21,7 @@
  */
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
-const isNodeProcess =
-  typeof process !== 'undefined' && Boolean(process.versions?.node);
+const isNodeProcess = typeof process !== 'undefined' && Boolean(process.versions?.node);
 
 let server!: ReturnType<typeof import('msw/node').setupServer>;
 

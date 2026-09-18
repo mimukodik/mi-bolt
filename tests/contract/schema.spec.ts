@@ -23,7 +23,15 @@ interface OpenApiSpec {
   openapi: string;
   paths: Record<
     string,
-    Record<string, { operationId?: string; parameters?: unknown[]; responses?: Record<string, unknown>; requestBody?: unknown }>
+    Record<
+      string,
+      {
+        operationId?: string;
+        parameters?: unknown[];
+        responses?: Record<string, unknown>;
+        requestBody?: unknown;
+      }
+    >
   >;
   components: {
     schemas: Record<string, unknown>;
@@ -122,11 +130,10 @@ describe('T03-AC02 Money invariant', () => {
         return;
       }
       const record = node as Record<string, unknown>;
-      if (
-        typeof record.amount === 'number' &&
-        typeof record.currency === 'string'
-      ) {
-        expect(Number.isInteger(record.amount), `amount at ${path.join('.')} is not integer`).toBe(true);
+      if (typeof record.amount === 'number' && typeof record.currency === 'string') {
+        expect(Number.isInteger(record.amount), `amount at ${path.join('.')} is not integer`).toBe(
+          true,
+        );
         expect(record.currency, `currency at ${path.join('.')} is not HUF`).toBe('HUF');
       }
       for (const [k, v] of Object.entries(record)) findMoney(v, [...path, k]);
@@ -138,9 +145,26 @@ describe('T03-AC02 Money invariant', () => {
 describe('T03-AC02 status codes & repeated query arrays', () => {
   it('every operation response is one of the documented status codes', () => {
     const known = new Set([
-      '200', '201', '202', '203', '204', '206',
-      '400', '401', '403', '404', '409', '410', '413', '415', '422', '429',
-      '500', '502', '503', '504',
+      '200',
+      '201',
+      '202',
+      '203',
+      '204',
+      '206',
+      '400',
+      '401',
+      '403',
+      '404',
+      '409',
+      '410',
+      '413',
+      '415',
+      '422',
+      '429',
+      '500',
+      '502',
+      '503',
+      '504',
     ]);
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
@@ -148,7 +172,9 @@ describe('T03-AC02 status codes & repeated query arrays', () => {
         if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue;
         for (const status of Object.keys(op.responses ?? {})) {
           if (status === 'default') continue;
-          expect(known.has(status), `${method.toUpperCase()} ${pathKey} returns ${status}`).toBe(true);
+          expect(known.has(status), `${method.toUpperCase()} ${pathKey} returns ${status}`).toBe(
+            true,
+          );
         }
       }
     }
@@ -226,9 +252,7 @@ describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
           in?: string;
         }>;
         const hasIfMatch = params.some(
-          (p) =>
-            p.$ref?.endsWith('/IfMatch') ||
-            (p.in === 'header' && p.name === 'If-Match'),
+          (p) => p.$ref?.endsWith('/IfMatch') || (p.in === 'header' && p.name === 'If-Match'),
         );
         expect(
           hasIfMatch,
@@ -246,8 +270,7 @@ describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
     expect(quote.properties.expiresAt.format).toBe('date-time');
 
     const quoteOp = spec.paths['/checkout/{cartId}/quote']?.post as
-      | { description?: string }
-      | undefined;
+      { description?: string } | undefined;
     expect(quoteOp, 'createCheckoutQuote operation must be defined').toBeDefined();
     const opDescription = (quoteOp?.description ?? '').toLowerCase();
     expect(
@@ -289,7 +312,9 @@ describe('T03-AC03 fixture shape', () => {
   it('every product has at least one variant', () => {
     for (const p of products) {
       const variants = (p as { variants?: unknown[] }).variants;
-      expect(Array.isArray(variants), `product ${(p as { id: string }).id} missing variants`).toBe(true);
+      expect(Array.isArray(variants), `product ${(p as { id: string }).id} missing variants`).toBe(
+        true,
+      );
       expect(variants?.length ?? 0).toBeGreaterThanOrEqual(1);
     }
   });
@@ -303,22 +328,39 @@ describe('T03-AC03 fixture shape', () => {
   });
 
   it('at least one out-of-stock combination exists', () => {
-    const oos = products.flatMap((p) => ((p as { variants?: Array<{ availability?: string }> }).variants ?? [])).filter((v) => v.availability === 'out_of_stock');
+    const oos = products
+      .flatMap((p) => (p as { variants?: Array<{ availability?: string }> }).variants ?? [])
+      .filter((v) => v.availability === 'out_of_stock');
     expect(oos.length).toBeGreaterThan(0);
   });
 
   it('at least one low-stock scenario exists (maxQuantity in (0..2] and in_stock)', () => {
     const low = products
-      .flatMap((p) => ((p as { variants?: Array<{ availability?: string; maxQuantity?: number }> }).variants ?? []))
-      .filter((v) => v.availability === 'in_stock' && typeof v.maxQuantity === 'number' && v.maxQuantity > 0 && v.maxQuantity <= 2);
+      .flatMap(
+        (p) =>
+          (p as { variants?: Array<{ availability?: string; maxQuantity?: number }> }).variants ??
+          [],
+      )
+      .filter(
+        (v) =>
+          v.availability === 'in_stock' &&
+          typeof v.maxQuantity === 'number' &&
+          v.maxQuantity > 0 &&
+          v.maxQuantity <= 2,
+      );
     expect(low.length).toBeGreaterThan(0);
   });
 
   it('every product brand avoids a real Hungarian operator name', () => {
     const forbidden = new Set(['yettel', 'telekom', 'magyar telekom', 'vodafone', 'digi']);
     for (const p of products) {
-      const brand = String((p as { brand?: string }).brand ?? '').trim().toLowerCase();
-      expect(forbidden.has(brand), `product ${(p as { id: string }).id} uses operator brand "${brand}"`).toBe(false);
+      const brand = String((p as { brand?: string }).brand ?? '')
+        .trim()
+        .toLowerCase();
+      expect(
+        forbidden.has(brand),
+        `product ${(p as { id: string }).id} uses operator brand "${brand}"`,
+      ).toBe(false);
     }
   });
 
@@ -327,7 +369,10 @@ describe('T03-AC03 fixture shape', () => {
     const validate = ajv.compile(productSchema);
     for (const p of products) {
       const ok = validate(p);
-      expect(ok, `product ${(p as { id: string }).id} failed Product schema: ${JSON.stringify(validate.errors)}`).toBe(true);
+      expect(
+        ok,
+        `product ${(p as { id: string }).id} failed Product schema: ${JSON.stringify(validate.errors)}`,
+      ).toBe(true);
     }
   });
 });

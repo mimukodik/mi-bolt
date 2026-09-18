@@ -28,11 +28,17 @@ import {
   withInterceptors,
 } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
+import {
+  BrowserDynamicTestingModule,
+  platformBrowserDynamicTesting,
+} from '@angular/platform-browser-dynamic/testing';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../src/app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../src/app/api/generated/api-configuration';
+import {
+  ApiConfiguration,
+  provideApiConfiguration,
+} from '../../src/app/api/generated/api-configuration';
 import * as operations from '../../src/app/api/generated/functions';
 import { createHandlers, createStrictHandlers } from '../../src/mocks/create-handlers';
 import { Repository } from '../../src/mocks/repository';
@@ -65,7 +71,10 @@ import {
   type OpenApiSpec,
   type OperationDescriptor,
 } from './response-validation';
-import { demoSessionInterceptor, withIfMatch } from '../../src/app/core/api/demo-session.interceptor';
+import {
+  demoSessionInterceptor,
+  withIfMatch,
+} from '../../src/app/core/api/demo-session.interceptor';
 
 const BASE_URL = 'http://localhost/api/v1';
 const BASE_URL_PATH = '/api/v1';
@@ -79,11 +88,9 @@ let operationsById: Map<string, OperationDescriptor>;
 let problemMatrix: Map<string, Set<string>>;
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   const loaded = await loadOpenApiSpec();
   rawSpec = loaded.raw;
   dereferencedSpec = loaded.dereferenced;
@@ -132,7 +139,11 @@ describe('T26-AC01 operation inventory parity', () => {
     // not a business handler response.
     const options = makeOptions(DEFAULT_SCENARIO);
     const handlers = createStrictHandlers(options);
-    const probe = handlers.find((h) => (h as unknown as { info?: { method: string; path: string } }).info?.path === '/api/v1/__unknown__');
+    const probe = handlers.find(
+      (h) =>
+        (h as unknown as { info?: { method: string; path: string } }).info?.path ===
+        '/api/v1/__unknown__',
+    );
     expect(probe, 'strict handler list must not contain an orphan probe').toBeUndefined();
     const strict = createStrictHandlers(options);
     const fallback = createHandlers(options);
@@ -153,7 +164,10 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
       if (!validator) continue;
       const fixture = buildHappyPathFixture(op, dereferencedSpec);
       const ok = validator(fixture);
-      expect(ok, `${op.operationId}: happy-path fixture failed schema — ${JSON.stringify(validator.errors)}`).toBe(true);
+      expect(
+        ok,
+        `${op.operationId}: happy-path fixture failed schema — ${JSON.stringify(validator.errors)}`,
+      ).toBe(true);
     }
   });
 
@@ -190,7 +204,9 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
         };
         // The validator must reject the drift; success means the contract
         // caught the bug at runtime.
-        expect(problem(drift), `${op.operationId}: ${status} drift accepted as Problem`).toBe(false);
+        expect(problem(drift), `${op.operationId}: ${status} drift accepted as Problem`).toBe(
+          false,
+        );
       }
     }
   });
@@ -244,7 +260,11 @@ describe('T26-AC03 business-error code coverage', () => {
     // bypass it and let MSW see the raw request to assert the 400.
     const res = await fetch(`${BASE_URL}/carts/cart-test/items`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'idem-test-1234567', 'If-Match': '"1"' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'idem-test-1234567',
+        'If-Match': '"1"',
+      },
       body: JSON.stringify({ variantId: 'demo-one-5g-graphite-256', quantity: 1 }),
     });
     expect(res.status).toBe(400);
@@ -254,11 +274,16 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('wrong type (quantity as string) returns 400 VALIDATION_FAILED', async () => {
-    const res = await rawFetch('POST', `${BASE_URL}/carts/cart-test/items`, {
-      'Idempotency-Key': 'idem-test-1234567',
-      'If-Match': '"1"',
-      'X-Demo-Session': 'session-test-12345678',
-    }, { variantId: 'demo-one-5g-graphite-256', quantity: 'not-a-number' });
+    const res = await rawFetch(
+      'POST',
+      `${BASE_URL}/carts/cart-test/items`,
+      {
+        'Idempotency-Key': 'idem-test-1234567',
+        'If-Match': '"1"',
+        'X-Demo-Session': 'session-test-12345678',
+      },
+      { variantId: 'demo-one-5g-graphite-256', quantity: 'not-a-number' },
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.code).toBe('VALIDATION_FAILED');
@@ -302,12 +327,17 @@ describe('T26-AC03 business-error code coverage', () => {
   it('reused key with different body returns 409 IDEMPOTENCY_CONFLICT', async () => {
     // Create the cart first so the cart handler has a target to mutate.
     const sessionId = 'session-test-12345678';
-    const createRes = await rawFetch('POST', `${BASE_URL}/carts`, {
-      'X-Demo-Session': sessionId,
-      'Idempotency-Key': 'idem-test-create-12',
-    }, { providerId: 'mi-bolt' });
+    const createRes = await rawFetch(
+      'POST',
+      `${BASE_URL}/carts`,
+      {
+        'X-Demo-Session': sessionId,
+        'Idempotency-Key': 'idem-test-create-12',
+      },
+      { providerId: 'mi-bolt' },
+    );
     expect(createRes.status).toBe(201);
-    const cart = await createRes.json() as { id: string; version: number };
+    const cart = (await createRes.json()) as { id: string; version: number };
 
     // First call: seed the idempotency cache with body A.
     const headers = {
@@ -315,14 +345,20 @@ describe('T26-AC03 business-error code coverage', () => {
       'Idempotency-Key': 'idem-test-abcdefgh',
       'If-Match': `"${cart.version}"`,
     };
-    const first = await rawFetch('POST', `${BASE_URL}/carts/${cart.id}/items`, headers, { variantId: 'demo-one-5g-graphite-256', quantity: 1 });
+    const first = await rawFetch('POST', `${BASE_URL}/carts/${cart.id}/items`, headers, {
+      variantId: 'demo-one-5g-graphite-256',
+      quantity: 1,
+    });
     expect([200, 201]).toContain(first.status);
 
     // Second call: same key, different body — handler must reject with
     // 409 IDEMPOTENCY_CONFLICT per the contract surface.
-    const second = await rawFetch('POST', `${BASE_URL}/carts/${cart.id}/items`, headers, { variantId: 'demo-one-5g-graphite-256', quantity: 2 });
+    const second = await rawFetch('POST', `${BASE_URL}/carts/${cart.id}/items`, headers, {
+      variantId: 'demo-one-5g-graphite-256',
+      quantity: 2,
+    });
     expect(second.status).toBe(409);
-    const secondBody = await second.json() as { code: string };
+    const secondBody = (await second.json()) as { code: string };
     expect(secondBody.code).toBe('IDEMPOTENCY_CONFLICT');
   });
 
@@ -333,12 +369,17 @@ describe('T26-AC03 business-error code coverage', () => {
 
     // Set up a cart so updateCheckout has a target.
     const sessionId = 'session-test-conditional';
-    const createRes = await rawFetch('POST', `${BASE_URL}/carts`, {
-      'X-Demo-Session': sessionId,
-      'Idempotency-Key': 'idem-test-create-34',
-    }, { providerId: 'mi-bolt' });
+    const createRes = await rawFetch(
+      'POST',
+      `${BASE_URL}/carts`,
+      {
+        'X-Demo-Session': sessionId,
+        'Idempotency-Key': 'idem-test-create-34',
+      },
+      { providerId: 'mi-bolt' },
+    );
     expect(createRes.status).toBe(201);
-    const cart = await createRes.json() as { id: string; version: number };
+    const cart = (await createRes.json()) as { id: string; version: number };
 
     const headers = {
       'X-Demo-Session': sessionId,
@@ -356,7 +397,7 @@ describe('T26-AC03 business-error code coverage', () => {
       },
     });
     expect(pickupWithAddress.status).toBe(422);
-    const pickupBody = await pickupWithAddress.json() as { code: string };
+    const pickupBody = (await pickupWithAddress.json()) as { code: string };
     expect(pickupBody.code).toBe('VALIDATION_ERROR');
 
     // home_delivery without an address must also be rejected.
@@ -364,7 +405,7 @@ describe('T26-AC03 business-error code coverage', () => {
       delivery: { optionId: 'home_delivery' },
     });
     expect(homeWithoutAddress.status).toBe(422);
-    const homeBody = await homeWithoutAddress.json() as { code: string };
+    const homeBody = (await homeWithoutAddress.json()) as { code: string };
     expect(homeBody.code).toBe('VALIDATION_ERROR');
   });
 });
@@ -379,7 +420,9 @@ describe('T26-AC04 demo and node mock share the domain', () => {
   it('createHandlers and createStrictHandlers share the same registry', async () => {
     const browserSource = await readFile(resolve(__dirname, '../../src/mocks/browser.ts'), 'utf8');
     const nodeSource = await readFile(resolve(__dirname, '../../src/mocks/node.ts'), 'utf8');
-    expect(browserSource.includes('createHandlers') || browserSource.includes('createStrictHandlers')).toBe(true);
+    expect(
+      browserSource.includes('createHandlers') || browserSource.includes('createStrictHandlers'),
+    ).toBe(true);
     expect(nodeSource.includes('createHandlers')).toBe(true);
   });
 
@@ -429,7 +472,8 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
   it('an OOS variant with maxQuantity=5 violates the documented cart-line invariant', () => {
     // The ProductSummary schema requires isDemo: const true; an entry
     // that omits the flag must be rejected by the runtime validator.
-    const summary = dereferencedSpec.components?.schemas?.['ProductSummary'] as { properties?: Record<string, { const?: unknown; type?: string }> } | undefined;
+    const summary = dereferencedSpec.components?.schemas?.['ProductSummary'] as
+      { properties?: Record<string, { const?: unknown; type?: string }> } | undefined;
     if (!summary) throw new Error('ProductSummary schema missing');
     const validator = compileResponseValidator('getProduct', '200');
     if (!validator) throw new Error('getProduct response validator missing');
@@ -489,7 +533,9 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
       facets: { brands: [], storageGb: [] },
     };
     const ok = validator(fakeProduct);
-    expect(ok, 'Money.amount=33999.5 must fail the contract validator (whole-HUF only)').toBe(false);
+    expect(ok, 'Money.amount=33999.5 must fail the contract validator (whole-HUF only)').toBe(
+      false,
+    );
   });
 
   it('a Quote.expiresAt not in date-time format is rejected', () => {
@@ -582,25 +628,39 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
       return schemas['Product']?.['examples']?.[0] ?? emptyObject(schemas, 'Product');
     case 'createCart':
     case 'getCart': {
-      return schemas['Cart']?.['examples']?.[0] ?? {
-        id: 'cart-fixture', version: 1, items: [], itemCount: 0,
-        subtotal: { amount: 0, currency: 'HUF' },
-        status: 'active', expiresAt: '2026-09-15T10:00:00.000Z',
-      };
+      return (
+        schemas['Cart']?.['examples']?.[0] ?? {
+          id: 'cart-fixture',
+          version: 1,
+          items: [],
+          itemCount: 0,
+          subtotal: { amount: 0, currency: 'HUF' },
+          status: 'active',
+          expiresAt: '2026-09-15T10:00:00.000Z',
+        }
+      );
     }
     case 'addCartItem':
     case 'setCartItemQuantity':
     case 'removeCartItem':
       return {
-        id: 'cart-fixture', version: 2, items: [], itemCount: 0,
+        id: 'cart-fixture',
+        version: 2,
+        items: [],
+        itemCount: 0,
         subtotal: { amount: 0, currency: 'HUF' },
-        status: 'active', expiresAt: '2026-09-15T10:00:00.000Z',
+        status: 'active',
+        expiresAt: '2026-09-15T10:00:00.000Z',
       };
     case 'getCheckoutOptions':
-      return schemas['CheckoutOptions']?.['examples']?.[0] ?? emptyObject(schemas, 'CheckoutOptions');
+      return (
+        schemas['CheckoutOptions']?.['examples']?.[0] ?? emptyObject(schemas, 'CheckoutOptions')
+      );
     case 'getCheckoutSession':
     case 'updateCheckout':
-      return schemas['CheckoutSession']?.['examples']?.[0] ?? emptyObject(schemas, 'CheckoutSession');
+      return (
+        schemas['CheckoutSession']?.['examples']?.[0] ?? emptyObject(schemas, 'CheckoutSession')
+      );
     case 'createCheckoutQuote':
       return schemas['Quote']?.['examples']?.[0] ?? emptyObject(schemas, 'Quote');
     case 'createPaymentIntent':
@@ -623,7 +683,10 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
   }
 }
 
-function emptyObject(schemas: Record<string, Record<string, unknown>>, name: string): Record<string, unknown> {
+function emptyObject(
+  schemas: Record<string, Record<string, unknown>>,
+  name: string,
+): Record<string, unknown> {
   const schema = schemas[name];
   if (!schema || typeof schema !== 'object') return {};
   const required = Array.isArray(schema['required']) ? (schema['required'] as string[]) : [];
@@ -672,8 +735,11 @@ function sampleRequest(op: OperationDescriptor): unknown {
       return { cartId: 'cart-x', quoteId: 'quote-x' };
     case 'createOrder':
       return {
-        cartId: 'cart-x', quoteId: 'quote-x',
-        termsVersion: 'demo-1', acceptedTerms: true, acknowledgedSimulation: true,
+        cartId: 'cart-x',
+        quoteId: 'quote-x',
+        termsVersion: 'demo-1',
+        acceptedTerms: true,
+        acknowledgedSimulation: true,
       };
     default:
       return {};
@@ -753,7 +819,12 @@ function expectProblemShape(body: Record<string, unknown>): void {
   expect(Array.isArray(body['fieldErrors'])).toBe(true);
 }
 
-async function rawFetch(method: string, url: string, headers: Record<string, string>, body?: unknown): Promise<Response> {
+async function rawFetch(
+  method: string,
+  url: string,
+  headers: Record<string, string>,
+  body?: unknown,
+): Promise<Response> {
   const init: RequestInit = {
     method,
     headers: { 'Content-Type': 'application/json', ...headers },

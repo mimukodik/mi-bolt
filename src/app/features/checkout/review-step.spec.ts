@@ -38,8 +38,11 @@ function read(relative: string): string {
   const sources = [relative, `${base}.html`, `${base}.scss`];
   return sources
     .map((p) => {
-      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-      catch { return ''; }
+      try {
+        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+      } catch {
+        return '';
+      }
     })
     .join('\n');
 }
@@ -84,10 +87,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
-      return readFileSync(
-        resolvePath(workspaceRoot, scssPath),
-        'utf8',
-      );
+      return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
     } catch {
       return '';
     }
@@ -164,7 +164,9 @@ describe('T22-AC02 demo terms + simulation acknowledgement with accessible dialo
     // mustAcknowledgeSimulation).
     expect(reviewStepSource).toMatch(/formField.*acceptedTerms|formField.*acknowledgedSimulation/);
     expect(reviewStepSource).toMatch(/acceptedTerms\(\)\.value\.set|acceptedTerms/);
-    expect(reviewStepSource).toMatch(/acknowledgedSimulation\(\)\.value\.set|acknowledgedSimulation/);
+    expect(reviewStepSource).toMatch(
+      /acknowledgedSimulation\(\)\.value\.set|acknowledgedSimulation/,
+    );
     // Two checkboxes are present and start unchecked.
     expect(reviewStepSource).toMatch(/<input[^>]*type="checkbox"[\s\S]*?acceptedTerms/);
     expect(reviewStepSource).toMatch(/<input[^>]*type="checkbox"[\s\S]*?acknowledgedSimulation/);
@@ -232,7 +234,9 @@ describe('T22-AC03 distinct PRICE_CHANGED / QUOTE_EXPIRED / OUT_OF_STOCK message
   it('the primary CTA is disabled while the quote state is not ready (old amount cannot be submitted)', () => {
     // The "ready" gate is the only state that enables submission;
     // every other state must disable the CTA.
-    expect(reviewStepSource).toMatch(/\[disabled\]="!canSubmit\(\)"|\[disabled\]="!canConfirm\(\)"/);
+    expect(reviewStepSource).toMatch(
+      /\[disabled\]="!canSubmit\(\)"|\[disabled\]="!canConfirm\(\)"/,
+    );
     // The canSubmit / canConfirm computed depends on the quote
     // state.
     expect(reviewStepSource).toMatch(/canSubmit|canConfirm/);
@@ -266,7 +270,9 @@ describe('T22-AC04 primary CTA copy and disabled-with-explanation behaviour', ()
     // The schema makes `acceptedTerms` and `acknowledgedSimulation`
     // invalid until they're both true; the gate combines with the
     // Signal Form `valid()` check.
-    expect(reviewStepSource).toMatch(/reviewForm\(\)\.valid\(\)|form\(\)\.valid\(\)|acceptedTerms\(\)\.value\(\)|acknowledgedSimulation\(\)\.value\(\)/);
+    expect(reviewStepSource).toMatch(
+      /reviewForm\(\)\.valid\(\)|form\(\)\.valid\(\)|acceptedTerms\(\)\.value\(\)|acknowledgedSimulation\(\)\.value\(\)/,
+    );
   });
 
   it('disables the CTA while the facade is busy (no double submit)', () => {
@@ -331,7 +337,9 @@ describe('T22 wiring — ReviewStep uses T10 primitives and owns the demo-aware 
   });
 
   it('ReviewPage is re-exported from review-step so the lazy route still resolves', () => {
-    expect(reviewPageSource).toMatch(/export\s*\{\s*ReviewStep(?:,\s*ReviewStep)?\s+as\s+ReviewPage\s*\}/);
+    expect(reviewPageSource).toMatch(
+      /export\s*\{\s*ReviewStep(?:,\s*ReviewStep)?\s+as\s+ReviewPage\s*\}/,
+    );
     expect(reviewPageSource).not.toMatch(/T11 placeholder/);
   });
 

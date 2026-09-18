@@ -34,12 +34,7 @@ import type { Cart } from '../../api/generated/models/cart';
 import type { ProblemCode } from '../../api/generated/models/problem-code';
 
 /** Discriminator for every intent the queue can serialize. */
-export type MutationIntentKind =
-  | 'create'
-  | 'addItem'
-  | 'setQuantity'
-  | 'removeItem'
-  | 'refetch';
+export type MutationIntentKind = 'create' | 'addItem' | 'setQuantity' | 'removeItem' | 'refetch';
 
 /**
  * A single mutation request waiting in the queue. The
@@ -78,10 +73,30 @@ export interface SuccessfulDispatch {
  * generic error signal without losing the wire-level code.
  */
 export type FailedDispatch =
-  | { readonly ok: false; readonly code: 'CART_VERSION_CONFLICT'; readonly status: 409; readonly detail: string }
-  | { readonly ok: false; readonly code: 'CART_EXPIRED'; readonly status: 410; readonly detail: string }
-  | { readonly ok: false; readonly code: 'NOT_FOUND'; readonly status: 404; readonly detail: string }
-  | { readonly ok: false; readonly code: ProblemCode; readonly status: number; readonly detail: string };
+  | {
+      readonly ok: false;
+      readonly code: 'CART_VERSION_CONFLICT';
+      readonly status: 409;
+      readonly detail: string;
+    }
+  | {
+      readonly ok: false;
+      readonly code: 'CART_EXPIRED';
+      readonly status: 410;
+      readonly detail: string;
+    }
+  | {
+      readonly ok: false;
+      readonly code: 'NOT_FOUND';
+      readonly status: 404;
+      readonly detail: string;
+    }
+  | {
+      readonly ok: false;
+      readonly code: ProblemCode;
+      readonly status: number;
+      readonly detail: string;
+    };
 
 export type DispatchResult = SuccessfulDispatch | FailedDispatch;
 
@@ -134,7 +149,12 @@ export class CartMutationQueue {
     dispatch: (inputs: DispatchInputs) => Promise<DispatchResult>,
   ): Promise<DispatchResult> {
     if (this.destroyed) {
-      return Promise.resolve({ ok: false, code: 'SERVICE_UNAVAILABLE', status: 0, detail: 'queue destroyed' } as DispatchResult);
+      return Promise.resolve({
+        ok: false,
+        code: 'SERVICE_UNAVAILABLE',
+        status: 0,
+        detail: 'queue destroyed',
+      } as DispatchResult);
     }
     const clearGeneration = this.clearGeneration;
     this.pendingWritable.update((n) => n + 1);

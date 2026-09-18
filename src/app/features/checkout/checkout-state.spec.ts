@@ -24,23 +24,12 @@
 import '@angular/compiler';
 
 // @vitest-environment jsdom
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http, type RequestHandler } from 'msw';
 import { setupServer } from 'msw/node';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   EnvironmentInjector,
@@ -74,10 +63,7 @@ import '../../../mocks/payment/payment.handlers';
 import '../../../mocks/orders/order.handlers';
 
 import { CartFacade } from '../../../app/features/cart/cart.facade';
-import {
-  CheckoutFacade,
-  type CheckoutStep,
-} from '../../../app/features/checkout/checkout.facade';
+import { CheckoutFacade, type CheckoutStep } from '../../../app/features/checkout/checkout.facade';
 import {
   createInitialCheckoutFormModel,
   buildCheckoutForm,
@@ -131,11 +117,9 @@ function buildHandlers(): readonly RequestHandler[] {
 }
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   server.listen({ onUnhandledRequest: 'error' });
 });
 
@@ -498,9 +482,8 @@ describe('T19 deep-link to /penztar/siker/:orderId without a receipt', () => {
     } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/penztar/siker/order-missing-001' } as RouterStateSnapshot;
 
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => successGuard(route, state),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      successGuard(route, state),
     );
     // T24-AC02: the success page owns hydration through fetchOrder.
     // The guard lets the navigation through; the page renders the
@@ -532,9 +515,8 @@ describe('T19 deep-link to /penztar/siker/:orderId without a receipt', () => {
       paramMap: convertToParamMap({ orderId: checkout.order()?.id ?? '' }),
     } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/penztar/siker/x' } as RouterStateSnapshot;
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => successGuard(route, state),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      successGuard(route, state),
     );
     expect(result).toBe(true);
   });
@@ -560,9 +542,8 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
     // contact step with a `navigationReason` query param.
     const segments = [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
     const route = {} as Parameters<typeof reviewGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     const tree = result as UrlTree;
@@ -585,9 +566,8 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
 
     const segments = [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
     const route = {} as Parameters<typeof reviewGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     expect((result as UrlTree).toString()).toContain('/penztar/szallitas');
@@ -600,9 +580,8 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
 
     const segments = [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
     const route = {} as Parameters<typeof reviewGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     expect((result as UrlTree).toString()).toContain('/penztar/kosar');
@@ -624,9 +603,8 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
 
     const segments = [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
     const route = {} as Parameters<typeof reviewGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      reviewGuard(route, segments, {} as never),
     );
     expect(result).toBe(true);
   });
@@ -647,9 +625,8 @@ describe('T19-AC05 guards do not call the network', () => {
     await seedCartWithItem();
     const segments = [{ path: 'penztar' }, { path: 'adatok' }] as UrlSegment[];
     const route = {} as Parameters<typeof contactGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => contactGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      contactGuard(route, segments, {} as never),
     );
     expect(result).toBe(true);
   });
@@ -665,9 +642,8 @@ describe('T19-AC05 guards do not call the network', () => {
 
     const segments = [{ path: 'penztar' }, { path: 'szallitas' }] as UrlSegment[];
     const route = {} as Parameters<typeof deliveryGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => deliveryGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      deliveryGuard(route, segments, {} as never),
     );
     expect(result).toBe(true);
   });
@@ -676,9 +652,8 @@ describe('T19-AC05 guards do not call the network', () => {
     await seedCartWithItem();
     const segments = [{ path: 'penztar' }, { path: 'szallitas' }] as UrlSegment[];
     const route = {} as Parameters<typeof deliveryGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => deliveryGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      deliveryGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     expect((result as UrlTree).toString()).toContain('/penztar/adatok');

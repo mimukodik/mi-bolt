@@ -36,8 +36,11 @@ function read(relative: string): string {
   const sources = [relative, `${base}.html`, `${base}.scss`];
   return sources
     .map((p) => {
-      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-      catch { return ''; }
+      try {
+        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+      } catch {
+        return '';
+      }
     })
     .join('\n');
 }
@@ -60,10 +63,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
-      return readFileSync(
-        resolvePath(workspaceRoot, scssPath),
-        'utf8',
-      );
+      return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
     } catch {
       return '';
     }
@@ -97,7 +97,9 @@ describe('T21-AC01 home delivery requires address; pickup removes it and announc
     // use at least one of those phrases so the user never mistakes
     // the demo option for a real store visit. The /s flag lets the
     // match span across template-literal line breaks.
-    expect(deliveryStepSource).toMatch(/Virtuális átvételi lehetőség|nincs valós\s+üzletcím|nem valós átvétel/is);
+    expect(deliveryStepSource).toMatch(
+      /Virtuális átvételi lehetőség|nincs valós\s+üzletcím|nem valós átvétel/is,
+    );
   });
 
   it('DeliveryStep exposes radio inputs (one per delivery option) and addresses are programmatic only', () => {
@@ -120,9 +122,13 @@ describe('T21-AC02 address field rules and fixed HU country', () => {
 
   it('AddressForm enforces city length 2..80, line1 length 3..120, line2 optional <=120', () => {
     // City 2..80
-    expect(addressFormSource).toMatch(/city[\s\S]{0,120}length[\s\S]{0,40}>=?\s*2[\s\S]{0,40}<=?\s*80|2.*80/);
+    expect(addressFormSource).toMatch(
+      /city[\s\S]{0,120}length[\s\S]{0,40}>=?\s*2[\s\S]{0,40}<=?\s*80|2.*80/,
+    );
     // Line1 3..120
-    expect(addressFormSource).toMatch(/line1[\s\S]{0,120}length[\s\S]{0,40}>=?\s*3[\s\S]{0,40}<=?\s*120|3.*120/);
+    expect(addressFormSource).toMatch(
+      /line1[\s\S]{0,120}length[\s\S]{0,40}>=?\s*3[\s\S]{0,40}<=?\s*120|3.*120/,
+    );
     // Line2 optional and <=120
     expect(addressFormSource).toMatch(/line2/);
     expect(addressFormSource).toMatch(/120/);
@@ -134,7 +140,9 @@ describe('T21-AC02 address field rules and fixed HU country', () => {
     expect(addressFormSource).toMatch(/HU/);
     expect(addressFormSource).not.toMatch(/<select[\s\S]*?country/);
     // The label visibly announces "HU".
-    expect(addressFormSource).toMatch(/Magyarország|HU\s*[-–]\s*Magyarország|HU\s*\(\s*Magyarország\s*\)/);
+    expect(addressFormSource).toMatch(
+      /Magyarország|HU\s*[-–]\s*Magyarország|HU\s*\(\s*Magyarország\s*\)/,
+    );
   });
 
   it('AddressForm tags every error with a JSON pointer the orchestrator can map back', () => {
@@ -163,9 +171,7 @@ describe('T21-AC03 visible shipping fee per option; no tariff / installments / i
   });
 
   it('does not mention tariff, installment, insurance, monthly fee, hidden add-on or card fields', () => {
-    const cleaned = deliveryStepSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const cleaned = deliveryStepSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     expect(cleaned.toLowerCase().indexOf('vám')).toBe(-1);
     expect(cleaned.toLowerCase().indexOf('részlet')).toBe(-1);
     expect(cleaned.toLowerCase().indexOf('installment')).toBe(-1);
@@ -237,8 +243,9 @@ describe('T21-AC04 selection invalidates the previous quote and is not indicated
   it('Selection change sets a `requires fresh review` flag the parent can read', () => {
     // Either a signal/computed exposed as `requiresFreshReview`, or
     // the selectionChanged event payload carries a hint.
-    const hasSignal =
-      /requiresFreshReview|reviewRequired|requiresReview|freshReview/.test(deliveryStepSource);
+    const hasSignal = /requiresFreshReview|reviewRequired|requiresReview|freshReview/.test(
+      deliveryStepSource,
+    );
     const hasPayload = /\{[^}]*selection[^}]*\}/.test(deliveryStepSource);
     expect(hasSignal || hasPayload).toBe(true);
   });
@@ -254,9 +261,7 @@ describe('T21-AC05 options-load error has retry and never invents a free-shippin
   });
 
   it('DeliveryStep never picks a fallback option when the load fails', () => {
-    const cleaned = deliveryStepSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const cleaned = deliveryStepSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     // No `?? 'home_delivery'` / `?? 'demo_pickup'` / default-id fallback.
     expect(cleaned).not.toMatch(/\?\?\s*['"]home_delivery['"]/);
     expect(cleaned).not.toMatch(/\?\?\s*['"]demo_pickup['"]/);
@@ -272,9 +277,7 @@ describe('T21-AC05 options-load error has retry and never invents a free-shippin
   it('Selection is impossible while in the error branch', () => {
     // The selectionChanged output is gated on the loaded options
     // signal: there is no fallback hand-out.
-    const cleaned = deliveryStepSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const cleaned = deliveryStepSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     expect(cleaned).not.toMatch(/emit\(.*home_delivery\)/);
     expect(cleaned).not.toMatch(/emit\(.*demo_pickup\)/);
   });

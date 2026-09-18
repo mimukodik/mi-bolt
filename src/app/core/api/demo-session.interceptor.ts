@@ -14,7 +14,14 @@
 // `Idempotency-Key` is also request-specific and is left to callers because
 // retry-safety requires the same caller to reuse the same key for retries.
 
-import { HttpContext, HttpContextToken, HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import {
+  HttpContext,
+  HttpContextToken,
+  HttpEvent,
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HttpRequest,
+} from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 const DEMO_SESSION_PATTERN = /^[a-zA-Z0-9_-]{8,80}$/;
@@ -39,9 +46,8 @@ export const demoSessionInterceptor: HttpInterceptorFn = (
 ): Observable<HttpEvent<unknown>> => {
   const headers = req.headers.set('X-Demo-Session', sessionId);
   const ifMatch = req.context.get(IF_MATCH_TOKEN);
-  const finalHeaders = typeof ifMatch === 'string'
-    ? headers.set('If-Match', quoteVersion(ifMatch))
-    : headers;
+  const finalHeaders =
+    typeof ifMatch === 'string' ? headers.set('If-Match', quoteVersion(ifMatch)) : headers;
   return next(req.clone({ headers: finalHeaders }));
 };
 

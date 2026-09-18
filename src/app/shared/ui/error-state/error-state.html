@@ -1,4 +1,9 @@
-<section class="root flex flex-col items-start gap-3 p-6 rounded" role="alert" aria-live="polite" data-testid="error-state">
+<section
+  class="root flex flex-col items-start gap-3 p-6 rounded"
+  role="alert"
+  aria-live="polite"
+  data-testid="error-state"
+>
   <h2 class="title m-0 font-bold">{{ title() }}</h2>
   <p class="message m-0">{{ message() }}</p>
   @if (preserving()) {

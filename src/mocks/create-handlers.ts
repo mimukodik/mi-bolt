@@ -67,10 +67,7 @@ export function createStrictHandlers(options: CreateHandlersOptions): RequestHan
  * stays at the back as the `/api/v1/...` 404 fallback.
  */
 export function createHandlers(options: CreateHandlersOptions): RequestHandler[] {
-  return [
-    ...createDispatcherShell(options),
-    ...createStrictHandlers(options),
-  ];
+  return [...createDispatcherShell(options), ...createStrictHandlers(options)];
 }
 
 function notFoundBody(options: CreateHandlersOptions) {
@@ -93,9 +90,7 @@ function notFoundBody(options: CreateHandlersOptions) {
  * wildcard alone would not claim the empty-path case.
  */
 function createDispatcherShell(options: CreateHandlersOptions): readonly RequestHandler[] {
-  const base = options.apiRoot.endsWith('/')
-    ? options.apiRoot.slice(0, -1)
-    : options.apiRoot;
+  const base = options.apiRoot.endsWith('/') ? options.apiRoot.slice(0, -1) : options.apiRoot;
   const prefix = `${base}/`;
   const responseInit = {
     status: 404,

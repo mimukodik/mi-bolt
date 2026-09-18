@@ -120,13 +120,9 @@ describe('T01-AC04: HttpClient wired with withFetch()', () => {
     // ɵfac holds a factory function; withFetch injects FetchBackend as the
     // primary backend.
     const http = providerManifest.httpClientWithFetch;
-    const list = Array.isArray(http)
-      ? http
-      : hasInternalProviders(http)
-        ? http.ɵproviders
-        : [];
+    const list = Array.isArray(http) ? http : hasInternalProviders(http) ? http.ɵproviders : [];
     const hasFetchBackend = list.some(
-      (entry) => hasProvToken(entry, 'FetchBackend') || hasProvToken(entry, 'HttpHandler')
+      (entry) => hasProvToken(entry, 'FetchBackend') || hasProvToken(entry, 'HttpHandler'),
     );
     expect(hasFetchBackend).toBe(true);
   });

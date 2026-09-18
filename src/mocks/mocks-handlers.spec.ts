@@ -11,11 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createHandlers } from '../mocks/create-handlers';
 import { Repository } from '../mocks/repository';
-import {
-  createBrowserPersistence,
-  snapshotKey,
-  type MockSnapshot,
-} from '../mocks/persistence';
+import { createBrowserPersistence, snapshotKey, type MockSnapshot } from '../mocks/persistence';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -55,7 +51,11 @@ function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
 describe('T05-AC02 handler factory', () => {
   it('returns a RequestHandler[] with the dispatcher shell and exposes the same factory for browser and node', () => {
     const options = {
-      repository: new Repository(DEFAULT_SCENARIO, createDeterministicIds(1), createFixedClock('2026-09-14T10:00:00.000Z')),
+      repository: new Repository(
+        DEFAULT_SCENARIO,
+        createDeterministicIds(1),
+        createFixedClock('2026-09-14T10:00:00.000Z'),
+      ),
       clock: createFixedClock('2026-09-14T10:00:00.000Z'),
       ids: createDeterministicIds(1),
       scenario: DEFAULT_SCENARIO,
@@ -169,7 +169,9 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
   });
 
   it('storage-denied mode keeps state in memory and warns once', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => { /* suppress expected warning */ });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* suppress expected warning */
+    });
     const original = rawStorage();
     const denial: Storage = {
       length: 0,
@@ -203,8 +205,16 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
 
 describe('T05-AC06 scenario isolation', () => {
   it('two scenarios keep independent repositories and snapshot storage', () => {
-    const repoA = new Repository({ ...DEFAULT_SCENARIO, name: 'isolated-A' }, createDeterministicIds(1), createFixedClock('2026-09-14T10:00:00.000Z'));
-    const repoB = new Repository({ ...DEFAULT_SCENARIO, name: 'isolated-B' }, createDeterministicIds(2), createFixedClock('2026-09-14T10:00:00.000Z'));
+    const repoA = new Repository(
+      { ...DEFAULT_SCENARIO, name: 'isolated-A' },
+      createDeterministicIds(1),
+      createFixedClock('2026-09-14T10:00:00.000Z'),
+    );
+    const repoB = new Repository(
+      { ...DEFAULT_SCENARIO, name: 'isolated-B' },
+      createDeterministicIds(2),
+      createFixedClock('2026-09-14T10:00:00.000Z'),
+    );
     repoA.createCart('sess-a');
     expect(repoA.listCarts()).toHaveLength(1);
     expect(repoB.listCarts()).toHaveLength(0);

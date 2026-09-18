@@ -59,9 +59,7 @@ export class FeaturedProducts {
   /** Joined error messages for the whole-grid error state. */
   readonly errorMessage = computed(() => {
     const list = this.slots();
-    const messages = list
-      .map((s) => s.error)
-      .filter((m): m is string => m !== null);
+    const messages = list.map((s) => s.error).filter((m): m is string => m !== null);
     if (messages.length === 0) {
       return 'A kiemelt termékek jelenleg nem érhetők el.';
     }

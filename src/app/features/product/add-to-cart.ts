@@ -22,15 +22,7 @@
  * the serialized mutation queue and the If-Match binding.
  */
 
-import {
-  Component,
-  DestroyRef,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 
 import { CartFacade } from '../../features/cart/cart.facade';
 

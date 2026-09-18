@@ -1,9 +1,9 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     coverage: {
-      reportsDirectory: "coverage/unit",
+      reportsDirectory: 'coverage/unit',
       reportOnFailure: true,
     },
   },

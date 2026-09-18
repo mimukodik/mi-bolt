@@ -108,18 +108,13 @@ export interface ContactSaveResult {
 }
 
 /** Pluggable save function the T19 facade will provide. */
-export type ContactDraftSaver = (
-  contact: ContactSubmission,
-) => Promise<ContactSaveResult>;
+export type ContactDraftSaver = (contact: ContactSubmission) => Promise<ContactSaveResult>;
 
 /** injection token for the draft save. */
-export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>(
-  'CONTACT_DRAFT_SAVER',
-  {
-    providedIn: 'root',
-    factory: () => () => Promise.resolve({ ok: true }),
-  },
-);
+export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>('CONTACT_DRAFT_SAVER', {
+  providedIn: 'root',
+  factory: () => () => Promise.resolve({ ok: true }),
+});
 
 /**
  * Fixture defaults: synthetic data so the demo never hints at a
@@ -133,19 +128,15 @@ const INITIAL_CONTACT: ContactInput = {
   phone: '+36 30 123 4567',
 };
 
-const EMAIL_RFC5322_SUBSET =
-  /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const EMAIL_RFC5322_SUBSET = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 const PHONE_E164 = /^\+36\d{8,9}$/;
 
 /** Convert the Signal Form errors array into the local FieldError shape. */
-function toFieldErrors(
-  errors: readonly ValidationError.WithFieldTree[],
-): readonly FieldError[] {
+function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readonly FieldError[] {
   const out: FieldError[] = [];
   for (const error of errors) {
-    const pointer = (error as ValidationError.WithFieldTree & { pointer?: string })
-      .pointer;
+    const pointer = (error as ValidationError.WithFieldTree & { pointer?: string }).pointer;
     out.push({
       code: error.kind,
       message: error.message ?? error.kind,
@@ -157,13 +148,7 @@ function toFieldErrors(
 
 @Component({
   selector: 'app-contact-step',
-  imports: [
-    RouterLink,
-    Button,
-    FormField,
-    FormFieldMessage,
-    ErrorState,
-  ],
+  imports: [RouterLink, Button, FormField, FormFieldMessage, ErrorState],
   templateUrl: './contact-step.html',
   styleUrl: './contact-step.scss',
 })
@@ -177,8 +162,7 @@ export class ContactStep {
 
   /** Reference to the form summary so we can move focus to it on
    *  invalid submission. */
-  private readonly summaryRef =
-    viewChild<ElementRef<HTMLElement>>('summary');
+  private readonly summaryRef = viewChild<ElementRef<HTMLElement>>('summary');
 
   /** Form model. Mirrors the Signal Form root. The schema reads
    *  from this signal so submitting the form serializes the same
@@ -245,15 +229,14 @@ export class ContactStep {
       const v = value().trim();
       if (v.length === 0) return null;
       const normalized = normalizeContact({
-          fullName: '',
-          email: '',
-          phone: v,
-        }).phone;
+        fullName: '',
+        email: '',
+        phone: v,
+      }).phone;
       if (!PHONE_E164.test(normalized)) {
         return {
           kind: 'invalidPhone',
-          message:
-            'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+          message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
         };
       }
       if (
@@ -262,13 +245,11 @@ export class ContactStep {
       ) {
         return {
           kind: 'invalidPhone',
-          message:
-            'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+          message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
         };
       }
       return null;
     });
-
   });
 
   // ---- Field state helpers ------------------------------------------
@@ -325,8 +306,7 @@ export class ContactStep {
       if (errors.length === 0) return;
       const first = errors[0];
       const pointer =
-        (first as ValidationError.WithFieldTree & { pointer?: string })
-          .pointer ?? `/${key}`;
+        (first as ValidationError.WithFieldTree & { pointer?: string }).pointer ?? `/${key}`;
       out.push({
         field: key,
         label,

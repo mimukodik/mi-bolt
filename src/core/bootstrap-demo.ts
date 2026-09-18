@@ -19,10 +19,7 @@
 import { environment } from '../environments/environment';
 import { startMockWorker } from '../mocks/browser';
 import { createBrowserPersistence } from '../mocks/persistence';
-import {
-  createRealClock,
-  parseScenarioFromLocation,
-} from '../mocks/scenarios';
+import { createRealClock, parseScenarioFromLocation } from '../mocks/scenarios';
 
 /** Tracks the last prepared scenario for diagnostics and E2E hooks. */
 let preparedScenario: string | null = null;

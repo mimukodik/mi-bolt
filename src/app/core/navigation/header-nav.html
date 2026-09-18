@@ -5,16 +5,27 @@
     role="banner"
   >
     <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
-      <a routerLink="/" class="brand inline-flex items-center gap-2 no-underline min-h-10" aria-label="MiBolt kezdőlap">
-        <span class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold" aria-hidden="true">M</span>
+      <a
+        routerLink="/"
+        class="brand inline-flex items-center gap-2 no-underline min-h-10"
+        aria-label="MiBolt kezdőlap"
+      >
+        <span
+          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
+          aria-hidden="true"
+          >M</span
+        >
         <span class="brand__word font-bold tracking-wide">MiBolt</span>
       </a>
-      <span class="header__label uppercase tracking-wider" aria-label="Demó pénztár">Demó pénztár</span>
+      <span class="header__label uppercase tracking-wider" aria-label="Demó pénztár"
+        >Demó pénztár</span
+      >
       <a
         routerLink="/telefonok"
         class="header__back inline-flex items-center no-underline min-h-10 rounded"
         data-testid="back-to-shop"
-      >Vissza a shopba</a>
+        >Vissza a shopba</a
+      >
     </div>
   </header>
 } @else {
@@ -24,8 +35,16 @@
     role="banner"
   >
     <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
-      <a routerLink="/" class="brand inline-flex items-center gap-2 no-underline min-h-10" aria-label="MiBolt kezdőlap">
-        <span class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold" aria-hidden="true">M</span>
+      <a
+        routerLink="/"
+        class="brand inline-flex items-center gap-2 no-underline min-h-10"
+        aria-label="MiBolt kezdőlap"
+      >
+        <span
+          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
+          aria-hidden="true"
+          >M</span
+        >
         <span class="brand__word font-bold tracking-wide">MiBolt</span>
       </a>
       <nav class="header__nav hidden gap-4 flex-1 justify-center lg:flex" aria-label="Fő navigáció">
@@ -36,11 +55,15 @@
             [fragment]="link.fragment"
             routerLinkActive="is-active"
             [routerLinkActiveOptions]="link.routerLink === '/' ? { exact: true } : { exact: false }"
-          >{{ link.label }}</a>
+            >{{ link.label }}</a
+          >
         }
       </nav>
       <div class="header__actions flex items-center gap-2 ml-auto">
-        <label class="header__search hidden items-center rounded min-h-10 px-3 lg:flex" data-testid="header-search">
+        <label
+          class="header__search hidden items-center rounded min-h-10 px-3 lg:flex"
+          data-testid="header-search"
+        >
           <span class="sr-only">Keresés a telefonok között</span>
           <input
             class="bg-transparent border-0 outline-none min-w-50 font-inherit h-10"
@@ -71,11 +94,20 @@
           </span>
           <span class="cart__label hidden lg:inline">Kosár</span>
           @if (cartFacade.itemCount() > 0) {
-            <span class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold" data-testid="cart-badge" aria-hidden="true">
+            <span
+              class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold"
+              data-testid="cart-badge"
+              aria-hidden="true"
+            >
               {{ cartFacade.itemCount() }}
             </span>
           } @else {
-            <span class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold" data-testid="cart-badge" aria-hidden="true">0</span>
+            <span
+              class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold"
+              data-testid="cart-badge"
+              aria-hidden="true"
+              >0</span
+            >
           }
         </a>
         <button
@@ -87,11 +119,17 @@
           aria-label="Menü megnyitása"
           data-testid="menu-trigger"
           (click)="toggleDrawer()"
-        >☰</button>
+        >
+          ☰
+        </button>
       </div>
     </div>
     @if (variant() === 'shop') {
-      <div class="mobile-search block px-4 pb-3 pt-2 border-t" data-testid="mobile-search" role="search">
+      <div
+        class="mobile-search block px-4 pb-3 pt-2 border-t"
+        data-testid="mobile-search"
+        role="search"
+      >
         <label class="mobile-search__field block">
           <span class="sr-only">Keresés a telefonok között</span>
           <input
@@ -123,7 +161,8 @@
         [routerLink]="link.routerLink"
         [fragment]="link.fragment"
         (click)="closeDrawer()"
-      >{{ link.label }}</a>
+        >{{ link.label }}</a
+      >
     }
   </app-mobile-drawer>
 }

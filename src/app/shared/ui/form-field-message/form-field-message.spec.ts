@@ -46,21 +46,27 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.touched.set(true);
     fixture.detectChanges();
-    const msg = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="form-field-message"]');
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="form-field-message"]',
+    );
     expect(msg).not.toBeNull();
     expect(msg?.id).toBe('email-message');
   });
 
   it('hides error text while the field is untouched and the form un-submitted', () => {
     const { fixture } = setup();
-    expect(getNativeElement(fixture).querySelector('[data-testid="form-field-message"]')).toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="form-field-message"]'),
+    ).toBeNull();
   });
 
   it('shows the error when the field is touched', () => {
     const { fixture, host } = setup();
     host.touched.set(true);
     fixture.detectChanges();
-    const msg = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="form-field-message"]');
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="form-field-message"]',
+    );
     expect(msg?.textContent).toContain('Az e-mail cím megadása kötelező.');
     expect(msg?.classList.contains('is-error')).toBe(true);
   });
@@ -69,14 +75,18 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.submitted.set(true);
     fixture.detectChanges();
-    expect(getNativeElement(fixture).querySelector('[data-testid="form-field-message"]')).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="form-field-message"]'),
+    ).not.toBeNull();
   });
 
   it('tags server errors with the originating JSON pointer', () => {
     const { fixture, host } = setup();
     host.touched.set(true);
     fixture.detectChanges();
-    const msg = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="form-field-message"]');
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="form-field-message"]',
+    );
     expect(msg?.getAttribute('data-pointer')).toBe('/contact/email');
   });
 
@@ -85,7 +95,9 @@ describe('FormFieldMessage primitive', () => {
     host.helpText.set('Formátum: nev@példa.hu');
     host.severity.set('help');
     fixture.detectChanges();
-    const msg = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="form-field-message"]');
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="form-field-message"]',
+    );
     expect(msg).not.toBeNull();
     if (!msg) {
       throw new Error('Expected form-field-message');
@@ -99,6 +111,8 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.errors.set([]);
     fixture.detectChanges();
-    expect(getNativeElement(fixture).querySelector('[data-testid="form-field-message"]')).toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="form-field-message"]'),
+    ).toBeNull();
   });
 });

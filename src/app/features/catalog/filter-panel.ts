@@ -1,15 +1,11 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 
 import type { CatalogQuery, SortMode } from './catalog-query';
-import {
-  ALLOWED_STORAGE_GB,
-  SORT_MODES,
-} from './catalog-query';
+import { ALLOWED_STORAGE_GB, SORT_MODES } from './catalog-query';
 import type { FacetValue } from '../../api/generated/models/facet-value';
 
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
-
 
 /**
  * T13 — desktop filter sidebar (FilterPanel).
@@ -44,7 +40,10 @@ export class FilterPanel {
   readonly value = input.required<CatalogQuery>();
 
   /** Facet buckets from the latest successful response, if any. */
-  readonly facets = input<{ readonly brands: readonly FacetValue[]; readonly storageGb: readonly FacetValue[] } | null>(null);
+  readonly facets = input<{
+    readonly brands: readonly FacetValue[];
+    readonly storageGb: readonly FacetValue[];
+  } | null>(null);
 
   /** True when the panel should be inert (loading or error refresh). */
   readonly disabled = input<boolean>(false);
@@ -101,7 +100,8 @@ export class FilterPanel {
     const max = this.parsePrice(this.maxDraft());
     if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
     if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    if (min !== null && max !== null && min > max) return 'A minimum nem lehet nagyobb a maximum árnál.';
+    if (min !== null && max !== null && min > max)
+      return 'A minimum nem lehet nagyobb a maximum árnál.';
     return null;
   });
 
@@ -140,7 +140,9 @@ export class FilterPanel {
 
   toggleStorage(bucket: 128 | 256 | 512): void {
     const current = this.value().storageGb ?? [];
-    const next = current.includes(bucket) ? current.filter((b) => b !== bucket) : [...current, bucket];
+    const next = current.includes(bucket)
+      ? current.filter((b) => b !== bucket)
+      : [...current, bucket];
     this.emit({ storageGb: next.length > 0 ? next : undefined });
   }
 

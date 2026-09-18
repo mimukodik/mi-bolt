@@ -24,13 +24,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
-import {
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import type { ProductSummary } from '../../api/generated/models/product-summary';
 import type { Variant } from '../../api/generated/models/variant';
@@ -79,7 +73,8 @@ function queryElement(parent: Element, selector: string): HTMLElement {
 
 function queryAnchor(parent: Element, selector: string): HTMLAnchorElement {
   const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLAnchorElement)) throw new Error(`Expected HTMLAnchorElement: ${selector}`);
+  if (!(el instanceof HTMLAnchorElement))
+    throw new Error(`Expected HTMLAnchorElement: ${selector}`);
   return el;
 }
 
@@ -151,10 +146,15 @@ function makeSummary(opts: {
   template: `<app-product-card [product]="product()" />`,
 })
 class HostComponent {
-  readonly product = signal<ProductSummary>(makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G' }));
+  readonly product = signal<ProductSummary>(
+    makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G' }),
+  );
 }
 
-function setup(): { fixture: ReturnType<typeof TestBed.createComponent<HostComponent>>; host: HostComponent } {
+function setup(): {
+  fixture: ReturnType<typeof TestBed.createComponent<HostComponent>>;
+  host: HostComponent;
+} {
   TestBed.configureTestingModule({
     imports: [HostComponent],
     providers: [provideRouter([])],
@@ -191,7 +191,9 @@ describe('T13-AC04 ProductCard', () => {
 
   it('renders the whole-HUF one-time price and the explicit one-time label', () => {
     const { fixture, host } = setup();
-    host.product.set(makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339990 }));
+    host.product.set(
+      makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339990 }),
+    );
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const priceEl = queryElement(root, '[data-testid="price-amount"]');
@@ -256,7 +258,9 @@ describe('T13-AC04 ProductCard', () => {
       }),
     );
     fixture.detectChanges();
-    const list = getRootElement(fixture).querySelectorAll('[data-testid="product-card-highlights"] li');
+    const list = getRootElement(fixture).querySelectorAll(
+      '[data-testid="product-card-highlights"] li',
+    );
     expect(list.length).toBe(2);
     const first = list[0];
     expect(first.textContent).toContain('6,7″ kijelző');

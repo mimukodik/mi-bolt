@@ -33,12 +33,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import {
-  contactGuard,
-  deliveryGuard,
-  reviewGuard,
-  successGuard,
-} from './checkout.guards';
+import { contactGuard, deliveryGuard, reviewGuard, successGuard } from './checkout.guards';
 
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
@@ -77,25 +72,16 @@ function freshIdempotencyKey(): string {
 function mapFieldErrors(
   entries: readonly { path: string; message: string }[],
 ): Partial<
-  Record<
-    ContactFieldKey,
-    readonly { code: string; message: string; pointer?: string }[]
-  >
+  Record<ContactFieldKey, readonly { code: string; message: string; pointer?: string }[]>
 > {
   const out: Partial<
-    Record<
-      ContactFieldKey,
-      readonly { code: string; message: string; pointer?: string }[]
-    >
+    Record<ContactFieldKey, readonly { code: string; message: string; pointer?: string }[]>
   > = {};
   for (const entry of entries) {
     const key = pointerToFieldKey(entry.path);
     if (key === null) continue;
     const bucket = out[key] ?? [];
-    out[key] = [
-      ...bucket,
-      { code: 'server', message: entry.message, pointer: entry.path },
-    ];
+    out[key] = [...bucket, { code: 'server', message: entry.message, pointer: entry.path }];
   }
   return out;
 }
@@ -199,8 +185,7 @@ export const checkoutRoutes: Routes = [
   {
     path: 'adatok',
     canMatch: [contactGuard],
-    loadComponent: () =>
-      import('./contact-page').then((m) => m.ContactPage),
+    loadComponent: () => import('./contact-page').then((m) => m.ContactPage),
     // Override the root-provided no-op default with the real
     // facade-backed saver. Lives on the route (not the component)
     // so the binding survives any re-creation of the lazy chunk
@@ -219,24 +204,21 @@ export const checkoutRoutes: Routes = [
   {
     path: 'szallitas',
     canMatch: [deliveryGuard],
-    loadComponent: () =>
-      import('./delivery-page').then((m) => m.DeliveryPage),
+    loadComponent: () => import('./delivery-page').then((m) => m.DeliveryPage),
     title: 'MiBolt — Szállítás és fizetés',
     data: { step: 'delivery' },
   },
   {
     path: 'ellenorzes',
     canMatch: [reviewGuard],
-    loadComponent: () =>
-      import('./review-page').then((m) => m.ReviewPage),
+    loadComponent: () => import('./review-page').then((m) => m.ReviewPage),
     title: 'MiBolt — Rendelés ellenőrzése',
     data: { step: 'review' },
   },
   {
     path: 'siker/:orderId',
     canActivate: [successGuard],
-    loadComponent: () =>
-      import('./success-step').then((m) => m.SuccessStep),
+    loadComponent: () => import('./success-step').then((m) => m.SuccessStep),
     title: 'MiBolt — Demórendelés elkészült',
     data: { step: 'success' },
   },

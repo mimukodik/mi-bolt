@@ -25,26 +25,18 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
 import { Api } from '../../../app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import {
+  ApiConfiguration,
+  provideApiConfiguration,
+} from '../../../app/api/generated/api-configuration';
 import type { Image } from '../../../app/api/generated/models/image';
 import type { Product } from '../../../app/api/generated/models/product';
 import type { Variant } from '../../../app/api/generated/models/variant';
@@ -117,42 +109,12 @@ function makeProduct(): Product {
     description: 'demo',
     specGroups: [],
     variants: [
-      makeVariant(
-        'demo-one-5g-graphite-256',
-        'graphite',
-        'Grafit',
-        256,
-        339_990,
-      ),
-      makeVariant(
-        'demo-one-5g-graphite-512',
-        'graphite',
-        'Grafit',
-        512,
-        378_390,
-      ),
-      makeVariant(
-        'demo-one-5g-silver-256',
-        'silver',
-        'Ezüst',
-        256,
-        344_990,
-      ),
-      makeVariant(
-        'demo-one-5g-silver-128',
-        'silver',
-        'Ezüst',
-        128,
-        299_990,
-      ),
+      makeVariant('demo-one-5g-graphite-256', 'graphite', 'Grafit', 256, 339_990),
+      makeVariant('demo-one-5g-graphite-512', 'graphite', 'Grafit', 512, 378_390),
+      makeVariant('demo-one-5g-silver-256', 'silver', 'Ezüst', 256, 344_990),
+      makeVariant('demo-one-5g-silver-128', 'silver', 'Ezüst', 128, 299_990),
     ],
-    defaultVariant: makeVariant(
-      'demo-one-5g-graphite-256',
-      'graphite',
-      'Grafit',
-      256,
-      339_990,
-    ),
+    defaultVariant: makeVariant('demo-one-5g-graphite-256', 'graphite', 'Grafit', 256, 339_990),
   };
 }
 
@@ -247,11 +209,7 @@ describe('T15 selectVariantByPair (AC02)', () => {
 });
 
 describe('T15 selectImageFromGallery (AC03)', () => {
-  const gallery: readonly Image[] = [
-    makeImage('img-a'),
-    makeImage('img-b'),
-    makeImage('img-c'),
-  ];
+  const gallery: readonly Image[] = [makeImage('img-a'), makeImage('img-b'), makeImage('img-c')];
 
   it('returns the image whose id matches when present', () => {
     const result = selectImageFromGallery(gallery, 'img-c');
@@ -326,13 +284,7 @@ describe('T15 validateQuantity (AC05)', () => {
 });
 
 describe('T15 computeAddToCartState (AC01 / AC04)', () => {
-  const variant = makeVariant(
-    'demo-one-5g-graphite-256',
-    'graphite',
-    'Grafit',
-    256,
-    339_990,
-  );
+  const variant = makeVariant('demo-one-5g-graphite-256', 'graphite', 'Grafit', 256, 339_990);
 
   it('disables when the variant is null', () => {
     const state = computeAddToCartState({
@@ -446,11 +398,9 @@ const delayedHandlers: DelayedHandler[] = [];
 const server = setupServer();
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
 
   server.listen({ onUnhandledRequest: 'error' });
 
@@ -602,10 +552,7 @@ describe('T15 ProductFacade — route loading via the SDK', () => {
 
   it('preserves the unknown variant id in invalidVariantQuery, keeps the default variant selected and disables add-to-cart (AC01)', async () => {
     const { facade, flushMicrotasks } = buildFacade();
-    facade.load(
-      'demo-one-5g',
-      new URLSearchParams('variant=demo-one-5g-does-not-exist'),
-    );
+    facade.load('demo-one-5g', new URLSearchParams('variant=demo-one-5g-does-not-exist'));
     await flushMicrotasks();
 
     const vm = facade.vm();
@@ -617,10 +564,7 @@ describe('T15 ProductFacade — route loading via the SDK', () => {
 
   it('clears the invalid query when the user explicitly picks a variant (AC01)', async () => {
     const { facade, flushMicrotasks } = buildFacade();
-    facade.load(
-      'demo-one-5g',
-      new URLSearchParams('variant=demo-one-5g-does-not-exist'),
-    );
+    facade.load('demo-one-5g', new URLSearchParams('variant=demo-one-5g-does-not-exist'));
     await flushMicrotasks();
     facade.selectVariant('demo-one-5g-silver-256');
     const vm = facade.vm();
@@ -649,9 +593,7 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     // Give the variant two distinct images so the gallery reset is observable.
     firstVariant.images = [makeImage('g-front'), makeImage('g-side')];
     product.defaultVariant = firstVariant;
-    server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)),
-    );
+    server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
     facade.load('demo-one-5g', new URLSearchParams());
@@ -724,9 +666,7 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     const firstVariant = product.variants[0];
     firstVariant.images = [makeImage('img-1'), makeImage('img-2'), makeImage('img-3')];
     product.defaultVariant = firstVariant;
-    server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)),
-    );
+    server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
     facade.load('demo-one-5g', new URLSearchParams());
@@ -774,9 +714,7 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     const firstVariant = product.variants[0];
     product.variants[1].availability = 'out_of_stock';
     product.defaultVariant = firstVariant;
-    server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)),
-    );
+    server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
     facade.load('demo-one-5g', new URLSearchParams());
@@ -792,10 +730,7 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
 describe('T15 ProductFacade — retry re-fires the most recent load (AC04)', () => {
   it('retry() re-issues the SDK call with the last slug and variant query', async () => {
     const { facade, flushMicrotasks } = buildFacade();
-    facade.load(
-      'demo-one-5g',
-      new URLSearchParams('variant=demo-one-5g-silver-256'),
-    );
+    facade.load('demo-one-5g', new URLSearchParams('variant=demo-one-5g-silver-256'));
     await flushMicrotasks();
 
     const before = captures.length;

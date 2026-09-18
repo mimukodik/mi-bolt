@@ -42,26 +42,11 @@ import { readFileSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
-import {
-  Injectable,
-  provideZonelessChangeDetection,
-} from '@angular/core';
-import {
-  provideRouter,
-  withComponentInputBinding,
-} from '@angular/router';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { Injectable, provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
-import {
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { Api } from '../../../app/api/generated/api';
 import { getConfig } from '../../../app/api/generated/fn/configuration/get-config';
@@ -97,11 +82,9 @@ function getComponentStyles(comp: unknown): readonly string[] {
 const workspaceRoot = resolvePath(process.cwd());
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   await TestBed.compileComponents();
 });
 
@@ -119,26 +102,41 @@ const homePageSource = [
   'src/app/features/home/home-page.ts',
   'src/app/features/home/home-page.html',
   'src/app/features/home/home-page.scss',
-].map((p) => {
-  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-  catch { return ''; }
-}).join('\n');
+]
+  .map((p) => {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+    } catch {
+      return '';
+    }
+  })
+  .join('\n');
 const heroSource = [
   'src/app/features/home/hero.ts',
   'src/app/features/home/hero.html',
   'src/app/features/home/hero.scss',
-].map((p) => {
-  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-  catch { return ''; }
-}).join('\n');
+]
+  .map((p) => {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+    } catch {
+      return '';
+    }
+  })
+  .join('\n');
 const featuredProductsSource = [
   'src/app/features/home/featured-products.ts',
   'src/app/features/home/featured-products.html',
   'src/app/features/home/featured-products.scss',
-].map((p) => {
-  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-  catch { return ''; }
-}).join('\n');
+]
+  .map((p) => {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+    } catch {
+      return '';
+    }
+  })
+  .join('\n');
 
 // ---------------------------------------------------------------------------
 // Stub Api: exposes the same surface the production home page uses
@@ -177,12 +175,7 @@ class StubApi {
     currency: 'HUF',
     isDemo: true,
     termsVersion: 'demo-1',
-    featuredSlugs: [
-      'demo-one-5g',
-      'demo-air-5g',
-      'demo-pro-5g',
-      'demo-lite-5g',
-    ],
+    featuredSlugs: ['demo-one-5g', 'demo-air-5g', 'demo-pro-5g', 'demo-lite-5g'],
     maximumLineQuantity: 5,
   };
 
@@ -215,14 +208,24 @@ class StubApi {
       this.nextProductError = null;
       return new Observable<Product>((subscriber) => {
         const sub = stream$.subscribe({
-          next: (p) => { subscriber.next(p); },
-          error: (err: unknown) => { subscriber.error(err); },
-          complete: () => { subscriber.complete(); },
+          next: (p) => {
+            subscriber.next(p);
+          },
+          error: (err: unknown) => {
+            subscriber.error(err);
+          },
+          complete: () => {
+            subscriber.complete();
+          },
         });
         if (errorPlan !== null && errorPlan.slug === slug) {
-          queueMicrotask(() => { subscriber.error(errorPlan.error); });
+          queueMicrotask(() => {
+            subscriber.error(errorPlan.error);
+          });
         }
-        return () => { sub.unsubscribe(); };
+        return () => {
+          sub.unsubscribe();
+        };
       });
     }
 
@@ -251,12 +254,7 @@ class StubApi {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const FEATURED_SLUGS = [
-  'demo-one-5g',
-  'demo-air-5g',
-  'demo-pro-5g',
-  'demo-lite-5g',
-] as const;
+const FEATURED_SLUGS = ['demo-one-5g', 'demo-air-5g', 'demo-pro-5g', 'demo-lite-5g'] as const;
 
 function money(amount: number): { amount: number; currency: 'HUF' } {
   return { amount, currency: 'HUF' };
@@ -272,11 +270,7 @@ function imageFor(slug: string): Image {
   };
 }
 
-function variantFor(
-  slug: string,
-  storageGb: 128 | 256 | 512,
-  price: number,
-): Variant {
+function variantFor(slug: string, storageGb: 128 | 256 | 512, price: number): Variant {
   return {
     id: `${slug}-${String(storageGb)}`,
     colorCode: 'graphite',
@@ -290,12 +284,7 @@ function variantFor(
   };
 }
 
-function makeProduct(
-  slug: string,
-  name: string,
-  brand: string,
-  price: number,
-): Product {
+function makeProduct(slug: string, name: string, brand: string, price: number): Product {
   const v256 = variantFor(slug, 256, price);
   return {
     id: slug,
@@ -335,10 +324,7 @@ function productFixtures(): Map<string, Product> {
 describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => {
   it('hero uses the dark shell token (R02) and the orange accent token (R03)', async () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([], withComponentInputBinding()),
-      ],
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
@@ -352,10 +338,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
 
   it('hero copy is live Hungarian text and contains no raster CTA image', async () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([], withComponentInputBinding()),
-      ],
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
@@ -368,9 +351,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(headingText.length).toBeGreaterThan(4);
     expect(headingText).not.toMatch(/[<>]/);
 
-    const ctaLink = raw.querySelector(
-      'a[data-testid="hero-cta"]',
-    );
+    const ctaLink = raw.querySelector('a[data-testid="hero-cta"]');
     expect(ctaLink).not.toBeNull();
     const ctaText = (ctaLink?.textContent ?? '').trim();
     expect(ctaText.length).toBeGreaterThan(2);
@@ -402,38 +383,28 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
 describe('T14-AC02 CTA + category shortcuts + featured details', () => {
   it('main CTA points to /telefonok', async () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([], withComponentInputBinding()),
-      ],
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
-    const cta = raw.querySelector(
-      'a[data-testid="hero-cta"]',
-    );
+    const cta = raw.querySelector('a[data-testid="hero-cta"]');
     expect(cta).not.toBeNull();
     expect(cta ? cta.getAttribute('href') : '').toBe('/telefonok');
   });
 
   it('category shortcuts set valid 5G / inStock filters', async () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([], withComponentInputBinding()),
-      ],
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
-    const shortcuts = Array.from(
-      raw.querySelectorAll('[data-testid^="shortcut-"]'),
-    );
+    const shortcuts = Array.from(raw.querySelectorAll('[data-testid^="shortcut-"]'));
     expect(shortcuts.length).toBeGreaterThanOrEqual(1);
 
     // The routerLink directive URL-encodes the rendered href
@@ -443,8 +414,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     let has5g = false;
     let hasInStock = false;
     shortcuts.forEach((s) => {
-      const url =
-        s.getAttribute('routerLink') ?? s.getAttribute('href') ?? '';
+      const url = s.getAttribute('routerLink') ?? s.getAttribute('href') ?? '';
       const decoded = decodeURIComponent(url);
       if (decoded.includes('is5g=true') && decoded.includes('inStock=true')) {
         hasBoth = true;
@@ -622,13 +592,10 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
-    const tiles = Array.from(
-      raw.querySelectorAll('[data-testid^="how-tile-"]'),
-    );
+    const tiles = Array.from(raw.querySelectorAll('[data-testid^="how-tile-"]'));
     expect(tiles.length).toBe(3);
 
-    const text = (raw.querySelector('[data-testid="how-demo-works"]'))
-      ?.textContent ?? '';
+    const text = raw.querySelector('[data-testid="how-demo-works"]')?.textContent ?? '';
     expect(text.length).toBeGreaterThan(0);
     expect(text).toMatch(/Böngészés/);
     expect(text).toMatch(/Kosár/);
@@ -664,23 +631,16 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
 describe('T14-AC05 mobile content order and 320 px clip safety', () => {
   it('mobile source order is heading, message, CTA, illustration, shortcuts', async () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([], withComponentInputBinding()),
-      ],
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
-    const heroSection = raw.querySelector(
-      '[data-testid="hero-section"]',
-    );
+    const heroSection = raw.querySelector('[data-testid="hero-section"]');
     expect(heroSection).not.toBeNull();
-    const inner = heroSection
-      ? heroSection.querySelector('.hero__inner')
-      : null;
+    const inner = heroSection ? heroSection.querySelector('.hero__inner') : null;
     expect(inner).not.toBeNull();
     const kids = inner ? Array.from(inner.children) : [];
     const expectedOrder = [
@@ -691,9 +651,7 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
       'hero-shortcuts',
     ];
     expectedOrder.forEach((id, idx) => {
-      const found = kids.findIndex(
-        (k) => k.getAttribute('data-testid') === id,
-      );
+      const found = kids.findIndex((k) => k.getAttribute('data-testid') === id);
       expect(found).toBe(idx);
     });
   });
@@ -709,18 +667,13 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
 
   it('hero CSS prevents clipping at narrow widths (word-break + max-width)', async () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([], withComponentInputBinding()),
-      ],
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
     await TestBed.compileComponents();
     TestBed.createComponent(Hero).detectChanges();
     const css = getComponentStyles(Hero).join(' ');
     const hasWrap =
-      css.includes('overflow-wrap') ||
-      css.includes('word-break') ||
-      css.includes('hyphens');
+      css.includes('overflow-wrap') || css.includes('word-break') || css.includes('hyphens');
     expect(hasWrap).toBe(true);
   });
 });

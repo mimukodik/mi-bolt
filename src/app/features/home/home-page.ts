@@ -71,9 +71,7 @@ export class HomePage {
   private readonly featuredSlugsSignal = signal<readonly string[] | null>(null);
 
   /** Per-slug request state captured from the SDK round-trips. */
-  private readonly slotsBySlugSignal = signal<
-    ReadonlyMap<string, FeaturedSlot>
-  >(new Map());
+  private readonly slotsBySlugSignal = signal<ReadonlyMap<string, FeaturedSlot>>(new Map());
 
   /** Stable list of `slots` derived from the two signals above. */
   readonly slots = computed<readonly FeaturedSlot[]>(() => {
@@ -164,14 +162,14 @@ export class HomePage {
    * on every change so consumers can rely on identity-based change
    * detection without us ever mutating a previously-emitted value.
    */
-  private updateSlot(
-    slug: string,
-    next: (prev: FeaturedSlot) => FeaturedSlot,
-  ): void {
+  private updateSlot(slug: string, next: (prev: FeaturedSlot) => FeaturedSlot): void {
     const prev = this.slotsBySlugSignal();
-    const current =
-      prev.get(slug) ??
-      ({ slug, status: 'loading' as const, product: null, error: null });
+    const current = prev.get(slug) ?? {
+      slug,
+      status: 'loading' as const,
+      product: null,
+      error: null,
+    };
     const updated = next(current);
     const map = new Map(prev);
     map.set(slug, updated);

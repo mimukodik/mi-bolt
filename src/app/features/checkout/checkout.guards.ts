@@ -206,9 +206,7 @@ export function guardForSegment(step: 'cart' | 'contact' | 'delivery' | 'review'
       return redirectToStep('cart', 'empty-cart');
     }
     if (step === 'success') {
-      return checkout.order() !== null
-        ? true
-        : redirectToStep('cart', 'deep-link');
+      return checkout.order() !== null ? true : redirectToStep('cart', 'deep-link');
     }
     const session = checkout.session();
     const target = step;

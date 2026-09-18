@@ -39,7 +39,9 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 describe('StatusMessage primitive', () => {
   it('renders the supplied message as live text', () => {
     const { fixture } = setup();
-    expect(getNativeElement(fixture).querySelector('.message')?.textContent).toContain('A művelet sikeres volt.');
+    expect(getNativeElement(fixture).querySelector('.message')?.textContent).toContain(
+      'A művelet sikeres volt.',
+    );
   });
 
   it('uses role=status + aria-live=polite for info', () => {

@@ -60,25 +60,13 @@
  * `DeliveryStep` do.
  */
 
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import {
-  FormField,
-  type FieldTree,
-} from '@angular/forms/signals';
+import { FormField, type FieldTree } from '@angular/forms/signals';
 
 import { CheckoutFacade } from './checkout.facade';
 import { CartFacade } from '../cart/cart.facade';
-import {
-  QuoteController,
-  type QuoteState,
-} from './quote-state';
+import { QuoteController, type QuoteState } from './quote-state';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -237,10 +225,7 @@ export class ReviewStep {
   });
 
   readonly busy = computed<boolean>(
-    () =>
-      this.quoteController.busy() ||
-      this.submitting() ||
-      this.checkoutFacade.busy(),
+    () => this.quoteController.busy() || this.submitting() || this.checkoutFacade.busy(),
   );
 
   /** Total-driven summary inputs. The OrderSummary primitive

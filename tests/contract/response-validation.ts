@@ -35,13 +35,7 @@ export const REQUIRED_OPERATION_COUNT = 16;
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
-export const HTTP_METHODS: readonly HttpMethod[] = [
-  'get',
-  'post',
-  'put',
-  'patch',
-  'delete',
-];
+export const HTTP_METHODS: readonly HttpMethod[] = ['get', 'post', 'put', 'patch', 'delete'];
 
 export type SpecPaths = Record<string, Record<string, SpecOperation>>;
 
@@ -50,7 +44,15 @@ export type SpecParameter = {
   in?: string;
   name?: string;
   required?: boolean;
-  schema?: { type?: string; enum?: unknown[]; format?: string; pattern?: string; minimum?: number; maximum?: number; maxLength?: number };
+  schema?: {
+    type?: string;
+    enum?: unknown[];
+    format?: string;
+    pattern?: string;
+    minimum?: number;
+    maximum?: number;
+    maxLength?: number;
+  };
   description?: string;
 };
 
@@ -61,7 +63,10 @@ export type SpecOperation = {
     required?: boolean;
     content?: Record<string, { schema?: unknown }>;
   };
-  responses?: Record<string, { description?: string; content?: Record<string, { schema?: unknown }> }>;
+  responses?: Record<
+    string,
+    { description?: string; content?: Record<string, { schema?: unknown }> }
+  >;
   tags?: string[];
 };
 
@@ -70,7 +75,10 @@ export type OpenApiSpec = {
   paths?: SpecPaths;
   components?: {
     schemas?: Record<string, unknown>;
-    parameters?: Record<string, { in?: string; name?: string; required?: boolean; schema?: unknown }>;
+    parameters?: Record<
+      string,
+      { in?: string; name?: string; required?: boolean; schema?: unknown }
+    >;
   };
 };
 
@@ -139,7 +147,9 @@ function buildAjv(): Ajv {
  * caller uses this to drive every assertion in the contract suite so
  * adding a 17th operation to the spec cannot go unnoticed.
  */
-export function collectOperations(spec: OpenApiSpec = derefSpecCache ?? ensureRawSpec()): OperationDescriptor[] {
+export function collectOperations(
+  spec: OpenApiSpec = derefSpecCache ?? ensureRawSpec(),
+): OperationDescriptor[] {
   const rows: OperationDescriptor[] = [];
   for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
     if (!pathItem || typeof pathItem !== 'object') continue;
@@ -152,7 +162,9 @@ export function collectOperations(spec: OpenApiSpec = derefSpecCache ?? ensureRa
       const documented = Object.keys(op.responses ?? {});
       const success = pickSuccessStatus(documented);
       const hasRequestBody = typeof op.requestBody === 'object' && op.requestBody !== null;
-      const bodyRequired = Boolean(op.requestBody && 'required' in op.requestBody ? op.requestBody.required : false);
+      const bodyRequired = Boolean(
+        op.requestBody && 'required' in op.requestBody ? op.requestBody.required : false,
+      );
       const tag = Array.isArray(op.tags) && typeof op.tags[0] === 'string' ? op.tags[0] : '';
       rows.push({
         operationId: op.operationId,
@@ -177,11 +189,7 @@ function pickSuccessStatus(statuses: string[]): string {
   return ok ?? statuses[0] ?? '200';
 }
 
-function collectPathParams(
-  path: string,
-  params: SpecParameter[],
-  spec: OpenApiSpec,
-): string[] {
+function collectPathParams(path: string, params: SpecParameter[], spec: OpenApiSpec): string[] {
   const matches = path.matchAll(/\{([^}]+)\}/g);
   const names = Array.from(matches, (m) => m[1] ?? '').filter((n) => n.length > 0);
   const components = spec.components?.parameters ?? {};
@@ -235,7 +243,9 @@ export function compileRequestValidator(operationId: string): ValidateFunction |
 
 export function getProblemValidator(): ValidateFunction {
   if (!problemValidator) {
-    throw new Error('[mi-bolt/contract] Problem validator is not compiled; call loadOpenApiSpec() first');
+    throw new Error(
+      '[mi-bolt/contract] Problem validator is not compiled; call loadOpenApiSpec() first',
+    );
   }
   return problemValidator;
 }
@@ -262,7 +272,9 @@ function precompileValidators(): void {
 
   const operations = collectOperations(derefSpecCache);
   for (const op of operations) {
-    const opSpec = (derefSpecCache.paths?.[op.path] as Record<string, SpecOperation | undefined> | undefined)?.[op.method];
+    const opSpec = (
+      derefSpecCache.paths?.[op.path] as Record<string, SpecOperation | undefined> | undefined
+    )?.[op.method];
     if (!opSpec) continue;
     const statusMap = new Map<string, ValidateFunction>();
     const responses = opSpec.responses ?? {};
@@ -296,11 +308,15 @@ function precompileValidators(): void {
  * the spec rather than maintained by hand; T26-AC03 walks it to drive
  * the negative-path coverage.
  */
-export function buildProblemCodeMatrix(spec: OpenApiSpec = derefSpecCache ?? ensureRawSpec()): Map<string, Set<string>> {
+export function buildProblemCodeMatrix(
+  spec: OpenApiSpec = derefSpecCache ?? ensureRawSpec(),
+): Map<string, Set<string>> {
   const matrix = new Map<string, Set<string>>();
   const operations = collectOperations(spec);
   for (const op of operations) {
-    const opSpec = (spec.paths?.[op.path] as Record<string, SpecOperation | undefined> | undefined)?.[op.method];
+    const opSpec = (
+      spec.paths?.[op.path] as Record<string, SpecOperation | undefined> | undefined
+    )?.[op.method];
     if (!opSpec) continue;
     for (const [status, response] of Object.entries(opSpec.responses ?? {})) {
       if (!status.startsWith('4') && !status.startsWith('5')) continue;
@@ -331,7 +347,11 @@ function collectCodesFromSchema(schema: unknown): string[] {
       return;
     }
     const record = node as Record<string, unknown>;
-    if (Array.isArray(record['enum']) && typeof record['type'] === 'string' && record['type'] === 'string') {
+    if (
+      Array.isArray(record['enum']) &&
+      typeof record['type'] === 'string' &&
+      record['type'] === 'string'
+    ) {
       for (const value of record['enum']) {
         if (typeof value === 'string') codes.push(value);
       }

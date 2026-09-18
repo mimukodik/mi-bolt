@@ -11,10 +11,7 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection, type Type } from '@angular/core';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -36,11 +33,9 @@ import { AccessibleDialog } from '../../app/shared/ui/accessible-dialog/accessib
 import { FooterNav } from '../../app/core/navigation/footer-nav';
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
 });
 
 function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
@@ -247,7 +242,9 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(raw.textContent).toContain('Vissza a shopba');
     const checkoutHeader = raw.querySelector('[data-testid="checkout-header"]');
     expect(checkoutHeader).not.toBeNull();
-    const search = checkoutHeader ? checkoutHeader.querySelector('[data-testid="header-search"]') : null;
+    const search = checkoutHeader
+      ? checkoutHeader.querySelector('[data-testid="header-search"]')
+      : null;
     expect(search).toBeNull();
   });
 

@@ -69,7 +69,13 @@ function variant(
     availability,
     maxQuantity,
     images: [
-      { id: `${id}-front`, src: '/assets/products/graphite-front.webp', alt: 'front', width: 320, height: 400 },
+      {
+        id: `${id}-front`,
+        src: '/assets/products/graphite-front.webp',
+        alt: 'front',
+        width: 320,
+        height: 400,
+      },
     ],
   };
 }
@@ -116,26 +122,16 @@ describe('normalizeQuery / normalizeBrand(s)', () => {
   });
 
   it('drops whitespace-only entries from a brand array', () => {
-    expect(normalizeBrands(['  ', 'MiBolt', '', '   Sample   '])).toEqual([
-      'mibolt',
-      'sample',
-    ]);
+    expect(normalizeBrands(['  ', 'MiBolt', '', '   Sample   '])).toEqual(['mibolt', 'sample']);
   });
 });
 
 describe('findMatchingVariant', () => {
-  const p = product(
-    'p-A',
-    'demo-a',
-    'MiBolt Demo',
-    'Demo A',
-    true,
-    [
-      variant('a-128', 100_000, 128),
-      variant('a-256', 200_000, 256),
-      variant('a-512', 300_000, 512),
-    ],
-  );
+  const p = product('p-A', 'demo-a', 'MiBolt Demo', 'Demo A', true, [
+    variant('a-128', 100_000, 128),
+    variant('a-256', 200_000, 256),
+    variant('a-512', 300_000, 512),
+  ]);
 
   it('returns the cheapest variant when no filter is applied', () => {
     expect(findMatchingVariant(p, EMPTY_FILTER)?.id).toBe('a-128');
@@ -155,35 +151,21 @@ describe('findMatchingVariant', () => {
   });
 
   it('requires an in-stock variant when inStock=true', () => {
-    const mixed = product(
-      'p-B',
-      'demo-b',
-      'MiBolt Demo',
-      'Demo B',
-      true,
-      [
-        variant('b-out', 50_000, 128, 'out_of_stock', 0),
-        variant('b-in', 60_000, 256, 'in_stock', 3),
-      ],
-    );
+    const mixed = product('p-B', 'demo-b', 'MiBolt Demo', 'Demo B', true, [
+      variant('b-out', 50_000, 128, 'out_of_stock', 0),
+      variant('b-in', 60_000, 256, 'in_stock', 3),
+    ]);
     expect(findMatchingVariant(mixed, { ...EMPTY_FILTER, inStock: true })?.id).toBe('b-in');
     // Without the inStock filter the cheapest overall variant wins.
     expect(findMatchingVariant(mixed, EMPTY_FILTER)?.id).toBe('b-out');
   });
 
   it('breaks ties on equal prices by variant id ascending', () => {
-    const tied = product(
-      'p-C',
-      'demo-c',
-      'MiBolt Demo',
-      'Demo C',
-      true,
-      [
-        variant('c-z', 100_000, 128),
-        variant('c-a', 100_000, 128),
-        variant('c-m', 100_000, 128),
-      ],
-    );
+    const tied = product('p-C', 'demo-c', 'MiBolt Demo', 'Demo C', true, [
+      variant('c-z', 100_000, 128),
+      variant('c-a', 100_000, 128),
+      variant('c-m', 100_000, 128),
+    ]);
     expect(findMatchingVariant(tied, EMPTY_FILTER)?.id).toBe('c-a');
   });
 
@@ -206,7 +188,9 @@ describe('matchProduct (AC01 same-variant conjunction)', () => {
   const featuredSet = new Set<string>(['demo-x']);
 
   it('matches q against brand and name (case-insensitive, NFC)', () => {
-    const p = product('p-1', 'demo-x', 'MiBolt Demo', 'Demo X 5G', true, [variant('x-256', 200_000, 256)]);
+    const p = product('p-1', 'demo-x', 'MiBolt Demo', 'Demo X 5G', true, [
+      variant('x-256', 200_000, 256),
+    ]);
     expect(matchProduct(p, { ...EMPTY_FILTER, q: 'demo x' }, featuredSet)?.product.id).toBe('p-1');
     expect(matchProduct(p, { ...EMPTY_FILTER, q: 'mibolt' }, featuredSet)?.product.id).toBe('p-1');
     expect(matchProduct(p, { ...EMPTY_FILTER, q: 'nope' }, featuredSet)).toBeNull();
@@ -217,26 +201,25 @@ describe('matchProduct (AC01 same-variant conjunction)', () => {
   it('applies brand filter as OR within the facet', () => {
     const a = product('p-A', 'a', 'Alpha', 'Alpha Phone', true, [variant('a-1', 100_000, 256)]);
     const b = product('p-B', 'b', 'Beta', 'Beta Phone', true, [variant('b-1', 100_000, 256)]);
-    expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['alpha'] }, featuredSet)?.product.id).toBe('p-A');
-    expect(matchProduct(b, { ...EMPTY_FILTER, brands: ['Alpha', 'Beta'] }, featuredSet)?.product.id).toBe('p-B');
+    expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['alpha'] }, featuredSet)?.product.id).toBe(
+      'p-A',
+    );
+    expect(
+      matchProduct(b, { ...EMPTY_FILTER, brands: ['Alpha', 'Beta'] }, featuredSet)?.product.id,
+    ).toBe('p-B');
     expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['beta'] }, featuredSet)).toBeNull();
     // Empty brand array (after normalize) applies no filter.
-    expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['  '] }, featuredSet)?.product.id).toBe('p-A');
+    expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['  '] }, featuredSet)?.product.id).toBe(
+      'p-A',
+    );
   });
 
   it('returns null when no single variant satisfies every across-facet condition (AC01)', () => {
-    const p = product(
-      'p-AC01',
-      'demo-ac01',
-      'BrandX',
-      'Demo AC01',
-      true,
-      [
-        variant('cheap-128', 250_000, 128),
-        variant('mid-256', 250_000, 256),
-        variant('out-512', 180_000, 512, 'out_of_stock', 0),
-      ],
-    );
+    const p = product('p-AC01', 'demo-ac01', 'BrandX', 'Demo AC01', true, [
+      variant('cheap-128', 250_000, 128),
+      variant('mid-256', 250_000, 256),
+      variant('out-512', 180_000, 512, 'out_of_stock', 0),
+    ]);
     const filter: CatalogFilter = {
       ...EMPTY_FILTER,
       minPrice: 0,
@@ -248,30 +231,36 @@ describe('matchProduct (AC01 same-variant conjunction)', () => {
     expect(matchProduct(p, filter, featuredSet)).toBeNull();
 
     // Replace the 256 GB variant with one inside the price range.
-    const ok = product(
-      'p-AC01b',
-      'demo-ac01b',
-      'BrandX',
-      'Demo AC01b',
-      true,
-      [
-        variant('cheap-128', 250_000, 128),
-        variant('mid-256', 150_000, 256),
-        variant('out-512', 180_000, 512, 'out_of_stock', 0),
-      ],
-    );
+    const ok = product('p-AC01b', 'demo-ac01b', 'BrandX', 'Demo AC01b', true, [
+      variant('cheap-128', 250_000, 128),
+      variant('mid-256', 150_000, 256),
+      variant('out-512', 180_000, 512, 'out_of_stock', 0),
+    ]);
     const match = matchProduct(ok, filter, featuredSet);
     expect(match?.matchingVariant.id).toBe('mid-256');
   });
 
   it('enforces is5g and featured against the product and the featured-slug set', () => {
-    const fiveG = product('p-5', 'demo-5', 'BrandX', 'Demo 5G', true, [variant('5-256', 100_000, 256)]);
-    const fourG = product('p-4', 'demo-4', 'BrandX', 'Demo 4G', false, [variant('4-256', 100_000, 256)]);
-    expect(matchProduct(fiveG, { ...EMPTY_FILTER, is5g: true }, featuredSet)?.product.id).toBe('p-5');
+    const fiveG = product('p-5', 'demo-5', 'BrandX', 'Demo 5G', true, [
+      variant('5-256', 100_000, 256),
+    ]);
+    const fourG = product('p-4', 'demo-4', 'BrandX', 'Demo 4G', false, [
+      variant('4-256', 100_000, 256),
+    ]);
+    expect(matchProduct(fiveG, { ...EMPTY_FILTER, is5g: true }, featuredSet)?.product.id).toBe(
+      'p-5',
+    );
     expect(matchProduct(fourG, { ...EMPTY_FILTER, is5g: true }, featuredSet)).toBeNull();
-    expect(matchProduct(fiveG, { ...EMPTY_FILTER, featured: true }, new Set(['demo-5']))?.product.id).toBe('p-5');
-    expect(matchProduct(fiveG, { ...EMPTY_FILTER, featured: true }, new Set(['demo-other']))).toBeNull();
-    expect(matchProduct(fiveG, { ...EMPTY_FILTER, featured: false }, new Set(['demo-other']))?.product.id).toBe('p-5');
+    expect(
+      matchProduct(fiveG, { ...EMPTY_FILTER, featured: true }, new Set(['demo-5']))?.product.id,
+    ).toBe('p-5');
+    expect(
+      matchProduct(fiveG, { ...EMPTY_FILTER, featured: true }, new Set(['demo-other'])),
+    ).toBeNull();
+    expect(
+      matchProduct(fiveG, { ...EMPTY_FILTER, featured: false }, new Set(['demo-other']))?.product
+        .id,
+    ).toBe('p-5');
   });
 });
 
@@ -320,7 +309,10 @@ describe('sortMatches', () => {
 describe('paginateMatches', () => {
   function mk(id: string, price = 100_000): ProductMatch {
     const v = variant(`v-${id}`, price, 256);
-    return { product: product(id, `slug-${id}`, 'BrandX', `Name ${id}`, true, [v]), matchingVariant: v };
+    return {
+      product: product(id, `slug-${id}`, 'BrandX', `Name ${id}`, true, [v]),
+      matchingVariant: v,
+    };
   }
   const matches = Array.from({ length: 5 }, (_, i) => mk(`p-${String(i)}`));
 
@@ -336,8 +328,18 @@ describe('paginateMatches', () => {
     const many = Array.from({ length: 25 }, (_, i) => mk(`p-${i.toString().padStart(2, '0')}`));
     const page = paginateMatches(many, 2, 12);
     expect(page.items.map((m) => m.product.id)).toEqual([
-      'p-12', 'p-13', 'p-14', 'p-15', 'p-16', 'p-17',
-      'p-18', 'p-19', 'p-20', 'p-21', 'p-22', 'p-23',
+      'p-12',
+      'p-13',
+      'p-14',
+      'p-15',
+      'p-16',
+      'p-17',
+      'p-18',
+      'p-19',
+      'p-20',
+      'p-21',
+      'p-22',
+      'p-23',
     ]);
   });
 
@@ -395,7 +397,9 @@ describe('parseCatalogFilter happy paths', () => {
 
   it('parses every supported query parameter', () => {
     const result = parseCatalogFilter(
-      paramsOf('q=demo&brand=MiBolt&brand=Sample&storageGb=128&storageGb=256&minPrice=10000&maxPrice=500000&inStock=true&is5g=true&featured=true&sort=price_desc&page=2&pageSize=24'),
+      paramsOf(
+        'q=demo&brand=MiBolt&brand=Sample&storageGb=128&storageGb=256&minPrice=10000&maxPrice=500000&inStock=true&is5g=true&featured=true&sort=price_desc&page=2&pageSize=24',
+      ),
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -518,12 +522,8 @@ describe('buildFacets', () => {
       variant('a-128', 100_000, 128),
       variant('a-256', 200_000, 256),
     ]),
-    product('p-B', 'b', 'Beta', 'Beta Phone', false, [
-      variant('b-256', 150_000, 256),
-    ]),
-    product('p-C', 'c', 'Alpha', 'Alpha Plus', true, [
-      variant('c-512', 300_000, 512),
-    ]),
+    product('p-B', 'b', 'Beta', 'Beta Phone', false, [variant('b-256', 150_000, 256)]),
+    product('p-C', 'c', 'Alpha', 'Alpha Plus', true, [variant('c-512', 300_000, 512)]),
   ];
 
   it('brand facet counts distinct products per brand without the brand filter', () => {
@@ -552,7 +552,9 @@ describe('buildFacets', () => {
 
   it('surfaces unknown storage values for forward compatibility', () => {
     const weird = [
-      product('p-Q', 'q', 'BrandQ', 'BrandQ Phone', true, [variant('q-1024', 100_000, 1024 as 128 | 256 | 512)]),
+      product('p-Q', 'q', 'BrandQ', 'BrandQ Phone', true, [
+        variant('q-1024', 100_000, 1024 as 128 | 256 | 512),
+      ]),
     ];
     const facets = buildFacets(weird, EMPTY_FILTER, []);
     const found = facets.storageGb.find((f) => f.value === '1024');
@@ -563,7 +565,9 @@ describe('buildFacets', () => {
     // No product has a 256 GB variant; the brand facet is empty and the
     // storage facet reports 0 for the 256 bucket while keeping the rest
     // at 0 too because no product passes filterWithoutStorage either.
-    const noMatch = product('p-N', 'n', 'NoMatch', 'NoMatch Phone', true, [variant('n-128', 100_000, 128)]);
+    const noMatch = product('p-N', 'n', 'NoMatch', 'NoMatch Phone', true, [
+      variant('n-128', 100_000, 128),
+    ]);
     const facets = buildFacets([noMatch], { ...EMPTY_FILTER, storageGb: [256] }, []);
     expect(facets.brands).toEqual([]);
     // The product's 128 GB variant still passes filterWithoutStorage, so
@@ -591,7 +595,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isProduct(value: unknown): value is Product {
   if (!isRecord(value)) return false;
-  return typeof value['id'] === 'string' && typeof value['slug'] === 'string' && Array.isArray(value['variants']);
+  return (
+    typeof value['id'] === 'string' &&
+    typeof value['slug'] === 'string' &&
+    Array.isArray(value['variants'])
+  );
 }
 
 function isProductArray(value: unknown): value is readonly Product[] {
@@ -639,9 +647,7 @@ interface ProductPageResponse {
 function isProductPageResponse(data: unknown): data is ProductPageResponse {
   if (!isRecord(data)) return false;
   return (
-    typeof data['total'] === 'number' &&
-    Array.isArray(data['items']) &&
-    isRecord(data['facets'])
+    typeof data['total'] === 'number' && Array.isArray(data['items']) && isRecord(data['facets'])
   );
 }
 
@@ -755,7 +761,10 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     // product id. We assert the order is monotonic in (price, id).
     const response = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
     const body = await readJson(response, isProductPageResponse);
-    interface Row { id: string; price: number; }
+    interface Row {
+      id: string;
+      price: number;
+    }
     const rows: Row[] = body.items.map((i) => ({
       id: i.id,
       price: i.defaultVariant.price.amount,
@@ -791,9 +800,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     const a = await readJson(resA, isProductPageResponse);
     const resB = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
     const b = await readJson(resB, isProductPageResponse);
-    expect(a.items.map((i) => i.id)).toEqual(
-      b.items.map((i) => i.id),
-    );
+    expect(a.items.map((i) => i.id)).toEqual(b.items.map((i) => i.id));
   });
 
   it('repeated brand[] params are applied as OR within the facet (AC05)', async () => {
@@ -824,13 +831,9 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('AC03: brand facet counts are independent of the brand filter', async () => {
     const resAll = await fetch(`${BASE_URL}/products`);
     const all = await readJson(resAll, isProductPageResponse);
-    const resFiltered = await fetch(
-      `${BASE_URL}/products?brand=MiBolt%20Demo`,
-    );
+    const resFiltered = await fetch(`${BASE_URL}/products?brand=MiBolt%20Demo`);
     const filtered = await readJson(resFiltered, isProductPageResponse);
-    const allBrands = Object.fromEntries(
-      all.facets.brands.map((f) => [f.value, f.count]),
-    );
+    const allBrands = Object.fromEntries(all.facets.brands.map((f) => [f.value, f.count]));
     const filteredBrands = Object.fromEntries(
       filtered.facets.brands.map((f) => [f.value, f.count]),
     );
@@ -841,13 +844,9 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('AC03: storage facet counts are independent of the storage filter', async () => {
     const resAll = await fetch(`${BASE_URL}/products`);
     const all = await readJson(resAll, isProductPageResponse);
-    const resFiltered = await fetch(
-      `${BASE_URL}/products?storageGb=256`,
-    );
+    const resFiltered = await fetch(`${BASE_URL}/products?storageGb=256`);
     const filtered = await readJson(resFiltered, isProductPageResponse);
-    const allStorage = Object.fromEntries(
-      all.facets.storageGb.map((f) => [f.value, f.count]),
-    );
+    const allStorage = Object.fromEntries(all.facets.storageGb.map((f) => [f.value, f.count]));
     const filteredStorage = Object.fromEntries(
       filtered.facets.storageGb.map((f) => [f.value, f.count]),
     );
@@ -863,9 +862,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   });
 
   it('returns 200 with empty items when the combination yields no products', async () => {
-    const response = await fetch(
-      `${BASE_URL}/products?minPrice=0&maxPrice=10`,
-    );
+    const response = await fetch(`${BASE_URL}/products?minPrice=0&maxPrice=10`);
     expect(response.status).toBe(200);
     const body = await readJson(response, isProductPageResponse);
     expect(body.total).toBe(0);

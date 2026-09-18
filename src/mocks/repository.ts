@@ -14,7 +14,10 @@
  */
 
 /** Money in whole HUF, no minor units. */
-export interface Money { amount: number; currency: 'HUF' }
+export interface Money {
+  amount: number;
+  currency: 'HUF';
+}
 
 /** Single product image rendered by the catalogue and PDP. */
 export interface Image {
@@ -42,7 +45,10 @@ export interface Variant {
 }
 
 /** One spec row in a spec group. */
-export interface SpecRow { label: string; value: string }
+export interface SpecRow {
+  label: string;
+  value: string;
+}
 
 /** One spec group shown on the product page. */
 export interface SpecGroup {

@@ -36,29 +36,10 @@ export const REPO_ROOT = resolve(__dirname, '..');
 
 export const REQUIRED_OPERATION_IDS = 16;
 
-const HTTP_METHODS = new Set([
-  'get',
-  'post',
-  'put',
-  'patch',
-  'delete',
-  'options',
-  'head',
-]);
+const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'options', 'head']);
 
 const KNOWN_2XX = new Set(['200', '201', '202', '203', '204', '206']);
-const KNOWN_4XX = new Set([
-  '400',
-  '401',
-  '403',
-  '404',
-  '409',
-  '410',
-  '413',
-  '415',
-  '422',
-  '429',
-]);
+const KNOWN_4XX = new Set(['400', '401', '403', '404', '409', '410', '413', '415', '422', '429']);
 const KNOWN_5XX = new Set(['500', '502', '503', '504']);
 
 // ---------------------------------------------------------------------------
@@ -183,8 +164,7 @@ export function assertRepeatedQueryEncoding(spec) {
             parameter: param.name,
             style: param.style ?? null,
             explode: param.explode ?? null,
-            reason:
-              `Repeated query array parameter "${param.name}" must use style=form, explode=true`,
+            reason: `Repeated query array parameter "${param.name}" must use style=form, explode=true`,
           });
         }
       }
@@ -217,20 +197,14 @@ export function assertStatusCodes(spec) {
           continue;
         }
         const bucket = `${status[0]}XX`;
-        const known =
-          bucket === '2XX'
-            ? KNOWN_2XX
-            : bucket === '4XX'
-              ? KNOWN_4XX
-              : KNOWN_5XX;
+        const known = bucket === '2XX' ? KNOWN_2XX : bucket === '4XX' ? KNOWN_4XX : KNOWN_5XX;
         if (!known.has(status)) {
           errors.push({
             kind: 'unexpected-status-code',
             operationId: op.operationId,
             path: `${method.toUpperCase()} ${pathKey}`,
             status,
-            reason:
-              `Response status "${status}" is not in the project's documented set`,
+            reason: `Response status "${status}" is not in the project's documented set`,
           });
         }
       }
@@ -437,7 +411,7 @@ export function assertFixturesShape(products) {
       reason: 'products fixture must contain at least one product with multiple variants',
     });
   }
-  const allVariants = products.flatMap((p) => Array.isArray(p?.variants) ? p.variants : []);
+  const allVariants = products.flatMap((p) => (Array.isArray(p?.variants) ? p.variants : []));
   if (allVariants.length === 0) {
     errors.push({ kind: 'fixture-no-variants', reason: 'products fixture has no variants' });
   }
@@ -451,12 +425,17 @@ export function assertFixturesShape(products) {
     });
   }
   const lowStock = allVariants.filter(
-    (v) => v?.availability === 'in_stock' && typeof v?.maxQuantity === 'number' && v.maxQuantity <= 2 && v.maxQuantity > 0,
+    (v) =>
+      v?.availability === 'in_stock' &&
+      typeof v?.maxQuantity === 'number' &&
+      v.maxQuantity <= 2 &&
+      v.maxQuantity > 0,
   );
   if (lowStock.length === 0) {
     errors.push({
       kind: 'fixture-no-low-stock',
-      reason: 'products fixture must contain at least one low-stock scenario (maxQuantity in (0..2])',
+      reason:
+        'products fixture must contain at least one low-stock scenario (maxQuantity in (0..2])',
     });
   }
   // Real Hungarian operators are explicitly forbidden in the fixture set;
@@ -473,7 +452,9 @@ export function assertFixturesShape(products) {
     'digi.hu',
   ]);
   for (const p of products) {
-    const brand = String(p?.brand ?? '').trim().toLowerCase();
+    const brand = String(p?.brand ?? '')
+      .trim()
+      .toLowerCase();
     if (brand && FORBIDDEN_OPERATORS.has(brand)) {
       errors.push({
         kind: 'fixture-operator-name',
@@ -488,9 +469,7 @@ export function assertFixturesShape(products) {
 
 export function assertFixturesSchema(products, ajv = buildAjv()) {
   const errors = [];
-  const validate = ajv.getSchema(
-    'https://example.invalid/dummy',
-  );
+  const validate = ajv.getSchema('https://example.invalid/dummy');
   // We accept the schema from the spec is needed, so this function expects
   // the dereferenced spec to be passed separately. See validateContract.
   if (!validate) {
@@ -518,12 +497,7 @@ export async function dereferenceSpec(spec) {
  * @param {object|null} input.packageJson Parsed package.json
  * @returns {{ok:boolean, summary:string, errors:object[], stats:object}}
  */
-export function validateContract({
-  spec,
-  dereferenced,
-  products,
-  packageJson,
-}) {
+export function validateContract({ spec, dereferenced, products, packageJson }) {
   const errors = [];
 
   // AC01 — operationIds
@@ -551,7 +525,8 @@ export function validateContract({
   if (!dereferenced) {
     errors.push({
       kind: 'ref-dereference-failed',
-      reason: 'json-schema-ref-parser could not dereference the spec; one or more $ref points are unresolved',
+      reason:
+        'json-schema-ref-parser could not dereference the spec; one or more $ref points are unresolved',
     });
   }
 

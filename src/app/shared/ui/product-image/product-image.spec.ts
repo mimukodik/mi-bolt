@@ -88,20 +88,26 @@ describe('ProductImage primitive', () => {
 
   it('swaps to a neutral named fallback on image error rather than a random photo', () => {
     const { fixture, host } = setup();
-    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>('[data-testid="image-photo"]');
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
     if (!photo) {
       throw new Error('Expected image photo');
     }
     photo.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     expect(host.failedCount()).toBe(1);
-    expect(getNativeElement(fixture).querySelector('[data-testid="image-fallback"]')).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="image-fallback"]'),
+    ).not.toBeNull();
     expect(getNativeElement(fixture).querySelector('[data-testid="image-photo"]')).toBeNull();
   });
 
   it('emits loadFailed exactly once per failure', () => {
     const { fixture, host } = setup();
-    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>('[data-testid="image-photo"]');
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
     if (!photo) {
       throw new Error('Expected image photo');
     }
@@ -113,7 +119,9 @@ describe('ProductImage primitive', () => {
 
   it('renders the product-name initial as the fallback marker', () => {
     const { fixture, host } = setup();
-    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>('[data-testid="image-photo"]');
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
     if (!photo) {
       throw new Error('Expected image photo');
     }

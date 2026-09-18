@@ -9,12 +9,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  mkdtempSync,
-  mkdirSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -29,11 +24,7 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = resolve(__dirname, 'verify-skill-evidence.mjs');
-const SKILL_LOCATION = resolve(
-  __dirname,
-  '..',
-  'docs/mi-bolt/execution/skill-location.json',
-);
+const SKILL_LOCATION = resolve(__dirname, '..', 'docs/mi-bolt/execution/skill-location.json');
 const REPO_ROOT = resolve(__dirname, '..');
 
 function makeSkillFixture({ sha256, version, omitRefs = [] } = {}) {
@@ -135,9 +126,7 @@ test('verify-skill-evidence: rejects when a required reference file is missing',
       result.errors.some((e) => e.kind === 'reference-file-missing'),
       `expected a reference-file-missing error, got ${JSON.stringify(result.errors)}`,
     );
-    const missing = result.errors.find(
-      (e) => e.kind === 'reference-file-missing',
-    );
+    const missing = result.errors.find((e) => e.kind === 'reference-file-missing');
     assert.equal(missing.file, '04-content-commerce.md');
   } finally {
     rmSync(dir, { recursive: true, force: true });

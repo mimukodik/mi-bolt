@@ -42,7 +42,8 @@ import { CheckoutLayout } from './layouts/checkout-layout';
  * browser builds skip the whole body via the `process` guard.
  */
 async function resolveLazyResources(): Promise<void> {
-  const proc = (globalThis as { process?: { versions?: { node?: string }; cwd?: () => string } }).process;
+  const proc = (globalThis as { process?: { versions?: { node?: string }; cwd?: () => string } })
+    .process;
   if (!proc?.versions?.node) return;
   const core = await import('@angular/core');
   // The `node:fs` / `node:path` module specifiers are concatenated so
@@ -173,8 +174,7 @@ export const routes: Routes = [
     // `deliveryGuard`, `reviewGuard` and `successGuard` — without
     // this indirection the inline `loadComponent`s below would skip
     // every guard and the wizard would not enforce T19 / T24.
-    loadChildren: () =>
-      import('./features/checkout/checkout.routes').then((m) => m.checkoutRoutes),
+    loadChildren: () => import('./features/checkout/checkout.routes').then((m) => m.checkoutRoutes),
   },
   // Utility 404 — wrapped in the ShopLayout chrome so the user keeps
   // the standard header/footer when an unknown URL is hit.

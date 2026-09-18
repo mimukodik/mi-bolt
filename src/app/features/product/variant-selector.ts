@@ -125,9 +125,7 @@ export class VariantSelector {
   }
 
   colorDisabledReasonId(colorCode: string): string | null {
-    return this.isColorDisabled(colorCode)
-      ? `variant-color-disabled-${colorCode}`
-      : null;
+    return this.isColorDisabled(colorCode) ? `variant-color-disabled-${colorCode}` : null;
   }
 
   storageDisabledReasonId(storageGb: number): string | null {

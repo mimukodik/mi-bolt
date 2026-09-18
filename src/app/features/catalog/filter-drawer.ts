@@ -40,7 +40,10 @@ export class FilterDrawer {
   readonly applied = input.required<CatalogQuery>();
 
   /** Live facets. */
-  readonly facets = input<{ readonly brands: readonly FacetValue[]; readonly storageGb: readonly FacetValue[] } | null>(null);
+  readonly facets = input<{
+    readonly brands: readonly FacetValue[];
+    readonly storageGb: readonly FacetValue[];
+  } | null>(null);
 
   /** Whether the drawer is mounted. */
   readonly opened = input<boolean>(false);
@@ -85,13 +88,16 @@ export class FilterDrawer {
     const max = this.parsePrice(this.draftMax());
     if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
     if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    if (min !== null && max !== null && min > max) return 'A minimum nem lehet nagyobb a maximum árnál.';
+    if (min !== null && max !== null && min > max)
+      return 'A minimum nem lehet nagyobb a maximum árnál.';
     return null;
   });
 
   readonly canApply = computed<boolean>(() => !this.disabled() && this.priceError() === null);
 
-  readonly applyLabel = computed<string>(() => (this.disabled() ? 'Alkalmazás…' : 'Szűrők alkalmazása'));
+  readonly applyLabel = computed<string>(() =>
+    this.disabled() ? 'Alkalmazás…' : 'Szűrők alkalmazása',
+  );
 
   constructor() {
     // Every time the drawer opens we reseed the draft from the parent
@@ -122,7 +128,9 @@ export class FilterDrawer {
 
   toggleStorage(bucket: 128 | 256 | 512): void {
     const current = this.draftStorage();
-    const next = current.includes(bucket) ? current.filter((b) => b !== bucket) : [...current, bucket];
+    const next = current.includes(bucket)
+      ? current.filter((b) => b !== bucket)
+      : [...current, bucket];
     this.draftStorage.set(next);
   }
 

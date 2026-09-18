@@ -21,24 +21,12 @@
 import '@angular/compiler';
 
 // @vitest-environment jsdom
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupServer } from 'msw/node';
 import { HttpResponse, http, type RequestHandler } from 'msw';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   EnvironmentInjector,
@@ -116,11 +104,9 @@ function buildHandlers(): readonly RequestHandler[] {
 }
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   server.listen({ onUnhandledRequest: 'error' });
 });
 
@@ -547,10 +533,7 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
     checkout.form.acceptedTerms().value.set(true);
     checkout.form.acknowledgedSimulation().value.set(true);
 
-    const [a, b] = await Promise.all([
-      submission.submitOrder(),
-      submission.submitOrder(),
-    ]);
+    const [a, b] = await Promise.all([submission.submitOrder(), submission.submitOrder()]);
 
     expect(orderCalls).toBe(1);
     expect(a.kind).toBe<SubmitOutcome['kind']>('committed');
@@ -569,15 +552,19 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
 
     const resolverHolder: { resolve?: (value: Record<string, unknown>) => void } = {};
     server.use(
-      http.post('*/api/v1/orders', () =>
-        new Promise<Response>((resolve) => {
-          resolverHolder.resolve = (body) => { resolve(
-              HttpResponse.json(body, {
-                status: 201,
-                headers: { 'content-type': 'application/json' },
-              }),
-            ); };
-        }),
+      http.post(
+        '*/api/v1/orders',
+        () =>
+          new Promise<Response>((resolve) => {
+            resolverHolder.resolve = (body) => {
+              resolve(
+                HttpResponse.json(body, {
+                  status: 201,
+                  headers: { 'content-type': 'application/json' },
+                }),
+              );
+            };
+          }),
       ),
     );
 
@@ -990,7 +977,10 @@ describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () 
     checkout.form.acknowledgedSimulation().value.set(true);
 
     await submission.submitOrder();
-    const flattened = sink.flat().map((entry) => JSON.stringify(entry)).join('\n');
+    const flattened = sink
+      .flat()
+      .map((entry) => JSON.stringify(entry))
+      .join('\n');
     expect(flattened).not.toMatch(/Teszt Elek|teszt@example\.test|\+36201234567/);
   });
 });

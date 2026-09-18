@@ -50,13 +50,18 @@ test.describe('MiBolt primitives — visual evidence', () => {
       await root.screenshot({ path });
       // Each primitive must expose at least one interactive control or
       // a status region so the screenshot has a meaningful surface.
-      const interactive = await root.locator('button, [role="status"], [role="alert"], input').count();
+      const interactive = await root
+        .locator('button, [role="status"], [role="alert"], input')
+        .count();
       expect(interactive).toBeGreaterThan(0);
     });
   }
 
   test('dialog traps focus inside the panel after open', async ({ page }) => {
-    await page.getByTestId('showcase-accessibledialog').getByRole('button', { name: 'Dialógus megnyitása' }).click();
+    await page
+      .getByTestId('showcase-accessibledialog')
+      .getByRole('button', { name: 'Dialógus megnyitása' })
+      .click();
     const panel = page.locator('[role="dialog"]');
     await expect(panel).toBeVisible();
     await expect(panel).toHaveAttribute('aria-modal', 'true');

@@ -164,7 +164,9 @@ export class CartFacade {
     // `provideHttpClient(withFetch(), withInterceptors(...))`.
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
     this.queue.setVersionProvider(() => this.cartWritable()?.version ?? null);
-    this.destroyRef.onDestroy(() => { this.queue.destroy(); });
+    this.destroyRef.onDestroy(() => {
+      this.queue.destroy();
+    });
   }
 
   /**
@@ -250,9 +252,8 @@ export class CartFacade {
       retry: false,
       payload: { itemId, quantity },
     };
-    const result = await this.queue.enqueue(
-      intent,
-      async (inputs) => this.dispatchSetQuantity(inputs),
+    const result = await this.queue.enqueue(intent, async (inputs) =>
+      this.dispatchSetQuantity(inputs),
     );
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
@@ -273,9 +274,8 @@ export class CartFacade {
       retry: false,
       payload: { itemId },
     };
-    const result = await this.queue.enqueue(
-      intent,
-      async (inputs) => this.dispatchRemoveItem(inputs),
+    const result = await this.queue.enqueue(intent, async (inputs) =>
+      this.dispatchRemoveItem(inputs),
     );
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
@@ -434,13 +434,10 @@ export class CartFacade {
   private async dispatchCreate(inputs: DispatchInputs): Promise<DispatchResult> {
     try {
       const response = await firstValueFrom(
-        this.api.invoke(
-          (await import('../../api/generated/functions')).createCart,
-          {
-            'Idempotency-Key': inputs.intent.idempotencyKey,
-            body: { providerId: 'mi-bolt' },
-          },
-        ),
+        this.api.invoke((await import('../../api/generated/functions')).createCart, {
+          'Idempotency-Key': inputs.intent.idempotencyKey,
+          body: { providerId: 'mi-bolt' },
+        }),
       );
       return { ok: true, cart: response, replayed: false };
     } catch (err) {
@@ -463,9 +460,8 @@ export class CartFacade {
       return result;
     }
     const payload = inputs.intent.payload as { variantId: string; quantity: number };
-    const context = inputs.expectedVersion === null
-      ? undefined
-      : withIfMatch(inputs.expectedVersion);
+    const context =
+      inputs.expectedVersion === null ? undefined : withIfMatch(inputs.expectedVersion);
     try {
       const response = await firstValueFrom(
         this.api.invoke(
@@ -492,9 +488,8 @@ export class CartFacade {
       return result;
     }
     const payload = inputs.intent.payload as { itemId: string; quantity: number };
-    const context = inputs.expectedVersion === null
-      ? undefined
-      : withIfMatch(inputs.expectedVersion);
+    const context =
+      inputs.expectedVersion === null ? undefined : withIfMatch(inputs.expectedVersion);
     try {
       const response = await firstValueFrom(
         this.api.invoke(
@@ -522,9 +517,8 @@ export class CartFacade {
       return result;
     }
     const payload = inputs.intent.payload as { itemId: string };
-    const context = inputs.expectedVersion === null
-      ? undefined
-      : withIfMatch(inputs.expectedVersion);
+    const context =
+      inputs.expectedVersion === null ? undefined : withIfMatch(inputs.expectedVersion);
     try {
       const response = await firstValueFrom(
         this.api.invoke(
@@ -547,10 +541,9 @@ export class CartFacade {
     const payload = inputs.intent.payload as { cartId: string };
     try {
       const response = await firstValueFrom(
-        this.api.invoke(
-          (await import('../../api/generated/functions')).getCart,
-          { cartId: payload.cartId },
-        ),
+        this.api.invoke((await import('../../api/generated/functions')).getCart, {
+          cartId: payload.cartId,
+        }),
       );
       return { ok: true, cart: response, replayed: false };
     } catch (err) {
@@ -681,8 +674,8 @@ export class CartFacade {
 function mapError(err: unknown): DispatchResult {
   if (err instanceof HttpErrorResponse) {
     const body = err.error as { code?: ProblemCode; detail?: string } | null;
-    const code = (body?.code) ?? ('UNKNOWN' as ProblemCode);
-    const detail = (body?.detail) ?? err.message;
+    const code = body?.code ?? ('UNKNOWN' as ProblemCode);
+    const detail = body?.detail ?? err.message;
     if (err.status === 409 && code === 'CART_VERSION_CONFLICT') {
       return { ok: false, code: 'CART_VERSION_CONFLICT', status: 409, detail };
     }

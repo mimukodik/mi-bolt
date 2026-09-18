@@ -23,10 +23,8 @@ import { defineConfig, devices } from '@playwright/test';
  * `MI_BOLT_E2E_BASE_URL` overrides the base URL; the CI workflow
  * sets both so the network namespace sees only the local origin.
  */
-const STATIC_DIR =
-  process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser';
-const BASE_URL =
-  process.env['MI_BOLT_E2E_BASE_URL'] ?? 'http://127.0.0.1:4200';
+const STATIC_DIR = process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser';
+const BASE_URL = process.env['MI_BOLT_E2E_BASE_URL'] ?? 'http://127.0.0.1:4200';
 
 export default defineConfig({
   testDir: './e2e',
@@ -34,10 +32,7 @@ export default defineConfig({
   forbidOnly: !!process.env['CI'],
   retries: 0,
   workers: process.env['CI'] ? 1 : undefined,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never', outputFolder: 'playwright-report' }],
-  ],
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
     baseURL: BASE_URL,
     trace: 'retain-on-failure',

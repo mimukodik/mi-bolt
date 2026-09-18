@@ -13,11 +13,7 @@
  */
 
 import type { Product } from '../repository';
-import {
-  FACET_STORAGE_GB,
-  matchProduct,
-  type CatalogFilter,
-} from './filter-products';
+import { FACET_STORAGE_GB, matchProduct, type CatalogFilter } from './filter-products';
 
 /** One entry in a facet response: value, label and the count of products. */
 export interface FacetValue {

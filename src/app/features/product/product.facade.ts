@@ -28,15 +28,7 @@
  */
 
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
-import {
-  catchError,
-  distinctUntilChanged,
-  map,
-  of,
-  Subject,
-  switchMap,
-  tap,
-} from 'rxjs';
+import { catchError, distinctUntilChanged, map, of, Subject, switchMap, tap } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
 import { getProduct } from '../../api/generated/fn/catalog/get-product';
@@ -158,9 +150,7 @@ export class ProductFacade {
         switchMap(({ slug }) =>
           this.api.invoke(getProduct, { slug }).pipe(
             map((product) => ({ kind: 'ok' as const, product })),
-            catchError((err: unknown) =>
-              of({ kind: 'err' as const, error: describeError(err) }),
-            ),
+            catchError((err: unknown) => of({ kind: 'err' as const, error: describeError(err) })),
           ),
         ),
       )
@@ -239,8 +229,7 @@ export class ProductFacade {
     const product = this.productSignal();
     if (product === null) return;
     const fallbackColor = this.selectedColorCodeSignal() ?? product.defaultVariant.colorCode;
-    const fallbackStorage =
-      this.selectedStorageGbSignal() ?? product.defaultVariant.storageGb;
+    const fallbackStorage = this.selectedStorageGbSignal() ?? product.defaultVariant.storageGb;
     const lookup = selectVariantByPair(
       product,
       colorCode,

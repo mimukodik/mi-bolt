@@ -34,11 +34,7 @@ import {
   type CreateHandlersOptions,
 } from './create-handlers';
 import { Repository, type Product } from './repository';
-import {
-  createRealClock,
-  createRealIds,
-  parseScenarioFromLocation,
-} from './scenarios';
+import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import type { MockSnapshot } from './persistence';
 
 // Force-load the slice handler modules so their module-level
@@ -111,7 +107,9 @@ export function installBusinessRouteBypass(): void {
  * previously-persisted cart so a reload restores state before the
  * first intercepted request lands.
  */
-export function buildBrowserHandlers(snapshot: MockSnapshot | null = null): ReturnType<typeof createHandlers> {
+export function buildBrowserHandlers(
+  snapshot: MockSnapshot | null = null,
+): ReturnType<typeof createHandlers> {
   const options = resolveBrowserHandlerOptions();
   if (snapshot?.cart) {
     options.repository.loadPersistedCart(snapshot.cart);
@@ -147,9 +145,7 @@ export async function startMockWorker(snapshot: MockSnapshot | null = null): Pro
         // worker; the page-level request listener picks the attempt
         // up as a network error.
         print.error();
-        throw new Error(
-          `[mi-bolt] unhandled business route: ${request.method} ${request.url}`,
-        );
+        throw new Error(`[mi-bolt] unhandled business route: ${request.method} ${request.url}`);
       }
       // Static assets, source maps, the mock worker bundle itself
       // and the Vite dev server chunks all bypass MSW silently.

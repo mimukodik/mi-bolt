@@ -163,7 +163,7 @@ test('assertStatusCodes: accepts documented 2xx/4xx/5xx codes', () => {
       '/x': {
         get: {
           operationId: 'getX',
-          responses: { '200': {}, '400': {}, '503': {} },
+          responses: { 200: {}, 400: {}, 503: {} },
         },
       },
     },
@@ -175,7 +175,7 @@ test('assertStatusCodes: rejects non-three-digit status code', () => {
   const spec = {
     paths: {
       '/x': {
-        get: { operationId: 'getX', responses: { '99': {} } },
+        get: { operationId: 'getX', responses: { 99: {} } },
       },
     },
   };
@@ -314,7 +314,12 @@ test('assertFixturesShape: accepts 16 multi-variant products with low + oos', ()
 
 test('assertFixturesShape: rejects fewer than 16 products', () => {
   const errors = assertFixturesShape([
-    { id: 'a', brand: 'X', name: 'Y', variants: [{ id: 'v', availability: 'in_stock', maxQuantity: 1 }] },
+    {
+      id: 'a',
+      brand: 'X',
+      name: 'Y',
+      variants: [{ id: 'v', availability: 'in_stock', maxQuantity: 1 }],
+    },
   ]);
   assert.ok(
     errors.some((e) => e.kind === 'fixture-product-count'),
@@ -332,7 +337,9 @@ test('assertFixturesShape: rejects no out-of-stock combination', () => {
   }));
   const errors = assertFixturesShape(products);
   assert.ok(
-    errors.some((e) => e.kind === 'fixture-no-multivariant' || e.kind === 'fixture-no-out-of-stock'),
+    errors.some(
+      (e) => e.kind === 'fixture-no-multivariant' || e.kind === 'fixture-no-out-of-stock',
+    ),
     `expected fixture-no-out-of-stock or fixture-no-multivariant, got ${JSON.stringify(errors)}`,
   );
 });
@@ -431,7 +438,7 @@ test('validateContract: rejects synthetic spec with one operation missing', () =
           operationId: 'getA',
           parameters: [],
           responses: {
-            '200': {
+            200: {
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/DemoConfig' },
@@ -484,12 +491,10 @@ test('validateContract: accepts the real openapi.yaml + fixtures + synthetic pac
   // First run with no api:generate must fail with api-generate-missing.
   const failResult = validateContract({
     spec: await (async () => {
-        const yaml = (await import('js-yaml')).default;
-        const raw = await import('node:fs/promises').then((m) =>
-          m.readFile(specPath, 'utf8'),
-        );
-        return yaml.load(raw);
-      })(),
+      const yaml = (await import('js-yaml')).default;
+      const raw = await import('node:fs/promises').then((m) => m.readFile(specPath, 'utf8'));
+      return yaml.load(raw);
+    })(),
     dereferenced: null,
     products,
     packageJson: { scripts: { build: 'ng build' } },

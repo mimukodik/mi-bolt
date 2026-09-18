@@ -157,9 +157,9 @@ function checkRequirements(reqs, taskToFiles) {
     if (reachedFiles.size === 0) {
       unreached.push({
         id: r.id,
-        reason: `requirement ${r.id} (${r.text ?? ''}) lists tasks ${
-          (r.tasks ?? []).join(', ')
-        } but no spec file references any of those tasks`,
+        reason: `requirement ${r.id} (${r.text ?? ''}) lists tasks ${(r.tasks ?? []).join(
+          ', ',
+        )} but no spec file references any of those tasks`,
       });
     }
   }
@@ -230,27 +230,17 @@ function main() {
     0,
   );
 
-  const totalAcCount = tasks.reduce(
-    (acc, t) => acc + (t.acceptanceCriteria ?? []).length,
-    0,
-  );
+  const totalAcCount = tasks.reduce((acc, t) => acc + (t.acceptanceCriteria ?? []).length, 0);
 
   const reachedScenarioCount = scenarios.filter(
-    (s) =>
-      scenarioToFiles.has(s.id) ||
-      (s.tasks ?? []).some((t) => taskToFiles.has(t)),
+    (s) => scenarioToFiles.has(s.id) || (s.tasks ?? []).some((t) => taskToFiles.has(t)),
   ).length;
 
   const unreachedReqs = checkRequirements(reqs, taskToFiles);
   const unreachedTasks = checkTasks(tasks, acToFiles);
-  const unreachedScenarios = checkScenarios(
-    scenarios,
-    scenarioToFiles,
-    taskToFiles,
-  );
+  const unreachedScenarios = checkScenarios(scenarios, scenarioToFiles, taskToFiles);
 
-  const totalIssues =
-    unreachedReqs.length + unreachedTasks.length + unreachedScenarios.length;
+  const totalIssues = unreachedReqs.length + unreachedTasks.length + unreachedScenarios.length;
 
   const summary = {
     requirements: {
@@ -284,9 +274,7 @@ function main() {
       process.stdout.write('  (none)\n');
     } else {
       process.stdout.write(
-        unreachedTasks
-          .map((t) => `  - ${t.id}: missing ${t.missing.join(', ')}`)
-          .join('\n') + '\n',
+        unreachedTasks.map((t) => `  - ${t.id}: missing ${t.missing.join(', ')}`).join('\n') + '\n',
       );
     }
     process.stdout.write(`\nunreached scenarios:\n`);

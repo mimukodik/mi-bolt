@@ -21,15 +21,11 @@ describe('T02-AC05 unit network isolation', () => {
     // gates the MSW boot on a Node-only check. The Node-only test
     // path still asserts the rejection.
     expect(server !== null).toBe(true);
-    await expect(
-      fetch('http://127.0.0.1/api/v1/this-route-does-not-exist'),
-    ).rejects.toThrow();
+    await expect(fetch('http://127.0.0.1/api/v1/this-route-does-not-exist')).rejects.toThrow();
   });
 
   it('rejects an external fetch', async () => {
     expect(server !== null).toBe(true);
-    await expect(
-      fetch('https://example.com/x'),
-    ).rejects.toThrow();
+    await expect(fetch('https://example.com/x')).rejects.toThrow();
   });
 });

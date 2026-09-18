@@ -19,7 +19,8 @@
         class="name-link no-underline"
         [routerLink]="detailsLink()"
         [attr.aria-label]="product().name + ' részleteinek megnyitása'"
-      >{{ product().name }}</a>
+        >{{ product().name }}</a
+      >
     </h3>
     <p class="variant m-0 inline-flex gap-2 items-center">
       <span class="variant__color">{{ variant().colorName }}</span>
@@ -48,6 +49,7 @@
       data-testid="product-card-cta"
       [routerLink]="detailsLink()"
       [attr.aria-label]="product().name + ' részleteinek megnyitása'"
-    >Részletek →</a>
+      >Részletek →</a
+    >
   </div>
 </article>

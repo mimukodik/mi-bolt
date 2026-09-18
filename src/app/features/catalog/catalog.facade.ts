@@ -76,7 +76,7 @@ export interface CatalogVm {
     readonly storageGb: readonly FacetValue[];
   } | null;
   readonly error: string | null;
-};
+}
 
 /** Coarse shape of the catalogue response — only what the VM exposes. */
 interface CatalogResult {
@@ -114,10 +114,7 @@ function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
   return true;
 }
 
-function arrayShallowEqual<T>(
-  a: readonly T[] | undefined,
-  b: readonly T[] | undefined,
-): boolean {
+function arrayShallowEqual<T>(a: readonly T[] | undefined, b: readonly T[] | undefined): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined) return false;
   if (a.length !== b.length) return false;
@@ -317,9 +314,7 @@ export class CatalogFacade {
     if (trimmed.length === 0) return;
     const current = this.querySignal().brands ?? [];
     const present = current.includes(trimmed);
-    const next = present
-      ? current.filter((b) => b !== trimmed)
-      : [...current, trimmed];
+    const next = present ? current.filter((b) => b !== trimmed) : [...current, trimmed];
     this.setFilters({ brands: next.length > 0 ? next : undefined });
   }
 
@@ -327,9 +322,7 @@ export class CatalogFacade {
   toggleStorage(storageGb: 128 | 256 | 512): void {
     const current = this.querySignal().storageGb ?? [];
     const present = current.includes(storageGb);
-    const next = present
-      ? current.filter((s) => s !== storageGb)
-      : [...current, storageGb];
+    const next = present ? current.filter((s) => s !== storageGb) : [...current, storageGb];
     this.setFilters({ storageGb: next.length > 0 ? next : undefined });
   }
 

@@ -15,10 +15,7 @@ import { createHandlers, registerBusinessHandlers } from '../../mocks/create-han
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { checkoutHandlersEntry } from '../../mocks/checkout/checkout.handlers';
 import { Repository } from '../../mocks/repository';
-import {
-  createDeterministicIds,
-  createFixedClock,
-} from '../../mocks/scenarios';
+import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
 import { server } from '../../../tests/setup-msw';
 
 interface CheckoutOptionsBody {
@@ -38,9 +35,7 @@ registerBusinessHandlers(checkoutHandlersEntry);
 
 describe('F1 - checkout.options responds 200 when handlers are added individually', () => {
   it('returns 200 from GET /checkout/options (browser-style registration)', async () => {
-    const clock = createFixedClock(
-      new Date('2026-09-16T00:00:00.000Z').toISOString(),
-    );
+    const clock = createFixedClock(new Date('2026-09-16T00:00:00.000Z').toISOString());
     const ids = createDeterministicIds(7);
     const scenario = {
       name: 'f1-f2-suite',
@@ -74,10 +69,7 @@ describe('F1 - checkout.options responds 200 when handlers are added individuall
     if (!isCheckoutOptionsBody(body)) {
       throw new Error('Invalid response body');
     }
-    expect(body.deliveryOptions.map((d) => d.id)).toEqual([
-      'home_delivery',
-      'demo_pickup',
-    ]);
+    expect(body.deliveryOptions.map((d) => d.id)).toEqual(['home_delivery', 'demo_pickup']);
     expect(body.paymentMethods).toEqual(['demo_card', 'demo_cod']);
   });
 });

@@ -24,7 +24,11 @@ import {
 
 @Component({
   imports: [Button],
-  template: `<app-button [label]="label()" [disabled]="disabled()" [loading]="loading()"></app-button>`,
+  template: `<app-button
+    [label]="label()"
+    [disabled]="disabled()"
+    [loading]="loading()"
+  ></app-button>`,
 })
 class ButtonHost {
   readonly label = signal('Művelet');
@@ -73,7 +77,10 @@ class ErrorHost {
 
 @Component({
   imports: [LoadingState],
-  template: `<app-loading-state [variant]="variant()" label="Adatok betöltése"></app-loading-state>`,
+  template: `<app-loading-state
+    [variant]="variant()"
+    label="Adatok betöltése"
+  ></app-loading-state>`,
 })
 class LoadingHost {
   readonly variant = signal<'block' | 'lines' | 'card'>('block');
@@ -202,7 +209,9 @@ function hasStyles(val: unknown): val is ComponentWithStyles {
 describe('MiBolt primitives: Required State Contract', () => {
   beforeEach(() => {
     // Clear any CDK overlays left over from a previous spec file.
-    document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => { el.remove(); });
+    document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
+      el.remove();
+    });
   });
 
   describe('Button', () => {
@@ -269,7 +278,9 @@ describe('MiBolt primitives: Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [ImageHost] });
       const f = TestBed.createComponent(ImageHost);
       f.detectChanges();
-      const photo = getNativeElement(f).querySelector<HTMLImageElement>('[data-testid="image-photo"]');
+      const photo = getNativeElement(f).querySelector<HTMLImageElement>(
+        '[data-testid="image-photo"]',
+      );
       expect(photo).not.toBeNull();
       if (!photo) {
         throw new Error('Expected photo');
@@ -336,7 +347,9 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.errors.set([{ code: 'required', message: 'Kötelező', pointer: '/a' }]);
       f.componentInstance.touched.set(true);
       f.detectChanges();
-      const msg = getNativeElement(f).querySelector<HTMLElement>('[data-testid="form-field-message"]');
+      const msg = getNativeElement(f).querySelector<HTMLElement>(
+        '[data-testid="form-field-message"]',
+      );
       expect(msg).not.toBeNull();
       expect(msg?.getAttribute('data-pointer')).toBe('/a');
     });
@@ -346,11 +359,15 @@ describe('MiBolt primitives: Required State Contract', () => {
     it('covers default, disabled, invalid; declares hover/focus/disabled in styles', () => {
       TestBed.configureTestingModule({ imports: [QuantityHost] });
       const f = TestBed.createComponent(QuantityHost);
-      expect(getNativeElement(f).querySelector('[data-testid="quantity-decrement"]')).not.toBeNull();
+      expect(
+        getNativeElement(f).querySelector('[data-testid="quantity-decrement"]'),
+      ).not.toBeNull();
 
       f.componentInstance.disabled.set(true);
       f.detectChanges();
-      const dec = getNativeElement(f).querySelector<HTMLButtonElement>('[data-testid="quantity-decrement"]');
+      const dec = getNativeElement(f).querySelector<HTMLButtonElement>(
+        '[data-testid="quantity-decrement"]',
+      );
       if (!dec) {
         throw new Error('Expected decrement button');
       }
@@ -359,7 +376,9 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.disabled.set(false);
       f.componentInstance.value.set(1);
       f.detectChanges();
-      const input = getNativeElement(f).querySelector<HTMLInputElement>('[data-testid="quantity-input"]');
+      const input = getNativeElement(f).querySelector<HTMLInputElement>(
+        '[data-testid="quantity-input"]',
+      );
       if (!input) {
         throw new Error('Expected quantity input');
       }

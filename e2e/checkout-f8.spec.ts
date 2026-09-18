@@ -86,10 +86,7 @@ test.describe('F8 — DeliveryStep onConfirm persists paymentMethod without 422'
     });
 
     // 5. Click confirm — both PUTs must run.
-    await page
-      .getByTestId('delivery-confirm')
-      .getByRole('button')
-      .click();
+    await page.getByTestId('delivery-confirm').getByRole('button').click();
 
     // 7. Navigation reaches the review step without workaround.
     await expect(page).toHaveURL(/\/penztar\/ellenorzes$/, { timeout: 15_000 });

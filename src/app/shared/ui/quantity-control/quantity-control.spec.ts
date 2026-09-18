@@ -64,9 +64,15 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 describe('QuantityControl primitive', () => {
   it('renders three controls in the order decrement, input, increment', () => {
     const { fixture } = setup();
-    expect(getNativeElement(fixture).querySelector('[data-testid="quantity-decrement"]')).not.toBeNull();
-    expect(getNativeElement(fixture).querySelector('[data-testid="quantity-input"]')).not.toBeNull();
-    expect(getNativeElement(fixture).querySelector('[data-testid="quantity-increment"]')).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="quantity-decrement"]'),
+    ).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="quantity-input"]'),
+    ).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="quantity-increment"]'),
+    ).not.toBeNull();
   });
 
   it('declares the 44-CSS-px minimum via the button height token (R21)', () => {
@@ -80,7 +86,9 @@ describe('QuantityControl primitive', () => {
 
   it('emits quantityChanged when the increment button is clicked', () => {
     const { fixture, host } = setup();
-    const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>('[data-testid="quantity-increment"]');
+    const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="quantity-increment"]',
+    );
     if (!inc) {
       throw new Error('Expected increment button');
     }
@@ -90,7 +98,9 @@ describe('QuantityControl primitive', () => {
 
   it('does not emit when the user enters a value above the maximum', () => {
     const { fixture, host } = setup();
-    const input = getNativeElement(fixture).querySelector<HTMLInputElement>('[data-testid="quantity-input"]');
+    const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
+      '[data-testid="quantity-input"]',
+    );
     if (!input) {
       throw new Error('Expected quantity input');
     }
@@ -98,13 +108,17 @@ describe('QuantityControl primitive', () => {
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     expect(host.changes()).toEqual([]);
-    expect(getNativeElement(fixture).querySelector('[data-testid="quantity-message"]')).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="quantity-message"]'),
+    ).not.toBeNull();
     expect(input.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('does not emit when the user enters a value below the minimum', () => {
     const { fixture, host } = setup();
-    const input = getNativeElement(fixture).querySelector<HTMLInputElement>('[data-testid="quantity-input"]');
+    const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
+      '[data-testid="quantity-input"]',
+    );
     if (!input) {
       throw new Error('Expected quantity input');
     }
@@ -112,14 +126,18 @@ describe('QuantityControl primitive', () => {
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     expect(host.changes()).toEqual([]);
-    expect(getNativeElement(fixture).querySelector('[data-testid="quantity-message"]')).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="quantity-message"]'),
+    ).not.toBeNull();
   });
 
   it('disables the decrement button at the minimum', () => {
     const { fixture, host } = setup();
     host.value.set(1);
     fixture.detectChanges();
-    const dec = getNativeElement(fixture).querySelector<HTMLButtonElement>('[data-testid="quantity-decrement"]');
+    const dec = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="quantity-decrement"]',
+    );
     if (!dec) {
       throw new Error('Expected decrement button');
     }
@@ -130,7 +148,9 @@ describe('QuantityControl primitive', () => {
     const { fixture, host } = setup();
     host.value.set(5);
     fixture.detectChanges();
-    const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>('[data-testid="quantity-increment"]');
+    const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="quantity-increment"]',
+    );
     if (!inc) {
       throw new Error('Expected increment button');
     }
@@ -141,9 +161,15 @@ describe('QuantityControl primitive', () => {
     const { fixture, host } = setup();
     host.disabled.set(true);
     fixture.detectChanges();
-    const dec = getNativeElement(fixture).querySelector<HTMLButtonElement>('[data-testid="quantity-decrement"]');
-    const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>('[data-testid="quantity-increment"]');
-    const input = getNativeElement(fixture).querySelector<HTMLInputElement>('[data-testid="quantity-input"]');
+    const dec = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="quantity-decrement"]',
+    );
+    const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="quantity-increment"]',
+    );
+    const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
+      '[data-testid="quantity-input"]',
+    );
     if (!dec || !inc || !input) {
       throw new Error('Expected controls to exist');
     }
@@ -154,7 +180,9 @@ describe('QuantityControl primitive', () => {
 
   it('emits the typed value when it lands back inside the range', () => {
     const { fixture, host } = setup();
-    const input = getNativeElement(fixture).querySelector<HTMLInputElement>('[data-testid="quantity-input"]');
+    const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
+      '[data-testid="quantity-input"]',
+    );
     if (!input) {
       throw new Error('Expected quantity input');
     }

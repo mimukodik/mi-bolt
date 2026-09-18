@@ -39,8 +39,11 @@ function read(relative: string): string {
   const sources = [relative, `${base}.html`, `${base}.scss`];
   return sources
     .map((p) => {
-      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-      catch { return ''; }
+      try {
+        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+      } catch {
+        return '';
+      }
     })
     .join('\n');
 }
@@ -63,10 +66,7 @@ function componentStyles(componentSource: string, scssPath?: string): string {
   if (htmlMatch) {
     const derivedScss = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
-      return readFileSync(
-        resolvePath(workspaceRoot, derivedScss),
-        'utf8',
-      );
+      return readFileSync(resolvePath(workspaceRoot, derivedScss), 'utf8');
     } catch {
       return '';
     }
@@ -146,9 +146,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
     // Strip comments + template literals so the Hungarian label
     // names ("havi díj" mention) inside narrative notes do not trip
     // the assertion against the implementation.
-    const cleaned = orderSummarySource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const cleaned = orderSummarySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     expect(cleaned.toLowerCase().indexOf('havi')).toBe(-1);
     expect(cleaned.toLowerCase().indexOf('előfizet')).toBe(-1);
     expect(cleaned.toLowerCase().indexOf('rejtett')).toBe(-1);
@@ -218,9 +216,7 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
   });
 
   it('does not display any monthly-fee or hidden-bundle copy (R25)', () => {
-    const cleaned = cartPageSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const cleaned = cartPageSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     expect(cleaned.toLowerCase().indexOf('havi')).toBe(-1);
     expect(cleaned.toLowerCase().indexOf('előfizetés')).toBe(-1);
     expect(cleaned.toLowerCase().indexOf('bundle')).toBe(-1);
@@ -254,7 +250,8 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
   it('OrderSummary only imports PriceBlock + Button from the shared UI surface', () => {
     const emptyImports = /imports:\s*\[\s*\]/;
     const hasImports = /imports:\s*\[/;
-    const usesEmptyOrAbsent = emptyImports.test(orderSummarySource) || !hasImports.test(orderSummarySource);
+    const usesEmptyOrAbsent =
+      emptyImports.test(orderSummarySource) || !hasImports.test(orderSummarySource);
     if (!usesEmptyOrAbsent) {
       // When imports is non-empty, only PriceBlock + Button are
       // expected.

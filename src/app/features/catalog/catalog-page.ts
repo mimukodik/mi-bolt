@@ -72,7 +72,10 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
           <span class="breadcrumb is-current" aria-current="page">Mobiltelefonok</span>
         </nav>
         <h1 class="title m-0">Mobiltelefonok</h1>
-        <p class="lede m-0 max-w-prose">A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en keresztül.</p>
+        <p class="lede m-0 max-w-prose">
+          A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en
+          keresztül.
+        </p>
       </header>
 
       <div class="layout gap-6">
@@ -99,7 +102,9 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                 (click)="openDrawer()"
                 [attr.aria-expanded]="drawerOpened() ? 'true' : 'false'"
                 [attr.aria-controls]="'filter-drawer'"
-              >Szűrők{{ appliedChipCount() > 0 ? ' (' + appliedChipCount() + ')' : '' }}</button>
+              >
+                Szűrők{{ appliedChipCount() > 0 ? ' (' + appliedChipCount() + ')' : '' }}
+              </button>
               <label class="sort inline-flex items-center gap-2">
                 <span class="sort__label">Rendezés</span>
                 <select
@@ -133,7 +138,10 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
           @if (appliedQuery().appliedChips.length > 0) {
             <div class="chips flex flex-wrap gap-2 items-center" data-testid="applied-filters">
               @for (chip of appliedQuery().appliedChips; track chip.id) {
-                <span class="chip inline-flex items-center gap-2 px-2 rounded-full leading-snug" [attr.data-testid]="'applied-chip'">
+                <span
+                  class="chip inline-flex items-center gap-2 px-2 rounded-full leading-snug"
+                  [attr.data-testid]="'applied-chip'"
+                >
                   <span class="chip__label">{{ chip.label }}</span>
                   <button
                     type="button"
@@ -141,7 +149,9 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                     [attr.aria-label]="'Szűrő eltávolítása: ' + chip.label"
                     [attr.data-testid]="'applied-chip-remove-' + chip.kind"
                     (click)="onChipRemoved(chip.kind, chip.value)"
-                  >×</button>
+                  >
+                    ×
+                  </button>
                 </span>
               }
               <button
@@ -149,7 +159,9 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                 class="chip-clear bg-transparent border-0 font-inherit cursor-pointer px-2 py-1 min-h-10"
                 data-testid="applied-filters-clear"
                 (click)="onClearAll()"
-              >Összes szűrő törlése</button>
+              >
+                Összes szűrő törlése
+              </button>
             </div>
           }
 
@@ -160,7 +172,10 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
           >
             @switch (facade.vm().status) {
               @case ('loading') {
-                <div class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-loading">
+                <div
+                  class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60"
+                  data-testid="catalog-loading"
+                >
                   <app-loading-state variant="card" label="Katalógus betöltése"></app-loading-state>
                 </div>
               }
@@ -170,13 +185,21 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                     <app-product-card [product]="item"></app-product-card>
                   }
                 } @else {
-                  <div class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60">
-                    <app-loading-state variant="card" label="Katalógus frissítése"></app-loading-state>
+                  <div
+                    class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60"
+                  >
+                    <app-loading-state
+                      variant="card"
+                      label="Katalógus frissítése"
+                    ></app-loading-state>
                   </div>
                 }
               }
               @case ('empty') {
-                <div class="state state--empty col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-empty">
+                <div
+                  class="state state--empty col-span-full flex items-center justify-center p-6 rounded min-h-60"
+                  data-testid="catalog-empty"
+                >
                   <app-empty-state
                     title="Nincs a szűrőknek megfelelő készülék."
                     message="Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket."
@@ -189,10 +212,15 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                 </div>
               }
               @case ('error') {
-                <div class="state state--error col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-error">
+                <div
+                  class="state state--error col-span-full flex items-center justify-center p-6 rounded min-h-60"
+                  data-testid="catalog-error"
+                >
                   <app-error-state
                     title="Nem sikerült betölteni a katalógust."
-                    [message]="facade.vm().error ?? 'Ismeretlen hiba a katalógus lekérdezése közben.'"
+                    [message]="
+                      facade.vm().error ?? 'Ismeretlen hiba a katalógus lekérdezése közben.'
+                    "
                     [pending]="isRefreshing()"
                     [preserving]="true"
                     (retryRequested)="onRetry()"
@@ -221,15 +249,21 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
                 data-testid="pagination-prev"
                 [disabled]="currentPage() <= 1 || isRefreshing()"
                 (click)="onPageChanged(currentPage() - 1)"
-              >Előző</button>
-              <span class="page page--current font-bold cursor-default" aria-current="page">{{ currentPage() }} / {{ totalPages() }}</span>
+              >
+                Előző
+              </button>
+              <span class="page page--current font-bold cursor-default" aria-current="page"
+                >{{ currentPage() }} / {{ totalPages() }}</span
+              >
               <button
                 type="button"
                 class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
                 data-testid="pagination-next"
                 [disabled]="currentPage() >= totalPages() || isRefreshing()"
                 (click)="onPageChanged(currentPage() + 1)"
-              >Következő</button>
+              >
+                Következő
+              </button>
             </nav>
           }
         </div>
@@ -260,7 +294,9 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
         class="sr-only absolute w-px h-px overflow-hidden"
         data-testid="search-commit"
         (click)="commitSearch()"
-      >commit</button>
+      >
+        commit
+      </button>
     </section>
   `,
   styles: [
@@ -375,7 +411,9 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
         }
       }
 
-      .sidebar { display: block; }
+      .sidebar {
+        display: block;
+      }
 
       @media (max-width: 1023px) {
         .sidebar {
@@ -604,7 +642,8 @@ export class CatalogPage {
   private readonly searchEl = viewChild<ElementRef<HTMLInputElement>>('search');
   /** Trigger button the catalog page opens the filter drawer with — passed
    *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3). */
-  protected readonly filterTrigger = viewChild<ElementRef<HTMLButtonElement>>('filterDrawerTrigger');
+  protected readonly filterTrigger =
+    viewChild<ElementRef<HTMLButtonElement>>('filterDrawerTrigger');
 
   /** Local UI flags that do NOT live in the URL. */
   readonly drawerOpened = signal<boolean>(false);
@@ -629,7 +668,9 @@ export class CatalogPage {
     return Math.max(1, Math.ceil(total / size));
   });
 
-  readonly shouldShowPagination = computed<boolean>(() => this.facade.vm().total > this.currentPageSize());
+  readonly shouldShowPagination = computed<boolean>(
+    () => this.facade.vm().total > this.currentPageSize(),
+  );
 
   /** Live, human-readable chip set derived from the canonical query. */
   readonly appliedQuery = computed<{
@@ -659,15 +700,13 @@ export class CatalogPage {
     // canonical state. We subscribe to the route's reactive
     // queryParamMap (not the snapshot) so back / forward, deep links
     // and manual URL edits all reach the facade.
-    this.route.queryParamMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => {
-        const search = new URLSearchParams();
-        params.keys.forEach((key) => {
-          for (const v of params.getAll(key)) search.append(key, v);
-        });
-        this.facade.loadFromParams(search);
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const search = new URLSearchParams();
+      params.keys.forEach((key) => {
+        for (const v of params.getAll(key)) search.append(key, v);
       });
+      this.facade.loadFromParams(search);
+    });
 
     // Mirror the facade back into the URL whenever the canonical
     // query changes (filter writes, sort, page). We use merge so we
@@ -780,10 +819,14 @@ export class CatalogPage {
 
   sortLabel(mode: SortMode): string {
     switch (mode) {
-      case 'recommended': return 'Ajánlott sorrend';
-      case 'price_asc': return 'Ár szerint növekvő';
-      case 'price_desc': return 'Ár szerint csökkenő';
-      case 'name_asc': return 'Név szerint';
+      case 'recommended':
+        return 'Ajánlott sorrend';
+      case 'price_asc':
+        return 'Ár szerint növekvő';
+      case 'price_desc':
+        return 'Ár szerint csökkenő';
+      case 'name_asc':
+        return 'Név szerint';
     }
   }
 
@@ -805,13 +848,16 @@ export class CatalogPage {
     };
     apply();
     mql.addEventListener('change', apply);
-    this.destroyRef.onDestroy(() => { mql.removeEventListener('change', apply); });
+    this.destroyRef.onDestroy(() => {
+      mql.removeEventListener('change', apply);
+    });
   }
 }
 
 interface AppliedChip {
   readonly id: string;
-  readonly kind: 'q' | 'brand' | 'storage' | 'inStock' | 'is5g' | 'minPrice' | 'maxPrice' | 'featured';
+  readonly kind:
+    'q' | 'brand' | 'storage' | 'inStock' | 'is5g' | 'minPrice' | 'maxPrice' | 'featured';
   readonly label: string;
   readonly value?: string | number;
 }
@@ -825,13 +871,28 @@ function buildChips(q: CatalogQuery): readonly AppliedChip[] {
     chips.push({ id: `brand:${brand}`, kind: 'brand', label: brand, value: brand });
   }
   for (const bucket of q.storageGb ?? []) {
-    chips.push({ id: `storage:${String(bucket)}`, kind: 'storage', label: `${String(bucket)} GB`, value: bucket });
+    chips.push({
+      id: `storage:${String(bucket)}`,
+      kind: 'storage',
+      label: `${String(bucket)} GB`,
+      value: bucket,
+    });
   }
   if (q.minPrice !== undefined) {
-    chips.push({ id: 'minPrice', kind: 'minPrice', label: `Min. ár: ${q.minPrice.toLocaleString('hu-HU')} Ft`, value: q.minPrice });
+    chips.push({
+      id: 'minPrice',
+      kind: 'minPrice',
+      label: `Min. ár: ${q.minPrice.toLocaleString('hu-HU')} Ft`,
+      value: q.minPrice,
+    });
   }
   if (q.maxPrice !== undefined) {
-    chips.push({ id: 'maxPrice', kind: 'maxPrice', label: `Max. ár: ${q.maxPrice.toLocaleString('hu-HU')} Ft`, value: q.maxPrice });
+    chips.push({
+      id: 'maxPrice',
+      kind: 'maxPrice',
+      label: `Max. ár: ${q.maxPrice.toLocaleString('hu-HU')} Ft`,
+      value: q.maxPrice,
+    });
   }
   if (q.inStock === true) {
     chips.push({ id: 'inStock', kind: 'inStock', label: 'Csak raktáron' });

@@ -16,17 +16,9 @@ import { CartDomain } from '../../mocks/cart/cart-domain';
 import { IdempotencyStore } from '../../mocks/idempotency';
 import type { Product, Variant } from '../../mocks/repository';
 import { Repository } from '../../mocks/repository';
-import {
-  createDeterministicIds,
-  createFixedClock,
-} from '../../mocks/scenarios';
-import {
-  CHECKOUT_OPTIONS,
-} from '../../mocks/checkout/checkout.handlers';
-import {
-  QUOTE_TTL_MS,
-  QuoteDomain,
-} from '../../mocks/checkout/quote-domain';
+import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
+import { CHECKOUT_OPTIONS } from '../../mocks/checkout/checkout.handlers';
+import { QUOTE_TTL_MS, QuoteDomain } from '../../mocks/checkout/quote-domain';
 import {
   normalizeAddressCity,
   normalizeAddressLine1,
@@ -116,7 +108,9 @@ function completeValidDelivery(optionId: 'home_delivery' | 'demo_pickup' = 'home
 describe('T08-AC01 contact normalization and partial-merge safety', () => {
   it('normalizes whitespace, case-folds email and validates the +36 phone prefix', () => {
     expect(normalizeContactFullName('  Teszt   Elek  ')).toBe('Teszt Elek');
-    expect(normalizeContactFullName('ÁRVÍZTŰRŐ'.normalize('NFC'))).toBe('ÁRVÍZTŰRŐ'.normalize('NFC'));
+    expect(normalizeContactFullName('ÁRVÍZTŰRŐ'.normalize('NFC'))).toBe(
+      'ÁRVÍZTŰRŐ'.normalize('NFC'),
+    );
     expect(normalizeContactEmail('  Teszt@Example.test ')).toBe('teszt@example.test');
     expect(normalizeContactPhone(' +36 20 123 4567 ')).toBe('+36201234567');
     expect(normalizeContactPhone('+36201234567')).toBe('+36201234567');
@@ -141,11 +135,7 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
     expect(result.problem.code).toBe('VALIDATION_ERROR');
     const paths = result.problem.fieldErrors.map((f) => f.path).sort();
     expect(paths).toEqual(
-      expect.arrayContaining([
-        '/contact/fullName',
-        '/contact/email',
-        '/contact/phone',
-      ]),
+      expect.arrayContaining(['/contact/fullName', '/contact/email', '/contact/phone']),
     );
   });
 
@@ -201,7 +191,12 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
       body: {
         delivery: {
           optionId: 'demo_pickup',
-          address: { countryCode: 'HU', postalCode: '1111', city: 'Demóváros', line1: 'Példa utca 1.' },
+          address: {
+            countryCode: 'HU',
+            postalCode: '1111',
+            city: 'Demóváros',
+            line1: 'Példa utca 1.',
+          },
         },
       },
     });
@@ -465,9 +460,12 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
     const seeded = await seedCart(env, SESSION_A, VARIANT_G256, 1);
     // Flip the catalogue to out_of_stock before the quote runs.
     const product = asProductFixture(env);
-    const oos = cloneProduct(product, product.variants.map((v) => (
-      v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v
-    )));
+    const oos = cloneProduct(
+      product,
+      product.variants.map((v) =>
+        v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v,
+      ),
+    );
     env.repository.loadProducts([oos]);
     const merged = env.quoteDomain.updateDraft({
       sessionId: SESSION_A,
@@ -681,9 +679,12 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
     // Mutate the catalogue price for the variant while the cart still
     // carries the old snapshot.
     const product = asProductFixture(env);
-    const mutated = cloneProduct(product, product.variants.map((v) => (
-      v.id === VARIANT_G256 ? { ...v, price: { amount: 359_990, currency: 'HUF' } } : v
-    )));
+    const mutated = cloneProduct(
+      product,
+      product.variants.map((v) =>
+        v.id === VARIANT_G256 ? { ...v, price: { amount: 359_990, currency: 'HUF' } } : v,
+      ),
+    );
     env.repository.loadProducts([mutated]);
 
     const result = env.quoteDomain.createQuote({
@@ -746,9 +747,12 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
     // Now flip a variant to out_of_stock at quote time; PRICE_CHANGED must
     // not be returned because the existing-prices branch is satisfied.
     const product = asProductFixture(env);
-    const oos = cloneProduct(product, product.variants.map((v) => (
-      v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v
-    )));
+    const oos = cloneProduct(
+      product,
+      product.variants.map((v) =>
+        v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v,
+      ),
+    );
     env.repository.loadProducts([oos]);
     const stock = env.quoteDomain.createQuote({
       sessionId: SESSION_A,
@@ -1002,7 +1006,10 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
   ): Promise<{ id: string; version: number }> {
     const response = await fetch(url(`/carts/${cart.id}/items`), {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-add-${variantId}-${String(cart.version)}`, `"${String(cart.version)}"`),
+      headers: commonHeaders(
+        `${IDEMPOTENCY_KEY_BASE}-wire-add-${variantId}-${String(cart.version)}`,
+        `"${String(cart.version)}"`,
+      ),
       body: JSON.stringify({ variantId, quantity }),
     });
     expect(response.status).toBe(200);
@@ -1020,7 +1027,10 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     const cart = await postCart();
     const response = await fetch(url(`/checkout/${cart.id}/quote`), {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-empty-quote-${String(cart.version)}`, `"${String(cart.version)}"`),
+      headers: commonHeaders(
+        `${IDEMPOTENCY_KEY_BASE}-wire-empty-quote-${String(cart.version)}`,
+        `"${String(cart.version)}"`,
+      ),
     });
     expect(response.status).toBe(422);
     const body = (await response.json()) as { code: string };
@@ -1034,7 +1044,10 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     // Update draft with home delivery
     const updateResponse = await fetch(url(`/checkout/${cart.id}`), {
       method: 'PUT',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-update-1`, `"${String(withItem.version)}"`),
+      headers: commonHeaders(
+        `${IDEMPOTENCY_KEY_BASE}-wire-update-1`,
+        `"${String(withItem.version)}"`,
+      ),
       body: JSON.stringify({
         contact: completeValidContact(),
         delivery: completeValidDelivery('home_delivery'),
@@ -1046,10 +1059,18 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     // First quote
     const firstQuoteResponse = await fetch(url(`/checkout/${cart.id}/quote`), {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-quote-1`, `"${String(withItem.version)}"`),
+      headers: commonHeaders(
+        `${IDEMPOTENCY_KEY_BASE}-wire-quote-1`,
+        `"${String(withItem.version)}"`,
+      ),
     });
     expect(firstQuoteResponse.status).toBe(200);
-    const firstQuote = (await firstQuoteResponse.json()) as { id: string; total: { amount: number }; shipping: { amount: number }; cartVersion: number };
+    const firstQuote = (await firstQuoteResponse.json()) as {
+      id: string;
+      total: { amount: number };
+      shipping: { amount: number };
+      cartVersion: number;
+    };
     expect(firstQuote.total).toEqual({ amount: 341_980, currency: 'HUF' });
     expect(firstQuote.shipping).toEqual({ amount: 1990, currency: 'HUF' });
     expect(firstQuote.cartVersion).toBe(withItem.version);
@@ -1076,7 +1097,10 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
 
     const badResponse = await fetch(url(`/checkout/${cart.id}`), {
       method: 'PUT',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-missing-address`, `"${String(withItem.version)}"`),
+      headers: commonHeaders(
+        `${IDEMPOTENCY_KEY_BASE}-wire-missing-address`,
+        `"${String(withItem.version)}"`,
+      ),
       body: JSON.stringify({
         contact: completeValidContact(),
         delivery: { optionId: 'home_delivery' },
@@ -1218,7 +1242,11 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     const cart = await postCart();
     const noKey = await fetch(url(`/checkout/${cart.id}/quote`), {
       method: 'POST',
-      headers: { 'X-Demo-Session': SESSION_A, 'If-Match': '"1"', 'Content-Type': 'application/json' },
+      headers: {
+        'X-Demo-Session': SESSION_A,
+        'If-Match': '"1"',
+        'Content-Type': 'application/json',
+      },
     });
     expect(noKey.status).toBe(400);
 

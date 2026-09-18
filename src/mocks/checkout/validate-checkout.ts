@@ -38,7 +38,8 @@ export function normalizeContactEmail(value: unknown): string | null {
   // The OpenAPI constraint is `format: email`, which delegates to the
   // runtime. The mock must reject obviously-bad shapes to keep the
   // contract meaningful, while still accepting every well-formed input.
-  const emailPattern = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+  const emailPattern =
+    /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
   if (!emailPattern.test(candidate)) return null;
   return candidate;
 }

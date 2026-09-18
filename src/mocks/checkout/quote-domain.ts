@@ -28,11 +28,7 @@
  * emitting any 400 problems before this module runs.
  */
 
-import {
-  deriveIdempotencyKey,
-  hashPayload,
-  type IdempotencyStore,
-} from '../idempotency';
+import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
 import type { Cart, CartLine, Money } from '../repository';
 import { Repository } from '../repository';
 import type { Clock, Ids } from '../scenarios';
@@ -70,7 +66,10 @@ export type ProblemCode =
   | 'IDEMPOTENCY_CONFLICT'
   | 'QUOTE_INVALIDATED';
 
-export interface FieldError { path: string; message: string }
+export interface FieldError {
+  path: string;
+  message: string;
+}
 
 export interface Problem {
   status: 400 | 404 | 409 | 410 | 422;
@@ -79,9 +78,7 @@ export interface Problem {
   fieldErrors: FieldError[];
 }
 
-export type Result<T> =
-  | { ok: true; value: T }
-  | { ok: false; problem: Problem };
+export type Result<T> = { ok: true; value: T } | { ok: false; problem: Problem };
 
 /** Normalized contact section the draft retains. */
 export interface NormalizedContact {
@@ -151,9 +148,12 @@ function readField(value: unknown, key: string): unknown {
 
 /** Returns the normalized HU address from an untrusted record, or null when invalid. */
 
-function validateAddress(value: unknown): {
-  ok: true; value: NormalizedAddress;
-} | { ok: false; errors: FieldError[] } {
+function validateAddress(value: unknown):
+  | {
+      ok: true;
+      value: NormalizedAddress;
+    }
+  | { ok: false; errors: FieldError[] } {
   const errors: FieldError[] = [];
   if (!value || typeof value !== 'object') {
     return { ok: false, errors: [{ path: '/delivery/address', message: 'A cím szükséges.' }] };
@@ -212,9 +212,12 @@ function validateAddress(value: unknown): {
   };
 }
 
-function validateContact(value: unknown): {
-  ok: true; value: NormalizedContact;
-} | { ok: false; errors: FieldError[] } {
+function validateContact(value: unknown):
+  | {
+      ok: true;
+      value: NormalizedContact;
+    }
+  | { ok: false; errors: FieldError[] } {
   const errors: FieldError[] = [];
   if (!value || typeof value !== 'object') {
     return { ok: false, errors: [{ path: '/contact', message: 'A kapcsolat szükséges.' }] };
@@ -254,9 +257,12 @@ function validateContact(value: unknown): {
   };
 }
 
-function validateDelivery(value: unknown): {
-  ok: true; value: NormalizedDelivery;
-} | { ok: false; errors: FieldError[] } {
+function validateDelivery(value: unknown):
+  | {
+      ok: true;
+      value: NormalizedDelivery;
+    }
+  | { ok: false; errors: FieldError[] } {
   if (!value || typeof value !== 'object') {
     return {
       ok: false,
@@ -294,9 +300,12 @@ function validateDelivery(value: unknown): {
   return { ok: true, value: { optionId: 'demo_pickup' } };
 }
 
-function validatePaymentMethod(value: unknown): {
-  ok: true; value: PaymentMethod;
-} | { ok: false; errors: FieldError[] } {
+function validatePaymentMethod(value: unknown):
+  | {
+      ok: true;
+      value: PaymentMethod;
+    }
+  | { ok: false; errors: FieldError[] } {
   if (value === 'demo_card' || value === 'demo_cod') {
     return { ok: true, value };
   }
@@ -568,9 +577,11 @@ export class QuoteDomain {
 
     // 1. Empty cart => CHECKOUT_INCOMPLETE /cart
     if (cart.items.length === 0) {
-      return err(checkoutIncomplete('A kosár üres, árajánlat nem készíthető.', [
-        { path: '/cart', message: 'A kosár jelenleg üres.' },
-      ]));
+      return err(
+        checkoutIncomplete('A kosár üres, árajánlat nem készíthető.', [
+          { path: '/cart', message: 'A kosár jelenleg üres.' },
+        ]),
+      );
     }
 
     // 2. Incomplete draft => CHECKOUT_INCOMPLETE per missing field
@@ -584,7 +595,10 @@ export class QuoteDomain {
       draftErrors.push({ path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' });
     }
     if (!draft.paymentMethod) {
-      draftErrors.push({ path: '/paymentMethod', message: 'A fizetési mód kiválasztása kötelező.' });
+      draftErrors.push({
+        path: '/paymentMethod',
+        message: 'A fizetési mód kiválasztása kötelező.',
+      });
     }
     if (draftErrors.length > 0 || !delivery) {
       return err(checkoutIncomplete('A fizetési adatok hiányosak.', draftErrors));

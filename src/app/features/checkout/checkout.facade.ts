@@ -118,13 +118,7 @@ import {
 
 /** A single guarded step in the wizard. */
 export type CheckoutStep =
-  | 'cart'
-  | 'contact'
-  | 'delivery'
-  | 'review'
-  | 'submitting'
-  | 'success'
-  | 'error';
+  'cart' | 'contact' | 'delivery' | 'review' | 'submitting' | 'success' | 'error';
 
 /** Errors surfaced to the UI as a banner string. */
 export interface CheckoutError {
@@ -136,8 +130,7 @@ export interface CheckoutError {
 
 /** Result returned by every save / quote / submit helper. */
 export type CheckoutMutationResult<T> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly error: CheckoutError };
+  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: CheckoutError };
 
 /** Generates an opaque idempotency key per intent. */
 function freshIdempotencyKey(): string {
@@ -226,8 +219,9 @@ export class CheckoutFacade {
   private readonly destroyRef = inject(DestroyRef);
 
   /** The single writable signal that owns the form data. */
-  private readonly modelWritable: WritableSignal<CheckoutFormModel> =
-    signal(createInitialCheckoutFormModel());
+  private readonly modelWritable: WritableSignal<CheckoutFormModel> = signal(
+    createInitialCheckoutFormModel(),
+  );
 
   /**
    * Signal Forms FieldTree built once off the model signal. The
@@ -249,11 +243,14 @@ export class CheckoutFacade {
   readonly quote: Signal<Quote | null> = this.quoteWritable.asReadonly();
 
   /** Payment intent created by the explicit "Fizetés indítása" click. */
-  private readonly paymentIntentWritable: WritableSignal<PaymentIntent | null> = signal<PaymentIntent | null>(null);
+  private readonly paymentIntentWritable: WritableSignal<PaymentIntent | null> =
+    signal<PaymentIntent | null>(null);
   readonly paymentIntent: Signal<PaymentIntent | null> = this.paymentIntentWritable.asReadonly();
 
   /** Order receipt produced by the final commit. */
-  private readonly orderWritable: WritableSignal<OrderReceipt | null> = signal<OrderReceipt | null>(null);
+  private readonly orderWritable: WritableSignal<OrderReceipt | null> = signal<OrderReceipt | null>(
+    null,
+  );
   readonly order: Signal<OrderReceipt | null> = this.orderWritable.asReadonly();
 
   /** True while any network mutation is in flight. */
@@ -261,7 +258,8 @@ export class CheckoutFacade {
   readonly busy: Signal<boolean> = this.busyWritable.asReadonly();
 
   /** Last non-recoverable error message; null when the flow is clean. */
-  private readonly errorWritable: WritableSignal<CheckoutError | null> = signal<CheckoutError | null>(null);
+  private readonly errorWritable: WritableSignal<CheckoutError | null> =
+    signal<CheckoutError | null>(null);
   readonly error: Signal<CheckoutError | null> = this.errorWritable.asReadonly();
 
   /**
@@ -303,10 +301,7 @@ export class CheckoutFacade {
     const session = this.session();
     if (session === null) return 'cart';
     if (session.contact === undefined) return 'contact';
-    if (
-      session.delivery === undefined ||
-      session.paymentMethod === undefined
-    ) {
+    if (session.delivery === undefined || session.paymentMethod === undefined) {
       return 'delivery';
     }
     return 'review';
@@ -329,15 +324,11 @@ export class CheckoutFacade {
   });
 
   /** True when the contact section validates AND has been saved on the server. */
-  readonly contactSaved: Signal<boolean> = computed(
-    () => this.session()?.contact !== undefined,
-  );
+  readonly contactSaved: Signal<boolean> = computed(() => this.session()?.contact !== undefined);
 
   /** True when the delivery + paymentMethod sections are both saved. */
   readonly deliverySaved: Signal<boolean> = computed(
-    () =>
-      this.session()?.delivery !== undefined &&
-      this.session()?.paymentMethod !== undefined,
+    () => this.session()?.delivery !== undefined && this.session()?.paymentMethod !== undefined,
   );
 
   /** True when every required section is saved and a quote exists. */
@@ -365,7 +356,10 @@ export class CheckoutFacade {
    * any contact / address the previous tab entered. The cart
    * survives because `CartFacade` is the source of truth for it.
    */
-  async loadSession(cartId: string | null, options: { clearOnLoad: boolean }): Promise<CheckoutSession | null> {
+  async loadSession(
+    cartId: string | null,
+    options: { clearOnLoad: boolean },
+  ): Promise<CheckoutSession | null> {
     if (cartId === null) {
       this.cartIdWritable.set(null);
       return null;
@@ -456,9 +450,11 @@ export class CheckoutFacade {
    * wrappers above. Updates the session, clears the cached quote,
    * and clears the `draftDirty` flag on success.
    */
-  private async saveSection(
-    body: { contact?: Contact; delivery?: DeliverySelection; paymentMethod?: 'demo_card' | 'demo_cod' },
-  ): Promise<CheckoutMutationResult<CheckoutSession>> {
+  private async saveSection(body: {
+    contact?: Contact;
+    delivery?: DeliverySelection;
+    paymentMethod?: 'demo_card' | 'demo_cod';
+  }): Promise<CheckoutMutationResult<CheckoutSession>> {
     const cartId = this.cartIdWritable();
     if (cartId === null) {
       return {
@@ -594,9 +590,7 @@ export class CheckoutFacade {
     // not by cart version, and a stale cart version should not turn
     // a deep-link reload into a 412.
     try {
-      const receipt = await firstValueFrom(
-        this.api.invoke(functions.getOrder, { orderId }),
-      );
+      const receipt = await firstValueFrom(this.api.invoke(functions.getOrder, { orderId }));
       this.orderWritable.set(receipt);
       this.errorWritable.set(null);
       persistReceipt(receipt);

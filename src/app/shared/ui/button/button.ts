@@ -1,9 +1,4 @@
-import {
-  Component,
-  computed,
-  input,
-  output,
-} from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 
 /**
  * MiBolt Button primitive.
@@ -43,9 +38,7 @@ export class Button {
   readonly pressed = output<MouseEvent>();
 
   readonly minTargetHeight = computed(() =>
-    this.size() === 'comfortable'
-      ? 'var(--size-control-comfortable)'
-      : 'var(--size-control)',
+    this.size() === 'comfortable' ? 'var(--size-control-comfortable)' : 'var(--size-control)',
   );
 
   onClick(event: MouseEvent): void {

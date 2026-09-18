@@ -19,17 +19,32 @@ import '@angular/compiler';
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import yaml from 'js-yaml';
-import { HttpClient, HttpContext, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  provideHttpClient,
+  withFetch,
+  withInterceptors,
+} from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BrowserDynamicTestingModule, platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
+import {
+  BrowserDynamicTestingModule,
+  platformBrowserDynamicTesting,
+} from '@angular/platform-browser-dynamic/testing';
 import { firstValueFrom } from 'rxjs';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
 import { Api } from '../../src/app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../src/app/api/generated/api-configuration';
+import {
+  ApiConfiguration,
+  provideApiConfiguration,
+} from '../../src/app/api/generated/api-configuration';
 import * as operations from '../../src/app/api/generated/functions';
-import { demoSessionInterceptor, withIfMatch } from '../../src/app/core/api/demo-session.interceptor';
+import {
+  demoSessionInterceptor,
+  withIfMatch,
+} from '../../src/app/core/api/demo-session.interceptor';
 
 const REPO_ROOT = resolve(__dirname, '../..');
 const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
@@ -47,12 +62,21 @@ type OperationRow = {
 interface OpenApiSpec {
   paths: Record<
     string,
-    Record<string, {
-      operationId?: string;
-      parameters?: Array<{ $ref?: string; in?: string; name?: string; required?: boolean; schema?: { type?: string } }>;
-      requestBody?: unknown;
-      responses?: Record<string, unknown>;
-    }>
+    Record<
+      string,
+      {
+        operationId?: string;
+        parameters?: Array<{
+          $ref?: string;
+          in?: string;
+          name?: string;
+          required?: boolean;
+          schema?: { type?: string };
+        }>;
+        requestBody?: unknown;
+        responses?: Record<string, unknown>;
+      }
+    >
   >;
   components: {
     parameters: Record<string, { in: string; name: string; required?: boolean }>;
@@ -63,7 +87,10 @@ let spec: OpenApiSpec;
 let opRows: OperationRow[];
 let seenOperationIds: Set<string>;
 
-const captures = new Map<string, { method: string; url: string; headers: Headers; bodyText: string }>();
+const captures = new Map<
+  string,
+  { method: string; url: string; headers: Headers; bodyText: string }
+>();
 
 function captureKey(method: string, url: URL): string {
   return `${method.toUpperCase()} ${url.pathname}${url.search}`;
@@ -86,14 +113,26 @@ function capture(request: Request, bodyText: string): void {
  * a failing test sees the exact request the SDK produced.
  */
 const handlers = [
-  http.get(`${BASE_URL}/config`, ({ request }) => { capture(request, ''); return HttpResponse.json(EMPTY_CONFIG); }),
-  http.get(`${BASE_URL}/products`, ({ request }) => { capture(request, ''); return HttpResponse.json(EMPTY_PRODUCT_PAGE); }),
+  http.get(`${BASE_URL}/config`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(EMPTY_CONFIG);
+  }),
+  http.get(`${BASE_URL}/products`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(EMPTY_PRODUCT_PAGE);
+  }),
   http.get(`${BASE_URL}/products/:slug`, ({ request, params }) => {
     capture(request, '');
     return HttpResponse.json(MINIMAL_PRODUCT(String(params['slug'])));
   }),
-  http.post(`${BASE_URL}/carts`, ({ request }) => { capture(request, ''); return HttpResponse.json(MINIMAL_CART(1)); }),
-  http.get(`${BASE_URL}/carts/:cartId`, ({ request }) => { capture(request, ''); return HttpResponse.json(MINIMAL_CART(1)); }),
+  http.post(`${BASE_URL}/carts`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(MINIMAL_CART(1));
+  }),
+  http.get(`${BASE_URL}/carts/:cartId`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(MINIMAL_CART(1));
+  }),
   http.post(`${BASE_URL}/carts/:cartId/items`, async ({ request }) => {
     capture(request, await request.text());
     return HttpResponse.json(MINIMAL_CART(2));
@@ -102,9 +141,18 @@ const handlers = [
     capture(request, await request.text());
     return HttpResponse.json(MINIMAL_CART(3));
   }),
-  http.delete(`${BASE_URL}/carts/:cartId/items/:itemId`, ({ request }) => { capture(request, ''); return HttpResponse.json(MINIMAL_CART(4)); }),
-  http.get(`${BASE_URL}/checkout/options`, ({ request }) => { capture(request, ''); return HttpResponse.json(EMPTY_CHECKOUT_OPTIONS); }),
-  http.get(`${BASE_URL}/checkout/:cartId`, ({ request }) => { capture(request, ''); return HttpResponse.json({ cartId: 'cart-demo-001', cartVersion: 1 }); }),
+  http.delete(`${BASE_URL}/carts/:cartId/items/:itemId`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(MINIMAL_CART(4));
+  }),
+  http.get(`${BASE_URL}/checkout/options`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(EMPTY_CHECKOUT_OPTIONS);
+  }),
+  http.get(`${BASE_URL}/checkout/:cartId`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json({ cartId: 'cart-demo-001', cartVersion: 1 });
+  }),
   http.put(`${BASE_URL}/checkout/:cartId`, async ({ request }) => {
     capture(request, await request.text());
     return HttpResponse.json({ cartId: 'cart-demo-001', cartVersion: 1 });
@@ -117,12 +165,18 @@ const handlers = [
     capture(request, await request.text());
     return HttpResponse.json(MINIMAL_PAYMENT_INTENT, { status: 201 });
   }),
-  http.get(`${BASE_URL}/payment-intents/:paymentIntentId`, ({ request }) => { capture(request, ''); return HttpResponse.json(MINIMAL_PAYMENT_INTENT); }),
+  http.get(`${BASE_URL}/payment-intents/:paymentIntentId`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(MINIMAL_PAYMENT_INTENT);
+  }),
   http.post(`${BASE_URL}/orders`, async ({ request }) => {
     capture(request, await request.text());
     return HttpResponse.json(MINIMAL_ORDER, { status: 201 });
   }),
-  http.get(`${BASE_URL}/orders/:orderId`, ({ request }) => { capture(request, ''); return HttpResponse.json(MINIMAL_ORDER); }),
+  http.get(`${BASE_URL}/orders/:orderId`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(MINIMAL_ORDER);
+  }),
 ];
 
 const EMPTY_CONFIG = {
@@ -135,33 +189,45 @@ const EMPTY_CONFIG = {
   maximumLineQuantity: 5,
 };
 const EMPTY_PRODUCT_PAGE = {
-  items: [], total: 0, page: 1, pageSize: 12,
+  items: [],
+  total: 0,
+  page: 1,
+  pageSize: 12,
   facets: { brands: [], storageGb: [] },
 };
 const EMPTY_CHECKOUT_OPTIONS = {
-  deliveryOptions: [{
-    id: 'home_delivery', label: 'Házhoz szállítás – demó',
-    fee: { amount: 1990, currency: 'HUF' },
-    requiresAddress: true,
-    description: 'demo',
-  }],
+  deliveryOptions: [
+    {
+      id: 'home_delivery',
+      label: 'Házhoz szállítás – demó',
+      fee: { amount: 1990, currency: 'HUF' },
+      requiresAddress: true,
+      description: 'demo',
+    },
+  ],
   paymentMethods: ['demo_card', 'demo_cod'],
   termsVersion: 'demo-1',
 };
 const MINIMAL_QUOTE = {
-  id: 'quote-demo-001', cartId: 'cart-demo-001', cartVersion: 1,
+  id: 'quote-demo-001',
+  cartId: 'cart-demo-001',
+  cartVersion: 1,
   subtotal: { amount: 339990, currency: 'HUF' },
   shipping: { amount: 1990, currency: 'HUF' },
   total: { amount: 341980, currency: 'HUF' },
   expiresAt: '2026-09-14T10:05:00Z',
 };
 const MINIMAL_PAYMENT_INTENT = {
-  id: 'pi-001', cartId: 'cart-demo-001', quoteId: 'quote-demo-001',
-  status: 'succeeded', isSimulation: true,
+  id: 'pi-001',
+  cartId: 'cart-demo-001',
+  quoteId: 'quote-demo-001',
+  status: 'succeeded',
+  isSimulation: true,
   amount: { amount: 341980, currency: 'HUF' },
 };
 const MINIMAL_ORDER = {
-  id: 'order-demo-001', orderNumber: 'DEMO-000001',
+  id: 'order-demo-001',
+  orderNumber: 'DEMO-000001',
   createdAt: '2026-09-14T10:01:00Z',
   status: 'demo_confirmed',
   isSimulation: true,
@@ -175,7 +241,10 @@ const MINIMAL_ORDER = {
 };
 function MINIMAL_CART(version: number) {
   return {
-    id: 'cart-demo-001', version, items: [], itemCount: 0,
+    id: 'cart-demo-001',
+    version,
+    items: [],
+    itemCount: 0,
     subtotal: { amount: 0, currency: 'HUF' },
     status: 'active',
     expiresAt: '2026-09-15T10:00:00Z',
@@ -183,17 +252,34 @@ function MINIMAL_CART(version: number) {
 }
 function MINIMAL_PRODUCT(slug: string) {
   return {
-    id: 'p-01', slug, brand: 'MiBolt Demo', name: 'Demo One 5G',
+    id: 'p-01',
+    slug,
+    brand: 'MiBolt Demo',
+    name: 'Demo One 5G',
     highlights: ['6,7″ kijelző', '50 MP kamera'],
     defaultVariant: {
       id: 'demo-one-5g-graphite-256',
-      colorCode: 'graphite', colorName: 'Grafit', swatchHex: '#343B43',
+      colorCode: 'graphite',
+      colorName: 'Grafit',
+      swatchHex: '#343B43',
       storageGb: 256,
       price: { amount: 339990, currency: 'HUF' },
-      availability: 'in_stock', maxQuantity: 5,
-      images: [{ id: 'i1', src: '/assets/products/graphite-front.webp', alt: 'a', width: 320, height: 400 }],
+      availability: 'in_stock',
+      maxQuantity: 5,
+      images: [
+        {
+          id: 'i1',
+          src: '/assets/products/graphite-front.webp',
+          alt: 'a',
+          width: 320,
+          height: 400,
+        },
+      ],
     },
-    is5g: true, isDemo: true, description: 'demo', variants: [],
+    is5g: true,
+    isDemo: true,
+    description: 'demo',
+    variants: [],
     specGroups: [{ id: 'g1', title: 'demo', rows: [{ label: 'k', value: 'v' }] }],
   };
 }
@@ -201,11 +287,9 @@ function MINIMAL_PRODUCT(slug: string) {
 const server = setupServer(...handlers);
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   const raw = await readFile(SPEC_PATH, 'utf8');
   spec = yaml.load(raw) as OpenApiSpec;
   opRows = collectOperations(spec);
@@ -260,22 +344,45 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
     await callOperation(api, 'getProduct', { slug: 'demo-one-5g' });
     await callOperation(api, 'createCart', { body: { providerId: 'mi-bolt' } });
     await callOperation(api, 'getCart', { cartId: 'cart-demo-001' });
-    await callOperation(api, 'addCartItem', {
-      cartId: 'cart-demo-001',
-      body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 },
-    }, withIfMatch('1'));
-    await callOperation(api, 'setCartItemQuantity', {
-      cartId: 'cart-demo-001', itemId: 'line-001',
-      body: { quantity: 2 },
-    }, withIfMatch('1'));
-    await callOperation(api, 'removeCartItem', {
-      cartId: 'cart-demo-001', itemId: 'line-001',
-    }, withIfMatch('1'));
+    await callOperation(
+      api,
+      'addCartItem',
+      {
+        cartId: 'cart-demo-001',
+        body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 },
+      },
+      withIfMatch('1'),
+    );
+    await callOperation(
+      api,
+      'setCartItemQuantity',
+      {
+        cartId: 'cart-demo-001',
+        itemId: 'line-001',
+        body: { quantity: 2 },
+      },
+      withIfMatch('1'),
+    );
+    await callOperation(
+      api,
+      'removeCartItem',
+      {
+        cartId: 'cart-demo-001',
+        itemId: 'line-001',
+      },
+      withIfMatch('1'),
+    );
     await callOperation(api, 'getCheckoutOptions');
     await callOperation(api, 'getCheckoutSession', { cartId: 'cart-demo-001' });
-    await callOperation(api, 'updateCheckout', {
-      cartId: 'cart-demo-001', body: { paymentMethod: 'demo_cod' },
-    }, withIfMatch('1'));
+    await callOperation(
+      api,
+      'updateCheckout',
+      {
+        cartId: 'cart-demo-001',
+        body: { paymentMethod: 'demo_cod' },
+      },
+      withIfMatch('1'),
+    );
     await callOperation(api, 'createCheckoutQuote', { cartId: 'cart-demo-001' }, withIfMatch('1'));
     await callOperation(api, 'createPaymentIntent', {
       body: { cartId: 'cart-demo-001', quoteId: 'quote-demo-001' },
@@ -283,8 +390,11 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
     await callOperation(api, 'getPaymentIntent', { paymentIntentId: 'pi-001' });
     await callOperation(api, 'createOrder', {
       body: {
-        cartId: 'cart-demo-001', quoteId: 'quote-demo-001',
-        termsVersion: 'demo-1', acceptedTerms: true, acknowledgedSimulation: true,
+        cartId: 'cart-demo-001',
+        quoteId: 'quote-demo-001',
+        termsVersion: 'demo-1',
+        acceptedTerms: true,
+        acknowledgedSimulation: true,
       },
     });
     await callOperation(api, 'getOrder', { orderId: 'order-demo-001' });
@@ -297,9 +407,7 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
 
     for (const op of opRows) {
       const pathRe = new RegExp(
-        '^' +
-          `${BASE_URL_PATH}${op.path}`.replace(/\{[^}]+\}/g, '[^/]+') +
-          '(?:\\?.*)?$',
+        '^' + `${BASE_URL_PATH}${op.path}`.replace(/\{[^}]+\}/g, '[^/]+') + '(?:\\?.*)?$',
       );
       const matches = [...captures.values()].filter((c) => {
         const url = new URL(c.url);
@@ -356,10 +464,15 @@ describe('T04-AC05 demo-session header is attached by the interceptor', () => {
 
   it('withIfMatch attaches If-Match alongside X-Demo-Session', async () => {
     const { api } = makeSdk();
-    await callOperation(api, 'addCartItem', {
-      cartId: 'cart-demo-001',
-      body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 },
-    }, withIfMatch('1'));
+    await callOperation(
+      api,
+      'addCartItem',
+      {
+        cartId: 'cart-demo-001',
+        body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 },
+      },
+      withIfMatch('1'),
+    );
 
     const call = [...captures.values()].find((c) => {
       const u = new URL(c.url);
@@ -402,7 +515,17 @@ describe('T04-AC05 generated SDK is the only API surface', () => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-type OpFn = (http: HttpClient, rootUrl: string, params?: Record<string, unknown>, context?: HttpContext) => { subscribe: (observer: { next: (value: unknown) => void; error: (err: unknown) => void }) => unknown };
+type OpFn = (
+  http: HttpClient,
+  rootUrl: string,
+  params?: Record<string, unknown>,
+  context?: HttpContext,
+) => {
+  subscribe: (observer: {
+    next: (value: unknown) => void;
+    error: (err: unknown) => void;
+  }) => unknown;
+};
 
 /**
  * Call a generated SDK operation through the `Api` service. The Api class

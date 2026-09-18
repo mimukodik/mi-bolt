@@ -24,13 +24,7 @@
  * layouts duplicating it.
  */
 
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { CartFacade } from './cart.facade';
@@ -183,7 +177,9 @@ export class CartPage {
     return this.transientStatus();
   });
 
-  private readonly transientStatus = signal<{ text: string; severity: StatusSeverity } | null>(null);
+  private readonly transientStatus = signal<{ text: string; severity: StatusSeverity } | null>(
+    null,
+  );
 
   constructor() {
     // Ensure a cart exists as soon as the user lands. ensureCart()
@@ -209,41 +205,37 @@ export class CartPage {
 
   onQuantityChanged(item: { id: string }, quantity: number): void {
     this.transientStatus.set({ text: 'A mennyiség frissítése…', severity: 'info' });
-    void this.facade.setQuantity(item.id, quantity).then(
-      () => {
-        // The facade's error / cartGone / cartExpired / cartExpired
-        // signals own the wire-level state. The banner is the
-        // user-facing summary, so we only flip it when the promise
-        // resolved without throwing.
-        if (this.facade.error() === null) {
-          this.transientStatus.set({ text: 'A mennyiség frissítve.', severity: 'success' });
-        } else {
-          this.transientStatus.set({
-            text: 'A mennyiség frissítése nem sikerült; a kosár változatlan.',
-            severity: 'error',
-          });
-        }
-      },
-    );
+    void this.facade.setQuantity(item.id, quantity).then(() => {
+      // The facade's error / cartGone / cartExpired / cartExpired
+      // signals own the wire-level state. The banner is the
+      // user-facing summary, so we only flip it when the promise
+      // resolved without throwing.
+      if (this.facade.error() === null) {
+        this.transientStatus.set({ text: 'A mennyiség frissítve.', severity: 'success' });
+      } else {
+        this.transientStatus.set({
+          text: 'A mennyiség frissítése nem sikerült; a kosár változatlan.',
+          severity: 'error',
+        });
+      }
+    });
   }
 
   onRemoveRequested(itemId: string): void {
     this.transientStatus.set({ text: 'A termék eltávolítása…', severity: 'info' });
-    void this.facade.removeItem(itemId).then(
-      () => {
-        if (this.facade.error() === null) {
-          this.transientStatus.set({
-            text: 'A termék törölve a kosárból.',
-            severity: 'success',
-          });
-        } else {
-          this.transientStatus.set({
-            text: 'A termék eltávolítása nem sikerült; a kosár változatlan.',
-            severity: 'error',
-          });
-        }
-      },
-    );
+    void this.facade.removeItem(itemId).then(() => {
+      if (this.facade.error() === null) {
+        this.transientStatus.set({
+          text: 'A termék törölve a kosárból.',
+          severity: 'success',
+        });
+      } else {
+        this.transientStatus.set({
+          text: 'A termék eltávolítása nem sikerült; a kosár változatlan.',
+          severity: 'error',
+        });
+      }
+    });
   }
 
   onRetry(): void {

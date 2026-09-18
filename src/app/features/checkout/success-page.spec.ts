@@ -37,10 +37,7 @@ import { HttpResponse, http, type RequestHandler } from 'msw';
 import { setupServer } from 'msw/node';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   EnvironmentInjector,
@@ -74,10 +71,7 @@ import '../../../mocks/orders/order.handlers';
 
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
-import {
-  reviewGuard,
-  successGuard,
-} from '../../../app/features/checkout/checkout.guards';
+import { reviewGuard, successGuard } from '../../../app/features/checkout/checkout.guards';
 
 const workspaceRoot = resolvePath(process.cwd());
 
@@ -86,8 +80,11 @@ function read(relative: string): string {
   const sources = [relative, `${base}.html`, `${base}.scss`];
   return sources
     .map((p) => {
-      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-      catch { return ''; }
+      try {
+        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+      } catch {
+        return '';
+      }
     })
     .join('\n');
 }
@@ -106,10 +103,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
-      return readFileSync(
-        resolvePath(workspaceRoot, scssPath),
-        'utf8',
-      );
+      return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
     } catch {
       return '';
     }
@@ -142,11 +136,11 @@ describe('T24-AC01 receipt content (DEMO order number, line items, total, method
   });
 
   it('order-receipt surfaces an explicit simulation notice (no real charge / delivery / email)', () => {
-    const cleaned = orderReceiptSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const cleaned = orderReceiptSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     // Hungarian copy explicitly says the order is simulated.
-    expect(cleaned).toMatch(/Nem történt|Nem küldünk|szimulált|szimuláció|isSimulation|notice|demo/i);
+    expect(cleaned).toMatch(
+      /Nem történt|Nem küldünk|szimulált|szimuláció|isSimulation|notice|demo/i,
+    );
     // Forbidden claims — positive statements that a real transaction / email /
     // delivery happened. The negation in our own notice ("Nem történt valódi
     // fizetés") is allowed.
@@ -246,11 +240,15 @@ describe('T24-AC04 browser back to the wizard cannot resubmit', () => {
 describe('T24-AC05 keyboard focus on the success heading', () => {
   it('the H1 has tabindex=-1 + is rendered at all times', () => {
     expect(successStepSource).toMatch(/<h1[\s\S]*?tabindex=["']-1["']/);
-    expect(successStepSource).toMatch(/<h1[\s\S]*?Rendelés elkészült|Sikeres demórendelés|elkészült/i);
+    expect(successStepSource).toMatch(
+      /<h1[\s\S]*?Rendelés elkészült|Sikeres demórendelés|elkészült/i,
+    );
   });
 
   it('the component explicitly moves focus to the heading (no reliance on a transient toast or animation)', () => {
-    expect(successStepSource).toMatch(/focus\(|autofocus|RouteFocusService|scheduleFocus|focusMainHeading/);
+    expect(successStepSource).toMatch(
+      /focus\(|autofocus|RouteFocusService|scheduleFocus|focusMainHeading/,
+    );
     // No use of CommonModule / toast-only primitives.
     expect(successStepSource).not.toMatch(/CommonModule|NgModule|BrowserModule/);
   });
@@ -353,11 +351,9 @@ function configureTestBed(): void {
 }
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   server.listen({ onUnhandledRequest: 'error' });
 });
 
@@ -462,7 +458,8 @@ describe('T24 runtime: success step wire-level behaviour', () => {
           total: { amount: 339_990, currency: 'HUF' },
           paymentMethod: 'demo_cod',
           deliveryOptionId: 'demo_pickup',
-          notice: 'A demórendelés elkészült. Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés.',
+          notice:
+            'A demórendelés elkészült. Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés.',
         });
       }),
     );
@@ -496,9 +493,8 @@ describe('T24 runtime: success step wire-level behaviour', () => {
 
     const segments = [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
     const route = {} as Parameters<typeof reviewGuard>[0];
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => reviewGuard(route, segments, {} as never),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      reviewGuard(route, segments, {} as never),
     );
     expect(result).toBeInstanceOf(UrlTree);
     const tree = result as UrlTree;
@@ -510,9 +506,8 @@ describe('T24 runtime: success step wire-level behaviour', () => {
       paramMap: convertToParamMap({ orderId: 'order-existing-0001' }),
     } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/penztar/siker/order-existing-0001' } as RouterStateSnapshot;
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => successGuard(route, state),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      successGuard(route, state),
     );
     expect(result).toBe(true);
   });
@@ -522,9 +517,8 @@ describe('T24 runtime: success step wire-level behaviour', () => {
       paramMap: convertToParamMap({}),
     } as unknown as ActivatedRouteSnapshot;
     const state = { url: '/penztar/siker/' } as RouterStateSnapshot;
-    const result = runInInjectionContext(
-      TestBed.inject(EnvironmentInjector),
-      () => successGuard(route, state),
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      successGuard(route, state),
     );
     expect(result).toBeInstanceOf(UrlTree);
     expect((result as UrlTree).toString()).toContain('/penztar/kosar');

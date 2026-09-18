@@ -27,11 +27,7 @@
  * and emitting the `If-Match` and `Idempotency-Key` validation.
  */
 
-import {
-  deriveIdempotencyKey,
-  hashPayload,
-  type IdempotencyStore,
-} from '../idempotency';
+import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
 import {
   type Cart,
   type CartLine,
@@ -61,7 +57,10 @@ export type ProblemCode =
   | 'QUANTITY_LIMIT'
   | 'IDEMPOTENCY_CONFLICT';
 
-export interface FieldError { path: string; message: string }
+export interface FieldError {
+  path: string;
+  message: string;
+}
 
 export interface Problem {
   status: 400 | 404 | 409 | 410 | 422;
@@ -228,9 +227,11 @@ export class CartDomain {
     const existing = cart.items.find((line) => line.variantId === input.variantId);
     const mergedQuantity = (existing?.quantity ?? 0) + input.quantity;
     if (mergedQuantity > cap) {
-      return err(CartDomain.quantityLimit(
-        `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
-      ));
+      return err(
+        CartDomain.quantityLimit(
+          `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
+        ),
+      );
     }
     if (lookup.variant.availability !== 'in_stock') {
       return err(CartDomain.outOfStock());
@@ -303,9 +304,11 @@ export class CartDomain {
 
     const cap = Math.min(lookup.variant.maxQuantity, MAX_LINE_QUANTITY);
     if (input.quantity > cap) {
-      return err(CartDomain.quantityLimit(
-        `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
-      ));
+      return err(
+        CartDomain.quantityLimit(
+          `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
+        ),
+      );
     }
     if (lookup.variant.availability !== 'in_stock' && input.quantity > 0) {
       return err(CartDomain.outOfStock());
@@ -463,7 +466,10 @@ export class CartDomain {
         code: 'QUANTITY_LIMIT',
         detail: `A mennyiség 1 és ${String(MAX_LINE_QUANTITY)} közé eshet.`,
         fieldErrors: [
-          { path: '/quantity', message: `A mennyiség 1 és ${String(MAX_LINE_QUANTITY)} közé eshet.` },
+          {
+            path: '/quantity',
+            message: `A mennyiség 1 és ${String(MAX_LINE_QUANTITY)} közé eshet.`,
+          },
         ],
       });
     }

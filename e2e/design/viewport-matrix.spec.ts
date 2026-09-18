@@ -32,12 +32,13 @@ import { dirname, resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 const REPO_ROOT = resolve(__dirname, '..', '..');
-const SCREENSHOT_ROOT = resolve(
-  REPO_ROOT,
-  'e2e/design/screenshots',
-);
+const SCREENSHOT_ROOT = resolve(REPO_ROOT, 'e2e/design/screenshots');
 
-const VIEWPORTS: ReadonlyArray<{ readonly name: string; readonly width: number; readonly height: number }> = [
+const VIEWPORTS: ReadonlyArray<{
+  readonly name: string;
+  readonly width: number;
+  readonly height: number;
+}> = [
   { name: '320', width: 320, height: 720 },
   { name: '390', width: 390, height: 844 },
   { name: '768', width: 768, height: 1024 },
@@ -117,15 +118,9 @@ test.describe('T25-AC01 viewport matrix — overflow + 44px CTAs', () => {
           // e2e/design/screenshots/<viewport>/<route>.png (AC02
           // visual evidence — comparison happens in design-review.md,
           // not in the test).
-          const screenshotDir = resolve(
-            SCREENSHOT_ROOT,
-            viewport.name,
-          );
+          const screenshotDir = resolve(SCREENSHOT_ROOT, viewport.name);
           mkdirSync(screenshotDir, { recursive: true });
-          const screenshotPath = resolve(
-            screenshotDir,
-            `${route.id}.png`,
-          );
+          const screenshotPath = resolve(screenshotDir, `${route.id}.png`);
           mkdirSync(dirname(screenshotPath), { recursive: true });
           await page.screenshot({
             path: screenshotPath,

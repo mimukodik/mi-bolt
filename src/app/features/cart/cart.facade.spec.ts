@@ -16,22 +16,11 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { type RequestHandler } from 'msw';
 import { setupServer } from 'msw/node';
@@ -43,10 +32,7 @@ import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handle
 import { CART_DURATION_MS, CartDomain } from '../../../mocks/cart/cart-domain';
 import { IdempotencyStore } from '../../../mocks/idempotency';
 import { Repository } from '../../../mocks/repository';
-import {
-  createDeterministicIds,
-  createFixedClock,
-} from '../../../mocks/scenarios';
+import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CartCountFacade } from '../../../app/core/navigation/cart-count-facade';
@@ -119,13 +105,15 @@ function makeEnv(): typeof currentEnv {
 
 function buildHandlers(): RequestHandler[] {
   const env = currentEnv;
-  return [...cartHandlersEntry({
-    repository: env.repository,
-    clock: env.clock,
-    ids: env.ids,
-    scenario: env.scenario,
-    apiRoot: '/api/v1',
-  })];
+  return [
+    ...cartHandlersEntry({
+      repository: env.repository,
+      clock: env.clock,
+      ids: env.ids,
+      scenario: env.scenario,
+      apiRoot: '/api/v1',
+    }),
+  ];
 }
 
 /**
@@ -140,7 +128,9 @@ function attachRequestCapture(serverInstance: ReturnType<typeof setupServer>): (
     captureRequest(request, bodyText);
   };
   serverInstance.events.on('request:start', handler);
-  return () => { serverInstance.events.removeListener('request:start', handler); };
+  return () => {
+    serverInstance.events.removeListener('request:start', handler);
+  };
 }
 
 let detachCapture: (() => void) | null = null;
@@ -148,11 +138,9 @@ let detachCapture: (() => void) | null = null;
 const server = setupServer();
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   server.listen({ onUnhandledRequest: 'error' });
 });
 
@@ -197,9 +185,7 @@ function patchesTo(cartId: string, itemId: string): CapturedRequest[] {
 }
 
 function addsTo(cartId: string): CapturedRequest[] {
-  return captures.filter(
-    (c) => c.method === 'POST' && c.url.endsWith(`/carts/${cartId}/items`),
-  );
+  return captures.filter((c) => c.method === 'POST' && c.url.endsWith(`/carts/${cartId}/items`));
 }
 
 /**
@@ -235,11 +221,11 @@ describe('T17-AC01: root-scoped CartFacade is the single owner', () => {
     const header = TestBed.inject(CartCountFacade);
     const real = TestBed.inject(CartFacade);
     expect(header).toBe(real);
-    expect(typeof (header).addItem).toBe('function');
-    expect(typeof (header).setQuantity).toBe('function');
-    expect(typeof (header).removeItem).toBe('function');
-    expect(typeof (header).ensureCart).toBe('function');
-    expect(typeof (header).retry).toBe('function');
+    expect(typeof header.addItem).toBe('function');
+    expect(typeof header.setQuantity).toBe('function');
+    expect(typeof header.removeItem).toBe('function');
+    expect(typeof header.ensureCart).toBe('function');
+    expect(typeof header.retry).toBe('function');
   });
 
   it('starts with itemCount=0, subtotal=0 HUF, no error and no pending intents', () => {
@@ -559,9 +545,10 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
     const seenVersions: number[] = [];
     const seenKeys: string[] = [];
 
-    const dispatcher = (
-      inputs: { intent: MutationIntent; expectedVersion: number | null },
-    ): Promise<DispatchResult> => {
+    const dispatcher = (inputs: {
+      intent: MutationIntent;
+      expectedVersion: number | null;
+    }): Promise<DispatchResult> => {
       const version = inputs.expectedVersion;
       seenVersions.push(version ?? -1);
       seenKeys.push(inputs.intent.idempotencyKey);
@@ -606,7 +593,8 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
     };
     const dispatcher = (): Promise<DispatchResult> =>
       new Promise<DispatchResult>((resolve) => {
-        resolveDispatch = () => { resolve({
+        resolveDispatch = () => {
+          resolve({
             ok: true,
             cart: {
               id: 'cart-1',
@@ -618,7 +606,8 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
               expiresAt: '2026-09-15T10:00:00.000Z',
             },
             replayed: false,
-          }); };
+          });
+        };
       });
 
     const p = queue.enqueue(

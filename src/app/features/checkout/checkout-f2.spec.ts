@@ -8,26 +8,12 @@
  */
 import '@angular/compiler';
 // @vitest-environment jsdom
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { Router } from '@angular/router';
-import {
-  provideHttpClient,
-  withInterceptors,
-} from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
@@ -41,11 +27,9 @@ import { DeliveryStep } from '../../../app/features/checkout/delivery-step';
 const BASE_URL = 'http://localhost/api/v1';
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
 });
 
 afterEach(() => {
@@ -73,7 +57,7 @@ describe('F2 — DeliveryStep.onConfirm persists selection and navigates', () =>
     const navigated: string[] = [];
     const routerStub = {
       navigate: (commands: readonly unknown[]) => {
-        const flat = (commands).flatMap((c) =>
+        const flat = commands.flatMap((c) =>
           typeof c === 'string'
             ? [c]
             : Array.isArray(c)
@@ -86,67 +70,67 @@ describe('F2 — DeliveryStep.onConfirm persists selection and navigates', () =>
     };
 
     // Override Router BEFORE any inject() calls.
-      TestBed.overrideProvider(Router, { useValue: routerStub });
+    TestBed.overrideProvider(Router, { useValue: routerStub });
 
-      const checkout = TestBed.inject(CheckoutFacade);
-      const session = {
-        cartId: 'cart-f2-test',
-        cartVersion: 1,
-        contact: { fullName: 'X', email: 'x@example.test', phone: '+36201234567' },
-      };
-      const saveDeliverySpy = vi
-        .spyOn(checkout, 'saveDeliverySection')
-        .mockResolvedValue({ ok: true, value: session });
-      const savePaymentSpy = vi
-        .spyOn(checkout, 'savePaymentMethod')
-        .mockResolvedValue({ ok: true, value: session });
+    const checkout = TestBed.inject(CheckoutFacade);
+    const session = {
+      cartId: 'cart-f2-test',
+      cartVersion: 1,
+      contact: { fullName: 'X', email: 'x@example.test', phone: '+36201234567' },
+    };
+    const saveDeliverySpy = vi
+      .spyOn(checkout, 'saveDeliverySection')
+      .mockResolvedValue({ ok: true, value: session });
+    const savePaymentSpy = vi
+      .spyOn(checkout, 'savePaymentMethod')
+      .mockResolvedValue({ ok: true, value: session });
 
-      // Pin the cart + cartId so `saveDeliverySection()` /
-      // `savePaymentMethod()` don't bail on the NO_CART branch.
-      const cartFacade = TestBed.inject(CartFacade);
-      vi.spyOn(cartFacade, 'cart').mockReturnValue({
-        id: 'cart-f2-test',
-        version: 1,
-        items: [],
-        itemCount: 0,
-        subtotal: { amount: 0, currency: 'HUF' },
-        status: 'active',
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      });
+    // Pin the cart + cartId so `saveDeliverySection()` /
+    // `savePaymentMethod()` don't bail on the NO_CART branch.
+    const cartFacade = TestBed.inject(CartFacade);
+    vi.spyOn(cartFacade, 'cart').mockReturnValue({
+      id: 'cart-f2-test',
+      version: 1,
+      items: [],
+      itemCount: 0,
+      subtotal: { amount: 0, currency: 'HUF' },
+      status: 'active',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
 
-      const step = TestBed.runInInjectionContext(() => new DeliveryStep());
+    const step = TestBed.runInInjectionContext(() => new DeliveryStep());
 
-      // Drive state into a canConfirm()=true configuration.
-      step.confirmPending.set(false);
-      step.selectedOptionId.set('home_delivery');
-      step.postalCode.set('1111');
-      step.city.set('Budapest');
-      step.line1.set('Példa utca 1.');
-      step.line2.set('');
-      step.addressSubmitted.set(true);
-      step.paymentMethod.set('demo_cod');
-      step.state.set({
-        kind: 'ready',
-        options: {
-          deliveryOptions: [
-            {
-              id: 'home_delivery',
-              label: 'Házhoz szállítás',
-              fee: { amount: 1990, currency: 'HUF' as const },
-              requiresAddress: true,
-              description: 'demo',
-            },
-          ],
-          paymentMethods: ['demo_card', 'demo_cod'],
-          termsVersion: 'demo-1',
-        },
-      });
+    // Drive state into a canConfirm()=true configuration.
+    step.confirmPending.set(false);
+    step.selectedOptionId.set('home_delivery');
+    step.postalCode.set('1111');
+    step.city.set('Budapest');
+    step.line1.set('Példa utca 1.');
+    step.line2.set('');
+    step.addressSubmitted.set(true);
+    step.paymentMethod.set('demo_cod');
+    step.state.set({
+      kind: 'ready',
+      options: {
+        deliveryOptions: [
+          {
+            id: 'home_delivery',
+            label: 'Házhoz szállítás',
+            fee: { amount: 1990, currency: 'HUF' as const },
+            requiresAddress: true,
+            description: 'demo',
+          },
+        ],
+        paymentMethods: ['demo_card', 'demo_cod'],
+        termsVersion: 'demo-1',
+      },
+    });
 
-      await step.onConfirm();
+    await step.onConfirm();
 
-      expect(saveDeliverySpy).toHaveBeenCalledTimes(1);
-      expect(savePaymentSpy).toHaveBeenCalledTimes(1);
-      expect(navigated.length).toBe(1);
-      expect(navigated[0]).toMatch(/\/penztar\/ellenorzes$/);
+    expect(saveDeliverySpy).toHaveBeenCalledTimes(1);
+    expect(savePaymentSpy).toHaveBeenCalledTimes(1);
+    expect(navigated.length).toBe(1);
+    expect(navigated[0]).toMatch(/\/penztar\/ellenorzes$/);
   });
 });

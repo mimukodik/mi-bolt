@@ -6,12 +6,7 @@ import { AccessibleDialog } from './accessible-dialog';
 @Component({
   imports: [AccessibleDialog, DialogModule],
   template: `
-    <button
-      #trigger
-      type="button"
-      data-testid="dialog-trigger"
-      (click)="open()"
-    >Open</button>
+    <button #trigger type="button" data-testid="dialog-trigger" (click)="open()">Open</button>
     <app-accessible-dialog
       [opened]="opened()"
       [label]="label()"
@@ -64,11 +59,15 @@ function hasStyles(val: unknown): val is ComponentWithStyles {
 }
 
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => { el.remove(); });
+  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
+    el.remove();
+  });
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.detectChanges();
-  const trigger = getNativeElement(fixture).querySelector<HTMLButtonElement>('[data-testid="dialog-trigger"]');
+  const trigger = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+    '[data-testid="dialog-trigger"]',
+  );
   fixture.componentInstance.trigger.set(trigger);
   return { fixture, host: fixture.componentInstance };
 }

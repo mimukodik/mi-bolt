@@ -41,8 +41,11 @@ function read(relative: string): string {
   const sources = [relative, `${base}.html`, `${base}.scss`];
   return sources
     .map((p) => {
-      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-      catch { return ''; }
+      try {
+        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+      } catch {
+        return '';
+      }
     })
     .join('\n');
 }
@@ -69,10 +72,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
-      return readFileSync(
-        resolvePath(workspaceRoot, scssPath),
-        'utf8',
-      );
+      return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
     } catch {
       return '';
     }
@@ -186,9 +186,7 @@ describe('T16-AC05 product-page has no 3D surface', () => {
     // Strip comments + template literals so the header notes that
     // name-check themselves ("no three.js bundle") do not trip the
     // test against its own documentation.
-    const code = productPageSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const code = productPageSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     expect(code).not.toMatch(/three\.js/);
     expect(code).not.toMatch(/babylon/);
     expect(code).not.toMatch(/<canvas/);
@@ -225,14 +223,16 @@ describe('T16 shared-primitive dependency wiring', () => {
     // `imports:` field are also valid (empty by default).
     const emptyImports = /imports:\s*\[\s*\]/;
     const hasImports = /imports:\s*\[/;
-    const emptyOrAbsent = emptyImports.test(variantSelectorSource) || !hasImports.test(variantSelectorSource);
+    const emptyOrAbsent =
+      emptyImports.test(variantSelectorSource) || !hasImports.test(variantSelectorSource);
     expect(emptyOrAbsent).toBe(true);
   });
 
   it('SpecificationAccordion depends on nothing exotic — accessible disclosure only', () => {
     const emptyImports = /imports:\s*\[\s*\]/;
     const hasImports = /imports:\s*\[/;
-    const emptyOrAbsent = emptyImports.test(specAccordionSource) || !hasImports.test(specAccordionSource);
+    const emptyOrAbsent =
+      emptyImports.test(specAccordionSource) || !hasImports.test(specAccordionSource);
     expect(emptyOrAbsent).toBe(true);
   });
 

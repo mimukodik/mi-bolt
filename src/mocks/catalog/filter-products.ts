@@ -100,10 +100,7 @@ export function normalizeBrands(raw: readonly string[]): readonly string[] {
  * Variant-id ascending breaks ties. Returns null when no variant
  * satisfies all conditions simultaneously.
  */
-export function findMatchingVariant(
-  product: Product,
-  filter: CatalogFilter,
-): Variant | null {
+export function findMatchingVariant(product: Product, filter: CatalogFilter): Variant | null {
   let best: Variant | null = null;
   for (const variant of product.variants) {
     if (filter.storageGb !== undefined && filter.storageGb.length > 0) {
@@ -171,10 +168,7 @@ export function matchProduct(
  * tie-break as `price_asc` (cheapest matching variant, product id, then
  * variant id) so the catalogue page is deterministic out of the box.
  */
-export function sortMatches(
-  matches: readonly ProductMatch[],
-  mode: SortMode,
-): ProductMatch[] {
+export function sortMatches(matches: readonly ProductMatch[], mode: SortMode): ProductMatch[] {
   const copy = matches.slice();
   const byProductId = (a: ProductMatch, b: ProductMatch): number =>
     a.product.id.localeCompare(b.product.id);
@@ -258,9 +252,7 @@ export type FilterParseError =
   | { code: 'INVALID_PAGE_SIZE'; field: 'pageSize'; detail: string };
 
 /** Result of parsing the `listProducts` query string. */
-export type ParseResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: FilterParseError };
+export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: FilterParseError };
 
 function parseBooleanParam(raw: string): boolean | 'invalid' {
   if (raw === 'true') return true;
@@ -453,10 +445,7 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
   const pageSizeRaw = params.get('pageSize');
   if (pageSizeRaw !== null) {
     const parsed = parseIntegerParam(pageSizeRaw);
-    if (
-      parsed === 'invalid' ||
-      (parsed !== 12 && parsed !== 24)
-    ) {
+    if (parsed === 'invalid' || (parsed !== 12 && parsed !== 24)) {
       return {
         ok: false,
         error: {

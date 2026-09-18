@@ -142,10 +142,9 @@ async function main() {
   const operations = collectOperations(spec);
 
   if (operations.length !== REQUIRED_OPERATION_COUNT) {
-    fail(
-      `expected ${REQUIRED_OPERATION_COUNT} operationIds, found ${operations.length}`,
-      { operations: operations.map((o) => o.operationId) },
-    );
+    fail(`expected ${REQUIRED_OPERATION_COUNT} operationIds, found ${operations.length}`, {
+      operations: operations.map((o) => o.operationId),
+    });
   }
   if (new Set(operations.map((o) => o.operationId)).size !== operations.length) {
     fail('duplicate operationIds in openapi.yaml', {
@@ -159,12 +158,14 @@ async function main() {
   // strip it so the comparison is against the OpenAPI path shape
   // (`/config`, `/carts/:cartId`).
   const API_ROOT_PREFIX = '/api/v1';
-  const registeredKeys = new Set(registered.map((r) => {
-    const stripped = r.path.startsWith(API_ROOT_PREFIX)
-      ? r.path.slice(API_ROOT_PREFIX.length)
-      : r.path;
-    return `${r.method} ${stripped}`;
-  }));
+  const registeredKeys = new Set(
+    registered.map((r) => {
+      const stripped = r.path.startsWith(API_ROOT_PREFIX)
+        ? r.path.slice(API_ROOT_PREFIX.length)
+        : r.path;
+      return `${r.method} ${stripped}`;
+    }),
+  );
 
   const missing = operations
     .filter((op) => !registeredKeys.has(`${op.method} ${op.mswPath}`))
@@ -188,7 +189,12 @@ async function main() {
 }
 
 async function exists(p) {
-  try { await stat(p); return true; } catch { return false; }
+  try {
+    await stat(p);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 main().catch((err) => {

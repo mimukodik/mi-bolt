@@ -89,9 +89,18 @@ import {
 export type SubmitOutcome =
   | { readonly kind: 'committed'; readonly orderId: string; readonly orderNumber: string }
   | { readonly kind: 'declined'; readonly reason: string; readonly intentId: string }
-  | { readonly kind: 'pending-timeout'; readonly safeKey: string; readonly intentId: string; readonly attempt: number }
+  | {
+      readonly kind: 'pending-timeout';
+      readonly safeKey: string;
+      readonly intentId: string;
+      readonly attempt: number;
+    }
   | { readonly kind: 'unknown'; readonly safeKey: string; readonly reason: string }
-  | { readonly kind: 'recovered'; readonly orderId: string; readonly source: 'getOrder' | 'replay' };
+  | {
+      readonly kind: 'recovered';
+      readonly orderId: string;
+      readonly source: 'getOrder' | 'replay';
+    };
 
 /** Recovered order returned by `recoverPersistedOrder`. */
 export interface RecoveredOrder {
@@ -323,7 +332,9 @@ export class OrderSubmission {
     // constructor injection; vitest's esbuild pipeline strips that
     // metadata, so wire it manually (same pattern CartFacade uses).
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
-    this.destroyRef.onDestroy(() => { this.cancelPolling(); });
+    this.destroyRef.onDestroy(() => {
+      this.cancelPolling();
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -512,7 +523,9 @@ export class OrderSubmission {
           orderId: receipt.id,
           orderNumber: receipt.orderNumber,
         });
-        this.logger([{ orderId: receipt.id, scenario: 'recovery', step: 'getOrder', outcome: 'recovered' }]);
+        this.logger([
+          { orderId: receipt.id, scenario: 'recovery', step: 'getOrder', outcome: 'recovered' },
+        ]);
         return { orderId: receipt.id, source: 'getOrder' };
       } catch (err) {
         const mapped = mapError(err);
@@ -534,7 +547,9 @@ export class OrderSubmission {
         orderId: receipt.id,
         orderNumber: receipt.orderNumber,
       });
-      this.logger([{ orderId: receipt.id, scenario: 'recovery', step: 'replay', outcome: 'recovered' }]);
+      this.logger([
+        { orderId: receipt.id, scenario: 'recovery', step: 'replay', outcome: 'recovered' },
+      ]);
       return { orderId: receipt.id, source: 'replay' };
     } catch (err) {
       const mapped = mapError(err);
@@ -559,7 +574,9 @@ export class OrderSubmission {
    * to. Lets the wiring spec assert on the SDK contract without
    * having to run a full submit.
    */
-  usesSdkFunction(name: 'createPaymentIntent' | 'getPaymentIntent' | 'createOrder' | 'getOrder'): boolean {
+  usesSdkFunction(
+    name: 'createPaymentIntent' | 'getPaymentIntent' | 'createOrder' | 'getOrder',
+  ): boolean {
     switch (name) {
       case 'createPaymentIntent':
       case 'getPaymentIntent':
@@ -574,7 +591,10 @@ export class OrderSubmission {
   // reference them; private to keep them off the public surface).
   // -------------------------------------------------------------------------
 
-  private readonly createPaymentIntent = async (body: { cartId: string; quoteId: string }): Promise<PaymentIntent> => {
+  private readonly createPaymentIntent = async (body: {
+    cartId: string;
+    quoteId: string;
+  }): Promise<PaymentIntent> => {
     return firstValueFrom(
       this.api.invoke(functions.createPaymentIntent, {
         'Idempotency-Key': freshIdempotencyKey(),
@@ -584,9 +604,7 @@ export class OrderSubmission {
   };
 
   private readonly getPaymentIntent = async (paymentIntentId: string): Promise<PaymentIntent> => {
-    return firstValueFrom(
-      this.api.invoke(functions.getPaymentIntent, { paymentIntentId }),
-    );
+    return firstValueFrom(this.api.invoke(functions.getPaymentIntent, { paymentIntentId }));
   };
 
   private readonly createOrder = async (
@@ -602,9 +620,7 @@ export class OrderSubmission {
   };
 
   private readonly getOrder = async (orderId: string): Promise<OrderReceipt> => {
-    return firstValueFrom(
-      this.api.invoke(functions.getOrder, { orderId }),
-    );
+    return firstValueFrom(this.api.invoke(functions.getOrder, { orderId }));
   };
 
   // -------------------------------------------------------------------------
@@ -668,7 +684,11 @@ export class OrderSubmission {
         state: 'succeeded',
         intentId: paymentIntentId,
         attempt: 1,
-        outcome: { kind: 'committed', orderId: result.value.id, orderNumber: result.value.orderNumber },
+        outcome: {
+          kind: 'committed',
+          orderId: result.value.id,
+          orderNumber: result.value.orderNumber,
+        },
       });
       this.logger([
         { cartId, quoteId, orderId: result.value.id, step: 'commit', outcome: 'committed' },
@@ -676,9 +696,7 @@ export class OrderSubmission {
       return { kind: 'committed', orderId: result.value.id, orderNumber: result.value.orderNumber };
     }
     const mapped = result.error;
-    this.logger([
-      { cartId, quoteId, step: 'commit', outcome: mapped.code },
-    ]);
+    this.logger([{ cartId, quoteId, step: 'commit', outcome: mapped.code }]);
     if (mapped.code === 'PAYMENT_DECLINED') {
       this.declinedWritable.set(true);
       this.lastOutcomeWritable.set({
@@ -749,14 +767,22 @@ export class OrderSubmission {
     }
     if (terminal.status === 'declined') {
       this.declinedWritable.set(true);
-      this.lastOutcomeWritable.set({ kind: 'declined', reason: 'declined', intentId: canonicalIntentId });
+      this.lastOutcomeWritable.set({
+        kind: 'declined',
+        reason: 'declined',
+        intentId: canonicalIntentId,
+      });
       this.emitProgress({
         state: 'declined',
         intentId: canonicalIntentId,
         attempt: terminal.attempt,
         outcome: { kind: 'declined', reason: 'declined', attempt: terminal.attempt },
       });
-      return { kind: 'declined', reason: 'A szimulált fizetés elutasítva.', intentId: canonicalIntentId };
+      return {
+        kind: 'declined',
+        reason: 'A szimulált fizetés elutasítva.',
+        intentId: canonicalIntentId,
+      };
     }
     // Timed out — recoverable unknown. Persist a safe record so the
     // user can reload and replay with the SAME key + body.
@@ -1001,7 +1027,10 @@ export class OrderSubmission {
 // ---------------------------------------------------------------------------
 
 function freshIdempotencyKey(): string {
-  if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function') {
+  if (
+    typeof globalThis.crypto !== 'undefined' &&
+    typeof globalThis.crypto.randomUUID === 'function'
+  ) {
     return globalThis.crypto.randomUUID();
   }
   return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;

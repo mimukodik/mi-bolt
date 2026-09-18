@@ -6,7 +6,9 @@
       <span class="breadcrumb is-current" aria-current="page">Mobiltelefonok</span>
     </nav>
     <h1 class="title m-0">Mobiltelefonok</h1>
-    <p class="lede m-0 max-w-prose">A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en keresztül.</p>
+    <p class="lede m-0 max-w-prose">
+      A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en keresztül.
+    </p>
   </header>
 
   <div class="layout grid gap-6">
@@ -33,7 +35,9 @@
             (click)="openDrawer()"
             [attr.aria-expanded]="drawerOpened() ? 'true' : 'false'"
             [attr.aria-controls]="'filter-drawer'"
-          >Szűrők{{ appliedChipCount() > 0 ? ' (' + appliedChipCount() + ')' : '' }}</button>
+          >
+            Szűrők{{ appliedChipCount() > 0 ? ' (' + appliedChipCount() + ')' : '' }}
+          </button>
           <label class="sort inline-flex items-center gap-2">
             <span class="sort__label">Rendezés</span>
             <select
@@ -67,7 +71,10 @@
       @if (appliedQuery().appliedChips.length > 0) {
         <div class="chips flex flex-wrap gap-2 items-center" data-testid="applied-filters">
           @for (chip of appliedQuery().appliedChips; track chip.id) {
-            <span class="chip inline-flex items-center gap-2 px-2 rounded-full leading-snug" [attr.data-testid]="'applied-chip'">
+            <span
+              class="chip inline-flex items-center gap-2 px-2 rounded-full leading-snug"
+              [attr.data-testid]="'applied-chip'"
+            >
               <span class="chip__label">{{ chip.label }}</span>
               <button
                 type="button"
@@ -75,7 +82,9 @@
                 [attr.aria-label]="'Szűrő eltávolítása: ' + chip.label"
                 [attr.data-testid]="'applied-chip-remove-' + chip.kind"
                 (click)="onChipRemoved(chip.kind, chip.value)"
-              >×</button>
+              >
+                ×
+              </button>
             </span>
           }
           <button
@@ -83,7 +92,9 @@
             class="chip-clear bg-transparent border-0 font-inherit cursor-pointer px-2 py-1 min-h-10"
             data-testid="applied-filters-clear"
             (click)="onClearAll()"
-          >Összes szűrő törlése</button>
+          >
+            Összes szűrő törlése
+          </button>
         </div>
       }
 
@@ -94,7 +105,10 @@
       >
         @switch (facade.vm().status) {
           @case ('loading') {
-            <div class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-loading">
+            <div
+              class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60"
+              data-testid="catalog-loading"
+            >
               <app-loading-state variant="card" label="Katalógus betöltése"></app-loading-state>
             </div>
           }
@@ -104,13 +118,18 @@
                 <app-product-card [product]="item"></app-product-card>
               }
             } @else {
-              <div class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60">
+              <div
+                class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60"
+              >
                 <app-loading-state variant="card" label="Katalógus frissítése"></app-loading-state>
               </div>
             }
           }
           @case ('empty') {
-            <div class="state state--empty col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-empty">
+            <div
+              class="state state--empty col-span-full flex items-center justify-center p-6 rounded min-h-60"
+              data-testid="catalog-empty"
+            >
               <app-empty-state
                 title="Nincs a szűrőknek megfelelő készülék."
                 message="Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket."
@@ -123,7 +142,10 @@
             </div>
           }
           @case ('error') {
-            <div class="state state--error col-span-full flex items-center justify-center p-6 rounded min-h-60" data-testid="catalog-error">
+            <div
+              class="state state--error col-span-full flex items-center justify-center p-6 rounded min-h-60"
+              data-testid="catalog-error"
+            >
               <app-error-state
                 title="Nem sikerült betölteni a katalógust."
                 [message]="facade.vm().error ?? 'Ismeretlen hiba a katalógus lekérdezése közben.'"
@@ -155,15 +177,21 @@
             data-testid="pagination-prev"
             [disabled]="currentPage() <= 1 || isRefreshing()"
             (click)="onPageChanged(currentPage() - 1)"
-          >Előző</button>
-          <span class="page page--current font-bold cursor-default" aria-current="page">{{ currentPage() }} / {{ totalPages() }}</span>
+          >
+            Előző
+          </button>
+          <span class="page page--current font-bold cursor-default" aria-current="page"
+            >{{ currentPage() }} / {{ totalPages() }}</span
+          >
           <button
             type="button"
             class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
             data-testid="pagination-next"
             [disabled]="currentPage() >= totalPages() || isRefreshing()"
             (click)="onPageChanged(currentPage() + 1)"
-          >Következő</button>
+          >
+            Következő
+          </button>
         </nav>
       }
     </div>
@@ -194,5 +222,7 @@
     class="sr-only absolute w-px h-px overflow-hidden"
     data-testid="search-commit"
     (click)="commitSearch()"
-  >commit</button>
+  >
+    commit
+  </button>
 </section>

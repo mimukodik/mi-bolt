@@ -123,7 +123,13 @@ export class ProductPage {
   readonly gallery = computed(() => {
     const variant = this.vm().selectedVariant;
     if (variant === null) return [];
-    return variant.images.map((i) => ({ src: i.src, alt: i.alt, width: i.width, height: i.height, id: i.id }));
+    return variant.images.map((i) => ({
+      src: i.src,
+      alt: i.alt,
+      width: i.width,
+      height: i.height,
+      id: i.id,
+    }));
   });
 
   readonly galleryIndex = computed(() => {
@@ -210,13 +216,16 @@ export class ProductPage {
     // different variant via `?variant=...` without remounting the
     // product page — re-parse the *current* params rather than the
     // snapshot captured at mount time.
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((queryParamMap) => {
-      const inputSlug = this.slug();
-      const slug = (inputSlug !== '' ? inputSlug : this.route.snapshot.paramMap.get('slug')) ?? '';
-      if (slug.length === 0) return;
-      const params = paramMapToSearchParams(queryParamMap);
-      this.facade.load(slug, params);
-    });
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((queryParamMap) => {
+        const inputSlug = this.slug();
+        const slug =
+          (inputSlug !== '' ? inputSlug : this.route.snapshot.paramMap.get('slug')) ?? '';
+        if (slug.length === 0) return;
+        const params = paramMapToSearchParams(queryParamMap);
+        this.facade.load(slug, params);
+      });
 
     // Reset the local image index whenever the gallery changes (variant
     // switch).

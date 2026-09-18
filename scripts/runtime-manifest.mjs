@@ -50,9 +50,7 @@ const EXCLUDE_DIRS = new Set([
   '.agents',
 ]);
 
-const EXCLUDE_FILES = new Set([
-  'mockServiceWorker.js',
-]);
+const EXCLUDE_FILES = new Set(['mockServiceWorker.js']);
 
 const TEST_SUFFIXES = ['.spec.ts', '.test.ts'];
 

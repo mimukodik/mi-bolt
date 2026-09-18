@@ -32,7 +32,8 @@ export class MarketingLayout {
     // screen-reader users land on the active page heading rather than
     // staying on the previous one. A `queueMicrotask` defers the read
     // until Angular has rendered the lazy chunk's H1.
-    this.routeFocus.navigationEnd$()
+    this.routeFocus
+      .navigationEnd$()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.routeFocus.scheduleFocus();

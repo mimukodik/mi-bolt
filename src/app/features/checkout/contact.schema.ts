@@ -34,12 +34,7 @@ export interface ContactInput {
 
 export interface ContactValidationError {
   readonly field: ContactFieldKey;
-  readonly code:
-    | 'required'
-    | 'tooShort'
-    | 'tooLong'
-    | 'invalidFormat'
-    | 'invalidPhone';
+  readonly code: 'required' | 'tooShort' | 'tooLong' | 'invalidFormat' | 'invalidPhone';
   readonly message: string;
 }
 
@@ -54,8 +49,7 @@ export interface NormalizedContact {
   phone: string;
 }
 
-const EMAIL_RFC5322_SUBSET =
-  /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const EMAIL_RFC5322_SUBSET = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 const PHONE_INTERNATIONAL = /^\+36\d{8,9}$/;
 
@@ -140,8 +134,7 @@ export function validateContact(input: ContactInput): ContactValidationResult {
     errors.push({
       field: 'phone',
       code: 'invalidPhone',
-      message:
-        'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+      message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
     });
   }
 

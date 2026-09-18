@@ -46,9 +46,7 @@ function parseArgs(argv) {
     const token = argv[i];
     if (token === '--static-dir') opts.staticDir = argv[++i];
     else if (token === '--help' || token === '-h') {
-      process.stdout.write(
-        'Usage: check-budgets.mjs [--static-dir <path>]\n',
-      );
+      process.stdout.write('Usage: check-budgets.mjs [--static-dir <path>]\n');
       process.exit(0);
     }
   }
@@ -98,9 +96,7 @@ function readMainScriptTag(html) {
 
 const mainScript = readMainScriptTag(indexHtml);
 if (mainScript === null) {
-  process.stderr.write(
-    'check-budgets: index.html does not contain a module entry script.\n',
-  );
+  process.stderr.write('check-budgets: index.html does not contain a module entry script.\n');
   process.exit(1);
 }
 
@@ -241,18 +237,13 @@ if (missingInitial.length > 0) {
   process.exit(1);
 }
 
-const initialJsTotalGzip = initialJsFiles.reduce(
-  (sum, file) => sum + gzipSize(file),
-  0,
-);
-const initialCssTotalGzip = initialCssFiles.reduce(
-  (sum, file) => sum + gzipSize(file),
-  0,
-);
+const initialJsTotalGzip = initialJsFiles.reduce((sum, file) => sum + gzipSize(file), 0);
+const initialCssTotalGzip = initialCssFiles.reduce((sum, file) => sum + gzipSize(file), 0);
 const inlineCssBytes = inlineStyleBytes(indexHtml);
-const firstViewTotalBytes = [...initialJsFiles, ...initialCssFiles, ...initialOtherFiles]
-  .map((file) => readFileSync(file).length)
-  .reduce((sum, n) => sum + n, 0) + inlineCssBytes;
+const firstViewTotalBytes =
+  [...initialJsFiles, ...initialCssFiles, ...initialOtherFiles]
+    .map((file) => readFileSync(file).length)
+    .reduce((sum, n) => sum + n, 0) + inlineCssBytes;
 
 const lazyJsByName = lazyJsFiles.map((file) => ({
   file,
@@ -302,7 +293,9 @@ lines.push('initial bundle:');
 for (const file of initialJsFiles) {
   lines.push(`  - ${basename(file)}: ${formatKiB(gzipSize(file))} gzip`);
 }
-lines.push(`  total initial JS gzip: ${formatKiB(initialJsTotalGzip)} (budget ${formatKiB(BUDGETS.initialJsGzipBytes)})`);
+lines.push(
+  `  total initial JS gzip: ${formatKiB(initialJsTotalGzip)} (budget ${formatKiB(BUDGETS.initialJsGzipBytes)})`,
+);
 for (const file of initialCssFiles) {
   lines.push(`  - ${basename(file)}: ${formatKiB(gzipSize(file))} gzip`);
 }

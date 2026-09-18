@@ -26,23 +26,10 @@
  * a fresh 409.
  */
 
-import {
-  deriveIdempotencyKey,
-  hashPayload,
-  type IdempotencyStore,
-} from '../idempotency';
-import {
-  type CartLine,
-  type Money,
-  type Variant,
-  Repository,
-} from '../repository';
+import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
+import { type CartLine, type Money, type Variant, Repository } from '../repository';
 import type { Clock, Ids } from '../scenarios';
-import {
-  QUOTE_TTL_MS,
-  type DeliveryOptionId,
-  QuoteDomain,
-} from '../checkout/quote-domain';
+import { QUOTE_TTL_MS, type DeliveryOptionId, QuoteDomain } from '../checkout/quote-domain';
 
 // ---------------------------------------------------------------------------
 // Payment method + intent vocabulary (matches OpenAPI enums).
@@ -87,9 +74,7 @@ export class PaymentIntentStore {
   constructor(private readonly clock: Clock) {}
 
   /** Creates a new intent and stores it. The status is supplied by the caller. */
-  create(
-    input: Omit<PaymentIntentRecord, 'createdAt'>,
-  ): PaymentIntentRecord {
+  create(input: Omit<PaymentIntentRecord, 'createdAt'>): PaymentIntentRecord {
     const record: PaymentIntentRecord = {
       ...input,
       createdAt: this.clock.now(),
@@ -167,7 +152,9 @@ export class StockTracker {
    * entry has the requested quantity plus the available stock so the
    * handler can surface a precise problem detail.
    */
-  findShortages(lines: readonly CartLine[]): { variantId: string; available: number; requested: number }[] {
+  findShortages(
+    lines: readonly CartLine[],
+  ): { variantId: string; available: number; requested: number }[] {
     this.ensureInitialized();
     const shortages: { variantId: string; available: number; requested: number }[] = [];
     for (const line of lines) {
@@ -288,9 +275,7 @@ export interface OrderProblem {
   fieldErrors: OrderFieldError[];
 }
 
-export type OrderResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; problem: OrderProblem };
+export type OrderResult<T> = { ok: true; value: T } | { ok: false; problem: OrderProblem };
 
 // ---------------------------------------------------------------------------
 // OrderDomain — the atomic commit orchestrator.
@@ -346,9 +331,9 @@ export class OrderDomain {
       return err(notFound('A kosár már lezárult.'));
     }
     if (cart.items.length === 0) {
-      return err(checkoutIncomplete('A kosár üres.', [
-        { path: '/cart', message: 'A kosár jelenleg üres.' },
-      ]));
+      return err(
+        checkoutIncomplete('A kosár üres.', [{ path: '/cart', message: 'A kosár jelenleg üres.' }]),
+      );
     }
 
     // 5. Consent + simulation acknowledgement
@@ -359,9 +344,11 @@ export class OrderDomain {
     const draft = this.quoteDomain.getSession(input.cartId, cart.version).draft;
     const method = draft.paymentMethod;
     if (method !== 'demo_card' && method !== 'demo_cod') {
-      return err(checkoutIncomplete('A fizetési mód hiányzik.', [
-        { path: '/paymentMethod', message: 'A fizetési mód kiválasztása kötelező.' },
-      ]));
+      return err(
+        checkoutIncomplete('A fizetési mód hiányzik.', [
+          { path: '/paymentMethod', message: 'A fizetési mód kiválasztása kötelező.' },
+        ]),
+      );
     }
 
     // 7. Quote lookup — must be unexpired, must reference this cart/version
@@ -401,17 +388,24 @@ export class OrderDomain {
       if (!intentMatches.ok) return intentMatches;
     } else {
       if (input.paymentIntentId !== null && input.paymentIntentId !== undefined) {
-        return err(validationFailed('A demo_cod fizetési módhoz nem adható meg paymentIntentId.', [
-          { path: '/paymentIntentId', message: 'A paymentIntentId mező tiltott demo_cod fizetési módnál.' },
-        ]));
+        return err(
+          validationFailed('A demo_cod fizetési módhoz nem adható meg paymentIntentId.', [
+            {
+              path: '/paymentIntentId',
+              message: 'A paymentIntentId mező tiltott demo_cod fizetési módnál.',
+            },
+          ]),
+        );
       }
     }
 
     // 9. Delivery option must be set
     if (!draft.delivery) {
-      return err(checkoutIncomplete('A szállítási mód hiányzik.', [
-        { path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' },
-      ]));
+      return err(
+        checkoutIncomplete('A szállítási mód hiányzik.', [
+          { path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' },
+        ]),
+      );
     }
     const deliveryOptionId: DeliveryOptionId = draft.delivery.optionId;
 
@@ -518,10 +512,7 @@ interface IntentMatch {
   amount: Money;
 }
 
-function validateIntentMatch(
-  intent: PaymentIntentRecord,
-  match: IntentMatch,
-): OrderResult<true> {
+function validateIntentMatch(intent: PaymentIntentRecord, match: IntentMatch): OrderResult<true> {
   if (intent.sessionId !== match.sessionId) {
     return err(notFound('A fizetési szándék nem tartozik ehhez a munkamenethez.'));
   }
@@ -625,13 +616,21 @@ export function cartExpired(): OrderProblem {
 }
 
 export function quoteExpired(): OrderProblem {
-  return { status: 409, code: 'QUOTE_EXPIRED', detail: 'Az árajánlat lejárt vagy érvénytelen.', fieldErrors: [] };
+  return {
+    status: 409,
+    code: 'QUOTE_EXPIRED',
+    detail: 'Az árajánlat lejárt vagy érvénytelen.',
+    fieldErrors: [],
+  };
 }
 
-export function outOfStock(shortages: readonly { variantId: string; available: number; requested: number }[]): OrderProblem {
-  const detail = shortages.length === 1
-    ? `A(z) ${shortages[0].variantId} változatból már csak ${String(shortages[0].available)} darab elérhető.`
-    : 'Egy vagy több változatból nincs elegendő készlet.';
+export function outOfStock(
+  shortages: readonly { variantId: string; available: number; requested: number }[],
+): OrderProblem {
+  const detail =
+    shortages.length === 1
+      ? `A(z) ${shortages[0].variantId} változatból már csak ${String(shortages[0].available)} darab elérhető.`
+      : 'Egy vagy több változatból nincs elegendő készlet.';
   return {
     status: 409,
     code: 'OUT_OF_STOCK',

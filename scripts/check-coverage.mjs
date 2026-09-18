@@ -153,11 +153,9 @@ function assertExactCoverage(manifest, report, thresholds = DEFAULT_THRESHOLDS) 
       });
     }
     if (value < 100) {
-      throw new GateError(
-        'threshold-below-100',
-        `threshold.${metric}=${value} must be 100`,
-        { thresholds },
-      );
+      throw new GateError('threshold-below-100', `threshold.${metric}=${value} must be 100`, {
+        thresholds,
+      });
     }
   }
 
@@ -182,11 +180,9 @@ function assertExactCoverage(manifest, report, thresholds = DEFAULT_THRESHOLDS) 
   );
 
   if (enforcedFiles.length === 0) {
-    throw new GateError(
-      'empty-report',
-      'manifest contains no enforced (runtime|bootstrap) files',
-      { manifestCounts: manifest.counts },
-    );
+    throw new GateError('empty-report', 'manifest contains no enforced (runtime|bootstrap) files', {
+      manifestCounts: manifest.counts,
+    });
   }
 
   const failures = [];
@@ -245,12 +241,15 @@ function assertExactCoverage(manifest, report, thresholds = DEFAULT_THRESHOLDS) 
     const summary = failures
       .map((f) => `  - [${f.code}] ${f.file}${f.metric ? ` (${f.metric}=${f.pct ?? 'NaN'})` : ''}`)
       .join('\n');
-    process.stderr.write(
-      `\nALL FAILURES:\n${summary}\n`,
-    );
+    process.stderr.write(`\nALL FAILURES:\n${summary}\n`);
     throw new GateError(
       failures[0].code,
-      `coverage gate failed (${failures.length} issue${failures.length === 1 ? '' : 's'}). First 10:\n${failures.slice(0, 10).map((f) => `  - [${f.code}] ${f.file}${f.metric ? ` (${f.metric}=${f.pct ?? 'NaN'})` : ''}`).join('\n')}`,
+      `coverage gate failed (${failures.length} issue${failures.length === 1 ? '' : 's'}). First 10:\n${failures
+        .slice(0, 10)
+        .map(
+          (f) => `  - [${f.code}] ${f.file}${f.metric ? ` (${f.metric}=${f.pct ?? 'NaN'})` : ''}`,
+        )
+        .join('\n')}`,
       { failures },
     );
   }
@@ -282,8 +281,7 @@ async function main() {
     process.exit(2);
   }
 
-  const manifestPath =
-    args.manifest ?? joinSafe(repoRoot, 'coverage/runtime-manifest.json');
+  const manifestPath = args.manifest ?? joinSafe(repoRoot, 'coverage/runtime-manifest.json');
   const reportPath =
     args.report ??
     (args.mode === 'unit'

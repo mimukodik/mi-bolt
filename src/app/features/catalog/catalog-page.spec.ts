@@ -21,12 +21,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Location } from '@angular/common';
 import { ActivatedRoute, provideRouter, Router, type Params } from '@angular/router';
-import {
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
@@ -75,13 +70,15 @@ function queryInput(parent: Element, selector: string): HTMLInputElement {
 
 function queryButton(parent: Element, selector: string): HTMLButtonElement {
   const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLButtonElement)) throw new Error(`Expected HTMLButtonElement: ${selector}`);
+  if (!(el instanceof HTMLButtonElement))
+    throw new Error(`Expected HTMLButtonElement: ${selector}`);
   return el;
 }
 
 function querySelect(parent: Element, selector: string): HTMLSelectElement {
   const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLSelectElement)) throw new Error(`Expected HTMLSelectElement: ${selector}`);
+  if (!(el instanceof HTMLSelectElement))
+    throw new Error(`Expected HTMLSelectElement: ${selector}`);
   return el;
 }
 
@@ -105,7 +102,13 @@ function money(amount: number): Money {
   return { amount, currency: 'HUF' };
 }
 
-function buildVariant(id: string, productId: string, colorName: string, storageGb: 128 | 256 | 512, price: number): Variant {
+function buildVariant(
+  id: string,
+  productId: string,
+  colorName: string,
+  storageGb: 128 | 256 | 512,
+  price: number,
+): Variant {
   const colorCode = colorName.toLowerCase();
   return {
     id,
@@ -116,11 +119,20 @@ function buildVariant(id: string, productId: string, colorName: string, storageG
     price: money(price),
     availability: 'in_stock',
     maxQuantity: 5,
-    images: [makeImage(`${id}-front`, `/assets/products/${colorCode}-front.webp`, `${productId} front`)],
+    images: [
+      makeImage(`${id}-front`, `/assets/products/${colorCode}-front.webp`, `${productId} front`),
+    ],
   };
 }
 
-function buildSummary(id: string, brand: string, name: string, price: number, is5g: boolean, storageGb: 128 | 256 | 512): ProductSummary {
+function buildSummary(
+  id: string,
+  brand: string,
+  name: string,
+  price: number,
+  is5g: boolean,
+  storageGb: 128 | 256 | 512,
+): ProductSummary {
   const variant = buildVariant(`${id}-${String(storageGb)}`, id, 'Grafit', storageGb, price);
   return {
     id,
@@ -149,7 +161,9 @@ interface Harness {
   reject: (status: number) => void;
   tick: () => Promise<void>;
   /** Returns when `vm.status` reaches the supplied target. */
-  waitForStatus: (status: 'loading' | 'refreshing' | 'success' | 'empty' | 'error') => Promise<void>;
+  waitForStatus: (
+    status: 'loading' | 'refreshing' | 'success' | 'empty' | 'error',
+  ) => Promise<void>;
   cleanup: () => void;
 }
 
@@ -235,7 +249,9 @@ function setupHarness(queryParams: Params = {}): Promise<Harness> {
     fixture.detectChanges();
   };
 
-  const waitForStatus = async (status: 'loading' | 'refreshing' | 'success' | 'empty' | 'error'): Promise<void> => {
+  const waitForStatus = async (
+    status: 'loading' | 'refreshing' | 'success' | 'empty' | 'error',
+  ): Promise<void> => {
     for (let i = 0; i < 20; i += 1) {
       await tick();
       if (facade.vm().status === status) return;
@@ -269,7 +285,10 @@ function setupHarness(queryParams: Params = {}): Promise<Harness> {
   });
 }
 
-function convertParams(params: Params): { get(name: string): string | null; getAll(name: string): readonly string[] } {
+function convertParams(params: Params): {
+  get(name: string): string | null;
+  getAll(name: string): readonly string[];
+} {
   const usp = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value === null || value === undefined) continue;
@@ -285,7 +304,12 @@ function convertParams(params: Params): { get(name: string): string | null; getA
   };
 }
 
-function successPage(items: readonly ProductSummary[], total: number, page = 1, pageSize: 12 | 24 = 12): ProductPageDTO {
+function successPage(
+  items: readonly ProductSummary[],
+  total: number,
+  page = 1,
+  pageSize: 12 | 24 = 12,
+): ProductPageDTO {
   return {
     items: [...items],
     total,
@@ -377,7 +401,9 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     const harness = await setupHarness();
     expect(harness.facade.vm().status).toBe('loading');
     expect(harness.facade.vm().items).toEqual([]);
-    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1));
+    harness.respond(
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+    );
     await harness.waitForStatus('success');
     expect(harness.facade.vm().items.length).toBe(1);
     expect(harness.facade.vm().total).toBe(1);
@@ -406,7 +432,10 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const brandBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-brand-MiBolt Demo"]');
+    const brandBtn = queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="filter-brand-MiBolt Demo"]',
+    );
     expect(brandBtn).not.toBeNull();
     brandBtn.click();
     await harness.tick();
@@ -425,7 +454,10 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const storageBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-storage-256"]');
+    const storageBtn = queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="filter-storage-256"]',
+    );
     expect(storageBtn).not.toBeNull();
     storageBtn.click();
     await harness.tick();
@@ -442,7 +474,10 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const inStockBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-inStock"]');
+    const inStockBtn = queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="filter-inStock"]',
+    );
     const fiveGBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-is5g"]');
     expect(inStockBtn).not.toBeNull();
     expect(fiveGBtn).not.toBeNull();
@@ -460,7 +495,9 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
 
   it('renders one removable applied chip per active filter', async () => {
     const harness = await setupHarness({ brand: 'MiBolt Demo', inStock: 'true' });
-    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1));
+    harness.respond(
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+    );
     await harness.waitForStatus('success');
     const root = getRootElement(harness.fixture);
     const chips = root.querySelectorAll('[data-testid="applied-chip"]');
@@ -477,7 +514,10 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const removeBtn = queryButton(getRootElement(harness.fixture), '[data-testid="applied-chip-remove-brand"]');
+    const removeBtn = queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="applied-chip-remove-brand"]',
+    );
     expect(removeBtn).not.toBeNull();
     removeBtn.click();
     await harness.tick();
@@ -513,7 +553,10 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const select = querySelect(getRootElement(harness.fixture), '[data-testid="catalog-page-size"]');
+    const select = querySelect(
+      getRootElement(harness.fixture),
+      '[data-testid="catalog-page-size"]',
+    );
     expect(select).not.toBeNull();
     select.value = '24';
     select.dispatchEvent(new Event('change'));
@@ -572,7 +615,9 @@ describe('T13-AC03 mobile filter drawer', () => {
     await harness.tick();
 
     // Tweak a draft inside the drawer.
-    const drawerBrand = document.body.querySelector<HTMLButtonElement>('[data-testid="drawer-brand-MiBolt Demo"]');
+    const drawerBrand = document.body.querySelector<HTMLButtonElement>(
+      '[data-testid="drawer-brand-MiBolt Demo"]',
+    );
     expect(drawerBrand).not.toBeNull();
     drawerBrand?.click();
     harness.fixture.detectChanges();
@@ -720,7 +765,9 @@ describe('T13-AC05 distinct visual states', () => {
     const photo = queryImage(getRootElement(harness.fixture), '[data-testid="image-photo"]');
     photo.dispatchEvent(new Event('error'));
     harness.fixture.detectChanges();
-    const fallback = getRootElement(harness.fixture).querySelector('[data-testid="image-fallback"]');
+    const fallback = getRootElement(harness.fixture).querySelector(
+      '[data-testid="image-fallback"]',
+    );
     expect(fallback).not.toBeNull();
     harness.cleanup();
   });
@@ -744,7 +791,10 @@ describe('T13-AC URL round-trip', () => {
     const harness = await setupHarness({ brand: 'MiBolt Demo', inStock: 'true' });
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
-    const clearAll = queryButton(getRootElement(harness.fixture), '[data-testid="applied-filters-clear"]');
+    const clearAll = queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="applied-filters-clear"]',
+    );
     clearAll.click();
     harness.fixture.detectChanges();
     await harness.tick();
@@ -754,4 +804,3 @@ describe('T13-AC URL round-trip', () => {
     harness.cleanup();
   });
 });
-

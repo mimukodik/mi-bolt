@@ -7,7 +7,11 @@
 >
   @switch (status()) {
     @case ('loading') {
-      <span class="skeleton absolute inset-0" aria-hidden="true" data-testid="image-skeleton"></span>
+      <span
+        class="skeleton absolute inset-0"
+        aria-hidden="true"
+        data-testid="image-skeleton"
+      ></span>
     }
     @case ('loaded') {
       <img
@@ -23,7 +27,11 @@
       />
     }
     @case ('error') {
-      <div class="fallback absolute inset-0 flex items-center justify-center" aria-hidden="true" data-testid="image-fallback">
+      <div
+        class="fallback absolute inset-0 flex items-center justify-center"
+        aria-hidden="true"
+        data-testid="image-fallback"
+      >
         <span class="fallback-mark font-bold tracking-wider">{{ initial() }}</span>
       </div>
     }

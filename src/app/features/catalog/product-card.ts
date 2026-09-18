@@ -57,8 +57,8 @@ export class ProductCard {
   });
 
   /** Up to two highlights, never invented beyond what the API supplies. */
-  readonly visibleHighlights = computed<readonly string[]>(
-    () => this.product().highlights.slice(0, 2),
+  readonly visibleHighlights = computed<readonly string[]>(() =>
+    this.product().highlights.slice(0, 2),
   );
 
   /** Router link to the product page, including the matching variant id. */

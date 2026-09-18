@@ -21,10 +21,7 @@
   @switch (state()) {
     @case ('loading') {
       <div class="loading flex items-center justify-center min-h-72" data-testid="cart-loading">
-        <app-loading-state
-          variant="card"
-          label="Kosár betöltése"
-        ></app-loading-state>
+        <app-loading-state variant="card" label="Kosár betöltése"></app-loading-state>
       </div>
     }
     @case ('error') {
@@ -47,7 +44,10 @@
       ></app-empty-state>
     }
     @default {
-      <div class="layout flex flex-col gap-5 lg:grid lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start" data-testid="cart-layout">
+      <div
+        class="layout flex flex-col gap-5 lg:grid lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start"
+        data-testid="cart-layout"
+      >
         <div class="lines">
           <ul class="lines-list m-0 p-0 list-none flex flex-col gap-3">
             @for (item of items(); track item.id) {
@@ -70,18 +70,21 @@
         ></app-order-summary>
       </div>
 
-      <footer class="footer flex flex-col gap-4 p-5 rounded lg:flex-row lg:items-center lg:justify-between lg:gap-6" data-testid="cart-footer">
+      <footer
+        class="footer flex flex-col gap-4 p-5 rounded lg:flex-row lg:items-center lg:justify-between lg:gap-6"
+        data-testid="cart-footer"
+      >
         <div class="footer-meta flex flex-col gap-2">
           <app-price-block
             [money]="subtotal()"
             [label]="'Részösszeg'"
             [status]="'success'"
           ></app-price-block>
-          <p class="footer-hint m-0">
-            A szállítási díj a pénztárban kerül kiszámításra.
-          </p>
+          <p class="footer-hint m-0">A szállítási díj a pénztárban kerül kiszámításra.</p>
         </div>
-        <div class="footer-actions flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center lg:flex-0 lg:flex-shrink-0">
+        <div
+          class="footer-actions flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center lg:flex-0 lg:flex-shrink-0"
+        >
           <app-button
             variant="secondary"
             size="comfortable"

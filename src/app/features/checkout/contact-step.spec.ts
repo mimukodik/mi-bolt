@@ -51,8 +51,11 @@ function read(relative: string): string {
   const sources = [relative, `${base}.html`, `${base}.scss`];
   return sources
     .map((p) => {
-      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-      catch { return ''; }
+      try {
+        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+      } catch {
+        return '';
+      }
     })
     .join('\n');
 }
@@ -75,10 +78,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
-      return readFileSync(
-        resolvePath(workspaceRoot, scssPath),
-        'utf8',
-      );
+      return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
     } catch {
       return '';
     }
@@ -154,7 +154,14 @@ describe('T20-AC01 contact schema validation and normalization', () => {
   });
 
   it('rejects an email without an @ or with malformed domain', () => {
-    const malformed = ['plain', 'no-at-sign.test', 'user@', '@example.com', 'user@example', 'a@b.c'];
+    const malformed = [
+      'plain',
+      'no-at-sign.test',
+      'user@',
+      '@example.com',
+      'user@example',
+      'a@b.c',
+    ];
     for (const value of malformed) {
       const result = validateContact({
         fullName: 'Teszt Elek',
@@ -176,37 +183,47 @@ describe('T20-AC01 contact schema validation and normalization', () => {
   });
 
   it('normalizes the phone: strips spaces, hyphens, parentheses, 00 prefix and 0 prefix', () => {
-    expect(normalizeContact({
-      fullName: '',
-      email: '',
-      phone: '+36 30 123 4567',
-    }).phone).toBe('+36301234567');
+    expect(
+      normalizeContact({
+        fullName: '',
+        email: '',
+        phone: '+36 30 123 4567',
+      }).phone,
+    ).toBe('+36301234567');
 
-    expect(normalizeContact({
-      fullName: '',
-      email: '',
-      phone: '+36-30-123-4567',
-    }).phone).toBe('+36301234567');
+    expect(
+      normalizeContact({
+        fullName: '',
+        email: '',
+        phone: '+36-30-123-4567',
+      }).phone,
+    ).toBe('+36301234567');
 
-    expect(normalizeContact({
-      fullName: '',
-      email: '',
-      phone: '+36 (30) 123-4567',
-    }).phone).toBe('+36301234567');
+    expect(
+      normalizeContact({
+        fullName: '',
+        email: '',
+        phone: '+36 (30) 123-4567',
+      }).phone,
+    ).toBe('+36301234567');
 
     // Hungarian trunk prefix "06"
-    expect(normalizeContact({
-      fullName: '',
-      email: '',
-      phone: '06 30 123 4567',
-    }).phone).toBe('+36301234567');
+    expect(
+      normalizeContact({
+        fullName: '',
+        email: '',
+        phone: '06 30 123 4567',
+      }).phone,
+    ).toBe('+36301234567');
 
     // International "0036" prefix
-    expect(normalizeContact({
-      fullName: '',
-      email: '',
-      phone: '0036 1 234 5678',
-    }).phone).toBe('+3612345678');
+    expect(
+      normalizeContact({
+        fullName: '',
+        email: '',
+        phone: '0036 1 234 5678',
+      }).phone,
+    ).toBe('+3612345678');
   });
 
   it('accepts 8-digit landline numbers normalized to +36', () => {
@@ -363,7 +380,9 @@ describe('T20-AC04 pending save gates duplicate advance; failure retains fields 
   });
 
   it('runs the save through Signal Forms submit() so server errors attach via fieldTree', () => {
-    expect(stepSource).toMatch(/import\s*\{[\s\S]*?submit[\s\S]*?\}\s*from\s*['"]@angular\/forms\/signals['"]/);
+    expect(stepSource).toMatch(
+      /import\s*\{[\s\S]*?submit[\s\S]*?\}\s*from\s*['"]@angular\/forms\/signals['"]/,
+    );
     expect(stepSource).toMatch(/submit\(\s*contactForm[\s\S]*?action/);
     expect(stepSource).toMatch(/fieldTree/);
   });
@@ -425,7 +444,9 @@ describe('T20 contact-step shared wiring and route stub', () => {
   });
 
   it('ContactPage is re-exported from contact-step so the lazy route still resolves', () => {
-    expect(pageSource).toMatch(/export\s*\{\s*ContactStep(?:,\s*ContactStep)?\s+as\s+ContactPage\s*\}/);
+    expect(pageSource).toMatch(
+      /export\s*\{\s*ContactStep(?:,\s*ContactStep)?\s+as\s+ContactPage\s*\}/,
+    );
     expect(pageSource).not.toMatch(/T11 placeholder/);
   });
 });

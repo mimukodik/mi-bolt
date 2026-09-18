@@ -55,8 +55,22 @@ type KeyboardStep = {
 };
 
 const FLOW: ReadonlyArray<KeyboardStep> = [
-  { name: 'home loads', path: '/', waitFor: 'app-marketing-layout', action: { kind: 'click', selector: 'a[href*="telefonok"]' }, expectVisible: 'catalog-grid', built: true },
-  { name: 'catalog renders grid', path: '/telefonok', waitFor: 'catalog-grid', action: { kind: 'click', selector: '[data-testid="filter-trigger"]' }, expectVisible: '[role="dialog"]', built: true },
+  {
+    name: 'home loads',
+    path: '/',
+    waitFor: 'app-marketing-layout',
+    action: { kind: 'click', selector: 'a[href*="telefonok"]' },
+    expectVisible: 'catalog-grid',
+    built: true,
+  },
+  {
+    name: 'catalog renders grid',
+    path: '/telefonok',
+    waitFor: 'catalog-grid',
+    action: { kind: 'click', selector: '[data-testid="filter-trigger"]' },
+    expectVisible: '[role="dialog"]',
+    built: true,
+  },
   {
     name: 'drawer escapes back to trigger',
     path: '/telefonok',
@@ -65,11 +79,50 @@ const FLOW: ReadonlyArray<KeyboardStep> = [
     expectFocused: '[data-testid="filter-trigger"]',
     built: true,
   },
-  { name: 'open product page', path: '/telefonok/demo-one-5g', waitFor: 'app-product-page', action: { kind: 'click', selector: 'button:has-text("Kosárba"), button:has-text("Add to cart"), button:has-text("Kosárba teszem")' }, expectVisible: 'cart-page', built: true },
-  { name: 'cart renders the line card', path: '/penztar/kosar', waitFor: 'cart-page', action: { kind: 'click', selector: '[data-testid="cart-continue"]' }, expectVisible: 'app-contact-step', built: true },
-  { name: 'contact step renders', path: '/penztar/adatok', waitFor: 'app-contact-step', action: { kind: 'click', selector: 'button:has-text("Tovább"), button[type="submit"]' }, expectVisible: 'app-delivery-step', built: true },
-  { name: 'delivery step renders', path: '/penztar/szallitas', waitFor: 'app-delivery-step', action: { kind: 'click', selector: 'button:has-text("Tovább"), button[type="submit"]' }, expectVisible: 'app-review-step', built: true },
-  { name: 'review step renders', path: '/penztar/ellenorzes', waitFor: 'app-review-step', action: { kind: 'click', selector: 'button:has-text("Megrendelés"), button[type="submit"]' }, expectVisible: 'app-success-step', built: true },
+  {
+    name: 'open product page',
+    path: '/telefonok/demo-one-5g',
+    waitFor: 'app-product-page',
+    action: {
+      kind: 'click',
+      selector:
+        'button:has-text("Kosárba"), button:has-text("Add to cart"), button:has-text("Kosárba teszem")',
+    },
+    expectVisible: 'cart-page',
+    built: true,
+  },
+  {
+    name: 'cart renders the line card',
+    path: '/penztar/kosar',
+    waitFor: 'cart-page',
+    action: { kind: 'click', selector: '[data-testid="cart-continue"]' },
+    expectVisible: 'app-contact-step',
+    built: true,
+  },
+  {
+    name: 'contact step renders',
+    path: '/penztar/adatok',
+    waitFor: 'app-contact-step',
+    action: { kind: 'click', selector: 'button:has-text("Tovább"), button[type="submit"]' },
+    expectVisible: 'app-delivery-step',
+    built: true,
+  },
+  {
+    name: 'delivery step renders',
+    path: '/penztar/szallitas',
+    waitFor: 'app-delivery-step',
+    action: { kind: 'click', selector: 'button:has-text("Tovább"), button[type="submit"]' },
+    expectVisible: 'app-review-step',
+    built: true,
+  },
+  {
+    name: 'review step renders',
+    path: '/penztar/ellenorzes',
+    waitFor: 'app-review-step',
+    action: { kind: 'click', selector: 'button:has-text("Megrendelés"), button[type="submit"]' },
+    expectVisible: 'app-success-step',
+    built: true,
+  },
 ];
 
 async function gotoAndCheck(
@@ -91,9 +144,7 @@ async function gotoAndCheck(
 }
 
 test.describe('T25-AC03 keyboard flow — full purchase path', () => {
-  test('Tab / Enter / Escape drive the purchase flow end to end', async ({
-    page,
-  }, testInfo) => {
+  test('Tab / Enter / Escape drive the purchase flow end to end', async ({ page }, testInfo) => {
     mkdirSync(resolve(SCREENSHOT_ROOT, 'keyboard'), { recursive: true });
     let skippedSteps = 0;
 
@@ -158,11 +209,7 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
 
   test('focus ring is visible on the primary CTA at 1440px', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    const check = await gotoAndCheck(
-      page,
-      '/telefonok?mi-scenario=default',
-      'catalog-grid',
-    );
+    const check = await gotoAndCheck(page, '/telefonok?mi-scenario=default', 'catalog-grid');
     if (!check.ok) {
       test.skip(true, '/telefonok not reachable');
       return;
@@ -184,19 +231,13 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
     expect(outlineColor).not.toBe('transparent');
   });
 
-  test('dialog restores focus to the trigger button after Escape', async ({
-    page,
-  }) => {
+  test('dialog restores focus to the trigger button after Escape', async ({ page }) => {
     // The filter-trigger only mounts on narrow viewports; on
     // desktop the catalogue uses the inline filter sidebar instead
     // (T13 — `data-layout-mode="sidebar|drawer"`). Switching to a
     // 390 px viewport activates the drawer branch.
     await page.setViewportSize({ width: 390, height: 844 });
-    const check = await gotoAndCheck(
-      page,
-      '/telefonok?mi-scenario=default',
-      'catalog-grid',
-    );
+    const check = await gotoAndCheck(page, '/telefonok?mi-scenario=default', 'catalog-grid');
     if (!check.ok) {
       test.skip(true, '/telefonok not reachable');
       return;
@@ -222,11 +263,7 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
   });
 
   test('interactive controls expose an accessible name', async ({ page }) => {
-    const check = await gotoAndCheck(
-      page,
-      '/telefonok?mi-scenario=default',
-      'catalog-grid',
-    );
+    const check = await gotoAndCheck(page, '/telefonok?mi-scenario=default', 'catalog-grid');
     if (!check.ok) {
       test.skip(true, '/telefonok not reachable');
       return;

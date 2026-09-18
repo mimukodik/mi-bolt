@@ -71,10 +71,7 @@ function badRequest(
   traceId: string,
   fieldErrors: { path: string; message: string }[] = [],
 ): HttpResponse<Record<string, unknown>> {
-  return problemResponse(
-    { status: 400, code: 'VALIDATION_FAILED', detail, fieldErrors },
-    traceId,
-  );
+  return problemResponse({ status: 400, code: 'VALIDATION_FAILED', detail, fieldErrors }, traceId);
 }
 
 function traceIdFor(options: CreateHandlersOptions): string {
@@ -101,17 +98,19 @@ interface OrderRequestBody {
 function readOrderBody(
   body: unknown,
   traceId: string,
-): {
-  ok: true;
-  value: {
-    cartId: string;
-    quoteId: string;
-    paymentIntentId: string | null;
-    termsVersion: string;
-    acceptedTerms: boolean;
-    acknowledgedSimulation: boolean;
-  };
-} | { ok: false; response: HttpResponse<Record<string, unknown>> } {
+):
+  | {
+      ok: true;
+      value: {
+        cartId: string;
+        quoteId: string;
+        paymentIntentId: string | null;
+        termsVersion: string;
+        acceptedTerms: boolean;
+        acknowledgedSimulation: boolean;
+      };
+    }
+  | { ok: false; response: HttpResponse<Record<string, unknown>> } {
   if (!body || typeof body !== 'object') {
     return {
       ok: false,
@@ -228,59 +227,53 @@ export function buildOrderHandlers(
     scenario.name,
   );
 
-  const createOrder: RequestHandler = http.post(
-    '*/api/v1/orders',
-    async ({ request }) => {
-      const sessionId = request.headers.get('X-Demo-Session');
-      if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      if (!SESSION_PATTERN.test(sessionId)) {
-        return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
-      }
-      const idempotencyKey = request.headers.get('Idempotency-Key');
-      if (idempotencyKey === null) return badRequest('Hiányzó Idempotency-Key fejléc.', traceId);
-      if (idempotencyKey.length < IDEMPOTENCY_MIN || idempotencyKey.length > IDEMPOTENCY_MAX) {
-        return badRequest('Érvénytelen Idempotency-Key hossz.', traceId);
-      }
-      const body = await readJsonBody(request);
-      const parsed = readOrderBody(body, traceId);
-      if (!parsed.ok) return parsed.response;
-      const result = domain.createOrder({
-        sessionId,
-        idempotencyKey,
-        cartId: parsed.value.cartId,
-        quoteId: parsed.value.quoteId,
-        paymentIntentId: parsed.value.paymentIntentId,
-        termsVersion: parsed.value.termsVersion,
-        acceptedTerms: parsed.value.acceptedTerms,
-        acknowledgedSimulation: parsed.value.acknowledgedSimulation,
-      });
-      if (!result.ok) return problemResponse(result.problem, traceId);
-      return HttpResponse.json(serializeReceipt(result.value), {
-        status: 201,
-        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-      });
-    },
-  );
+  const createOrder: RequestHandler = http.post('*/api/v1/orders', async ({ request }) => {
+    const sessionId = request.headers.get('X-Demo-Session');
+    if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
+    if (!SESSION_PATTERN.test(sessionId)) {
+      return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
+    }
+    const idempotencyKey = request.headers.get('Idempotency-Key');
+    if (idempotencyKey === null) return badRequest('Hiányzó Idempotency-Key fejléc.', traceId);
+    if (idempotencyKey.length < IDEMPOTENCY_MIN || idempotencyKey.length > IDEMPOTENCY_MAX) {
+      return badRequest('Érvénytelen Idempotency-Key hossz.', traceId);
+    }
+    const body = await readJsonBody(request);
+    const parsed = readOrderBody(body, traceId);
+    if (!parsed.ok) return parsed.response;
+    const result = domain.createOrder({
+      sessionId,
+      idempotencyKey,
+      cartId: parsed.value.cartId,
+      quoteId: parsed.value.quoteId,
+      paymentIntentId: parsed.value.paymentIntentId,
+      termsVersion: parsed.value.termsVersion,
+      acceptedTerms: parsed.value.acceptedTerms,
+      acknowledgedSimulation: parsed.value.acknowledgedSimulation,
+    });
+    if (!result.ok) return problemResponse(result.problem, traceId);
+    return HttpResponse.json(serializeReceipt(result.value), {
+      status: 201,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    });
+  });
 
-  const getOrder: RequestHandler = http.get(
-    '*/api/v1/orders/:orderId',
-    ({ request, params }) => {
-      const sessionId = request.headers.get('X-Demo-Session');
-      if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      if (!SESSION_PATTERN.test(sessionId)) {
-        return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
-      }
-      const result = domain.getOrder({
-        sessionId,
-        orderId: String(params['orderId']),
-      });
-      if (!result.ok) return problemResponse(result.problem, traceId);
-      return HttpResponse.json(serializeReceipt(result.value), {
-        status: 200,
-        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-      });
-    },
-  );
+  const getOrder: RequestHandler = http.get('*/api/v1/orders/:orderId', ({ request, params }) => {
+    const sessionId = request.headers.get('X-Demo-Session');
+    if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
+    if (!SESSION_PATTERN.test(sessionId)) {
+      return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
+    }
+    const result = domain.getOrder({
+      sessionId,
+      orderId: String(params['orderId']),
+    });
+    if (!result.ok) return problemResponse(result.problem, traceId);
+    return HttpResponse.json(serializeReceipt(result.value), {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    });
+  });
 
   return [createOrder, getOrder];
 }
@@ -293,7 +286,12 @@ export function buildOrderHandlers(
 
 export const orderHandlersEntry: BusinessHandlerEntry = (options) => {
   const idempotencyForQuotes = new IdempotencyStore(options.clock);
-  const shared = getSharedStores(options.repository, options.clock, options.ids, idempotencyForQuotes);
+  const shared = getSharedStores(
+    options.repository,
+    options.clock,
+    options.ids,
+    idempotencyForQuotes,
+  );
   return buildOrderHandlers(options, shared);
 };
 

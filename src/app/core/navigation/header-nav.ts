@@ -1,4 +1,12 @@
-import { Component, computed, inject, input, signal, viewChild, type ElementRef } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+  viewChild,
+  type ElementRef,
+} from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { CartCountFacade } from './cart-count-facade';

@@ -1,4 +1,9 @@
-<div class="root inline-flex flex-col gap-1" [class.is-disabled]="disabled()" [class.is-invalid]="invalid()" data-testid="quantity-control">
+<div
+  class="root inline-flex flex-col gap-1"
+  [class.is-disabled]="disabled()"
+  [class.is-invalid]="invalid()"
+  data-testid="quantity-control"
+>
   <button
     type="button"
     class="step inline-flex items-center justify-center min-w-10 h-10 rounded font-medium cursor-pointer leading-none"
@@ -6,7 +11,9 @@
     [disabled]="decrementDisabled()"
     (click)="decrement()"
     data-testid="quantity-decrement"
-  >−</button>
+  >
+    −
+  </button>
   <input
     type="text"
     inputmode="numeric"
@@ -27,9 +34,17 @@
     [disabled]="incrementDisabled()"
     (click)="increment()"
     data-testid="quantity-increment"
-  >+</button>
+  >
+    +
+  </button>
   @if (invalid() && message()) {
-    <p class="message m-0 px-2" [id]="describedById" role="status" aria-live="polite" data-testid="quantity-message">
+    <p
+      class="message m-0 px-2"
+      [id]="describedById"
+      role="status"
+      aria-live="polite"
+      data-testid="quantity-message"
+    >
       {{ message() }}
     </p>
   }

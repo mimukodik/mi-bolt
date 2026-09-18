@@ -7,11 +7,7 @@ import type { Money } from './price-block';
 @Component({
   imports: [PriceBlock],
   template: `
-    <app-price-block
-      [money]="money()"
-      [label]="label()"
-      [status]="status()"
-    ></app-price-block>
+    <app-price-block [money]="money()" [label]="label()" [status]="status()"></app-price-block>
   `,
 })
 class HostComponent {
@@ -38,7 +34,9 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 describe('PriceBlock primitive', () => {
   it('formats a whole-HUF amount with non-breaking spaces', () => {
     const { fixture } = setup();
-    const amount = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="price-amount"]');
+    const amount = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="price-amount"]',
+    );
     expect(amount).not.toBeNull();
     if (!amount) {
       throw new Error('Expected price-amount element');
@@ -71,7 +69,9 @@ describe('PriceBlock primitive', () => {
     const { fixture, host } = setup();
     host.status.set('loading');
     fixture.detectChanges();
-    expect(getNativeElement(fixture).querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="price-skeleton"]'),
+    ).not.toBeNull();
     expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
 
@@ -79,7 +79,9 @@ describe('PriceBlock primitive', () => {
     const { fixture, host } = setup();
     host.status.set('error');
     fixture.detectChanges();
-    const error = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="price-error"]');
+    const error = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="price-error"]',
+    );
     expect(error).not.toBeNull();
     expect(error?.textContent).toContain('\u2014');
     expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();

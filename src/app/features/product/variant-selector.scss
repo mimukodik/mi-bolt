@@ -1,107 +1,112 @@
 /* variant-selector.scss — extracted from inline styles.
    Tailwind v4 utility classes live alongside the scoped selectors below. */
 
+:host {
+  display: block;
+}
 
-      :host { display: block; }
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
 
-      .group {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-2);
-        margin: 0;
-        padding: 0;
-        border: 0;
-      }
+.legend {
+  font-size: var(--type-helper);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+}
 
-      .legend {
-        font-size: var(--type-helper);
-        font-weight: var(--weight-medium);
-        color: var(--color-text-secondary);
-      }
+.legend strong {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-bold);
+}
 
-      .legend strong {
-        color: var(--color-text-primary);
-        font-weight: var(--weight-bold);
-      }
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
 
-      .options {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-2);
-      }
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-control);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-light);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--type-body);
+  line-height: 1;
+  cursor: pointer;
+}
 
-      .option {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        min-height: var(--size-control);
-        padding: 0 var(--space-3);
-        border-radius: var(--radius-control);
-        border: 1px solid var(--color-border-subtle);
-        background: var(--color-surface-light);
-        color: var(--color-text-primary);
-        font-family: inherit;
-        font-size: var(--type-body);
-        line-height: 1;
-        cursor: pointer;
-      }
+.option:hover:not(:disabled) {
+  background: var(--color-brand-accent-soft);
+  border-color: var(--color-brand-ink);
+}
 
-      .option:hover:not(:disabled) {
-        background: var(--color-brand-accent-soft);
-        border-color: var(--color-brand-ink);
-      }
+.option:focus-visible {
+  outline: 2px solid var(--color-focus-light);
+  outline-offset: 2px;
+}
 
-      .option:focus-visible {
-        outline: 2px solid var(--color-focus-light);
-        outline-offset: 2px;
-      }
+.option.is-selected {
+  background: var(--color-brand-accent-soft);
+  border-color: var(--color-brand-ink);
+  color: var(--color-brand-ink);
+  font-weight: var(--weight-medium);
+}
 
-      .option.is-selected {
-        background: var(--color-brand-accent-soft);
-        border-color: var(--color-brand-ink);
-        color: var(--color-brand-ink);
-        font-weight: var(--weight-medium);
-      }
+.option:disabled {
+  background: var(--color-surface-section);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
-      .option:disabled {
-        background: var(--color-surface-section);
-        color: var(--color-text-secondary);
-        cursor: not-allowed;
-        opacity: 0.6;
-      }
+.swatch {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-subtle);
+  flex: 0 0 auto;
+}
 
-      .swatch {
-        display: inline-block;
-        width: 1.25rem;
-        height: 1.25rem;
-        border-radius: 50%;
-        border: 1px solid var(--color-border-subtle);
-        flex: 0 0 auto;
-      }
+.label {
+  display: inline-block;
+}
 
-      .label {
-        display: inline-block;
-      }
+.option.is-selected .label::after {
+  content: '';
+}
 
-      .option.is-selected .label::after {
-        content: '';
-      }
+.check {
+  display: none;
+  font-weight: var(--weight-bold);
+}
 
-      .check {
-        display: none;
-        font-weight: var(--weight-bold);
-      }
+.option.is-selected .check {
+  display: inline-block;
+}
 
-      .option.is-selected .check { display: inline-block; }
+.reason {
+  margin: 0;
+  font-size: var(--type-helper);
+  color: var(--color-status-error);
+  line-height: var(--line-height-body);
+}
 
-      .reason {
-        margin: 0;
-        font-size: var(--type-helper);
-        color: var(--color-status-error);
-        line-height: var(--line-height-body);
-      }
-
-      @media (max-width: 640px) {
-        .option { min-height: var(--size-control); padding: 0 var(--space-3); }
-      }
-    
+@media (max-width: 640px) {
+  .option {
+    min-height: var(--size-control);
+    padding: 0 var(--space-3);
+  }
+}

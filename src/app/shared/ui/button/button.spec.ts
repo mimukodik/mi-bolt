@@ -36,7 +36,11 @@ function hasComponentStyles(val: unknown): val is ComponentWithStyles {
   return 'ɵcmp' in val;
 }
 
-function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent; root: HTMLElement } {
+function setup(): {
+  fixture: ComponentFixture<HostComponent>;
+  host: HostComponent;
+  root: HTMLElement;
+} {
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.detectChanges();

@@ -1,9 +1,10 @@
-<article class="line grid gap-4 p-4 rounded" [attr.aria-busy]="pending() ? 'true' : null" data-testid="cart-line">
+<article
+  class="line grid gap-4 p-4 rounded"
+  [attr.aria-busy]="pending() ? 'true' : null"
+  data-testid="cart-line"
+>
   <div class="media flex items-start justify-center min-w-0">
-    <app-product-image
-      [image]="imageLike()"
-      [productName]="line().productName"
-    ></app-product-image>
+    <app-product-image [image]="imageLike()" [productName]="line().productName"></app-product-image>
   </div>
 
   <div class="body flex flex-col gap-3 min-w-0">

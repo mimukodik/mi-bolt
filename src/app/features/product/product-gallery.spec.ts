@@ -45,26 +45,41 @@ const gallerySource = [
   'src/app/features/product/product-gallery.ts',
   'src/app/features/product/product-gallery.html',
   'src/app/features/product/product-gallery.scss',
-].map((p) => {
-  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-  catch { return ''; }
-}).join('\n');
+]
+  .map((p) => {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+    } catch {
+      return '';
+    }
+  })
+  .join('\n');
 const productImageSource = [
   'src/app/shared/ui/product-image/product-image.ts',
   'src/app/shared/ui/product-image/product-image.html',
   'src/app/shared/ui/product-image/product-image.scss',
-].map((p) => {
-  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-  catch { return ''; }
-}).join('\n');
+]
+  .map((p) => {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+    } catch {
+      return '';
+    }
+  })
+  .join('\n');
 const accessibleDialogSource = [
   'src/app/shared/ui/accessible-dialog/accessible-dialog.ts',
   'src/app/shared/ui/accessible-dialog/accessible-dialog.html',
   'src/app/shared/ui/accessible-dialog/accessible-dialog.scss',
-].map((p) => {
-  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-  catch { return ''; }
-}).join('\n');
+]
+  .map((p) => {
+    try {
+      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+    } catch {
+      return '';
+    }
+  })
+  .join('\n');
 
 // ---------------------------------------------------------------------------
 // T16-AC02 — gallery: prev/next, thumbnail, count, zoom, keyboard,
@@ -83,11 +98,15 @@ describe('T16-AC02 product-gallery prev/next/thumbnail/count', () => {
   it('renders a thumbnail strip with one button per image and emits the matching index on click', () => {
     expect(gallerySource).toMatch(/gallery-thumb-/);
     expect(gallerySource).toMatch(/\(click\)="goTo\(i\)"/);
-    expect(gallerySource).toMatch(/\[attr\.aria-current\]="i === imageIndex\(\) \? 'true' : 'false'"/);
+    expect(gallerySource).toMatch(
+      /\[attr\.aria-current\]="i === imageIndex\(\) \? 'true' : 'false'"/,
+    );
   });
 
   it('shows the image count in the form "current / total"', () => {
-    expect(gallerySource).toMatch(/\{\{\s*imageIndex\(\)\s*\+\s*1\s*\}\s*\}\s*\/\s*\{\{\s*images\(\)\.length\s*\}\}/);
+    expect(gallerySource).toMatch(
+      /\{\{\s*imageIndex\(\)\s*\+\s*1\s*\}\s*\}\s*\/\s*\{\{\s*images\(\)\.length\s*\}\}/,
+    );
     expect(gallerySource).toMatch(/data-testid="gallery-count"/);
   });
 });
@@ -138,9 +157,7 @@ describe('T16-AC02 product-gallery image error fallback', () => {
   it('does not autoplay: the gallery never schedules a timer that advances the index', () => {
     // Strip comments + template literals before checking for timer
     // names so the comment in the file header does not match.
-    const code = gallerySource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const code = gallerySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     const noAutoplayTimer = /\bsetInterval\b|\bsetTimeout\b|\brequestAnimationFrame\b/;
     expect(noAutoplayTimer.test(code)).toBe(false);
   });

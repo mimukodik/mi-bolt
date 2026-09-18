@@ -203,7 +203,10 @@ function serializeCart(cart: ReturnType<Repository['createCart']>): Record<strin
  * `application/problem+json` content type, and a stable trace id so
  * log readers can correlate failures to scenarios.
  */
-function problemResponse(problem: ProblemLike, traceId: string): HttpResponse<Record<string, unknown>> {
+function problemResponse(
+  problem: ProblemLike,
+  traceId: string,
+): HttpResponse<Record<string, unknown>> {
   const body = {
     type: `urn:mi-bolt:problem:${problem.code.toLowerCase().replace(/_/g, '-')}`,
     title: problem.detail,
@@ -227,7 +230,8 @@ function badRequest(detail: string, traceId: string): HttpResponse<Record<string
 }
 
 function readVariantId(body: unknown): { ok: true; value: string } | { ok: false; detail: string } {
-  if (!body || typeof body !== 'object') return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
+  if (!body || typeof body !== 'object')
+    return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
   const record = body as Record<string, unknown>;
   const variantId = record['variantId'];
   if (typeof variantId !== 'string' || variantId.length === 0) {
@@ -237,7 +241,8 @@ function readVariantId(body: unknown): { ok: true; value: string } | { ok: false
 }
 
 function readQuantity(body: unknown): { ok: true; value: number } | { ok: false; detail: string } {
-  if (!body || typeof body !== 'object') return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
+  if (!body || typeof body !== 'object')
+    return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
   const record = body as Record<string, unknown>;
   const quantity = record['quantity'];
   if (typeof quantity !== 'number' || !Number.isFinite(quantity) || !Number.isInteger(quantity)) {
@@ -251,7 +256,9 @@ function readQuantity(body: unknown): { ok: true; value: number } | { ok: false;
  * Each MSW worker (browser / node) builds its handler list from this
  * entry plus the T06 catalog entry, in registry order.
  */
-export const cartHandlersEntry: BusinessHandlerEntry = (options: CreateHandlersOptions): readonly RequestHandler[] => {
+export const cartHandlersEntry: BusinessHandlerEntry = (
+  options: CreateHandlersOptions,
+): readonly RequestHandler[] => {
   const { repository, clock, ids, scenario } = options;
   ensureFixture(repository);
 

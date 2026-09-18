@@ -30,7 +30,10 @@
 
 import { Component, computed, model, signal } from '@angular/core';
 
-import { FormFieldMessage, type FieldError } from '../../shared/ui/form-field-message/form-field-message';
+import {
+  FormFieldMessage,
+  type FieldError,
+} from '../../shared/ui/form-field-message/form-field-message';
 
 interface AddressLike {
   readonly city: string;
@@ -78,10 +81,22 @@ export class AddressForm {
   readonly postalErrors = computed<readonly FieldError[]>(() => {
     const value = this.postalCode().trim();
     if (value.length === 0) {
-      return [{ code: 'required', message: 'Az irányítószám megadása kötelező.', pointer: '/delivery/address/postalCode' }];
+      return [
+        {
+          code: 'required',
+          message: 'Az irányítószám megadása kötelező.',
+          pointer: '/delivery/address/postalCode',
+        },
+      ];
     }
     if (!POSTAL_CODE_PATTERN.test(value)) {
-      return [{ code: 'pattern', message: 'Az irányítószám formátuma 4 számjegy, 1-es vagy 9-es kezdettel.', pointer: '/delivery/address/postalCode' }];
+      return [
+        {
+          code: 'pattern',
+          message: 'Az irányítószám formátuma 4 számjegy, 1-es vagy 9-es kezdettel.',
+          pointer: '/delivery/address/postalCode',
+        },
+      ];
     }
     return [];
   });
@@ -89,10 +104,22 @@ export class AddressForm {
   readonly cityErrors = computed<readonly FieldError[]>(() => {
     const value = this.city().trim();
     if (value.length === 0) {
-      return [{ code: 'required', message: 'A város megadása kötelező.', pointer: '/delivery/address/city' }];
+      return [
+        {
+          code: 'required',
+          message: 'A város megadása kötelező.',
+          pointer: '/delivery/address/city',
+        },
+      ];
     }
     if (value.length < 2 || value.length > 80) {
-      return [{ code: 'length', message: 'A város 2–80 karakter hosszú lehet.', pointer: '/delivery/address/city' }];
+      return [
+        {
+          code: 'length',
+          message: 'A város 2–80 karakter hosszú lehet.',
+          pointer: '/delivery/address/city',
+        },
+      ];
     }
     return [];
   });
@@ -100,10 +127,22 @@ export class AddressForm {
   readonly line1Errors = computed<readonly FieldError[]>(() => {
     const value = this.line1().trim();
     if (value.length === 0) {
-      return [{ code: 'required', message: 'A cím megadása kötelező.', pointer: '/delivery/address/line1' }];
+      return [
+        {
+          code: 'required',
+          message: 'A cím megadása kötelező.',
+          pointer: '/delivery/address/line1',
+        },
+      ];
     }
     if (value.length < 3 || value.length > 120) {
-      return [{ code: 'length', message: 'A cím 3–120 karakter hosszú lehet.', pointer: '/delivery/address/line1' }];
+      return [
+        {
+          code: 'length',
+          message: 'A cím 3–120 karakter hosszú lehet.',
+          pointer: '/delivery/address/line1',
+        },
+      ];
     }
     return [];
   });
@@ -112,7 +151,13 @@ export class AddressForm {
     const value = this.line2().trim();
     if (value.length === 0) return [];
     if (value.length > 120) {
-      return [{ code: 'length', message: 'Az emelet/ajtó legfeljebb 120 karakter lehet.', pointer: '/delivery/address/line2' }];
+      return [
+        {
+          code: 'length',
+          message: 'Az emelet/ajtó legfeljebb 120 karakter lehet.',
+          pointer: '/delivery/address/line2',
+        },
+      ];
     }
     return [];
   });

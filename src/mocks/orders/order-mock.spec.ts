@@ -30,10 +30,7 @@ import {
   type Ids,
   type ScenarioDescriptor,
 } from '../../mocks/scenarios';
-import {
-  QuoteDomain,
-  type DeliveryOptionId,
-} from '../../mocks/checkout/quote-domain';
+import { QuoteDomain, type DeliveryOptionId } from '../../mocks/checkout/quote-domain';
 import {
   OrderDomain,
   PaymentIntentStore,
@@ -97,7 +94,18 @@ function makeEnv(
     quoteDomain,
     scenario.name,
   );
-  return { clock, ids, repository, idempotency, cartDomain, quoteDomain, paymentIntents, stocks, orderDomain, scenario };
+  return {
+    clock,
+    ids,
+    repository,
+    idempotency,
+    cartDomain,
+    quoteDomain,
+    paymentIntents,
+    stocks,
+    orderDomain,
+    scenario,
+  };
 }
 
 function completeContact() {
@@ -108,7 +116,10 @@ function completeContact() {
   };
 }
 
-function homeDelivery(): { optionId: 'home_delivery'; address: { countryCode: 'HU'; postalCode: string; city: string; line1: string } } {
+function homeDelivery(): {
+  optionId: 'home_delivery';
+  address: { countryCode: 'HU'; postalCode: string; city: string; line1: string };
+} {
   return {
     optionId: 'home_delivery',
     address: {
@@ -155,7 +166,12 @@ interface ReadyCheckout {
 async function readyCheckout(
   env: Env,
   paymentMethod: 'demo_card' | 'demo_cod',
-  options: { sessionId?: string; variantId?: string; quantity?: number; deliveryOptionId?: DeliveryOptionId } = {},
+  options: {
+    sessionId?: string;
+    variantId?: string;
+    quantity?: number;
+    deliveryOptionId?: DeliveryOptionId;
+  } = {},
 ): Promise<ReadyCheckout> {
   const sessionId = options.sessionId ?? SESSION_A;
   const variantId = options.variantId ?? VARIANT_G256;
@@ -282,9 +298,13 @@ describe('T09-AC02 deterministic card scenarios', () => {
       status: 'pending',
       isSimulation: true,
     });
-    expect(env.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe('pending');
+    expect(env.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe(
+      'pending',
+    );
     env.clock.advanceMs(1100);
-    expect(env.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe('succeeded');
+    expect(env.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe(
+      'succeeded',
+    );
   });
 
   it('keeps a pending intent pending forever under the payment-pending-timeout scenario', () => {
@@ -300,7 +320,9 @@ describe('T09-AC02 deterministic card scenarios', () => {
       isSimulation: true,
     });
     env.clock.advanceMs(60_000);
-    expect(env.paymentIntents.findById(intent.id, 'payment-pending-timeout')?.status).toBe('pending');
+    expect(env.paymentIntents.findById(intent.id, 'payment-pending-timeout')?.status).toBe(
+      'pending',
+    );
   });
 
   it('forbids paymentIntentId on the order request when paymentMethod is demo_cod', async () => {
@@ -464,7 +486,10 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
   it('returns 409 IDEMPOTENCY_CONFLICT when the same key is reused with a different body', async () => {
     const env = makeEnv();
     const ready1 = await readyCheckout(env, 'demo_cod', { variantId: VARIANT_G256 });
-    const ready2 = await readyCheckout(env, 'demo_cod', { variantId: VARIANT_G512, sessionId: SESSION_A });
+    const ready2 = await readyCheckout(env, 'demo_cod', {
+      variantId: VARIANT_G512,
+      sessionId: SESSION_A,
+    });
     const idemKey = `${IDEMPOTENCY_KEY_BASE}-conflict`;
     const first = env.orderDomain.createOrder({
       sessionId: SESSION_A,
@@ -568,13 +593,7 @@ describe('T09-AC05 privacy-minimized receipt reload', () => {
     if (!persisted) return;
     const keys = Object.keys(persisted);
     expect(keys).toEqual(
-      expect.arrayContaining([
-        'id',
-        'orderNumber',
-        'sessionId',
-        'createdAt',
-        'total',
-      ]),
+      expect.arrayContaining(['id', 'orderNumber', 'sessionId', 'createdAt', 'total']),
     );
     for (const forbidden of [
       'contact',
@@ -1167,21 +1186,35 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
       },
     });
     expect(response.status).toBe(200);
-    return (await response.json()) as { id: string; total: { amount: number; currency: string }; cartVersion: number };
+    return (await response.json()) as {
+      id: string;
+      total: { amount: number; currency: string };
+      cartVersion: number;
+    };
   }
 
   async function createPaymentIntent(
     cartId: string,
     quoteId: string,
     idempotencyKey: string,
-  ): Promise<{ id: string; status: string; isSimulation: boolean; amount: { amount: number; currency: string } }> {
+  ): Promise<{
+    id: string;
+    status: string;
+    isSimulation: boolean;
+    amount: { amount: number; currency: string };
+  }> {
     const response = await fetch(url('/payment-intents'), {
       method: 'POST',
       headers: commonHeaders(idempotencyKey),
       body: JSON.stringify({ cartId, quoteId }),
     });
     expect(response.status).toBe(201);
-    return (await response.json()) as { id: string; status: string; isSimulation: boolean; amount: { amount: number; currency: string } };
+    return (await response.json()) as {
+      id: string;
+      status: string;
+      isSimulation: boolean;
+      amount: { amount: number; currency: string };
+    };
   }
 
   async function createOrder(
@@ -1218,34 +1251,69 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
   async function buildReadyCheckout(
     paymentMethod: 'demo_card' | 'demo_cod',
     options: { sessionId?: string } = {},
-  ): Promise<{ cartId: string; cartVersion: number; quoteId: string; paymentIntentId?: string; sessionId: string }> {
+  ): Promise<{
+    cartId: string;
+    cartVersion: number;
+    quoteId: string;
+    paymentIntentId?: string;
+    sessionId: string;
+  }> {
     const sessionId = options.sessionId ?? SESSION_A;
     const cart = await postCart();
-    const seeded = await addItem(cart, VARIANT_G256, 1, uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-add`));
-    const draft = await updateCheckout(seeded.id, seeded.version, uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-draft`), {
-      contact: completeContact(),
-      delivery: homeDelivery(),
-      paymentMethod,
-    });
-    const quote = await createQuote(seeded.id, draft.cartVersion, uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-quote`));
+    const seeded = await addItem(
+      cart,
+      VARIANT_G256,
+      1,
+      uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-add`),
+    );
+    const draft = await updateCheckout(
+      seeded.id,
+      seeded.version,
+      uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-draft`),
+      {
+        contact: completeContact(),
+        delivery: homeDelivery(),
+        paymentMethod,
+      },
+    );
+    const quote = await createQuote(
+      seeded.id,
+      draft.cartVersion,
+      uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-quote`),
+    );
     let paymentIntentId: string | undefined;
     if (paymentMethod === 'demo_card') {
-      const intent = await createPaymentIntent(seeded.id, quote.id, uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent`));
+      const intent = await createPaymentIntent(
+        seeded.id,
+        quote.id,
+        uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent`),
+      );
       paymentIntentId = intent.id;
     }
-    return { cartId: seeded.id, cartVersion: seeded.version, quoteId: quote.id, paymentIntentId, sessionId };
+    return {
+      cartId: seeded.id,
+      cartVersion: seeded.version,
+      quoteId: quote.id,
+      paymentIntentId,
+      sessionId,
+    };
   }
 
   it('runs a complete demo_cod flow on the wire and returns a privacy-minimized receipt', async () => {
     const ready = await buildReadyCheckout('demo_cod');
-    const response = await createOrder(ready.cartId, ready.quoteId, `${IDEMPOTENCY_KEY_BASE}-wire-cod-commit`, {
-      cartId: ready.cartId,
-      quoteId: ready.quoteId,
-      paymentIntentId: null,
-      termsVersion: 'demo-1',
-      acceptedTerms: true,
-      acknowledgedSimulation: true,
-    });
+    const response = await createOrder(
+      ready.cartId,
+      ready.quoteId,
+      `${IDEMPOTENCY_KEY_BASE}-wire-cod-commit`,
+      {
+        cartId: ready.cartId,
+        quoteId: ready.quoteId,
+        paymentIntentId: null,
+        termsVersion: 'demo-1',
+        acceptedTerms: true,
+        acknowledgedSimulation: true,
+      },
+    );
     expect(response.status).toBe(201);
     const body = (await response.json()) as OrderReceipt;
     expect(body.status).toBe('demo_confirmed');
@@ -1267,14 +1335,19 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
 
   it('runs a complete demo_card flow on the wire and verifies stock decremented once', async () => {
     const ready = await buildReadyCheckout('demo_card');
-    const response = await createOrder(ready.cartId, ready.quoteId, `${IDEMPOTENCY_KEY_BASE}-wire-card-commit`, {
-      cartId: ready.cartId,
-      quoteId: ready.quoteId,
-      paymentIntentId: ready.paymentIntentId ?? null,
-      termsVersion: 'demo-1',
-      acceptedTerms: true,
-      acknowledgedSimulation: true,
-    });
+    const response = await createOrder(
+      ready.cartId,
+      ready.quoteId,
+      `${IDEMPOTENCY_KEY_BASE}-wire-card-commit`,
+      {
+        cartId: ready.cartId,
+        quoteId: ready.quoteId,
+        paymentIntentId: ready.paymentIntentId ?? null,
+        termsVersion: 'demo-1',
+        acceptedTerms: true,
+        acknowledgedSimulation: true,
+      },
+    );
     expect(response.status).toBe(201);
     expect(env.stocks.get(VARIANT_G256)).toBe(4);
   });
@@ -1329,14 +1402,19 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
 
   it('rejects demo_cod with a paymentIntentId on the wire as 400 VALIDATION_FAILED', async () => {
     const ready = await buildReadyCheckout('demo_cod');
-    const response = await createOrder(ready.cartId, ready.quoteId, `${IDEMPOTENCY_KEY_BASE}-wire-cod-intent`, {
-      cartId: ready.cartId,
-      quoteId: ready.quoteId,
-      paymentIntentId: 'whatever',
-      termsVersion: 'demo-1',
-      acceptedTerms: true,
-      acknowledgedSimulation: true,
-    });
+    const response = await createOrder(
+      ready.cartId,
+      ready.quoteId,
+      `${IDEMPOTENCY_KEY_BASE}-wire-cod-intent`,
+      {
+        cartId: ready.cartId,
+        quoteId: ready.quoteId,
+        paymentIntentId: 'whatever',
+        termsVersion: 'demo-1',
+        acceptedTerms: true,
+        acknowledgedSimulation: true,
+      },
+    );
     expect(response.status).toBe(400);
     const body = (await response.json()) as { code: string; fieldErrors: { path: string }[] };
     expect(body.code).toBe('VALIDATION_FAILED');
@@ -1515,14 +1593,19 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
 
   it('returns 404 from createPaymentIntent when the cart is already ordered', async () => {
     const ready = await buildReadyCheckout('demo_card');
-    const commit = await createOrder(ready.cartId, ready.quoteId, uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent-after-order`), {
-      cartId: ready.cartId,
-      quoteId: ready.quoteId,
-      paymentIntentId: ready.paymentIntentId ?? null,
-      termsVersion: 'demo-1',
-      acceptedTerms: true,
-      acknowledgedSimulation: true,
-    });
+    const commit = await createOrder(
+      ready.cartId,
+      ready.quoteId,
+      uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent-after-order`),
+      {
+        cartId: ready.cartId,
+        quoteId: ready.quoteId,
+        paymentIntentId: ready.paymentIntentId ?? null,
+        termsVersion: 'demo-1',
+        acceptedTerms: true,
+        acknowledgedSimulation: true,
+      },
+    );
     expect(commit.status).toBe(201);
     const response = await fetch(url('/payment-intents'), {
       method: 'POST',
@@ -1611,7 +1694,11 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     expect(unknown.status).toBe(404);
 
     const cardReady = await buildReadyCheckout('demo_card');
-    const intent = await createPaymentIntent(cardReady.cartId, cardReady.quoteId, uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent-cross`));
+    const intent = await createPaymentIntent(
+      cardReady.cartId,
+      cardReady.quoteId,
+      uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent-cross`),
+    );
     const crossSession = await fetch(url(`/payment-intents/${intent.id}`), {
       headers: { 'X-Demo-Session': SESSION_B },
     });
@@ -1631,14 +1718,19 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     const ready = await buildReadyCheckout('demo_card');
     const before = env.stocks.get(VARIANT_G256);
     // Use the wrong paymentIntentId -> should fail before any state change.
-    const response = await createOrder(ready.cartId, ready.quoteId, `${IDEMPOTENCY_KEY_BASE}-wire-rollback`, {
-      cartId: ready.cartId,
-      quoteId: ready.quoteId,
-      paymentIntentId: 'pi-bogus',
-      termsVersion: 'demo-1',
-      acceptedTerms: true,
-      acknowledgedSimulation: true,
-    });
+    const response = await createOrder(
+      ready.cartId,
+      ready.quoteId,
+      `${IDEMPOTENCY_KEY_BASE}-wire-rollback`,
+      {
+        cartId: ready.cartId,
+        quoteId: ready.quoteId,
+        paymentIntentId: 'pi-bogus',
+        termsVersion: 'demo-1',
+        acceptedTerms: true,
+        acknowledgedSimulation: true,
+      },
+    );
     expect(response.status).toBe(404);
     expect(env.stocks.get(VARIANT_G256)).toBe(before);
     // Cart remains active so the user can retry.

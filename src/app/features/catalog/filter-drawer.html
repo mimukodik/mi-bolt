@@ -25,7 +25,11 @@
               [disabled]="disabled() || brand.count === 0"
               (click)="toggleBrand(brand.value)"
             >
-              <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isBrandSelected(brand.value) ? '✓' : '' }}</span>
+              <span
+                class="check inline-flex items-center justify-center w-5 font-bold"
+                aria-hidden="true"
+                >{{ isBrandSelected(brand.value) ? '✓' : '' }}</span
+              >
               <span class="option__label flex-1">{{ brand.label }}</span>
               <span class="option__count">{{ brand.count }}</span>
             </button>
@@ -47,7 +51,11 @@
             [disabled]="disabled()"
             (click)="toggleStorage(bucket)"
           >
-            <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isStorageSelected(bucket) ? '✓' : '' }}</span>
+            <span
+              class="check inline-flex items-center justify-center w-5 font-bold"
+              aria-hidden="true"
+              >{{ isStorageSelected(bucket) ? '✓' : '' }}</span
+            >
             <span>{{ bucket }} GB</span>
           </button>
         }
@@ -108,7 +116,11 @@
         [disabled]="disabled()"
         (click)="toggleInStock()"
       >
-        <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isInStockSelected() ? '✓' : '' }}</span>
+        <span
+          class="check inline-flex items-center justify-center w-5 font-bold"
+          aria-hidden="true"
+          >{{ isInStockSelected() ? '✓' : '' }}</span
+        >
         <span>Csak raktáron</span>
       </button>
       <button
@@ -120,7 +132,11 @@
         [disabled]="disabled()"
         (click)="toggleFiveG()"
       >
-        <span class="check inline-flex items-center justify-center w-5 font-bold" aria-hidden="true">{{ isFiveGSelected() ? '✓' : '' }}</span>
+        <span
+          class="check inline-flex items-center justify-center w-5 font-bold"
+          aria-hidden="true"
+          >{{ isFiveGSelected() ? '✓' : '' }}</span
+        >
         <span>Csak 5G</span>
       </button>
     </fieldset>

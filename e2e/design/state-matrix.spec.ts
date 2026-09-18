@@ -46,9 +46,7 @@ type Surface = {
   readonly routeId: string;
   readonly path: string;
   /** Selector / text the surface exposes in the named state. */
-  readonly assertion:
-    | { kind: 'testid'; testId: string }
-    | { kind: 'text'; match: RegExp };
+  readonly assertion: { kind: 'testid'; testId: string } | { kind: 'text'; match: RegExp };
   /** Optional query string the page needs to force the state. */
   readonly query?: string;
   /** Whether this route is currently implemented in the build. */
@@ -119,10 +117,7 @@ test.describe('T25 state matrix — default / loading / empty / error', () => {
         // build (cart / checkout / success pages). Skip rather
         // than fail so the suite can be run incrementally while
         // the dependent tasks (T17–T24) land.
-        test.skip(
-          true,
-          `${url} returned ${status} — page not yet implemented (T17–T24)`,
-        );
+        test.skip(true, `${url} returned ${status} — page not yet implemented (T17–T24)`);
         return;
       }
 
@@ -146,20 +141,13 @@ test.describe('T25 state matrix — default / loading / empty / error', () => {
         const text = page.getByText(surface.assertion.match);
         const mounted = (await text.count()) > 0;
         if (!mounted) {
-          test.skip(
-            true,
-            `text matching ${surface.assertion.match} not present on ${url}`,
-          );
+          test.skip(true, `text matching ${surface.assertion.match} not present on ${url}`);
           return;
         }
         await expect(text.first()).toBeVisible({ timeout: 10_000 });
       }
 
-      const screenshotDir = resolve(
-        SCREENSHOT_ROOT,
-        'states',
-        surface.state,
-      );
+      const screenshotDir = resolve(SCREENSHOT_ROOT, 'states', surface.state);
       mkdirSync(screenshotDir, { recursive: true });
       const screenshotPath = resolve(screenshotDir, `${surface.routeId}.png`);
       await page.screenshot({ path: screenshotPath, fullPage: true });

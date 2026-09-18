@@ -25,31 +25,14 @@
  */
 import '@angular/compiler';
 // @vitest-environment jsdom
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { setupServer } from 'msw/node';
 import type { RequestHandler } from 'msw';
 
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
-import {
-  EnvironmentInjector,
-  runInInjectionContext,
-} from '@angular/core';
-import {
-  provideHttpClient,
-  withInterceptors,
-} from '@angular/common/http';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
@@ -114,11 +97,9 @@ function buildHandlers(): readonly RequestHandler[] {
 }
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   server.listen({ onUnhandledRequest: 'error' });
 });
 

@@ -147,9 +147,7 @@ function badRequest(detail: string, traceId: string): HttpResponse<Record<string
 // each scenario owns its own draft + quote state.
 // ---------------------------------------------------------------------------
 
-export function buildCheckoutHandlers(
-  options: CreateHandlersOptions,
-): readonly RequestHandler[] {
+export function buildCheckoutHandlers(options: CreateHandlersOptions): readonly RequestHandler[] {
   const { repository, clock, ids } = options;
   const traceId = traceIdFor(options);
   // The QuoteDomain is shared with the payment + order handlers so the
@@ -159,13 +157,11 @@ export function buildCheckoutHandlers(
   const shared = getSharedStores(repository, clock, ids, new IdempotencyStore(clock));
   const domain: QuoteDomain = shared.quoteDomain;
 
-  const getCheckoutOptions: RequestHandler = http.get(
-    '*/api/v1/checkout/options',
-    () =>
-      HttpResponse.json(CHECKOUT_OPTIONS, {
-        status: 200,
-        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-      }),
+  const getCheckoutOptions: RequestHandler = http.get('*/api/v1/checkout/options', () =>
+    HttpResponse.json(CHECKOUT_OPTIONS, {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    }),
   );
 
   const getCheckoutSession: RequestHandler = http.get(
@@ -281,7 +277,8 @@ export function buildCheckoutHandlers(
 }
 
 /** Public registration entry — wired by `registerBusinessHandlers`. */
-export const checkoutHandlersEntry: BusinessHandlerEntry = (options) => buildCheckoutHandlers(options);
+export const checkoutHandlersEntry: BusinessHandlerEntry = (options) =>
+  buildCheckoutHandlers(options);
 
 registerBusinessHandlers(checkoutHandlersEntry);
 

@@ -38,7 +38,9 @@
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
   background: var(--color-surface-section);
-  transition: border-color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+  transition:
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
 }
 
 .option.is-active {

@@ -16,7 +16,9 @@ const API_PATH = '/api/v1';
 
 export function resolveApiRoot(documentLike?: Document): string {
   if (typeof documentLike === 'undefined' && typeof document === 'undefined') {
-    throw new Error('[mi-bolt] resolveApiRoot(): document is missing; SDK cannot derive a same-origin root.');
+    throw new Error(
+      '[mi-bolt] resolveApiRoot(): document is missing; SDK cannot derive a same-origin root.',
+    );
   }
   const baseUri = (documentLike ?? document).baseURI;
   let origin: string;

@@ -25,11 +25,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles/tokens.css",
-              "src/styles/primitives.css",
-              "src/styles.css"
-            ]
+            "styles": ["src/styles/tokens.css", "src/styles/primitives.css", "src/styles.css"]
           },
           "configurations": {
             "production": {
@@ -91,13 +87,9 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "runnerConfig": "vitest.config.ts",
-            "setupFiles": [
-              "tests/setup-msw.ts"
-            ],
+            "setupFiles": ["tests/setup-msw.ts"],
             "coverage": true,
-            "coverageInclude": [
-              "src/**/*.ts"
-            ],
+            "coverageInclude": ["src/**/*.ts"],
             "coverageExclude": [
               "**/*.spec.ts",
               "**/*.test.ts",
@@ -106,20 +98,13 @@
               "tests/**",
               "e2e/**"
             ],
-            "coverageReporters": [
-              "json-summary",
-              "json",
-              "text"
-            ]
+            "coverageReporters": ["json-summary", "json", "text"]
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": [
-              "src/**/*.ts",
-              "src/**/*.html"
-            ]
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
         }
       }

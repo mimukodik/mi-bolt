@@ -6,11 +6,7 @@ import type { LoadingVariant } from './loading-state';
 @Component({
   imports: [LoadingState],
   template: `
-    <app-loading-state
-      [variant]="variant()"
-      [label]="label()"
-      [role]="role()"
-    ></app-loading-state>
+    <app-loading-state [variant]="variant()" [label]="label()" [role]="role()"></app-loading-state>
   `,
 })
 class HostComponent {
@@ -47,7 +43,9 @@ describe('LoadingState primitive', () => {
     host.variant.set('lines');
     fixture.detectChanges();
     expect(getNativeElement(fixture).querySelectorAll('.line').length).toBe(3);
-    expect(getNativeElement(fixture).querySelector('.root')?.classList.contains('is-lines')).toBe(true);
+    expect(getNativeElement(fixture).querySelector('.root')?.classList.contains('is-lines')).toBe(
+      true,
+    );
   });
 
   it('renders the card-shaped skeleton (image + title + price) for the card variant', () => {
@@ -57,7 +55,9 @@ describe('LoadingState primitive', () => {
     expect(getNativeElement(fixture).querySelector('.block--image')).not.toBeNull();
     expect(getNativeElement(fixture).querySelector('.block--title')).not.toBeNull();
     expect(getNativeElement(fixture).querySelector('.block--price')).not.toBeNull();
-    expect(getNativeElement(fixture).querySelector('.root')?.classList.contains('is-card')).toBe(true);
+    expect(getNativeElement(fixture).querySelector('.root')?.classList.contains('is-card')).toBe(
+      true,
+    );
   });
 
   it('renders a single block skeleton for the default variant', () => {

@@ -30,10 +30,7 @@
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
-import {
-  registerBusinessHandlers,
-  type CreateHandlersOptions,
-} from '../create-handlers';
+import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
 import type { Product, Variant } from '../repository';
 import { buildFacets, type ProductFacets } from './facets';
 import {
@@ -59,12 +56,7 @@ export const DEMO_CONFIG = {
   currency: 'HUF',
   isDemo: true,
   termsVersion: 'demo-1',
-  featuredSlugs: [
-    'demo-one-5g',
-    'demo-air-5g',
-    'demo-pro-5g',
-    'demo-lite-5g',
-  ],
+  featuredSlugs: ['demo-one-5g', 'demo-air-5g', 'demo-pro-5g', 'demo-lite-5g'],
   maximumLineQuantity: 5,
 } as const;
 
@@ -111,10 +103,7 @@ function traceId(options: CreateHandlersOptions): string {
   return `mock-trace-${options.scenario.name}`;
 }
 
-function validationProblem(
-  options: CreateHandlersOptions,
-  error: FilterParseError,
-): Response {
+function validationProblem(options: CreateHandlersOptions, error: FilterParseError): Response {
   const body: ProblemBody = {
     type: 'urn:mi-bolt:problem:validation-failed',
     title: 'A kérés nem felel meg az elfogadható formátumnak.',
@@ -160,10 +149,7 @@ function notFoundProblem(
  * CHEAPEST MATCHING variant as its default; the underlying fixture
  * product stays untouched so `getProduct` keeps the original default.
  */
-function withDefaultVariant(
-  product: Product,
-  replacement: Variant,
-): ProductSummary {
+function withDefaultVariant(product: Product, replacement: Variant): ProductSummary {
   return {
     id: product.id,
     slug: product.slug,
@@ -187,9 +173,7 @@ function withDefaultVariant(
  * or Node-only imports. Tests do the same: each case seeds its own
  * repository before wiring the handlers.
  */
-export function listCatalogProducts(
-  options: CreateHandlersOptions,
-): readonly Product[] {
+export function listCatalogProducts(options: CreateHandlersOptions): readonly Product[] {
   return options.repository.listProducts();
 }
 
@@ -226,18 +210,14 @@ function buildListResponse(
  * Public handler factory. The returned list is what
  * `registerBusinessHandlers` will hand to the T05 dispatcher shell.
  */
-export function buildCatalogHandlers(
-  options: CreateHandlersOptions,
-): readonly RequestHandler[] {
+export function buildCatalogHandlers(options: CreateHandlersOptions): readonly RequestHandler[] {
   // MSW 2.x in the browser resolves relative paths against
   // `location.href`, so a literal `/api/v1/...` pattern matches
   // the page's actual origin (e.g. http://127.0.0.1:4204). The
   // cart / checkout handlers use the same pattern.
   const products = listCatalogProducts(options);
 
-  const getConfig = http.get(`*/api/v1/config`, () =>
-    HttpResponse.json(DEMO_CONFIG),
-  );
+  const getConfig = http.get(`*/api/v1/config`, () => HttpResponse.json(DEMO_CONFIG));
 
   const listProducts = http.get(`*/api/v1/products`, ({ request }) => {
     const url = new URL(request.url);
@@ -245,11 +225,7 @@ export function buildCatalogHandlers(
     if (!parsed.ok) {
       return validationProblem(options, parsed.error);
     }
-    const matches = filterProducts(
-      products,
-      parsed.value,
-      DEMO_CONFIG.featuredSlugs,
-    );
+    const matches = filterProducts(products, parsed.value, DEMO_CONFIG.featuredSlugs);
     return buildListResponse(options, parsed.value, products, matches);
   });
 
@@ -257,11 +233,7 @@ export function buildCatalogHandlers(
     const slug = String(params['slug']);
     const product = options.repository.getProductBySlug(slug);
     if (!product) {
-      return notFoundProblem(
-        options,
-        `Ismeretlen termék: ${slug}.`,
-        'NOT_FOUND',
-      );
+      return notFoundProblem(options, `Ismeretlen termék: ${slug}.`, 'NOT_FOUND');
     }
     return HttpResponse.json(product);
   });

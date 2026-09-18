@@ -63,23 +63,14 @@ import { OrderReceiptComponent } from './order-receipt';
 
 /** State of the hydration pipeline that lives on top of `CheckoutFacade.order()`. */
 type LoadState =
-  | { kind: 'loading' }
-  | { kind: 'ready' }
-  | { kind: 'missing' }
-  | { kind: 'error'; detail: string };
+  { kind: 'loading' } | { kind: 'ready' } | { kind: 'missing' } | { kind: 'error'; detail: string };
 
 const ORDER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,80}$/;
 
 @Component({
   selector: 'app-success-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    RouterLink,
-    Button,
-    ErrorState,
-    LoadingState,
-    OrderReceiptComponent,
-  ],
+  imports: [RouterLink, Button, ErrorState, LoadingState, OrderReceiptComponent],
   templateUrl: './success-step.html',
   styleUrl: './success-step.scss',
 })
@@ -213,7 +204,8 @@ export class SuccessStep {
 
   /** Subscribed once: move focus to the success heading. */
   private scheduleHeadingFocus(heading: ElementRef<HTMLElement>): void {
-    this.routeFocus.navigationEnd$()
+    this.routeFocus
+      .navigationEnd$()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         // Defer the focus one tick so the H1 is connected (lazy
@@ -269,7 +261,9 @@ export class SuccessStep {
     //   4. Navigate to the shop so the user can keep shopping.
     void this.cart
       .ensureCart()
-      .then(() => { this.checkout.resetDraft(); })
+      .then(() => {
+        this.checkout.resetDraft();
+      })
       .then(() => this.router.navigate(['/telefonok']))
       .catch(() => this.router.navigate(['/penztar/kosar']))
       .finally(() => {

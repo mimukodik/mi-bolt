@@ -51,10 +51,7 @@ import {
 
 import type { Quote } from '../../api/generated/models/quote';
 
-import {
-  CheckoutFacade,
-  type CheckoutError,
-} from './checkout.facade';
+import { CheckoutFacade, type CheckoutError } from './checkout.facade';
 
 /** Discriminated union exposed to the review component template. */
 export type QuoteState =
@@ -104,8 +101,7 @@ export class QuoteController {
   private readonly facade = inject(CheckoutFacade);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly stateWritable: WritableSignal<QuoteState> =
-    signal<QuoteState>({ kind: 'idle' });
+  private readonly stateWritable: WritableSignal<QuoteState> = signal<QuoteState>({ kind: 'idle' });
 
   /** Current state. The page branches on `kind` to pick the right
    *  banner + CTA explanation. */
@@ -118,15 +114,11 @@ export class QuoteController {
   });
 
   /** True while a quote request is in flight. */
-  readonly busy: Signal<boolean> = computed<boolean>(
-    () => this.stateWritable().kind === 'loading',
-  );
+  readonly busy: Signal<boolean> = computed<boolean>(() => this.stateWritable().kind === 'loading');
 
   /** True only when the controller holds a fresh, submittable
    *  quote. The CTA reads this. */
-  readonly ready: Signal<boolean> = computed<boolean>(
-    () => this.stateWritable().kind === 'ready',
-  );
+  readonly ready: Signal<boolean> = computed<boolean>(() => this.stateWritable().kind === 'ready');
 
   constructor() {
     // Drop the active quote when the facade invalidates it (the

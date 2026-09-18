@@ -30,7 +30,8 @@ export class ShopLayout {
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
-    this.routeFocus.navigationEnd$()
+    this.routeFocus
+      .navigationEnd$()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.routeFocus.scheduleFocus();

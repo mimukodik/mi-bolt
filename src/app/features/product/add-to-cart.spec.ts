@@ -35,8 +35,11 @@ function read(relative: string): string {
   const sources = [relative, `${base}.html`, `${base}.scss`];
   return sources
     .map((p) => {
-      try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-      catch { return ''; }
+      try {
+        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
+      } catch {
+        return '';
+      }
     })
     .join('\n');
 }
@@ -107,7 +110,9 @@ describe('T18 add-to-cart shared-primitive dependency wiring', () => {
     expect(addToCartSource).toMatch(/inject\(CartFacade\)/);
     // No sibling event bus, no parallel totals, no Service stub of
     // its own.
-    expect(addToCartSource).not.toMatch(/class\s+\w+\s*\{[^}]*private\s+(cart|itemCount|subtotal)\s*=/);
+    expect(addToCartSource).not.toMatch(
+      /class\s+\w+\s*\{[^}]*private\s+(cart|itemCount|subtotal)\s*=/,
+    );
   });
 
   it('product page wires the Add-to-cart component through addRequested', () => {
@@ -141,7 +146,9 @@ describe('T18 product-page addRequested wiring', () => {
 // ---------------------------------------------------------------------------
 describe('T18 add-to-cart CartFacade contract pins', () => {
   it('CartFacade.addItem accepts (variantId, quantity) and returns a promise', () => {
-    expect(cartFacadeSource).toMatch(/async\s+addItem\(variantId:\s*string,\s*quantity:\s*number\)/);
+    expect(cartFacadeSource).toMatch(
+      /async\s+addItem\(variantId:\s*string,\s*quantity:\s*number\)/,
+    );
     expect(cartFacadeSource).toMatch(/Promise<void>/);
   });
 

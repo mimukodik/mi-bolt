@@ -154,7 +154,9 @@ export class PaymentProgress implements OnDestroy {
   readonly tick: Signal<PaymentProgressTick | null> = this.currentTick.asReadonly();
 
   /** Discrete view state derived from the tick. */
-  readonly state: Signal<PaymentProgressState | null> = computed(() => this.currentTick()?.state ?? null);
+  readonly state: Signal<PaymentProgressState | null> = computed(
+    () => this.currentTick()?.state ?? null,
+  );
 
   /** 1-indexed attempt number. 0 before the first poll. */
   readonly attempt: Signal<number> = computed(() => this.currentTick()?.attempt ?? 0);

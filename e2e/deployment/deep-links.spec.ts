@@ -31,8 +31,7 @@
  */
 import { expect, test } from '@playwright/test';
 
-const STATIC_DIR =
-  process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser';
+const STATIC_DIR = process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser';
 const BASE_URL = process.env['MI_BOLT_E2E_BASE_URL'] ?? 'http://127.0.0.1:4200';
 
 const NO_CACHE_TOKENS = ['no-cache', 'no-store', 'must-revalidate'];
@@ -60,18 +59,14 @@ test.describe('T28 deep-link routing + SW cache policy', () => {
     await expect(page).toHaveTitle(/MiBolt — Mobiltelefonok/);
   });
 
-  test('GET /telefonok/demo-one-5g resolves the product detail route', async ({
-    page,
-  }) => {
+  test('GET /telefonok/demo-one-5g resolves the product detail route', async ({ page }) => {
     const response = await page.goto('/telefonok/demo-one-5g');
     expect(response).not.toBeNull();
     expect(response!.status()).toBe(200);
     await expect(page).toHaveTitle(/MiBolt — Termék/);
   });
 
-  test('GET /penztar/siker/test-order-id recovers (no 500)', async ({
-    page,
-  }) => {
+  test('GET /penztar/siker/test-order-id recovers (no 500)', async ({ page }) => {
     // The unknown order id MUST NOT leave the user on a dead
     // success URL or surface a 500 error. The T28 spec calls this
     // a "404 recover": the guard recognises the order is missing
@@ -96,9 +91,7 @@ test.describe('T28 deep-link routing + SW cache policy', () => {
     ).toBe(true);
   });
 
-  test('GET /penztar/ellenorzes with empty cart does not 500', async ({
-    page,
-  }) => {
+  test('GET /penztar/ellenorzes with empty cart does not 500', async ({ page }) => {
     // The cart facade starts with `cart() === null` so a build
     // that ships the reviewGuard redirects to /penztar/kosar with
     // `navigationReason=empty-cart` (T19). The current T13-catalog
@@ -135,9 +128,7 @@ test.describe('T28 deep-link routing + SW cache policy', () => {
     expect(typeof body.detail).toBe('string');
   });
 
-  test('mockServiceWorker.js is served with no-cache headers (T28-AC03)', async ({
-    request,
-  }) => {
+  test('mockServiceWorker.js is served with no-cache headers (T28-AC03)', async ({ request }) => {
     const response = await request.get(`${BASE_URL}/mockServiceWorker.js`);
     expect(response.status()).toBe(200);
     const cacheControl = response.headers()['cache-control'] ?? '';
@@ -156,9 +147,7 @@ test.describe('T28 deep-link routing + SW cache policy', () => {
     expect(cacheControl.toLowerCase()).not.toContain('immutable');
   });
 
-  test('index.html is served with no-cache headers (T28-AC03)', async ({
-    request,
-  }) => {
+  test('index.html is served with no-cache headers (T28-AC03)', async ({ request }) => {
     const response = await request.get(`${BASE_URL}/`);
     expect(response.status()).toBe(200);
     const cacheControl = response.headers()['cache-control'] ?? '';
@@ -187,10 +176,9 @@ test.describe('T28 deep-link routing + SW cache policy', () => {
       const response = await request.get(url);
       expect(response.status(), `preload ${href}`).toBe(200);
       const cacheControl = response.headers()['cache-control'] ?? '';
-      expect(
-        cacheControl.toLowerCase(),
-        `preload ${href} must be marked immutable`,
-      ).toContain('immutable');
+      expect(cacheControl.toLowerCase(), `preload ${href} must be marked immutable`).toContain(
+        'immutable',
+      );
     }
   });
 

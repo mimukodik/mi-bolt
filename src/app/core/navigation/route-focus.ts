@@ -1,4 +1,10 @@
-import { EnvironmentInjector, Service, afterNextRender, inject, runInInjectionContext } from '@angular/core';
+import {
+  EnvironmentInjector,
+  Service,
+  afterNextRender,
+  inject,
+  runInInjectionContext,
+} from '@angular/core';
 import { NavigationEnd, Router, type Event } from '@angular/router';
 import { Observable, filter } from 'rxjs';
 
@@ -57,7 +63,9 @@ export class RouteFocusService {
    */
   scheduleFocus(): void {
     runInInjectionContext(this.injector, () => {
-      afterNextRender(() => { this.focusMainHeading(); });
+      afterNextRender(() => {
+        this.focusMainHeading();
+      });
     });
   }
 

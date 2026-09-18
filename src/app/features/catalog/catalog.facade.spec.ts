@@ -19,26 +19,14 @@
 import 'reflect-metadata';
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
-import {
-  BrowserTestingModule,
-  platformBrowserTesting,
-} from '@angular/platform-browser/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection, Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { Api } from '../../../app/api/generated/api';
 import { listProducts } from '../../../app/api/generated/fn/catalog/list-products';
-import {
-  CatalogFacade,
-} from '../../../app/features/catalog/catalog.facade';
+import { CatalogFacade } from '../../../app/features/catalog/catalog.facade';
 import {
   ALLOWED_PAGE_SIZES,
   ALLOWED_STORAGE_GB,
@@ -58,11 +46,9 @@ import type { ProductSummary } from '../../../app/api/generated/models/product-s
 import type { Variant } from '../../../app/api/generated/models/variant';
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(
-    BrowserTestingModule,
-    platformBrowserTesting(),
-    { teardown: { destroyAfterEach: true } },
-  );
+  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+    teardown: { destroyAfterEach: true },
+  });
   await TestBed.compileComponents();
 });
 
@@ -98,14 +84,24 @@ class StubApi {
     this.nextError = null;
     return new Observable<ProductPage>((subscriber) => {
       const sub = stream$.subscribe({
-        next: (page) => { subscriber.next(page); },
-        error: (err) => { subscriber.error(err); },
-        complete: () => { subscriber.complete(); },
+        next: (page) => {
+          subscriber.next(page);
+        },
+        error: (err) => {
+          subscriber.error(err);
+        },
+        complete: () => {
+          subscriber.complete();
+        },
       });
       if (error !== null && error !== undefined) {
-        queueMicrotask(() => { subscriber.error(error); });
+        queueMicrotask(() => {
+          subscriber.error(error);
+        });
       }
-      return () => { sub.unsubscribe(); };
+      return () => {
+        sub.unsubscribe();
+      };
     });
   }
 
@@ -156,7 +152,12 @@ function makeFacet(value: string, count: number): FacetValue {
   return { value, label: value, count };
 }
 
-function makePage(items: ProductSummary[], total: number, page = 1, pageSize: 12 | 24 = 12): ProductPage {
+function makePage(
+  items: ProductSummary[],
+  total: number,
+  page = 1,
+  pageSize: 12 | 24 = 12,
+): ProductPage {
   return {
     items,
     total,
@@ -244,18 +245,14 @@ describe('T12-AC01 catalog-query codec', () => {
   });
 
   it('drops non-boolean inStock / is5g / featured values', () => {
-    const parsed = parseCatalogQuery(
-      new URLSearchParams('inStock=yes&is5g=1&featured=true'),
-    );
+    const parsed = parseCatalogQuery(new URLSearchParams('inStock=yes&is5g=1&featured=true'));
     expect(parsed.inStock).toBeUndefined();
     expect(parsed.is5g).toBeUndefined();
     expect(parsed.featured).toBe(true);
   });
 
   it('drops negative prices and keeps valid bounds', () => {
-    const parsed = parseCatalogQuery(
-      new URLSearchParams('minPrice=-1&maxPrice=50000'),
-    );
+    const parsed = parseCatalogQuery(new URLSearchParams('minPrice=-1&maxPrice=50000'));
     expect(parsed.minPrice).toBeUndefined();
     expect(parsed.maxPrice).toBe(50_000);
   });
@@ -327,10 +324,7 @@ function setupFacade(): SetupHandle {
   TestBed.resetTestingModule();
   const api = new StubApi();
   TestBed.configureTestingModule({
-    providers: [
-      provideZonelessChangeDetection(),
-      { provide: Api, useValue: api },
-    ],
+    providers: [provideZonelessChangeDetection(), { provide: Api, useValue: api }],
   });
   const facade = TestBed.inject(CatalogFacade);
 
@@ -339,7 +333,14 @@ function setupFacade(): SetupHandle {
     await new Promise((r) => setTimeout(r, SEARCH_DEBOUNCE_MS + 20));
   };
 
-  return { facade, api, respond: api.resolve.bind(api), reject: api.reject.bind(api), tick, waitDebounce };
+  return {
+    facade,
+    api,
+    respond: api.resolve.bind(api),
+    reject: api.reject.bind(api),
+    tick,
+    waitDebounce,
+  };
 }
 
 beforeEach(() => {

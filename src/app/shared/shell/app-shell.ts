@@ -29,7 +29,7 @@ export class AppShell {
   readonly variant = input.required<HeaderVariant>();
 
   /** Cart count source-of-truth. Injected here so the shell owns the wiring. */
-   
+
   private readonly cart = inject(CartCountFacade);
 
   /** Whether to render the standard footer. Checkout uses a compact footer. */

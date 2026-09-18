@@ -1,10 +1,13 @@
-<app-mobile-drawer
-  [opened]="opened()"
-  [triggerEl]="triggerEl()"
-  (closed)="closed.set(true)"
->
+<app-mobile-drawer [opened]="opened()" [triggerEl]="triggerEl()" (closed)="closed.set(true)">
   @for (link of navLinks(); track link.label) {
     <a class="block no-underline" [href]="link.routerLink">{{ link.label }}</a>
   }
 </app-mobile-drawer>
-<button #trigger type="button" class="inline-flex items-center justify-center rounded px-3 py-2 cursor-pointer" data-testid="drawer-trigger">Menü</button>
+<button
+  #trigger
+  type="button"
+  class="inline-flex items-center justify-center rounded px-3 py-2 cursor-pointer"
+  data-testid="drawer-trigger"
+>
+  Menü
+</button>

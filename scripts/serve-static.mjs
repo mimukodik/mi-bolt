@@ -48,8 +48,8 @@ const PORT = Number.parseInt(process.env['PORT'] ?? '4200', 10);
 
 const NO_CACHE_HEADERS = {
   'cache-control': 'no-cache, no-store, must-revalidate',
-  'pragma': 'no-cache',
-  'expires': '0',
+  pragma: 'no-cache',
+  expires: '0',
 };
 
 const IMMUTABLE_HEADERS = {
@@ -247,9 +247,7 @@ const server = createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  process.stdout.write(
-    `[serve-static] serving ${STATIC_DIR} on http://${HOST}:${PORT}\n`,
-  );
+  process.stdout.write(`[serve-static] serving ${STATIC_DIR} on http://${HOST}:${PORT}\n`);
 });
 
 // Clean shutdown so a Ctrl-C in a developer terminal does not leak

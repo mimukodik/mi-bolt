@@ -38,11 +38,7 @@ import {
   getSharedStores,
 } from '../orders/commit-order';
 
-import {
-  QuoteDomain,
-  type Problem,
-  type QuoteSnapshot,
-} from '../checkout/quote-domain';
+import { QuoteDomain, type Problem, type QuoteSnapshot } from '../checkout/quote-domain';
 
 // ---------------------------------------------------------------------------
 // Header validation rules — mirror the cart / checkout layers.
@@ -86,10 +82,7 @@ function badRequest(
   traceId: string,
   fieldErrors: { path: string; message: string }[] = [],
 ): HttpResponse<Record<string, unknown>> {
-  return problemResponse(
-    { status: 400, code: 'VALIDATION_FAILED', detail, fieldErrors },
-    traceId,
-  );
+  return problemResponse({ status: 400, code: 'VALIDATION_FAILED', detail, fieldErrors }, traceId);
 }
 
 function traceIdFor(options: CreateHandlersOptions): string {
@@ -117,10 +110,7 @@ async function readJsonBody(request: Request): Promise<unknown> {
 
 function initialStatusFor(scenarioName: string): PaymentIntentStatus {
   if (scenarioName === 'payment-declined') return 'declined';
-  if (
-    scenarioName === 'payment-pending-resolves' ||
-    scenarioName === 'payment-pending-timeout'
-  ) {
+  if (scenarioName === 'payment-pending-resolves' || scenarioName === 'payment-pending-timeout') {
     return 'pending';
   }
   return 'succeeded';
@@ -156,7 +146,10 @@ function serializeIntent(intent: PaymentIntentRecord): PaymentIntentWire {
 // Validation helpers
 // ---------------------------------------------------------------------------
 
-function validateSession(value: string | null, traceId: string): { ok: true; value: string } | { ok: false; response: HttpResponse<Record<string, unknown>> } {
+function validateSession(
+  value: string | null,
+  traceId: string,
+): { ok: true; value: string } | { ok: false; response: HttpResponse<Record<string, unknown>> } {
   if (value === null) {
     return {
       ok: false,
@@ -256,7 +249,12 @@ export function buildPaymentHandlers(
       }
       if (idempotency.hasConflictingPayload(idemKey, payloadHash)) {
         return problemResponse(
-          { status: 409, code: 'IDEMPOTENCY_CONFLICT', detail: 'Az idempotencia kulcs már más kéréssel lett rögzítve.', fieldErrors: [] },
+          {
+            status: 409,
+            code: 'IDEMPOTENCY_CONFLICT',
+            detail: 'Az idempotencia kulcs már más kéréssel lett rögzítve.',
+            fieldErrors: [],
+          },
           traceId,
         );
       }
@@ -286,7 +284,12 @@ export function buildPaymentHandlers(
       const quote = quoteDomain.getActiveQuote(parsed.value.cartId, cart.version);
       if (quote?.id !== parsed.value.quoteId) {
         return problemResponse(
-          { status: 409, code: 'QUOTE_EXPIRED', detail: 'Az árajánlat lejárt vagy érvénytelen.', fieldErrors: [] },
+          {
+            status: 409,
+            code: 'QUOTE_EXPIRED',
+            detail: 'Az árajánlat lejárt vagy érvénytelen.',
+            fieldErrors: [],
+          },
           traceId,
         );
       }
@@ -320,7 +323,12 @@ export function buildPaymentHandlers(
       const intent = paymentIntents.findById(id, scenario.name);
       if (!intent) {
         return problemResponse(
-          { status: 404, code: 'NOT_FOUND', detail: 'A fizetési szándék nem található.', fieldErrors: [] },
+          {
+            status: 404,
+            code: 'NOT_FOUND',
+            detail: 'A fizetési szándék nem található.',
+            fieldErrors: [],
+          },
           traceId,
         );
       }
@@ -328,7 +336,12 @@ export function buildPaymentHandlers(
       // session id cannot probe another session's intents.
       if (intent.sessionId !== session.value) {
         return problemResponse(
-          { status: 404, code: 'NOT_FOUND', detail: 'A fizetési szándék nem található.', fieldErrors: [] },
+          {
+            status: 404,
+            code: 'NOT_FOUND',
+            detail: 'A fizetési szándék nem található.',
+            fieldErrors: [],
+          },
           traceId,
         );
       }
@@ -350,7 +363,12 @@ export function buildPaymentHandlers(
 // ---------------------------------------------------------------------------
 
 export const paymentHandlersEntry: BusinessHandlerEntry = (options) => {
-  const shared = getSharedStores(options.repository, options.clock, options.ids, new IdempotencyStore(options.clock));
+  const shared = getSharedStores(
+    options.repository,
+    options.clock,
+    options.ids,
+    new IdempotencyStore(options.clock),
+  );
   return buildPaymentHandlers(options, shared.paymentIntents, shared.quoteDomain);
 };
 

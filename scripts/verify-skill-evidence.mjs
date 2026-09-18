@@ -66,8 +66,7 @@ export function parseMetadataVersion(frontmatter) {
 
 export async function validateSkillEvidence(options = {}) {
   const skillLocationPath =
-    options.skillLocationPath ??
-    resolve(REPO_ROOT, 'docs/mi-bolt/execution/skill-location.json');
+    options.skillLocationPath ?? resolve(REPO_ROOT, 'docs/mi-bolt/execution/skill-location.json');
 
   const errors = [];
 
@@ -91,8 +90,7 @@ export async function validateSkillEvidence(options = {}) {
 
   const skillEntry = options.skillEntryOverride ?? location.entry;
   const skillRoot = options.skillRootOverride ?? location.root;
-  const declaredSha =
-    options.skillSha256Override ?? location.sha256?.['SKILL.md'];
+  const declaredSha = options.skillSha256Override ?? location.sha256?.['SKILL.md'];
   const approvedVersion = options.approvedVersion ?? location.approvedVersion;
 
   let skillContent;
