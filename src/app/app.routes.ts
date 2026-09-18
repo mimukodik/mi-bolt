@@ -176,8 +176,19 @@ export const routes: Routes = [
     // every guard and the wizard would not enforce T19 / T24.
     loadChildren: () => import('./features/checkout/checkout.routes').then((m) => m.checkoutRoutes),
   },
+  // Internal routes ------------------------------------------------------
+  {
+    path: 'primitives',
+    loadComponent: () =>
+      import('./features/primitives-showcase/primitives-showcase').then(
+        (m) => m.PrimitivesShowcase,
+      ),
+    title: 'MiBolt — UI primitives',
+  },
   // Utility 404 — wrapped in the ShopLayout chrome so the user keeps
-  // the standard header/footer when an unknown URL is hit.
+  // the standard header/footer when an unknown URL is hit. It matches
+  // every path, so it must stay the last element of this array; any
+  // route declared after it is unreachable.
   {
     path: '**',
     component: ShopLayout,
@@ -189,14 +200,5 @@ export const routes: Routes = [
         title: 'MiBolt — Az oldal nem található',
       },
     ],
-  },
-  // Internal routes ------------------------------------------------------
-  {
-    path: 'primitives',
-    loadComponent: () =>
-      import('./features/primitives-showcase/primitives-showcase').then(
-        (m) => m.PrimitivesShowcase,
-      ),
-    title: 'MiBolt — UI primitives',
   },
 ];
