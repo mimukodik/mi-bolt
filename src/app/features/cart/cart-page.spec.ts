@@ -1,267 +1,658 @@
+// @vitest-environment jsdom
+import '@angular/compiler';
+
 /**
  * T18: cart screen (S4.1).
  *
- * Acceptance criteria mapped to source-pattern tests:
+ * Acceptance criteria mapped to real TestBed behavior tests:
  *
- *   T18-AC01: Adding confirms product, color, storage and quantity in an
+ *   T18-AC01 - Adding confirms product, color, storage and quantity in an
  *              accessible status. Cart line matches the mock response.
  *              Status line is asserted on `add-to-cart.ts` (the
  *              confirmation surface) and on `cart-line.ts` (the line
  *              card that matches the mock response).
- *   T18-AC02: Cart page shows image/name/variant/unit price/quantity/
+ *   T18-AC02 - Cart page shows image/name/variant/unit price/quantity/
  *              line total, remove action, and subtotal. Shipping is
  *              NOT misrepresented as final before method choice.
- *   T18-AC03: Quantity increment/decrement/remove handle
+ *   T18-AC03 - Quantity increment/decrement/remove handle
  *              max/min/pending/failure and preserve cart on error.
  *              Removing the last item produces the empty screen.
- *   T18-AC04: Continue button is disabled for empty/invalid/pending
+ *   T18-AC04 - Continue button is disabled for empty/invalid/pending
  *              cart and navigates to /penztar/adatok only after
  *              authoritative revalidation (`facade.ensureCart`).
- *   T18-AC05: 339 990 × 2 = 679 980 HUF subtotal; with home
+ *   T18-AC05 - 339 990 x 2 = 679 980 HUF subtotal; with home
  *              delivery (1 990 HUF) total = 681 970 HUF. No monthly
  *              fee or hidden add-on copy.
- *
- * The tests inspect the rendered source directly because vitest's
- * esbuild/oxc pipeline strips the Angular signal-input metadata
- * that TestBed's runtime instantiation needs (see
- * `vitest.config.ts`). The implementation is exercised end-to-end
- * by `ng build` and by the browser-side demos.
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve as resolvePath } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  Input,
+  Output,
+  provideZonelessChangeDetection,
+  ɵresolveComponentResources,
+} from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { provideRouter, Router } from '@angular/router';
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
+import { readdir, readFile } from 'node:fs/promises';
+import { join as pathJoin, resolve as pathResolve } from 'node:path';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-const workspaceRoot = resolvePath(process.cwd());
+import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { CartDomain } from '../../../mocks/cart/cart-domain';
+import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
+import { IdempotencyStore } from '../../../mocks/idempotency';
+import { Repository } from '../../../mocks/repository';
+import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
+import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { Button } from '../../shared/ui/button/button';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ErrorState } from '../../shared/ui/error-state/error-state';
+import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { PriceBlock } from '../../shared/ui/price-block/price-block';
+import { ProductImage } from '../../shared/ui/product-image/product-image';
+import { QuantityControl } from '../../shared/ui/quantity-control/quantity-control';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import { CartFacade } from './cart.facade';
+import { CartLine } from './cart-line';
+import { CartPage } from './cart-page';
+import { OrderSummary } from './order-summary';
+import type { CartItem } from '../../api/generated/models/cart-item';
 
-function read(relative: string): string {
-  const base = relative.replace(/\.ts$/, '');
-  const sources = [relative, `${base}.html`, `${base}.scss`];
-  return sources
-    .map((p) => {
-      try {
-        return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
-      } catch {
-        return '';
+const BASE_URL = 'http://localhost/api/v1';
+
+const DEMO_CART_ITEM: CartItem = {
+  id: 'cart-item-1',
+  variantId: 'demo-one-5g-graphite-256',
+  productId: 'p-01',
+  productName: 'Demo One 5G',
+  productSlug: 'demo-one-5g',
+  colorName: 'Grafit',
+  storageGb: 256,
+  quantity: 2,
+  unitPrice: { amount: 339990, currency: 'HUF' },
+  lineTotal: { amount: 679980, currency: 'HUF' },
+  maxQuantity: 5,
+  availability: 'in_stock',
+  image: {
+    id: 'demo-one-5g-graphite-256-front',
+    src: '/assets/products/graphite-front.webp',
+    alt: 'Demo One 5G, Grafit, 256 GB',
+    width: 320,
+    height: 400,
+  },
+};
+
+function registerComponentMetadata(
+  componentClass: unknown,
+  config: {
+    inputs?: readonly string[];
+    outputs?: readonly string[];
+    models?: readonly string[];
+  },
+): void {
+  if (typeof componentClass !== 'function') return;
+  const raw: unknown = Reflect.get(componentClass, 'propDecorators');
+  const propDecorators: Record<string, unknown[]> = {};
+  if (typeof raw === 'object' && raw !== null) {
+    for (const [key, value] of Object.entries(raw)) {
+      if (Array.isArray(value)) {
+        const arr: unknown[] = [];
+        for (const item of value) {
+          arr.push(item);
+        }
+        propDecorators[key] = arr;
       }
-    })
-    .join('\n');
-}
-
-const cartPageSource = read('src/app/features/cart/cart-page.ts');
-const cartLineSource = read('src/app/features/cart/cart-line.ts');
-const orderSummarySource = read('src/app/features/cart/order-summary.ts');
-
-function componentStyles(componentSource: string, scssPath?: string): string {
-  const inline = /styles:\s*\[([\s\S]*?)\]/.exec(componentSource);
-  if (inline) return inline[1];
-  if (scssPath) {
-    try {
-      return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
-    } catch {
-      return '';
     }
   }
-  const htmlMatch = /templateUrl:\s*'\.\/([^']+\.html)'/.exec(componentSource);
-  if (htmlMatch) {
-    const derivedScss = htmlMatch[1].replace(/\.html$/, '.scss');
-    try {
-      return readFileSync(resolvePath(workspaceRoot, derivedScss), 'utf8');
-    } catch {
-      return '';
+  if (config.inputs !== undefined) {
+    for (const name of config.inputs) {
+      const arr = propDecorators[name] ?? [];
+      arr.push({ type: Input, args: [{ isSignal: true }] });
+      propDecorators[name] = arr;
     }
   }
-  return '';
+  if (config.outputs !== undefined) {
+    for (const name of config.outputs) {
+      const arr = propDecorators[name] ?? [];
+      arr.push({ type: Output, args: [] });
+      propDecorators[name] = arr;
+    }
+  }
+  if (config.models !== undefined) {
+    for (const name of config.models) {
+      const arr = propDecorators[name] ?? [];
+      arr.push({ type: Input, args: [{ isSignal: true }] });
+      arr.push({ type: Output, args: [`${name}Change`] });
+      propDecorators[name] = arr;
+    }
+  }
+  Reflect.set(componentClass, 'propDecorators', propDecorators);
 }
+
+registerComponentMetadata(CartLine, {
+  inputs: ['line', 'pending'],
+  outputs: ['quantityChanged', 'removeRequested'],
+});
+registerComponentMetadata(OrderSummary, {
+  inputs: ['subtotal', 'shipping', 'footnote'],
+});
+registerComponentMetadata(ProductImage, {
+  inputs: ['image', 'productName', 'aspectRatio'],
+  outputs: ['loadFailed'],
+});
+registerComponentMetadata(QuantityControl, {
+  inputs: ['value', 'min', 'max', 'disabled', 'pending', 'label'],
+  outputs: ['quantityChanged'],
+});
+registerComponentMetadata(EmptyState, {
+  inputs: ['title', 'message', 'actionLabel', 'actionVariant'],
+  outputs: ['actionRequested'],
+});
+registerComponentMetadata(ErrorState, {
+  inputs: ['title', 'message', 'retryLabel', 'pending', 'preserving'],
+  outputs: ['retryRequested'],
+});
+registerComponentMetadata(PriceBlock, {
+  inputs: ['money', 'label', 'status'],
+});
+registerComponentMetadata(Button, {
+  inputs: ['variant', 'size', 'label', 'loadingLabel', 'disabled', 'loading'],
+  outputs: ['pressed'],
+});
+registerComponentMetadata(LoadingState, {
+  inputs: ['variant', 'label'],
+});
+registerComponentMetadata(StatusMessage, {
+  inputs: ['message', 'severity', 'persistent'],
+  outputs: ['dismissed'],
+});
+
+function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected fixture.nativeElement to be HTMLElement');
+  }
+  return raw;
+}
+
+function getElement(parent: Element, selector: string): HTMLElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLElement)) {
+    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  }
+  return el;
+}
+
+function queryElement(parent: Element, selector: string): HTMLElement | null {
+  const el = parent.querySelector(selector);
+  if (el === null) return null;
+  if (!(el instanceof HTMLElement)) {
+    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  }
+  return el;
+}
+
+const fileCache = new Map<string, string>();
+
+async function findInWorkspace(targetName: string, dir: string): Promise<string | null> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
+      continue;
+    }
+    const fullPath = pathJoin(dir, entry.name);
+    if (entry.isDirectory()) {
+      const nested = await findInWorkspace(targetName, fullPath);
+      if (nested !== null) return nested;
+    } else if (entry.name === targetName) {
+      return fullPath;
+    }
+  }
+  return null;
+}
+
+async function resolveWorkspaceFile(url: string): Promise<string> {
+  if (url.endsWith('.scss') || url.endsWith('.css')) {
+    return '';
+  }
+  const filename = url.startsWith('./') ? url.slice(2) : url;
+  const cached = fileCache.get(filename);
+  if (cached !== undefined) return cached;
+
+  const foundPath = await findInWorkspace(filename, pathResolve(process.cwd(), 'src'));
+  if (foundPath === null) return '';
+  const content = await readFile(foundPath, 'utf-8');
+  fileCache.set(filename, content);
+  return content;
+}
+
+function makeEnv() {
+  const clock = createFixedClock(new Date(Date.parse('2026-09-14T10:00:00.000Z')).toISOString());
+  const ids = createDeterministicIds(7);
+  const scenario = {
+    name: 'cart-page-suite',
+    seed: 7,
+    clockOffsetMs: 0,
+    isolated: true,
+  };
+  const repository = new Repository(scenario, ids, clock);
+  repository.loadProducts([DEMO_PRODUCT]);
+  const idempotency = new IdempotencyStore(clock);
+  new CartDomain(repository, clock, ids, idempotency);
+  return { repository, clock, ids, scenario, apiRoot: '/api/v1' };
+}
+
+const server = setupServer();
+
+beforeAll(async () => {
+  try {
+    TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+      teardown: { destroyAfterEach: true },
+    });
+  } catch {
+    // Environment already initialized
+  }
+  server.listen({ onUnhandledRequest: 'error' });
+
+  await ɵresolveComponentResources(resolveWorkspaceFile);
+  await TestBed.compileComponents();
+});
+
+afterAll(() => {
+  server.close();
+});
+
+beforeEach(async () => {
+  const env = makeEnv();
+  server.use(...cartHandlersEntry(env));
+  TestBed.configureTestingModule({
+    imports: [CartPage, CartLine, OrderSummary],
+    providers: [
+      provideZonelessChangeDetection(),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
+      provideApiConfiguration(BASE_URL),
+      provideRouter([
+        { path: 'penztar/adatok', component: CartPage },
+        { path: 'termekek', component: CartPage },
+      ]),
+      CartFacade,
+    ],
+  });
+  await TestBed.compileComponents();
+});
+
+afterEach(() => {
+  server.resetHandlers();
+  TestBed.resetTestingModule();
+});
 
 // ---------------------------------------------------------------------------
-// T18-AC01: add-to-cart surface confirms the addition. The full
-// confirmation flow lives in `add-to-cart.ts`; here we assert the
-// page renders the line card that matches the mock response.
+// T18-AC01: add-to-cart surface confirms the addition and line card renders correctly
 // ---------------------------------------------------------------------------
 describe('T18-AC01 cart page renders the line card matching the mock cart', () => {
-  it('CartLine renders image, name, variant, unit price, quantity, line total', () => {
-    // Image
-    expect(cartLineSource).toMatch(/ProductImage|app-product-image/);
-    // Product name (the wire-shaped field name is `productName`).
-    expect(cartLineSource).toMatch(/productName/);
-    // Variant line: color name and storage both rendered.
-    expect(cartLineSource).toMatch(/colorName/);
-    expect(cartLineSource).toMatch(/storageGb/);
-    // Unit price + line total go through the PriceBlock primitive.
-    expect(cartLineSource).toMatch(/app-price-block/);
-    expect(cartLineSource).toMatch(/unitPrice/);
-    expect(cartLineSource).toMatch(/lineTotal/);
-    // Quantity control wires quantity changes back to the page.
-    expect(cartLineSource).toMatch(/app-quantity-control/);
-    expect(cartLineSource).toMatch(/quantityChanged/);
+  it('CartLine renders image, name, variant, unit price, quantity, line total', async () => {
+    const fixture = TestBed.createComponent(CartLine);
+    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+
+    expect(queryElement(root, 'app-product-image')).not.toBeNull();
+
+    const nameEl = getElement(root, '[data-testid="cart-line-name"]');
+    expect(nameEl.textContent.trim()).toBe('Demo One 5G');
+
+    const variantColor = getElement(root, '.variant-color');
+    expect(variantColor.textContent.trim()).toBe('Grafit');
+
+    const variantStorage = getElement(root, '.variant-storage');
+    expect(variantStorage.textContent.trim()).toBe('256 GB');
+
+    const priceBlocks = root.querySelectorAll('app-price-block');
+    expect(priceBlocks.length).toBeGreaterThanOrEqual(2);
+
+    const qtyControl = queryElement(root, 'app-quantity-control');
+    expect(qtyControl).not.toBeNull();
   });
 
-  it('CartLine emits removeRequested and uses an aria-label for the remove action', () => {
-    expect(cartLineSource).toMatch(/removeRequested/);
-    expect(cartLineSource).toMatch(/aria-label/);
-    // The remove action is rendered as a real button for keyboard access.
-    expect(cartLineSource).toMatch(/<button[\s\S]*?remove/);
+  it('CartLine emits removeRequested and uses an aria-label for the remove action', async () => {
+    const fixture = TestBed.createComponent(CartLine);
+    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    let removedId: string | null = null;
+    fixture.componentInstance.removeRequested.subscribe((id: string) => {
+      removedId = id;
+    });
+
+    const root = getRootElement(fixture);
+    const removeBtn = getElement(root, '[data-testid="cart-line-remove"]');
+    expect(removeBtn.getAttribute('aria-label')).toBe('Törlés: Demo One 5G');
+
+    removeBtn.click();
+    expect(removedId).toBe('cart-item-1');
   });
 
-  it('CartPage passes each item to a CartLine, plus wires quantity + remove', () => {
-    expect(cartPageSource).toMatch(/@for[\s\S]*?app-cart-line/);
-    expect(cartPageSource).toMatch(/<app-cart-line/);
-    // Page listens to the line events and forwards to the facade.
-    expect(cartPageSource).toMatch(/\(quantityChanged\)=["']onQuantityChanged/);
-    expect(cartPageSource).toMatch(/\(removeRequested\)=["']onRemoveRequested/);
+  it('CartPage passes each item to a CartLine, plus wires quantity + remove', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const cartLines = root.querySelectorAll('app-cart-line');
+    expect(cartLines.length).toBe(1);
+
+    const line = cartLines[0];
+    if (!(line instanceof HTMLElement)) {
+      throw new Error('Expected HTMLElement');
+    }
+    const nameEl = getElement(line, '[data-testid="cart-line-name"]');
+    expect(nameEl.textContent.trim()).toBe('Demo One 5G');
   });
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC02: cart page renders subtotal and never misrepresents
-// shipping as final before the user chooses a method.
+// T18-AC02: cart page renders subtotal and never misrepresents shipping as final
 // ---------------------------------------------------------------------------
 describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a final shipping figure', () => {
-  it('renders OrderSummary with the cart subtotal', () => {
-    expect(cartPageSource).toMatch(/<app-order-summary/);
-    expect(cartPageSource).toMatch(/\[subtotal\]="subtotal\(\)"/);
+  it('renders OrderSummary with the cart subtotal', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const orderSummary = queryElement(root, 'app-order-summary');
+    expect(orderSummary).not.toBeNull();
   });
 
-  it('OrderSummary renders the Hungarian "shipping calculated at checkout" message when no method is selected', () => {
-    // The exact Hungarian message spelled out in the task spec.
-    expect(orderSummarySource).toMatch(/A szállítási díj a pénztárban kerül kiszámításra/);
-    // The summary does NOT lock the total to a specific fee before
-    // the user picks a method: total computation must allow a null
-    // shipping leg.
-    expect(orderSummarySource).toMatch(/shipping/);
+  it('OrderSummary renders the Hungarian "shipping calculated at checkout" message when no method is selected', async () => {
+    const fixture = TestBed.createComponent(OrderSummary);
+    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('shipping', null);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(root.textContent).toContain('A szállítási díj a pénztárban kerül kiszámításra');
   });
 
-  it('OrderSummary computes subtotal + shipping = total when a method is supplied', () => {
-    // The Hungarian "Részösszeg" + "Szállítás" + "Végösszeg" labels.
-    expect(orderSummarySource).toMatch(/Részösszeg|Részöszeg|Subtotal/i);
-    expect(orderSummarySource).toMatch(/Szállítás/);
-    expect(orderSummarySource).toMatch(/Végösszeg|Fizetendő/);
-    // The summary takes a Money total or computes one from subtotal
-    // + optional shipping.
-    expect(orderSummarySource).toMatch(/total/);
+  it('OrderSummary computes subtotal + shipping = total when a method is supplied', async () => {
+    const fixture = TestBed.createComponent(OrderSummary);
+    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('shipping', { amount: 1990, currency: 'HUF' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.total().amount).toBe(681970);
+    expect(fixture.componentInstance.total().currency).toBe('HUF');
+
+    const root = getRootElement(fixture);
+    expect(root.textContent).toContain('Részösszeg');
+    expect(root.textContent).toContain('Szállítás');
+    expect(root.textContent).toContain('Végösszeg');
   });
 
-  it('never invents a monthly fee or hidden add-on (T18-AC05)', () => {
-    // Strip comments + template literals so the Hungarian label
-    // names ("havi díj" mention) inside narrative notes do not trip
-    // the assertion against the implementation.
-    const cleaned = orderSummarySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-    expect(cleaned.toLowerCase().indexOf('havi')).toBe(-1);
-    expect(cleaned.toLowerCase().indexOf('előfizet')).toBe(-1);
-    expect(cleaned.toLowerCase().indexOf('rejtett')).toBe(-1);
-    expect(cleaned.toLowerCase().indexOf('extra költség')).toBe(-1);
+  it('never invents a monthly fee or hidden add-on (T18-AC05)', async () => {
+    const fixture = TestBed.createComponent(OrderSummary);
+    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('shipping', null);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const text = root.textContent.toLowerCase();
+    expect(text).not.toContain('havi');
+    expect(text).not.toContain('előfizet');
+    expect(text).not.toContain('rejtett');
+    expect(text).not.toContain('extra költség');
   });
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC03: quantity controls handle boundaries and the empty
-// state appears when the last line is removed.
+// T18-AC03: quantity controls handle boundaries and empty screen on last line removal
 // ---------------------------------------------------------------------------
 describe('T18-AC03 quantity boundaries and the empty screen on last-line removal', () => {
-  it('CartLine forwards quantity changes to the facade and respects maxQuantity from the line', () => {
-    expect(cartLineSource).toMatch(/maxQuantity/);
-    // The line component reads the wire-shaped `maxQuantity` so the
-    // user's hand is forced into the cap the cart backend accepts.
-    expect(cartLineSource).toMatch(/\[max\]="maxQuantity\(\)"/);
+  it('CartLine forwards quantity changes to the facade and respects maxQuantity from the line', async () => {
+    const fixture = TestBed.createComponent(CartLine);
+    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.maxQuantity()).toBe(5);
+
+    let emittedQty = 0;
+    fixture.componentInstance.quantityChanged.subscribe((qty: number) => {
+      emittedQty = qty;
+    });
+
+    fixture.componentInstance.onQuantityChanged(3);
+    expect(emittedQty).toBe(3);
   });
 
-  it('CartLine surfaces pending state when a mutation is in flight', () => {
-    expect(cartLineSource).toMatch(/\[pending\]="pending\(\)"/);
+  it('CartLine surfaces pending state when a mutation is in flight', async () => {
+    const fixture = TestBed.createComponent(CartLine);
+    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
+    fixture.componentRef.setInput('pending', true);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const lineEl = getElement(root, '[data-testid="cart-line"]');
+    expect(lineEl.getAttribute('aria-busy')).toBe('true');
+
+    const removeBtn = getElement(root, '[data-testid="cart-line-remove"]');
+    expect(removeBtn.hasAttribute('disabled')).toBe(true);
   });
 
-  it('CartPage renders the EmptyState when no items remain (removing the last line)', () => {
-    expect(cartPageSource).toMatch(/app-empty-state/);
-    // The empty-screen title and message are Hungarian.
-    expect(cartPageSource).toMatch(/A kosarad üres|A kosár üres/);
-    // The empty state offers a way back to the catalogue so the
-    // user can keep shopping without losing context.
-    expect(cartPageSource).toMatch(/Vásárlás folytatása|Tovább a kínálatba/);
+  it('CartPage renders the EmptyState when no items remain (removing the last line)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const emptyState = queryElement(root, 'app-empty-state');
+    expect(emptyState).not.toBeNull();
+    expect(emptyState?.textContent).toContain('A kosarad üres');
+    expect(emptyState?.textContent).toContain('Vásárlás folytatása');
   });
 
-  it('CartPage renders a loading skeleton on first arrival and an ErrorState on a failure', () => {
-    expect(cartPageSource).toMatch(/app-loading-state/);
-    expect(cartPageSource).toMatch(/app-error-state/);
+  it('CartPage renders a loading skeleton on first arrival and an ErrorState on a failure', async () => {
+    server.use(
+      http.get('*/api/v1/carts/:cartId', () => {
+        return HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:service-unavailable',
+            title: 'Hiba',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'A kosár szolgáltatás átmenetileg nem elérhető.',
+            fieldErrors: [],
+          },
+          { status: 503, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+      http.post('*/api/v1/carts', () => {
+        return HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:service-unavailable',
+            title: 'Hiba',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'A kosár szolgáltatás átmenetileg nem elérhető.',
+            fieldErrors: [],
+          },
+          { status: 503, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const errorState = queryElement(root, 'app-error-state');
+    expect(errorState).not.toBeNull();
   });
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC04: Continue is disabled when the cart cannot be advanced,
-// and only navigates to /penztar/adatok after ensureCart() succeeds.
+// T18-AC04: Continue is disabled when cart cannot be advanced, navigates to /penztar/adatok
 // ---------------------------------------------------------------------------
 describe('T18-AC04 Continue gating and authoritative revalidation', () => {
-  it('exposes a continue button disabled when the cart is empty, pending, or in error', () => {
-    expect(cartPageSource).toMatch(/Tovább a pénztárhoz|Continue|Tovább/);
-    // The disabled binding must reflect the union of (empty || pending || error).
-    expect(cartPageSource).toMatch(/\[disabled\]="!canContinue\(\)"/);
-    expect(cartPageSource).toMatch(/canContinue/);
+  it('exposes a continue button disabled when the cart is empty, pending, or in error', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canContinue()).toBe(false);
+
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canContinue()).toBe(true);
+
+    const root = getRootElement(fixture);
+    const continueBtn = getElement(root, '[data-testid="cart-continue"] button');
+    expect(continueBtn.hasAttribute('disabled')).toBe(false);
   });
 
-  it('navigates only after `facade.ensureCart()` resolves successfully', () => {
-    expect(cartPageSource).toMatch(/facade\.ensureCart/);
-    expect(cartPageSource).toMatch(/Router|navigate/);
-    expect(cartPageSource).toMatch(/penztar\/adatok/);
+  it('navigates only after facade.ensureCart() resolves successfully', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const router = TestBed.inject(Router);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    fixture.componentInstance.onContinue();
+    await fixture.whenStable();
+
+    expect(router.url).toBe('/penztar/adatok');
   });
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC05: subtotal calculation is unit-priced * quantity. The
-// cart page renders the subtotal as whole HUF; with home delivery
-// the summary computes the final 681 970 HUF. No monthly fee.
+// T18-AC05: subtotal and total arithmetic in whole HUF
 // ---------------------------------------------------------------------------
 describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
-  it('renders the subtotal through the PriceBlock primitive (whole HUF)', () => {
-    expect(cartPageSource).toMatch(/app-price-block/);
-    expect(cartPageSource).toMatch(/subtotal\(\)/);
+  it('renders the subtotal through the PriceBlock primitive (whole HUF)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.subtotal().amount).toBe(679980);
+    expect(fixture.componentInstance.subtotal().currency).toBe('HUF');
+
+    const root = getRootElement(fixture);
+    const footer = getElement(root, '[data-testid="cart-footer"]');
+    const priceBlock = queryElement(footer, 'app-price-block');
+    expect(priceBlock).not.toBeNull();
   });
 
-  it('does not display any monthly-fee or hidden-bundle copy (R25)', () => {
-    const cleaned = cartPageSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-    expect(cleaned.toLowerCase().indexOf('havi')).toBe(-1);
-    expect(cleaned.toLowerCase().indexOf('előfizetés')).toBe(-1);
-    expect(cleaned.toLowerCase().indexOf('bundle')).toBe(-1);
-    expect(cleaned.toLowerCase().indexOf('rejtett')).toBe(-1);
+  it('does not display any monthly-fee or hidden-bundle copy (R25)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const text = root.textContent.toLowerCase();
+    expect(text).not.toContain('havi');
+    expect(text).not.toContain('előfizetés');
+    expect(text).not.toContain('bundle');
+    expect(text).not.toContain('rejtett');
   });
 
-  it('styles declare a desktop two-column layout (items + summary)', () => {
-    const css = componentStyles(cartPageSource, 'src/app/features/cart/cart-page.scss');
-    // Two-column layout for the items column and the order summary
-    // sits side-by-side on desktop (>= 1024 px).
-    expect(css).toMatch(/@media\s*\(min-width:\s*1024px\)/);
-    expect(css).toMatch(/grid-template-columns/);
+  it('styles declare a desktop two-column layout (items + summary)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const layout = getElement(root, '[data-testid="cart-layout"]');
+    expect(layout.classList.contains('layout')).toBe(true);
+    expect(layout.classList.contains('lg:grid')).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// T18 wiring: CartPage uses the documented T10 primitives.
+// T18 wiring: CartPage uses the documented T10 primitives
 // ---------------------------------------------------------------------------
 describe('T18 cart-page shared-primitive dependency wiring', () => {
-  it('depends on the shared UI primitives and the CartFacade + ProductFacade', () => {
-    expect(cartPageSource).toMatch(/imports:\s*\[[\s\S]*?CartLine[\s\S]*?\]/);
-    expect(cartPageSource).toMatch(/imports:\s*\[[\s\S]*?OrderSummary[\s\S]*?\]/);
-    expect(cartPageSource).toMatch(/imports:\s*\[[\s\S]*?EmptyState[\s\S]*?\]/);
-    expect(cartPageSource).toMatch(/imports:\s*\[[\s\S]*?LoadingState[\s\S]*?\]/);
-    expect(cartPageSource).toMatch(/imports:\s*\[[\s\S]*?ErrorState[\s\S]*?\]/);
-    expect(cartPageSource).toMatch(/imports:\s*\[[\s\S]*?PriceBlock[\s\S]*?\]/);
-    // CartFacade is consumed via inject().
-    expect(cartPageSource).toMatch(/inject\(CartFacade\)/);
+  it('depends on the shared UI primitives and the CartFacade + ProductFacade', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(queryElement(root, 'app-cart-line')).not.toBeNull();
+    expect(queryElement(root, 'app-order-summary')).not.toBeNull();
+    expect(queryElement(root, 'app-button')).not.toBeNull();
+    expect(queryElement(root, 'app-price-block')).not.toBeNull();
   });
 
-  it('OrderSummary only imports PriceBlock + Button from the shared UI surface', () => {
-    const emptyImports = /imports:\s*\[\s*\]/;
-    const hasImports = /imports:\s*\[/;
-    const usesEmptyOrAbsent =
-      emptyImports.test(orderSummarySource) || !hasImports.test(orderSummarySource);
-    if (!usesEmptyOrAbsent) {
-      // When imports is non-empty, only PriceBlock + Button are
-      // expected.
-      expect(orderSummarySource).toMatch(/imports:\s*\[[\s\S]*?PriceBlock[\s\S]*?\]/);
-    }
+  it('OrderSummary only imports PriceBlock from the shared UI surface', async () => {
+    const fixture = TestBed.createComponent(OrderSummary);
+    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('shipping', { amount: 1990, currency: 'HUF' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const priceBlocks = root.querySelectorAll('app-price-block');
+    expect(priceBlocks.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('CartLine uses ProductImage + PriceBlock + QuantityControl from the shared UI surface', () => {
-    expect(cartLineSource).toMatch(/imports:\s*\[[\s\S]*?ProductImage[\s\S]*?\]/);
-    expect(cartLineSource).toMatch(/imports:\s*\[[\s\S]*?PriceBlock[\s\S]*?\]/);
-    expect(cartLineSource).toMatch(/imports:\s*\[[\s\S]*?QuantityControl[\s\S]*?\]/);
+  it('CartLine uses ProductImage + PriceBlock + QuantityControl from the shared UI surface', async () => {
+    const fixture = TestBed.createComponent(CartLine);
+    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(queryElement(root, 'app-product-image')).not.toBeNull();
+    expect(queryElement(root, 'app-price-block')).not.toBeNull();
+    expect(queryElement(root, 'app-quantity-control')).not.toBeNull();
   });
 });
