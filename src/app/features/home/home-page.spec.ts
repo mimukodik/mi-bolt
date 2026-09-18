@@ -37,12 +37,7 @@
 
 // @vitest-environment jsdom
 import 'reflect-metadata';
-import '@angular/compiler';
-import { readFileSync } from 'node:fs';
-import { resolve as resolvePath } from 'node:path';
-
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { Injectable, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
@@ -59,6 +54,7 @@ import type { Variant } from '../../../app/api/generated/models/variant';
 import { Hero } from '../../../app/features/home/hero';
 import { HowDemoWorks } from '../../../app/features/home/how-demo-works';
 import { HomePage } from '../../../app/features/home/home-page';
+import { FeaturedProducts } from '../../../app/features/home/featured-products';
 
 function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
   return (typeof value === 'function' || typeof value === 'object') && value !== null;
@@ -79,64 +75,21 @@ function getComponentStyles(comp: unknown): readonly string[] {
   return [];
 }
 
-const workspaceRoot = resolvePath(process.cwd());
+function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (raw instanceof HTMLElement) {
+    return raw;
+  }
+  throw new Error('Expected HTMLElement');
+}
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
   await TestBed.compileComponents();
 });
 
 afterEach(() => {
   TestBed.resetTestingModule();
 });
-
-// ---------------------------------------------------------------------------
-// Source files: read once for the source-pattern assertions. The
-// components are owned by T14, so the suite reads them directly. Any
-// refactor that breaks a documented contract makes the regex fail.
-// ---------------------------------------------------------------------------
-
-const homePageSource = [
-  'src/app/features/home/home-page.ts',
-  'src/app/features/home/home-page.html',
-  'src/app/features/home/home-page.scss',
-]
-  .map((p) => {
-    try {
-      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
-    } catch {
-      return '';
-    }
-  })
-  .join('\n');
-const heroSource = [
-  'src/app/features/home/hero.ts',
-  'src/app/features/home/hero.html',
-  'src/app/features/home/hero.scss',
-]
-  .map((p) => {
-    try {
-      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
-    } catch {
-      return '';
-    }
-  })
-  .join('\n');
-const featuredProductsSource = [
-  'src/app/features/home/featured-products.ts',
-  'src/app/features/home/featured-products.html',
-  'src/app/features/home/featured-products.scss',
-]
-  .map((p) => {
-    try {
-      return readFileSync(resolvePath(workspaceRoot, p), 'utf8');
-    } catch {
-      return '';
-    }
-  })
-  .join('\n');
 
 // ---------------------------------------------------------------------------
 // Stub Api: exposes the same surface the production home page uses
@@ -359,19 +312,16 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(ctaImage).toBeNull();
   });
 
-  it('hero template carries the MiBolt brand text in a functional element', () => {
-    // docs/tasks/T14.md:42 (T14-AC01) has two halves: no superseded
-    // brand text in functional UI, and MiBolt as the brand carried
-    // there instead. This test covers only the second (presence) half.
-    // The first (absence) half cannot be asserted here: doing so would
-    // require this file to contain the superseded brand token, which
-    // is itself the thing that must not exist. That half is instead
-    // guaranteed by the token appearing nowhere in the repository
-    // (verified separately, outside this suite).
-    expect(heroSource).toMatch(/MiBolt/);
-    // The brand mark is rendered as a decorative span (R10), not as
-    // functional text inside the CTA.
-    expect(heroSource).toMatch(/data-testid="hero-cta"/);
+  it('hero template carries the MiBolt brand text in a functional element', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(Hero);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(root.textContent).toContain('MiBolt');
+    expect(root.querySelector('[data-testid="hero-cta"]')).not.toBeNull();
   });
 });
 
@@ -427,18 +377,24 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     expect(hasInStock).toBe(true);
   });
 
-  it('featured product "Részletek" opens the correct slug', () => {
-    // Source-pattern check: FeaturedProducts renders one
-    // routerLink per slot pointing to /telefonok/<slug>.
-    expect(featuredProductsSource).toMatch(
-      /\[routerLink\]="\['\/telefonok',\s*slot\.product\.slug\]"/,
+  it('featured product "Részletek" opens the correct slug', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(FeaturedProducts);
+    const mockProduct = makeProduct('demo-one-5g', 'Demo One 5G', 'DemoBrand', 249990);
+    fixture.componentRef.setInput('slots', [
+      { slug: 'demo-one-5g', status: 'success', product: mockProduct, error: null },
+    ]);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const link = root.querySelector<HTMLAnchorElement>(
+      '[data-testid="featured-details-demo-one-5g"]',
     );
-    expect(featuredProductsSource).toMatch(
-      /\[attr\.data-testid\]="'featured-details-'\s*\+\s*slot\.product\.slug"/,
-    );
-    // The home page threads the slot slug through FeaturedProducts so
-    // every fixture slug ends up wired to the detail route.
-    expect(featuredProductsSource).toMatch(/Részletek/);
+    expect(link).not.toBeNull();
+    expect(link?.textContent).toContain('Részletek');
+    expect(link?.getAttribute('href')).toContain('/telefonok/demo-one-5g');
   });
 });
 
@@ -449,11 +405,20 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
 // ---------------------------------------------------------------------------
 
 describe('T14-AC03 four featured products with real prices, no made-up prices', () => {
-  it('FeaturedProducts consumes slot entries and renders the SDK variant price', () => {
-    expect(featuredProductsSource).toMatch(/slots\s*=\s*input/);
-    expect(featuredProductsSource).toMatch(/slot\.product\.defaultVariant\.price/);
-    // No fallback to a hard-coded "0 Ft" or any other invented amount.
-    expect(featuredProductsSource).not.toMatch(/['"]\s*0\s*['"]\s*\+\s*['"]\s*Ft\s*['"]/);
+  it('FeaturedProducts consumes slot entries and renders the SDK variant price', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(FeaturedProducts);
+    const mockProduct = makeProduct('demo-one-5g', 'Demo One 5G', 'DemoBrand', 339990);
+    fixture.componentRef.setInput('slots', [
+      { slug: 'demo-one-5g', status: 'success', product: mockProduct, error: null },
+    ]);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(root.textContent.replace(/\u00a0/g, ' ')).toContain('339 990');
+    expect(root.textContent).not.toContain('0 Ft');
   });
 
   it('home page issues getConfig + getProduct per featured slug and threads slots', async () => {
@@ -510,30 +475,22 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     }
   });
 
-  it('does not show a price while the SDK call is still loading', () => {
-    // Source-pattern check: the loading branch (the @default block) renders
-    // a skeleton (no money/price text), and the success branch only renders
-    // the price through slot.product.defaultVariant.price.
-    expect(featuredProductsSource).toMatch(/featured__skeleton--price/);
-    expect(featuredProductsSource).toMatch(/data-testid="price-skeleton"/);
-    expect(featuredProductsSource).toMatch(/@default\s*\{/);
-    // The loading block (the @default branch) sits AFTER the success
-    // branch. The block between @case ('success') and @default must not
-    // contain a price element: the skeleton replaces it.
-    const successIdx = featuredProductsSource.indexOf("@case ('success')");
-    const defaultIdx = featuredProductsSource.indexOf('@default');
-    expect(successIdx).toBeGreaterThan(-1);
-    expect(defaultIdx).toBeGreaterThan(successIdx);
-    const block = featuredProductsSource.slice(successIdx, defaultIdx);
-    // The success block may contain the price element; the check below
-    // targets the @default branch (after @default).
-    const defaultBlock = featuredProductsSource.slice(defaultIdx);
-    expect(defaultBlock).not.toMatch(/defaultVariant\.price/);
-    expect(defaultBlock).not.toMatch(/data-testid="price-amount"/);
-    expect(defaultBlock).not.toMatch(/data-testid="price-empty"/);
-    expect(defaultBlock).not.toMatch(/data-testid="price-error"/);
-    // The success branch must contain the real price source.
-    expect(block).toMatch(/defaultVariant\.price/);
+  it('does not show a price while the SDK call is still loading', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(FeaturedProducts);
+    fixture.componentRef.setInput('slots', [
+      { slug: 'demo-one-5g', status: 'loading', product: null, error: null },
+    ]);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
+    expect(root.querySelector('.featured__skeleton--price')).not.toBeNull();
+    expect(root.querySelector('[data-testid="price-amount"]')).toBeNull();
+    expect(root.querySelector('[data-testid="price-empty"]')).toBeNull();
+    expect(root.querySelector('[data-testid="price-error"]')).toBeNull();
   });
 
   it('does not show a made-up price when the SDK call errors', async () => {
@@ -656,13 +613,33 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     });
   });
 
-  it('home page renders Hero before FeaturedProducts before HowDemoWorks', () => {
-    const heroIdx = homePageSource.indexOf('<app-hero');
-    const featuredIdx = homePageSource.indexOf('<app-featured-products');
-    const howIdx = homePageSource.indexOf('<app-how-demo-works');
-    expect(heroIdx).toBeGreaterThan(-1);
-    expect(featuredIdx).toBeGreaterThan(heroIdx);
-    expect(howIdx).toBeGreaterThan(featuredIdx);
+  it('home page renders Hero before FeaturedProducts before HowDemoWorks', async () => {
+    const api = new StubApi();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([], withComponentInputBinding()),
+        { provide: Api, useValue: api },
+      ],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(HomePage);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const hero = root.querySelector('app-hero');
+    const featured = root.querySelector('app-featured-products');
+    const how = root.querySelector('app-how-demo-works');
+    expect(hero).not.toBeNull();
+    expect(featured).not.toBeNull();
+    expect(how).not.toBeNull();
+    if (hero !== null && featured !== null && how !== null) {
+      expect(
+        Boolean(hero.compareDocumentPosition(featured) & Node.DOCUMENT_POSITION_FOLLOWING),
+      ).toBe(true);
+      expect(
+        Boolean(featured.compareDocumentPosition(how) & Node.DOCUMENT_POSITION_FOLLOWING),
+      ).toBe(true);
+    }
   });
 
   it('hero CSS prevents clipping at narrow widths (word-break + max-width)', async () => {
