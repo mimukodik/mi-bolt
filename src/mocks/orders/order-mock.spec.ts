@@ -488,7 +488,7 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
     const ready1 = await readyCheckout(env, 'demo_cod', { variantId: VARIANT_G256 });
     const ready2 = await readyCheckout(env, 'demo_cod', {
       variantId: VARIANT_G512,
-      sessionId: SESSION_A,
+      sessionId: SESSION_B,
     });
     const idemKey = `${IDEMPOTENCY_KEY_BASE}-conflict`;
     const first = env.orderDomain.createOrder({
@@ -1115,19 +1115,22 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     return `http://127.0.0.1/api/v1${path}`;
   }
 
-  function commonHeaders(idempotencyKey: string): Record<string, string> {
+  function commonHeaders(
+    idempotencyKey: string,
+    sessionId: string = SESSION_A,
+  ): Record<string, string> {
     return {
-      'X-Demo-Session': SESSION_A,
+      'X-Demo-Session': sessionId,
       'Idempotency-Key': idempotencyKey,
       'Content-Type': 'application/json',
     };
   }
 
-  async function postCart(): Promise<{ id: string; version: number }> {
+  async function postCart(sessionId: string = SESSION_A): Promise<{ id: string; version: number }> {
     const response = await fetch(url('/carts'), {
       method: 'POST',
       headers: {
-        'X-Demo-Session': SESSION_A,
+        'X-Demo-Session': sessionId,
         'Idempotency-Key': uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-cart`),
         'Content-Type': 'application/json',
       },
@@ -1142,11 +1145,12 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     variantId: string,
     quantity: number,
     idempotencyKey: string,
+    sessionId: string = SESSION_A,
   ): Promise<{ id: string; version: number }> {
     const response = await fetch(url(`/carts/${cart.id}/items`), {
       method: 'POST',
       headers: {
-        ...commonHeaders(idempotencyKey),
+        ...commonHeaders(idempotencyKey, sessionId),
         'If-Match': `"${String(cart.version)}"`,
       },
       body: JSON.stringify({ variantId, quantity }),
@@ -1160,11 +1164,12 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     cartVersion: number,
     idempotencyKey: string,
     body: Record<string, unknown>,
+    sessionId: string = SESSION_A,
   ): Promise<{ cartVersion: number }> {
     const response = await fetch(url(`/checkout/${cartId}`), {
       method: 'PUT',
       headers: {
-        ...commonHeaders(idempotencyKey),
+        ...commonHeaders(idempotencyKey, sessionId),
         'If-Match': `"${String(cartVersion)}"`,
       },
       body: JSON.stringify(body),
@@ -1177,11 +1182,12 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     cartId: string,
     cartVersion: number,
     idempotencyKey: string,
+    sessionId: string = SESSION_A,
   ): Promise<{ id: string; total: { amount: number; currency: string }; cartVersion: number }> {
     const response = await fetch(url(`/checkout/${cartId}/quote`), {
       method: 'POST',
       headers: {
-        ...commonHeaders(idempotencyKey),
+        ...commonHeaders(idempotencyKey, sessionId),
         'If-Match': `"${String(cartVersion)}"`,
       },
     });
@@ -1197,6 +1203,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     cartId: string,
     quoteId: string,
     idempotencyKey: string,
+    sessionId: string = SESSION_A,
   ): Promise<{
     id: string;
     status: string;
@@ -1205,7 +1212,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
   }> {
     const response = await fetch(url('/payment-intents'), {
       method: 'POST',
-      headers: commonHeaders(idempotencyKey),
+      headers: commonHeaders(idempotencyKey, sessionId),
       body: JSON.stringify({ cartId, quoteId }),
     });
     expect(response.status).toBe(201);
@@ -1259,12 +1266,13 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     sessionId: string;
   }> {
     const sessionId = options.sessionId ?? SESSION_A;
-    const cart = await postCart();
+    const cart = await postCart(sessionId);
     const seeded = await addItem(
       cart,
       VARIANT_G256,
       1,
       uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-add`),
+      sessionId,
     );
     const draft = await updateCheckout(
       seeded.id,
@@ -1275,11 +1283,13 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
         delivery: homeDelivery(),
         paymentMethod,
       },
+      sessionId,
     );
     const quote = await createQuote(
       seeded.id,
       draft.cartVersion,
       uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-quote`),
+      sessionId,
     );
     let paymentIntentId: string | undefined;
     if (paymentMethod === 'demo_card') {
@@ -1287,6 +1297,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
         seeded.id,
         quote.id,
         uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent`),
+        sessionId,
       );
       paymentIntentId = intent.id;
     }
@@ -1376,7 +1387,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
 
   it('returns 409 IDEMPOTENCY_CONFLICT on same-key + different-body retry', async () => {
     const ready1 = await buildReadyCheckout('demo_cod');
-    const ready2 = await buildReadyCheckout('demo_cod');
+    const ready2 = await buildReadyCheckout('demo_cod', { sessionId: SESSION_B });
     const idemKey = `${IDEMPOTENCY_KEY_BASE}-wire-conflict`;
     const first = await createOrder(ready1.cartId, ready1.quoteId, idemKey, {
       cartId: ready1.cartId,

@@ -11,7 +11,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createHandlers } from '../mocks/create-handlers';
 import { Repository } from '../mocks/repository';
-import { createBrowserPersistence, snapshotKey, type MockSnapshot } from '../mocks/persistence';
+import {
+  createBrowserPersistence,
+  snapshotKey,
+  type MockSnapshot,
+  type PersistedCart,
+} from '../mocks/persistence';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -19,6 +24,9 @@ import {
   parseScenarioFromLocation,
   resolveScenario,
 } from '../mocks/scenarios';
+import { buildSnapshot } from './snapshot';
+import { DEMO_PRODUCT } from './cart/cart.handlers';
+import { server } from '../../tests/setup-msw';
 
 const SCENARIO_KEY = 'test-scenario';
 const STORAGE_KEY = snapshotKey(SCENARIO_KEY);
@@ -255,5 +263,131 @@ describe('T05-AC06 scenario isolation', () => {
     // Missing location / missing param falls back to default.
     delete (globalThis as { location?: unknown }).location;
     expect(parseScenarioFromLocation().name).toBe('default');
+  });
+});
+
+describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection', () => {
+  it('calls persist callback on mutating cart requests and not on read requests', async () => {
+    const persistSpy = vi.fn();
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+    const handlers = createHandlers({
+      repository,
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+      persist: persistSpy,
+    });
+    server.use(...handlers);
+
+    const sessionId = 'sess-mutating-test';
+    const postRes = await fetch('http://localhost/api/v1/carts', {
+      method: 'POST',
+      headers: {
+        'X-Demo-Session': sessionId,
+        'Idempotency-Key': 'idem-key-mutating-1',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ providerId: 'mi-bolt' }),
+    });
+    expect(postRes.status).toBe(201);
+    const rawBody: unknown = await postRes.json();
+    const cartId =
+      typeof rawBody === 'object' &&
+      rawBody !== null &&
+      'id' in rawBody &&
+      typeof rawBody.id === 'string'
+        ? rawBody.id
+        : '';
+    expect(cartId).not.toBe('');
+    expect(persistSpy).toHaveBeenCalledTimes(1);
+    expect(persistSpy).toHaveBeenCalledWith(sessionId);
+
+    persistSpy.mockClear();
+
+    const getRes = await fetch(`http://localhost/api/v1/carts/${cartId}`, {
+      method: 'GET',
+      headers: {
+        'X-Demo-Session': sessionId,
+      },
+    });
+    expect(getRes.status).toBe(200);
+    expect(persistSpy).not.toHaveBeenCalled();
+  });
+
+  it('round-trips buildSnapshot through persistence save and hydrate matching line ids, variant ids, and quantities', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+
+    const persistedCart: PersistedCart = {
+      id: 'cart-roundtrip-1',
+      version: 2,
+      items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 2 }],
+      lastUpdatedAt: '2026-09-14T10:00:00.000Z',
+    };
+    repository.loadPersistedCart(persistedCart, 'sess-12345');
+
+    const nowMs = Date.parse('2026-09-14T10:00:00.000Z');
+    const built = buildSnapshot(repository, 'sess-12345', nowMs);
+
+    const scenarioName = 'snapshot-roundtrip';
+    const persistence = createBrowserPersistence({
+      nowMs: () => nowMs,
+    });
+    persistence.save(scenarioName, built);
+    const hydrated = persistence.hydrate(scenarioName);
+
+    expect(hydrated).not.toBeNull();
+    const repoCart = repository.findCartBySession('sess-12345');
+    expect(repoCart).toBeDefined();
+    expect(hydrated?.cart?.items).toEqual(
+      repoCart?.items.map((it) => ({
+        id: it.id,
+        variantId: it.variantId,
+        quantity: it.quantity,
+      })),
+    );
+  });
+
+  it('buildSnapshot contains only allowlisted keys', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+    repository.ensureCart('sess-12345');
+
+    const built = buildSnapshot(repository, 'sess-12345', Date.now());
+    expect(Object.keys(built).sort()).toEqual([
+      'cart',
+      'expiresAt',
+      'providerId',
+      'receipts',
+      'savedAt',
+      'schemaVersion',
+      'simulatedSessionId',
+    ]);
+  });
+
+  it('reconnects existing persisted cart on ensureCart and findCartBySession (FIX-10-AC08)', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+
+    const persistedCart: PersistedCart = {
+      id: 'cart-persisted-x',
+      version: 1,
+      items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
+      lastUpdatedAt: '2026-09-14T10:00:00.000Z',
+    };
+    repository.loadPersistedCart(persistedCart, 'sess-x');
+
+    expect(repository.ensureCart('sess-x').id).toBe(persistedCart.id);
+    expect(repository.findCartBySession('sess-x')?.id).toBe(persistedCart.id);
   });
 });

@@ -27,6 +27,13 @@ export interface CreateHandlersOptions {
   ids: Ids;
   scenario: ScenarioDescriptor;
   apiRoot: string;
+  /**
+   * Called by a handler after a successful mutating response so the
+   * browser worker can write the sessionStorage snapshot. Absent in the
+   * Node and unit paths, which keeps this factory side-effect-free as
+   * the module header promises.
+   */
+  persist?: (sessionId: string) => void;
 }
 
 /**

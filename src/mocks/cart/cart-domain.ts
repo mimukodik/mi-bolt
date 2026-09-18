@@ -162,7 +162,7 @@ export class CartDomain {
       return err(CartDomain.idempotencyConflict());
     }
 
-    const cart = this.repository.createCart(input.sessionId);
+    const cart = this.repository.ensureCart(input.sessionId);
     this.idempotency.record(idemKey, payloadHash, { status: 201, body: cart });
     return ok(cart);
   }

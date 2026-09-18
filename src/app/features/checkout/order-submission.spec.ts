@@ -54,8 +54,6 @@ import {
   OrderSubmission,
   SafeLogger,
   type SubmitOutcome,
-  SAFE_ORDER_STORAGE_PREFIX,
-  type SafeOrderStorage,
   type SafeLogContext,
 } from '../../../app/features/checkout/order-submission';
 import {
@@ -114,44 +112,9 @@ afterAll(() => {
   server.close();
 });
 
-function clearSafeOrderStorage(): void {
-  const store: Storage | undefined = (globalThis as { localStorage?: Storage }).localStorage;
-  if (store === undefined) return;
-  const keys: string[] = [];
-  for (let i = 0; i < store.length; i += 1) {
-    const k = store.key(i);
-    if (k !== null) keys.push(k);
-  }
-  for (const k of keys) {
-    if (k.startsWith(SAFE_ORDER_STORAGE_PREFIX)) {
-      store.removeItem(k);
-    }
-  }
-}
-
-function makeInMemoryStorage(): SafeOrderStorage {
-  const map = new Map<string, string>();
-  return {
-    getItem(key: string): string | null {
-      return map.get(key) ?? null;
-    },
-    setItem(key: string, value: string): void {
-      map.set(key, value);
-    },
-    removeItem(key: string): void {
-      map.delete(key);
-    },
-  };
-}
-
-function bindInMemoryStorageOn(submission: OrderSubmission): void {
-  submission.bindStorage(makeInMemoryStorage());
-}
-
 beforeEach(() => {
   currentEnv = makeEnv();
   server.use(...buildHandlers());
-  clearSafeOrderStorage();
 });
 
 afterEach(() => {
@@ -265,7 +228,6 @@ describe('T23-AC01 demo_cod commits directly without a payment intent', () => {
     const checkout = TestBed.inject(CheckoutFacade);
     const submission = TestBed.inject(OrderSubmission);
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_cod');
 
@@ -301,7 +263,6 @@ describe('T23-AC01 demo_cod commits directly without a payment intent', () => {
     const checkout = TestBed.inject(CheckoutFacade);
     const submission = TestBed.inject(OrderSubmission);
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
@@ -319,7 +280,6 @@ describe('T23-AC01 demo_cod commits directly without a payment intent', () => {
     const checkout = TestBed.inject(CheckoutFacade);
     const submission = TestBed.inject(OrderSubmission);
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
@@ -383,7 +343,6 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
     const submission = TestBed.inject(OrderSubmission);
     const fakeClock = makeFakeClock();
     submission.bindClock(fakeClock);
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
@@ -425,16 +384,6 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
     expect(submission.canRetryUnknown()).toBe(true);
     // No order was committed.
     expect(checkout.order()).toBeNull();
-    // The persisted safe key is available so the user can recover.
-    const persisted = submission.readPersistedSafeOrder();
-    expect(persisted).not.toBeNull();
-    // The persisted paymentIntentId is the ORIGINAL id returned by
-    // createPaymentIntent (not the override's `pi-pending-forever`
-    // id), because the polling loop preserves the original id for
-    // server-side lookups. The exact value is scenario-dependent;
-    // what matters is that it is a non-empty opaque id.
-    expect(typeof persisted?.paymentIntentId).toBe('string');
-    expect((persisted?.paymentIntentId ?? '').length).toBeGreaterThan(0);
   });
 
   it('emits a `pending` tick first, then `attempt` ticks 1..10, then a `timeout` tick', async () => {
@@ -442,7 +391,6 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
     const submission = TestBed.inject(OrderSubmission);
     const fakeClock = makeFakeClock();
     submission.bindClock(fakeClock);
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
@@ -501,7 +449,6 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
     const checkout = TestBed.inject(CheckoutFacade);
     const submission = TestBed.inject(OrderSubmission);
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_cod');
 
@@ -546,7 +493,6 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
     const checkout = TestBed.inject(CheckoutFacade);
     const submission = TestBed.inject(OrderSubmission);
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_cod');
 
@@ -606,7 +552,6 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
     const checkout = TestBed.inject(CheckoutFacade);
     const submission = TestBed.inject(OrderSubmission);
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_cod');
 
@@ -628,252 +573,9 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
       const outcome = await submission.submitOrder();
       expect(outcome.kind).toBe<SubmitOutcome['kind']>('committed');
       expect(orderCalls).toBe(1);
-
-      // Recovery after a "lost" response must consult the persisted
-      // safe key and short-circuit on the first getOrder attempt
-      // (the order was saved by the mock domain during the original
-      // commit, so the default GET handler returns it).
-      const recover = await submission.recoverPersistedOrder();
-      expect(recover?.source).toBe('getOrder');
-      expect(recover?.orderId).toBe(checkout.order()?.id);
-      // No second createOrder fired.
-      expect(orderCalls).toBe(1);
     } finally {
       server.events.removeListener('request:match', onMatch);
     }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T23-AC04 — unknown outcome retains identical order key + normalized
-// request; reload recovery queries stored receipt or replays exact order.
-// ---------------------------------------------------------------------------
-
-describe('T23-AC04 unknown outcome retains identical order key and normalized request', () => {
-  beforeEach(() => {
-    configureTestBed();
-  });
-
-  it('persists a safe order key + normalized body on the first commit attempt', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
-
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    await submission.submitOrder();
-
-    const stored = submission.readPersistedSafeOrder();
-    expect(stored).not.toBeNull();
-    // The persisted record must NOT carry contact / address / card.
-    const json = JSON.stringify(stored);
-    expect(json).not.toMatch(/Teszt Elek|teszt@example\.test|\+36201234567|Példa utca|Demóváros/i);
-    // It MUST carry the cartId + quoteId + termsVersion.
-    expect(stored?.cartId).toBe(checkout.cartId());
-    expect(stored?.body.termsVersion).toBe('demo-1');
-    expect(stored?.body.acceptedTerms).toBe(true);
-    // The orderId from the receipt is now persisted so getOrder can find it.
-    expect(stored?.orderId).toBe(checkout.order()?.id);
-  });
-
-  it('a pending-timeout preserves the persisted safe key for replay', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    const fakeClock = makeFakeClock();
-    submission.bindClock(fakeClock);
-    bindInMemoryStorageOn(submission);
-
-    currentEnv = makeEnv('payment-pending-timeout');
-    server.resetHandlers();
-    server.use(...buildHandlers());
-
-    await fillContactDeliveryPayment(checkout, 'demo_card');
-
-    const currentCartId = checkout.cartId();
-    if (!currentCartId) throw new Error('Expected cartId');
-    const currentQuote = checkout.quote();
-    if (!currentQuote) throw new Error('Expected quote');
-
-    server.use(
-      http.get('*/api/v1/payment-intents/:intentId', () =>
-        HttpResponse.json({
-          id: 'pi-pending-replay',
-          cartId: currentCartId,
-          quoteId: currentQuote.id,
-          status: 'pending',
-          isSimulation: true,
-          amount: { amount: 100, currency: 'HUF' },
-        }),
-      ),
-    );
-
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const submitted = submission.submitOrder();
-    await flushAsync();
-    for (let i = 0; i < 10; i += 1) {
-      fakeClock.fire();
-      await flushAsync();
-    }
-    const first = await submitted;
-    expect(first.kind).toBe<SubmitOutcome['kind']>('pending-timeout');
-
-    const firstRecord = submission.readPersistedSafeOrder();
-    expect(firstRecord).not.toBeNull();
-    if (firstRecord === null) throw new Error('Expected firstRecord to not be null');
-    const firstKey = firstRecord.orderKey;
-    const firstBody = firstRecord.body;
-
-    // The retry path must send the EXACT persisted key + body.
-    // Capture the next POST /orders request to assert the wire
-    // contract; the order itself may still fail (the intent is
-    // still pending) — the AC is about replaying the same request,
-    // not about its result.
-    let capturedKey: string | null = null;
-    let capturedBody: unknown = null;
-    server.use(
-      http.post('*/api/v1/orders', async ({ request }) => {
-        capturedKey = request.headers.get('Idempotency-Key');
-        capturedBody = await request.clone().json();
-        // Return PAYMENT_PENDING so the retry surface mirrors the
-        // still-pending intent; the AC is about the request shape,
-        // not the outcome.
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:payment-pending',
-            title: 'A szimulált fizetés még feldolgozás alatt.',
-            status: 409,
-            code: 'PAYMENT_PENDING',
-            detail: 'A szimulált fizetés még feldolgozás alatt.',
-            traceId: 'mock-trace-test',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const retry = await submission.retryUnknownOutcome();
-    // Result is unknown — the intent is still pending in this
-    // scenario. What matters for T23-AC04 is that the wire request
-    // carried the persisted key + body verbatim.
-    expect(retry.kind).toBe<SubmitOutcome['kind']>('unknown');
-    expect(capturedKey).toBe(firstKey);
-    expect(capturedBody).toEqual(firstBody);
-
-    const secondRecord = submission.readPersistedSafeOrder();
-    expect(secondRecord).not.toBeNull();
-    if (secondRecord === null) throw new Error('Expected secondRecord to not be null');
-    expect(secondRecord.orderKey).toBe(firstKey);
-    // The normalized body must be byte-equal.
-    expect(secondRecord.body).toEqual(firstBody);
-  });
-
-  it('reload recovery queries getOrder first when the receipt id is persisted', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
-
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const outcome = await submission.submitOrder();
-    expect(outcome.kind).toBe<SubmitOutcome['kind']>('committed');
-
-    let getOrderCalls = 0;
-    server.use(
-      http.get('*/api/v1/orders/:orderId', () => {
-        getOrderCalls += 1;
-        return HttpResponse.json(
-          {
-            id: 'order-recovered',
-            orderNumber: 'DEMO-000001',
-            createdAt: currentEnv.clock.now(),
-            status: 'demo_confirmed',
-            isSimulation: true,
-            items: [],
-            subtotal: { amount: 339_990, currency: 'HUF' },
-            shipping: { amount: 0, currency: 'HUF' },
-            total: { amount: 339_990, currency: 'HUF' },
-            paymentMethod: 'demo_cod',
-            deliveryOptionId: 'demo_pickup',
-            notice: 'demo',
-          },
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
-
-    const recover = await submission.recoverPersistedOrder();
-    expect(getOrderCalls).toBe(1);
-    expect(recover?.orderId).toBe('order-recovered');
-    expect(recover?.source).toBe('getOrder');
-  });
-
-  it('reload recovery falls back to a replay when getOrder returns 404', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
-
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    await submission.submitOrder();
-
-    let getOrderCalls = 0;
-    let orderCalls = 0;
-    // Override the default order handler to count both paths.
-    server.use(
-      http.get('*/api/v1/orders/:orderId', () => {
-        getOrderCalls += 1;
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:not-found',
-            title: 'A rendelés nem található.',
-            status: 404,
-            code: 'NOT_FOUND',
-            detail: 'A rendelés nem található.',
-            traceId: 'mock-trace-test',
-            fieldErrors: [],
-          },
-          { status: 404, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-      http.post('*/api/v1/orders', () => {
-        orderCalls += 1;
-        return HttpResponse.json(
-          {
-            id: 'order-replayed',
-            orderNumber: 'DEMO-000002',
-            createdAt: currentEnv.clock.now(),
-            status: 'demo_confirmed',
-            isSimulation: true,
-            items: [],
-            subtotal: { amount: 339_990, currency: 'HUF' },
-            shipping: { amount: 0, currency: 'HUF' },
-            total: { amount: 339_990, currency: 'HUF' },
-            paymentMethod: 'demo_cod',
-            deliveryOptionId: 'demo_pickup',
-            notice: 'demo',
-          },
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
-
-    const recover = await submission.recoverPersistedOrder();
-    expect(getOrderCalls).toBe(1);
-    expect(orderCalls).toBe(1);
-    expect(recover?.orderId).toBe('order-replayed');
-    expect(recover?.source).toBe('replay');
   });
 });
 
@@ -892,7 +594,6 @@ describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () 
     const cart = TestBed.inject(CartFacade);
     const submission = TestBed.inject(OrderSubmission);
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
@@ -926,8 +627,6 @@ describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () 
     expect(checkout.form().value().paymentMethod).toBe('demo_card');
     // Cart survives.
     expect(cart.itemCount()).toBe(1);
-    // No persisted safe key after a deterministic, expected failure.
-    expect(submission.readPersistedSafeOrder()).toBeNull();
   });
 
   it('SafeLogger.redact() strips contact / address / payment-like fields', () => {
@@ -970,7 +669,6 @@ describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () 
     const sink: (readonly SafeLogContext[])[] = [];
     submission.bindSafeLogger((entries) => sink.push(entries));
     submission.bindClock(makeFakeClock());
-    bindInMemoryStorageOn(submission);
 
     await fillContactDeliveryPayment(checkout, 'demo_cod');
     checkout.form.acceptedTerms().value.set(true);

@@ -259,7 +259,7 @@ function readQuantity(body: unknown): { ok: true; value: number } | { ok: false;
 export const cartHandlersEntry: BusinessHandlerEntry = (
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] => {
-  const { repository, clock, ids, scenario } = options;
+  const { repository, clock, ids, scenario, persist } = options;
   ensureFixture(repository);
 
   const idempotency = new IdempotencyStore(clock);
@@ -273,6 +273,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
     if (idempotencyKey === null) return badRequest('Hiányzó Idempotency-Key fejléc.', traceId);
     const result = domain.createCart({ sessionId, idempotencyKey });
     if (!result.ok) return problemResponse(result.problem, traceId);
+    persist?.(sessionId);
     return HttpResponse.json(serializeCart(result.value), {
       status: 201,
       headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
@@ -313,6 +314,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
         quantity: quantityRead.value,
       });
       if (!result.ok) return problemResponse(result.problem, traceId);
+      persist?.(sessionId);
       return HttpResponse.json(serializeCart(result.value), {
         status: 200,
         headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
@@ -341,6 +343,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
         quantity: quantityRead.value,
       });
       if (!result.ok) return problemResponse(result.problem, traceId);
+      persist?.(sessionId);
       return HttpResponse.json(serializeCart(result.value), {
         status: 200,
         headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
@@ -365,6 +368,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
         idempotencyKey,
       });
       if (!result.ok) return problemResponse(result.problem, traceId);
+      persist?.(sessionId);
       return HttpResponse.json(serializeCart(result.value), {
         status: 200,
         headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },

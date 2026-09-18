@@ -213,7 +213,7 @@ export function buildOrderHandlers(
     stocks: StockTracker;
   },
 ): readonly RequestHandler[] {
-  const { repository, clock, ids, scenario } = options;
+  const { repository, clock, ids, scenario, persist } = options;
   const traceId = traceIdFor(options);
   const idempotency = new IdempotencyStore(clock);
   const domain = new OrderDomain(
@@ -252,6 +252,7 @@ export function buildOrderHandlers(
       acknowledgedSimulation: parsed.value.acknowledgedSimulation,
     });
     if (!result.ok) return problemResponse(result.problem, traceId);
+    persist?.(sessionId);
     return HttpResponse.json(serializeReceipt(result.value), {
       status: 201,
       headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },

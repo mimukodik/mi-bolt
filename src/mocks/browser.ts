@@ -35,7 +35,8 @@ import {
 } from './create-handlers';
 import { Repository, type Product } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
-import type { MockSnapshot } from './persistence';
+import { createBrowserPersistence, type MockSnapshot } from './persistence';
+import { buildSnapshot } from './snapshot';
 
 // Force-load the slice handler modules so their module-level
 // registerBusinessHandlers(...) calls populate the create-handlers
@@ -75,12 +76,19 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const clock = createRealClock(scenario.clockOffsetMs);
   const repository = new Repository(scenario, ids, clock);
   loadCatalogFixture(repository, scenario.name);
+  const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
   return {
     repository,
     clock,
     ids,
     scenario,
     apiRoot: '/api/v1',
+    persist: (sessionId: string) => {
+      persistence.save(
+        scenario.name,
+        buildSnapshot(repository, sessionId, Date.parse(clock.now())),
+      );
+    },
   };
 }
 
@@ -112,7 +120,10 @@ export function buildBrowserHandlers(
 ): ReturnType<typeof createHandlers> {
   const options = resolveBrowserHandlerOptions();
   if (snapshot?.cart) {
-    options.repository.loadPersistedCart(snapshot.cart);
+    options.repository.loadPersistedCart(snapshot.cart, snapshot.simulatedSessionId);
+  }
+  if (snapshot?.receipts) {
+    options.repository.loadPersistedOrders(snapshot.receipts, snapshot.simulatedSessionId);
   }
   // The E2E configuration preserves the T02 network-isolation gate:
   // an unhandled `/api/v1/...` request must throw so the suite catches

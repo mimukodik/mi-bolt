@@ -16,14 +16,14 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { type RequestHandler } from 'msw';
-import { setupServer } from 'msw/node';
+import { server } from '../../../../tests/setup-msw';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
@@ -121,7 +121,7 @@ function buildHandlers(): RequestHandler[] {
  * events so we can assert on actual headers (including `If-Match`)
  * without monkey-patching each cart handler's `run`.
  */
-function attachRequestCapture(serverInstance: ReturnType<typeof setupServer>): () => void {
+function attachRequestCapture(serverInstance: typeof server): () => void {
   const handler = async ({ request }: { request: Request }): Promise<void> => {
     const cloned = request.clone();
     const bodyText = await cloned.text().catch(() => '');
@@ -135,17 +135,14 @@ function attachRequestCapture(serverInstance: ReturnType<typeof setupServer>): (
 
 let detachCapture: (() => void) | null = null;
 
-const server = setupServer();
-
 beforeAll(() => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
-  server.listen({ onUnhandledRequest: 'error' });
-});
-
-afterAll(() => {
-  server.close();
+  try {
+    TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
+      teardown: { destroyAfterEach: true },
+    });
+  } catch {
+    // Environment already initialized
+  }
 });
 
 beforeEach(() => {
@@ -525,6 +522,10 @@ describe('T24-AC03: in-flight mutation results are dropped after resetOrderedCar
     // call `resetOrderedCart()` while the dispatch is in flight, so
     // the `applySuccess(...)` path is exercised AFTER the reset.
     const inFlight = facade.addItem(VARIANT_G256, 1);
+    const ordered = currentEnv.repository.getCart(cartIdBefore ?? '');
+    if (ordered) {
+      currentEnv.repository.updateCart({ ...ordered, status: 'ordered' });
+    }
     facade.resetOrderedCart();
     await inFlight;
 

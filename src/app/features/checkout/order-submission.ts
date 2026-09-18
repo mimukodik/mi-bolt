@@ -118,19 +118,6 @@ export interface NormalizedOrderBody {
   readonly acknowledgedSimulation: true;
 }
 
-/** Persisted record kept under `localStorage` so reload can recover. */
-export interface SafeOrderRecord {
-  readonly orderKey: string;
-  /** Filled in after a successful commit so reload recovery can `getOrder(id)`. */
-  readonly orderId: string | null;
-  readonly cartId: string;
-  readonly quoteId: string;
-  readonly paymentIntentId: string | null;
-  readonly body: NormalizedOrderBody;
-  readonly createdAt: string;
-  readonly attempt: number;
-}
-
 /** Whitelist-only context the safe logger emits. */
 export interface SafeLogContext {
   readonly cartId?: string;
@@ -159,71 +146,6 @@ export interface SafeLogContext {
 export type SafeLogger = (entries: readonly SafeLogContext[]) => void;
 
 const noopLogger: SafeLogger = () => undefined;
-
-/**
- * Minimal key-value store the service uses for the persisted safe
- * record. Defaults to a `localStorage`-backed implementation; tests
- * inject an in-memory map via `bindStorage(...)` because jsdom does
- * not always expose `globalThis.localStorage` in this workspace.
- */
-export interface SafeOrderStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
-}
-
-class LocalStorageBackedStore implements SafeOrderStorage {
-  getItem(key: string): string | null {
-    try {
-      if (typeof globalThis.localStorage === 'undefined') return null;
-      return globalThis.localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  }
-  setItem(key: string, value: string): void {
-    try {
-      if (typeof globalThis.localStorage === 'undefined') return;
-      globalThis.localStorage.setItem(key, value);
-    } catch {
-      // ignore — same non-fatal contract as the original write path.
-    }
-  }
-  removeItem(key: string): void {
-    try {
-      if (typeof globalThis.localStorage === 'undefined') return;
-      globalThis.localStorage.removeItem(key);
-    } catch {
-      // ignore
-    }
-  }
-}
-
-/**
- * Test-only in-memory implementation of `SafeOrderStorage`. Kept
- * module-local so production code never reaches for it; tests
- * instantiate an instance via `bindStorage(...)`.
- */
-export class InMemoryStore implements SafeOrderStorage {
-  private readonly map = new Map<string, string>();
-  getItem(key: string): string | null {
-    return this.map.get(key) ?? null;
-  }
-  setItem(key: string, value: string): void {
-    this.map.set(key, value);
-  }
-  removeItem(key: string): void {
-    this.map.delete(key);
-  }
-}
-
-/** `localStorage` key prefix for the persisted safe-order record. */
-export const SAFE_ORDER_STORAGE_PREFIX = 'mi-bolt:checkout:safe-order:';
-
-/** Default `localStorage` key suffix used when none was stored yet. */
-function storageKeyForCart(cartId: string): string {
-  return `${SAFE_ORDER_STORAGE_PREFIX}${cartId}`;
-}
 
 // ---------------------------------------------------------------------------
 // SafeLogger — static helper that strips contact / address / payment-like
@@ -283,14 +205,6 @@ export class OrderSubmission {
 
   /** Active safe-logger sink — overridable in tests via `bindSafeLogger`. */
   private logger: SafeLogger = noopLogger;
-
-  /**
-   * Active safe-order storage. Defaults to a localStorage-backed
-   * implementation; tests inject an in-memory store via `bindStorage`
-   * because jsdom does not always expose `globalThis.localStorage`
-   * in this workspace.
-   */
-  private storage: SafeOrderStorage = new LocalStorageBackedStore();
 
   /**
    * In-flight submit mutex. The reference is held in a closure so a
@@ -382,21 +296,6 @@ export class OrderSubmission {
     this.logger = logger;
   }
 
-  /**
-   * Replaces the storage backend the service uses for the persisted
-   * safe-order record. Tests inject an `InMemoryStore` to drive the
-   * reload-recovery assertions without depending on jsdom's
-   * `localStorage`.
-   */
-  bindStorage(storage: SafeOrderStorage): void {
-    this.storage = storage;
-  }
-
-  /** Returns the active storage backend. Used by tests to assert on persisted state. */
-  currentStorage(): SafeOrderStorage {
-    return this.storage;
-  }
-
   // -------------------------------------------------------------------------
   // Progress stream.
   // -------------------------------------------------------------------------
@@ -448,121 +347,6 @@ export class OrderSubmission {
       this.inFlightWritable.set(false);
       this.cancelPolling();
     });
-  }
-
-  /**
-   * Re-issues the LAST persisted safe-order request without any
-   * contact / address data. Used after a recoverable timeout: the
-   * persisted key + body are replayed verbatim so the mock's
-   * idempotency cache returns the original receipt.
-   *
-   * This is the deterministic recovery path: the SAME idempotency
-   * key + normalized body are sent again. The wire request is
-   * handled here directly (not via the facade) because the user may
-   * no longer have the form / draft state hydrated after reload.
-   */
-  async retryUnknownOutcome(): Promise<SubmitOutcome> {
-    const persisted = this.readPersistedSafeOrder();
-    if (persisted === null) {
-      this.timeoutWritable.set(true);
-      return { kind: 'unknown', safeKey: '', reason: 'Nem található megőrzött rendelési kérés.' };
-    }
-    // Same mutex guarantees: a concurrent submit / retry collapses
-    // into the same in-flight promise.
-    if (this.inFlightPromise !== null) {
-      return this.inFlightPromise;
-    }
-    this.inFlightWritable.set(true);
-    this.timeoutWritable.set(false);
-    const replay = this.runReplay(persisted);
-    this.inFlightPromise = replay;
-    return replay.finally(() => {
-      if (this.inFlightPromise === replay) {
-        this.inFlightPromise = null;
-      }
-      this.inFlightWritable.set(false);
-    });
-  }
-
-  /**
-   * Returns the persisted safe-order record, or `null` when none
-   * exists. Safe to call from the page (no PII is read).
-   */
-  readPersistedSafeOrder(): SafeOrderRecord | null {
-    const cartId = this.checkout.cartId();
-    if (cartId === null) return null;
-    const raw = this.readStorage(storageKeyForCart(cartId));
-    if (raw === null) return null;
-    try {
-      const parsed = JSON.parse(raw) as unknown;
-      if (!isSafeOrderRecord(parsed)) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Reload-recovery entry point. Tries `getOrder` first when a
-   * receipt id was persisted alongside the safe key; on 404 (or
-   * when no order id is persisted yet) falls back to `createOrder`
-   * with the EXACT stored key + body. Returns `null` when no
-   * persisted record exists.
-   */
-  async recoverPersistedOrder(): Promise<RecoveredOrder | null> {
-    const persisted = this.readPersistedSafeOrder();
-    if (persisted === null) return null;
-
-    // 1. Try `getOrder` first when a receipt id is already known.
-    //    This is the cheap path — the server holds the receipt.
-    if (persisted.orderId !== null) {
-      try {
-        const receipt = await this.getOrder(persisted.orderId);
-        this.lastOutcomeWritable.set({
-          kind: 'committed',
-          orderId: receipt.id,
-          orderNumber: receipt.orderNumber,
-        });
-        this.logger([
-          { orderId: receipt.id, scenario: 'recovery', step: 'getOrder', outcome: 'recovered' },
-        ]);
-        return { orderId: receipt.id, source: 'getOrder' };
-      } catch (err) {
-        const mapped = mapError(err);
-        if (mapped.status !== 404) {
-          // Any non-404 is treated as an unknown recoverable state.
-          return null;
-        }
-        // 404 — fall through to the replay path below.
-      }
-    }
-
-    // 2. Fall back to a replay with the EXACT stored key + body. The
-    //    mock's idempotency cache returns the original receipt.
-    try {
-      const receipt = await this.createOrder(persisted.orderKey, persisted.body);
-      this.persistSafeOrder({ ...persisted, orderId: receipt.id, attempt: persisted.attempt + 1 });
-      this.lastOutcomeWritable.set({
-        kind: 'committed',
-        orderId: receipt.id,
-        orderNumber: receipt.orderNumber,
-      });
-      this.logger([
-        { orderId: receipt.id, scenario: 'recovery', step: 'replay', outcome: 'recovered' },
-      ]);
-      return { orderId: receipt.id, source: 'replay' };
-    } catch (err) {
-      const mapped = mapError(err);
-      this.logger([
-        {
-          orderKey: persisted.orderKey,
-          scenario: 'recovery',
-          step: 'replay',
-          outcome: mapped.code,
-        },
-      ]);
-      return null;
-    }
   }
 
   // -------------------------------------------------------------------------
@@ -647,7 +431,7 @@ export class OrderSubmission {
    * submission's OWN idempotency key. The facade's
    * `commitOrderWithKey()` keeps the form-state preservation
    * contract intact (busy / error / order signals) while letting
-   * the submission service own the idempotency key — that is what
+   * the submission service own the idempotency key: that is what
    * makes the replay return the cached receipt (T23-AC04).
    */
   private async commitDirectly(
@@ -657,24 +441,8 @@ export class OrderSubmission {
   ): Promise<SubmitOutcome> {
     const orderKey = freshIdempotencyKey();
     const body = this.buildNormalizedBody(cartId, quoteId, paymentIntentId);
-    this.persistSafeOrder({
-      orderKey,
-      orderId: null,
-      cartId,
-      quoteId,
-      paymentIntentId,
-      body,
-      createdAt: this.clock.nowIso(),
-      attempt: 1,
-    });
     const result = await this.checkout.commitOrderWithKey(orderKey, body);
     if (result.ok) {
-      // Stamp the receipt id into the persisted record so reload
-      // recovery can `getOrder(receiptId)` directly.
-      const previous = this.readPersistedSafeOrder();
-      if (previous !== null && previous.cartId === cartId) {
-        this.persistSafeOrder({ ...previous, orderId: result.value.id, attempt: previous.attempt });
-      }
       this.lastOutcomeWritable.set({
         kind: 'committed',
         orderId: result.value.id,
@@ -784,18 +552,8 @@ export class OrderSubmission {
         intentId: canonicalIntentId,
       };
     }
-    // Timed out — recoverable unknown. Persist a safe record so the
-    // user can reload and replay with the SAME key + body.
-    const safeKey = this.persistSafeOrder({
-      orderKey: freshIdempotencyKey(),
-      orderId: null,
-      cartId,
-      quoteId,
-      paymentIntentId: canonicalIntentId,
-      body: this.buildNormalizedBody(cartId, quoteId, canonicalIntentId),
-      createdAt: this.clock.nowIso(),
-      attempt: 1,
-    });
+    // Timed out: recoverable unknown.
+    const safeKey = freshIdempotencyKey();
     this.timeoutWritable.set(true);
     this.lastOutcomeWritable.set({
       kind: 'pending-timeout',
@@ -909,46 +667,7 @@ export class OrderSubmission {
   }
 
   // -------------------------------------------------------------------------
-  // Replay path — used by `retryUnknownOutcome`.
-  // -------------------------------------------------------------------------
-
-  private async runReplay(persisted: SafeOrderRecord): Promise<SubmitOutcome> {
-    try {
-      const receipt = await this.createOrder(persisted.orderKey, persisted.body);
-      this.persistSafeOrder({ ...persisted, attempt: persisted.attempt + 1 });
-      this.lastOutcomeWritable.set({
-        kind: 'committed',
-        orderId: receipt.id,
-        orderNumber: receipt.orderNumber,
-      });
-      this.logger([
-        {
-          cartId: persisted.cartId,
-          quoteId: persisted.quoteId,
-          orderKey: persisted.orderKey,
-          orderId: receipt.id,
-          step: 'replay',
-          outcome: 'committed',
-        },
-      ]);
-      return { kind: 'committed', orderId: receipt.id, orderNumber: receipt.orderNumber };
-    } catch (err) {
-      const mapped = mapError(err);
-      this.logger([
-        {
-          cartId: persisted.cartId,
-          quoteId: persisted.quoteId,
-          orderKey: persisted.orderKey,
-          step: 'replay',
-          outcome: mapped.code,
-        },
-      ]);
-      return { kind: 'unknown', safeKey: persisted.orderKey, reason: mapped.detail };
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Persisted record + storage I/O.
+  // Normalized body derivation.
   // -------------------------------------------------------------------------
 
   private buildNormalizedBody(
@@ -969,16 +688,6 @@ export class OrderSubmission {
     };
   }
 
-  private persistSafeOrder(record: SafeOrderRecord): string {
-    try {
-      this.writeStorage(storageKeyForCart(record.cartId), JSON.stringify(record));
-    } catch {
-      // Storage failures (quota / disabled) are non-fatal — the
-      // service still operates in memory; only recovery degrades.
-    }
-    return record.orderKey;
-  }
-
   private cancelPolling(): void {
     if (this.pollAbort !== null) {
       this.pollAbort.abort();
@@ -989,22 +698,6 @@ export class OrderSubmission {
       this.pollHandle = null;
     }
     this.pollingIntentWritable.set(null);
-  }
-
-  private readStorage(key: string): string | null {
-    try {
-      return this.storage.getItem(key);
-    } catch {
-      return null;
-    }
-  }
-
-  private writeStorage(key: string, value: string): void {
-    try {
-      this.storage.setItem(key, value);
-    } catch {
-      // Ignore — see `persistSafeOrder`.
-    }
   }
 
   // -------------------------------------------------------------------------
@@ -1046,29 +739,4 @@ function mapError(err: unknown): { status: number; code: string; detail: string 
     };
   }
   return { status: 0, code: 'SERVICE_UNAVAILABLE', detail: String(err) };
-}
-
-function isSafeOrderRecord(value: unknown): value is SafeOrderRecord {
-  if (!value || typeof value !== 'object') return false;
-  const v = value as Record<string, unknown>;
-  if (typeof v['orderKey'] !== 'string') return false;
-  if (typeof v['cartId'] !== 'string') return false;
-  if (typeof v['quoteId'] !== 'string') return false;
-  if (typeof v['paymentIntentId'] !== 'string' && v['paymentIntentId'] !== null) return false;
-  if (typeof v['createdAt'] !== 'string') return false;
-  if (typeof v['attempt'] !== 'number') return false;
-  // `orderId` is optional; absent on records persisted before a
-  // successful commit, present after.
-  if (v['orderId'] !== null && typeof v['orderId'] !== 'string' && v['orderId'] !== undefined) {
-    return false;
-  }
-  if (!v['body'] || typeof v['body'] !== 'object') return false;
-  const body = v['body'] as Record<string, unknown>;
-  return (
-    typeof body['cartId'] === 'string' &&
-    typeof body['quoteId'] === 'string' &&
-    typeof body['termsVersion'] === 'string' &&
-    body['acceptedTerms'] === true &&
-    body['acknowledgedSimulation'] === true
-  );
 }
