@@ -269,7 +269,7 @@ export class SuccessStep {
     //   4. Navigate to the shop so the user can keep shopping.
     void this.cart
       .ensureCart()
-      .then(() => this.checkout.resetDraft())
+      .then(() => { this.checkout.resetDraft(); })
       .then(() => this.router.navigate(['/telefonok']))
       .catch(() => this.router.navigate(['/penztar/kosar']))
       .finally(() => {

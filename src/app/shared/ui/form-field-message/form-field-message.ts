@@ -49,7 +49,8 @@ export class FormFieldMessage {
 
   readonly showMessage = computed(() => {
     if (this.severity() === 'help') {
-      return this.helpText() !== null && this.helpText()!.length > 0;
+      const help = this.helpText();
+      return help !== null && help.length > 0;
     }
     const errs = this.errors();
     if (errs.length === 0) return false;

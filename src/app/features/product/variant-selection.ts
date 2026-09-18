@@ -157,7 +157,7 @@ export function computeDisabledCombinations(product: Product): readonly Disabled
       out.push({
         colorCode,
         storageGb,
-        reason: `Ez a szín (${colorName}) nem elérhető ${storageGb} GB kapacitással.`,
+        reason: `Ez a szín (${colorName}) nem elérhető ${String(storageGb)} GB kapacitással.`,
       });
     }
   }
@@ -222,9 +222,9 @@ export function selectImageFromGallery(
   if (gallery.length === 0) return { image: null, index: -1 };
   if (imageId !== null) {
     const idx = gallery.findIndex((i) => i.id === imageId);
-    if (idx >= 0) return { image: gallery[idx]!, index: idx };
+    if (idx >= 0) return { image: gallery[idx], index: idx };
   }
-  return { image: gallery[0]!, index: 0 };
+  return { image: gallery[0], index: 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -296,7 +296,7 @@ export function computeAddToCartState(input: {
     const effectiveMax = Math.min(variant.maxQuantity, MAX_LINE_QUANTITY);
     return {
       enabled: false,
-      reason: `Maximum ${effectiveMax} darab rendelhető ebből a változatból.`,
+      reason: `Maximum ${String(effectiveMax)} darab rendelhető ebből a változatból.`,
     };
   }
   return { enabled: true, reason: null };

@@ -35,13 +35,12 @@ import { resolve as resolvePath } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http, type RequestHandler } from 'msw';
 import { setupServer } from 'msw/node';
-import { firstValueFrom } from 'rxjs';
 
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   EnvironmentInjector,
@@ -50,7 +49,6 @@ import {
 } from '@angular/core';
 import {
   ActivatedRouteSnapshot,
-  Router,
   RouterStateSnapshot,
   UrlSegment,
   UrlTree,
@@ -58,9 +56,7 @@ import {
   provideRouter,
 } from '@angular/router';
 
-import { Api } from '../../../app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import * as functions from '../../../app/api/generated/functions';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
@@ -79,8 +75,6 @@ import '../../../mocks/orders/order.handlers';
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
 import {
-  contactGuard,
-  deliveryGuard,
   reviewGuard,
   successGuard,
 } from '../../../app/features/checkout/checkout.guards';
@@ -99,8 +93,8 @@ function read(relative: string): string {
 }
 
 function componentStyles(componentSource: string, explicitScssPath?: string): string {
-  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  if (inline) return inline[1] ?? '';
+  const inline = /styles:\s*\[([\s\S]*?)\]/.exec(componentSource);
+  if (inline) return inline[1];
   if (explicitScssPath) {
     try {
       return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
@@ -108,7 +102,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
       return '';
     }
   }
-  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  const htmlMatch = /templateUrl:\s*'\.\/([^']+\.html)'/.exec(componentSource);
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
@@ -180,7 +174,7 @@ describe('T24-AC02 refresh restores the receipt and never POSTs another order', 
     // fetchOrder itself never references createOrder; the commit path
     // stays the only place that may invoke createOrder, but that is a
     // separate method (out of scope here).
-    const fetchMatch = checkoutFacadeSource.match(/async fetchOrder[\s\S]*?\n {2}\}/);
+    const fetchMatch = /async fetchOrder[\s\S]*?\n {2}\}/.exec(checkoutFacadeSource);
     expect(fetchMatch).not.toBeNull();
     const fetchBody = fetchMatch?.[0] ?? '';
     expect(fetchBody).toMatch(/getOrder/);
@@ -329,7 +323,7 @@ function makeEnv(scenarioName = 'success-page-suite'): Env {
   };
   const repository = new Repository(scenario, ids, clock);
   repository.loadProducts([DEMO_PRODUCT]);
-  void new IdempotencyStore(clock);
+  new IdempotencyStore(clock);
   return { repository, clock, ids, scenario };
 }
 
@@ -350,7 +344,7 @@ function configureTestBed(): void {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       provideRouter([]),
     ],
@@ -360,8 +354,8 @@ function configureTestBed(): void {
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
   server.listen({ onUnhandledRequest: 'error' });
@@ -495,7 +489,6 @@ describe('T24 runtime: success step wire-level behaviour', () => {
 
   it('reviewGuard redirects back to the existing success URL when an order is in memory', async () => {
     await commitHappyPath();
-    const router = TestBed.inject(Router);
     const checkout = TestBed.inject(CheckoutFacade);
     const orderId = checkout.order()?.id;
     expect(orderId).toBeDefined();
@@ -510,7 +503,6 @@ describe('T24 runtime: success step wire-level behaviour', () => {
     expect(result).toBeInstanceOf(UrlTree);
     const tree = result as UrlTree;
     expect(tree.toString()).toContain(`/penztar/siker/${orderId}`);
-    void router;
   });
 
   it('successGuard allows navigation through when the URL carries an orderId (the page owns hydration)', () => {
@@ -538,15 +530,3 @@ describe('T24 runtime: success step wire-level behaviour', () => {
     expect((result as UrlTree).toString()).toContain('/penztar/kosar');
   });
 });
-
-// ---------------------------------------------------------------------------
-// Quiet unused-import warnings for symbols referenced for type only.
-// ---------------------------------------------------------------------------
-
-void firstValueFrom;
-void functions;
-void Api;
-void ApiConfiguration;
-void CartFacade;
-void contactGuard;
-void deliveryGuard;

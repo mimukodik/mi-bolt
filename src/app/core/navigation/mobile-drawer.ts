@@ -32,5 +32,5 @@ export class MobileDrawer {
   readonly triggerEl = input<HTMLElement | null>(null);
 
   /** Emitted whenever the drawer closes by any path (button, Escape, backdrop). */
-  readonly closed = output<void>();
+  readonly closed = output();
 }

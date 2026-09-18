@@ -1,5 +1,5 @@
 /**
- * T06 — catalog mock + filter semantics.
+ * T06 - catalog mock + filter semantics.
  *
  * The tests run end-to-end against MSW so every line of the catalog
  * handler dispatch path is exercised. The pure predicates are also
@@ -89,7 +89,7 @@ function product(
     brand,
     name,
     highlights: ['demo'],
-    defaultVariant: variants[0]!,
+    defaultVariant: variants[0],
     is5g,
     isDemo: true,
     description,
@@ -192,10 +192,12 @@ describe('findMatchingVariant', () => {
     // must first order by product id then by variant id.
     const a = product('p-A', 'a', 'BrandX', 'A', true, [variant('a-1', 100_000, 256)]);
     const b = product('p-B', 'b', 'BrandX', 'B', true, [variant('b-1', 100_000, 256)]);
-    const sorted = sortMatches(
-      [matchProduct(b, EMPTY_FILTER, new Set())!, matchProduct(a, EMPTY_FILTER, new Set())!],
-      'price_asc',
-    ).map((m) => m.product.id);
+    const matchB = matchProduct(b, EMPTY_FILTER, new Set());
+    const matchA = matchProduct(a, EMPTY_FILTER, new Set());
+    if (!matchA || !matchB) {
+      throw new Error('expected matches');
+    }
+    const sorted = sortMatches([matchB, matchA], 'price_asc').map((m) => m.product.id);
     expect(sorted).toEqual(['p-A', 'p-B']);
   });
 });
@@ -308,7 +310,7 @@ describe('sortMatches', () => {
     expect(sorted).toEqual(['p-1', 'p-4', 'p-3', 'p-2']);
   });
 
-  it('returns a fresh array — the input is not mutated', () => {
+  it('returns a fresh array - the input is not mutated', () => {
     const original = matches.slice();
     sortMatches(matches, 'price_desc');
     expect(matches.map((m) => m.product.id)).toEqual(original.map((m) => m.product.id));
@@ -320,7 +322,7 @@ describe('paginateMatches', () => {
     const v = variant(`v-${id}`, price, 256);
     return { product: product(id, `slug-${id}`, 'BrandX', `Name ${id}`, true, [v]), matchingVariant: v };
   }
-  const matches = Array.from({ length: 5 }, (_, i) => mk(`p-${i}`));
+  const matches = Array.from({ length: 5 }, (_, i) => mk(`p-${String(i)}`));
 
   it('returns the requested page of items', () => {
     const page = paginateMatches(matches, 1, 12);
@@ -373,7 +375,7 @@ describe('filterProducts', () => {
 });
 
 // ---------------------------------------------------------------------------
-// parseCatalogFilter — every error path is exercised
+// parseCatalogFilter - every error path is exercised
 // ---------------------------------------------------------------------------
 
 function paramsOf(qs: string): URLSearchParams {
@@ -580,8 +582,102 @@ describe('FACET_STORAGE_GB', () => {
 });
 
 // ---------------------------------------------------------------------------
-// MSW handler dispatch — every catalog operationId + every error path
+// MSW handler dispatch - every catalog operationId + every error path
 // ---------------------------------------------------------------------------
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isProduct(value: unknown): value is Product {
+  if (!isRecord(value)) return false;
+  return typeof value['id'] === 'string' && typeof value['slug'] === 'string' && Array.isArray(value['variants']);
+}
+
+function isProductArray(value: unknown): value is readonly Product[] {
+  return Array.isArray(value) && value.every(isProduct);
+}
+
+interface ConfigResponse {
+  providerId: string;
+  featuredSlugs: string[];
+  maximumLineQuantity: number;
+}
+
+function isConfigResponse(data: unknown): data is ConfigResponse {
+  if (!isRecord(data)) return false;
+  return (
+    typeof data['providerId'] === 'string' &&
+    Array.isArray(data['featuredSlugs']) &&
+    typeof data['maximumLineQuantity'] === 'number'
+  );
+}
+
+interface ProductItem {
+  id: string;
+  slug: string;
+  brand: string;
+  name: string;
+  defaultVariant: {
+    price: { amount: number };
+    storageGb?: number;
+    availability?: string;
+  };
+}
+
+interface ProductPageResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ProductItem[];
+  facets: {
+    brands: { value: string; count: number }[];
+    storageGb: { value: string; count: number }[];
+  };
+}
+
+function isProductPageResponse(data: unknown): data is ProductPageResponse {
+  if (!isRecord(data)) return false;
+  return (
+    typeof data['total'] === 'number' &&
+    Array.isArray(data['items']) &&
+    isRecord(data['facets'])
+  );
+}
+
+interface ProblemResponse {
+  code: string;
+  type?: string;
+  fieldErrors?: { path: string; message: string }[];
+}
+
+function isProblemResponse(data: unknown): data is ProblemResponse {
+  if (!isRecord(data)) return false;
+  return typeof data['code'] === 'string';
+}
+
+interface ProductDetailResponse {
+  slug: string;
+  variants: readonly unknown[];
+  specGroups: readonly unknown[];
+}
+
+function isProductDetailResponse(data: unknown): data is ProductDetailResponse {
+  if (!isRecord(data)) return false;
+  return (
+    typeof data['slug'] === 'string' &&
+    Array.isArray(data['variants']) &&
+    Array.isArray(data['specGroups'])
+  );
+}
+
+async function readJson<T>(response: Response, guard: (data: unknown) => data is T): Promise<T> {
+  const data: unknown = await response.json();
+  if (!guard(data)) {
+    throw new Error('Response JSON did not match expected shape');
+  }
+  return data;
+}
 
 const API_ROOT = '/api/v1';
 const BASE_URL = `http://localhost${API_ROOT}`;
@@ -593,9 +689,12 @@ function makeHandlerOptions(): CreateHandlersOptions {
   const repository = new Repository(scenario, ids, clock);
   // The handler file is Node-free; the Node test bootstrap loads the
   // canonical fixture from disk and seeds the per-test repository.
-  const fixturePath = resolve(__dirname, '../docs/api/fixtures/products.json');
-  const products = JSON.parse(readFileSync(fixturePath, 'utf8')) as readonly Product[];
-  repository.loadProducts(products);
+  const fixturePath = resolve(__dirname, '../../../docs/api/fixtures/products.json');
+  const parsed: unknown = JSON.parse(readFileSync(fixturePath, 'utf8'));
+  if (!isProductArray(parsed)) {
+    throw new Error('Invalid products fixture');
+  }
+  repository.loadProducts(parsed);
   return { repository, clock, ids, scenario, apiRoot: API_ROOT };
 }
 
@@ -607,7 +706,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('GET /api/v1/config returns the demo config (AC01 of T06)', async () => {
     const response = await fetch(`${BASE_URL}/config`);
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isConfigResponse);
     expect(body.providerId).toBe('mi-bolt');
     expect(body.featuredSlugs).toContain('demo-one-5g');
     expect(body.maximumLineQuantity).toBe(5);
@@ -616,19 +715,19 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('GET /api/v1/products returns the 16-product catalogue with default page', async () => {
     const response = await fetch(`${BASE_URL}/products`);
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     expect(body.total).toBe(16);
     expect(body.page).toBe(1);
     expect(body.pageSize).toBe(12);
     expect(body.items).toHaveLength(12);
     expect(body.facets.brands.length).toBeGreaterThan(0);
-    expect(body.facets.storageGb.map((s: { value: string }) => s.value)).toEqual(['128', '256', '512']);
+    expect(body.facets.storageGb.map((s) => s.value)).toEqual(['128', '256', '512']);
   });
 
   it('GET /api/v1/products?pageSize=24 returns 16 items in one page', async () => {
     const response = await fetch(`${BASE_URL}/products?pageSize=24`);
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     expect(body.pageSize).toBe(24);
     expect(body.items).toHaveLength(16);
   });
@@ -636,7 +735,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('GET /api/v1/products?page=2&pageSize=12 returns the second page', async () => {
     const response = await fetch(`${BASE_URL}/products?page=2&pageSize=12`);
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     expect(body.page).toBe(2);
     expect(body.items).toHaveLength(4);
   });
@@ -644,7 +743,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('returns the cheapest matching defaultVariant (AC02)', async () => {
     const response = await fetch(`${BASE_URL}/products?sort=price_asc`);
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     const first = body.items[0];
     expect(first.id).toBeTruthy();
     // demo-go-graphite-128 is the cheapest variant (79 990 HUF).
@@ -655,15 +754,15 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     // Sort by price asc. The cheapest variant wins; ties break by
     // product id. We assert the order is monotonic in (price, id).
     const response = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     interface Row { id: string; price: number; }
-    const rows: Row[] = body.items.map((i: { id: string; defaultVariant: { price: { amount: number } } }) => ({
+    const rows: Row[] = body.items.map((i) => ({
       id: i.id,
       price: i.defaultVariant.price.amount,
     }));
     for (let i = 1; i < rows.length; i++) {
-      const prev = rows[i - 1]!;
-      const curr = rows[i]!;
+      const prev = rows[i - 1];
+      const curr = rows[i];
       const priceUp = curr.price > prev.price;
       const priceTied = curr.price === prev.price;
       const idOrdered = curr.id.localeCompare(prev.id) >= 0;
@@ -673,25 +772,27 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
 
   it('sort=price_desc returns products in reverse price order', async () => {
     const response = await fetch(`${BASE_URL}/products?sort=price_desc&pageSize=24`);
-    const body = await response.json();
-    const amounts = body.items.map((i: { defaultVariant: { price: { amount: number } } }) => i.defaultVariant.price.amount);
-    const sorted = amounts.slice().sort((a: number, b: number) => b - a);
+    const body = await readJson(response, isProductPageResponse);
+    const amounts = body.items.map((i) => i.defaultVariant.price.amount);
+    const sorted = amounts.slice().sort((a, b) => b - a);
     expect(amounts).toEqual(sorted);
   });
 
   it('sort=name_asc returns products in alphabetical name order', async () => {
     const response = await fetch(`${BASE_URL}/products?sort=name_asc&pageSize=24`);
-    const body = await response.json();
-    const names = body.items.map((i: { name: string }) => i.name);
-    const sorted = names.slice().sort((a: string, b: string) => a.localeCompare(b));
+    const body = await readJson(response, isProductPageResponse);
+    const names = body.items.map((i) => i.name);
+    const sorted = names.slice().sort((a, b) => a.localeCompare(b));
     expect(names).toEqual(sorted);
   });
 
   it('sort=recommended matches price_asc + product id tie-break', async () => {
-    const a = await (await fetch(`${BASE_URL}/products?sort=recommended&pageSize=24`)).json();
-    const b = await (await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`)).json();
-    expect(a.items.map((i: { id: string }) => i.id)).toEqual(
-      b.items.map((i: { id: string }) => i.id),
+    const resA = await fetch(`${BASE_URL}/products?sort=recommended&pageSize=24`);
+    const a = await readJson(resA, isProductPageResponse);
+    const resB = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
+    const b = await readJson(resB, isProductPageResponse);
+    expect(a.items.map((i) => i.id)).toEqual(
+      b.items.map((i) => i.id),
     );
   });
 
@@ -700,7 +801,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
       `${BASE_URL}/products?brand=MiBolt%20Demo&brand=Sample&pageSize=24`,
     );
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     // MiBolt Demo (7) + Sample (5) = 12 distinct products
     expect(body.total).toBe(12);
   });
@@ -710,7 +811,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
       `${BASE_URL}/products?minPrice=0&maxPrice=200000&storageGb=128&storageGb=256&inStock=true&pageSize=24`,
     );
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     expect(body.total).toBeGreaterThan(0);
     for (const item of body.items) {
       const v = item.defaultVariant;
@@ -721,30 +822,34 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   });
 
   it('AC03: brand facet counts are independent of the brand filter', async () => {
-    const all = await (await fetch(`${BASE_URL}/products`)).json();
-    const filtered = await (
-      await fetch(`${BASE_URL}/products?brand=MiBolt%20Demo`)
-    ).json();
+    const resAll = await fetch(`${BASE_URL}/products`);
+    const all = await readJson(resAll, isProductPageResponse);
+    const resFiltered = await fetch(
+      `${BASE_URL}/products?brand=MiBolt%20Demo`,
+    );
+    const filtered = await readJson(resFiltered, isProductPageResponse);
     const allBrands = Object.fromEntries(
-      all.facets.brands.map((f: { value: string; count: number }) => [f.value, f.count]),
+      all.facets.brands.map((f) => [f.value, f.count]),
     );
     const filteredBrands = Object.fromEntries(
-      filtered.facets.brands.map((f: { value: string; count: number }) => [f.value, f.count]),
+      filtered.facets.brands.map((f) => [f.value, f.count]),
     );
     // Brand facets stay identical regardless of the active brand filter.
     expect(filteredBrands).toEqual(allBrands);
   });
 
   it('AC03: storage facet counts are independent of the storage filter', async () => {
-    const all = await (await fetch(`${BASE_URL}/products`)).json();
-    const filtered = await (
-      await fetch(`${BASE_URL}/products?storageGb=256`)
-    ).json();
+    const resAll = await fetch(`${BASE_URL}/products`);
+    const all = await readJson(resAll, isProductPageResponse);
+    const resFiltered = await fetch(
+      `${BASE_URL}/products?storageGb=256`,
+    );
+    const filtered = await readJson(resFiltered, isProductPageResponse);
     const allStorage = Object.fromEntries(
-      all.facets.storageGb.map((f: { value: string; count: number }) => [f.value, f.count]),
+      all.facets.storageGb.map((f) => [f.value, f.count]),
     );
     const filteredStorage = Object.fromEntries(
-      filtered.facets.storageGb.map((f: { value: string; count: number }) => [f.value, f.count]),
+      filtered.facets.storageGb.map((f) => [f.value, f.count]),
     );
     expect(filteredStorage).toEqual(allStorage);
   });
@@ -752,7 +857,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('returns 200 with empty items when brand is unknown (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?brand=NotExisting`);
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     expect(body.total).toBe(0);
     expect(body.items).toEqual([]);
   });
@@ -762,7 +867,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
       `${BASE_URL}/products?minPrice=0&maxPrice=10`,
     );
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductPageResponse);
     expect(body.total).toBe(0);
     expect(body.items).toEqual([]);
   });
@@ -770,7 +875,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('returns 404 when the page is beyond the result set (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?page=99`);
     expect(response.status).toBe(404);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('NOT_FOUND');
     expect(body.type).toBe('urn:mi-bolt:problem:not-found');
   });
@@ -778,55 +883,55 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('returns 400 for an empty brand[] value (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?brand=`);
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors[0].path).toBe('brand');
+    expect(body.fieldErrors?.[0]?.path).toBe('brand');
   });
 
   it('returns 400 for page=abc (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?page=abc`);
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors[0].path).toBe('page');
+    expect(body.fieldErrors?.[0]?.path).toBe('page');
   });
 
   it('returns 400 for minPrice > maxPrice (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?minPrice=100000&maxPrice=50000`);
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors[0].path).toBe('minPrice');
+    expect(body.fieldErrors?.[0]?.path).toBe('minPrice');
   });
 
   it('returns 400 for unknown sort mode (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?sort=newest`);
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors[0].path).toBe('sort');
+    expect(body.fieldErrors?.[0]?.path).toBe('sort');
   });
 
   it('returns 400 for unsupported storage size (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?storageGb=999`);
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors[0].path).toBe('storageGb');
+    expect(body.fieldErrors?.[0]?.path).toBe('storageGb');
   });
 
   it('returns 400 for unsupported pageSize (AC04)', async () => {
     const response = await fetch(`${BASE_URL}/products?pageSize=13`);
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors[0].path).toBe('pageSize');
+    expect(body.fieldErrors?.[0]?.path).toBe('pageSize');
   });
 
   it('GET /api/v1/products/{slug} returns 200 with the full Product', async () => {
     const response = await fetch(`${BASE_URL}/products/demo-one-5g`);
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = await readJson(response, isProductDetailResponse);
     expect(body.slug).toBe('demo-one-5g');
     expect(body.variants.length).toBeGreaterThan(0);
     expect(body.specGroups.length).toBeGreaterThan(0);
@@ -838,9 +943,12 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     const ids = createDeterministicIds(scenario.seed);
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const repository = new Repository(scenario, ids, clock);
-    repository.loadProducts(
-      JSON.parse(readFileSync(resolve(__dirname, '../docs/api/fixtures/products.json'), 'utf8')) as readonly Product[],
-    );
+    const fixturePath = resolve(__dirname, '../../../docs/api/fixtures/products.json');
+    const parsed: unknown = JSON.parse(readFileSync(fixturePath, 'utf8'));
+    if (!isProductArray(parsed)) {
+      throw new Error('Invalid products fixture');
+    }
+    repository.loadProducts(parsed);
     const handlers = buildCatalogHandlers({
       repository,
       clock,
@@ -856,7 +964,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
   it('GET /api/v1/products/{slug} returns 404 for an unknown slug', async () => {
     const response = await fetch(`${BASE_URL}/products/does-not-exist`);
     expect(response.status).toBe(404);
-    const body = await response.json();
+    const body = await readJson(response, isProblemResponse);
     expect(body.code).toBe('NOT_FOUND');
   });
 });

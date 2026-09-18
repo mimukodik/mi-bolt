@@ -71,10 +71,10 @@ export class QuantityControl {
     if (!this.invalid()) return null;
     const v = this.draftValue();
     if (v < this.min()) {
-      return `A megadott mennyiség nem lehet kevesebb mint ${this.min()}.`;
+      return `A megadott mennyiség nem lehet kevesebb mint ${String(this.min())}.`;
     }
     if (v > this.max()) {
-      return `A megadott mennyiség nem lehet több mint ${this.max()}.`;
+      return `A megadott mennyiség nem lehet több mint ${String(this.max())}.`;
     }
     return null;
   });
@@ -92,7 +92,8 @@ export class QuantityControl {
   }
 
   onInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    if (!(event.target instanceof HTMLInputElement)) return;
+    const input = event.target;
     this.draft.set(input.value);
     const n = Number.parseInt(input.value, 10);
     if (Number.isFinite(n) && n >= this.min() && n <= this.max()) {

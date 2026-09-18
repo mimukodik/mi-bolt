@@ -1,7 +1,7 @@
 /**
  * F1 regression pin: `GET /api/v1/checkout/options` returns 200
  * when handlers are registered one-by-one via `server.use(handler)`
- * — the production browser pattern. Without the early-return guard
+ * - the production browser pattern. Without the early-return guard
  * in `getCheckoutSession` for `cartId === 'options'`, the
  * parameterised handler shadows the literal one and MSW returns
  * 404 "A kosár nem található.".
@@ -13,7 +13,7 @@ import { createHandlers, registerBusinessHandlers } from '../../mocks/create-han
 // T05 registry so `createHandlers` builds them in the same order
 // the live application does.
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
-import { CHECKOUT_OPTIONS, checkoutHandlersEntry } from '../../mocks/checkout/checkout.handlers';
+import { checkoutHandlersEntry } from '../../mocks/checkout/checkout.handlers';
 import { Repository } from '../../mocks/repository';
 import {
   createDeterministicIds,
@@ -21,13 +21,22 @@ import {
 } from '../../mocks/scenarios';
 import { server } from '../../../tests/setup-msw';
 
-// Force-register the checkout entry. The `import { CHECKOUT_OPTIONS
-// }` triggers the side-effect when this spec is loaded once, but
-// vitest can hoist the import and the bare import alone is not
-// robust across all run orderings.
+interface CheckoutOptionsBody {
+  deliveryOptions: { id: string }[];
+  paymentMethods: string[];
+}
+
+function isCheckoutOptionsBody(data: unknown): data is CheckoutOptionsBody {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+  return 'deliveryOptions' in data && 'paymentMethods' in data;
+}
+
+// Force-register the checkout entry.
 registerBusinessHandlers(checkoutHandlersEntry);
 
-describe('F1 — checkout.options responds 200 when handlers are added individually', () => {
+describe('F1 - checkout.options responds 200 when handlers are added individually', () => {
   it('returns 200 from GET /checkout/options (browser-style registration)', async () => {
     const clock = createFixedClock(
       new Date('2026-09-16T00:00:00.000Z').toISOString(),
@@ -61,10 +70,10 @@ describe('F1 — checkout.options responds 200 when handlers are added individua
     const response = await fetch('http://127.0.0.1/api/v1/checkout/options');
     expect(response.status).toBe(200);
 
-    const body = (await response.json()) as {
-      deliveryOptions: { id: string }[];
-      paymentMethods: string[];
-    };
+    const body: unknown = await response.json();
+    if (!isCheckoutOptionsBody(body)) {
+      throw new Error('Invalid response body');
+    }
     expect(body.deliveryOptions.map((d) => d.id)).toEqual([
       'home_delivery',
       'demo_pickup',

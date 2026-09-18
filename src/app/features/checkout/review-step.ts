@@ -143,7 +143,7 @@ export class ReviewStep {
     this.items().map((item) => ({
       id: item.id,
       productName: item.productName,
-      variantLabel: `${item.colorName} · ${item.storageGb} GB`,
+      variantLabel: `${item.colorName} · ${String(item.storageGb)} GB`,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       lineTotal: item.lineTotal,
@@ -276,7 +276,7 @@ export class ReviewStep {
 
   readonly priceChangedMessage = computed<string>(() => {
     const state = this.state();
-    if (state === null || state.kind !== 'price-changed') {
+    if (state?.kind !== 'price-changed') {
       return 'A katalógus ára megváltozott.';
     }
     return `${state.detail} Erősítsd meg az új végösszeget a „Árajánlat frissítése” gombra kattintva.`;
@@ -284,7 +284,7 @@ export class ReviewStep {
 
   readonly quoteExpiredMessage = computed<string>(() => {
     const state = this.state();
-    if (state === null || state.kind !== 'quote-expired') {
+    if (state?.kind !== 'quote-expired') {
       return 'Az árajánlat lejárt.';
     }
     return `${state.detail} Kattints a „Árajánlat frissítése” gombra az új végösszegért.`;
@@ -292,7 +292,7 @@ export class ReviewStep {
 
   readonly outOfStockMessage = computed<string>(() => {
     const state = this.state();
-    if (state === null || state.kind !== 'out-of-stock') {
+    if (state?.kind !== 'out-of-stock') {
       return 'Egy vagy több változat elfogyott.';
     }
     return `${state.detail} Visszavonulhatsz a kosárhoz a cikk korrigálásához.`;
@@ -300,7 +300,7 @@ export class ReviewStep {
 
   readonly fieldErrorMessage = computed<string>(() => {
     const state = this.state();
-    if (state === null || state.kind !== 'field-error') {
+    if (state?.kind !== 'field-error') {
       return 'A rendelés leadása nem sikerült.';
     }
     return state.detail;

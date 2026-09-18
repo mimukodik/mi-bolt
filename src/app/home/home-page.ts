@@ -47,4 +47,6 @@ import { Component } from '@angular/core';
     `,
   ],
 })
-export class HomePage {}
+export class HomePage {
+  protected readonly tag = 'app-home-page';
+}

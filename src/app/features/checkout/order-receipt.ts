@@ -69,7 +69,7 @@ export class OrderReceiptComponent {
 
   /** The simulation notice copy. Pulled from the receipt body when present. */
   readonly simulationNotice = computed<string>(() => {
-    const fromWire = this.receipt().notice?.trim();
+    const fromWire = this.receipt().notice.trim();
     if (typeof fromWire === 'string' && fromWire.length > 0) return fromWire;
     return SIMULATION_NOTICE;
   });

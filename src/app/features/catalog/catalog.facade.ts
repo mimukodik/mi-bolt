@@ -143,8 +143,8 @@ function toSdkParams(q: CatalogQuery): Parameters<typeof listProducts>[2] {
   if (q.is5g !== undefined) params.is5g = q.is5g;
   if (q.featured !== undefined) params.featured = q.featured;
   if (q.sort !== undefined) params.sort = q.sort;
-  if (q.page !== undefined) params.page = q.page;
-  if (q.pageSize !== undefined) params.pageSize = q.pageSize;
+  params.page = q.page;
+  params.pageSize = q.pageSize;
   return params;
 }
 

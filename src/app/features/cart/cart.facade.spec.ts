@@ -1,5 +1,5 @@
 /**
- * T17 — global cart signal facade.
+ * T17: global cart signal facade.
  *
  * Each acceptance criterion has at least one named failing test. The
  * suite wires the real SDK over MSW (T07 cart handlers) so the
@@ -26,21 +26,18 @@ import {
   it,
 } from 'vitest';
 
-import { HttpClient, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { http, HttpResponse, type RequestHandler } from 'msw';
+import { type RequestHandler } from 'msw';
 import { setupServer } from 'msw/node';
-import { firstValueFrom } from 'rxjs';
 
-import { Api } from '../../../app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import * as operations from '../../../app/api/generated/functions';
-import { demoSessionInterceptor, withIfMatch } from '../../../app/core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { CART_DURATION_MS, CartDomain } from '../../../mocks/cart/cart-domain';
@@ -65,19 +62,27 @@ const VARIANT_G256 = 'demo-one-5g-graphite-256';
 const VARIANT_G512 = 'demo-one-5g-graphite-512';
 const VARIANT_S256 = 'demo-one-5g-silver-256';
 
+function getQueue(target: unknown): CartMutationQueue | null {
+  if (typeof target !== 'object' || target === null) return null;
+  if (!('queue' in target)) return null;
+  const q = target.queue;
+  if (q instanceof CartMutationQueue) return q;
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Capture every outgoing request so AC02 can assert header values.
 // ---------------------------------------------------------------------------
 interface CapturedRequest {
   readonly method: string;
   readonly url: string;
-  readonly headers: Record<string, string>;
+  readonly headers: Record<string, string | undefined>;
   readonly body: string;
 }
 const captures: CapturedRequest[] = [];
 
 function captureRequest(request: Request, body: string): void {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string | undefined> = {};
   request.headers.forEach((value, key) => {
     headers[key] = value;
   });
@@ -112,42 +117,40 @@ function makeEnv(): typeof currentEnv {
   return { repository, clock, ids, scenario };
 }
 
-function buildHandlers(): readonly RequestHandler[] {
+function buildHandlers(): RequestHandler[] {
   const env = currentEnv;
-  return cartHandlersEntry({
+  return [...cartHandlersEntry({
     repository: env.repository,
     clock: env.clock,
     ids: env.ids,
     scenario: env.scenario,
     apiRoot: '/api/v1',
-  });
+  })];
 }
 
 /**
- * MSW's `request:start` event fires exactly once per outgoing HTTP
- * request the worker intercepts. We listen on the server's event
- * bus so AC02 can assert on `If-Match` / `Idempotency-Key` values
+ * Attaches a request capture handler directly to the MSW server
+ * events so we can assert on actual headers (including `If-Match`)
  * without monkey-patching each cart handler's `run`.
  */
 function attachRequestCapture(serverInstance: ReturnType<typeof setupServer>): () => void {
-  const handler = async ({ request, requestId }: { request: Request; requestId: string }): Promise<void> => {
+  const handler = async ({ request }: { request: Request }): Promise<void> => {
     const cloned = request.clone();
     const bodyText = await cloned.text().catch(() => '');
     captureRequest(request, bodyText);
-    void requestId;
   };
   serverInstance.events.on('request:start', handler);
-  return () => serverInstance.events.removeListener('request:start', handler);
+  return () => { serverInstance.events.removeListener('request:start', handler); };
 }
 
 let detachCapture: (() => void) | null = null;
 
 const server = setupServer();
 
-beforeAll(async () => {
+beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
   server.listen({ onUnhandledRequest: 'error' });
@@ -180,21 +183,11 @@ function configureTestBed(): void {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
-}
-
-function makeSdk(): Api {
-  const httpClient = TestBed.inject(HttpClient);
-  const config = TestBed.inject(ApiConfiguration);
-  return new Api(config, httpClient);
-}
-
-function captureFor(url: string): CapturedRequest | undefined {
-  return captures.find((c) => c.url === url);
 }
 
 function patchesTo(cartId: string, itemId: string): CapturedRequest[] {
@@ -217,9 +210,9 @@ function addsTo(cartId: string): CapturedRequest[] {
 function readDemoSessionId(): string {
   for (let i = captures.length - 1; i >= 0; i--) {
     const value = captures[i]?.headers['x-demo-session'];
-    if (value !== undefined) return value;
+    if (typeof value === 'string') return value;
   }
-  throw new Error('No captured request found — call facade.ensureCart() first.');
+  throw new Error('No captured request found: call facade.ensureCart() first.');
 }
 
 // ---------------------------------------------------------------------------
@@ -242,11 +235,11 @@ describe('T17-AC01: root-scoped CartFacade is the single owner', () => {
     const header = TestBed.inject(CartCountFacade);
     const real = TestBed.inject(CartFacade);
     expect(header).toBe(real);
-    expect(typeof (header as unknown as CartFacade).addItem).toBe('function');
-    expect(typeof (header as unknown as CartFacade).setQuantity).toBe('function');
-    expect(typeof (header as unknown as CartFacade).removeItem).toBe('function');
-    expect(typeof (header as unknown as CartFacade).ensureCart).toBe('function');
-    expect(typeof (header as unknown as CartFacade).retry).toBe('function');
+    expect(typeof (header).addItem).toBe('function');
+    expect(typeof (header).setQuantity).toBe('function');
+    expect(typeof (header).removeItem).toBe('function');
+    expect(typeof (header).ensureCart).toBe('function');
+    expect(typeof (header).retry).toBe('function');
   });
 
   it('starts with itemCount=0, subtotal=0 HUF, no error and no pending intents', () => {
@@ -328,7 +321,7 @@ describe('T17-AC03: pending controls and authoritative totals', () => {
     const facade = TestBed.inject(CartFacade);
     await facade.ensureCart();
     await facade.addItem(VARIANT_G256, 1);
-    const itemId = facade.cart()?.items[0]!.id ?? '';
+    const itemId = facade.cart()?.items[0]?.id ?? '';
 
     const p1 = facade.setQuantity(itemId, 5);
     const p2 = facade.setQuantity(itemId, 2);
@@ -391,7 +384,8 @@ describe('T17-AC04: 409 conflict surfaces a recovery signal and defers replay', 
 
     // The refetch is fire-and-forget; wait for the queue to drain
     // so the GET request lands before the assertion runs.
-    const queue = (facade as unknown as { queue: CartMutationQueue }).queue;
+    const queue = getQueue(facade);
+    if (!queue) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
 
     // The facade must have refetched the cart via GET after the 409.
@@ -408,7 +402,7 @@ describe('T17-AC04: 409 conflict surfaces a recovery signal and defers replay', 
     await facade.ensureCart();
     await facade.addItem(VARIANT_G256, 1);
     const cartId = facade.cartId ?? '';
-    const itemId = facade.cart()?.items[0]!.id ?? '';
+    const itemId = facade.cart()?.items[0]?.id ?? '';
 
     // Seed an OOB version bump so the next setQuantity on the facade
     // sees a 409.
@@ -455,7 +449,7 @@ describe('T17-AC04: 409 conflict surfaces a recovery signal and defers replay', 
     const oob = currentDomain.addCartItem({
       sessionId,
       cartId,
-      ifMatch: `"${facade.cart()?.version}"`,
+      ifMatch: `"${String(facade.cart()?.version ?? 0)}"`,
       idempotencyKey: 'oob-no-replay',
       variantId: VARIANT_S256,
       quantity: 1,
@@ -464,7 +458,8 @@ describe('T17-AC04: 409 conflict surfaces a recovery signal and defers replay', 
 
     // Fire a second intent that will 409.
     await facade.addItem(VARIANT_G512, 1).catch(() => undefined);
-    const queue = (facade as unknown as { queue: CartMutationQueue }).queue;
+    const queue = getQueue(facade);
+    if (!queue) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
     // After the conflict + refetch, the version reflects the server,
     // but the line quantities that the facade displays match the
@@ -488,10 +483,7 @@ describe('T17-AC05: 404/410/explicit recovery; no 401 path', () => {
     await facade.ensureCart();
     // Drive the facade into the missing-cart branch by triggering an
     // addItem against a forced-missing cart via the test seam.
-    const facadeAny = facade as unknown as {
-      _seedMissingCart(): void;
-    };
-    facadeAny._seedMissingCart();
+    facade._seedMissingCart();
     await facade.addItem(VARIANT_G256, 1).catch(() => undefined);
     expect(facade.cartGone()).toBe(true);
   });
@@ -512,14 +504,14 @@ describe('T17-AC05: 404/410/explicit recovery; no 401 path', () => {
     expect(cartId).not.toBeNull();
   });
 
-  it('does not invent a 401 signal — there is no auth surface in this demo', () => {
+  it('does not invent a 401 signal: there is no auth surface in this demo', () => {
     const facade = TestBed.inject(CartFacade);
     // The signal surface intentionally has no `unauthorized` / `401`
     // member. This test pins the contract: any future addition must
     // be a deliberate decision, not a derived assertion.
     const names = Object.keys(facade);
-    expect(names.some((k) => k.toLowerCase().indexOf('unauthor') !== -1)).toBe(false);
-    expect(names.some((k) => k.toLowerCase().indexOf('auth') !== -1)).toBe(false);
+    expect(names.some((k) => k.toLowerCase().includes('unauthor'))).toBe(false);
+    expect(names.some((k) => k.toLowerCase().includes('auth'))).toBe(false);
   });
 });
 
@@ -543,7 +535,7 @@ describe('T24-AC03: in-flight mutation results are dropped after resetOrderedCar
     const cartIdBefore = facade.cartId;
     expect(cartIdBefore).not.toBeNull();
 
-    // Kick the in-flight addItem but do NOT await it yet — we want to
+    // Kick the in-flight addItem but do NOT await it yet: we want to
     // call `resetOrderedCart()` while the dispatch is in flight, so
     // the `applySuccess(...)` path is exercised AFTER the reset.
     const inFlight = facade.addItem(VARIANT_G256, 1);
@@ -567,15 +559,15 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
     const seenVersions: number[] = [];
     const seenKeys: string[] = [];
 
-    const dispatcher = async (
+    const dispatcher = (
       inputs: { intent: MutationIntent; expectedVersion: number | null },
     ): Promise<DispatchResult> => {
       const version = inputs.expectedVersion;
-      seenVersions.push(version === null ? -1 : version);
+      seenVersions.push(version ?? -1);
       seenKeys.push(inputs.intent.idempotencyKey);
-      const next = (version === null ? 0 : version) + 1;
+      const next = (version ?? 0) + 1;
       currentVersion = next;
-      return {
+      return Promise.resolve({
         ok: true,
         cart: {
           id: 'cart-1',
@@ -587,7 +579,7 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
           expiresAt: '2026-09-15T10:00:00.000Z',
         },
         replayed: false,
-      };
+      });
     };
 
     queue.setVersionProvider(() => currentVersion);
@@ -614,8 +606,7 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
     };
     const dispatcher = (): Promise<DispatchResult> =>
       new Promise<DispatchResult>((resolve) => {
-        resolveDispatch = () =>
-          resolve({
+        resolveDispatch = () => { resolve({
             ok: true,
             cart: {
               id: 'cart-1',
@@ -627,7 +618,7 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
               expiresAt: '2026-09-15T10:00:00.000Z',
             },
             replayed: false,
-          });
+          }); };
       });
 
     const p = queue.enqueue(
@@ -641,7 +632,7 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
     expect(queue.pendingCount()).toBe(0);
   });
 
-  it('serialize=true is the default — parallel dispatch would race', async () => {
+  it('serialize=true is the default: parallel dispatch would race', async () => {
     const queue = new CartMutationQueue();
     queue.setVersionProvider(() => 1);
     const order: string[] = [];

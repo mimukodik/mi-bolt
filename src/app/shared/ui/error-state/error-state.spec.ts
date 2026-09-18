@@ -24,6 +24,14 @@ class HostComponent {
   readonly retryCount = signal(0);
 }
 
+function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected HTMLElement');
+  }
+  return raw;
+}
+
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
@@ -34,33 +42,36 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 describe('ErrorState primitive', () => {
   it('announces via role=alert and aria-live=polite', () => {
     const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.getAttribute('role')).toBe('alert');
-    expect(root.getAttribute('aria-live')).toBe('polite');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBe('alert');
+    expect(root?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('renders the supplied title and message', () => {
     const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.textContent).toContain('Nem sikerült betölteni');
-    expect(root.textContent).toContain('A hálózati hiba miatt');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.textContent).toContain('Nem sikerült betölteni');
+    expect(root?.textContent).toContain('A hálózati hiba miatt');
   });
 
   it('shows the preserve hint when configured', () => {
     const { fixture } = setup();
-    expect(fixture.nativeElement.querySelector('[data-testid="error-hint"]')).not.toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="error-hint"]')).not.toBeNull();
   });
 
   it('hides the preserve hint when not configured', () => {
     const { fixture, host } = setup();
     host.preserving.set(false);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="error-hint"]')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="error-hint"]')).toBeNull();
   });
 
   it('emits retryRequested when the retry button is clicked', () => {
     const { fixture, host } = setup();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!btn) {
+      throw new Error('Expected button');
+    }
     btn.click();
     expect(host.retryCount()).toBe(1);
   });
@@ -69,7 +80,10 @@ describe('ErrorState primitive', () => {
     const { fixture, host } = setup();
     host.pending.set(true);
     fixture.detectChanges();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!btn) {
+      throw new Error('Expected button');
+    }
     expect(btn.disabled).toBe(true);
     expect(btn.getAttribute('aria-busy')).toBe('true');
     expect(btn.textContent).toContain('Újrapróbálom…');
@@ -79,7 +93,7 @@ describe('ErrorState primitive', () => {
     const { fixture, host } = setup();
     host.message.set('A fizetés nem sikerült. Próbáld újra, vagy válassz másik módot.');
     fixture.detectChanges();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.textContent).not.toMatch(/készleten|raktáron|24 órán belül/i);
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.textContent).not.toMatch(/készleten|raktáron|24 órán belül/i);
   });
 });

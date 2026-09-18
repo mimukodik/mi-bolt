@@ -57,7 +57,7 @@ export class RouteFocusService {
    */
   scheduleFocus(): void {
     runInInjectionContext(this.injector, () => {
-      afterNextRender(() => this.focusMainHeading());
+      afterNextRender(() => { this.focusMainHeading(); });
     });
   }
 

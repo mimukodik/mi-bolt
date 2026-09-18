@@ -1,5 +1,5 @@
 /**
- * T09 — order + payment mock focused unit suite.
+ * T09 - order + payment mock focused unit suite.
  *
  * Each acceptance criterion has at least one named assertion in
  * this file. The suite exercises every line of `commit-order.ts`
@@ -22,7 +22,7 @@ import '../../mocks/orders/order.handlers';
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CartDomain } from '../../mocks/cart/cart-domain';
 import { IdempotencyStore } from '../../mocks/idempotency';
-import { Repository, type Product, type Variant } from '../../mocks/repository';
+import { Repository } from '../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -126,16 +126,17 @@ async function seedCart(
   variantId: string = VARIANT_G256,
   quantity = 1,
 ) {
+  await Promise.resolve();
   const created = env.cartDomain.createCart({
     sessionId,
-    idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-seed-${sessionId}-${variantId}-${quantity}`,
+    idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-seed-${sessionId}-${variantId}-${String(quantity)}`,
   });
   if (!created.ok) throw new Error('createCart failed');
   const added = env.cartDomain.addCartItem({
     sessionId,
     cartId: created.value.id,
-    ifMatch: `"${created.value.version}"`,
-    idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add-${sessionId}-${variantId}-${quantity}`,
+    ifMatch: `"${String(created.value.version)}"`,
+    idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add-${sessionId}-${variantId}-${String(quantity)}`,
     variantId,
     quantity,
   });
@@ -241,7 +242,7 @@ describe('T09-AC02 deterministic card scenarios', () => {
   it('creates a succeeded intent by default and matches cart/quote/amount/session', async () => {
     const env = makeEnv('default');
     const ready = await readyCheckout(env, 'demo_card');
-    const intent = env.paymentIntents.findById(ready.paymentIntentId!, 'default');
+    const intent = env.paymentIntents.findById(ready.paymentIntentId ?? '', 'default');
     expect(intent).toBeDefined();
     if (!intent) return;
     expect(intent.status).toBe('succeeded');
@@ -492,7 +493,7 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
     if (conflict.ok) return;
     expect(conflict.problem.status).toBe(409);
     expect(conflict.problem.code).toBe('IDEMPOTENCY_CONFLICT');
-    // ready2's cart stays active — the conflict rejects without state change.
+    // ready2's cart stays active - the conflict rejects without state change.
     expect(env.repository.getCart(ready2.cartId)?.status).toBe('active');
   });
 
@@ -996,7 +997,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
     expect(result.problem.code).toBe('NOT_FOUND');
   });
 
-  it('rejects an order when the cart has no items (CHECKOUT_INCOMPLETE)', async () => {
+  it('rejects an order when the cart has no items (CHECKOUT_INCOMPLETE)', () => {
     const env = makeEnv();
     const created = env.cartDomain.createCart({
       sessionId: 'session-cccccccccccc',
@@ -1068,7 +1069,7 @@ describe('StockTracker edge cases', () => {
 });
 
 // ---------------------------------------------------------------------------
-// MSW wire tests — exercise the full handler chain so the dispatch path
+// MSW wire tests - exercise the full handler chain so the dispatch path
 // stays at 100% coverage.
 // ---------------------------------------------------------------------------
 
@@ -1127,7 +1128,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
       method: 'POST',
       headers: {
         ...commonHeaders(idempotencyKey),
-        'If-Match': `"${cart.version}"`,
+        'If-Match': `"${String(cart.version)}"`,
       },
       body: JSON.stringify({ variantId, quantity }),
     });
@@ -1145,7 +1146,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
       method: 'PUT',
       headers: {
         ...commonHeaders(idempotencyKey),
-        'If-Match': `"${cartVersion}"`,
+        'If-Match': `"${String(cartVersion)}"`,
       },
       body: JSON.stringify(body),
     });
@@ -1162,7 +1163,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
       method: 'POST',
       headers: {
         ...commonHeaders(idempotencyKey),
-        'If-Match': `"${cartVersion}"`,
+        'If-Match': `"${String(cartVersion)}"`,
       },
     });
     expect(response.status).toBe(200);
@@ -1211,7 +1212,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
   let wireKeyCounter = 0;
   function uniqueKey(prefix: string): string {
     wireKeyCounter += 1;
-    return `${prefix}-${wireKeyCounter}-${Math.random().toString(36).slice(2, 8)}`;
+    return `${prefix}-${String(wireKeyCounter)}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
   async function buildReadyCheckout(
@@ -1647,15 +1648,3 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     expect(cartResponse.status).toBe(200);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Test-only helpers
-// ---------------------------------------------------------------------------
-
-function cloneProduct(product: Product, variants: readonly Variant[]): Product {
-  return {
-    ...product,
-    variants,
-    defaultVariant: variants[0] ?? product.defaultVariant,
-  };
-}

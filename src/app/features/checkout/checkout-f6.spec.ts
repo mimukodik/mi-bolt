@@ -41,13 +41,12 @@ import {
 
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import {
   provideHttpClient,
-  withFetch,
   withInterceptors,
 } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
@@ -62,8 +61,8 @@ const BASE_URL = 'http://localhost/api/v1';
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
 });
@@ -76,7 +75,7 @@ function configureTestBed(): void {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       provideRouter([]),
     ],
@@ -96,7 +95,7 @@ describe('F6 — DeliveryStep effect does not loop on internal counter', () => {
 
     const step = TestBed.runInInjectionContext(() => new DeliveryStep());
 
-    step['state'].set({
+    step.state.set({
       kind: 'ready',
       options: {
         deliveryOptions: [
@@ -116,13 +115,13 @@ describe('F6 — DeliveryStep effect does not loop on internal counter', () => {
     // Drive the exact signal mix a real user would: option, address,
     // payment. Each write would, in the broken version, re-trigger the
     // effect and let the counter-write loop compound.
-    step['selectedOptionId'].set('home_delivery');
-    step['postalCode'].set('1111');
-    step['city'].set('Budapest');
-    step['line1'].set('Példa utca 1.');
-    step['line2'].set('');
-    step['addressSubmitted'].set(true);
-    step['paymentMethod'].set('demo_cod');
+    step.selectedOptionId.set('home_delivery');
+    step.postalCode.set('1111');
+    step.city.set('Budapest');
+    step.line1.set('Példa utca 1.');
+    step.line2.set('');
+    step.addressSubmitted.set(true);
+    step.paymentMethod.set('demo_cod');
 
     // Wait long enough for any microtask-pumped loop to surface.
     // 50 ms is enough for hundreds of synchronous effect re-runs on
@@ -130,7 +129,7 @@ describe('F6 — DeliveryStep effect does not loop on internal counter', () => {
     // hundreds or thousands.
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const counter = step['interactionCounter']();
+    const counter = step.interactionCounter();
     // The bound is generous on purpose: each user-visible mutation
     // bumps the counter by exactly one in the fixed version, so a
     // realistic run ends well under 20 even with one initial pass.

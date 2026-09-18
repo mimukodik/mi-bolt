@@ -41,7 +41,7 @@ export class ProductImage {
   readonly productName = input.required<string>();
   readonly aspectRatio = input<string>('4 / 3');
 
-  readonly loadFailed = output<void>();
+  readonly loadFailed = output();
 
   private readonly failed = signal(false);
   readonly status = computed<'loading' | 'loaded' | 'error'>(() =>

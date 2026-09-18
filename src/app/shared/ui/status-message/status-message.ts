@@ -30,5 +30,5 @@ export class StatusMessage {
   readonly message = input.required<string>();
   readonly severity = input<StatusSeverity>('info');
   readonly persistent = input(false);
-  readonly dismissed = output<void>();
+  readonly dismissed = output();
 }

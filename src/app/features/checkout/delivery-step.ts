@@ -140,7 +140,7 @@ export class DeliveryStep {
   readonly selectionChanged = signal<DeliverySelectionChange | null>(null);
 
   /** Internal counter so the change-effect can ignore its first run. */
-  private readonly interactionCounter = signal<number>(0);
+  readonly interactionCounter = signal<number>(0);
 
   /** Convenience accessor so the template does not need to switch
    *  on `state().kind` itself. */
@@ -260,11 +260,10 @@ export class DeliveryStep {
       // list iterates over the wire response so the user sees ONLY
       // what the server told them is available.
       this.state.set({ kind: 'ready', options: response });
-    } catch (err) {
+    } catch (_err) {
       // The exact cause is surfaced through the network console; the
       // user-visible message stays generic on purpose so we never
       // leak backend detail (R15).
-      void err;
       this.state.set({
         kind: 'error',
         detail: 'A szállítási és fizetési opciók betöltése sikertelen.',

@@ -164,7 +164,7 @@ export class CartFacade {
     // `provideHttpClient(withFetch(), withInterceptors(...))`.
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
     this.queue.setVersionProvider(() => this.cartWritable()?.version ?? null);
-    this.destroyRef.onDestroy(() => this.queue.destroy());
+    this.destroyRef.onDestroy(() => { this.queue.destroy(); });
   }
 
   /**
@@ -198,10 +198,11 @@ export class CartFacade {
       // Re-check inside the queue callback so a second ensureCart() that
       // landed in the same microtask sees the cart the first call
       // already created and short-circuits to a no-op dispatch.
-      if (this.cartWritable() !== null && this.cartWritable()?.status === 'active') {
+      const existing = this.cartWritable();
+      if (existing?.status === 'active') {
         return Promise.resolve({
           ok: true as const,
-          cart: this.cartWritable()!,
+          cart: existing,
           replayed: false,
         });
       }
@@ -680,8 +681,8 @@ export class CartFacade {
 function mapError(err: unknown): DispatchResult {
   if (err instanceof HttpErrorResponse) {
     const body = err.error as { code?: ProblemCode; detail?: string } | null;
-    const code = (body && body.code) || ('UNKNOWN' as ProblemCode);
-    const detail = (body && body.detail) || err.message;
+    const code = (body?.code) ?? ('UNKNOWN' as ProblemCode);
+    const detail = (body?.detail) ?? err.message;
     if (err.status === 409 && code === 'CART_VERSION_CONFLICT') {
       return { ok: false, code: 'CART_VERSION_CONFLICT', status: 409, detail };
     }

@@ -1,5 +1,5 @@
 /**
- * T08 — checkout draft, shipping and quote mock focused unit suite.
+ * T08 - checkout draft, shipping and quote mock focused unit suite.
  *
  * Each acceptance criterion has at least one named assertion in the
  * file. The suite exercises every line of `validate-checkout.ts`,
@@ -76,6 +76,7 @@ function asProductFixture(env: Env): Product {
 }
 
 async function seedCart(env: Env, sessionId = SESSION_A, variantId = VARIANT_G256, quantity = 1) {
+  await Promise.resolve();
   const created = env.cartDomain.createCart({
     sessionId,
     idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-seed-${sessionId}-${variantId}`,
@@ -84,7 +85,7 @@ async function seedCart(env: Env, sessionId = SESSION_A, variantId = VARIANT_G25
   const added = env.cartDomain.addCartItem({
     sessionId,
     cartId: created.value.id,
-    ifMatch: `"${created.value.version}"`,
+    ifMatch: `"${String(created.value.version)}"`,
     idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add-${sessionId}-${variantId}`,
     variantId,
     quantity,
@@ -385,7 +386,7 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
 });
 
 describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () => {
-  it('rejects a quote for an empty cart with CHECKOUT_INCOMPLETE /cart pointer', async () => {
+  it('rejects a quote for an empty cart with CHECKOUT_INCOMPLETE /cart pointer', () => {
     const env = makeEnv();
     const created = env.cartDomain.createCart({
       sessionId: SESSION_A,
@@ -582,7 +583,7 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     const bumped = env.cartDomain.addCartItem({
       sessionId: SESSION_A,
       cartId: seeded.id,
-      ifMatch: `"${seeded.version}"`,
+      ifMatch: `"${String(seeded.version)}"`,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-mut-bump`,
       variantId: VARIANT_G512,
       quantity: 1,
@@ -731,7 +732,7 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
 
     env.clock.advanceMs(QUOTE_TTL_MS + 1);
 
-    // Same cart, same draft, same stock, same prices — strictly expiry.
+    // Same cart, same draft, same stock, same prices - strictly expiry.
     const expired = env.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
@@ -816,7 +817,7 @@ describe('address and contact normalization helpers', () => {
 });
 
 describe('QuoteDomain error paths and session guards', () => {
-  it('rejects malformed X-Demo-Session headers with 400 VALIDATION_FAILED', async () => {
+  it('rejects malformed X-Demo-Session headers with 400 VALIDATION_FAILED', () => {
     const env = makeEnv();
     const result = env.quoteDomain.updateDraft({
       sessionId: 'short',
@@ -831,7 +832,7 @@ describe('QuoteDomain error paths and session guards', () => {
     expect(result.problem.code).toBe('VALIDATION_FAILED');
   });
 
-  it('rejects missing If-Match with 400 VALIDATION_FAILED', async () => {
+  it('rejects missing If-Match with 400 VALIDATION_FAILED', () => {
     const env = makeEnv();
     const result = env.quoteDomain.updateDraft({
       sessionId: SESSION_A,
@@ -846,7 +847,7 @@ describe('QuoteDomain error paths and session guards', () => {
     expect(result.problem.fieldErrors[0]?.path).toBe('/If-Match');
   });
 
-  it('rejects missing Idempotency-Key with 400 VALIDATION_FAILED', async () => {
+  it('rejects missing Idempotency-Key with 400 VALIDATION_FAILED', () => {
     const env = makeEnv();
     const result = env.quoteDomain.updateDraft({
       sessionId: SESSION_A,
@@ -861,7 +862,7 @@ describe('QuoteDomain error paths and session guards', () => {
     expect(result.problem.fieldErrors[0]?.path).toBe('/Idempotency-Key');
   });
 
-  it('returns 404 NOT_FOUND when the cart does not belong to the session', async () => {
+  it('returns 404 NOT_FOUND when the cart does not belong to the session', () => {
     const env = makeEnv();
     const result = env.quoteDomain.updateDraft({
       sessionId: SESSION_A,
@@ -1001,7 +1002,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
   ): Promise<{ id: string; version: number }> {
     const response = await fetch(url(`/carts/${cart.id}/items`), {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-add-${variantId}-${cart.version}`, `"${cart.version}"`),
+      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-add-${variantId}-${String(cart.version)}`, `"${String(cart.version)}"`),
       body: JSON.stringify({ variantId, quantity }),
     });
     expect(response.status).toBe(200);
@@ -1019,7 +1020,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     const cart = await postCart();
     const response = await fetch(url(`/checkout/${cart.id}/quote`), {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-empty-quote-${cart.version}`, `"${cart.version}"`),
+      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-empty-quote-${String(cart.version)}`, `"${String(cart.version)}"`),
     });
     expect(response.status).toBe(422);
     const body = (await response.json()) as { code: string };
@@ -1033,7 +1034,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     // Update draft with home delivery
     const updateResponse = await fetch(url(`/checkout/${cart.id}`), {
       method: 'PUT',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-update-1`, `"${withItem.version}"`),
+      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-update-1`, `"${String(withItem.version)}"`),
       body: JSON.stringify({
         contact: completeValidContact(),
         delivery: completeValidDelivery('home_delivery'),
@@ -1045,7 +1046,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     // First quote
     const firstQuoteResponse = await fetch(url(`/checkout/${cart.id}/quote`), {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-quote-1`, `"${withItem.version}"`),
+      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-quote-1`, `"${String(withItem.version)}"`),
     });
     expect(firstQuoteResponse.status).toBe(200);
     const firstQuote = (await firstQuoteResponse.json()) as { id: string; total: { amount: number }; shipping: { amount: number }; cartVersion: number };
@@ -1061,7 +1062,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     // Subsequent quote uses the bumped version and produces a fresh quote id
     const refreshedResponse = await fetch(url(`/checkout/${cart.id}/quote`), {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-quote-2`, `"${bumped.version}"`),
+      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-quote-2`, `"${String(bumped.version)}"`),
     });
     expect(refreshedResponse.status).toBe(200);
     const refreshed = (await refreshedResponse.json()) as { id: string; cartVersion: number };
@@ -1075,7 +1076,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
 
     const badResponse = await fetch(url(`/checkout/${cart.id}`), {
       method: 'PUT',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-missing-address`, `"${withItem.version}"`),
+      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-missing-address`, `"${String(withItem.version)}"`),
       body: JSON.stringify({
         contact: completeValidContact(),
         delivery: { optionId: 'home_delivery' },
@@ -1094,7 +1095,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     const key = `${IDEMPOTENCY_KEY_BASE}-wire-conflict`;
     const first = await fetch(url(`/checkout/${cart.id}`), {
       method: 'PUT',
-      headers: commonHeaders(key, `"${withItem.version}"`),
+      headers: commonHeaders(key, `"${String(withItem.version)}"`),
       body: JSON.stringify({
         contact: completeValidContact(),
         delivery: completeValidDelivery('home_delivery'),
@@ -1104,7 +1105,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
     expect(first.status).toBe(200);
     const conflict = await fetch(url(`/checkout/${cart.id}`), {
       method: 'PUT',
-      headers: commonHeaders(key, `"${withItem.version}"`),
+      headers: commonHeaders(key, `"${String(withItem.version)}"`),
       body: JSON.stringify({
         contact: completeValidContact(),
         delivery: completeValidDelivery('demo_pickup'),
@@ -1245,7 +1246,7 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
   });
 });
 
-/** Test-only helpers below — small utilities used by the suite. */
+/** Test-only helpers below - small utilities used by the suite. */
 
 function cloneProduct(product: Product, variants: readonly Variant[]): Product {
   return {

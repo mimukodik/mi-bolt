@@ -205,7 +205,7 @@ export const checkoutFormSchema: SchemaFn<CheckoutFormModel> = (path) => {
   // child field's context, so `value` is the address signal — we
   // must read the sibling `deliveryOptionId` via `valueOf`.
   hidden(path.address, {
-    when: ({ valueOf }) => valueOf(path.deliveryOptionId) !== 'home_delivery',
+    when: (ctx) => ctx.valueOf(path.deliveryOptionId) !== 'home_delivery',
   });
 
   required(path.address.postalCode, {
@@ -252,7 +252,7 @@ export const checkoutFormSchema: SchemaFn<CheckoutFormModel> = (path) => {
   });
 
   validate(path.acceptedTerms, ({ value }) =>
-    value() === true
+    value()
       ? null
       : {
           kind: 'mustAcceptTerms',
@@ -260,7 +260,7 @@ export const checkoutFormSchema: SchemaFn<CheckoutFormModel> = (path) => {
         },
   );
   validate(path.acknowledgedSimulation, ({ value }) =>
-    value() === true
+    value()
       ? null
       : {
           kind: 'mustAcknowledgeSimulation',

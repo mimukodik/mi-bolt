@@ -20,13 +20,12 @@ import {
 
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { Router } from '@angular/router';
 import {
   provideHttpClient,
-  withFetch,
   withInterceptors,
 } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -43,8 +42,8 @@ const BASE_URL = 'http://localhost/api/v1';
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
 });
@@ -57,7 +56,7 @@ function configureTestBed(): void {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       provideRouter([]),
     ],
@@ -74,7 +73,7 @@ describe('F2 — DeliveryStep.onConfirm persists selection and navigates', () =>
     const navigated: string[] = [];
     const routerStub = {
       navigate: (commands: readonly unknown[]) => {
-        const flat = (commands as readonly unknown[]).flatMap((c) =>
+        const flat = (commands).flatMap((c) =>
           typeof c === 'string'
             ? [c]
             : Array.isArray(c)
@@ -118,15 +117,15 @@ describe('F2 — DeliveryStep.onConfirm persists selection and navigates', () =>
       const step = TestBed.runInInjectionContext(() => new DeliveryStep());
 
       // Drive state into a canConfirm()=true configuration.
-      step['confirmPending'].set(false);
-      step['selectedOptionId'].set('home_delivery');
-      step['postalCode'].set('1111');
-      step['city'].set('Budapest');
-      step['line1'].set('Példa utca 1.');
-      step['line2'].set('');
-      step['addressSubmitted'].set(true);
-      step['paymentMethod'].set('demo_cod');
-      step['state'].set({
+      step.confirmPending.set(false);
+      step.selectedOptionId.set('home_delivery');
+      step.postalCode.set('1111');
+      step.city.set('Budapest');
+      step.line1.set('Példa utca 1.');
+      step.line2.set('');
+      step.addressSubmitted.set(true);
+      step.paymentMethod.set('demo_cod');
+      step.state.set({
         kind: 'ready',
         options: {
           deliveryOptions: [

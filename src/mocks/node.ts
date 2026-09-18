@@ -74,8 +74,9 @@ export function createNodeServer(
     listen(): void {
       server.listen({ onUnhandledRequest: 'error' });
     },
-    async close(): Promise<void> {
+    close(): Promise<void> {
       server.close();
+      return Promise.resolve();
     },
   };
 }

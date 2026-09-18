@@ -20,6 +20,14 @@ class HostComponent {
   readonly status = signal<AsyncStatus>('success');
 }
 
+function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected HTMLElement');
+  }
+  return raw;
+}
+
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
@@ -30,21 +38,28 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 describe('PriceBlock primitive', () => {
   it('formats a whole-HUF amount with non-breaking spaces', () => {
     const { fixture } = setup();
-    const amount: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="price-amount"]');
+    const amount = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="price-amount"]');
     expect(amount).not.toBeNull();
-    expect(amount?.textContent?.trim()).toBe('339 990');
+    if (!amount) {
+      throw new Error('Expected price-amount element');
+    }
+    expect(amount.textContent.trim()).toBe('339 990');
   });
 
   it('attaches the Ft suffix in a separate visually-distinct element', () => {
     const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.textContent).toContain('Ft');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.textContent).toContain('Ft');
   });
 
   it('exposes the one-time label live text', () => {
     const { fixture } = setup();
-    const label: HTMLElement | null = fixture.nativeElement.querySelector('.label');
-    expect(label?.textContent?.trim()).toBe('Készülékár, egyszeri díj');
+    const label = getNativeElement(fixture).querySelector<HTMLElement>('.label');
+    expect(label).not.toBeNull();
+    if (!label) {
+      throw new Error('Expected label element');
+    }
+    expect(label.textContent.trim()).toBe('Készülékár, egyszeri díj');
   });
 
   it('formats the example 339 990 / 9 990 amounts from the skill', () => {
@@ -56,26 +71,26 @@ describe('PriceBlock primitive', () => {
     const { fixture, host } = setup();
     host.status.set('loading');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="price-amount"]')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
 
   it('renders a dash on error and never an invented number', () => {
     const { fixture, host } = setup();
     host.status.set('error');
     fixture.detectChanges();
-    const error: HTMLElement | null = fixture.nativeElement.querySelector('[data-testid="price-error"]');
+    const error = getNativeElement(fixture).querySelector<HTMLElement>('[data-testid="price-error"]');
     expect(error).not.toBeNull();
-    expect(error?.textContent).toContain('—');
-    expect(fixture.nativeElement.querySelector('[data-testid="price-amount"]')).toBeNull();
+    expect(error?.textContent).toContain('\u2014');
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
 
   it('renders a dash on empty and never an invented number', () => {
     const { fixture, host } = setup();
     host.status.set('empty');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="price-empty"]')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="price-amount"]')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-empty"]')).not.toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
 
   it('does not show 0 Ft when the amount is zero or invalid', () => {
@@ -83,8 +98,8 @@ describe('PriceBlock primitive', () => {
     host.money.set({ amount: 0, currency: 'HUF' });
     host.status.set('success');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="price-amount"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="price-empty"]')).not.toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-empty"]')).not.toBeNull();
   });
 
   it('rejects a non-HUF currency silently', () => {
@@ -93,6 +108,6 @@ describe('PriceBlock primitive', () => {
     host.money.set({ amount: 100, currency: 'EUR' });
     host.status.set('success');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="price-amount"]')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
 });

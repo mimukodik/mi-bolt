@@ -6,7 +6,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { APP_BASE_HREF } from '@angular/common';
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -23,7 +23,7 @@ import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
  * inserting a new `const _foo = provideX(...)` line.
  */
 const _provideZoneless: EnvironmentProviders = provideZonelessChangeDetection();
-const _provideHttpWithFetch = provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor]));
+const _provideHttpWithFetch = provideHttpClient(withInterceptors([demoSessionInterceptor]));
 const _provideRouter = provideRouter(routes, withComponentInputBinding());
 const _provideBaseHref: Provider = {
   provide: APP_BASE_HREF,

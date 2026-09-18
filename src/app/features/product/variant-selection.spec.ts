@@ -34,12 +34,12 @@ import {
   expect,
   it,
 } from 'vitest';
-import { HttpClient, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
@@ -215,7 +215,7 @@ describe('T15 computeDisabledCombinations (AC02)', () => {
       ],
     };
     const disabled = computeDisabledCombinations(product);
-    const keys = disabled.map((d) => `${d.colorCode}|${d.storageGb}`).sort();
+    const keys = disabled.map((d) => `${d.colorCode}|${String(d.storageGb)}`).sort();
     // silver is missing 128 and 512 — must be flagged.
     expect(keys).toEqual(['silver|128', 'silver|512']);
     const entry = disabled.find((d) => d.colorCode === 'silver' && d.storageGb === 128);
@@ -442,22 +442,21 @@ interface DelayedHandler {
 
 const captures: CapturedRequest[] = [];
 const delayedHandlers: DelayedHandler[] = [];
-let getConfigRequests = 0;
 
 const server = setupServer();
 
-beforeAll(async () => {
+beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
 
   server.listen({ onUnhandledRequest: 'error' });
 
-  await TestBed.configureTestingModule({
+  TestBed.configureTestingModule({
     providers: [
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
@@ -472,11 +471,9 @@ afterAll(() => {
 beforeEach(() => {
   captures.length = 0;
   delayedHandlers.length = 0;
-  getConfigRequests = 0;
 
   server.use(
     http.get(`${BASE_URL}/config`, () => {
-      getConfigRequests += 1;
       return HttpResponse.json({
         providerId: 'mi-bolt',
         displayName: 'MiBolt',
@@ -541,7 +538,7 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       // The generated Api class is partially compiled; vitest's esbuild
       // pipeline does not emit constructor metadata so TestBed cannot
@@ -648,9 +645,10 @@ describe('T15 ProductFacade — route loading via the SDK', () => {
 describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / selectImage / setQuantity', () => {
   it('selectVariant switches the atomic state (price, stock, gallery) and resets the gallery index to 0 (AC03)', async () => {
     const product = makeProduct();
+    const firstVariant = product.variants[0];
     // Give the variant two distinct images so the gallery reset is observable.
-    product.variants[0]!.images = [makeImage('g-front'), makeImage('g-side')];
-    product.defaultVariant = product.variants[0]!;
+    firstVariant.images = [makeImage('g-front'), makeImage('g-side')];
+    product.defaultVariant = firstVariant;
     server.use(
       http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)),
     );
@@ -723,8 +721,9 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
 
   it('selectImage picks the right index for a real gallery image', async () => {
     const product = makeProduct();
-    product.variants[0]!.images = [makeImage('img-1'), makeImage('img-2'), makeImage('img-3')];
-    product.defaultVariant = product.variants[0]!;
+    const firstVariant = product.variants[0];
+    firstVariant.images = [makeImage('img-1'), makeImage('img-2'), makeImage('img-3')];
+    product.defaultVariant = firstVariant;
     server.use(
       http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)),
     );
@@ -772,8 +771,9 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
 
   it('out-of-stock selection disables add-to-cart (AC04)', async () => {
     const product = makeProduct();
-    product.variants[1]!.availability = 'out_of_stock';
-    product.defaultVariant = product.variants[0]!;
+    const firstVariant = product.variants[0];
+    product.variants[1].availability = 'out_of_stock';
+    product.defaultVariant = firstVariant;
     server.use(
       http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)),
     );
@@ -802,7 +802,7 @@ describe('T15 ProductFacade — retry re-fires the most recent load (AC04)', () 
     facade.retry();
     await flushMicrotasks();
     expect(captures.length).toBeGreaterThan(before);
-    const lastCall = captures[captures.length - 1]!;
+    const lastCall = captures[captures.length - 1];
     expect(lastCall.slug).toBe('demo-one-5g');
   });
 
@@ -822,9 +822,11 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
       payload: makeProduct(),
       resolve: () => undefined,
     });
+    const proPayload = payloadForSlug('demo-pro-5g');
+    if (!proPayload) throw new Error('Expected payload for demo-pro-5g');
     delayedHandlers.push({
       slug: 'demo-pro-5g',
-      payload: payloadForSlug('demo-pro-5g')!,
+      payload: proPayload,
       resolve: () => undefined,
     });
 
@@ -837,14 +839,15 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
     // Yield so the second request is in flight before we resolve it.
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-    // Resolve only the second request — the first must be cancelled
+    // Resolve only the second request: the first must be cancelled
     // by switchMap and never reach the product signal.
-    const second = delayedHandlers.find((h) => h.slug === 'demo-pro-5g')!;
+    const second = delayedHandlers.find((h) => h.slug === 'demo-pro-5g');
+    if (!second) throw new Error('Expected second handler');
     second.resolve();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     // expect.poll retries the assertion until it holds, covering the
-    // MSW → fetch → SDK → RxJS → signal chain in whatever order the
+    // MSW -> fetch -> SDK -> RxJS -> signal chain in whatever order the
     // runtime schedules it.
     await expect.poll(() => facade.vm().status, { timeout: 1000, interval: 5 }).toBe('success');
 
@@ -853,7 +856,8 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
 
     // Resolving the first handler after cancellation must NOT swap the
     // product back to demo-one-5g.
-    const first = delayedHandlers.find((h) => h.slug === 'demo-one-5g')!;
+    const first = delayedHandlers.find((h) => h.slug === 'demo-one-5g');
+    if (!first) throw new Error('Expected first handler');
     first.resolve();
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
     expect(facade.vm().product?.slug).toBe('demo-pro-5g');

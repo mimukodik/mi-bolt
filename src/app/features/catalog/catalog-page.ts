@@ -646,10 +646,10 @@ export class CatalogPage {
     const vm = this.facade.vm();
     if (vm.status === 'loading') return 'Keresés a katalógusban…';
     if (vm.status === 'refreshing') {
-      return `Találatok: ${vm.total} (frissítés alatt)`;
+      return `Találatok: ${String(vm.total)} (frissítés alatt)`;
     }
     if (vm.total === 0) return 'Nincs találat.';
-    return `Találatok: ${vm.total}`;
+    return `Találatok: ${String(vm.total)}`;
   });
 
   constructor() {
@@ -798,12 +798,14 @@ export class CatalogPage {
     if (typeof window === 'undefined') return;
     const mql = window.matchMedia('(min-width: 1024px)');
     const apply = (): void => {
-      const host = this.host.nativeElement;
-      host.dataset['layoutMode'] = mql.matches ? 'sidebar' : 'drawer';
+      const host: unknown = this.host.nativeElement;
+      if (host instanceof HTMLElement) {
+        host.dataset['layoutMode'] = mql.matches ? 'sidebar' : 'drawer';
+      }
     };
     apply();
     mql.addEventListener('change', apply);
-    this.destroyRef.onDestroy(() => mql.removeEventListener('change', apply));
+    this.destroyRef.onDestroy(() => { mql.removeEventListener('change', apply); });
   }
 }
 
@@ -823,7 +825,7 @@ function buildChips(q: CatalogQuery): readonly AppliedChip[] {
     chips.push({ id: `brand:${brand}`, kind: 'brand', label: brand, value: brand });
   }
   for (const bucket of q.storageGb ?? []) {
-    chips.push({ id: `storage:${bucket}`, kind: 'storage', label: `${bucket} GB`, value: bucket });
+    chips.push({ id: `storage:${String(bucket)}`, kind: 'storage', label: `${String(bucket)} GB`, value: bucket });
   }
   if (q.minPrice !== undefined) {
     chips.push({ id: 'minPrice', kind: 'minPrice', label: `Min. ár: ${q.minPrice.toLocaleString('hu-HU')} Ft`, value: q.minPrice });

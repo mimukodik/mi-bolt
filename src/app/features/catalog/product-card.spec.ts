@@ -1,5 +1,5 @@
 /**
- * T13 — ProductCard atomic view-model (AC04).
+ * T13: ProductCard atomic view-model (AC04).
  *
  * The card is purely presentational. It receives one ProductSummary and
  * renders the catalog atomic view: image (4:3, no crop), product name,
@@ -46,6 +46,49 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
+function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
+  return (typeof value === 'function' || typeof value === 'object') && value !== null;
+}
+
+function getComponentStyles(comp: unknown): readonly string[] {
+  if (!isObjectOrFunction(comp)) {
+    return [];
+  }
+  const cmp = comp['ɵcmp'];
+  if (!isObjectOrFunction(cmp)) {
+    return [];
+  }
+  const styles = cmp['styles'];
+  if (Array.isArray(styles)) {
+    return styles.filter((s): s is string => typeof s === 'string');
+  }
+  return [];
+}
+
+function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+  return raw;
+}
+
+function queryElement(parent: Element, selector: string): HTMLElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
+  return el;
+}
+
+function queryAnchor(parent: Element, selector: string): HTMLAnchorElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLAnchorElement)) throw new Error(`Expected HTMLAnchorElement: ${selector}`);
+  return el;
+}
+
+function queryImage(parent: Element, selector: string): HTMLImageElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLImageElement)) throw new Error(`Expected HTMLImageElement: ${selector}`);
+  return el;
+}
+
 // ---------------------------------------------------------------------------
 // Fixture factory
 // ---------------------------------------------------------------------------
@@ -73,12 +116,13 @@ function makeSummary(opts: {
 }): ProductSummary {
   const colorCode = opts.colorName ? opts.colorName.toLowerCase() : 'graphite';
   const imageId = `${opts.id}-front`;
+  const storageVal = opts.storageGb ?? 256;
   const variant: Variant = {
-    id: `${opts.id}-${opts.storageGb ?? 256}-${colorCode}`,
+    id: `${opts.id}-${String(storageVal)}-${colorCode}`,
     colorCode,
     colorName: opts.colorName ?? 'Grafit',
     swatchHex: '#343B43',
-    storageGb: opts.storageGb ?? 256,
+    storageGb: storageVal,
     price: money(opts.price ?? 339_990),
     availability: opts.availability ?? 'in_stock',
     maxQuantity: 5,
@@ -86,7 +130,7 @@ function makeSummary(opts: {
       makeImage(
         imageId,
         opts.imageSrc ?? `/assets/products/${colorCode}-front.webp`,
-        `${opts.name}, ${opts.colorName ?? 'Grafit'}, ${opts.storageGb ?? 256} GB`,
+        `${opts.name}, ${opts.colorName ?? 'Grafit'}, ${String(storageVal)} GB`,
       ),
     ],
   };
@@ -121,27 +165,25 @@ function setup(): { fixture: ReturnType<typeof TestBed.createComponent<HostCompo
 }
 
 // ---------------------------------------------------------------------------
-// AC04 — atomic view-model and outlined CTA
+// AC04: atomic view-model and outlined CTA
 // ---------------------------------------------------------------------------
 
 describe('T13-AC04 ProductCard', () => {
   it('renders the matching variant image with 4:3 frame and intact alt', () => {
     const { fixture } = setup();
-    const root = fixture.nativeElement as HTMLElement;
-    const frame = root.querySelector('[data-testid="product-card-image"]') as HTMLElement;
-    expect(frame).not.toBeNull();
-    // The aspect ratio MUST be exactly 4 / 3 — R11 keeps the
+    const raw = getRootElement(fixture);
+    const frame = queryElement(raw, '[data-testid="product-card-image"]');
+    // The aspect ratio MUST be exactly 4 / 3: R11 keeps the
     // optical size of the device consistent across the catalog.
     expect(frame.style.aspectRatio.replace(/\s+/g, '')).toBe('4/3');
-    const photo = root.querySelector('[data-testid="image-photo"]') as HTMLImageElement;
-    expect(photo).not.toBeNull();
+    const photo = queryImage(raw, '[data-testid="image-photo"]');
     expect(photo.getAttribute('alt')).toContain('Demo One 5G');
     expect(photo.getAttribute('alt')).toContain('256 GB');
   });
 
-  it('preserves the full device aspect — no cropping, object-fit contain', () => {
+  it('preserves the full device aspect: no cropping, object-fit contain', () => {
     setup();
-    const css = (ProductCard as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+    const css = getComponentStyles(ProductCard).join('\n');
     expect(css).toContain('object-fit: contain');
     // Cropping via object-fit: cover is explicitly disallowed (R11).
     expect(css).not.toContain('object-fit: cover');
@@ -151,13 +193,12 @@ describe('T13-AC04 ProductCard', () => {
     const { fixture, host } = setup();
     host.product.set(makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339990 }));
     fixture.detectChanges();
-    const root = fixture.nativeElement as HTMLElement;
-    const priceEl = root.querySelector('[data-testid="price-amount"]') as HTMLElement;
-    expect(priceEl).not.toBeNull();
-    // 339 990 — non-breaking space U+00A0 separator, integer HUF.
-    expect(priceEl.textContent?.replace(/\s+/g, ' ').trim()).toBe('339 990');
-    const label = root.querySelector('.label') as HTMLElement | null;
-    expect(label?.textContent ?? '').toContain('Egyszeri');
+    const root = getRootElement(fixture);
+    const priceEl = queryElement(root, '[data-testid="price-amount"]');
+    // 339 990: non-breaking space U+00A0 separator, integer HUF.
+    expect(priceEl.textContent.replace(/\s+/g, ' ').trim()).toBe('339 990');
+    const label = queryElement(root, '.label');
+    expect(label.textContent).toContain('Egyszeri');
   });
 
   it('renders the matching variant color label and storage bucket together', () => {
@@ -172,40 +213,36 @@ describe('T13-AC04 ProductCard', () => {
       }),
     );
     fixture.detectChanges();
-    const root = fixture.nativeElement as HTMLElement;
-    const text = (root.textContent ?? '').replace(/\s+/g, ' ');
+    const root = getRootElement(fixture);
+    const text = root.textContent.replace(/\s+/g, ' ');
     expect(text).toContain('Ezüst');
     expect(text).toContain('128 GB');
   });
 
-  it('renders the outlined "Részletek" CTA — not a filled primary button', () => {
+  it('renders the outlined "Részletek" CTA: not a filled primary button', () => {
     const { fixture } = setup();
-    const cta = fixture.nativeElement.querySelector('[data-testid="product-card-cta"]') as HTMLElement;
-    expect(cta).not.toBeNull();
-    expect(cta.textContent ?? '').toContain('Részletek');
-    const css = (ProductCard as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
-    expect(css).toContain('border'); // outlined look — border on the CTA
+    const cta = queryElement(getRootElement(fixture), '[data-testid="product-card-cta"]');
+    expect(cta.textContent).toContain('Részletek');
+    const css = getComponentStyles(ProductCard).join('\n');
+    expect(css).toContain('border'); // outlined look: border on the CTA
   });
 
   it('navigates to the product detail route with the default variant id', () => {
     const { fixture } = setup();
-    const link = fixture.nativeElement.querySelector('[data-testid="product-card-cta"]') as HTMLAnchorElement;
-    expect(link).not.toBeNull();
+    const link = queryAnchor(getRootElement(fixture), '[data-testid="product-card-cta"]');
     expect(link.getAttribute('href')).toContain('/telefonok/demo-one-5g');
     expect(link.getAttribute('href')).toContain('variant=');
   });
 
   it('falls back to the named image-fallback when the photo errors (no invented device)', () => {
     const { fixture } = setup();
-    const photo = fixture.nativeElement.querySelector('[data-testid="image-photo"]') as HTMLImageElement;
-    expect(photo).not.toBeNull();
+    const photo = queryImage(getRootElement(fixture), '[data-testid="image-photo"]');
     photo.dispatchEvent(new Event('error'));
     fixture.detectChanges();
-    const fallback = fixture.nativeElement.querySelector('[data-testid="image-fallback"]') as HTMLElement;
-    expect(fallback).not.toBeNull();
+    const fallback = queryElement(getRootElement(fixture), '[data-testid="image-fallback"]');
     // The fallback MUST stay inside the card and keep the product's
     // initial so the user still sees WHICH product this card is.
-    expect(fallback.textContent ?? '').toMatch(/D/);
+    expect(fallback.textContent).toMatch(/D/);
   });
 
   it('limits the rendered highlights to at most two', () => {
@@ -219,8 +256,9 @@ describe('T13-AC04 ProductCard', () => {
       }),
     );
     fixture.detectChanges();
-    const list = fixture.nativeElement.querySelectorAll('[data-testid="product-card-highlights"] li');
+    const list = getRootElement(fixture).querySelectorAll('[data-testid="product-card-highlights"] li');
     expect(list.length).toBe(2);
-    expect(list[0]?.textContent ?? '').toContain('6,7″ kijelző');
+    const first = list[0];
+    expect(first.textContent).toContain('6,7″ kijelző');
   });
 });

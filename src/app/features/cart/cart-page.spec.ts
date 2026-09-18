@@ -1,23 +1,23 @@
 /**
- * T18 — cart screen (S4.1).
+ * T18: cart screen (S4.1).
  *
  * Acceptance criteria mapped to source-pattern tests:
  *
- *   T18-AC01 — Adding confirms product, color, storage and quantity in an
+ *   T18-AC01: Adding confirms product, color, storage and quantity in an
  *              accessible status. Cart line matches the mock response.
  *              Status line is asserted on `add-to-cart.ts` (the
  *              confirmation surface) and on `cart-line.ts` (the line
  *              card that matches the mock response).
- *   T18-AC02 — Cart page shows image/name/variant/unit price/quantity/
+ *   T18-AC02: Cart page shows image/name/variant/unit price/quantity/
  *              line total, remove action, and subtotal. Shipping is
  *              NOT misrepresented as final before method choice.
- *   T18-AC03 — Quantity increment/decrement/remove handle
+ *   T18-AC03: Quantity increment/decrement/remove handle
  *              max/min/pending/failure and preserve cart on error.
  *              Removing the last item produces the empty screen.
- *   T18-AC04 — Continue button is disabled for empty/invalid/pending
+ *   T18-AC04: Continue button is disabled for empty/invalid/pending
  *              cart and navigates to /penztar/adatok only after
  *              authoritative revalidation (`facade.ensureCart`).
- *   T18-AC05 — 339 990 × 2 = 679 980 HUF subtotal; with home
+ *   T18-AC05: 339 990 × 2 = 679 980 HUF subtotal; with home
  *              delivery (1 990 HUF) total = 681 970 HUF. No monthly
  *              fee or hidden add-on copy.
  *
@@ -50,8 +50,8 @@ const cartLineSource = read('src/app/features/cart/cart-line.ts');
 const orderSummarySource = read('src/app/features/cart/order-summary.ts');
 
 function componentStyles(componentSource: string, scssPath?: string): string {
-  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  if (inline) return inline[1] ?? '';
+  const inline = /styles:\s*\[([\s\S]*?)\]/.exec(componentSource);
+  if (inline) return inline[1];
   if (scssPath) {
     try {
       return readFileSync(resolvePath(workspaceRoot, scssPath), 'utf8');
@@ -59,7 +59,7 @@ function componentStyles(componentSource: string, scssPath?: string): string {
       return '';
     }
   }
-  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  const htmlMatch = /templateUrl:\s*'\.\/([^']+\.html)'/.exec(componentSource);
   if (htmlMatch) {
     const derivedScss = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
@@ -75,7 +75,7 @@ function componentStyles(componentSource: string, scssPath?: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// T18-AC01 — add-to-cart surface confirms the addition. The full
+// T18-AC01: add-to-cart surface confirms the addition. The full
 // confirmation flow lives in `add-to-cart.ts`; here we assert the
 // page renders the line card that matches the mock response.
 // ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
     expect(cartLineSource).toMatch(/ProductImage|app-product-image/);
     // Product name (the wire-shaped field name is `productName`).
     expect(cartLineSource).toMatch(/productName/);
-    // Variant line — color name and storage both rendered.
+    // Variant line: color name and storage both rendered.
     expect(cartLineSource).toMatch(/colorName/);
     expect(cartLineSource).toMatch(/storageGb/);
     // Unit price + line total go through the PriceBlock primitive.
@@ -114,7 +114,7 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC02 — cart page renders subtotal and never misrepresents
+// T18-AC02: cart page renders subtotal and never misrepresents
 // shipping as final before the user chooses a method.
 // ---------------------------------------------------------------------------
 describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a final shipping figure', () => {
@@ -127,7 +127,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
     // The exact Hungarian message spelled out in the task spec.
     expect(orderSummarySource).toMatch(/A szállítási díj a pénztárban kerül kiszámításra/);
     // The summary does NOT lock the total to a specific fee before
-    // the user picks a method — total computation must allow a null
+    // the user picks a method: total computation must allow a null
     // shipping leg.
     expect(orderSummarySource).toMatch(/shipping/);
   });
@@ -157,7 +157,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC03 — quantity controls handle boundaries and the empty
+// T18-AC03: quantity controls handle boundaries and the empty
 // state appears when the last line is removed.
 // ---------------------------------------------------------------------------
 describe('T18-AC03 quantity boundaries and the empty screen on last-line removal', () => {
@@ -188,7 +188,7 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC04 — Continue is disabled when the cart cannot be advanced,
+// T18-AC04: Continue is disabled when the cart cannot be advanced,
 // and only navigates to /penztar/adatok after ensureCart() succeeds.
 // ---------------------------------------------------------------------------
 describe('T18-AC04 Continue gating and authoritative revalidation', () => {
@@ -207,7 +207,7 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC05 — subtotal calculation is unit-priced * quantity. The
+// T18-AC05: subtotal calculation is unit-priced * quantity. The
 // cart page renders the subtotal as whole HUF; with home delivery
 // the summary computes the final 681 970 HUF. No monthly fee.
 // ---------------------------------------------------------------------------
@@ -237,7 +237,7 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T18 wiring — CartPage uses the documented T10 primitives.
+// T18 wiring: CartPage uses the documented T10 primitives.
 // ---------------------------------------------------------------------------
 describe('T18 cart-page shared-primitive dependency wiring', () => {
   it('depends on the shared UI primitives and the CartFacade + ProductFacade', () => {

@@ -203,8 +203,7 @@ export class CartPage {
     // a new shape so a stale "X törölve" message does not survive a
     // subsequent successful mutation.
     effect(() => {
-      const cart = this.cart();
-      void cart;
+      this.cart();
     });
   }
 
@@ -249,7 +248,7 @@ export class CartPage {
 
   onRetry(): void {
     this.revalidating.set(true);
-    this.facade.ensureCart().finally(() => {
+    void this.facade.ensureCart().finally(() => {
       this.revalidating.set(false);
     });
   }

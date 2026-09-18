@@ -34,11 +34,11 @@ import {
 import { setupServer } from 'msw/node';
 import { HttpResponse, http, type RequestHandler } from 'msw';
 
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   EnvironmentInjector,
@@ -46,7 +46,7 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 
-import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
@@ -74,7 +74,6 @@ import {
   PAYMENT_POLL_INTERVAL_MS,
   PAYMENT_POLL_MAX_ATTEMPTS,
   type FakeClock,
-  type FakeClockLike,
   type PaymentProgressTick,
 } from '../../../app/features/checkout/payment-progress';
 
@@ -99,7 +98,7 @@ function makeEnv(scenarioName = 't23-suite'): Env {
   };
   const repository = new Repository(scenario, ids, clock);
   repository.loadProducts([DEMO_PRODUCT]);
-  void new IdempotencyStore(clock);
+  new IdempotencyStore(clock);
   return { repository, clock, ids, scenario };
 }
 
@@ -118,8 +117,8 @@ function buildHandlers(): readonly RequestHandler[] {
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
   server.listen({ onUnhandledRequest: 'error' });
@@ -148,7 +147,7 @@ function makeInMemoryStorage(): SafeOrderStorage {
   const map = new Map<string, string>();
   return {
     getItem(key: string): string | null {
-      return map.has(key) ? (map.get(key) as string) : null;
+      return map.get(key) ?? null;
     },
     setItem(key: string, value: string): void {
       map.set(key, value);
@@ -179,7 +178,7 @@ function configureTestBed(): void {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
@@ -402,14 +401,19 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
+    const currentCartId = checkout.cartId();
+    if (!currentCartId) throw new Error('Expected cartId');
+    const currentQuote = checkout.quote();
+    if (!currentQuote) throw new Error('Expected quote');
+
     let pollCount = 0;
     server.use(
       http.get('*/api/v1/payment-intents/:intentId', () => {
         pollCount += 1;
         return HttpResponse.json({
           id: 'pi-pending-forever',
-          cartId: checkout.cartId()!,
-          quoteId: checkout.quote()!.id,
+          cartId: currentCartId,
+          quoteId: currentQuote.id,
           status: 'pending',
           isSimulation: true,
           amount: { amount: 100, currency: 'HUF' },
@@ -456,12 +460,17 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
+    const currentCartId = checkout.cartId();
+    if (!currentCartId) throw new Error('Expected cartId');
+    const currentQuote = checkout.quote();
+    if (!currentQuote) throw new Error('Expected quote');
+
     server.use(
       http.get('*/api/v1/payment-intents/:intentId', () =>
         HttpResponse.json({
           id: 'pi-pending-ticks',
-          cartId: checkout.cartId()!,
-          quoteId: checkout.quote()!.id,
+          cartId: currentCartId,
+          quoteId: currentQuote.id,
           status: 'pending',
           isSimulation: true,
           amount: { amount: 100, currency: 'HUF' },
@@ -558,17 +567,16 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
 
     await fillContactDeliveryPayment(checkout, 'demo_cod');
 
-    let resolveOrder: ((value: Record<string, unknown>) => void) | null = null;
+    const resolverHolder: { resolve?: (value: Record<string, unknown>) => void } = {};
     server.use(
       http.post('*/api/v1/orders', () =>
         new Promise<Response>((resolve) => {
-          resolveOrder = (body) =>
-            resolve(
+          resolverHolder.resolve = (body) => { resolve(
               HttpResponse.json(body, {
                 status: 201,
                 headers: { 'content-type': 'application/json' },
               }),
-            );
+            ); };
         }),
       ),
     );
@@ -585,7 +593,8 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
     const second = submission.submitOrder();
     await Promise.resolve();
 
-    resolveOrder!({
+    if (!resolverHolder.resolve) throw new Error('Expected resolveOrder to be defined');
+    resolverHolder.resolve({
       id: 'order-only-one',
       orderNumber: 'DEMO-000001',
       createdAt: currentEnv.clock.now(),
@@ -696,12 +705,17 @@ describe('T23-AC04 unknown outcome retains identical order key and normalized re
 
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
+    const currentCartId = checkout.cartId();
+    if (!currentCartId) throw new Error('Expected cartId');
+    const currentQuote = checkout.quote();
+    if (!currentQuote) throw new Error('Expected quote');
+
     server.use(
       http.get('*/api/v1/payment-intents/:intentId', () =>
         HttpResponse.json({
           id: 'pi-pending-replay',
-          cartId: checkout.cartId()!,
-          quoteId: checkout.quote()!.id,
+          cartId: currentCartId,
+          quoteId: currentQuote.id,
           status: 'pending',
           isSimulation: true,
           amount: { amount: 100, currency: 'HUF' },
@@ -723,8 +737,9 @@ describe('T23-AC04 unknown outcome retains identical order key and normalized re
 
     const firstRecord = submission.readPersistedSafeOrder();
     expect(firstRecord).not.toBeNull();
-    const firstKey = firstRecord!.orderKey;
-    const firstBody = firstRecord!.body;
+    if (firstRecord === null) throw new Error('Expected firstRecord to not be null');
+    const firstKey = firstRecord.orderKey;
+    const firstBody = firstRecord.body;
 
     // The retry path must send the EXACT persisted key + body.
     // Capture the next POST /orders request to assert the wire
@@ -765,9 +780,10 @@ describe('T23-AC04 unknown outcome retains identical order key and normalized re
 
     const secondRecord = submission.readPersistedSafeOrder();
     expect(secondRecord).not.toBeNull();
-    expect(secondRecord!.orderKey).toBe(firstKey);
+    if (secondRecord === null) throw new Error('Expected secondRecord to not be null');
+    expect(secondRecord.orderKey).toBe(firstKey);
     // The normalized body must be byte-equal.
-    expect(secondRecord!.body).toEqual(firstBody);
+    expect(secondRecord.body).toEqual(firstBody);
   });
 
   it('reload recovery queries getOrder first when the receipt id is persisted', async () => {

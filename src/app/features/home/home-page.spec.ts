@@ -1,25 +1,25 @@
 /**
- * T14 — Home (Főoldal) acceptance suite.
+ * T14: Home (Főoldal) acceptance suite.
  *
  * The home page is the entry screen for the four commerce families.
  * It owns a dark hero (R02), three light shopping entry points, four
  * featured products rendered with the real `getProduct` SDK call, and
  * three "how the demo works" tiles that explain browsing / cart /
- * simulated order (AC04 — and nothing about tariffs, internet,
+ * simulated order (AC04: and nothing about tariffs, internet,
  * services, payments or bank cards).
  *
  * The vitest legacy-decorator transform cannot resolve `styleUrl`
  * CSS imports or read `input()` signal inputs from the transpiled
  * class body, so the suite mixes three strategies:
  *
- *   1. Source-pattern assertions — read the component source files
+ *   1. Source-pattern assertions: read the component source files
  *      from disk and verify the documented contract (CTAs, shortcuts,
  *      tokens, copy, structure) with regex. This is the convention
  *      the project already follows (see product-gallery.spec.ts).
- *   2. Standalone rendering — render the Hero and HowDemoWorks
+ *   2. Standalone rendering: render the Hero and HowDemoWorks
  *      components directly. They have inline styles and no signal
  *      inputs, so the JIT compiler resolves them in vitest.
- *   3. Orchestration via StubApi — instantiate HomePage's facade
+ *   3. Orchestration via StubApi: instantiate HomePage's facade
  *      behaviour with a stub `Api` that exposes the same
  *      `invoke(fn, params)` surface the production facade uses. We
  *      read the resulting signals to verify the request lifecycle
@@ -43,13 +43,12 @@ import { resolve as resolvePath } from 'node:path';
 
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import {
   Injectable,
   provideZonelessChangeDetection,
-  runInInjectionContext,
 } from '@angular/core';
 import {
   provideRouter,
@@ -75,14 +74,32 @@ import type { Variant } from '../../../app/api/generated/models/variant';
 import { Hero } from '../../../app/features/home/hero';
 import { HowDemoWorks } from '../../../app/features/home/how-demo-works';
 import { HomePage } from '../../../app/features/home/home-page';
-import { FeaturedProducts } from '../../../app/features/home/featured-products';
+
+function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
+  return (typeof value === 'function' || typeof value === 'object') && value !== null;
+}
+
+function getComponentStyles(comp: unknown): readonly string[] {
+  if (!isObjectOrFunction(comp)) {
+    return [];
+  }
+  const cmp = comp['ɵcmp'];
+  if (!isObjectOrFunction(cmp)) {
+    return [];
+  }
+  const styles = cmp['styles'];
+  if (Array.isArray(styles)) {
+    return styles.filter((s): s is string => typeof s === 'string');
+  }
+  return [];
+}
 
 const workspaceRoot = resolvePath(process.cwd());
 
 beforeAll(async () => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
   await TestBed.compileComponents();
@@ -93,7 +110,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Source files — read once for the source-pattern assertions. The
+// Source files: read once for the source-pattern assertions. The
 // components are owned by T14, so the suite reads them directly. Any
 // refactor that breaks a documented contract makes the regex fail.
 // ---------------------------------------------------------------------------
@@ -122,17 +139,9 @@ const featuredProductsSource = [
   try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
   catch { return ''; }
 }).join('\n');
-const howDemoWorksSource = [
-  'src/app/features/home/how-demo-works.ts',
-  'src/app/features/home/how-demo-works.html',
-  'src/app/features/home/how-demo-works.scss',
-].map((p) => {
-  try { return readFileSync(resolvePath(workspaceRoot, p), 'utf8'); }
-  catch { return ''; }
-}).join('\n');
 
 // ---------------------------------------------------------------------------
-// Stub Api — exposes the same surface the production home page uses
+// Stub Api: exposes the same surface the production home page uses
 // (`api.invoke(getConfig)`, `api.invoke(getProduct, { slug })`).
 // Captures every call and pushes the configured response / error
 // through a fresh Subject so the RxJS chain inside the page observes
@@ -146,6 +155,15 @@ interface GetProductParams {
 interface CapturedCall {
   readonly fn: unknown;
   readonly params: unknown;
+}
+
+function isGetProductParams(params: unknown): params is GetProductParams {
+  return (
+    typeof params === 'object' &&
+    params !== null &&
+    'slug' in params &&
+    typeof params.slug === 'string'
+  );
 }
 
 @Injectable({ providedIn: 'root' })
@@ -170,16 +188,16 @@ class StubApi {
 
   nextProductError: { slug: string; error: unknown } | null = null;
 
-  invoke<P, R>(fn: typeof getConfig, params?: P): Observable<R>;
-  invoke<P, R>(fn: typeof getProduct, params: P): Observable<R>;
-  invoke<P, R>(fn: unknown, params?: unknown): Observable<R> {
+  invoke(fn: typeof getConfig, params?: unknown): Observable<DemoConfig>;
+  invoke(fn: typeof getProduct, params: GetProductParams): Observable<Product>;
+  invoke(fn: unknown, params?: unknown): Observable<unknown> {
     this.calls.push({ fn, params });
 
     if (fn === getConfig) {
       const response = this.configResponse;
-      return new Observable<R>((subscriber) => {
+      return new Observable<DemoConfig>((subscriber) => {
         queueMicrotask(() => {
-          subscriber.next(response as unknown as R);
+          subscriber.next(response);
           subscriber.complete();
         });
         return () => undefined;
@@ -187,21 +205,24 @@ class StubApi {
     }
 
     if (fn === getProduct) {
-      const slug = (params as GetProductParams).slug;
+      if (!isGetProductParams(params)) {
+        throw new Error('StubApi: expected GetProductParams.');
+      }
+      const slug = params.slug;
       const stream$ = new Subject<Product>();
       this.productBySlug.set(slug, stream$);
       const errorPlan = this.nextProductError;
       this.nextProductError = null;
-      return new Observable<R>((subscriber) => {
+      return new Observable<Product>((subscriber) => {
         const sub = stream$.subscribe({
-          next: (p) => subscriber.next(p as unknown as R),
-          error: (err) => subscriber.error(err),
-          complete: () => subscriber.complete(),
+          next: (p) => { subscriber.next(p); },
+          error: (err: unknown) => { subscriber.error(err); },
+          complete: () => { subscriber.complete(); },
         });
         if (errorPlan !== null && errorPlan.slug === slug) {
-          queueMicrotask(() => subscriber.error(errorPlan.error));
+          queueMicrotask(() => { subscriber.error(errorPlan.error); });
         }
-        return () => sub.unsubscribe();
+        return () => { sub.unsubscribe(); };
       });
     }
 
@@ -257,7 +278,7 @@ function variantFor(
   price: number,
 ): Variant {
   return {
-    id: `${slug}-${storageGb}`,
+    id: `${slug}-${String(storageGb)}`,
     colorCode: 'graphite',
     colorName: 'Grafit',
     swatchHex: '#343B43',
@@ -307,7 +328,7 @@ function productFixtures(): Map<string, Product> {
 }
 
 // ---------------------------------------------------------------------------
-// AC01 — Brand-consistent composition, live Hungarian copy, no raster
+// AC01: Brand-consistent composition, live Hungarian copy, no raster
 // CTA / operator name in functional UI.
 // ---------------------------------------------------------------------------
 
@@ -322,12 +343,11 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
-    const css = (Hero as unknown as { ɵcmp: { styles: readonly string[] } })
-      .ɵcmp.styles.join(' ');
-    const hasDark = css.indexOf('color-shell-dark') >= 0;
-    const hasAlt = css.indexOf('mi-bolt-color-surface-dark') >= 0;
+    const css = getComponentStyles(Hero).join(' ');
+    const hasDark = css.includes('color-shell-dark');
+    const hasAlt = css.includes('mi-bolt-color-surface-dark');
     expect(hasDark || hasAlt).toBe(true);
-    expect(css.indexOf('color-brand-accent') >= 0).toBe(true);
+    expect(css.includes('color-brand-accent')).toBe(true);
   });
 
   it('hero copy is live Hungarian text and contains no raster CTA image', async () => {
@@ -340,18 +360,19 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
-    const root = f.nativeElement as HTMLElement;
-    const heading = root.querySelector('h1');
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const heading = raw.querySelector('h1');
     expect(heading).not.toBeNull();
-    const headingText = heading && heading.textContent ? heading.textContent : '';
+    const headingText = heading?.textContent ?? '';
     expect(headingText.length).toBeGreaterThan(4);
     expect(headingText).not.toMatch(/[<>]/);
 
-    const ctaLink = root.querySelector(
+    const ctaLink = raw.querySelector(
       'a[data-testid="hero-cta"]',
-    ) as HTMLAnchorElement | null;
+    );
     expect(ctaLink).not.toBeNull();
-    const ctaText = ctaLink && ctaLink.textContent ? ctaLink.textContent.trim() : '';
+    const ctaText = (ctaLink?.textContent ?? '').trim();
     expect(ctaText.length).toBeGreaterThan(2);
     const ctaImage = ctaLink ? ctaLink.querySelector('img') : null;
     expect(ctaImage).toBeNull();
@@ -374,7 +395,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
 });
 
 // ---------------------------------------------------------------------------
-// AC02 — Hero CTA opens the catalogue; category shortcuts set valid
+// AC02: Hero CTA opens the catalogue; category shortcuts set valid
 // 5G / inStock filters; featured "Részletek" opens the correct slug.
 // ---------------------------------------------------------------------------
 
@@ -389,10 +410,11 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
-    const root = f.nativeElement as HTMLElement;
-    const cta = root.querySelector(
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const cta = raw.querySelector(
       'a[data-testid="hero-cta"]',
-    ) as HTMLAnchorElement | null;
+    );
     expect(cta).not.toBeNull();
     expect(cta ? cta.getAttribute('href') : '').toBe('/telefonok');
   });
@@ -407,10 +429,11 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
-    const root = f.nativeElement as HTMLElement;
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const shortcuts = Array.from(
-      root.querySelectorAll('[data-testid^="shortcut-"]'),
-    ) as HTMLAnchorElement[];
+      raw.querySelectorAll('[data-testid^="shortcut-"]'),
+    );
     expect(shortcuts.length).toBeGreaterThanOrEqual(1);
 
     // The routerLink directive URL-encodes the rendered href
@@ -423,11 +446,11 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
       const url =
         s.getAttribute('routerLink') ?? s.getAttribute('href') ?? '';
       const decoded = decodeURIComponent(url);
-      if (decoded.indexOf('is5g=true') >= 0 && decoded.indexOf('inStock=true') >= 0) {
+      if (decoded.includes('is5g=true') && decoded.includes('inStock=true')) {
         hasBoth = true;
       }
-      if (decoded.indexOf('is5g=true') >= 0) has5g = true;
-      if (decoded.indexOf('inStock=true') >= 0) hasInStock = true;
+      if (decoded.includes('is5g=true')) has5g = true;
+      if (decoded.includes('inStock=true')) hasInStock = true;
     });
     expect(hasBoth).toBe(true);
     expect(has5g).toBe(true);
@@ -450,7 +473,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC03 — Four featured products from the SDK; loading/error show no
+// AC03: Four featured products from the SDK; loading/error show no
 // made-up prices; the actual variant price is rendered when the call
 // succeeds.
 // ---------------------------------------------------------------------------
@@ -486,9 +509,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
 
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
-    const instance = fixture.componentInstance as unknown as {
-      slots: () => readonly unknown[];
-    };
+    const instance = fixture.componentInstance;
     // Wait for getConfig microtask to fire and loadOneFeatured to issue
     // the four getProduct calls.
     for (let i = 0; i < 30; i += 1) {
@@ -513,10 +534,9 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     const slots = instance.slots();
     expect(slots.length).toBe(FEATURED_SLUGS.length);
     for (const slot of slots) {
-      const s = slot as { status: string; product: Product | null };
-      expect(s.status).toBe('success');
-      expect(s.product).not.toBeNull();
-      expect(s.product ? s.product.slug : '').not.toBe('');
+      expect(slot.status).toBe('success');
+      expect(slot.product).not.toBeNull();
+      expect(slot.product ? slot.product.slug : '').not.toBe('');
     }
   });
 
@@ -529,7 +549,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     expect(featuredProductsSource).toMatch(/@default\s*\{/);
     // The loading block (the @default branch) sits AFTER the success
     // branch. The block between @case ('success') and @default must not
-    // contain a price element — the skeleton replaces it.
+    // contain a price element: the skeleton replaces it.
     const successIdx = featuredProductsSource.indexOf("@case ('success')");
     const defaultIdx = featuredProductsSource.indexOf('@default');
     expect(successIdx).toBeGreaterThan(-1);
@@ -575,22 +595,19 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     fixture.detectChanges();
-    const instance = fixture.componentInstance as unknown as {
-      slots: () => readonly unknown[];
-    };
+    const instance = fixture.componentInstance;
     const slots = instance.slots();
     expect(slots.length).toBe(FEATURED_SLUGS.length);
     for (const slot of slots) {
-      const s = slot as { status: string; product: Product | null; error: string | null };
-      expect(s.status).toBe('error');
-      expect(s.product).toBeNull();
-      expect(s.error).not.toBeNull();
+      expect(slot.status).toBe('error');
+      expect(slot.product).toBeNull();
+      expect(slot.error).not.toBeNull();
     }
   });
 });
 
 // ---------------------------------------------------------------------------
-// AC04 — Three explanatory tiles (böngészés, kosár, szimulált rendelés)
+// AC04: Three explanatory tiles (böngészés, kosár, szimulált rendelés)
 // describe the demo flow. No tariffs / internet / services / payments /
 // bankcards.
 // ---------------------------------------------------------------------------
@@ -603,13 +620,14 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
     await TestBed.compileComponents();
     const f = TestBed.createComponent(HowDemoWorks);
     f.detectChanges();
-    const root = f.nativeElement as HTMLElement;
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const tiles = Array.from(
-      root.querySelectorAll('[data-testid^="how-tile-"]'),
+      raw.querySelectorAll('[data-testid^="how-tile-"]'),
     );
     expect(tiles.length).toBe(3);
 
-    const text = (root.querySelector('[data-testid="how-demo-works"]') as HTMLElement | null)
+    const text = (raw.querySelector('[data-testid="how-demo-works"]'))
       ?.textContent ?? '';
     expect(text.length).toBeGreaterThan(0);
     expect(text).toMatch(/Böngészés/);
@@ -624,9 +642,10 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
     await TestBed.compileComponents();
     const f = TestBed.createComponent(HowDemoWorks);
     f.detectChanges();
-    const root = f.nativeElement as HTMLElement;
-    const section = root.querySelector('[data-testid="how-demo-works"]') as HTMLElement | null;
-    const text = section ? section.textContent ?? '' : '';
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const section = raw.querySelector('[data-testid="how-demo-works"]');
+    const text = section?.textContent ?? '';
     const lower = text.toLowerCase();
     expect(lower).not.toMatch(/díjas?csomag/);
     expect(lower).not.toMatch(/internet/);
@@ -638,7 +657,7 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
 });
 
 // ---------------------------------------------------------------------------
-// AC05 — Mobile content order: heading, message, CTA, illustration,
+// AC05: Mobile content order: heading, message, CTA, illustration,
 // shortcuts, product cards. No hero text clipped at 320 px.
 // ---------------------------------------------------------------------------
 
@@ -653,13 +672,14 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
     f.detectChanges();
-    const root = f.nativeElement as HTMLElement;
-    const heroSection = root.querySelector(
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const heroSection = raw.querySelector(
       '[data-testid="hero-section"]',
-    ) as HTMLElement | null;
+    );
     expect(heroSection).not.toBeNull();
     const inner = heroSection
-      ? heroSection.querySelector('.hero__inner') as HTMLElement | null
+      ? heroSection.querySelector('.hero__inner')
       : null;
     expect(inner).not.toBeNull();
     const kids = inner ? Array.from(inner.children) : [];
@@ -672,7 +692,7 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     ];
     expectedOrder.forEach((id, idx) => {
       const found = kids.findIndex(
-        (k) => (k as HTMLElement).getAttribute('data-testid') === id,
+        (k) => k.getAttribute('data-testid') === id,
       );
       expect(found).toBe(idx);
     });
@@ -696,16 +716,11 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     });
     await TestBed.compileComponents();
     TestBed.createComponent(Hero).detectChanges();
-    const css = (Hero as unknown as { ɵcmp: { styles: readonly string[] } })
-      .ɵcmp.styles.join(' ');
+    const css = getComponentStyles(Hero).join(' ');
     const hasWrap =
-      css.indexOf('overflow-wrap') >= 0 ||
-      css.indexOf('word-break') >= 0 ||
-      css.indexOf('hyphens') >= 0;
+      css.includes('overflow-wrap') ||
+      css.includes('word-break') ||
+      css.includes('hyphens');
     expect(hasWrap).toBe(true);
   });
 });
-
-// Silence "unused import" warnings for symbols kept available for future
-// expansion of the suite (e.g. extending the orchestration harness).
-void runInInjectionContext;

@@ -72,7 +72,7 @@ export class HeaderNav {
     const n = this.cartFacade.itemCount();
     if (n === 0) return 'Kosár megnyitása, jelenleg üres';
     if (n === 1) return 'Kosár megnyitása, 1 termék';
-    return `Kosár megnyitása, ${n} termék`;
+    return `Kosár megnyitása, ${String(n)} termék`;
   });
 
   toggleDrawer(): void {

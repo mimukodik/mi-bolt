@@ -53,7 +53,6 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
-  email,
   form,
   FormField,
   maxLength as maxLengthRule,
@@ -118,7 +117,7 @@ export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>(
   'CONTACT_DRAFT_SAVER',
   {
     providedIn: 'root',
-    factory: () => async () => ({ ok: true }),
+    factory: () => () => Promise.resolve({ ok: true }),
   },
 );
 
@@ -210,7 +209,7 @@ export class ContactStep {
       message: 'A teljes név legfeljebb 100 karakter lehet.',
     });
     validate(path.fullName, ({ value }) => {
-      const v = (value() ?? '').trim();
+      const v = value().trim();
       if (v.length === 0) return null;
       if (v.length < CONTACT_NAME_MIN) {
         return {
@@ -228,7 +227,7 @@ export class ContactStep {
       message: 'Az e-mail cím legfeljebb 254 karakter lehet.',
     });
     validate(path.email, ({ value }) => {
-      const v = (value() ?? '').trim();
+      const v = value().trim();
       if (v.length === 0) return null;
       if (!EMAIL_RFC5322_SUBSET.test(v)) {
         return {
@@ -243,7 +242,7 @@ export class ContactStep {
       message: 'A telefonszám kötelező.',
     });
     validate(path.phone, ({ value }) => {
-      const v = (value() ?? '').trim();
+      const v = value().trim();
       if (v.length === 0) return null;
       const normalized = normalizeContact({
           fullName: '',
@@ -270,7 +269,6 @@ export class ContactStep {
       return null;
     });
 
-    void email;
   });
 
   // ---- Field state helpers ------------------------------------------
@@ -326,7 +324,6 @@ export class ContactStep {
       const errors = field.errors();
       if (errors.length === 0) return;
       const first = errors[0];
-      if (first === undefined) return;
       const pointer =
         (first as ValidationError.WithFieldTree & { pointer?: string })
           .pointer ?? `/${key}`;
@@ -414,8 +411,9 @@ export class ContactStep {
 
   focusFirstInvalidField(): void {
     queueMicrotask(() => {
-      const first = this.invalidFields()[0];
-      if (first === undefined) return;
+      const invalid = this.invalidFields();
+      if (invalid.length === 0) return;
+      const first = invalid[0];
       const target = document.getElementById(`contact-${first.field}-input`);
       target?.focus();
     });
@@ -463,7 +461,7 @@ export class ContactStep {
       out.push({
         kind: 'server',
         message: saveResult.message ?? 'A mentés nem sikerült.',
-        fieldTree: rootField as unknown as ReadonlyFieldTree<unknown>,
+        fieldTree: rootField,
       });
     }
     return out;

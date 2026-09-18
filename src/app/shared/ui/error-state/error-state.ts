@@ -28,5 +28,5 @@ export class ErrorState {
   readonly pending = input(false);
   readonly preserving = input(false);
 
-  readonly retryRequested = output<void>();
+  readonly retryRequested = output();
 }

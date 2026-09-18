@@ -311,7 +311,7 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     const storageGb: number[] = [];
     for (const raw of storageRaw) {
       const parsed = parseIntegerParam(raw);
-      if (parsed === 'invalid' || !ALLOWED_STORAGE_GB.includes(parsed as 128 | 256 | 512)) {
+      if (parsed === 'invalid' || !ALLOWED_STORAGE_GB.includes(parsed)) {
         return {
           ok: false,
           error: {
@@ -466,7 +466,7 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
         },
       };
     }
-    filter.pageSize = parsed as 12 | 24;
+    filter.pageSize = parsed;
   }
 
   return { ok: true, value: filter };

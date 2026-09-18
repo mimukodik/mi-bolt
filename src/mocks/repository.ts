@@ -267,7 +267,7 @@ export class Repository {
       const lookup = this.variantsById.get(line.variantId);
       if (!lookup) continue;
       const variant = lookup.variant;
-      const firstImage = variant.images[0];
+      const firstImage = variant.images.at(0);
       if (!firstImage) continue;
       items.push({
         id: line.id,

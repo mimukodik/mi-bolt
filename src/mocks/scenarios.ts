@@ -59,7 +59,7 @@ export const DEFAULT_SCENARIO: ScenarioDescriptor = Object.freeze({
  * runtime extension is needed, by going through `resolveScenario`
  * with a new `name`) rather than mutating the exported object.
  */
-export const BUILT_IN_SCENARIOS: Readonly<Record<ScenarioName, ScenarioDescriptor>> =
+export const BUILT_IN_SCENARIOS: Readonly<Record<ScenarioName, ScenarioDescriptor | undefined>> =
   Object.freeze({
     default: DEFAULT_SCENARIO,
     'happy-path': Object.freeze({
@@ -174,9 +174,9 @@ export function createRealIds(): Ids {
   return {
     uuid(): string {
       const candidate =
-        (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+        typeof globalThis.crypto.randomUUID === 'function'
           ? globalThis.crypto.randomUUID()
-          : fallbackUuid());
+          : fallbackUuid();
       return assertIdPattern(candidate);
     },
   };

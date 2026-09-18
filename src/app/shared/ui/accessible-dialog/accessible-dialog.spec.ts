@@ -35,12 +35,40 @@ class HostComponent {
   }
 }
 
+function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected HTMLElement');
+  }
+  return raw;
+}
+
+interface ComponentWithStyles {
+  ɵcmp: {
+    styles: readonly string[];
+  };
+}
+
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
+    return false;
+  }
+  if (val === null || !('ɵcmp' in val)) {
+    return false;
+  }
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
+}
+
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => { el.remove(); });
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.detectChanges();
-  const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="dialog-trigger"]');
+  const trigger = getNativeElement(fixture).querySelector<HTMLButtonElement>('[data-testid="dialog-trigger"]');
   fixture.componentInstance.trigger.set(trigger);
   return { fixture, host: fixture.componentInstance };
 }
@@ -69,7 +97,10 @@ describe('AccessibleDialog primitive', () => {
   });
 
   it('declares a 44-CSS-px close target via the size-control token (R21)', () => {
-    const css = (AccessibleDialog as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+    if (!hasStyles(AccessibleDialog)) {
+      throw new Error('Expected AccessibleDialog to have styles');
+    }
+    const css = AccessibleDialog.ɵcmp.styles.join('\n');
     expect(css).toMatch(/size-control/);
     expect(css).toMatch(/min-(width|height)/);
   });
@@ -78,8 +109,11 @@ describe('AccessibleDialog primitive', () => {
     const { fixture, host } = setup();
     host.opened.set(true);
     fixture.detectChanges();
-    const close: HTMLButtonElement = document.body.querySelector('[data-testid="dialog-close"]') as HTMLButtonElement;
+    const close = document.body.querySelector<HTMLButtonElement>('[data-testid="dialog-close"]');
     expect(close).not.toBeNull();
+    if (!close) {
+      throw new Error('Expected close button');
+    }
     close.click();
     fixture.detectChanges();
     expect(document.body.querySelector('[data-testid="dialog-body"]')).toBeNull();

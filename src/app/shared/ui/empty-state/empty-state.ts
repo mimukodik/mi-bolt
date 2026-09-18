@@ -25,5 +25,5 @@ export class EmptyState {
   readonly actionLabel = input<string | null>(null);
   readonly actionVariant = input<'primary' | 'secondary'>('secondary');
 
-  readonly actionRequested = output<void>();
+  readonly actionRequested = output();
 }

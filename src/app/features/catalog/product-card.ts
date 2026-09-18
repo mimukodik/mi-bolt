@@ -48,18 +48,6 @@ export class ProductCard {
   /** First image of the variant's gallery. */
   readonly image = computed<ImageLike>(() => {
     const first = this.variant().images[0];
-    if (!first) {
-      // ProductImage renders its own named fallback when the URL
-      // resolves to 404, so an empty gallery is safe — we feed it an
-      // image that points at the public placeholder and re-uses the
-      // product name as alt text. R11 forbids inventing another device.
-      return {
-        src: '/assets/placeholder.svg',
-        alt: `${this.product().name}, illusztráció`,
-        width: 320,
-        height: 240,
-      };
-    }
     return {
       src: first.src,
       alt: first.alt || `${this.product().name} illusztráció`,
@@ -84,6 +72,6 @@ export class ProductCard {
   readonly ariaLabel = computed(() => {
     const p = this.product();
     const v = this.variant();
-    return `${p.name}, ${v.colorName}, ${v.storageGb} GB — részletek megnyitása`;
+    return `${p.name}, ${v.colorName}, ${String(v.storageGb)} GB - részletek megnyitása`;
   });
 }

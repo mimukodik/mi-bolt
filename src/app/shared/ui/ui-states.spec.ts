@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import {
@@ -83,13 +83,15 @@ class LoadingHost {
   imports: [EmptyState],
   template: `
     <app-empty-state
-      [title]="'Nincs találat'"
+      [title]="title()"
       [message]="'Próbáld meg kevesebb szűrővel.'"
       [actionLabel]="'Szűrők törlése'"
     ></app-empty-state>
   `,
 })
-class EmptyHost {}
+class EmptyHost {
+  readonly title = signal('Nincs találat');
+}
 
 @Component({
   imports: [FormFieldMessage],
@@ -162,6 +164,34 @@ class StatusHost {
   readonly persistent = signal(false);
 }
 
+function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected HTMLElement');
+  }
+  return raw;
+}
+
+interface ComponentWithStyles {
+  ɵcmp: {
+    styles: readonly string[];
+  };
+}
+
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
+    return false;
+  }
+  if (val === null || !('ɵcmp' in val)) {
+    return false;
+  }
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
+}
+
 /**
  * Cross-cutting state-contract suite. Each primitive MUST implement the
  * "Required State Contract" from the mi-bolt-design skill where its role
@@ -169,10 +199,10 @@ class StatusHost {
  * invent states, but every state it does implement must have an
  * observable, asserted outcome in the DOM.
  */
-describe('MiBolt primitives — Required State Contract', () => {
+describe('MiBolt primitives: Required State Contract', () => {
   beforeEach(() => {
     // Clear any CDK overlays left over from a previous spec file.
-    document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => { el.remove(); });
   });
 
   describe('Button', () => {
@@ -180,21 +210,30 @@ describe('MiBolt primitives — Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [ButtonHost] });
       const f = TestBed.createComponent(ButtonHost);
       f.detectChanges();
-      const btn: HTMLButtonElement = f.nativeElement.querySelector('button');
+      const btn = getNativeElement(f).querySelector<HTMLButtonElement>('button');
+      if (!btn) {
+        throw new Error('Expected button');
+      }
       expect(btn.disabled).toBe(false);
 
       f.componentInstance.disabled.set(true);
       f.detectChanges();
-      expect((f.nativeElement.querySelector('button') as HTMLButtonElement).disabled).toBe(true);
+      expect(getNativeElement(f).querySelector<HTMLButtonElement>('button')?.disabled).toBe(true);
 
       f.componentInstance.disabled.set(false);
       f.componentInstance.loading.set(true);
       f.detectChanges();
-      const lb: HTMLButtonElement = f.nativeElement.querySelector('button') as HTMLButtonElement;
+      const lb = getNativeElement(f).querySelector<HTMLButtonElement>('button');
+      if (!lb) {
+        throw new Error('Expected button');
+      }
       expect(lb.getAttribute('aria-busy')).toBe('true');
       expect(lb.textContent).toContain('Betöltés…');
 
-      const css = (Button as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+      if (!hasStyles(Button)) {
+        throw new Error('Expected Button to have styles');
+      }
+      const css = Button.ɵcmp.styles.join('\n');
       expect(css).toContain(':hover');
       expect(css).toContain(':focus-visible');
       expect(css).toContain(':active');
@@ -208,20 +247,20 @@ describe('MiBolt primitives — Required State Contract', () => {
       const f = TestBed.createComponent(PriceHost);
       f.componentInstance.status.set('success');
       f.detectChanges();
-      expect(f.nativeElement.querySelector('[data-testid="price-amount"]')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="price-amount"]')).not.toBeNull();
 
       f.componentInstance.status.set('loading');
       f.detectChanges();
-      expect(f.nativeElement.querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
 
       f.componentInstance.status.set('error');
       f.detectChanges();
-      expect(f.nativeElement.querySelector('[data-testid="price-error"]')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="price-error"]')).not.toBeNull();
 
       f.componentInstance.money.set({ amount: 0, currency: 'HUF' });
       f.componentInstance.status.set('success');
       f.detectChanges();
-      expect(f.nativeElement.querySelector('[data-testid="price-amount"]')).toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="price-amount"]')).toBeNull();
     });
   });
 
@@ -230,11 +269,14 @@ describe('MiBolt primitives — Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [ImageHost] });
       const f = TestBed.createComponent(ImageHost);
       f.detectChanges();
-      const photo: HTMLImageElement = f.nativeElement.querySelector('[data-testid="image-photo"]');
+      const photo = getNativeElement(f).querySelector<HTMLImageElement>('[data-testid="image-photo"]');
       expect(photo).not.toBeNull();
+      if (!photo) {
+        throw new Error('Expected photo');
+      }
       photo.dispatchEvent(new Event('error'));
       f.detectChanges();
-      expect(f.nativeElement.querySelector('[data-testid="image-fallback"]')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="image-fallback"]')).not.toBeNull();
       expect(f.componentInstance.failedCount()).toBe(1);
     });
   });
@@ -244,13 +286,16 @@ describe('MiBolt primitives — Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [ErrorHost] });
       const f = TestBed.createComponent(ErrorHost);
       f.detectChanges();
-      const root: HTMLElement = f.nativeElement.querySelector('.root');
-      expect(root.getAttribute('role')).toBe('alert');
-      expect(f.nativeElement.querySelector('[data-testid="error-hint"]')).not.toBeNull();
+      const root = getNativeElement(f).querySelector<HTMLElement>('.root');
+      expect(root?.getAttribute('role')).toBe('alert');
+      expect(getNativeElement(f).querySelector('[data-testid="error-hint"]')).not.toBeNull();
 
       f.componentInstance.pending.set(true);
       f.detectChanges();
-      const btn: HTMLButtonElement = f.nativeElement.querySelector('button') as HTMLButtonElement;
+      const btn = getNativeElement(f).querySelector<HTMLButtonElement>('button');
+      if (!btn) {
+        throw new Error('Expected button');
+      }
       expect(btn.disabled).toBe(true);
       expect(btn.getAttribute('aria-busy')).toBe('true');
     });
@@ -262,12 +307,12 @@ describe('MiBolt primitives — Required State Contract', () => {
       const f = TestBed.createComponent(LoadingHost);
       f.componentInstance.variant.set('lines');
       f.detectChanges();
-      expect(f.nativeElement.querySelectorAll('.line').length).toBe(3);
+      expect(getNativeElement(f).querySelectorAll('.line').length).toBe(3);
 
       f.componentInstance.variant.set('card');
       f.detectChanges();
-      expect(f.nativeElement.querySelector('.block--image')).not.toBeNull();
-      expect(f.nativeElement.querySelector('.block--price')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('.block--image')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('.block--price')).not.toBeNull();
     });
   });
 
@@ -276,8 +321,8 @@ describe('MiBolt primitives — Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [EmptyHost] });
       const f = TestBed.createComponent(EmptyHost);
       f.detectChanges();
-      expect(f.nativeElement.querySelector('.title')?.textContent).toContain('Nincs találat');
-      expect(f.nativeElement.querySelector('button')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('.title')?.textContent).toContain('Nincs találat');
+      expect(getNativeElement(f).querySelector('button')).not.toBeNull();
     });
   });
 
@@ -286,14 +331,14 @@ describe('MiBolt primitives — Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [FormHost] });
       const f = TestBed.createComponent(FormHost);
       f.detectChanges();
-      expect(f.nativeElement.querySelector('[data-testid="form-field-message"]')).toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="form-field-message"]')).toBeNull();
 
       f.componentInstance.errors.set([{ code: 'required', message: 'Kötelező', pointer: '/a' }]);
       f.componentInstance.touched.set(true);
       f.detectChanges();
-      const msg: HTMLElement | null = f.nativeElement.querySelector('[data-testid="form-field-message"]');
+      const msg = getNativeElement(f).querySelector<HTMLElement>('[data-testid="form-field-message"]');
       expect(msg).not.toBeNull();
-      expect(msg!.getAttribute('data-pointer')).toBe('/a');
+      expect(msg?.getAttribute('data-pointer')).toBe('/a');
     });
   });
 
@@ -301,24 +346,32 @@ describe('MiBolt primitives — Required State Contract', () => {
     it('covers default, disabled, invalid; declares hover/focus/disabled in styles', () => {
       TestBed.configureTestingModule({ imports: [QuantityHost] });
       const f = TestBed.createComponent(QuantityHost);
-      expect(f.nativeElement.querySelector('[data-testid="quantity-decrement"]')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="quantity-decrement"]')).not.toBeNull();
 
       f.componentInstance.disabled.set(true);
       f.detectChanges();
-      expect(
-        (f.nativeElement.querySelector('[data-testid="quantity-decrement"]') as HTMLButtonElement).disabled,
-      ).toBe(true);
+      const dec = getNativeElement(f).querySelector<HTMLButtonElement>('[data-testid="quantity-decrement"]');
+      if (!dec) {
+        throw new Error('Expected decrement button');
+      }
+      expect(dec.disabled).toBe(true);
 
       f.componentInstance.disabled.set(false);
       f.componentInstance.value.set(1);
       f.detectChanges();
-      const input: HTMLInputElement = f.nativeElement.querySelector('[data-testid="quantity-input"]');
+      const input = getNativeElement(f).querySelector<HTMLInputElement>('[data-testid="quantity-input"]');
+      if (!input) {
+        throw new Error('Expected quantity input');
+      }
       input.value = '99';
       input.dispatchEvent(new Event('input'));
       f.detectChanges();
-      expect(f.nativeElement.querySelector('[data-testid="quantity-message"]')).not.toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="quantity-message"]')).not.toBeNull();
 
-      const css = (QuantityControl as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+      if (!hasStyles(QuantityControl)) {
+        throw new Error('Expected QuantityControl to have styles');
+      }
+      const css = QuantityControl.ɵcmp.styles.join('\n');
       expect(css).toContain(':hover');
       expect(css).toContain(':focus-visible');
       expect(css).toContain(':disabled');
@@ -334,7 +387,7 @@ describe('MiBolt primitives — Required State Contract', () => {
       const host = f.componentInstance;
       host.label.set('Figyelem');
 
-      expect(f.nativeElement.querySelector('[data-testid="dialog-body"]')).toBeNull();
+      expect(getNativeElement(f).querySelector('[data-testid="dialog-body"]')).toBeNull();
 
       host.opened.set(true);
       f.detectChanges();
@@ -343,8 +396,9 @@ describe('MiBolt primitives — Required State Contract', () => {
       expect(panel?.getAttribute('aria-modal')).toBe('true');
       expect(panel?.getAttribute('aria-label')).toBe('Figyelem');
 
-      const close = document.body.querySelector('[data-testid="dialog-close"]') as HTMLButtonElement;
-      close.click();
+      const close = document.body.querySelector<HTMLButtonElement>('[data-testid="dialog-close"]');
+      expect(close).not.toBeNull();
+      close?.click();
       f.detectChanges();
       expect(document.body.querySelector('[data-testid="dialog-body"]')).toBeNull();
       expect(host.closedCount()).toBeGreaterThanOrEqual(1);
@@ -357,19 +411,19 @@ describe('MiBolt primitives — Required State Contract', () => {
       const f = TestBed.createComponent(StatusHost);
       f.detectChanges();
 
-      const root: HTMLElement = f.nativeElement.querySelector('.root');
-      expect(root.getAttribute('role')).toBe('status');
-      expect(root.getAttribute('aria-live')).toBe('polite');
+      const root = getNativeElement(f).querySelector<HTMLElement>('.root');
+      expect(root?.getAttribute('role')).toBe('status');
+      expect(root?.getAttribute('aria-live')).toBe('polite');
 
       f.componentInstance.severity.set('error');
       f.detectChanges();
-      const root2: HTMLElement = f.nativeElement.querySelector('.root');
-      expect(root2.getAttribute('role')).toBe('alert');
-      expect(root2.getAttribute('aria-live')).toBe('assertive');
+      const root2 = getNativeElement(f).querySelector<HTMLElement>('.root');
+      expect(root2?.getAttribute('role')).toBe('alert');
+      expect(root2?.getAttribute('aria-live')).toBe('assertive');
 
       f.componentInstance.persistent.set(true);
       f.detectChanges();
-      expect(f.nativeElement.querySelector('button')).toBeNull();
+      expect(getNativeElement(f).querySelector('button')).toBeNull();
     });
   });
 });

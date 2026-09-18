@@ -85,7 +85,7 @@ export function buildStorageFacet(
   for (const storageGb of FACET_STORAGE_GB) {
     result.push({
       value: String(storageGb),
-      label: `${storageGb} GB`,
+      label: `${String(storageGb)} GB`,
       count: counts.get(storageGb) ?? 0,
     });
   }
@@ -95,7 +95,7 @@ export function buildStorageFacet(
     if (FACET_STORAGE_GB.includes(value)) continue;
     result.push({
       value: String(value),
-      label: `${value} GB`,
+      label: `${String(value)} GB`,
       count,
     });
   }

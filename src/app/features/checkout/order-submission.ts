@@ -198,7 +198,7 @@ class LocalStorageBackedStore implements SafeOrderStorage {
 export class InMemoryStore implements SafeOrderStorage {
   private readonly map = new Map<string, string>();
   getItem(key: string): string | null {
-    return this.map.has(key) ? (this.map.get(key) as string) : null;
+    return this.map.get(key) ?? null;
   }
   setItem(key: string, value: string): void {
     this.map.set(key, value);
@@ -323,7 +323,7 @@ export class OrderSubmission {
     // constructor injection; vitest's esbuild pipeline strips that
     // metadata, so wire it manually (same pattern CartFacade uses).
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
-    this.destroyRef.onDestroy(() => this.cancelPolling());
+    this.destroyRef.onDestroy(() => { this.cancelPolling(); });
   }
 
   // -------------------------------------------------------------------------
@@ -562,13 +562,10 @@ export class OrderSubmission {
   usesSdkFunction(name: 'createPaymentIntent' | 'getPaymentIntent' | 'createOrder' | 'getOrder'): boolean {
     switch (name) {
       case 'createPaymentIntent':
-        return this.createPaymentIntent !== undefined;
       case 'getPaymentIntent':
-        return this.getPaymentIntent !== undefined;
       case 'createOrder':
-        return this.createOrder !== undefined;
       case 'getOrder':
-        return this.getOrder !== undefined;
+        return true;
     }
   }
 
@@ -820,7 +817,7 @@ export class OrderSubmission {
       outcome: { kind: 'idle' },
     });
     while (attempt <= PAYMENT_POLL_MAX_ATTEMPTS) {
-      if (signal.aborted) {
+      if (this.isAborted(signal)) {
         this.pollingIntentWritable.set(null);
         return { status: current.status, id: current.id, attempt, originalId };
       }
@@ -830,7 +827,7 @@ export class OrderSubmission {
       }
       // Wait one interval, but bail out immediately if aborted.
       await this.waitOneInterval(signal);
-      if (signal.aborted) {
+      if (this.isAborted(signal)) {
         this.pollingIntentWritable.set(null);
         return { status: current.status, id: current.id, attempt, originalId };
       }
@@ -859,6 +856,10 @@ export class OrderSubmission {
     }
     this.pollingIntentWritable.set(null);
     return { status: 'pending', id: current.id, attempt: PAYMENT_POLL_MAX_ATTEMPTS, originalId };
+  }
+
+  private isAborted(signal: AbortSignal): boolean {
+    return signal.aborted;
   }
 
   private waitOneInterval(signal: AbortSignal): Promise<void> {

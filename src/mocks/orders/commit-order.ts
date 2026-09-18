@@ -336,7 +336,7 @@ export class OrderDomain {
 
     // 4. Cart lookup
     const cart = this.repository.getCart(input.cartId);
-    if (!cart || cart.sessionId !== input.sessionId) {
+    if (cart?.sessionId !== input.sessionId) {
       return err(notFound('A kosár nem található.'));
     }
     if (this.quoteDomain.isExpired(cart)) {
@@ -487,13 +487,13 @@ export class OrderDomain {
         message: 'A demo feltételek verziója nem egyezik a szerver által elfogadottal.',
       });
     }
-    if (input.acceptedTerms !== true) {
+    if (!input.acceptedTerms) {
       fieldErrors.push({
         path: '/acceptedTerms',
         message: 'A demo feltételek elfogadása kötelező.',
       });
     }
-    if (input.acknowledgedSimulation !== true) {
+    if (!input.acknowledgedSimulation) {
       fieldErrors.push({
         path: '/acknowledgedSimulation',
         message: 'A szimuláció tudomásulvétele kötelező.',
@@ -561,7 +561,6 @@ function sumMoney(items: readonly Money[]): Money {
 /** Drops the internal sessionId before returning the receipt to a caller. */
 function stripSession(stored: { sessionId?: string } & Record<string, unknown>): OrderReceipt {
   const { sessionId: _sessionId, ...rest } = stored;
-  void _sessionId;
   return rest as unknown as OrderReceipt;
 }
 
@@ -597,7 +596,7 @@ function validateIdempotencyKey(key: string): OrderResult<string> {
       fieldErrors: [
         {
           path: '/Idempotency-Key',
-          message: `Az Idempotency-Key hossza ${IDEMPOTENCY_MIN} és ${IDEMPOTENCY_MAX} karakter közé eshet.`,
+          message: `Az Idempotency-Key hossza ${String(IDEMPOTENCY_MIN)} és ${String(IDEMPOTENCY_MAX)} karakter közé eshet.`,
         },
       ],
     });
@@ -631,7 +630,7 @@ export function quoteExpired(): OrderProblem {
 
 export function outOfStock(shortages: readonly { variantId: string; available: number; requested: number }[]): OrderProblem {
   const detail = shortages.length === 1
-    ? `A(z) ${shortages[0]!.variantId} változatból már csak ${shortages[0]!.available} darab elérhető.`
+    ? `A(z) ${shortages[0].variantId} változatból már csak ${String(shortages[0].available)} darab elérhető.`
     : 'Egy vagy több változatból nincs elegendő készlet.';
   return {
     status: 409,
@@ -639,7 +638,7 @@ export function outOfStock(shortages: readonly { variantId: string; available: n
     detail,
     fieldErrors: shortages.map((s) => ({
       path: `/items/${s.variantId}`,
-      message: `A kért ${s.requested} darab helyett csak ${s.available} áll rendelkezésre.`,
+      message: `A kért ${String(s.requested)} darab helyett csak ${String(s.available)} áll rendelkezésre.`,
     })),
   };
 }

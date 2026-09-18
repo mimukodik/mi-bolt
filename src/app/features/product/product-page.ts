@@ -8,8 +8,18 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+function paramMapToSearchParams(params: ParamMap): URLSearchParams {
+  const search = new URLSearchParams();
+  for (const key of params.keys) {
+    for (const v of params.getAll(key)) {
+      search.append(key, v);
+    }
+  }
+  return search;
+}
 
 import { ProductFacade } from './product.facade';
 import { ProductGallery } from './product-gallery';
@@ -141,7 +151,7 @@ export class ProductPage {
   readonly selectedStorageLabel = computed<string | null>(() => {
     const gb = this.selectedStorageGb();
     if (gb === null) return null;
-    return `${gb} GB`;
+    return `${String(gb)} GB`;
   });
 
   readonly devicePrice = computed<Money | null>(() => {
@@ -183,11 +193,12 @@ export class ProductPage {
     // prevents a no-op re-fire when the same slug + variant query is
     // emitted twice.
     effect(() => {
-      const slug = this.slug() || this.route.snapshot.paramMap.get('slug') || '';
+      const inputSlug = this.slug();
+      const slug = (inputSlug !== '' ? inputSlug : this.route.snapshot.paramMap.get('slug')) ?? '';
       if (slug.length === 0) return;
       if (slug === this.currentSlug()) return;
       this.currentSlug.set(slug);
-      const params = new URLSearchParams(this.route.snapshot.queryParamMap.toString());
+      const params = paramMapToSearchParams(this.route.snapshot.queryParamMap);
       this.facade.load(slug, params);
     });
 
@@ -200,9 +211,10 @@ export class ProductPage {
     // product page — re-parse the *current* params rather than the
     // snapshot captured at mount time.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((queryParamMap) => {
-      const slug = this.slug() || this.route.snapshot.paramMap.get('slug') || '';
+      const inputSlug = this.slug();
+      const slug = (inputSlug !== '' ? inputSlug : this.route.snapshot.paramMap.get('slug')) ?? '';
       if (slug.length === 0) return;
-      const params = new URLSearchParams(queryParamMap.toString());
+      const params = paramMapToSearchParams(queryParamMap);
       this.facade.load(slug, params);
     });
 
@@ -231,17 +243,16 @@ export class ProductPage {
 
   onImageChange(index: number): void {
     const list = this.gallery();
+    if (index < 0 || index >= list.length) return;
     const image = list[index];
-    if (image === undefined) return;
     this.localImageIndex.set(index);
-    this.facade.selectImage(image.id ?? '');
+    this.facade.selectImage(image.id);
   }
 
-  onZoomChange(open: boolean): void {
+  onZoomChange(_open: boolean): void {
     // No-op for now. The AccessibleDialog primitive handles focus,
     // backdrop and restoration; we accept the event so consumers can
     // gate further UI on zoom state if they need to.
-    void open;
   }
 
   onQuantityChanged(value: number): void {
@@ -264,8 +275,10 @@ export class ProductPage {
     // / `cartGone` / `cartExpired` signals — it does not throw on
     // HTTP errors — so a fire-and-forget `addItem()` is the right
     // call shape here.
+    const variantId = v.selectedVariant.id;
+    const quantity = v.quantity;
     void this.cartFacade.ensureCart().then(() => {
-      void this.cartFacade.addItem(v.selectedVariant!.id, v.quantity);
+      void this.cartFacade.addItem(variantId, quantity);
     });
   }
 

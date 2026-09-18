@@ -66,7 +66,7 @@ export class PaymentMethodSelector {
 
   readonly options: readonly PaymentOption[] = PAYMENT_OPTIONS;
 
-  readonly canConfirm = computed<boolean>(() => this.value() !== null && this.ready() && !this.pending());
+  readonly canConfirm = computed<boolean>(() => this.ready() && !this.pending());
 
   readonly confirmLabel = computed<string>(() => 'Tovább az ellenőrzéshez');
 

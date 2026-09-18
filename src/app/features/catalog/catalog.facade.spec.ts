@@ -1,5 +1,5 @@
 /**
- * T12 — catalog URL-state and signal facade.
+ * T12: catalog URL-state and signal facade.
  *
  * Coverage contract: every line of `catalog-query.ts` and
  * `catalog.facade.ts` is exercised. The codec suite is a pure
@@ -7,7 +7,7 @@
  * `Api` with a stub so the read pipeline is observed deterministically.
  * The stub mirrors the shape the production facade uses
  * (`api.invoke(listProducts, params)`) so the production wire path
- * is unchanged — the test simply substitutes the upstream so the
+ * is unchanged: the test simply substitutes the upstream so the
  * RxJS chain inside the facade can be driven by hand.
  *
  * The vitest parser is brittle around `??` / `||` chained with
@@ -20,9 +20,9 @@ import 'reflect-metadata';
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection, Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import {
@@ -59,15 +59,15 @@ import type { Variant } from '../../../app/api/generated/models/variant';
 
 beforeAll(async () => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
   await TestBed.compileComponents();
 });
 
 // ---------------------------------------------------------------------------
-// Stub SDK — exposes the same surface the production facade uses
+// Stub SDK: exposes the same surface the production facade uses
 // (`api.invoke(listProducts, params)`) so the real wire path is
 // unchanged. Tests push responses through `pending$` and read the
 // captured request params via `lastCall()`.
@@ -79,33 +79,33 @@ type ListProductsParams = Parameters<typeof listProducts>[2];
 class StubApi {
   /** Latest params passed to `invoke(listProducts, ...)`. */
   readonly calls: ListProductsParams[] = [];
-  /** Active response stream — replaced per call so a previous error
+  /** Active response stream: replaced per call so a previous error
    * or completion does not poison the next subscriber. */
   private current$: Subject<ProductPage> = new Subject<ProductPage>();
   /** Optional pre-recorded error for the next call. */
   nextError: unknown = null;
 
-  invoke<P, R>(fn: typeof listProducts, params: P): Observable<R> {
+  invoke(fn: typeof listProducts, params: ListProductsParams): Observable<ProductPage> {
     if (fn !== listProducts) {
       throw new Error('StubApi only handles listProducts in this spec.');
     }
-    this.calls.push(params as unknown as ListProductsParams);
+    this.calls.push(params);
     // A fresh Subject per call so a Subject error / complete from
     // a previous call does not short-circuit the new subscription.
     const stream$ = new Subject<ProductPage>();
     this.current$ = stream$;
     const error = this.nextError;
     this.nextError = null;
-    return new Observable<R>((subscriber) => {
+    return new Observable<ProductPage>((subscriber) => {
       const sub = stream$.subscribe({
-        next: (page) => subscriber.next(page as unknown as R),
-        error: (err) => subscriber.error(err),
-        complete: () => subscriber.complete(),
+        next: (page) => { subscriber.next(page); },
+        error: (err) => { subscriber.error(err); },
+        complete: () => { subscriber.complete(); },
       });
       if (error !== null && error !== undefined) {
-        queueMicrotask(() => subscriber.error(error));
+        queueMicrotask(() => { subscriber.error(error); });
       }
-      return () => sub.unsubscribe();
+      return () => { sub.unsubscribe(); };
     });
   }
 
@@ -174,7 +174,7 @@ function emptyPage(): ProductPage {
 }
 
 // ---------------------------------------------------------------------------
-// Codec suite — every AC01 branch
+// Codec suite: every AC01 branch
 // ---------------------------------------------------------------------------
 
 describe('T12-AC01 catalog-query codec', () => {
@@ -351,7 +351,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// AC02 — debounce + page reset + cancellation safety
+// AC02: debounce + page reset + cancellation safety
 // ---------------------------------------------------------------------------
 
 describe('T12-AC02 search debounce + page reset on filter/sort', () => {
@@ -555,7 +555,7 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC03 — switchMap race + no duplicate requests
+// AC03: switchMap race + no duplicate requests
 // ---------------------------------------------------------------------------
 
 describe('T12-AC03 race + duplicate request suppression', () => {
@@ -642,7 +642,7 @@ describe('T12-AC03 race + duplicate request suppression', () => {
 
     facade.toggleBrand('Apple');
     await tick();
-    // Toggling the only brand off is a real state change — the URL
+    // Toggling the only brand off is a real state change: the URL
     // no longer carries `brand=Apple`, so the next fetch must see
     // the dropped filter.
     expect(api.calls.length).toBe(2);
@@ -653,7 +653,7 @@ describe('T12-AC03 race + duplicate request suppression', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC04 — distinct vm states preserve useful content; errors never zero out
+// AC04: distinct vm states preserve useful content; errors never zero out
 // ---------------------------------------------------------------------------
 
 describe('T12-AC04 vm status transitions preserve useful content', () => {
@@ -783,7 +783,7 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC05 — URL is the single source of truth (loadFromParams / currentParams)
+// AC05: URL is the single source of truth (loadFromParams / currentParams)
 // ---------------------------------------------------------------------------
 
 describe('T12-AC05 URL round-trip + direct-link restore', () => {

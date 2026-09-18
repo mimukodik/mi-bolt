@@ -62,8 +62,8 @@ const schemaSource = read('src/app/features/checkout/contact.schema.ts');
 const pageSource = read('src/app/features/checkout/contact-page.ts');
 
 function componentStyles(componentSource: string, explicitScssPath?: string): string {
-  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  if (inline) return inline[1] ?? '';
+  const inline = /styles:\s*\[([\s\S]*?)\]/.exec(componentSource);
+  if (inline) return inline[1];
   if (explicitScssPath) {
     try {
       return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
@@ -71,7 +71,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
       return '';
     }
   }
-  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  const htmlMatch = /templateUrl:\s*'\.\/([^']+\.html)'/.exec(componentSource);
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {

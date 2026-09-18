@@ -43,7 +43,7 @@ import { CheckoutLayout } from './layouts/checkout-layout';
  */
 async function resolveLazyResources(): Promise<void> {
   const proc = (globalThis as { process?: { versions?: { node?: string }; cwd?: () => string } }).process;
-  if (!proc || !proc.versions || !proc.versions.node) return;
+  if (!proc?.versions?.node) return;
   const core = await import('@angular/core');
   // The `node:fs` / `node:path` module specifiers are concatenated so
   // the production bundler never sees the literals; in the browser the
@@ -67,7 +67,8 @@ async function resolveLazyResources(): Promise<void> {
   function findFile(filename: string): string | null {
     const queue: string[] = [workspaceRoot];
     while (queue.length > 0) {
-      const dir = queue.shift() as string;
+      const dir = queue.shift();
+      if (!dir) continue;
       let entries: ReturnType<typeof fs.readdirSync>;
       try {
         entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -88,18 +89,18 @@ async function resolveLazyResources(): Promise<void> {
     }
     return null;
   }
-  const resolver = async (url: string): Promise<string> => {
+  const resolver = (url: string): Promise<string> => {
     const cached = cache.get(url);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) return Promise.resolve(cached);
     const filename = url.startsWith('./') ? url.slice(2) : url;
     const absolute = findFile(filename);
     if (absolute === null) {
       cache.set(url, '');
-      return '';
+      return Promise.resolve('');
     }
     const content = fs.readFileSync(absolute, 'utf-8');
     cache.set(url, content);
-    return content;
+    return Promise.resolve(content);
   };
   await core.ɵresolveComponentResources(resolver);
 }

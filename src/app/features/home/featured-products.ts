@@ -47,7 +47,7 @@ export class FeaturedProducts {
   /** Re-fire signal — surfaced when the user clicks "Újrapróbálom"
    *  on the whole-grid error state. Per-card errors don't surface a
    *  retry CTA on their own; the whole-grid state does. */
-  readonly retryRequested = output<void>();
+  readonly retryRequested = output();
 
   /** True when every slot is in error state (the grid-level error UI). */
   readonly allErrored = computed(() => {
@@ -65,28 +65,35 @@ export class FeaturedProducts {
     if (messages.length === 0) {
       return 'A kiemelt termékek jelenleg nem érhetők el.';
     }
-    return messages[0]!;
+    return messages[0];
   });
 
   /** Returns the first image src for the product, or null if absent. */
   firstImageSrc(product: Product): string | null {
-    const first = product.defaultVariant.images[0];
-    return first ? first.src : null;
+    const images = product.defaultVariant.images;
+    if (images.length === 0) return null;
+    return images[0].src;
   }
 
   firstImageAlt(product: Product): string {
-    const first = product.defaultVariant.images[0];
-    return (first && first.alt) || product.name;
+    const images = product.defaultVariant.images;
+    if (images.length === 0) return product.name;
+    const alt = images[0].alt;
+    return alt.length > 0 ? alt : product.name;
   }
 
   firstImageWidth(product: Product): number | null {
-    const first = product.defaultVariant.images[0];
-    return first && first.width ? first.width : null;
+    const images = product.defaultVariant.images;
+    if (images.length === 0) return null;
+    const width = images[0].width;
+    return width > 0 ? width : null;
   }
 
   firstImageHeight(product: Product): number | null {
-    const first = product.defaultVariant.images[0];
-    return first && first.height ? first.height : null;
+    const images = product.defaultVariant.images;
+    if (images.length === 0) return null;
+    const height = images[0].height;
+    return height > 0 ? height : null;
   }
 
   initialFor(name: string): string {

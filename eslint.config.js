@@ -9,10 +9,19 @@ module.exports = defineConfig([
     files: ['**/*.ts'],
     extends: [
       eslint.configs.recommended,
-      tseslint.configs.recommended,
-      tseslint.configs.stylistic,
+      tseslint.configs.strictTypeChecked,
+      tseslint.configs.stylisticTypeChecked,
       angular.configs.tsRecommended,
     ],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
+      },
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: 'off',
+    },
     processor: angular.processInlineTemplates,
     rules: {
       '@angular-eslint/directive-selector': [
@@ -41,26 +50,7 @@ module.exports = defineConfig([
       // files so CanMatchFn / CanActivateFn can keep their unused
       // injected params without tripping the rule.
       '@typescript-eslint/no-unused-vars': [
-        'warn',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-        },
-      ],
-    },
-  },
-  // Pre-existing shared UI primitives were authored against an earlier
-  // Angular style (decorator-based `@Input()`, `ChangeDetectionStrategy.OnPush`,
-  // `@ViewChild`). Carrying them over to the modern signal-based form is
-  // out of scope for T01; relax the modern rules for that path so the
-  // workspace lint stays green while T07/T25 rework them as a unit.
-  {
-    files: ['src/app/shared/ui/**/*.ts'],
-    rules: {
-      '@angular-eslint/prefer-signals': 'off',
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
+        'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',

@@ -20,4 +20,6 @@ import { RouterLink } from '@angular/router';
   templateUrl: './footer-nav.html',
   styleUrl: './footer-nav.scss',
 })
-export class FooterNav {}
+export class FooterNav {
+  protected readonly tag = 'app-footer-nav';
+}

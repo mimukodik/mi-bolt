@@ -31,4 +31,6 @@ import { RouterLink } from '@angular/router';
   templateUrl: './hero.html',
   styleUrl: './hero.scss',
 })
-export class Hero {}
+export class Hero {
+  protected readonly tag = 'app-hero';
+}

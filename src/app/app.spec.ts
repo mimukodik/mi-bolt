@@ -5,6 +5,36 @@ import { App } from './app';
 import { routes } from './app.routes';
 import { appConfig, providerManifest } from './app.config';
 
+function hasInternalProviders(value: unknown): value is { ɵproviders: unknown[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'ɵproviders' in value &&
+    Array.isArray(value.ɵproviders)
+  );
+}
+
+function hasProvToken(entry: unknown, expectedToken: string): boolean {
+  if (typeof entry !== 'object' || entry === null) return false;
+  if (!('ɵprov' in entry)) return false;
+  const prov = entry.ɵprov;
+  if (typeof prov !== 'object' || prov === null) return false;
+  if (!('token' in prov)) return false;
+  const token = prov.token;
+  if (typeof token !== 'object' || token === null) return false;
+  if (!('name' in token)) return false;
+  return token.name === expectedToken;
+}
+
+function hasUseValue(value: unknown): value is { useValue: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'useValue' in value &&
+    typeof value.useValue === 'string'
+  );
+}
+
 /**
  * Tests for T01 acceptance criteria. Each `describe` block maps to
  * one acceptance id so a failing test maps back to the spec line
@@ -22,7 +52,9 @@ describe('T01-AC05: root component', () => {
     const root = TestBed.createComponent(App);
     root.autoDetectChanges();
     await root.whenStable();
-    const heading = root.nativeElement.querySelector('h1');
+    const raw: unknown = root.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const heading = raw.querySelector('h1');
     expect(heading).toBeTruthy();
     expect(heading?.textContent).toContain('MiBolt');
   });
@@ -30,7 +62,9 @@ describe('T01-AC05: root component', () => {
   it('exposes a fatal-startup fallback element, hidden by default', () => {
     const root = TestBed.createComponent(App);
     root.detectChanges();
-    const fatal = root.nativeElement.querySelector('app-fatal');
+    const raw: unknown = root.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const fatal = raw.querySelector('app-fatal');
     expect(fatal).toBeTruthy();
     expect(fatal?.hasAttribute('hidden')).toBe(true);
   });
@@ -38,7 +72,9 @@ describe('T01-AC05: root component', () => {
   it('renders a skip-link to the main content', () => {
     const root = TestBed.createComponent(App);
     root.detectChanges();
-    const skip = root.nativeElement.querySelector('a.skip-link');
+    const raw: unknown = root.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const skip = raw.querySelector('a.skip-link');
     expect(skip).toBeTruthy();
     expect(skip?.getAttribute('href')).toBe('#main-content');
   });
@@ -46,17 +82,18 @@ describe('T01-AC05: root component', () => {
 
 describe('T01-AC02: provideZonelessChangeDetection in appConfig', () => {
   it('exports a non-empty zoneless change detection provider', () => {
-    const provider = providerManifest.zonelessChangeDetection as {
-      ɵproviders?: unknown[];
-    };
+    const provider = providerManifest.zonelessChangeDetection;
     // The provider is opaque at runtime; the @angular/core API returns
     // an EnvironmentProviders object whose `ɵproviders` array holds the
     // internals. A missing call to provideZonelessChangeDetection()
     // makes `providerManifest.zonelessChangeDetection` `undefined` and
     // also breaks the build, so this test double-checks the wiring.
     expect(provider).toBeDefined();
+    if (!hasInternalProviders(provider)) {
+      throw new Error('Expected provider with ɵproviders');
+    }
     expect(Array.isArray(provider.ɵproviders)).toBe(true);
-    expect(provider.ɵproviders?.length).toBeGreaterThan(0);
+    expect(provider.ɵproviders.length).toBeGreaterThan(0);
   });
 });
 
@@ -68,14 +105,13 @@ describe('T01-AC04: HttpClient wired with withFetch()', () => {
     // replaces the default XhrBackend with FetchBackend, so its
     // presence in the resolved list is the binding proof that
     // withFetch() was actually wired up.
-    const http = providerManifest.httpClientWithFetch as { ɵproviders?: unknown[] };
-    const list = http.ɵproviders ?? [];
+    const http = providerManifest.httpClientWithFetch;
+    if (!hasInternalProviders(http)) {
+      throw new Error('Expected http with ɵproviders');
+    }
+    const list = http.ɵproviders;
     expect(list.length).toBeGreaterThan(0);
-    const hasFetchBackend = list.some((entry) => {
-      const token = (entry as { ɵprov?: { token?: { name?: string } } }).ɵprov
-        ?.token?.name;
-      return token === 'FetchBackend';
-    });
+    const hasFetchBackend = list.some((entry) => hasProvToken(entry, 'FetchBackend'));
     expect(hasFetchBackend).toBe(true);
   });
 
@@ -83,23 +119,26 @@ describe('T01-AC04: HttpClient wired with withFetch()', () => {
     // The provideHttpClient() spread array carries class providers whose
     // ɵfac holds a factory function; withFetch injects FetchBackend as the
     // primary backend.
-    const list = Array.isArray(providerManifest.httpClientWithFetch)
-      ? (providerManifest.httpClientWithFetch as unknown[])
-      : ((providerManifest.httpClientWithFetch as { ɵproviders?: unknown[] })
-          .ɵproviders ?? []);
-    const hasFetchBackend = list.some((entry) => {
-      const token = (entry as { ɵprov?: { token?: { name?: string } } }).ɵprov
-        ?.token?.name;
-      return token === 'FetchBackend' || token === 'HttpHandler';
-    });
+    const http = providerManifest.httpClientWithFetch;
+    const list = Array.isArray(http)
+      ? http
+      : hasInternalProviders(http)
+        ? http.ɵproviders
+        : [];
+    const hasFetchBackend = list.some(
+      (entry) => hasProvToken(entry, 'FetchBackend') || hasProvToken(entry, 'HttpHandler')
+    );
     expect(hasFetchBackend).toBe(true);
   });
 });
 
 describe('T01-AC04: APP_BASE_HREF provider', () => {
   it('appConfig exposes a base-href provider', () => {
-    const base = providerManifest.baseHref as { provide?: unknown; useValue?: string };
+    const base = providerManifest.baseHref;
     expect(base).toBeDefined();
+    if (!hasUseValue(base)) {
+      throw new Error('Expected baseHref with useValue string');
+    }
     expect(typeof base.useValue).toBe('string');
     // Either '/' (production at /) or '/mi-bolt/' (subpath deployment);
     // the production default satisfies the T01-AC05 deployment test.

@@ -80,7 +80,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
       return '';
     }
   }
-  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  const htmlMatch = /templateUrl:\s*'\.\/([^']+\.html)'/.exec(componentSource);
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {
@@ -112,8 +112,8 @@ describe('T22-AC01 review entry creates a fresh quote and shows the order summar
     // delegates to `QuoteController.refresh()` (which calls the
     // facade under the hood).
     const driven =
-      /createQuote\(\)/.test(reviewStepSource) ||
-      /quoteController\.refresh/.test(reviewStepSource) ||
+      reviewStepSource.includes('createQuote()') ||
+      reviewStepSource.includes('quoteController.refresh') ||
       /quoteController\b/.test(quoteStateSource);
     expect(driven).toBe(true);
     // The constructor drives the lifecycle through the QuoteController.

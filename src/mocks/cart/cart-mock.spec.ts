@@ -1,5 +1,5 @@
 /**
- * T07 — cart mock focused unit suite.
+ * T07 - cart mock focused unit suite.
  *
  * Each acceptance criterion has at least one named assertion in the
  * file. The suite exercises every line of `cart-domain.ts` and
@@ -10,10 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createHandlers } from '../../mocks/create-handlers';
 // Side-effect import - registers cart handlers in the T05 registry.
-import {
-  DEMO_PRODUCT,
-  cartHandlersEntry,
-} from '../../mocks/cart/cart.handlers';
+import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import {
   CART_DURATION_MS,
   CartDomain,
@@ -39,6 +36,10 @@ const VARIANT_G512 = 'demo-one-5g-graphite-512';
 const VARIANT_S256 = 'demo-one-5g-silver-256';
 const IDEMPOTENCY_KEY_BASE = 'idem-key-12345678';
 
+function quoteEtag(version: number): string {
+  return `"${String(version)}"`;
+}
+
 function makeEnv(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')) {
   const clock = createFixedClock(new Date(initialClockMs).toISOString());
   const ids = createDeterministicIds(7);
@@ -62,7 +63,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     expect(cart.ok).toBe(true);
     if (!cart.ok) throw new Error('createCart failed');
     const cartId = cart.value.id;
-    const ifMatch1 = `"${cart.value.version}"`;
+    const ifMatch1 = quoteEtag(cart.value.version);
     const first = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId,
@@ -73,7 +74,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('first add failed');
-    const ifMatch2 = `"${first.value.version}"`;
+    const ifMatch2 = quoteEtag(first.value.version);
     const second = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId,
@@ -95,7 +96,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     const env = makeEnv();
     const cart = env.domain.createCart({ sessionId: SESSION_A, idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-4` });
     if (!cart.ok) throw new Error('createCart failed');
-    const ifMatch1 = `"${cart.value.version}"`;
+    const ifMatch1 = quoteEtag(cart.value.version);
     const a = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
@@ -105,7 +106,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
       quantity: 2,
     });
     if (!a.ok) throw new Error('add G256 failed');
-    const ifMatch2 = `"${a.value.version}"`;
+    const ifMatch2 = quoteEtag(a.value.version);
     const b = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
@@ -132,7 +133,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     const tooHigh = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
-      ifMatch: `"${cart.value.version}"`,
+      ifMatch: quoteEtag(cart.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-8`,
       variantId: VARIANT_G256,
       quantity: MAX_LINE_QUANTITY + 1,
@@ -153,7 +154,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     const tooLow = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
-      ifMatch: `"${cart.value.version}"`,
+      ifMatch: quoteEtag(cart.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-10`,
       variantId: VARIANT_G256,
       quantity: 0,
@@ -171,7 +172,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     const first = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
-      ifMatch: `"${cart.value.version}"`,
+      ifMatch: quoteEtag(cart.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-12`,
       variantId: VARIANT_G256,
       quantity: 4,
@@ -180,7 +181,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     const tooMuch = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
-      ifMatch: `"${first.value.version}"`,
+      ifMatch: quoteEtag(first.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-13`,
       variantId: VARIANT_G256,
       quantity: 2,
@@ -202,7 +203,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     const missing = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
-      ifMatch: `"${cart.value.version}"`,
+      ifMatch: quoteEtag(cart.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-15`,
       variantId: 'demo-one-5g-graphite-9999',
       quantity: 1,
@@ -223,7 +224,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     const firstAdd = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add1`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -233,7 +234,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     const secondAdd = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${firstAdd.value.version}"`,
+      ifMatch: quoteEtag(firstAdd.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add2`,
       variantId: VARIANT_S256,
       quantity: 1,
@@ -245,7 +246,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId,
-      ifMatch: `"${secondAdd.value.version}"`,
+      ifMatch: quoteEtag(secondAdd.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-set1`,
       quantity: 3,
     });
@@ -255,7 +256,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId,
-      ifMatch: `"${set.value.version}"`,
+      ifMatch: quoteEtag(set.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-rm1`,
     });
     if (!removed.ok) throw new Error('remove failed');
@@ -270,7 +271,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     const first = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-18`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -280,7 +281,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     const stale = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-19`,
       variantId: VARIANT_G512,
       quantity: 2,
@@ -302,7 +303,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     const result = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-21`,
       variantId: VARIANT_G256,
       quantity: 3,
@@ -323,13 +324,13 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     const initialAdd = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-23`,
       variantId: VARIANT_G256,
       quantity: 2,
     });
     if (!initialAdd.ok) throw new Error('add failed');
-    // Replay uses a stale If-Match — replay must win over the version
+    // Replay uses a stale If-Match - replay must win over the version
     // check, returning the original cart body without mutating.
     const replay = env.domain.addCartItem({
       sessionId: SESSION_A,
@@ -352,7 +353,7 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     const first = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-25`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -361,7 +362,7 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     const conflict = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${first.value.version}"`,
+      ifMatch: quoteEtag(first.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-25`,
       variantId: VARIANT_G512,
       quantity: 2,
@@ -385,7 +386,7 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     const first = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-27`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -395,7 +396,7 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     const after = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${first.value.version}"`,
+      ifMatch: quoteEtag(first.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-27`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -412,7 +413,7 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     const first = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-27b`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -479,7 +480,7 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
     const initialAdd = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-29`,
       variantId: VARIANT_G256,
       quantity: 2,
@@ -494,7 +495,7 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
     const addAfterExpiry = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${initialAdd.value.version}"`,
+      ifMatch: quoteEtag(initialAdd.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-30`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -515,7 +516,7 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
     const first = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-32`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -524,7 +525,7 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
     const stale = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-33`,
       variantId: VARIANT_S256,
       quantity: 2,
@@ -560,7 +561,7 @@ describe('T07-AC05: session isolation', () => {
     const wrongSession = env.domain.addCartItem({
       sessionId: SESSION_B,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-36`,
       variantId: VARIANT_G256,
       quantity: 1,
@@ -655,7 +656,7 @@ describe('CartDomain header validation', () => {
     const fractional = env.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-43`,
       variantId: VARIANT_G256,
       quantity: 1.5,
@@ -674,7 +675,7 @@ describe('CartDomain header validation', () => {
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId: 'missing-line-id',
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-45`,
       quantity: 1,
     });
@@ -691,7 +692,7 @@ describe('CartDomain header validation', () => {
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId: 'missing-line-id',
-      ifMatch: `"${created.value.version}"`,
+      ifMatch: quoteEtag(created.value.version),
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-47`,
     });
     expect(result.ok).toBe(false);
@@ -751,17 +752,17 @@ describe('cart handler dispatch path (MSW + SDK wire)', () => {
     const cart = await postCart();
     const add = await fetch(url(`/carts/${cart.id}/items`), {
       method: 'POST',
-      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-add`), 'If-Match': `"${cart.version}"` },
+      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-add`), 'If-Match': quoteEtag(cart.version) },
       body: JSON.stringify({ variantId: VARIANT_G256, quantity: 1 }),
     });
     expect(add.status).toBe(200);
     const afterAdd = (await add.json()) as { version: number; items: { id: string; quantity: number }[] };
     expect(afterAdd.version).toBe(2);
     expect(afterAdd.items).toHaveLength(1);
-    const itemId = afterAdd.items[0]!.id;
+    const itemId = afterAdd.items[0].id;
     const patch = await fetch(url(`/carts/${cart.id}/items/${itemId}`), {
       method: 'PATCH',
-      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-set`), 'If-Match': `"${afterAdd.version}"` },
+      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-set`), 'If-Match': quoteEtag(afterAdd.version) },
       body: JSON.stringify({ quantity: 3 }),
     });
     expect(patch.status).toBe(200);
@@ -770,7 +771,7 @@ describe('cart handler dispatch path (MSW + SDK wire)', () => {
     expect(afterSet.items[0]?.quantity).toBe(3);
     const del = await fetch(url(`/carts/${cart.id}/items/${itemId}`), {
       method: 'DELETE',
-      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-del`), 'If-Match': `"${afterSet.version}"` },
+      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-del`), 'If-Match': quoteEtag(afterSet.version) },
     });
     expect(del.status).toBe(200);
     const afterDel = (await del.json()) as { version: number; items: unknown[] };
@@ -817,14 +818,14 @@ describe('cart handler dispatch path (MSW + SDK wire)', () => {
     const cart = await postCart();
     const first = await fetch(url(`/carts/${cart.id}/items`), {
       method: 'POST',
-      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-conflict`), 'If-Match': `"${cart.version}"` },
+      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-conflict`), 'If-Match': quoteEtag(cart.version) },
       body: JSON.stringify({ variantId: VARIANT_G256, quantity: 1 }),
     });
     expect(first.status).toBe(200);
     const after = (await first.json()) as { version: number };
     const conflict = await fetch(url(`/carts/${cart.id}/items`), {
       method: 'POST',
-      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-conflict`), 'If-Match': `"${after.version}"` },
+      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-conflict`), 'If-Match': quoteEtag(after.version) },
       body: JSON.stringify({ variantId: VARIANT_G512, quantity: 2 }),
     });
     expect(conflict.status).toBe(409);

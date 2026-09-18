@@ -12,4 +12,6 @@ import { RouterLink } from '@angular/router';
   imports: [RouterLink],
   templateUrl: './not-found-page.html',
 })
-export class NotFoundPage {}
+export class NotFoundPage {
+  protected readonly tag = 'app-not-found-page';
+}

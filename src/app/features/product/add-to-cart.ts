@@ -166,6 +166,6 @@ export class AddToCart {
   private composeMessage(selection: AddToCartSelection): string {
     const qty = selection.quantity;
     const unit = qty === 1 ? 'darab' : 'darab';
-    return `${selection.productName}, ${selection.colorName}, ${selection.storageGb} GB – ${qty} ${unit} a kosárban.`;
+    return `${selection.productName}, ${selection.colorName}, ${String(selection.storageGb)} GB – ${String(qty)} ${unit} a kosárban.`;
   }
 }

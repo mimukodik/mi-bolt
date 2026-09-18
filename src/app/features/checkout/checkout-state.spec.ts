@@ -35,13 +35,12 @@ import {
 } from 'vitest';
 import { HttpResponse, http, type RequestHandler } from 'msw';
 import { setupServer } from 'msw/node';
-import { firstValueFrom } from 'rxjs';
 
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   EnvironmentInjector,
@@ -51,7 +50,6 @@ import {
 } from '@angular/core';
 import {
   ActivatedRouteSnapshot,
-  Router,
   RouterStateSnapshot,
   UrlSegment,
   UrlTree,
@@ -59,10 +57,8 @@ import {
   provideRouter,
 } from '@angular/router';
 
-import { Api } from '../../../app/api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import * as functions from '../../../app/api/generated/functions';
-import { demoSessionInterceptor, withIfMatch } from '../../../app/core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
@@ -83,7 +79,6 @@ import {
   type CheckoutStep,
 } from '../../../app/features/checkout/checkout.facade';
 import {
-  checkoutFormSchema,
   createInitialCheckoutFormModel,
   buildCheckoutForm,
   PHONE_PATTERN,
@@ -118,7 +113,7 @@ function makeEnv(scenarioName = 'checkout-state-suite'): Env {
   };
   const repository = new Repository(scenario, ids, clock);
   repository.loadProducts([DEMO_PRODUCT]);
-  void new IdempotencyStore(clock); // side-effect: ensures the clock is wired
+  new IdempotencyStore(clock); // side-effect: ensures the clock is wired
   return { repository, clock, ids, scenario };
 }
 
@@ -137,8 +132,8 @@ function buildHandlers(): readonly RequestHandler[] {
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
   server.listen({ onUnhandledRequest: 'error' });
@@ -162,7 +157,7 @@ function configureTestBed(): void {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       provideRouter([]),
     ],
@@ -346,7 +341,7 @@ describe('T19 forward navigation through the wizard', () => {
   it('refuses to advance when the contact section does not validate', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
     await seedCartWithItem();
-    await checkout.loadSession(TestBed.inject(CartFacade).cartId!, { clearOnLoad: false });
+    await checkout.loadSession(TestBed.inject(CartFacade).cartId, { clearOnLoad: false });
 
     // Leave required fields blank and call saveContactSection.
     // The form is invalid, but the facade still talks to the wire:
@@ -495,7 +490,6 @@ describe('T19 deep-link to /penztar/siker/:orderId without a receipt', () => {
   });
 
   it('allows the navigation through so the page can hydrate the receipt', () => {
-    const router = TestBed.inject(Router);
     const checkout = TestBed.inject(CheckoutFacade);
     expect(checkout.order()).toBeNull();
 
@@ -512,7 +506,6 @@ describe('T19 deep-link to /penztar/siker/:orderId without a receipt', () => {
     // The guard lets the navigation through; the page renders the
     // 404 recovery when the order is genuinely missing server-side.
     expect(result).toBe(true);
-    void router;
   });
 
   it('allows the navigation when the facade already carries the receipt', async () => {
@@ -721,14 +714,3 @@ describe('T19-AC02 reload clears contact/address but preserves the cart', () => 
     expect(cart.itemCount()).toBe(1);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Quiet the unused-import warning for symbols the spec uses only via
-// their type information.
-// ---------------------------------------------------------------------------
-
-void firstValueFrom;
-void withIfMatch;
-void Api;
-void ApiConfiguration;
-void functions;

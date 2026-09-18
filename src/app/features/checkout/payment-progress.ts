@@ -66,10 +66,10 @@ export class RealClock implements FakeClockLike {
     return new Date().toISOString();
   }
   setTimeoutFn(handler: () => void, delayMs: number): number {
-    return setTimeout(handler, delayMs) as unknown as number;
+    return window.setTimeout(handler, delayMs);
   }
   clearTimeoutFn(handle: number): void {
-    clearTimeout(handle as unknown as ReturnType<typeof setTimeout>);
+    window.clearTimeout(handle);
   }
 }
 
@@ -186,7 +186,7 @@ export class PaymentProgress implements OnDestroy {
   readonly attemptLabel: Signal<string> = computed(() => {
     const a = this.attempt();
     const max = this.maxAttempts();
-    return `${a} / ${max}`;
+    return `${String(a)} / ${String(max)}`;
   });
 
   private stopWatching: (() => void) | null = null;

@@ -48,7 +48,7 @@ export class OrderSummary {
     const shipping = this.shipping();
     if (shipping === null) return ZERO_TOTAL;
     const subtotal = this.subtotal();
-    const amount = (subtotal?.amount ?? 0) + shipping.amount;
+    const amount = subtotal.amount + shipping.amount;
     return { amount, currency: 'HUF' };
   });
 

@@ -187,7 +187,7 @@ export function buildCheckoutHandlers(
         return badRequest('Érvénytelen X-Demo-Session fejléc.', traceId);
       }
       const cart = repository.getCart(cartId);
-      if (!cart || cart.sessionId !== sessionId) {
+      if (cart?.sessionId !== sessionId) {
         return problemResponse(
           { status: 404, code: 'NOT_FOUND', detail: 'A kosár nem található.', fieldErrors: [] },
           traceId,
@@ -234,7 +234,7 @@ export function buildCheckoutHandlers(
         cartId: String(params['cartId']),
         cartVersion,
         idempotencyKey,
-        body: body as { contact?: unknown; delivery?: unknown; paymentMethod?: unknown },
+        body: body,
       });
       if (!result.ok) return problemResponse(result.problem, traceId);
       const cart = repository.getCart(result.value.cartId);

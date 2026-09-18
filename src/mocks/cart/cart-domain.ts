@@ -173,7 +173,7 @@ export class CartDomain {
     const session = this.validateSession(input.sessionId);
     if (!session.ok) return session;
     const cart = this.repository.getCart(input.cartId);
-    if (!cart || cart.sessionId !== input.sessionId) {
+    if (cart?.sessionId !== input.sessionId) {
       return err(CartDomain.notFound());
     }
     if (this.isExpired(cart)) {
@@ -206,7 +206,7 @@ export class CartDomain {
     }
 
     const cart = this.repository.getCart(input.cartId);
-    if (!cart || cart.sessionId !== input.sessionId) {
+    if (cart?.sessionId !== input.sessionId) {
       return err(CartDomain.notFound());
     }
     if (this.isExpired(cart)) {
@@ -229,7 +229,7 @@ export class CartDomain {
     const mergedQuantity = (existing?.quantity ?? 0) + input.quantity;
     if (mergedQuantity > cap) {
       return err(CartDomain.quantityLimit(
-        `A sor mennyisége nem haladhatja meg a(z) ${cap} darabot.`,
+        `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
       ));
     }
     if (lookup.variant.availability !== 'in_stock') {
@@ -278,7 +278,7 @@ export class CartDomain {
     }
 
     const cart = this.repository.getCart(input.cartId);
-    if (!cart || cart.sessionId !== input.sessionId) {
+    if (cart?.sessionId !== input.sessionId) {
       return err(CartDomain.notFound());
     }
     if (this.isExpired(cart)) {
@@ -304,7 +304,7 @@ export class CartDomain {
     const cap = Math.min(lookup.variant.maxQuantity, MAX_LINE_QUANTITY);
     if (input.quantity > cap) {
       return err(CartDomain.quantityLimit(
-        `A sor mennyisége nem haladhatja meg a(z) ${cap} darabot.`,
+        `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
       ));
     }
     if (lookup.variant.availability !== 'in_stock' && input.quantity > 0) {
@@ -345,7 +345,7 @@ export class CartDomain {
     }
 
     const cart = this.repository.getCart(input.cartId);
-    if (!cart || cart.sessionId !== input.sessionId) {
+    if (cart?.sessionId !== input.sessionId) {
       return err(CartDomain.notFound());
     }
     if (this.isExpired(cart)) {
@@ -391,7 +391,7 @@ export class CartDomain {
   }
 
   validateIfMatch(ifMatch: string | null): CartResult<number> {
-    if (ifMatch === null || ifMatch === undefined) {
+    if (ifMatch === null) {
       return err({
         status: 400,
         code: 'VALIDATION_FAILED',
@@ -424,7 +424,7 @@ export class CartDomain {
   }
 
   validateIdempotencyKey(key: string | null): CartResult<string> {
-    if (key === null || key === undefined) {
+    if (key === null) {
       return err({
         status: 400,
         code: 'VALIDATION_FAILED',
@@ -440,7 +440,7 @@ export class CartDomain {
         fieldErrors: [
           {
             path: '/Idempotency-Key',
-            message: `Az Idempotency-Key hossza ${HeaderRules.idempotencyMin} és ${HeaderRules.idempotencyMax} karakter közé eshet.`,
+            message: `Az Idempotency-Key hossza ${String(HeaderRules.idempotencyMin)} és ${String(HeaderRules.idempotencyMax)} karakter közé eshet.`,
           },
         ],
       });
@@ -461,9 +461,9 @@ export class CartDomain {
       return err({
         status: 422,
         code: 'QUANTITY_LIMIT',
-        detail: `A mennyiség 1 és ${MAX_LINE_QUANTITY} közé eshet.`,
+        detail: `A mennyiség 1 és ${String(MAX_LINE_QUANTITY)} közé eshet.`,
         fieldErrors: [
-          { path: '/quantity', message: `A mennyiség 1 és ${MAX_LINE_QUANTITY} közé eshet.` },
+          { path: '/quantity', message: `A mennyiség 1 és ${String(MAX_LINE_QUANTITY)} közé eshet.` },
         ],
       });
     }
@@ -471,11 +471,11 @@ export class CartDomain {
       return err({
         status: 422,
         code: 'QUANTITY_LIMIT',
-        detail: `A változathoz legfeljebb ${variant.maxQuantity} darab rendelhető.`,
+        detail: `A változathoz legfeljebb ${String(variant.maxQuantity)} darab rendelhető.`,
         fieldErrors: [
           {
             path: '/quantity',
-            message: `A változathoz legfeljebb ${variant.maxQuantity} darab rendelhető.`,
+            message: `A változathoz legfeljebb ${String(variant.maxQuantity)} darab rendelhető.`,
           },
         ],
       });
@@ -509,11 +509,11 @@ export class CartDomain {
     availability: Variant['availability'];
     maxQuantity: number;
   } {
-    const firstImage = variant.images[0];
+    const firstImage = variant.images.at(0);
     const image: Image = firstImage ?? {
       id: `${variant.id}-placeholder`,
       src: '/assets/placeholder.svg',
-      alt: `${product.name}, ${variant.colorName}, ${variant.storageGb} GB`,
+      alt: `${product.name}, ${variant.colorName}, ${String(variant.storageGb)} GB`,
       width: 320,
       height: 400,
     };

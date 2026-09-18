@@ -113,7 +113,7 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
     return redirectToStep('cart', 'empty-cart');
   }
   const session = checkout.session();
-  if (session === null || session.contact === undefined) {
+  if (session?.contact === undefined) {
     return redirectToStep('contact', 'incomplete');
   }
   return true;
@@ -144,7 +144,7 @@ export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =>
     return redirectToStep('cart', 'empty-cart');
   }
   const session = checkout.session();
-  if (session === null || session.contact === undefined) {
+  if (session?.contact === undefined) {
     return redirectToStep('contact', 'incomplete');
   }
   if (session.delivery === undefined || session.paymentMethod === undefined) {
@@ -216,13 +216,13 @@ export function guardForSegment(step: 'cart' | 'contact' | 'delivery' | 'review'
       return true;
     }
     if (target === 'delivery') {
-      if (session === null || session.contact === undefined) {
+      if (session?.contact === undefined) {
         return redirectToStep('contact', 'incomplete');
       }
       return true;
     }
     // review
-    if (session === null || session.contact === undefined) {
+    if (session?.contact === undefined) {
       return redirectToStep('contact', 'incomplete');
     }
     if (session.delivery === undefined || session.paymentMethod === undefined) {

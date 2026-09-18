@@ -21,6 +21,14 @@ class HostComponent {
   readonly dismissCount = signal(0);
 }
 
+function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected HTMLElement');
+  }
+  return raw;
+}
+
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
@@ -31,37 +39,40 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 describe('StatusMessage primitive', () => {
   it('renders the supplied message as live text', () => {
     const { fixture } = setup();
-    expect(fixture.nativeElement.querySelector('.message')?.textContent).toContain('A művelet sikeres volt.');
+    expect(getNativeElement(fixture).querySelector('.message')?.textContent).toContain('A művelet sikeres volt.');
   });
 
   it('uses role=status + aria-live=polite for info', () => {
     const { fixture, host } = setup();
     host.severity.set('info');
     fixture.detectChanges();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.getAttribute('role')).toBe('status');
-    expect(root.getAttribute('aria-live')).toBe('polite');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBe('status');
+    expect(root?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('uses role=status + aria-live=polite for success', () => {
     const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.getAttribute('role')).toBe('status');
-    expect(root.getAttribute('aria-live')).toBe('polite');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBe('status');
+    expect(root?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('uses role=alert + aria-live=assertive for error (T10-AC05)', () => {
     const { fixture, host } = setup();
     host.severity.set('error');
     fixture.detectChanges();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.getAttribute('role')).toBe('alert');
-    expect(root.getAttribute('aria-live')).toBe('assertive');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBe('alert');
+    expect(root?.getAttribute('aria-live')).toBe('assertive');
   });
 
   it('emits dismissed when the close button is clicked', () => {
     const { fixture, host } = setup();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!btn) {
+      throw new Error('Expected button');
+    }
     btn.click();
     expect(host.dismissCount()).toBe(1);
   });
@@ -70,14 +81,14 @@ describe('StatusMessage primitive', () => {
     const { fixture, host } = setup();
     host.persistent.set(true);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('button')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('button')).toBeNull();
   });
 
   it('does not invent urgency or stock copy', () => {
     const { fixture, host } = setup();
     host.message.set('A tranzakció jóváhagyásra vár.');
     fixture.detectChanges();
-    const text: string = fixture.nativeElement.querySelector('.message').textContent ?? '';
+    const text = getNativeElement(fixture).querySelector('.message')?.textContent ?? '';
     expect(text).not.toMatch(/utolsó|készleten|siess/i);
   });
 });

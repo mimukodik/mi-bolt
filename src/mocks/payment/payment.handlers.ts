@@ -263,7 +263,7 @@ export function buildPaymentHandlers(
 
       // Validate cart
       const cart = repository.getCart(parsed.value.cartId);
-      if (!cart || cart.sessionId !== session.value) {
+      if (cart?.sessionId !== session.value) {
         return problemResponse(
           { status: 404, code: 'NOT_FOUND', detail: 'A kosár nem található.', fieldErrors: [] },
           traceId,
@@ -284,7 +284,7 @@ export function buildPaymentHandlers(
 
       // Validate quote
       const quote = quoteDomain.getActiveQuote(parsed.value.cartId, cart.version);
-      if (!quote || quote.id !== parsed.value.quoteId) {
+      if (quote?.id !== parsed.value.quoteId) {
         return problemResponse(
           { status: 409, code: 'QUOTE_EXPIRED', detail: 'Az árajánlat lejárt vagy érvénytelen.', fieldErrors: [] },
           traceId,

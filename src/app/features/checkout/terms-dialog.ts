@@ -39,7 +39,7 @@ export class TermsDialog {
 
   /** Emits whenever the dialog closes by any mechanism (close
    *  button, Escape, backdrop click). */
-  readonly closed = output<void>();
+  readonly closed = output();
 
   onClosed(): void {
     this.closed.emit();

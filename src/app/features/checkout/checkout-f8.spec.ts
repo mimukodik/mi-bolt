@@ -39,16 +39,15 @@ import type { RequestHandler } from 'msw';
 
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import {
   EnvironmentInjector,
   runInInjectionContext,
 } from '@angular/core';
 import {
   provideHttpClient,
-  withFetch,
   withInterceptors,
 } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -97,7 +96,7 @@ function makeEnv(scenarioName = 'checkout-f8-suite'): Env {
   };
   const repository = new Repository(scenario, ids, clock);
   repository.loadProducts([DEMO_PRODUCT]);
-  void new IdempotencyStore(clock);
+  new IdempotencyStore(clock);
   return { repository, clock, ids, scenario };
 }
 
@@ -116,8 +115,8 @@ function buildHandlers(): readonly RequestHandler[] {
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
   server.listen({ onUnhandledRequest: 'error' });
@@ -141,7 +140,7 @@ function configureTestBed(): void {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       provideRouter([]),
     ],

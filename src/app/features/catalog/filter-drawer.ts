@@ -52,7 +52,7 @@ export class FilterDrawer {
   readonly filtersChanged = output<CatalogQuery>();
 
   /** Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop). */
-  readonly closed = output<void>();
+  readonly closed = output();
 
   // -------------------------------------------------------------------------
   // Draft state — resets to the applied filters every time the drawer opens.
@@ -152,8 +152,8 @@ export class FilterDrawer {
       storageGb: this.draftStorage().length > 0 ? this.draftStorage() : undefined,
       inStock: this.draftInStock() ? true : undefined,
       is5g: this.draftFiveG() ? true : undefined,
-      minPrice: min === null ? undefined : min,
-      maxPrice: max === null ? undefined : max,
+      minPrice: min ?? undefined,
+      maxPrice: max ?? undefined,
     };
     this.filtersChanged.emit(draft);
     this.closed.emit();

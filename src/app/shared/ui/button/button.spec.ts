@@ -26,90 +26,108 @@ class HostComponent {
   readonly clickCount = signal(0);
 }
 
-function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
+interface ComponentWithStyles {
+  ɵcmp: { styles: readonly string[] };
+}
+
+function hasComponentStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'object' && typeof val !== 'function') return false;
+  if (val === null) return false;
+  return 'ɵcmp' in val;
+}
+
+function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent; root: HTMLElement } {
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.detectChanges();
-  return { fixture, host: fixture.componentInstance };
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected HTMLElement');
+  }
+  return { fixture, host: fixture.componentInstance, root: raw };
 }
 
 describe('Button primitive', () => {
   it('renders the label as visible text', () => {
-    const { fixture } = setup();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    expect(btn.textContent?.trim()).toBe('Kosárba teszem');
+    const { root } = setup();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.textContent.trim()).toBe('Kosárba teszem');
   });
 
   it('renders a native button with type=button by default', () => {
-    const { fixture } = setup();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    expect(btn.tagName).toBe('BUTTON');
-    expect(btn.getAttribute('type')).toBe('button');
+    const { root } = setup();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.tagName).toBe('BUTTON');
+    expect(btn?.getAttribute('type')).toBe('button');
   });
 
   it('reports the variant token in its computed style (R21 minimum 44 CSS px)', () => {
-    const { fixture } = setup();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    expect(btn.classList.contains('is-primary')).toBe(true);
+    const { root } = setup();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn).not.toBeNull();
+    expect(btn?.classList.contains('is-primary')).toBe(true);
     // The size token is wired in button.css as min-height: var(--button-height).
     // jsdom has no layout but the class-based guarantee of the standard
     // height is what makes the button reachable for assistive tech.
   });
 
   it('uses the comfortable class when size=comfortable is requested', () => {
-    const { fixture, host } = setup();
+    const { fixture, host, root } = setup();
     host.size.set('comfortable');
     fixture.detectChanges();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    expect(btn.classList.contains('is-comfortable')).toBe(true);
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.classList.contains('is-comfortable')).toBe(true);
   });
 
   it('emits a pressed event on click', () => {
-    const { fixture, host } = setup();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    btn.click();
+    const { host, root } = setup();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    btn?.click();
     expect(host.clickCount()).toBe(1);
   });
 
   it('does not emit when disabled and exposes native disabled state', () => {
-    const { fixture, host } = setup();
+    const { fixture, host, root } = setup();
     host.disabled.set(true);
     fixture.detectChanges();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-    btn.click();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.disabled).toBe(true);
+    btn?.click();
     expect(host.clickCount()).toBe(0);
   });
 
   it('does not emit while loading and exposes aria-busy', () => {
-    const { fixture, host } = setup();
+    const { fixture, host, root } = setup();
     host.loading.set(true);
     host.loadingLabel.set('Hozzáadás…');
     fixture.detectChanges();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-    expect(btn.getAttribute('aria-busy')).toBe('true');
-    expect(btn.disabled).toBe(true);
-    expect(btn.textContent).toContain('Hozzáadás…');
-    btn.click();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.getAttribute('aria-busy')).toBe('true');
+    expect(btn?.disabled).toBe(true);
+    expect(btn?.textContent).toContain('Hozzáadás…');
+    btn?.click();
     expect(host.clickCount()).toBe(0);
   });
 
   it('uses a button (not an a-tag) for actions', () => {
-    const { fixture } = setup();
-    expect(fixture.nativeElement.querySelector('a')).toBeNull();
+    const { root } = setup();
+    expect(root.querySelector('a')).toBeNull();
   });
 
   it('applies the secondary variant on dark mode when configured', () => {
-    const { fixture, host } = setup();
+    const { fixture, host, root } = setup();
     host.variant.set('secondaryOnDark');
     fixture.detectChanges();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
-    expect(btn.classList.contains('is-secondary-on-dark')).toBe(true);
-    expect(btn.classList.contains('is-primary')).toBe(false);
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.classList.contains('is-secondary-on-dark')).toBe(true);
+    expect(btn?.classList.contains('is-primary')).toBe(false);
   });
 
   it('declares the focus-visible state in its stylesheet (R20)', () => {
-    const css = (Button as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+    if (!hasComponentStyles(Button)) {
+      throw new Error('Expected Button component styles');
+    }
+    const css = Button.ɵcmp.styles.join('\n');
     expect(css).toContain(':focus-visible');
   });
 });

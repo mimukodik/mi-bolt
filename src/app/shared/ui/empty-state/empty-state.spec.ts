@@ -22,6 +22,14 @@ class HostComponent {
   readonly actionCount = signal(0);
 }
 
+function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected HTMLElement');
+  }
+  return raw;
+}
+
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
@@ -32,21 +40,24 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 describe('EmptyState primitive', () => {
   it('renders the supplied title and message as live text', () => {
     const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.textContent).toContain('Nincs találat');
-    expect(root.textContent).toContain('A jelenlegi szűrőkkel');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.textContent).toContain('Nincs találat');
+    expect(root?.textContent).toContain('A jelenlegi szűrőkkel');
   });
 
   it('exposes role=status and aria-live=polite so screen readers are informed', () => {
     const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement.querySelector('.root');
-    expect(root.getAttribute('role')).toBe('status');
-    expect(root.getAttribute('aria-live')).toBe('polite');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBe('status');
+    expect(root?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('emits actionRequested when the action button is clicked', () => {
     const { fixture, host } = setup();
-    const btn: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!btn) {
+      throw new Error('Expected button');
+    }
     btn.click();
     expect(host.actionCount()).toBe(1);
   });
@@ -55,12 +66,13 @@ describe('EmptyState primitive', () => {
     const { fixture, host } = setup();
     host.actionLabel.set(null);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('button')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('button')).toBeNull();
   });
 
   it('does not include any urgency, review or scarcity copy', () => {
     const { fixture } = setup();
-    const text: string = fixture.nativeElement.querySelector('.root').textContent ?? '';
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    const text = root?.textContent ?? '';
     expect(text).not.toMatch(/utolsó|készleten|népszerű|ajánljuk/i);
   });
 });

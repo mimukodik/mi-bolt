@@ -1,5 +1,5 @@
 /**
- * T11 — Layouts, navigation and global state.
+ * T11: Layouts, navigation and global state.
  *
  * Vitest's esbuild/oxc parser is broken with several common TypeScript
  * patterns (e.g. `??` chained with method calls, `||` chained with
@@ -12,9 +12,9 @@
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting,
+} from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection, type Type } from '@angular/core';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -37,11 +37,61 @@ import { FooterNav } from '../../app/core/navigation/footer-nav';
 
 beforeAll(() => {
   TestBed.initTestEnvironment(
-    BrowserDynamicTestingModule,
-    platformBrowserDynamicTesting(),
+    BrowserTestingModule,
+    platformBrowserTesting(),
     { teardown: { destroyAfterEach: true } },
   );
 });
+
+function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
+  return (typeof value === 'function' || typeof value === 'object') && value !== null;
+}
+
+function isCallable(value: unknown): value is () => readonly unknown[] {
+  return typeof value === 'function';
+}
+
+function getComponentStyles(comp: unknown): readonly string[] {
+  if (!isObjectOrFunction(comp)) {
+    return [];
+  }
+  const cmp = comp['ɵcmp'];
+  if (!isObjectOrFunction(cmp)) {
+    return [];
+  }
+  const styles = cmp['styles'];
+  if (Array.isArray(styles)) {
+    return styles.filter((s): s is string => typeof s === 'string');
+  }
+  return [];
+}
+
+function getComponentDependencies(comp: unknown): readonly unknown[] {
+  if (!isObjectOrFunction(comp)) {
+    return [];
+  }
+  const cmp = comp['ɵcmp'];
+  if (!isObjectOrFunction(cmp)) {
+    return [];
+  }
+  const deps = cmp['dependencies'];
+  if (isCallable(deps)) {
+    const evaluated: unknown = deps();
+    if (Array.isArray(evaluated)) return evaluated;
+    return [];
+  }
+  if (Array.isArray(deps)) {
+    return deps;
+  }
+  return [];
+}
+
+function hasName(item: unknown, expectedName: string): boolean {
+  if (typeof item === 'function' && item.name === expectedName) {
+    return true;
+  }
+  return typeof item === 'object' && item !== null && 'name' in item && item.name === expectedName;
+}
 
 const colon = String.fromCharCode(58);
 
@@ -141,22 +191,26 @@ describe('T11-AC02 brand-consistent header and footer', () => {
   it('MarketingLayout header has dark shell and brand label', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
-    const header = f.nativeElement.querySelector('header');
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const header = raw.querySelector('header');
     expect(header).not.toBeNull();
-    const css = (HeaderNav as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join(' ');
-    const hasDark = css.indexOf('color-shell-dark') >= 0;
-    const hasAlt = css.indexOf('mi-bolt-color-surface-dark') >= 0;
-    const found = hasDark ? hasDark : hasAlt;
+    const css = getComponentStyles(HeaderNav).join(' ');
+    const hasDark = css.includes('color-shell-dark');
+    const hasAlt = css.includes('mi-bolt-color-surface-dark');
+    const found = hasDark || hasAlt;
     expect(found).toBe(true);
   });
 
   it('MarketingLayout exposes Hungarian nav links', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
-    const nav = f.nativeElement.querySelector('nav');
-    const text = nav && nav.textContent ? nav.textContent : '';
-    const has1 = text.indexOf('Mobiltelefonok') >= 0;
-    const has2 = text.indexOf('A demóról') >= 0;
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const nav = raw.querySelector('nav');
+    const text = nav?.textContent ?? '';
+    const has1 = text.includes('Mobiltelefonok');
+    const has2 = text.includes('A demóról');
     expect(has1).toBe(true);
     expect(has2).toBe(true);
   });
@@ -164,7 +218,9 @@ describe('T11-AC02 brand-consistent header and footer', () => {
   it('MarketingLayout renders the standard footer with link groups', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
-    const footer = f.nativeElement.querySelector('footer');
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const footer = raw.querySelector('footer');
     expect(footer).not.toBeNull();
     const links = footer ? footer.querySelectorAll('a') : [];
     const len = links.length;
@@ -175,19 +231,21 @@ describe('T11-AC02 brand-consistent header and footer', () => {
   it('ShopLayout exposes a full-width mobile search at narrow widths', () => {
     const f = TestBed.createComponent(ShopLayout);
     f.detectChanges();
-    const m = f.nativeElement.querySelector('[data-testid="mobile-search"]');
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const m = raw.querySelector('[data-testid="mobile-search"]');
     expect(m).not.toBeNull();
-    const css = (ShopLayout as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join(' ');
-    expect(css.indexOf('max-width: 640px') >= 0).toBe(true);
+    const css = getComponentStyles(ShopLayout).join(' ');
+    expect(css.includes('max-width: 640px')).toBe(true);
   });
 
   it('CheckoutLayout removes search but retains return-to-shop navigation', () => {
     const f = TestBed.createComponent(CheckoutLayout);
     f.detectChanges();
-    const root = f.nativeElement as HTMLElement;
-    const text = root.textContent ? root.textContent : '';
-    expect(text.indexOf('Vissza a shopba') >= 0).toBe(true);
-    const checkoutHeader = root.querySelector('[data-testid="checkout-header"]');
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    expect(raw.textContent).toContain('Vissza a shopba');
+    const checkoutHeader = raw.querySelector('[data-testid="checkout-header"]');
     expect(checkoutHeader).not.toBeNull();
     const search = checkoutHeader ? checkoutHeader.querySelector('[data-testid="header-search"]') : null;
     expect(search).toBeNull();
@@ -196,11 +254,13 @@ describe('T11-AC02 brand-consistent header and footer', () => {
   it('CheckoutLayout shows the four numbered step labels', () => {
     const f = TestBed.createComponent(CheckoutLayout);
     f.detectChanges();
-    const text = (f.nativeElement as HTMLElement).textContent || '';
-    expect(text.indexOf('Kosár') >= 0).toBe(true);
-    expect(text.indexOf('Adatok') >= 0).toBe(true);
-    expect(text.indexOf('Szállítás') >= 0).toBe(true);
-    expect(text.indexOf('Ellenőrzés') >= 0).toBe(true);
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const text = raw.textContent;
+    expect(text).toContain('Kosár');
+    expect(text).toContain('Adatok');
+    expect(text).toContain('Szállítás');
+    expect(text).toContain('Ellenőrzés');
   });
 });
 
@@ -227,7 +287,9 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
   it('the root skip link points to main-content', () => {
     const app = TestBed.createComponent(App);
     app.detectChanges();
-    const skip = app.nativeElement.querySelector('a.skip-link');
+    const raw: unknown = app.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const skip = raw.querySelector('a.skip-link');
     expect(skip).not.toBeNull();
     const href = skip ? skip.getAttribute('href') : '';
     expect(href).toBe('#main-content');
@@ -238,7 +300,9 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
       f.detectChanges();
-      const main = f.nativeElement.querySelector('main#main-content');
+      const raw: unknown = f.nativeElement;
+      if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+      const main = raw.querySelector('main#main-content');
       expect(main).not.toBeNull();
       f.destroy();
     });
@@ -249,7 +313,9 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
       f.detectChanges();
-      const h1s = f.nativeElement.querySelectorAll('main h1');
+      const raw: unknown = f.nativeElement;
+      if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+      const h1s = raw.querySelectorAll('main h1');
       expect(h1s.length).toBe(0);
       f.destroy();
     });
@@ -275,7 +341,10 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
   it('RouteFocusService.focusMainHeading moves focus to the main H1', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
-    const main = f.nativeElement.querySelector('main') as HTMLElement;
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const main = raw.querySelector('main');
+    if (!(main instanceof HTMLElement)) throw new Error('Expected main HTMLElement');
     const h1 = document.createElement('h1');
     h1.textContent = 'Pelda';
     main.appendChild(h1);
@@ -292,17 +361,17 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     const location = TestBed.inject(Location);
     await router.navigateByUrl('/telefonok?brand=demo-one');
     const p1 = location.path();
-    const has1 = p1.indexOf('telefonok') >= 0;
-    const has2 = p1.indexOf('brand=demo-one') >= 0;
+    const has1 = p1.includes('telefonok');
+    const has2 = p1.includes('brand=demo-one');
     expect(has1).toBe(true);
     expect(has2).toBe(true);
     await router.navigateByUrl('/telefonok/demo-one');
     const p2 = location.path();
-    expect(p2.indexOf('demo-one') >= 0).toBe(true);
+    expect(p2.includes('demo-one')).toBe(true);
     location.back();
     await new Promise((r) => setTimeout(r, 0));
     const p3 = location.path();
-    expect(p3.indexOf('brand=demo-one') >= 0).toBe(true);
+    expect(p3.includes('brand=demo-one')).toBe(true);
   });
 });
 
@@ -329,8 +398,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
   it('MobileDrawer renders a focus-managed dialog', () => {
     const f = TestBed.createComponent(MobileDrawerHost);
     f.detectChanges();
-    const host = f.componentInstance as unknown as { opened: { set: (v: boolean) => void } };
-    host.opened.set(true);
+    f.componentInstance.opened.set(true);
     f.detectChanges();
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
@@ -342,8 +410,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
 
   it('MobileDrawer dialog is not a scaled desktop header', () => {
     const f = TestBed.createComponent(MobileDrawerHost);
-    const host = f.componentInstance as unknown as { opened: { set: (v: boolean) => void } };
-    host.opened.set(true);
+    f.componentInstance.opened.set(true);
     f.detectChanges();
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
@@ -356,15 +423,10 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     // output) or a function that returns the array (JIT output). The
     // test runner here goes through vitest + the Angular JIT compiler,
     // so accept both forms.
-    const rawDeps = (MobileDrawer as unknown as {
-      ɵcmp: { dependencies: unknown };
-    }).ɵcmp.dependencies;
-    const deps = (typeof rawDeps === 'function'
-      ? (rawDeps as () => readonly unknown[])()
-      : (rawDeps as readonly unknown[]));
+    const deps = getComponentDependencies(MobileDrawer);
     let found = false;
     deps.forEach((d) => {
-      if ((d as { name?: string }).name === 'AccessibleDialog') found = true;
+      if (hasName(d, 'AccessibleDialog')) found = true;
     });
     expect(found).toBe(true);
   });
@@ -399,8 +461,10 @@ describe('T11-AC05 cart badge wiring', () => {
     const f = TestBed.createComponent(AppShell);
     f.componentRef.setInput('variant', 'marketing');
     f.detectChanges();
-    const badge = f.nativeElement.querySelector('[data-testid="cart-badge"]');
-    const text = badge && badge.textContent ? badge.textContent.trim() : '';
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const badge = raw.querySelector('[data-testid="cart-badge"]');
+    const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('0');
   });
 
@@ -410,15 +474,15 @@ describe('T11-AC05 cart badge wiring', () => {
     f.detectChanges();
     // T17 replaced the T11 stub with the real CartFacade: there is no
     // writable `count` signal any more. Drive the badge through the
-    // authoritative cart snapshot — `_seedCart` is the test seam that
+    // authoritative cart snapshot: `_seedCart` is the test seam that
     // points the facade at a known cart id.
-    const facade = TestBed.inject(CartCountFacade) as unknown as {
-      _seedCart: (input: { id: string; itemCount: number }) => void;
-    };
+    const facade = TestBed.inject(CartCountFacade);
     facade._seedCart({ id: 'cart-test-001', itemCount: 3 });
     f.detectChanges();
-    const badge = f.nativeElement.querySelector('[data-testid="cart-badge"]');
-    const text = badge && badge.textContent ? badge.textContent.trim() : '';
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const badge = raw.querySelector('[data-testid="cart-badge"]');
+    const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('3');
   });
 });

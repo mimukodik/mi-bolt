@@ -2,12 +2,12 @@ import {
   Component,
   ElementRef,
   TemplateRef,
-  ViewChild,
   ViewContainerRef,
   effect,
   inject,
   input,
   output,
+  viewChild,
 } from '@angular/core';
 import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
 
@@ -30,9 +30,9 @@ import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
  * charge of what fills the dialog.
  *
  * Required states:
- * - closed  — nothing mounted, focus lives wherever the user left it.
- * - open    — focus trapped inside, backdrop excluded.
- * - focus   — focus is somewhere inside the panel; the consumer can
+ * - closed  - nothing mounted, focus lives wherever the user left it.
+ * - open    - focus trapped inside, backdrop excluded.
+ * - focus   - focus is somewhere inside the panel; the consumer can
  *             render `autofocus` on the element that should start there.
  */
 @Component({
@@ -44,7 +44,7 @@ import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
 export class AccessibleDialog {
   private readonly dialog = inject(Dialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
-  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Whether the dialog is open. Driven by the parent. */
   readonly opened = input<boolean>(false);
@@ -65,20 +65,11 @@ export class AccessibleDialog {
   readonly restoreTarget = input<HTMLElement | null>(null);
 
   /** Emits when the dialog closes by any mechanism (button, Escape, backdrop). */
-  readonly closed = output<void>();
+  readonly closed = output();
 
-  /**
-   * `@ViewChild` is the JIT-friendly view-query API: the JIT compiler
-   * (the only path available under vitest without an Angular linker)
-   * reads `propDecorators` for property-level `@ViewChild` and
-   * `@Input` annotations. The vitest transformer in `vitest.config.ts`
-   * ensures those entries reach the JIT compiler; signal-based
-   * `viewChild()` only works under AOT.
-   */
-  @ViewChild('body', { static: true })
-  private readonly body!: TemplateRef<unknown>;
+  readonly body = viewChild.required<TemplateRef<unknown>>('body');
 
-  private ref: DialogRef<unknown> | null = null;
+  private ref: DialogRef | null = null;
 
   constructor() {
     effect(() => {
@@ -100,8 +91,8 @@ export class AccessibleDialog {
   }
 
   private openInternal(): void {
-    const restore = (this.restoreTarget() as HTMLElement | null) ?? this.host.nativeElement;
-    this.ref = this.dialog.open(this.body, {
+    const restore = this.restoreTarget() ?? this.host.nativeElement;
+    this.ref = this.dialog.open(this.body(), {
       ariaLabel: this.label(),
       ariaLabelledBy: this.labelledBy() ?? undefined,
       ariaModal: true,

@@ -43,7 +43,8 @@ export class PriceBlock {
   readonly amountText = computed<string | null>(() => {
     const m = this.money();
     if (m === null) return null;
-    if (m.currency !== 'HUF') return null;
+    const currency: unknown = m.currency;
+    if (currency !== 'HUF') return null;
     if (!Number.isFinite(m.amount)) return null;
     if (!Number.isInteger(m.amount)) return null;
     if (m.amount <= 0) return null;

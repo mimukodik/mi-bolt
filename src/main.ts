@@ -54,7 +54,7 @@ const start = async (): Promise<void> => {
     return;
   }
   const { prepareMocks } = await import('./core/bootstrap-demo');
-  await prepareMocks().catch((err) => {
+  await prepareMocks().catch((err: unknown) => {
     console.error('[MiBolt] Mock preparation failed; continuing without mocks:', err);
   });
   bootstrapApplication(App, appConfig).catch(showFatal);

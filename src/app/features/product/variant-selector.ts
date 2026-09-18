@@ -73,7 +73,7 @@ export class VariantSelector {
   readonly selectedStorageLabel = computed<string>(() => {
     const value = this.selectedStorageGb();
     if (value === null) return '—';
-    return `${value} GB`;
+    return `${String(value)} GB`;
   });
 
   readonly colorDisabledReasons = computed(() =>
@@ -92,7 +92,7 @@ export class VariantSelector {
     this.disabledCombinations()
       .filter((d) => d.colorCode === (this.selectedColorCode() ?? ''))
       .map((d) => ({
-        id: `variant-storage-disabled-${d.storageGb}`,
+        id: `variant-storage-disabled-${String(d.storageGb)}`,
         text: d.reason,
         storageGb: d.storageGb,
       })),
@@ -132,7 +132,7 @@ export class VariantSelector {
 
   storageDisabledReasonId(storageGb: number): string | null {
     return this.isStorageDisabled(storageGb)
-      ? `variant-storage-disabled-${storageGb}`
+      ? `variant-storage-disabled-${String(storageGb)}`
       : null;
   }
 
@@ -141,6 +141,6 @@ export class VariantSelector {
   }
 
   ariaLabelForStorage(gb: number, selected: boolean): string {
-    return `${gb} GB${selected ? ', kiválasztva' : ', elérhető'}`;
+    return `${String(gb)} GB${selected ? ', kiválasztva' : ', elérhető'}`;
   }
 }

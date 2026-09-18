@@ -121,7 +121,7 @@ export class FilterPanel {
     this.minSignal.set(value);
     if (this.priceError() !== null) return;
     const parsed = this.parsePrice(value);
-    this.emit({ minPrice: parsed === null ? undefined : parsed });
+    this.emit({ minPrice: parsed ?? undefined });
   }
 
   onMaxInput(event: Event): void {
@@ -129,7 +129,7 @@ export class FilterPanel {
     this.maxSignal.set(value);
     if (this.priceError() !== null) return;
     const parsed = this.parsePrice(value);
-    this.emit({ maxPrice: parsed === null ? undefined : parsed });
+    this.emit({ maxPrice: parsed ?? undefined });
   }
 
   toggleBrand(brand: string): void {

@@ -56,8 +56,8 @@ const productGallerySource = read('src/app/features/product/product-gallery.ts')
  *  the component uses an external styleUrl (the cli build bundles it
  *  and the runtime serves it). */
 function componentStyles(componentSource: string, explicitScssPath?: string): string {
-  const inline = componentSource.match(/styles:\s*\[([\s\S]*?)\]/);
-  if (inline) return inline[1] ?? '';
+  const inline = /styles:\s*\[([\s\S]*?)\]/.exec(componentSource);
+  if (inline) return inline[1];
   if (explicitScssPath) {
     try {
       return readFileSync(resolvePath(workspaceRoot, explicitScssPath), 'utf8');
@@ -65,7 +65,7 @@ function componentStyles(componentSource: string, explicitScssPath?: string): st
       return '';
     }
   }
-  const htmlMatch = componentSource.match(/templateUrl:\s*'\.\/([^']+\.html)'/);
+  const htmlMatch = /templateUrl:\s*'\.\/([^']+\.html)'/.exec(componentSource);
   if (htmlMatch) {
     const scssPath = htmlMatch[1].replace(/\.html$/, '.scss');
     try {

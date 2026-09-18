@@ -167,7 +167,7 @@ export class ProductGallery {
    *  perceive the swatch alone (R03 — selection is not conveyed by
    *  color alone). */
   thumbLabel(index: number): string {
-    return `${index + 1}`;
+    return String(index + 1);
   }
 
   private effectiveIndex(): number {

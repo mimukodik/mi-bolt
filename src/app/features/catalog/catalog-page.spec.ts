@@ -1,14 +1,14 @@
 /**
- * T13 — CatalogPage acceptance suite.
+ * T13: CatalogPage acceptance suite.
  *
  * Each named failing test asserts one rule from the task's AC list:
  *
- *   AC01 — breakpoint-correct grid (sidebar / drawer switch).
- *   AC02 — filter, sort, page-size, search, applied chips and result
+ *   AC01: breakpoint-correct grid (sidebar / drawer switch).
+ *   AC02: filter, sort, page-size, search, applied chips and result
  *          count all tied to URL state via the facade.
- *   AC03 — mobile drawer Apply commits, Cancel/Escape discards; focus
+ *   AC03: mobile drawer Apply commits, Cancel/Escape discards; focus
  *          trap and background exclusion handled by AccessibleDialog.
- *   AC05 — default, loading, empty, error, missing-image and selected
+ *   AC05: default, loading, empty, error, missing-image and selected
  *          filter states are visually distinct.
  *
  * The suite wires the real SDK through MSW (T06 catalog handlers) and
@@ -18,7 +18,7 @@
  */
 
 import { TestBed } from '@angular/core/testing';
-import { HttpClient, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Location } from '@angular/common';
 import { ActivatedRoute, provideRouter, Router, type Params } from '@angular/router';
 import {
@@ -42,8 +42,57 @@ import type { Money } from '../../shared/ui/price-block/price-block';
 
 const BASE_URL = 'http://localhost/api/v1';
 
+function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
+  return (typeof value === 'function' || typeof value === 'object') && value !== null;
+}
+
+function getComponentStyles(comp: unknown): readonly string[] {
+  if (!isObjectOrFunction(comp)) {
+    return [];
+  }
+  const cmp = comp['ɵcmp'];
+  if (!isObjectOrFunction(cmp)) {
+    return [];
+  }
+  const styles = cmp['styles'];
+  if (Array.isArray(styles)) {
+    return styles.filter((s): s is string => typeof s === 'string');
+  }
+  return [];
+}
+
+function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+  return raw;
+}
+
+function queryInput(parent: Element, selector: string): HTMLInputElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLInputElement)) throw new Error(`Expected HTMLInputElement: ${selector}`);
+  return el;
+}
+
+function queryButton(parent: Element, selector: string): HTMLButtonElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLButtonElement)) throw new Error(`Expected HTMLButtonElement: ${selector}`);
+  return el;
+}
+
+function querySelect(parent: Element, selector: string): HTMLSelectElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLSelectElement)) throw new Error(`Expected HTMLSelectElement: ${selector}`);
+  return el;
+}
+
+function queryImage(parent: Element, selector: string): HTMLImageElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLImageElement)) throw new Error(`Expected HTMLImageElement: ${selector}`);
+  return el;
+}
+
 // ---------------------------------------------------------------------------
-// MSW handler — minimal stub of GET /products so the SDK round-trip
+// MSW handler: minimal stub of GET /products so the SDK round-trip
 // resolves without spinning up the entire catalog mock. The shape
 // mirrors `docs/api/fixtures/products.json`.
 // ---------------------------------------------------------------------------
@@ -72,7 +121,7 @@ function buildVariant(id: string, productId: string, colorName: string, storageG
 }
 
 function buildSummary(id: string, brand: string, name: string, price: number, is5g: boolean, storageGb: 128 | 256 | 512): ProductSummary {
-  const variant = buildVariant(`${id}-${storageGb}`, id, 'Grafit', storageGb, price);
+  const variant = buildVariant(`${id}-${String(storageGb)}`, id, 'Grafit', storageGb, price);
   return {
     id,
     slug: id,
@@ -106,19 +155,19 @@ interface Harness {
 
 const server = setupServer();
 
-beforeAll(async () => {
+beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
 
-  await TestBed.configureTestingModule({
+  TestBed.configureTestingModule({
     providers: [
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
 });
 
-async function setupHarness(queryParams: Params = {}): Promise<Harness> {
+function setupHarness(queryParams: Params = {}): Promise<Harness> {
   TestBed.resetTestingModule();
   const captured: CapturedRequest[] = [];
   let responder: ((page: ProductPageDTO) => void) | null = null;
@@ -154,7 +203,7 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
   TestBed.configureTestingModule({
     imports: [CatalogPage],
     providers: [
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       {
         provide: Api,
@@ -200,7 +249,7 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
     TestBed.resetTestingModule();
   };
 
-  return {
+  return Promise.resolve({
     fixture,
     router,
     location,
@@ -217,7 +266,7 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
     tick,
     waitForStatus,
     cleanup,
-  };
+  });
 }
 
 function convertParams(params: Params): { get(name: string): string | null; getAll(name: string): readonly string[] } {
@@ -256,42 +305,42 @@ function successPage(items: readonly ProductSummary[], total: number, page = 1, 
 }
 
 // ===========================================================================
-// AC01 — breakpoint-aware layout
+// AC01: breakpoint-aware layout
 // ===========================================================================
 
 describe('T13-AC01 catalog layout breakpoints', () => {
   it('>=1280px desktop renders a sidebar + 3-column grid (CSS data-layout=desktop-3col)', () => {
-    const css = (CatalogPage as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+    const css = getComponentStyles(CatalogPage).join('\n');
     expect(css).toMatch(/min-width:\s*1280px/);
     // Three columns: grid-template-columns repeat(3, ...) inside the desktop media block.
-    const desktopBlock = css.match(/@media[^{]*min-width:\s*1280px[^}]*\{[^}]*\}/s);
+    const desktopBlock = /@media[^{]*min-width:\s*1280px[^}]*\{[^}]*\}/s.exec(css);
     expect(desktopBlock).not.toBeNull();
-    expect(desktopBlock![0]).toMatch(/repeat\(3/);
+    expect(desktopBlock?.[0]).toMatch(/repeat\(3/);
   });
 
   it('1024-1279 px desktop renders a sidebar + 2-column grid', () => {
-    const css = (CatalogPage as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+    const css = getComponentStyles(CatalogPage).join('\n');
     // 2-column rule inside a 1024+ rule (and below 1280)
     expect(css).toMatch(/min-width:\s*1024px[^{]*\{[^}]*repeat\(2/s);
   });
 
   it('640-1023 px renders a drawer + 2-column grid', () => {
-    const css = (CatalogPage as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+    const css = getComponentStyles(CatalogPage).join('\n');
     expect(css).toMatch(/min-width:\s*640px[^{]*\{[^}]*repeat\(2/s);
   });
 
   it('<640 px renders a drawer + 1-column grid', () => {
-    const css = (CatalogPage as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles.join('\n');
+    const css = getComponentStyles(CatalogPage).join('\n');
     // The base grid is single-column.
-    const baseGrid = css.match(/\.grid\s*\{[^}]*\}/s);
+    const baseGrid = /\.grid\s*\{[^}]*\}/s.exec(css);
     expect(baseGrid).not.toBeNull();
-    expect(baseGrid![0]).toMatch(/repeat\(1/);
+    expect(baseGrid?.[0]).toMatch(/repeat\(1/);
   });
 
   it('filter sidebar (>=1024 px) carries data-layout="sidebar" + filter button hidden', () => {
     return (async (): Promise<void> => {
       const harness = await setupHarness();
-      const root = harness.fixture.nativeElement as HTMLElement;
+      const root = getRootElement(harness.fixture);
       const sidebar = root.querySelector('[data-testid="filter-sidebar"]');
       expect(sidebar).not.toBeNull();
       const trigger = root.querySelector('[data-testid="filter-trigger"]');
@@ -299,7 +348,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
       // but the trigger SHOULD exist as a button and have data-mode="sidebar"
       // on the host so the CSS hides it.
       expect(trigger).not.toBeNull();
-      const root2 = harness.fixture.nativeElement as HTMLElement;
+      const root2 = getRootElement(harness.fixture);
       expect(root2.getAttribute('data-layout-mode') ?? 'sidebar').toBe('sidebar');
       harness.cleanup();
     })();
@@ -310,7 +359,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     // mobile drawer trigger). The actual CSS media query is asserted above;
     // here we confirm the host renders both branches so CSS decides which wins.
     const harness = await setupHarness();
-    const root = harness.fixture.nativeElement as HTMLElement;
+    const root = getRootElement(harness.fixture);
     expect(root.querySelector('[data-testid="filter-trigger"]')).not.toBeNull();
     // The desktop sidebar is still mounted but is hidden via CSS at <1024px;
     // the assertion here is structural presence so the host owns both modes.
@@ -320,7 +369,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
 });
 
 // ===========================================================================
-// AC02 — search / filter / sort / page-size wired through facade & URL
+// AC02: search / filter / sort / page-size wired through facade & URL
 // ===========================================================================
 
 describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', () => {
@@ -337,7 +386,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
 
   it('search input is debounced 300ms and pushed to the URL via the facade', async () => {
     const harness = await setupHarness();
-    const input = harness.fixture.nativeElement.querySelector('[data-testid="catalog-search"]') as HTMLInputElement;
+    const input = queryInput(getRootElement(harness.fixture), '[data-testid="catalog-search"]');
     expect(input).not.toBeNull();
     input.value = 'demo';
     input.dispatchEvent(new Event('input'));
@@ -357,7 +406,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const brandBtn = harness.fixture.nativeElement.querySelector('[data-testid="filter-brand-MiBolt Demo"]') as HTMLButtonElement;
+    const brandBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-brand-MiBolt Demo"]');
     expect(brandBtn).not.toBeNull();
     brandBtn.click();
     await harness.tick();
@@ -376,7 +425,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const storageBtn = harness.fixture.nativeElement.querySelector('[data-testid="filter-storage-256"]') as HTMLButtonElement;
+    const storageBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-storage-256"]');
     expect(storageBtn).not.toBeNull();
     storageBtn.click();
     await harness.tick();
@@ -393,8 +442,8 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const inStockBtn = harness.fixture.nativeElement.querySelector('[data-testid="filter-inStock"]') as HTMLButtonElement;
-    const fiveGBtn = harness.fixture.nativeElement.querySelector('[data-testid="filter-is5g"]') as HTMLButtonElement;
+    const inStockBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-inStock"]');
+    const fiveGBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-is5g"]');
     expect(inStockBtn).not.toBeNull();
     expect(fiveGBtn).not.toBeNull();
     inStockBtn.click();
@@ -413,10 +462,10 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     const harness = await setupHarness({ brand: 'MiBolt Demo', inStock: 'true' });
     harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1));
     await harness.waitForStatus('success');
-    const root = harness.fixture.nativeElement as HTMLElement;
+    const root = getRootElement(harness.fixture);
     const chips = root.querySelectorAll('[data-testid="applied-chip"]');
     expect(chips.length).toBe(2);
-    const labels = Array.from(chips).map((c) => (c.textContent ?? '').trim());
+    const labels = Array.from(chips).map((c) => c.textContent.trim());
     expect(labels.some((t) => t.includes('MiBolt Demo'))).toBe(true);
     expect(labels.some((t) => t.includes('Raktáron'))).toBe(true);
     harness.cleanup();
@@ -428,13 +477,13 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const removeBtn = harness.fixture.nativeElement.querySelector('[data-testid="applied-chip-remove-brand"]') as HTMLButtonElement;
+    const removeBtn = queryButton(getRootElement(harness.fixture), '[data-testid="applied-chip-remove-brand"]');
     expect(removeBtn).not.toBeNull();
     removeBtn.click();
     await harness.tick();
     expect(harness.captured.length).toBeGreaterThanOrEqual(1);
     const last = harness.captured[harness.captured.length - 1];
-    expect(last?.params.getAll('brand')).toEqual([]);
+    expect(last.params.getAll('brand')).toEqual([]);
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
     harness.cleanup();
@@ -446,7 +495,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const select = harness.fixture.nativeElement.querySelector('[data-testid="catalog-sort"]') as HTMLSelectElement;
+    const select = querySelect(getRootElement(harness.fixture), '[data-testid="catalog-sort"]');
     expect(select).not.toBeNull();
     select.value = 'price_asc';
     select.dispatchEvent(new Event('change'));
@@ -464,7 +513,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const select = harness.fixture.nativeElement.querySelector('[data-testid="catalog-page-size"]') as HTMLSelectElement;
+    const select = querySelect(getRootElement(harness.fixture), '[data-testid="catalog-page-size"]');
     expect(select).not.toBeNull();
     select.value = '24';
     select.dispatchEvent(new Event('change'));
@@ -484,7 +533,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     ];
     harness.respond(successPage(items, 16));
     await harness.waitForStatus('success');
-    const root = harness.fixture.nativeElement as HTMLElement;
+    const root = getRootElement(harness.fixture);
     const counter = root.querySelector('[data-testid="result-count"]');
     expect(counter).not.toBeNull();
     expect(counter?.textContent ?? '').toContain('16');
@@ -493,7 +542,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
 });
 
 // ===========================================================================
-// AC03 — mobile drawer: Apply commits, Cancel/Escape discards
+// AC03: mobile drawer: Apply commits, Cancel/Escape discards
 // ===========================================================================
 
 describe('T13-AC03 mobile filter drawer', () => {
@@ -501,7 +550,7 @@ describe('T13-AC03 mobile filter drawer', () => {
     const harness = await setupHarness();
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
-    const trigger = harness.fixture.nativeElement.querySelector('[data-testid="filter-trigger"]') as HTMLButtonElement;
+    const trigger = queryButton(getRootElement(harness.fixture), '[data-testid="filter-trigger"]');
     expect(trigger).not.toBeNull();
     trigger.click();
     harness.fixture.detectChanges();
@@ -517,24 +566,24 @@ describe('T13-AC03 mobile filter drawer', () => {
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const trigger = harness.fixture.nativeElement.querySelector('[data-testid="filter-trigger"]') as HTMLButtonElement;
+    const trigger = queryButton(getRootElement(harness.fixture), '[data-testid="filter-trigger"]');
     trigger.click();
     harness.fixture.detectChanges();
     await harness.tick();
 
     // Tweak a draft inside the drawer.
-    const drawerBrand = document.body.querySelector('[data-testid="drawer-brand-MiBolt Demo"]') as HTMLButtonElement;
+    const drawerBrand = document.body.querySelector<HTMLButtonElement>('[data-testid="drawer-brand-MiBolt Demo"]');
     expect(drawerBrand).not.toBeNull();
-    drawerBrand.click();
+    drawerBrand?.click();
     harness.fixture.detectChanges();
     await harness.tick();
 
-    // No fetch yet — the drawer is a transient copy.
+    // No fetch yet: the drawer is a transient copy.
     expect(harness.captured.length).toBe(0);
 
-    const apply = document.body.querySelector('[data-testid="drawer-apply"]') as HTMLButtonElement;
+    const apply = document.body.querySelector<HTMLButtonElement>('[data-testid="drawer-apply"]');
     expect(apply).not.toBeNull();
-    apply.click();
+    apply?.click();
     harness.fixture.detectChanges();
     await harness.tick();
 
@@ -546,31 +595,29 @@ describe('T13-AC03 mobile filter drawer', () => {
     harness.cleanup();
   });
 
-  it('Cancel discards the draft — the URL stays as the prior state', async () => {
+  it('Cancel discards the draft: the URL stays as the prior state', async () => {
     const harness = await setupHarness({ brand: 'MiBolt Demo' });
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
     expect(harness.location.path(true)).toContain('brand=MiBolt');
 
-    const trigger = harness.fixture.nativeElement.querySelector('[data-testid="filter-trigger"]') as HTMLButtonElement;
+    const trigger = queryButton(getRootElement(harness.fixture), '[data-testid="filter-trigger"]');
     trigger.click();
     harness.fixture.detectChanges();
     await harness.tick();
 
-    const drawerBrand = document.body.querySelector('[data-testid="drawer-brand-Sample"]') as HTMLButtonElement;
-    expect(drawerBrand).not.toBeNull();
+    const drawerBrand = queryButton(document.body, '[data-testid="drawer-brand-Sample"]');
     drawerBrand.click();
     harness.fixture.detectChanges();
     await harness.tick();
 
-    const cancel = document.body.querySelector('[data-testid="drawer-cancel"]') as HTMLButtonElement;
-    expect(cancel).not.toBeNull();
+    const cancel = queryButton(document.body, '[data-testid="drawer-cancel"]');
     cancel.click();
     harness.fixture.detectChanges();
     await harness.tick();
 
-    // URL is untouched — Sample never made it to the facade.
+    // URL is untouched: Sample never made it to the facade.
     expect(harness.location.path(true)).not.toContain('Sample');
     // No extra request was fired.
     expect(harness.captured.length).toBe(0);
@@ -583,7 +630,7 @@ describe('T13-AC03 mobile filter drawer', () => {
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const trigger = harness.fixture.nativeElement.querySelector('[data-testid="filter-trigger"]') as HTMLButtonElement;
+    const trigger = queryButton(getRootElement(harness.fixture), '[data-testid="filter-trigger"]');
     trigger.click();
     harness.fixture.detectChanges();
     await harness.tick();
@@ -600,7 +647,7 @@ describe('T13-AC03 mobile filter drawer', () => {
 });
 
 // ===========================================================================
-// AC05 — distinct state copy/structure for default / loading / empty / error
+// AC05: distinct state copy/structure for default / loading / empty / error
 // ===========================================================================
 
 describe('T13-AC05 distinct visual states', () => {
@@ -612,7 +659,7 @@ describe('T13-AC05 distinct visual states', () => {
     ];
     harness.respond(successPage(items, 2));
     await harness.waitForStatus('success');
-    const root = harness.fixture.nativeElement as HTMLElement;
+    const root = getRootElement(harness.fixture);
     expect(root.querySelectorAll('[data-testid="product-card"]').length).toBe(2);
     expect(root.querySelector('[data-testid="catalog-empty"]')).toBeNull();
     expect(root.querySelector('[data-testid="catalog-error"]')).toBeNull();
@@ -621,8 +668,8 @@ describe('T13-AC05 distinct visual states', () => {
 
   it('loading state renders the LoadingState primitive, not the empty placeholder', async () => {
     const harness = await setupHarness();
-    // No response yet — facade is in `loading`.
-    const root = harness.fixture.nativeElement as HTMLElement;
+    // No response yet: facade is in `loading`.
+    const root = getRootElement(harness.fixture);
     expect(root.querySelector('[data-testid="loading-state"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="catalog-empty"]')).toBeNull();
     expect(root.querySelector('[data-testid="catalog-error"]')).toBeNull();
@@ -635,11 +682,11 @@ describe('T13-AC05 distinct visual states', () => {
     const harness = await setupHarness();
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
-    const root = harness.fixture.nativeElement as HTMLElement;
+    const root = getRootElement(harness.fixture);
     expect(root.querySelector('[data-testid="catalog-empty"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="empty-state"]')).not.toBeNull();
     expect(root.querySelectorAll('[data-testid="product-card"]').length).toBe(0);
-    const reset = root.querySelector('[data-testid="empty-reset"]') as HTMLButtonElement | null;
+    const reset = root.querySelector('[data-testid="empty-reset"]');
     expect(reset).not.toBeNull();
     harness.cleanup();
   });
@@ -648,10 +695,10 @@ describe('T13-AC05 distinct visual states', () => {
     const harness = await setupHarness({ q: 'demo' });
     harness.reject(503);
     await harness.waitForStatus('error');
-    const root = harness.fixture.nativeElement as HTMLElement;
+    const root = getRootElement(harness.fixture);
     expect(root.querySelector('[data-testid="catalog-error"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="error-state"]')).not.toBeNull();
-    const retry = root.querySelector('[data-testid="error-retry"]') as HTMLButtonElement | null;
+    const retry = root.querySelector('[data-testid="error-retry"]');
     expect(retry).not.toBeNull();
     harness.cleanup();
   });
@@ -660,7 +707,7 @@ describe('T13-AC05 distinct visual states', () => {
     const harness = await setupHarness({ brand: 'MiBolt Demo' });
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
-    const root = harness.fixture.nativeElement as HTMLElement;
+    const root = getRootElement(harness.fixture);
     expect(root.querySelector('[data-testid="applied-filters"]')).not.toBeNull();
     harness.cleanup();
   });
@@ -670,18 +717,17 @@ describe('T13-AC05 distinct visual states', () => {
     const items = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
     harness.respond(successPage(items, 1));
     await harness.waitForStatus('success');
-    const photo = harness.fixture.nativeElement.querySelector('[data-testid="image-photo"]') as HTMLImageElement;
-    expect(photo).not.toBeNull();
+    const photo = queryImage(getRootElement(harness.fixture), '[data-testid="image-photo"]');
     photo.dispatchEvent(new Event('error'));
     harness.fixture.detectChanges();
-    const fallback = harness.fixture.nativeElement.querySelector('[data-testid="image-fallback"]');
+    const fallback = getRootElement(harness.fixture).querySelector('[data-testid="image-fallback"]');
     expect(fallback).not.toBeNull();
     harness.cleanup();
   });
 });
 
 // ===========================================================================
-// Shared AC — URL round-trips through the facade
+// Shared AC: URL round-trips through the facade
 // ===========================================================================
 
 describe('T13-AC URL round-trip', () => {
@@ -689,7 +735,8 @@ describe('T13-AC URL round-trip', () => {
     const harness = await setupHarness({ q: 'apple' });
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
-    expect(harness.captured[harness.captured.length - 1]?.params.get('q')).toBe('apple');
+    const last = harness.captured[harness.captured.length - 1];
+    expect(last.params.get('q')).toBe('apple');
     harness.cleanup();
   });
 
@@ -697,14 +744,14 @@ describe('T13-AC URL round-trip', () => {
     const harness = await setupHarness({ brand: 'MiBolt Demo', inStock: 'true' });
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
-    const clearAll = harness.fixture.nativeElement.querySelector('[data-testid="applied-filters-clear"]') as HTMLButtonElement;
-    expect(clearAll).not.toBeNull();
+    const clearAll = queryButton(getRootElement(harness.fixture), '[data-testid="applied-filters-clear"]');
     clearAll.click();
     harness.fixture.detectChanges();
     await harness.tick();
     const last = harness.captured[harness.captured.length - 1];
-    expect(last?.params.getAll('brand')).toEqual([]);
-    expect(last?.params.get('inStock')).toBeNull();
+    expect(last.params.getAll('brand')).toEqual([]);
+    expect(last.params.get('inStock')).toBeNull();
     harness.cleanup();
   });
 });
+

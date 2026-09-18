@@ -197,14 +197,16 @@ function validateAddress(value: unknown): {
   } else {
     line2 = line2Raw;
   }
-  if (errors.length > 0) return { ok: false, errors };
+  if (errors.length > 0 || postalCode === null || city === null || line1 === null) {
+    return { ok: false, errors };
+  }
   return {
     ok: true,
     value: {
       countryCode: 'HU',
-      postalCode: postalCode!,
-      city: city!,
-      line1: line1!,
+      postalCode,
+      city,
+      line1,
       line2,
     },
   };
@@ -239,13 +241,15 @@ function validateContact(value: unknown): {
       message: 'A telefonszám +36 prefixumú, 8-9 számjegy.',
     });
   }
-  if (errors.length > 0) return { ok: false, errors };
+  if (errors.length > 0 || fullName === null || email === null || phone === null) {
+    return { ok: false, errors };
+  }
   return {
     ok: true,
     value: {
-      fullName: fullName!,
-      email: email!,
-      phone: phone!,
+      fullName,
+      email,
+      phone,
     },
   };
 }
@@ -427,7 +431,7 @@ export class QuoteDomain {
     }
 
     const cart = this.repository.getCart(input.cartId);
-    if (!cart || cart.sessionId !== input.sessionId) {
+    if (cart?.sessionId !== input.sessionId) {
       return err(notFound());
     }
     if (this.isExpired(cart)) {
@@ -437,7 +441,7 @@ export class QuoteDomain {
       return err(versionConflict());
     }
 
-    const body = input.body ?? {};
+    const body = input.body;
     const ALLOWED_SECTIONS = new Set(['contact', 'delivery', 'paymentMethod']);
     const presentSections: string[] = [];
     const unknownKeys: string[] = [];
@@ -552,7 +556,7 @@ export class QuoteDomain {
     }
 
     const cart = this.repository.getCart(input.cartId);
-    if (!cart || cart.sessionId !== input.sessionId) {
+    if (cart?.sessionId !== input.sessionId) {
       return err(notFound());
     }
     if (this.isExpired(cart)) {
@@ -571,17 +575,18 @@ export class QuoteDomain {
 
     // 2. Incomplete draft => CHECKOUT_INCOMPLETE per missing field
     const draft = this.drafts.get(input.cartId)?.draft ?? {};
+    const delivery = draft.delivery;
     const draftErrors: FieldError[] = [];
     if (!draft.contact) {
       draftErrors.push({ path: '/contact', message: 'A kapcsolat kitöltése kötelező.' });
     }
-    if (!draft.delivery) {
+    if (!delivery) {
       draftErrors.push({ path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' });
     }
     if (!draft.paymentMethod) {
       draftErrors.push({ path: '/paymentMethod', message: 'A fizetési mód kiválasztása kötelező.' });
     }
-    if (draftErrors.length > 0) {
+    if (draftErrors.length > 0 || !delivery) {
       return err(checkoutIncomplete('A fizetési adatok hiányosak.', draftErrors));
     }
 
@@ -651,7 +656,7 @@ export class QuoteDomain {
     }
 
     // 4. Subtotal + shipping + total
-    const shipping = SHIPPING_FEE[draft.delivery!.optionId];
+    const shipping = SHIPPING_FEE[delivery.optionId];
     const total = { amount: subtotal + shipping.amount, currency: 'HUF' as const };
     const quoteRecord: QuoteSnapshot = {
       id: this.ids.uuid(),
@@ -780,7 +785,7 @@ function validateSession(sessionId: string): Result<string> {
 }
 
 function validateIfMatch(ifMatch: number | null): Result<number> {
-  if (ifMatch === null || ifMatch === undefined) {
+  if (ifMatch === null) {
     return err({
       status: 400,
       code: 'VALIDATION_FAILED',
@@ -802,7 +807,7 @@ function validateIfMatch(ifMatch: number | null): Result<number> {
 }
 
 function validateIdempotencyKey(key: string | null): Result<string> {
-  if (key === null || key === undefined) {
+  if (key === null) {
     return err({
       status: 400,
       code: 'VALIDATION_FAILED',
@@ -818,7 +823,7 @@ function validateIdempotencyKey(key: string | null): Result<string> {
       fieldErrors: [
         {
           path: '/Idempotency-Key',
-          message: `Az Idempotency-Key hossza ${HeaderRules.idempotencyMin} és ${HeaderRules.idempotencyMax} karakter közé eshet.`,
+          message: `Az Idempotency-Key hossza ${String(HeaderRules.idempotencyMin)} és ${String(HeaderRules.idempotencyMax)} karakter közé eshet.`,
         },
       ],
     });
