@@ -12,7 +12,7 @@
  *     (R21, the project's deliberately more comfortable
  *     target)
  *   - one full-element screenshot per viewport / route pair is
- *     captured under `e2e/design/screenshots/<viewport>/<route>.png`
+ *     captured under `e2e/design/screenshots/<viewport>/<project>-<route>.png`
  *     for AC02 visual comparison.
  *
  * The matrix is driven by data so a new viewport, route or CTA
@@ -115,12 +115,12 @@ test.describe('T25-AC01 viewport matrix — overflow + 44px CTAs', () => {
           ).toBeLessThanOrEqual(overflow.innerWidth + 1);
 
           // Persist one screenshot per viewport / route pair under
-          // e2e/design/screenshots/<viewport>/<route>.png (AC02
-          // visual evidence — comparison happens in design-review.md,
-          // not in the test).
+          // e2e/design/screenshots/<viewport>/<project>-<route>.png
+          // (AC02 visual evidence — comparison happens in
+          // design-review.md, not in the test).
           const screenshotDir = resolve(SCREENSHOT_ROOT, viewport.name);
           mkdirSync(screenshotDir, { recursive: true });
-          const screenshotPath = resolve(screenshotDir, `${route.id}.png`);
+          const screenshotPath = resolve(screenshotDir, `${testInfo.project.name}-${route.id}.png`);
           mkdirSync(dirname(screenshotPath), { recursive: true });
           await page.screenshot({
             path: screenshotPath,

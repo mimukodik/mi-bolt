@@ -189,7 +189,7 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
       const screenshotPath = resolve(
         SCREENSHOT_ROOT,
         'keyboard',
-        `${step.name.replace(/\s+/g, '-').toLowerCase()}.png`,
+        `${testInfo.project.name}-${step.name.replace(/\s+/g, '-').toLowerCase()}.png`,
       );
       mkdirSync(resolve(SCREENSHOT_ROOT, 'keyboard'), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });

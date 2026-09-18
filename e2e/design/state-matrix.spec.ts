@@ -10,7 +10,7 @@
  *   - the state-specific surface is mounted (text matches the
  *     contract asserted by the unit suite for that surface),
  *   - a screenshot under
- *     `e2e/design/screenshots/states/<state>/<route>.png` is
+ *     `e2e/design/screenshots/states/<state>/<project>-<route>.png` is
  *     captured for the AC02 visual catalogue.
  *
  * Error states are deliberately exercised through the `out-of-stock`
@@ -149,7 +149,10 @@ test.describe('T25 state matrix — default / loading / empty / error', () => {
 
       const screenshotDir = resolve(SCREENSHOT_ROOT, 'states', surface.state);
       mkdirSync(screenshotDir, { recursive: true });
-      const screenshotPath = resolve(screenshotDir, `${surface.routeId}.png`);
+      const screenshotPath = resolve(
+        screenshotDir,
+        `${testInfo.project.name}-${surface.routeId}.png`,
+      );
       await page.screenshot({ path: screenshotPath, fullPage: true });
       testInfo.attachments.push({
         name: `state-${surface.state}-${surface.routeId}`,
