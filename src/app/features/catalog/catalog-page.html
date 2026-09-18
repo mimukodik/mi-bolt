@@ -213,22 +213,5 @@
     (filtersChanged)="onFiltersChanged($event)"
     (closed)="closeDrawer()"
   ></app-filter-drawer>
-
-  <input
-    #search
-    type="search"
-    class="sr-only absolute w-px h-px overflow-hidden"
-    data-testid="catalog-search"
-    [value]="facade.query().q ?? ''"
-    (input)="onSearchInput($event)"
-  />
-  <button
-    #searchCommit
-    type="button"
-    class="sr-only absolute w-px h-px overflow-hidden"
-    data-testid="search-commit"
-    (click)="commitSearch()"
-  >
-    commit
-  </button>
 </section>
+

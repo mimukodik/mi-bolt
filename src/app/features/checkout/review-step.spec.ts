@@ -893,6 +893,44 @@ describe('T22-AC05 order summary is preserved across quote states', () => {
     expect(statusRow).not.toBeNull();
   });
 
+  it('renders persistent price-changed error status message with no close button and enabled refresh action', async () => {
+    server.use(
+      http.post('*/api/v1/checkout/:cartId/quote', () => {
+        return HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:price-changed',
+            title: 'Árváltozás',
+            status: 409,
+            code: 'PRICE_CHANGED',
+            detail: 'Árváltozás történt.',
+            fieldErrors: [],
+          },
+          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+
+    const quoteController = TestBed.inject(QuoteController);
+    await quoteController.refresh();
+
+    const fixture = TestBed.createComponent(ReviewStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const statusMessage = queryElement(root, '[data-testid="status-message"]');
+    expect(statusMessage).not.toBeNull();
+    expect(statusMessage?.querySelector('button')).toBeNull();
+
+    const refreshButton = root.querySelector<HTMLButtonElement>('[data-testid="review-refresh"]');
+    expect(refreshButton).not.toBeNull();
+    expect(refreshButton?.disabled).toBe(false);
+  });
+
   it('field-error branch (validation failures) keeps the items visible', async () => {
     server.use(
       http.post('*/api/v1/checkout/:cartId/quote', () => {

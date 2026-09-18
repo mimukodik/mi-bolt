@@ -412,10 +412,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
 
   it('search input is debounced 300ms and pushed to the URL via the facade', async () => {
     const harness = await setupHarness();
-    const input = queryInput(getRootElement(harness.fixture), '[data-testid="catalog-search"]');
-    expect(input).not.toBeNull();
-    input.value = 'demo';
-    input.dispatchEvent(new Event('input'));
+    harness.facade.setSearch('demo');
     await new Promise<void>((r) => setTimeout(r, 50));
     expect(harness.captured.length).toBe(0);
     await new Promise<void>((r) => setTimeout(r, 320));
@@ -423,6 +420,14 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     expect(harness.captured[0]?.params.get('q')).toBe('demo');
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
+    harness.cleanup();
+  });
+
+  it('does not render test-only search input or search commit button', async () => {
+    const harness = await setupHarness();
+    const root = getRootElement(harness.fixture);
+    expect(root.querySelector('[data-testid="catalog-search"]')).toBeNull();
+    expect(root.querySelector('[data-testid="search-commit"]')).toBeNull();
     harness.cleanup();
   });
 

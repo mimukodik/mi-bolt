@@ -73,7 +73,6 @@ export class CatalogPage {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly facade = inject(CatalogFacade);
 
-  private readonly searchEl = viewChild<ElementRef<HTMLInputElement>>('search');
   /** Trigger button the catalog page opens the filter drawer with — passed
    *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3). */
   protected readonly filterTrigger =
@@ -189,17 +188,6 @@ export class CatalogPage {
   onPageChanged(page: number): void {
     if (page < 1) return;
     this.facade.setPage(page);
-  }
-
-  onSearchInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.facade.setSearch(value);
-  }
-
-  commitSearch(): void {
-    // Used by tests to flush a search debounce; no UI surface.
-    const el = this.searchEl()?.nativeElement;
-    if (el) this.facade.setSearch(el.value);
   }
 
   onChipRemoved(kind: AppliedChip['kind'], value: string | number | undefined): void {

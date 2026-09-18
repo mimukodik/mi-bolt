@@ -12,6 +12,7 @@ import { Button } from './button';
       [loadingLabel]="loadingLabel()"
       [disabled]="disabled()"
       [loading]="loading()"
+      [type]="type()"
       (pressed)="clickCount.set(clickCount() + 1)"
     ></app-button>
   `,
@@ -23,6 +24,7 @@ class HostComponent {
   readonly loadingLabel = signal('Hozzáadás…');
   readonly disabled = signal(false);
   readonly loading = signal(false);
+  readonly type = signal<'button' | 'submit' | 'reset'>('button');
   readonly clickCount = signal(0);
 }
 
@@ -63,6 +65,14 @@ describe('Button primitive', () => {
     const btn = root.querySelector<HTMLButtonElement>('button');
     expect(btn?.tagName).toBe('BUTTON');
     expect(btn?.getAttribute('type')).toBe('button');
+  });
+
+  it('applies the requested type when bound (e.g. submit)', () => {
+    const { fixture, host, root } = setup();
+    host.type.set('submit');
+    fixture.detectChanges();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.getAttribute('type')).toBe('submit');
   });
 
   it('reports the variant token in its computed style (R21 minimum 44 CSS px)', () => {

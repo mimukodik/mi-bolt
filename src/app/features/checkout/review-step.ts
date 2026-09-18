@@ -406,10 +406,6 @@ export class ReviewStep {
     this.termsOpened.set(false);
   }
 
-  onDismissStatus(): void {
-    void this.quoteController.refresh();
-  }
-
   async onSubmit(): Promise<void> {
     if (!this.canSubmit()) {
       this.submitted.set(true);

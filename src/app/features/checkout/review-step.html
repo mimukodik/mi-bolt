@@ -133,7 +133,6 @@
                 [message]="priceChangedMessage()"
                 severity="error"
                 [persistent]="true"
-                (dismissed)="onDismissStatus()"
               ></app-status-message>
             }
             @case ('quote-expired') {
@@ -141,7 +140,6 @@
                 [message]="quoteExpiredMessage()"
                 severity="error"
                 [persistent]="true"
-                (dismissed)="onDismissStatus()"
               ></app-status-message>
             }
             @case ('out-of-stock') {
@@ -149,7 +147,6 @@
                 [message]="outOfStockMessage()"
                 severity="error"
                 [persistent]="true"
-                (dismissed)="onDismissStatus()"
               ></app-status-message>
             }
             @case ('field-error') {
@@ -157,7 +154,6 @@
                 [message]="fieldErrorMessage()"
                 severity="error"
                 [persistent]="true"
-                (dismissed)="onDismissStatus()"
               ></app-status-message>
             }
           }
