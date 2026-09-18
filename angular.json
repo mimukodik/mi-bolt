@@ -98,6 +98,13 @@
               "tests/**",
               "e2e/**"
             ],
+            "coverageThresholds": {
+              "perFile": true,
+              "statements": 100,
+              "branches": 100,
+              "functions": 100,
+              "lines": 100
+            },
             "coverageReporters": ["json-summary", "json", "text"]
           }
         },

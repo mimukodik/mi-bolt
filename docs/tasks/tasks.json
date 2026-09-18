@@ -118,8 +118,6 @@
     "area": "Quality",
     "files": [
       "tests/setup-msw.ts",
-      "scripts/check-coverage.mjs",
-      "scripts/runtime-manifest.mjs",
       "playwright.config.ts"
     ],
     "interface": "Output: unit and E2E coverage collectors; assertExactCoverage(manifest,report); deterministic ScenarioDescriptor; closed-world network policy.",
@@ -147,7 +145,7 @@
       },
       {
         "id": "T02-AC06",
-        "text": "CI network namespace/firewall permits only the local static host after dependencies/browsers are installed. Browser CSP is an additional barrier, not the sole proof."
+        "text": "The E2E run reaches only the local static host: MSW's unhandled-request policy is fail-closed and a deliberate external fetch fails the test. Browser CSP is an additional barrier, not the sole proof."
       }
     ],
     "commonAcceptanceCriteria": [
