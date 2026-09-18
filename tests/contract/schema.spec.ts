@@ -1,11 +1,16 @@
-// tests/contract/schema.spec.ts — T03-AC01/AC02/AC04 contract-level assertions.
+// tests/contract/schema.spec.ts — T03-AC01/AC02/AC03/AC04 contract-level
+// assertions, plus a package.json contract check for the api:generate
+// script T04 wires.
 //
-// Vitest suite that reads docs/api/openapi.yaml (the wire contract) plus the
-// products fixture, dereferences $refs with @apidevtools/json-schema-ref-parser,
-// and asserts the schema-level and business-invariant constraints the spec
-// document imposes. The validator (scripts/validate-contract.mjs) enforces the
-// same checks for the CLI; this suite gives the same coverage to Vitest so
-// T03 can run it under `ng test` or `npx vitest run`.
+// Vitest suite that reads docs/api/openapi.yaml (the wire contract), the
+// products fixture and package.json, dereferences $refs with
+// @apidevtools/json-schema-ref-parser, and asserts the schema-level and
+// business-invariant constraints the spec document imposes. This suite is
+// the sole enforcement of these invariants: the hand-rolled CLI duplicate,
+// scripts/validate-contract.mjs, is deleted (FIX-13) because every check it
+// performed already had a vitest case here or gained one in the same change.
+// The two it gained are the package.json api:generate declaration and the schema-level
+// example validation (T03-AC01's third clause).
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -100,6 +105,33 @@ describe('T03-AC01 operationIds', () => {
     expect(dereferenced.components.schemas.Product).toBeDefined();
     expect(dereferenced.components.schemas.Cart).toBeDefined();
     expect(dereferenced.components.schemas.Quote).toBeDefined();
+  });
+
+  it('every schema-level example validates against its own schema', () => {
+    // Ported from scripts/validate-contract.mjs's assertExamplesValidate
+    // (buildAjv at :246, the schema-level loop at :304-312), deleted by
+    // FIX-13. Its Ajv is built with validateFormats: false; this instance
+    // repeats that exactly, so the moved check is the same check and not a
+    // stricter one. The operation media-type half of that function is not
+    // carried over: docs/api/openapi.yaml declares eight `examples:` blocks
+    // and all eight are schema-level (grep -c "example:" returns 0).
+    const exampleAjv = new Ajv({ allErrors: true, strict: false, validateFormats: false });
+    addFormats(exampleAjv);
+    const schemas = dereferenced.components.schemas;
+    let checked = 0;
+    for (const [name, schema] of Object.entries(schemas)) {
+      const examples = (schema as { examples?: unknown[] }).examples;
+      if (!Array.isArray(examples)) continue;
+      const validate = exampleAjv.compile(schema as Record<string, unknown>);
+      examples.forEach((example, i) => {
+        checked += 1;
+        expect(
+          validate(example),
+          `${name}.examples[${i}] failed its own schema: ${JSON.stringify(validate.errors)}`,
+        ).toBe(true);
+      });
+    }
+    expect(checked, 'no schema-level example was found to validate').toBeGreaterThan(0);
   });
 });
 
@@ -376,3 +408,31 @@ describe('T03-AC03 fixture shape', () => {
     }
   });
 });
+
+/**
+ * The deleted scripts/validate-contract.mjs checked this inline
+ * (assertApiGenerateScript, :395-413). It is a predicate here so the
+ * negative arm is a case rather than a hand-performed rename of a
+ * package.json key in the same commit that rewrites devDependencies.
+ */
+function declaresApiGenerate(scripts: Record<string, string> | undefined): boolean {
+  return Object.prototype.hasOwnProperty.call(scripts ?? {}, 'api:generate');
+}
+
+describe('package.json contract — api:generate is declared (T04 wiring)', () => {
+  it('package.json declares the api:generate script', async () => {
+    const packageJsonRaw = await readFile(resolve(__dirname, '../../package.json'), 'utf8');
+    const packageJson = JSON.parse(packageJsonRaw) as { scripts?: Record<string, string> };
+    expect(
+      declaresApiGenerate(packageJson.scripts),
+      'package.json scripts.api:generate is required (T04 wires ng-openapi-gen; T03 asserts the name)',
+    ).toBe(true);
+  });
+
+  it('the check fails when the script is renamed or absent', () => {
+    expect(declaresApiGenerate({ 'zz-api:generate': 'ng-openapi-gen --config ng-openapi-gen.json' })).toBe(false);
+    expect(declaresApiGenerate({})).toBe(false);
+    expect(declaresApiGenerate(undefined)).toBe(false);
+  });
+});
+

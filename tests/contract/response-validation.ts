@@ -1,7 +1,6 @@
 /**
- * T26 — OpenAPI-backed schema validators shared by the contract
- * parity suite (`tests/contract/operation-matrix.spec.ts`) and the
- * CLI parity script (`scripts/check-operation-parity.mjs`).
+ * T26 — OpenAPI-backed schema validators used by the contract
+ * parity suite (`tests/contract/operation-matrix.spec.ts`).
  *
  * The wire contract is `docs/api/openapi.yaml`; the SDK is generated
  * from it; the MSW handlers register their slices through the T05
