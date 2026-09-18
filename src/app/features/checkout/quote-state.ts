@@ -40,7 +40,6 @@
  */
 
 import {
-  DestroyRef,
   Injectable,
   computed,
   inject,
@@ -99,7 +98,6 @@ export function mapQuoteError(error: CheckoutError): QuoteState {
 @Injectable({ providedIn: 'root' })
 export class QuoteController {
   private readonly facade = inject(CheckoutFacade);
-  private readonly destroyRef = inject(DestroyRef);
 
   private readonly stateWritable: WritableSignal<QuoteState> = signal<QuoteState>({ kind: 'idle' });
 
@@ -119,18 +117,6 @@ export class QuoteController {
   /** True only when the controller holds a fresh, submittable
    *  quote. The CTA reads this. */
   readonly ready: Signal<boolean> = computed<boolean>(() => this.stateWritable().kind === 'ready');
-
-  constructor() {
-    // Drop the active quote when the facade invalidates it (the
-    // user re-edited an earlier step). The page calls `refresh()`
-    // after the user returns to the review screen, so this effect
-    // only has to mark the state as `idle` — it does NOT trigger a
-    // new network call automatically.
-    this.destroyRef.onDestroy(() => {
-      // No-op: signals dispose themselves when the injector tears
-      // down. Kept as a hook for future cleanup work.
-    });
-  }
 
   /**
    * Mirrors the facade's "active quote" flag into the controller
