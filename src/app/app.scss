@@ -1,31 +1,21 @@
 :host {
   display: block;
   min-height: 100dvh;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
-  color: #171b1f;
-  background: #ffffff;
 }
 
 .skip-link {
   position: absolute;
   left: -9999px;
   top: 0;
-  padding: 0.5rem 0.75rem;
-  background: #171b1f;
-  color: #ffffff;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-text-primary);
+  color: var(--color-text-inverse);
   text-decoration: none;
   z-index: 1000;
 }
 
 .skip-link:focus {
-  left: 0.5rem;
-  top: 0.5rem;
-  outline: 2px solid #ff6a00;
+  left: var(--space-2);
+  top: var(--space-2);
+  outline: 2px solid var(--color-brand-accent);
 }
