@@ -16,7 +16,8 @@
     "coverage:unit:check": "node scripts/check-coverage.mjs --unit",
     "coverage:e2e:check": "node scripts/check-coverage.mjs --e2e",
     "check:traceability": "node scripts/check-traceability.mjs",
-    "check:test-policy": "node scripts/check-test-policy.mjs"
+    "check:test-policy": "node scripts/check-test-policy.mjs",
+    "fix:status": "node scripts/fix-status.mjs"
   },
   "private": true,
   "packageManager": "npm@11.17.0",
