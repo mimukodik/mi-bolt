@@ -396,3 +396,83 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
     expect(repository.findCartBySession('sess-x')?.id).toBe(persistedCart.id);
   });
 });
+
+describe('ensureCart does not resurrect an expired restored cart', () => {
+  it('still returns an unexpired restored cart (no regression on FIX-10-AC08)', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+
+    const persistedCart: PersistedCart = {
+      id: 'cart-unexpired-x',
+      version: 1,
+      items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
+      lastUpdatedAt: '2026-09-14T10:00:00.000Z',
+    };
+    repository.loadPersistedCart(persistedCart, 'sess-unexpired');
+    // loadPersistedCart sets expiresAt to lastUpdatedAt + 24h; the clock has
+    // not advanced, so the cart is still well within its window.
+    clock.advanceMs(23 * 60 * 60 * 1000);
+
+    expect(repository.ensureCart('sess-unexpired').id).toBe(persistedCart.id);
+  });
+
+  it('mints a fresh, empty cart when the restored cart has already expired', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+
+    const persistedCart: PersistedCart = {
+      id: 'cart-expired-x',
+      version: 1,
+      items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
+      lastUpdatedAt: '2026-09-14T10:00:00.000Z',
+    };
+    repository.loadPersistedCart(persistedCart, 'sess-expired');
+    // loadPersistedCart's expiresAt is lastUpdatedAt + 24h; a six-day-old
+    // snapshot (well inside persistence's 7-day MAX_AGE_MS) still carries a
+    // cart that is long past that 24h mark.
+    clock.advanceMs(6 * 24 * 60 * 60 * 1000);
+
+    const fresh = repository.ensureCart('sess-expired');
+
+    expect(fresh.id).not.toBe(persistedCart.id);
+    expect(fresh.items).toEqual([]);
+    expect(repository.findCartBySession('sess-expired')?.id).toBe(fresh.id);
+  });
+
+  it('treats an unparseable expiresAt as not expired (matches CartDomain.isExpired)', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+
+    // Built directly through createCart/updateCart rather than
+    // loadPersistedCart: loadPersistedCart derives expiresAt from
+    // lastUpdatedAt via `new Date(...).toISOString()`, which throws on
+    // an unparseable input rather than producing an unparseable
+    // expiresAt string. This isolates the guard on `cart.expiresAt`
+    // itself, per "Do not change loadPersistedCart's expiry arithmetic".
+    const created = repository.createCart('sess-bad-date');
+    repository.updateCart({ ...created, expiresAt: 'not-a-real-date' });
+
+    expect(repository.ensureCart('sess-bad-date').id).toBe(created.id);
+  });
+
+  it('still mints a fresh cart when the existing cart is not active (pre-existing arm)', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+
+    const created = repository.createCart('sess-ordered');
+    repository.updateCart({ ...created, status: 'ordered' });
+
+    const fresh = repository.ensureCart('sess-ordered');
+
+    expect(fresh.id).not.toBe(created.id);
+    expect(fresh.status).toBe('active');
+  });
+});

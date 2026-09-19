@@ -200,14 +200,31 @@ export class Repository {
     return cart;
   }
 
-  /** Returns the cart associated with a session, creating one if absent. */
+  /**
+   * Returns the cart associated with a session, creating one if absent
+   * or expired.
+   */
   ensureCart(sessionId: string): Cart {
     const existing = this.cartsBySession.get(sessionId);
     if (existing) {
       const cart = this.carts.get(existing);
-      if (cart?.status === 'active') return cart;
+      if (cart?.status === 'active' && !this.isCartExpired(cart)) return cart;
     }
     return this.createCart(sessionId);
+  }
+
+  /**
+   * Mirrors `CartDomain.isExpired` (src/mocks/cart/cart-domain.ts)
+   * in the repository's own terms — `Repository` cannot import
+   * `CartDomain`, since the dependency runs the other way. Keep the
+   * two predicates in step: an unparseable date is not expired, and
+   * expiry is `>=` against the clock.
+   */
+  private isCartExpired(cart: Cart): boolean {
+    const nowMs = Date.parse(this.clock.now());
+    const expiresAtMs = Date.parse(cart.expiresAt);
+    if (!Number.isFinite(nowMs) || !Number.isFinite(expiresAtMs)) return false;
+    return nowMs >= expiresAtMs;
   }
 
   /** Looks up a cart by id. */
