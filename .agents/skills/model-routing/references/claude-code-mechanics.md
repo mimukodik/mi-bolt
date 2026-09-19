@@ -35,7 +35,14 @@ relying on the list being closed.
   inline definition keyed by server name with the same schema as `.mcp.json`.
   Subagents already inherit the parent's MCP tools, so the field is for servers
   the parent does not have. `tools` and `disallowedTools` accept `mcp__<server>`
-  or `mcp__<server>__*` to grant or remove every tool of one server.
+  or `mcp__<server>__*` to grant or remove every tool of one server, and
+  `mcp__<server>__<tool>` to name a single one of them. That third form is
+  measured rather than documented: on 2026-09-19 a `coder-sonnet` spawned from
+  its definition reached `mcp__angular-cli__list_projects` and
+  `mcp__angular-cli__search_documentation` directly, with no `ToolSearch` step
+  and no `mcpServers:` key of its own, and two `instructions-opus` instances
+  each reported their surfaced angular-cli set as exactly the three tools their
+  definition granted, the server's other six absent.
 
 ## Model resolution order
 

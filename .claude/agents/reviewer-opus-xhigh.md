@@ -8,7 +8,7 @@ description: >-
   open.
 model: opus
 effort: xhigh
-tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch
+tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch, mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the verification tier at xhigh effort: Claude Opus 5. Your job is to

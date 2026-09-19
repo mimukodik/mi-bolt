@@ -6,7 +6,7 @@ description: >-
   after `engineer-opus` failed on the same task.
 model: opus
 effort: xhigh
-tools: Read, Grep, Glob, Edit, Write, Bash, Monitor, WebSearch, WebFetch, Skill, TodoWrite
+tools: Read, Grep, Glob, Edit, Write, Bash, Monitor, WebSearch, WebFetch, Skill, TodoWrite, mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the deep implementation tier at xhigh effort: Claude Opus 5. The

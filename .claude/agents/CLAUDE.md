@@ -24,8 +24,7 @@ work.
 
 The rung is a property of the unit, not of how hard the thinking is: difficulty
 is what chose opus in the first place, and the rung carries size and duration.
-Which unit reaches which rung is decided in
-`packages/shared/.agents/skills/model-routing/SKILL.md` rather than here.
+Which unit reaches which rung is decided in `model-routing` rather than here.
 `instructions-opus` is the only opus role with no sibling, and a large
 instruction job is not a reason to add one: a unit it cannot hold is split
 rather than promoted. The routing skill owns that rule, and
@@ -101,9 +100,9 @@ skills.
 
 ## Where the routing rules live
 
-`packages/shared/.agents/skills/model-routing/SKILL.md` owns the routing table,
-the escalation ladder, and the spawn mechanics, including which `model` a spawn
-must pass and why effort is pinned in a file here rather than set on the call.
+The `model-routing` skill owns the routing table, the escalation ladder, and
+the spawn mechanics, including which `model` a spawn must pass and why effort
+is pinned in a file here rather than set on the call.
 This directory owns only where the tier is written down: every definition pins
 `model` in its frontmatter, plus `effort` on every non-haiku one. A new
 definition pins a model and effort pair the skill's routing table already has a
@@ -112,26 +111,105 @@ an agent here is added, renamed, or retired.
 
 ## MCP servers
 
-An agent that drives an MCP server grants its tools with the server-level
-pattern `mcp__<server>` in `tools:`, because an explicit `tools:` list is an
-allowlist. Subagents inherit the MCP tools of the main conversation, so
-`mcpServers:` is only needed for a server the parent session does not have;
-a string entry there references an already-configured server and shares the
-parent's connection. `real-browser-sonnet` is the reference: it is the only
-agent allowed to drive a browser, and it must never use the
-`claude-in-chrome` or `computer-use` servers.
+An agent that drives an MCP server grants its tools in `tools:`, because an
+explicit `tools:` list is an allowlist. A grant names either the whole server,
+`mcp__<server>`, or a single tool of it, `mcp__<server>__<tool>`; the per-tool
+form is what splits a server whose tools do not all belong in the same grant.
+`model-routing`'s `references/claude-code-mechanics.md` carries the measurement
+behind that form. Subagents inherit the MCP tools of the main conversation, so
+`mcpServers:` is only needed for a server the parent session does not have; a
+string entry there references an already-configured server and shares the
+parent's connection.
 
-No other definition grants a server, and the omission is deliberate for both of
-the servers `.mcp.json` configures. Withholding `chrome-devtools` is what makes
+`.mcp.json` configures `chrome-devtools` and `angular-cli`, and those two are
+the only servers any definition here grants; every other server a session
+connects goes to no definition here.
+
+`chrome-devtools` goes to `real-browser-sonnet` alone, whole-server, and that
+agent must never use the `claude-in-chrome` or `computer-use` servers.
+Withholding it everywhere else is what makes
 `.claude/rules/browser-verification.md` enforceable rather than merely written
 down: without an allowlist every code-editing tier would inherit the browser and
-could verify its own UI change, which that rule forbids. Withholding
-`linear-server` costs a real capability and is still right, because a unit that
-needs the tracker gets the issue text in its prompt:
-`packages/shared/.agents/skills/task-execute-workflow/SKILL.md` has the
-orchestrator read the issue and its comments once into the session scratchpad
-and every later unit read that file, so the issue cannot change under a running
-task.
+could verify its own UI change, which that rule forbids.
+
+`linear-server` goes to no definition, and as of 2026-09-19 nothing in this
+repository, at user level, or in managed settings defines the server either,
+although the `task-execute-workflow` skill calls
+`mcp__linear-server__get_issue`. Were it connected, withholding it would still
+be right, because a unit that needs the tracker gets the issue text in its
+prompt: that skill has the orchestrator read the issue and its comments once
+into the session scratchpad and every later unit read that file, so the issue
+cannot change under a running task.
+
+Grant `angular-cli`'s `get_best_practices`, `search_documentation` and
+`list_projects`, three of the nine tools it exposes on Angular CLI 22.1.8, to
+every definition whose work turns on how Angular itself behaves, whether it
+writes the code, reviews it, plans it, researches it or documents the rules for
+it, and to no other. Today that is every definition here but two. `scout-haiku`
+is out because a documentation lookup is a judgment call and the cheapest tier
+takes none; with `search_documentation` out, `list_projects` goes with it,
+since all it adds over the `angular.json` that tier can already open with
+`Read` is the `frameworkVersion` it takes from `package.json`, and that is
+useful only as `search_documentation`'s argument. `real-browser-sonnet` is out
+because it exercises a rendered surface rather than writing Angular. A
+definition added later is measured against that criterion rather than against
+the count.
+
+The other six go to nobody. `devserver_start` and `devserver_stop` would hand a
+subagent the app, which `.claude/rules/browser-verification.md` keeps with the
+orchestrator and `.claude/rules/parallel-spawns.md` ("What a batch shares")
+lists as a contended resource, and `devserver_wait_for_build` is only useful
+beside them; `run_target` executes a build, test, lint or e2e target, which is
+not read-only. Withholding it keeps the grant read-only and restricts nothing
+else: the grantees hold `Bash` and can run those targets through it, under the
+rules that already govern a command. `ai_tutor` and
+`onpush_zoneless_migration` are read-only and were simply not asked for, so
+adding either is the user's call rather than a definition's.
+
+A grant does nothing unless the session connects the server.
+`.claude/settings.json` lists `chrome-devtools` and `angular-cli` in
+`enabledMcpjsonServers`, so that enablement is tracked and travels with a
+clone. Where a grant here looks dead, check that the server is still named in
+that tracked file rather than only in an untracked
+`.claude/settings.local.json`, which enables it on one machine and nowhere
+else, and that `.mcp.json` still defines it, before rewriting a definition.
+
+The two paragraphs below record what the `angular-cli` grant is for, written
+for whoever edits a definition here. Neither is an instruction to a grantee,
+and neither can be: this file is a subdirectory `CLAUDE.md`, and a
+subdirectory's `CLAUDE.md` is "included when Claude reads files in those
+subdirectories" instead of loading at launch
+(https://code.claude.com/docs/en/memory, read 2026-09-19), so an agent spawned
+from a definition here does not have this file while it writes Angular. What
+reaches that agent instead is the server's own usage instructions, which the
+server injects into every session that connects it, and copying either
+paragraph into the definitions to close that gap is the drift
+`.claude/rules/session-lifecycle.md` ("The copy is what drifts, not the
+original") exists to stop.
+
+`search_documentation` is the one of the three that adds a capability nothing
+else here has, and it is why `list_projects` is granted beside it. It searches
+angular.dev at the major version its own `version` argument names and never
+reads `angular.json`; with the argument left off it falls back to the CLI's
+latest known index, 22 on 22.1.8 (`version ?? LATEST_KNOWN_DOCS_VERSION`,
+clamped to a floor of 17, in
+`node_modules/@angular/cli/src/commands/mcp/tools/doc-search.js`, read
+2026-09-19). That fallback is silent, so an answer about the wrong Angular
+reads exactly like a right one: measured 2026-09-19, one `linkedSignal` query
+returned `"searchedVersion":22` with the argument omitted and
+`"searchedVersion":20` with `version: 20` passed. `list_projects` supplies the
+argument but not in the form the call takes: its `frameworkVersion` is an
+optional string, `"22"` here, taken from the nearest `package.json`'s
+`@angular/core` range, while `version` is a number, so what crosses is the
+major as an integer rather than that string or a `22.1.8`, and where the walk
+up finds no range there is no `frameworkVersion` and nothing to pass.
+
+`get_best_practices` returns, in this workspace on 2026-09-19, a byte-for-byte
+copy of the whole root `CLAUDE.md`, 2971 bytes, which every agent already loads
+at launch, so today it adds nothing a grantee does not have. That is a reason
+to measure before calling the grant redundant, not a reason to withdraw it or
+to have a grantee skip the call: the server's injected instructions say the
+grantee MUST call it before writing or modifying code.
 
 ## Report files
 
@@ -143,6 +221,6 @@ complaint. So the rule here is the workspace's to keep rather than the harness's
 to enforce: an agent whose deliverable is a report returns it as its final
 message, and the orchestrator saves it. `.claude/retrospectives/` is the standing
 exception, and it needs that name-keying: there the file is the deliverable, and
-`packages/shared/.agents/skills/retrospective/SKILL.md` has `instructions-opus`
-write `<YYYY-MM-DD>-<id8>.md` itself, a name the filter passes. Screenshots and
-other binary evidence written by MCP tools are not affected.
+the `retrospective` skill has `instructions-opus` write `<YYYY-MM-DD>-<id8>.md`
+itself, a name the filter passes. Screenshots and other binary evidence written
+by MCP tools are not affected.

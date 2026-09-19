@@ -7,7 +7,7 @@ description: >-
   over many runs goes to `debugger-opus-xhigh` instead.
 model: opus
 effort: high
-tools: Read, Grep, Glob, Edit, Write, Bash, Monitor, WebSearch, WebFetch, Skill, TodoWrite
+tools: Read, Grep, Glob, Edit, Write, Bash, Monitor, WebSearch, WebFetch, Skill, TodoWrite, mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the debugging tier: Claude Opus 5 at high effort.

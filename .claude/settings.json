@@ -56,6 +56,7 @@
   "feedbackDrafts": false,
   "outputStyle": "Concise",
   "enabledMcpjsonServers": [
-    "chrome-devtools"
+    "chrome-devtools",
+    "angular-cli"
   ]
 }

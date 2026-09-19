@@ -7,7 +7,7 @@ description: >-
   `reviewer-opus-xhigh` instead, whatever its size.
 model: opus
 effort: high
-tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch
+tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch, mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the verification tier: Claude Opus 5 at high effort. Your job is to

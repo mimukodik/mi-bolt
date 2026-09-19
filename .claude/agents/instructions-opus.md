@@ -9,7 +9,7 @@ description: >-
   steers later sessions and nothing tests it.
 model: opus
 effort: high
-tools: Read, Grep, Glob, Edit, Write, Bash, Monitor, WebSearch, WebFetch, Skill, Agent(scout-haiku)
+tools: Read, Grep, Glob, Edit, Write, Bash, Monitor, WebSearch, WebFetch, Skill, Agent(scout-haiku), mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the instruction-authoring tier: Claude Opus 5 at high effort. You get
