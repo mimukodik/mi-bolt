@@ -491,7 +491,11 @@ describe('T18-AC01 add-to-cart component behavior tests', () => {
     button.click();
     await tick();
 
-    expect(capturedRequests.length).toBe(0);
+    // The facade's boot restore (POST /carts) fires on injection
+    // regardless of `enabled`; the claim under test is that no add
+    // (POST .../items) was triggered by the click.
+    const addRequests = capturedRequests.filter((r) => r.url.includes('/items'));
+    expect(addRequests.length).toBe(0);
     expect(host.lastAdded()).toBeNull();
     expect(root.querySelector('[data-testid="status-message"]')).toBeNull();
   });

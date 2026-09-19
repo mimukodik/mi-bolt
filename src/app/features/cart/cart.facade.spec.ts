@@ -21,11 +21,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { type RequestHandler } from 'msw';
+import { http, HttpResponse, type RequestHandler } from 'msw';
 import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import type { Cart } from '../../../app/api/generated/models/cart';
 
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { CART_DURATION_MS, CartDomain } from '../../../mocks/cart/cart-domain';
@@ -219,11 +220,15 @@ describe('T17-AC01: root-scoped CartFacade is the single owner', () => {
     expect(typeof header.retry).toBe('function');
   });
 
-  it('starts with itemCount=0, subtotal=0 HUF, no error and no pending intents', () => {
+  it('starts with itemCount=0, subtotal=0 HUF, no error, and the boot restore already pending', () => {
     const facade = TestBed.inject(CartFacade);
     expect(facade.itemCount()).toBe(0);
     expect(facade.subtotal()).toEqual({ amount: 0, currency: 'HUF' });
-    expect(facade.pending()).toBe(0);
+    // The facade issues its own boot restore on construction (see the
+    // constructor's `void this.ensureCart()`), so `pending()` is already
+    // 1 the instant injection returns — nothing has been asked of it by
+    // a caller, but the facade has already asked of itself.
+    expect(facade.pending()).toBeGreaterThan(0);
     expect(facade.error()).toBeNull();
     expect(facade.conflict()).toBeNull();
     expect(facade.cartGone()).toBe(false);
@@ -489,6 +494,99 @@ describe('T17-AC05: 404/410/explicit recovery; no 401 path', () => {
     const names = Object.keys(facade);
     expect(names.some((k) => k.toLowerCase().includes('unauthor'))).toBe(false);
     expect(names.some((k) => k.toLowerCase().includes('auth'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX-10: the facade acquires the session's cart on construction, with
+// no caller invoking ensureCart(), so a reload restores the header
+// badge and every other screen instead of only the cart page.
+// ---------------------------------------------------------------------------
+describe('FIX-10: CartFacade acquires its cart on construction', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('issues the cart-acquisition request on injection and fills cart()/itemCount() from a successful boot restore', async () => {
+    const restoredCart: Cart = {
+      id: 'cart-boot-restore-1',
+      version: 1,
+      status: 'active',
+      items: [
+        {
+          id: 'item-boot-1',
+          variantId: VARIANT_G256,
+          productId: 'demo-one-5g',
+          productName: 'Demo One 5G',
+          productSlug: 'demo-one-5g',
+          colorName: 'Grafit',
+          storageGb: 256,
+          quantity: 1,
+          maxQuantity: 5,
+          availability: 'in_stock',
+          image: {
+            id: 'img-1',
+            src: '/assets/products/graphite-front.webp',
+            alt: 'Demo One 5G Grafit',
+            width: 320,
+            height: 400,
+          },
+          unitPrice: { amount: 339990, currency: 'HUF' },
+          lineTotal: { amount: 339990, currency: 'HUF' },
+        },
+      ],
+      itemCount: 1,
+      subtotal: { amount: 339990, currency: 'HUF' },
+      expiresAt: '2026-12-31T23:59:59.000Z',
+    } satisfies Cart;
+    // Override the default createCart handler so the boot restore
+    // resolves against a cart that already carries an item, the way a
+    // returning tab's session would.
+    server.use(
+      http.post(`${BASE_URL}/carts`, () => HttpResponse.json(restoredCart, { status: 201 })),
+    );
+
+    const facade = TestBed.inject(CartFacade);
+    // Nobody called ensureCart(): the constructor already queued it.
+    expect(facade.pending()).toBeGreaterThan(0);
+
+    const queue = getQueue(facade);
+    if (!queue) throw new Error('Expected CartMutationQueue');
+    await settleQueue(queue);
+
+    expect(facade.cart()?.id).toBe('cart-boot-restore-1');
+    expect(facade.itemCount()).toBe(1);
+    expect(facade.subtotal()).toEqual({ amount: 339990, currency: 'HUF' });
+    expect(facade.error()).toBeNull();
+  });
+
+  it('lands a failing boot restore on the error signal without throwing', async () => {
+    server.use(
+      http.post(`${BASE_URL}/carts`, () =>
+        HttpResponse.json(
+          {
+            type: 'urn:problem:service-unavailable',
+            title: 'Service Unavailable',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'Mock service unavailable during boot restore.',
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+
+    // Construction must not throw even though the boot restore fails.
+    const facade = TestBed.inject(CartFacade);
+    const queue = getQueue(facade);
+    if (!queue) throw new Error('Expected CartMutationQueue');
+    await settleQueue(queue);
+
+    expect(facade.cart()).toBeNull();
+    expect(facade.itemCount()).toBe(0);
+    expect(facade.error()).not.toBeNull();
+    expect(facade.error()?.code).toBe('SERVICE_UNAVAILABLE');
+    expect(facade.error()?.status).toBe(503);
   });
 });
 

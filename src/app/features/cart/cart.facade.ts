@@ -19,7 +19,9 @@
  *     user must consent (AC04);
  *   - on 404 / 410 raises `cartGone` / `cartExpired` so the UI can
  *     offer a fresh start. 401 is never invented for this
- *     unauthenticated demo (AC05).
+ *     unauthenticated demo (AC05);
+ *   - acquires the session's cart once on construction so a reload
+ *     restores it on every screen, not only on the cart page.
  *
  * The T11 `CartCountFacade` token is preserved as a re-export so
  * the existing header binding needs no change.
@@ -167,6 +169,19 @@ export class CartFacade {
     this.destroyRef.onDestroy(() => {
       this.queue.destroy();
     });
+    // A full page load starts this facade with an empty snapshot while
+    // the backend still holds the session's cart, so every screen that
+    // does not open the cart itself — the header badge above all —
+    // reads 0 until the user navigates to `/penztar/kosar`.
+    // `docs/spec/architecture.md:109` requires the CART to restore
+    // across a reload, not the cart page to restore it, so the facade
+    // acquires its own cart once here instead of waiting to be asked.
+    // `ensureCart()` resolves against the session's existing cart
+    // (`Repository.ensureCart`), so this restores a returning tab's
+    // cart and mints an empty one for a tab that has none. Failures
+    // land on the `error` signal exactly as a user-triggered call's
+    // would; the facade never throws on an HTTP error.
+    void this.ensureCart();
   }
 
   /**
