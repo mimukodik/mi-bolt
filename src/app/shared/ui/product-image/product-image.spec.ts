@@ -16,7 +16,7 @@ import type { ImageLike } from './product-image';
 })
 class HostComponent {
   readonly image = signal<ImageLike>({
-    src: '/test.png',
+    src: '/assets/products/graphite-front.webp',
     alt: 'Demo telefon fotó',
     width: 800,
     height: 600,
@@ -141,5 +141,33 @@ describe('ProductImage primitive', () => {
       throw new Error('Expected fallback mark');
     }
     expect(mark2.textContent.trim()).toBe('A');
+  });
+
+  it('resolves a logical /assets/ path against the document base URI (FIX-49)', () => {
+    const { fixture } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    expect(photo.getAttribute('src')).toBe(
+      new URL('assets/products/graphite-front.webp', document.baseURI).href,
+    );
+  });
+
+  it('renders the fallback, not a broken <img>, when the wire src is rejected (FIX-49)', () => {
+    const { fixture, host } = setup();
+    host.image.set({
+      src: 'https://evil.example/x.webp',
+      alt: 'Demo telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-photo"]')).toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="image-fallback"]'),
+    ).not.toBeNull();
   });
 });

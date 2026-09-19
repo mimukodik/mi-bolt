@@ -56,7 +56,12 @@ class PriceHost {
   `,
 })
 class ImageHost {
-  readonly image = signal<ImageLike>({ src: '/x.png', alt: 'Demo', width: 4, height: 3 });
+  readonly image = signal<ImageLike>({
+    src: '/assets/products/graphite-front.webp',
+    alt: 'Demo',
+    width: 4,
+    height: 3,
+  });
   readonly failedCount = signal(0);
 }
 

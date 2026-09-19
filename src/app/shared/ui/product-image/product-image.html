@@ -16,7 +16,7 @@
     @case ('loaded') {
       <img
         class="photo absolute inset-0 w-full h-full object-contain block"
-        [src]="image().src"
+        [src]="resolvedSrc()"
         [alt]="image().alt"
         [attr.width]="image().width ?? null"
         [attr.height]="image().height ?? null"

@@ -1,6 +1,22 @@
 # FIX-49 — Build `resolveAssetUrl` and complete the asset manifest
 
-Status: PLANNED — not executed.
+Status: PARTIAL — `resolveAssetUrl` built at `src/app/shared/media/resolve-asset-url.ts`,
+wired into `ProductImage`, and the manifest carries all 8 entries (`FIX-36` has not
+landed, so the 4 pre-existing `.webp` paths still read `docs/mi-bolt/design/...`; the
+4 new `.svg` entries use the correct flat `docs/design/...` form per D2, recorded here
+as the two-convention state `FIX-36` closes). Tests are co-located
+(`src/app/shared/media/resolve-asset-url.spec.ts`,
+`src/app/shared/ui/product-image/product-image.spec.ts`) rather than under `tests/`:
+the doc's own reason for `tests/` — `vitest.config.ts` routing and a red `ng test`
+baseline — no longer holds, since `FIX-04`/`FIX-06` have landed and specs are
+co-located under `src/`. Open, AC09 not met: wiring the resolver changes
+`ProductImage`'s rendered `<img src>` from the raw logical path to a resolved
+absolute URL, which breaks two pre-existing assertions in
+`src/app/features/product/product-gallery.spec.ts:171,262` (`toBe('/assets/...')`)
+— that file is outside this run's `src/app/shared/ui/**` scope and was not edited;
+the fix there is to compare with `.toContain('/assets/products/…')` or
+`new URL(...).href` instead of raw-path equality. `npm run test`: 2 failed / 801
+passed (was 41 files / 786 tests green before this run's other commits).
 Severity: major
 Source: A7 F11 (release and traceability sweep), A2 (mock and fixture sweep), `docs/spec/architecture.md:159`. Recorded as unowned in `FIX-40` and `FIX-36`; this task is its owner.
 

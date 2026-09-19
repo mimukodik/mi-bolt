@@ -1,4 +1,6 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { AssetUrlError, resolveAssetUrl } from '../../media/resolve-asset-url';
 
 /**
  * Wire-shaped Image object used by the OpenAPI-generated SDK.
@@ -37,10 +39,32 @@ export class ProductImage {
 
   readonly loadFailed = output();
 
+  private readonly doc = inject(DOCUMENT);
+
   private readonly failed = signal(false);
+
+  /** Resolution result: the deployment-resolved image URL, or null when
+   *  `resolveAssetUrl` rejected the wire value. A rejection renders the
+   *  same neutral fallback as a failed network load; it never renders a
+   *  broken `<img>`. */
+  private readonly resolution = computed<string | null>(() => {
+    try {
+      return resolveAssetUrl(this.image().src, this.doc.baseURI);
+    } catch (error) {
+      if (error instanceof AssetUrlError) return null;
+      throw error;
+    }
+  });
+
   readonly status = computed<'loading' | 'loaded' | 'error'>(() =>
-    this.failed() ? 'error' : 'loaded',
+    this.failed() || this.resolution() === null ? 'error' : 'loaded',
   );
+
+  /** Non-null view of `resolution()`, and the only member the template
+   *  reads. `status()` is `'loaded'` only when `resolution()` is non-null
+   *  and the `@case ('loaded')` branch is its only reader, so the
+   *  empty-string arm never reaches the DOM. */
+  readonly resolvedSrc = computed<string>(() => this.resolution() ?? '');
 
   readonly initial = computed<string>(() => {
     const name = this.productName().trim();
