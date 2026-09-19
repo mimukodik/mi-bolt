@@ -151,7 +151,7 @@ import { PHONE_INTERNATIONAL } from './contact.schema';
 export const PHONE_PATTERN = PHONE_INTERNATIONAL;
 ```
 
-  The name must stay exported: `tests/checkout-state.spec.ts:88` imports it. There is no
+  The name must stay exported: `src/app/features/checkout/checkout-state.spec.ts:69` imports it. There is no
   import cycle — `contact.schema.ts` imports nothing.
 
 **Do not delete `validateContact` (`contact.schema.ts:87-148`).** A4 F1 proposes deleting

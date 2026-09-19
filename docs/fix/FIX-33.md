@@ -187,7 +187,7 @@ Two further details from the same commit matter to the rebuild:
   `it('the demo notice is visible in every layout')` that queried
   `[data-testid="demo-notice"]` in all three layouts — while leaving the identifier in the
   describe title, which now reads `describe('T11-AC05 cart badge wiring'` at
-  `tests/layouts.spec.ts:373`. Under decision **D17** the traceability gate that could be
+  `src/app/layouts/layouts.spec.ts:694`. Under decision **D17** the traceability gate that could be
   gamed this way — the citation-based check that counted a criterion reached from the
   string in a `describe` title alone, never from an assertion — is removed rather than
   repaired; this is exactly the failure mode D17 cites as evidence that a citation-only

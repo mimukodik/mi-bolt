@@ -90,11 +90,11 @@ After FIX-04 the unit suite runs under **jsdom inside a Node process**, so `wind
 are about to move call methods on it:
 
 ```text
-tests/cart-mock.spec.ts:715        server.use(...handlers);
-tests/catalog-mock.spec.ts:603     server.use(...buildCatalogHandlers(makeHandlerOptions()));
-tests/checkout-f1-f2.spec.ts:58    server.use(handler);
-tests/checkout-mock.spec.ts:964    server.use(...handlers);
-tests/order-mock.spec.ts:1087      server.use(...handlers);
+src/mocks/cart/cart-mock.spec.ts:786        server.use(...handlers);
+src/mocks/catalog/catalog-mock.spec.ts:710     server.use(...buildCatalogHandlers(makeHandlerOptions()));
+src/mocks/checkout/checkout-f1-f2.spec.ts:67    server.use(handler);
+src/mocks/checkout/checkout-mock.spec.ts:974    server.use(...handlers);
+src/mocks/orders/order-mock.spec.ts:1112      server.use(...handlers);
 ```
 
 Every one of those becomes `Cannot read properties of null`. **Repairing that guard is

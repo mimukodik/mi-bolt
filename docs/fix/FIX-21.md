@@ -117,7 +117,7 @@ changes: `this.mutatingItemId.set(itemId);` before `this.facade.removeItem(itemI
 **4. Test — `tests/cart-page.spec.ts`.** That file asserts against the concatenated
 component source (its own `read()` helper at `:36-46` joins the `.ts`, `.html` and `.scss`),
 so add the assertions in that style, in the `T18-AC03` block that already owns quantity
-and removal (`tests/cart-page.spec.ts:163-189`):
+and removal (`src/app/features/cart/cart-page.spec.ts:450-189`):
 
 - the page source no longer contains
   `new Set(cart.items.map((item) => item.id))`, i.e. the pending set is not derived from

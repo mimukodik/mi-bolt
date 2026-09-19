@@ -234,7 +234,7 @@ runner that cannot compile it. Confirm with `ls tests/`, which must list six ent
 more, `FIX-06` has not landed — stop and report. Run this spec with `npm run test`; do not use
 `npx vitest run <path>`, which after `FIX-06` no longer has a config that includes `src/`.
 
-Copy the setup shape from `tests/layouts.spec.ts:11-19` — the `// @vitest-environment jsdom`
+Copy the setup shape from `src/app/layouts/layouts.spec.ts:11-19` — the `// @vitest-environment jsdom`
 pragma, `import '@angular/compiler';`, `TestBed`, `provideZonelessChangeDetection()`.
 
 The spec asserts the two things jsdom can see:

@@ -283,7 +283,7 @@ a TestBed spec placed there is collected by a runner that cannot compile it. Con
 report. Run this spec with `npm run test`; do not use `npx vitest run <path>`, which after
 `FIX-06` no longer has a config that includes `src/`.
 
-Copy the setup shape from `tests/layouts.spec.ts:11-19` — the `// @vitest-environment jsdom`
+Copy the setup shape from `src/app/layouts/layouts.spec.ts:11-19` — the `// @vitest-environment jsdom`
 pragma, `import '@angular/compiler';`, `TestBed`, `provideZonelessChangeDetection()`. jsdom
 implements focus, `document.activeElement` and `HTMLElement.focus()`, so the behavioural half of
 this task **is** unit-testable, unlike a layout change.

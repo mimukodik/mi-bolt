@@ -73,7 +73,7 @@ correct and the conclusion is not: the spec that mounts it is not under `src/`.
 tests/layouts.spec.ts:34:import { MobileDrawerHost } from '../src/app/core/navigation/mobile-drawer-host';
 tests/layouts.spec.ts:314:        MobileDrawerHost,
 tests/layouts.spec.ts:330:    const f = TestBed.createComponent(MobileDrawerHost);
-tests/layouts.spec.ts:344:    const f = TestBed.createComponent(MobileDrawerHost);
+src/app/layouts/layouts.spec.ts:667:    const f = TestBed.createComponent(MobileDrawerHost);
 ```
 
 The component does exactly what its docblock (`src/app/core/navigation/mobile-drawer-host.ts:5-15`)

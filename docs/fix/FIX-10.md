@@ -116,7 +116,7 @@ a different namespace, and the snapshot on disk is unreachable even when one exi
 
 Measured on commit `db6d295`: `grep -rn "\.save(" src` returns **no matches at all**. The
 only callers in the repository are four lines in one spec,
-`tests/mocks-handlers.spec.ts:136,190,193,217`, which construct a `Persistence` instance
+`src/mocks/mocks-handlers.spec.ts:149,190,193,217`, which construct a `Persistence` instance
 directly.
 
 The read half is wired and works: `src/core/bootstrap-demo.ts:62-63` calls
@@ -288,11 +288,11 @@ lines with:
 // new id because sessionStorage is not shared between tabs.
 ```
 
-Ten spec files import `demoSessionInterceptor` (`tests/order-submission.spec.ts:50`,
-`tests/variant-selection.spec.ts:52`, `tests/checkout-f6.spec.ts:56`,
-`tests/success-page.spec.ts:65`, `tests/checkout-f2.spec.ts:36`,
-`tests/checkout-f8.spec.ts:58`, `tests/checkout-state.spec.ts:64`,
-`tests/cart.facade.spec.ts:43`, `tests/contract/sdk-transport.spec.ts:32`,
+Ten spec files import `demoSessionInterceptor` (`src/app/features/checkout/order-submission.spec.ts:37`,
+`src/app/features/product/variant-selection.spec.ts:43`, `src/app/features/checkout/checkout-f6.spec.ts:41`,
+`tests/success-page.spec.ts:65`, `src/app/features/checkout/checkout-f2.spec.ts:20`,
+`src/app/features/checkout/checkout-f8.spec.ts:39`, `src/app/features/checkout/checkout-state.spec.ts:49`,
+`src/app/features/cart/cart.facade.spec.ts:28`, `tests/contract/sdk-transport.spec.ts:32`,
 `tests/contract/operation-matrix.spec.ts:68`). They run under `environment: 'node'`
 (`vitest.config.ts:507`), where `globalThis.sessionStorage` is undefined, so
 `readableStorage()` returns null and the behaviour is byte-for-byte what it is today: one
@@ -663,7 +663,7 @@ pnpm and no mise in this repository.
    failure here means**: after Part 2, two `createCart` calls with the **same**
    `sessionId` inside one environment return the **same** cart instead of two. A spec
    that seeded twice under one session and expected two distinct cart ids is the
-   failure to expect — `tests/order-mock.spec.ts:763` and `:1002` both seed with
+   failure to expect — `src/mocks/orders/order-mock.spec.ts:788` and `:1002` both seed with
    `sessionId: 'session-cccccccccccc'`, so read those two first. Repair the spec to
    use distinct session ids, not the mock: the new behaviour is the decision
    "What to change" item 2 states, and `src/app/features/cart/cart.facade.ts:179-185`

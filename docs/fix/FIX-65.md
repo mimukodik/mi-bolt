@@ -80,17 +80,17 @@ mirrors the OpenAPI enum directly, is never imported from `catalog-query.ts`, an
   SortMode[] = SORT_MODES;` becomes `readonly Sort[]`. `SORT_MODES` itself (the runtime
   array) is **not** renamed — only the type name changes; `components.md` names no
   runtime constant, so there is nothing for this identifier to conform to.
-- `tests/catalog.facade.spec.ts:53` — the `type SortMode` import becomes `type Sort`.
-- `tests/catalog.facade.spec.ts:305` — `toBe<SortMode>('price_desc')` becomes
+- `src/app/features/catalog/catalog.facade.spec.ts:40` — the `type SortMode` import becomes `type Sort`.
+- `src/app/features/catalog/catalog.facade.spec.ts:298` — `toBe<SortMode>('price_desc')` becomes
   `toBe<Sort>('price_desc')`.
-- `tests/catalog.facade.spec.ts:443` — `toBe<SortMode>('price_asc')` becomes
+- `src/app/features/catalog/catalog.facade.spec.ts:465` — `toBe<SortMode>('price_asc')` becomes
   `toBe<Sort>('price_asc')`.
-- `tests/catalog.facade.spec.ts:807` — `toBe<SortMode>('price_desc')` becomes
+- `src/app/features/catalog/catalog.facade.spec.ts:829` — `toBe<SortMode>('price_desc')` becomes
   `toBe<Sort>('price_desc')`.
 
 Do not touch `src/mocks/catalog/filter-products.ts:26`, `:38`, `:70`, `:176`, `:424`,
 `:434` or `src/mocks/catalog/catalog.handlers.ts:47`, `:276`, and do not touch
-`tests/catalog-mock.spec.ts:864` (a comment referring to the mock's own `SortMode`, not
+`src/mocks/catalog/catalog-mock.spec.ts:970` (a comment referring to the mock's own `SortMode`, not
 this one — confirmed by reading its imports, which pull from
 `src/mocks/catalog/filter-products.ts`, never from `catalog-query.ts`).
 
@@ -160,14 +160,14 @@ Cite it from there; do not restate it here.
 ## Acceptance criteria
 
 - [ ] **FIX-65-AC01** `grep -rn "SortMode" src tests` returns matches only under
-      `src/mocks/` and the one comment at `tests/catalog-mock.spec.ts:864`. Every site
+      `src/mocks/` and the one comment at `src/mocks/catalog/catalog-mock.spec.ts:970`. Every site
       listed under "What to change" now reads `Sort`.
 - [ ] **FIX-65-AC02** `grep -n "^export type Sort " src/app/features/catalog/catalog-query.ts`
       prints exactly one line, and it matches `Sort = recommended | price_asc |
       price_desc | name_asc` verbatim against `components.md:7`'s `Sort` definition.
 - [ ] **FIX-65-AC03** `npx vitest run tests/catalog.facade.spec.ts` (or `npm run test` if
       **FIX-04** has landed) exits 0, and the four test edits listed under "What to
-      change" — `tests/catalog.facade.spec.ts:53`, `:305`, `:443`, `:807` — now read
+      change" — `src/app/features/catalog/catalog.facade.spec.ts:40`, `:305`, `:443`, `:807` — now read
       `Sort` in place of `SortMode`.
 - [ ] **FIX-65-AC04** `npm run build` exits 0.
 

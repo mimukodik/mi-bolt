@@ -27,7 +27,7 @@ the file-reading helpers, deletes every `const …Source` constant they feed, an
 each assertion that used one with a rendered-DOM, emitted-output or intercepted-request
 assertion in the same `it` block.
 
-The files say so themselves. `tests/success-page.spec.ts:19-25`:
+The files say so themselves. `src/app/features/checkout/success-page.spec.ts:22-25`:
 
 ```ts
  * The tests inspect the rendered source AND drive the MSW wire path
@@ -216,10 +216,10 @@ facade to skip the request.
 **Two patterns are explicitly ruled out, so the executor does not have to weigh them.**
 
 - **Do not use `TestBed.runInInjectionContext(() => new SomeComponent())`.** That pattern
-  exists at `tests/checkout-f2.spec.ts:118` and A5 recommends copying it because it
+  exists at `src/app/features/checkout/checkout-f2.spec.ts:94` and A5 recommends copying it because it
   "avoids `createComponent()`". That avoidance was a workaround for the same broken
   runner this package already fixed; `createComponent` works after `FIX-04`. The pattern
-  also forces the test to reach into private state — `tests/checkout-f2.spec.ts:121-128`
+  also forces the test to reach into private state — `src/app/features/checkout/checkout-f2.spec.ts:97-128`
   sets `step['confirmPending']`, `step['selectedOptionId']`, `step['postalCode']` and five
   more — which asserts on the implementation instead of on what the user sees.
   `docs/tasks/T21.md:32` is the house rule: *"UI criteria require rendered DOM/user-action
