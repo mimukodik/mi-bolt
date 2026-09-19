@@ -9,11 +9,9 @@
  * Each test stands up its own Repository so the demo fixture does not
  * leak between cases. The MSW Node server is shared.
  */
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import productsFixture from '../../../docs/api/fixtures/products.json';
 import { buildCatalogHandlers } from '../../mocks/catalog/catalog.handlers';
 import {
   DEFAULT_PAGE_SIZE,
@@ -693,10 +691,9 @@ function makeHandlerOptions(): CreateHandlersOptions {
   const ids: Ids = createDeterministicIds(scenario.seed);
   const clock: Clock = createFixedClock('2026-09-14T10:00:00.000Z');
   const repository = new Repository(scenario, ids, clock);
-  // The handler file is Node-free; the Node test bootstrap loads the
-  // canonical fixture from disk and seeds the per-test repository.
-  const fixturePath = resolve(__dirname, '../../../docs/api/fixtures/products.json');
-  const parsed: unknown = JSON.parse(readFileSync(fixturePath, 'utf8'));
+  // The handler file is Node-free; the statically imported fixture
+  // seeds the per-test repository instead.
+  const parsed: unknown = productsFixture;
   if (!isProductArray(parsed)) {
     throw new Error('Invalid products fixture');
   }
@@ -940,8 +937,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     const ids = createDeterministicIds(scenario.seed);
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const repository = new Repository(scenario, ids, clock);
-    const fixturePath = resolve(__dirname, '../../../docs/api/fixtures/products.json');
-    const parsed: unknown = JSON.parse(readFileSync(fixturePath, 'utf8'));
+    const parsed: unknown = productsFixture;
     if (!isProductArray(parsed)) {
       throw new Error('Invalid products fixture');
     }
