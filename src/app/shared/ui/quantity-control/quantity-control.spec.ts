@@ -178,6 +178,27 @@ describe('QuantityControl primitive', () => {
     expect(input.disabled).toBe(true);
   });
 
+  it('lays the three step controls out in a shared .row wrapper, with the message outside it (FIX-19)', () => {
+    const { fixture, host } = setup();
+    host.value.set(0);
+    fixture.detectChanges();
+    const root = getNativeElement(fixture);
+    const dec = root.querySelector('[data-testid="quantity-decrement"]');
+    const input = root.querySelector('[data-testid="quantity-input"]');
+    const inc = root.querySelector('[data-testid="quantity-increment"]');
+    const message = root.querySelector('[data-testid="quantity-message"]');
+    if (!dec || !input || !inc) {
+      throw new Error('Expected the three step controls to exist');
+    }
+    const row = dec.parentElement;
+    expect(row).not.toBeNull();
+    expect(row?.classList.contains('row')).toBe(true);
+    expect(input.parentElement).toBe(row);
+    expect(inc.parentElement).toBe(row);
+    expect(message).not.toBeNull();
+    expect(row?.contains(message)).toBe(false);
+  });
+
   it('emits the typed value when it lands back inside the range', () => {
     const { fixture, host } = setup();
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(

@@ -112,4 +112,16 @@ describe('PriceBlock primitive', () => {
     fixture.detectChanges();
     expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
+
+  it('puts the amount and the currency in one shared row, not the component root (FIX-19)', () => {
+    const { fixture } = setup();
+    const amount = getNativeElement(fixture).querySelector('[data-testid="price-amount"]');
+    const currency = getNativeElement(fixture).querySelector('.currency');
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(amount).not.toBeNull();
+    expect(currency).not.toBeNull();
+    expect(amount?.parentElement).toBe(currency?.parentElement);
+    expect(amount?.parentElement).not.toBe(root);
+    expect(amount?.parentElement?.classList.contains('row')).toBe(true);
+  });
 });

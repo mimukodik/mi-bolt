@@ -7,10 +7,12 @@
     }
     @case ('success') {
       @if (amountText()) {
-        <span class="amount font-bold leading-tight tabular-nums" data-testid="price-amount">{{
-          amountText()
-        }}</span>
-        <span class="currency ml-1" aria-hidden="true">Ft</span>
+        <span class="row inline-flex items-baseline">
+          <span class="amount font-bold leading-tight tabular-nums" data-testid="price-amount">{{
+            amountText()
+          }}</span>
+          <span class="currency ml-1" aria-hidden="true">Ft</span>
+        </span>
       } @else {
         <span class="amount amount--error font-medium" data-testid="price-empty">—</span>
         <span class="sr-only absolute w-px h-px overflow-hidden">Az ár nem áll rendelkezésre.</span>

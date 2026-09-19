@@ -4,39 +4,41 @@
   [class.is-invalid]="invalid()"
   data-testid="quantity-control"
 >
-  <button
-    type="button"
-    class="step inline-flex items-center justify-center min-w-10 h-10 rounded font-medium cursor-pointer leading-none"
-    [attr.aria-label]="'Darabszám csökkentése'"
-    [disabled]="decrementDisabled()"
-    (click)="decrement()"
-    data-testid="quantity-decrement"
-  >
-    −
-  </button>
-  <input
-    type="text"
-    inputmode="numeric"
-    class="value inline-flex items-center justify-center w-16 h-10 border-l-0 border-r-0 text-center tabular-nums font-inherit leading-none cursor-text"
-    [attr.aria-label]="label()"
-    [attr.aria-invalid]="invalid() ? 'true' : 'false'"
-    [attr.aria-describedby]="invalid() ? describedById : null"
-    [value]="value()"
-    [disabled]="disabled()"
-    (input)="onInput($event)"
-    (blur)="onBlur()"
-    data-testid="quantity-input"
-  />
-  <button
-    type="button"
-    class="step inline-flex items-center justify-center min-w-10 h-10 rounded font-medium cursor-pointer leading-none"
-    [attr.aria-label]="'Darabszám növelése'"
-    [disabled]="incrementDisabled()"
-    (click)="increment()"
-    data-testid="quantity-increment"
-  >
-    +
-  </button>
+  <div class="row inline-flex items-center">
+    <button
+      type="button"
+      class="step inline-flex items-center justify-center min-w-10 h-10 rounded font-medium cursor-pointer leading-none"
+      [attr.aria-label]="'Darabszám csökkentése'"
+      [disabled]="decrementDisabled()"
+      (click)="decrement()"
+      data-testid="quantity-decrement"
+    >
+      −
+    </button>
+    <input
+      type="text"
+      inputmode="numeric"
+      class="value inline-flex items-center justify-center w-16 h-10 border-l-0 border-r-0 text-center tabular-nums font-inherit leading-none cursor-text"
+      [attr.aria-label]="label()"
+      [attr.aria-invalid]="invalid() ? 'true' : 'false'"
+      [attr.aria-describedby]="invalid() ? describedById : null"
+      [value]="value()"
+      [disabled]="disabled()"
+      (input)="onInput($event)"
+      (blur)="onBlur()"
+      data-testid="quantity-input"
+    />
+    <button
+      type="button"
+      class="step inline-flex items-center justify-center min-w-10 h-10 rounded font-medium cursor-pointer leading-none"
+      [attr.aria-label]="'Darabszám növelése'"
+      [disabled]="incrementDisabled()"
+      (click)="increment()"
+      data-testid="quantity-increment"
+    >
+      +
+    </button>
+  </div>
   @if (invalid() && message()) {
     <p
       class="message m-0 px-2"

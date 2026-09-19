@@ -1,6 +1,6 @@
 # FIX-19 — QuantityControl stacks vertically and PriceBlock wraps the currency
 
-Status: PLANNED — not executed.
+Status: DONE — QuantityControl's three step controls and PriceBlock's amount/currency now share a `.row` wrapper; structural unit tests added and green (788/788).
 Severity: major
 Source: B3 F3 and B3 F4 (both orchestrator-confirmed at source), B1 (product and cart screenshots).
 
