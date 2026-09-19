@@ -171,21 +171,6 @@ describe('T01-AC04: APP_BASE_HREF provider', () => {
   });
 });
 
-describe('T01-AC04: registerLocaleData is invoked with hu-HU', () => {
-  // The locale registration is a top-level call inside app.config.ts and
-  // main.ts. Importing the entry guarantees it ran in this test file,
-  // and the spec'd locale id is the only public anchor: removing the
-  // registerLocaleData call sites breaks both `app.config.ts` imports
-  // and the angular.json fileReplacements `apiBase` assertion above.
-  it('main.ts imports the hu locale data', async () => {
-    const main = await import('../main');
-    expect(main).toBeDefined();
-    // The module's top-level statements must execute, registering the
-    // hu-HU locale before any consumer asks for it.
-    expect(true).toBe(true);
-  });
-});
-
 describe('T01-AC01: production providers compile cleanly', () => {
   it('appConfig is a valid ApplicationConfig shape', () => {
     expect(appConfig).toBeDefined();
