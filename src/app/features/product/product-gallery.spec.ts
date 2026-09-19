@@ -237,7 +237,7 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
       const thumb = queryButton(root, `[data-testid="gallery-thumb-${String(index)}"]`);
       const img = queryImage(thumb, 'img.thumb-img');
       expect(img.getAttribute('src')).toBe(image.src);
-      expect(thumb.querySelector('.thumb-' + 'mark')).toBeNull();
+      expect(thumb.querySelector('.thumb-mark')).toBeNull();
       expect(thumb.textContent).not.toContain(String(index + 1));
       expect(thumb.getAttribute('aria-current')).toBe(index === 0 ? 'true' : 'false');
     });

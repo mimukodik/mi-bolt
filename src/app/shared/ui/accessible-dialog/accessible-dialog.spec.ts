@@ -164,7 +164,7 @@ describe('AccessibleDialog primitive', () => {
 
   it('does not emit hardcoded heading ids and preserves unique aria-labels when two dialogs are mounted simultaneously', () => {
     const { host } = setupTwoDialogs();
-    expect(document.querySelectorAll('#dialog-' + 'title').length).toBe(0);
+    expect(document.querySelectorAll('#dialog-title').length).toBe(0);
 
     const panels = document.querySelectorAll<HTMLElement>('.panel[role="dialog"]');
     expect(panels.length).toBe(2);
