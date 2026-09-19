@@ -592,6 +592,72 @@ describe('T21-AC04 selection invalidates the previous quote and is not indicated
 });
 
 // ---------------------------------------------------------------------------
+// FIX-22 - one working continue button; the summary shows the chosen
+// delivery method instead of repeating the row label or an internal flag.
+// ---------------------------------------------------------------------------
+describe('FIX-22 one working continue button and a readable summary', () => {
+  it('PaymentMethodSelector renders no button and no in-flow confirm control', () => {
+    const fixture = TestBed.createComponent(PaymentMethodSelector);
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(root.querySelector('app-button')).toBeNull();
+    expect(root.querySelector('[data-testid="payment-confirm"]')).toBeNull();
+  });
+
+  it('DeliveryStep renders exactly one "Tovább az ellenőrzéshez" button', async () => {
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const buttons = Array.from(root.querySelectorAll('button')).filter(
+      (b) => b.textContent.trim() === 'Tovább az ellenőrzéshez',
+    );
+    expect(buttons.length).toBe(1);
+  });
+
+  it('the summary never renders the raw "Új áttekintés szükséges" internal state', async () => {
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(root.textContent).not.toContain('Új áttekintés szükséges');
+
+    fixture.componentInstance.onOptionSelected('home_delivery');
+    fixture.detectChanges();
+    expect(root.textContent).not.toContain('Új áttekintés szükséges');
+    expect(fixture.componentInstance.requiresFreshReview()).toBe(true);
+
+    fixture.componentInstance.onOptionSelected('demo_pickup');
+    fixture.detectChanges();
+    expect(root.textContent).not.toContain('Új áttekintés szükséges');
+  });
+
+  it('the fee row shows the chosen delivery option label exactly once, not the literal row term twice', async () => {
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    fixture.componentInstance.onOptionSelected('home_delivery');
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const feeRow = getElement(root, '[data-testid="summary-row-fee"]');
+    const option = fixture.componentInstance
+      .readyOptions()
+      ?.deliveryOptions.find((o) => o.id === 'home_delivery');
+    if (option === undefined) {
+      throw new Error('Expected a home_delivery option');
+    }
+    expect(feeRow.textContent).toContain(option.label);
+    const occurrences = (feeRow.textContent.match(/Szállítási díj/g) ?? []).length;
+    expect(occurrences).toBe(1);
+    expect(fixture.componentInstance.deliveryLabel()).toBe(option.label);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // T21-AC05 - options-load error has retry and never invents a free-shipping default
 // ---------------------------------------------------------------------------
 describe('T21-AC05 options-load error has retry and never invents a free-shipping default', () => {
@@ -678,14 +744,6 @@ describe('T21 wiring - owned files use the documented T10 primitives', () => {
     const root = getRootElement(fixture);
     const messages = root.querySelectorAll('app-form-field-message');
     expect(messages.length).toBeGreaterThan(0);
-  });
-
-  it('PaymentMethodSelector uses the shared Button primitive for the Confirm action', () => {
-    const fixture = TestBed.createComponent(PaymentMethodSelector);
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    expect(root.querySelector('app-button')).not.toBeNull();
   });
 
   it('AddressForm styles follow the desktop/mobile breakpoint rule (R22 narrow layout)', () => {

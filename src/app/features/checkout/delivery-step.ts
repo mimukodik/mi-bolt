@@ -213,6 +213,15 @@ export class DeliveryStep {
 
   readonly confirmLabel = computed<string>(() => 'Tovább az ellenőrzéshez');
 
+  /** Name of the chosen delivery option, for the summary card.
+   *  screens.md S4.3: "Any selected method is explicitly visible
+   *  before final review." */
+  readonly deliveryLabel = computed<string>(() => {
+    const id = this.selectedOptionId();
+    const option = (this.readyOptions()?.deliveryOptions ?? []).find((o) => o.id === id);
+    return option?.label ?? 'Nincs kiválasztva';
+  });
+
   readonly paymentLabel = computed<string>(() => {
     const id = this.paymentMethod();
     if (id === 'demo_card') return 'Bankkártya (szimulált)';

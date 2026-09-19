@@ -57,17 +57,4 @@
       </li>
     }
   </ul>
-
-  <div class="actions flex justify-end gap-3 mt-5">
-    <app-button
-      variant="primary"
-      size="comfortable"
-      [label]="confirmLabel()"
-      [loadingLabel]="'Mentés…'"
-      [loading]="pending()"
-      [disabled]="!canConfirm()"
-      (pressed)="onConfirm()"
-      data-testid="payment-confirm"
-    ></app-button>
-  </div>
 </fieldset>

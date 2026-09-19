@@ -105,8 +105,6 @@
           <app-payment-method-selector
             [value]="paymentMethod()"
             (valueChange)="onPaymentChanged($event)"
-            [pending]="confirmPending()"
-            [ready]="canConfirm()"
             (paymentChanged)="onPaymentChanged($event)"
           ></app-payment-method-selector>
         </div>
@@ -123,7 +121,7 @@
               <dd>
                 <app-price-block
                   [money]="currentShippingFee()"
-                  [label]="'Szállítási díj'"
+                  [label]="deliveryLabel()"
                   [status]="'success'"
                 ></app-price-block>
               </dd>
@@ -131,17 +129,6 @@
             <div class="summary-row" data-testid="summary-row-payment">
               <dt>Fizetési mód</dt>
               <dd class="payment-value">{{ paymentLabel() }}</dd>
-            </div>
-            <div class="summary-row" data-testid="summary-row-fresh">
-              <dt>Új áttekintés szükséges</dt>
-              <dd class="fresh-value">
-                @if (requiresFreshReview()) {
-                  <span class="fresh-flag" data-testid="fresh-flag">Igen</span>
-                  <span class="fresh-hint">A korábbi ajánlat és fizetési szándék elavult.</span>
-                } @else {
-                  <span class="fresh-ok">Nem</span>
-                }
-              </dd>
             </div>
           </dl>
 

@@ -1,6 +1,9 @@
 # FIX-22 — Delivery step: a continue button that does nothing, and internal state printed at the user
 
-Status: PLANNED — not executed.
+Status: DONE — the dead in-flow confirm button is removed from
+PaymentMethodSelector, the delivery summary shows the chosen delivery
+method's own label instead of repeating the row term, and the raw
+internal "Új áttekintés szükséges" flag is no longer rendered.
 Severity: blocker
 Source: B2 F3 (dead in-flow button, reproduced 4/4), B3 F6 (duplicated row label and the raw state string).
 
