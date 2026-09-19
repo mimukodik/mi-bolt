@@ -14,6 +14,25 @@
  */
 import { expect, test as base } from '@playwright/test';
 
+/**
+ * The page-side fetch attempt against an unhandled `/api/v1` route
+ * can only end one of two ways: it resolves (any status, 2xx through
+ * 5xx, because the request reached a real network stack) or it
+ * throws (because MSW's `onUnhandledRequest: 'error'` refused to let
+ * an unmatched request leave the worker). The discriminated union
+ * keeps those two outcomes distinct instead of collapsing them into
+ * a single boolean, so the assertions below can require the throw
+ * specifically rather than merely a non-2xx response.
+ */
+type FetchAttemptResult =
+  { readonly ok: true; readonly status: 0 } | { readonly ok: false; readonly message: string };
+
+function isRejectedFetch(
+  result: FetchAttemptResult,
+): result is { readonly ok: false; readonly message: string } {
+  return result.ok === false;
+}
+
 base.describe('T02-AC05 E2E network isolation', () => {
   base('unhandled /api/v1 business route surfaces in the request log', async ({ page }) => {
     const apiCalls: string[] = [];
@@ -26,16 +45,27 @@ base.describe('T02-AC05 E2E network isolation', () => {
     await page.goto('/');
     await expect(page.getByTestId('hero-section')).toBeVisible();
 
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(async (): Promise<FetchAttemptResult> => {
       try {
-        const res = await fetch('/api/v1/this-route-does-not-exist');
-        return { ok: res.ok, status: res.status };
+        await fetch('/api/v1/this-route-does-not-exist');
+        return { ok: true, status: 0 };
       } catch (err) {
         return { ok: false, message: String(err) };
       }
     });
+    // A resolved fetch here — 2xx, 404, 500, anything — means the
+    // request reached the network and MSW did not intervene. Only
+    // the catch branch proves the worker blocked egress, so the
+    // assertion has to require the throw itself, not just a
+    // non-2xx-looking result. `isRejectedFetch` pins that mechanism:
+    // it fails a fetch that merely resolved with a bad status, since
+    // that shape carries no `message`.
     expect(apiCalls.length).toBeGreaterThan(0);
     expect(result.ok).toBe(false);
+    expect(isRejectedFetch(result)).toBe(true);
+    if (isRejectedFetch(result)) {
+      expect(result.message.length).toBeGreaterThan(0);
+    }
   });
 
   base('external fetch is recorded by the page-level request listener', async ({ page }) => {

@@ -9,9 +9,11 @@
  * page is not reaching the network for any business call.
  *
  * Static assets (Vite dev server chunks, `/mockServiceWorker.js`,
- * `/assets/...`) are explicitly bypassed: the `onUnhandledRequest`
- * callback only throws for `/api/...` traffic so the page can still
- * boot in the demo / e2e environment.
+ * `/assets/...`) are explicitly bypassed so the page can still boot
+ * in the demo / e2e environment. Every `/api/...` request no business
+ * slice claims is answered with `HttpResponse.error()` instead, so a
+ * page-side `fetch()` rejects with a real network error rather than
+ * reaching the network or resolving with a status.
  *
  * `createHandlers` builds the actual handler list from the injected
  * repository / clock / ids / scenario / apiRoot; T05 only owns the
@@ -19,7 +21,7 @@
  * up. T06–T09 register their own slices by calling
  * `registerBusinessHandlers(...)` from their files.
  */
-import { http, passthrough, type HttpHandler } from 'msw';
+import { http, HttpResponse, passthrough, type HttpHandler } from 'msw';
 import { setupWorker } from 'msw/browser';
 
 import { environment } from '../environments/environment';
@@ -96,8 +98,8 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
  * Install a global passthrough for every non-business route. The
  * dev server still serves its own Vite chunks, source maps and the
  * mockServiceWorker.js bundle; intercepting those would break the
- * page. The `onUnhandledRequest` callback in `startMockWorker`
- * retains the `error` policy for `/api/...` URLs only.
+ * page. `installUnclaimedApiRouteNetworkError` owns the `/api/...`
+ * half with the exactly complementary predicate.
  */
 export function installBusinessRouteBypass(): void {
   const bypassAllNonApi: HttpHandler = http.all(
@@ -105,6 +107,39 @@ export function installBusinessRouteBypass(): void {
     () => passthrough(),
   );
   worker.use(bypassAllNonApi);
+}
+
+/**
+ * Install the catch-all that refuses every `/api/...` request no
+ * business slice claimed. `HttpResponse.error()` is a `Response`
+ * (`msw/src/core/HttpResponse.ts:55-57`), so the service worker
+ * source posts it as a `status: 0` mocked response
+ * (`msw/src/browser/sources/service-worker-source.ts:496-500`) and
+ * `public/mockServiceWorker.js:325-329` turns that back into
+ * `Response.error()`: the page-side `fetch()` rejects. Throwing from
+ * the `onUnhandledRequest` callback cannot produce that, because
+ * `errorWith` forwards only a `Response` and answers anything else
+ * with a 500 (`service-worker-source.ts:502-528`).
+ *
+ * The predicate is the exact complement of
+ * `installBusinessRouteBypass`'s, so every request is claimed by
+ * exactly one of the two and neither can shadow the other.
+ *
+ * Register this BEFORE the business handlers. `use()` prepends each
+ * call's handlers to the list
+ * (`msw/src/core/experimental/handlers-controller.ts:71-95`), so the
+ * evaluation order is the reverse of the registration order;
+ * measured against the installed msw 2.15.0, registering catch-all,
+ * bypass, businessA, businessB in that order lists them as
+ * `businessB -> businessA -> bypass -> catchAll`. Registered last it
+ * would instead shadow every business route.
+ */
+export function installUnclaimedApiRouteNetworkError(): void {
+  const failUnclaimedApiRoute: HttpHandler = http.all(
+    ({ request }) => new URL(request.url).pathname.startsWith('/api/'),
+    () => HttpResponse.error(),
+  );
+  worker.use(failUnclaimedApiRoute);
 }
 
 /**
@@ -135,29 +170,24 @@ export function buildBrowserHandlers(
 /**
  * Boots the MSW service worker. Production builds skip the boot
  * entirely; demo and e2e configurations register the handlers built
- * by `createHandlers` and start the worker with the strict
- * onUnhandledRequest policy. The optional snapshot is forwarded to
- * `buildBrowserHandlers` so the repository is seeded with the
- * persisted cart before the first request is dispatched.
+ * by `createHandlers` behind the `/api/...` network-error catch-all
+ * that keeps them the only way out. The optional snapshot is
+ * forwarded to `buildBrowserHandlers` so the repository is seeded
+ * with the persisted cart before the first request is dispatched.
  */
 export async function startMockWorker(snapshot: MockSnapshot | null = null): Promise<void> {
   if (!environment.demo && !environment.e2e) return;
 
+  // Registration order is evaluation order reversed, so the
+  // catch-all goes in first to be consulted last — after every
+  // business handler. See `installUnclaimedApiRouteNetworkError`.
+  installUnclaimedApiRouteNetworkError();
   installBusinessRouteBypass();
   for (const handler of buildBrowserHandlers(snapshot)) {
     worker.use(handler);
   }
   await worker.start({
-    onUnhandledRequest(request, print) {
-      const url = new URL(request.url);
-      if (url.pathname.startsWith('/api/')) {
-        // The T02 contract: an unhandled business route is a test
-        // failure. The MSW unhandled event fires inside the service
-        // worker; the page-level request listener picks the attempt
-        // up as a network error.
-        print.error();
-        throw new Error(`[mi-bolt] unhandled business route: ${request.method} ${request.url}`);
-      }
+    onUnhandledRequest() {
       // Static assets, source maps, the mock worker bundle itself
       // and the Vite dev server chunks all bypass MSW silently.
     },
