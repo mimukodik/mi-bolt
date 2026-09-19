@@ -752,7 +752,9 @@ describe('T13-AC03 mobile filter drawer', () => {
     // the native button `Button` renders internally; `.click()` on the
     // host element never reaches the inner `(click)` listener the
     // `pressed` output depends on.
-    const apply = document.body.querySelector<HTMLButtonElement>('[data-testid="drawer-apply"] button');
+    const apply = document.body.querySelector<HTMLButtonElement>(
+      '[data-testid="drawer-apply"] button',
+    );
     expect(apply).not.toBeNull();
     apply?.click();
     harness.fixture.detectChanges();

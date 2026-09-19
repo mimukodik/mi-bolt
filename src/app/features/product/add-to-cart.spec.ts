@@ -618,12 +618,14 @@ describe('T18-AC01 add-to-cart component behavior tests', () => {
 
     const { facade, root, tick } = await createHarness();
     const origAddItem = facade.addItem.bind(facade);
-    const addItemSpy = vi.spyOn(facade, 'addItem').mockImplementation(async (variantId, quantity) => {
-      await origAddItem(variantId, quantity);
-      if (facade.error() !== null) {
-        throw new Error('Failed to add item');
-      }
-    });
+    const addItemSpy = vi
+      .spyOn(facade, 'addItem')
+      .mockImplementation(async (variantId, quantity) => {
+        await origAddItem(variantId, quantity);
+        if (facade.error() !== null) {
+          throw new Error('Failed to add item');
+        }
+      });
 
     const button = queryButton(root, '[data-testid="add-to-cart-button"] button');
     button.click();

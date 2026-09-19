@@ -7,8 +7,7 @@
     </nav>
     <h1 class="title m-0">Mobiltelefonok</h1>
     <p class="lede m-0 max-w-prose">
-      A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en
-      keresztül.
+      A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en keresztül.
     </p>
   </header>
 
@@ -122,10 +121,7 @@
               <div
                 class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60"
               >
-                <app-loading-state
-                  variant="card"
-                  label="Katalógus frissítése"
-                ></app-loading-state>
+                <app-loading-state variant="card" label="Katalógus frissítése"></app-loading-state>
               </div>
             }
           }
@@ -152,9 +148,7 @@
             >
               <app-error-state
                 title="Nem sikerült betölteni a katalógust."
-                [message]="
-                  facade.vm().error ?? 'Ismeretlen hiba a katalógus lekérdezése közben.'
-                "
+                [message]="facade.vm().error ?? 'Ismeretlen hiba a katalógus lekérdezése közben.'"
                 [pending]="isRefreshing()"
                 [preserving]="true"
                 (retryRequested)="onRetry()"
@@ -214,4 +208,3 @@
     (closed)="closeDrawer()"
   ></app-filter-drawer>
 </section>
-

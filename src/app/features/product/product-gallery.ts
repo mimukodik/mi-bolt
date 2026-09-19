@@ -162,7 +162,6 @@ export class ProductGallery {
     this.imageFailed.set(true);
   }
 
-
   private effectiveIndex(): number {
     const input = this.imageIndex();
     const list = this.images();

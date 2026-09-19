@@ -86,10 +86,7 @@
 
             <div class="cta-desktop">
               @if (addToCartSelection(); as selection) {
-                <app-add-to-cart
-                  [selection]="selection"
-                  [enabled]="addToCartEnabled()"
-                />
+                <app-add-to-cart [selection]="selection" [enabled]="addToCartEnabled()" />
               } @else {
                 <app-button
                   [variant]="'primary'"

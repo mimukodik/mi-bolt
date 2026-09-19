@@ -430,9 +430,10 @@ describe('package.json contract — api:generate is declared (T04 wiring)', () =
   });
 
   it('the check fails when the script is renamed or absent', () => {
-    expect(declaresApiGenerate({ 'zz-api:generate': 'ng-openapi-gen --config ng-openapi-gen.json' })).toBe(false);
+    expect(
+      declaresApiGenerate({ 'zz-api:generate': 'ng-openapi-gen --config ng-openapi-gen.json' }),
+    ).toBe(false);
     expect(declaresApiGenerate({})).toBe(false);
     expect(declaresApiGenerate(undefined)).toBe(false);
   });
 });
-
