@@ -73,8 +73,6 @@ function getComponentDependencies(comp: unknown): readonly unknown[] {
   return [];
 }
 
-const colon = String.fromCharCode(58);
-
 describe('T11-AC01 layouts and route table', () => {
   it('declares routes for the four screen families', () => {
     let hasHome = false;
@@ -110,8 +108,7 @@ describe('T11-AC01 layouts and route table', () => {
       if (r.path !== 'telefonok') return;
       if (!r.children) return;
       r.children.forEach((c) => {
-        const slugLit = colon + 'slug';
-        if (c.path === slugLit) found = true;
+        if (c.path === ':slug') found = true;
       });
     });
     expect(found).toBe(true);
@@ -119,9 +116,8 @@ describe('T11-AC01 layouts and route table', () => {
 
   it('utility 404 is wired as a wildcard leaf route', () => {
     let found = false;
-    const wildcard = String.fromCharCode(42) + String.fromCharCode(42);
     routes.forEach((r) => {
-      if (r.path === wildcard) found = true;
+      if (r.path === '**') found = true;
     });
     expect(found).toBe(true);
   });
@@ -140,8 +136,7 @@ describe('T11-AC01 layouts and route table', () => {
 
   it('checkout success route uses the orderId child pattern', () => {
     let found = false;
-    const orderIdLit = colon + 'orderId';
-    const fullPath = 'siker' + '/' + orderIdLit;
+    const fullPath = 'siker/:orderId';
     checkoutRoutes.forEach((c) => {
       if (c.path === fullPath) found = true;
     });
