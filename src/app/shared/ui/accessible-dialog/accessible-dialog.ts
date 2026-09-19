@@ -1,6 +1,5 @@
 import {
   Component,
-  ElementRef,
   TemplateRef,
   ViewContainerRef,
   effect,
@@ -44,7 +43,6 @@ import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
 export class AccessibleDialog {
   private readonly dialog = inject(Dialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Whether the dialog is open. Driven by the parent. */
   readonly opened = input<boolean>(false);
@@ -59,10 +57,19 @@ export class AccessibleDialog {
   readonly labelledBy = input<string | null>(null);
 
   /**
-   * Element that should regain focus when the dialog closes. Defaults to
-   * the host element of the primitive.
+   * Element that should regain focus when the dialog closes. When left
+   * unset, the CDK restores focus to whatever had it before the dialog
+   * opened.
    */
   readonly restoreTarget = input<HTMLElement | null>(null);
+
+  /**
+   * Where focus lands when the dialog opens. `first-tabbable` is the
+   * CDK default and keeps a plain modal behaving as it did. A drawer
+   * passes `first-heading` so the user is told the name of what they
+   * opened, per docs/spec/screens.md S2 ("Initial focus=drawer heading").
+   */
+  readonly initialFocus = input<'first-tabbable' | 'first-heading'>('first-tabbable');
 
   /** Emits when the dialog closes by any mechanism (button, Escape, backdrop). */
   readonly closed = output();
@@ -91,7 +98,7 @@ export class AccessibleDialog {
   }
 
   private openInternal(): void {
-    const restore = this.restoreTarget() ?? this.host.nativeElement;
+    const restore = this.restoreTarget() ?? true;
     this.ref = this.dialog.open(this.body(), {
       // The dialog semantics (role, aria-modal and the accessible name)
       // live on the `.panel` element in accessible-dialog.html, next to
@@ -106,7 +113,7 @@ export class AccessibleDialog {
       hasBackdrop: true,
       disableClose: false,
       restoreFocus: restore,
-      autoFocus: 'first-tabbable',
+      autoFocus: this.initialFocus(),
       viewContainerRef: this.viewContainerRef,
     });
     // Notify parent when the dialog closes through any of CDK's paths

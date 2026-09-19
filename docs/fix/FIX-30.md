@@ -1,6 +1,17 @@
 # FIX-30 — Restore focus after a dialog closes and focus the drawer heading on open
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the primitive-side fix landed: `AccessibleDialog`'s restore fallback is now
+`this.restoreTarget() ?? true` (was the non-focusable host element), and a new
+`initialFocus` input (`'first-tabbable' | 'first-heading'`, defaulting to the
+unchanged behaviour) is wired to `autoFocus`. This alone fixes focus restoration
+for every consumer that passes no `restoreTarget` (the terms dialog and the
+gallery zoom modal), with no caller edited. Open: wiring
+`[initialFocus]="'first-heading'"` onto `src/app/core/navigation/mobile-drawer.html`
+and `src/app/features/catalog/filter-drawer.html` (AC03/AC04) was not done —
+both files are outside `src/app/shared/ui/**`, and `filter-drawer.html` sits in
+a sibling agent's `features/catalog/**` worktree this round. Real-browser
+criteria (AC01-AC06, AC09, AC11-AC12) were not run; deferred to the batched
+browser pass per this run's own constraints (unit tests only, no dev server).
 Severity: major
 Source: B2 F8, B2 F9, B3 R20 (fail), B3 R23 (fail)
 
