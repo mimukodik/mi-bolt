@@ -114,6 +114,19 @@ function queryImage(parent: ParentNode, selector: string): HTMLImageElement {
   return el;
 }
 
+/**
+ * The path an `<img>` actually points at, with the origin stripped off.
+ *
+ * `ProductImage` runs its `src` through `resolveAssetUrl`, which returns an
+ * absolute URL, so the rendered attribute reads
+ * `http://localhost:3000/assets/...` under the unit runner. Asserting on the
+ * whole string would pin these tests to whatever host the runner happens to
+ * serve from; the path is the part the component decides.
+ */
+function imagePath(image: HTMLImageElement): string {
+  return new URL(image.getAttribute('src') ?? '', 'http://localhost').pathname;
+}
+
 beforeEach(() => {
   document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
     el.remove();
@@ -168,7 +181,7 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
     expect(host.imageIndex()).toBe(1);
 
     const activePhoto = queryImage(root, '[data-testid="image-photo"]');
-    expect(activePhoto.getAttribute('src')).toBe('/assets/products/demo-one-back.webp');
+    expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-back.webp');
 
     // From index 1, prev button returns to index 0
     prevBtn.click();
@@ -177,7 +190,7 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
 
     expect(host.emittedImageChanges).toEqual([1, 0]);
     expect(host.imageIndex()).toBe(0);
-    expect(queryImage(root, '[data-testid="image-photo"]').getAttribute('src')).toBe(
+    expect(imagePath(queryImage(root, '[data-testid="image-photo"]'))).toBe(
       '/assets/products/demo-one-front.webp',
     );
   });
@@ -259,7 +272,7 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     expect(thumb2.getAttribute('aria-current')).toBe('true');
 
     const activePhoto = queryImage(root, '[data-testid="image-photo"]');
-    expect(activePhoto.getAttribute('src')).toBe('/assets/products/demo-one-side.webp');
+    expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-side.webp');
   });
 
   it('T16-AC02: displays image count formatted in current / total format with polite live region', async () => {
