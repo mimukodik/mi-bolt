@@ -28,12 +28,14 @@ export class MarketingLayout {
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
-    // Move focus to the new H1 on every navigation so keyboard and
+    // Move focus to the new H1 on every route-path change so keyboard and
     // screen-reader users land on the active page heading rather than
     // staying on the previous one. A `queueMicrotask` defers the read
-    // until Angular has rendered the lazy chunk's H1.
+    // until Angular has rendered the lazy chunk's H1. A query-only
+    // navigation does not trigger this — see
+    // `RouteFocusService.pathChangeNavigationEnd$()`.
     this.routeFocus
-      .navigationEnd$()
+      .pathChangeNavigationEnd$()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.routeFocus.scheduleFocus();

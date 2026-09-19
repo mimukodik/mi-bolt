@@ -334,6 +334,275 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     expect(document.activeElement).toBe(h1);
   });
 
+  it('RouteFocusService.pathChangeNavigationEnd$ emits on the first navigation', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+    });
+    const router = TestBed.inject(Router);
+    const focus = TestBed.inject(RouteFocusService);
+    const events: NavigationEnd[] = [];
+    const sub = focus.pathChangeNavigationEnd$().subscribe((event) => {
+      events.push(event);
+    });
+    await router.navigateByUrl('/telefonok');
+    const ok = events.length - 0;
+    expect(ok > 0).toBe(true);
+    sub.unsubscribe();
+  });
+
+  it('RouteFocusService.pathChangeNavigationEnd$ does not emit for a query-only navigation', async () => {
+    // The subscription is created before the baseline navigation and
+    // stays alive across both, mirroring how a layout's constructor
+    // subscribes once and keeps that same subscription for every
+    // navigation the layout lives through. A subscription created only
+    // after the baseline nav would see the query-only nav as its own
+    // first-ever event, which always passes distinctUntilChanged.
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+    });
+    const router = TestBed.inject(Router);
+    const focus = TestBed.inject(RouteFocusService);
+    const events: NavigationEnd[] = [];
+    const sub = focus.pathChangeNavigationEnd$().subscribe((event) => {
+      events.push(event);
+    });
+    await router.navigateByUrl('/telefonok');
+    const afterBaseline = events.length;
+    await router.navigateByUrl('/telefonok?q=foo');
+    const diff = events.length - afterBaseline;
+    expect(diff).toBe(0);
+    sub.unsubscribe();
+  });
+
+  it('RouteFocusService.pathChangeNavigationEnd$ does not emit between two query-only navigations', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+    });
+    const router = TestBed.inject(Router);
+    const focus = TestBed.inject(RouteFocusService);
+    const events: NavigationEnd[] = [];
+    const sub = focus.pathChangeNavigationEnd$().subscribe((event) => {
+      events.push(event);
+    });
+    await router.navigateByUrl('/telefonok?q=foo');
+    const afterBaseline = events.length;
+    await router.navigateByUrl('/telefonok?q=bar');
+    const diff = events.length - afterBaseline;
+    expect(diff).toBe(0);
+    sub.unsubscribe();
+  });
+
+  it('RouteFocusService.pathChangeNavigationEnd$ emits when the path itself changes', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+    });
+    const router = TestBed.inject(Router);
+    const focus = TestBed.inject(RouteFocusService);
+    const events: NavigationEnd[] = [];
+    const sub = focus.pathChangeNavigationEnd$().subscribe((event) => {
+      events.push(event);
+    });
+    await router.navigateByUrl('/telefonok?q=foo');
+    const afterBaseline = events.length;
+    await router.navigateByUrl('/');
+    const diff = events.length - afterBaseline;
+    expect(diff > 0).toBe(true);
+    sub.unsubscribe();
+  });
+
+  it('RouteFocusService.pathChangeNavigationEnd$ emits again on returning to a path visited earlier', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+    });
+    const router = TestBed.inject(Router);
+    const focus = TestBed.inject(RouteFocusService);
+    const events: NavigationEnd[] = [];
+    const sub = focus.pathChangeNavigationEnd$().subscribe((event) => {
+      events.push(event);
+    });
+    await router.navigateByUrl('/telefonok');
+    await router.navigateByUrl('/');
+    await router.navigateByUrl('/telefonok');
+    const ok = events.length - 2;
+    expect(ok > 0).toBe(true);
+    sub.unsubscribe();
+  });
+
+  it('a query-only navigation does not move focus off the field the user is typing into', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+    });
+    const router = TestBed.inject(Router);
+    const focus = TestBed.inject(RouteFocusService);
+    document.body.innerHTML = '';
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    const h1 = document.createElement('h1');
+    h1.textContent = 'Mobiltelefonok';
+    main.appendChild(h1);
+    document.body.appendChild(main);
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+
+    // Mirrors the subscription each layout sets up in its constructor.
+    // `focusMainHeading()` is called directly rather than through
+    // `scheduleFocus()`'s `afterNextRender` wrapper: that wrapper exists
+    // to wait for a lazy chunk's not-yet-mounted H1, and the H1 above is
+    // already in the DOM, so the indirection would only add an
+    // unrelated async render dependency to this test.
+    const sub = focus.pathChangeNavigationEnd$().subscribe(() => {
+      focus.focusMainHeading();
+    });
+
+    await router.navigateByUrl('/telefonok');
+    expect(document.activeElement).toBe(h1);
+
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    await router.navigateByUrl('/telefonok?q=foo');
+    expect(document.activeElement).toBe(input);
+    expect(document.activeElement).not.toBe(h1);
+
+    sub.unsubscribe();
+  });
+
+  // -------------------------------------------------------------------------
+  // FIX-25: the heading focus has to survive a page whose H1 arrives late.
+  //
+  // Measured in Chrome at 1440x900: clicking a product card on
+  // `/telefonok` rendered the product page correctly and left
+  // `document.activeElement` on `BODY`, immediately and 500 ms later.
+  //
+  // `ProductPage` renders `LoadingState` until the SDK answers, so its
+  // `<h1>` is not in the DOM one render after `NavigationEnd` — which is
+  // exactly when `scheduleFocus()`'s `afterNextRender` callback runs.
+  // `focusMainHeading()` found no H1, returned having done nothing, and
+  // nothing ever re-ran it. `CatalogPage` was unaffected because its H1
+  // is static markup, which is why `/telefonok` focused and
+  // `/telefonok/:slug` did not.
+  //
+  // Reproduced end to end in jsdom by deferring the product response
+  // past the first render; the same run with `navigationEnd$()` in place
+  // of `pathChangeNavigationEnd$()` behaved identically, so this is not
+  // a regression of that change.
+  // -------------------------------------------------------------------------
+
+  function mountMainLandmark(): HTMLElement {
+    document.body.innerHTML = '';
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    main.setAttribute('tabindex', '-1');
+    const placeholder = document.createElement('div');
+    placeholder.textContent = 'Termék betöltése';
+    main.appendChild(placeholder);
+    document.body.appendChild(main);
+    return main;
+  }
+
+  function mountHeading(main: HTMLElement, text: string): HTMLElement {
+    const h1 = document.createElement('h1');
+    h1.textContent = text;
+    main.appendChild(h1);
+    return h1;
+  }
+
+  async function flushMutations(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  function freshRouteFocus(): RouteFocusService {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+    });
+    return TestBed.inject(RouteFocusService);
+  }
+
+  it('focusMainHeadingWhenMounted focuses an H1 that is already in the DOM', () => {
+    const focus = freshRouteFocus();
+    const main = mountMainLandmark();
+    const h1 = mountHeading(main, 'Mobiltelefonok');
+    focus.focusMainHeadingWhenMounted();
+    expect(document.activeElement).toBe(h1);
+  });
+
+  it('focusMainHeadingWhenMounted focuses an H1 that mounts after the navigation settled', async () => {
+    const focus = freshRouteFocus();
+    const main = mountMainLandmark();
+    focus.focusMainHeadingWhenMounted();
+    // The lazy page is still showing its loading state: nothing to focus.
+    expect(document.activeElement).toBe(document.body);
+    const h1 = mountHeading(main, 'Demo One 5G');
+    await flushMutations();
+    expect(document.activeElement).toBe(h1);
+  });
+
+  it('focusMainHeadingWhenMounted keeps waiting through a render that brings no H1', async () => {
+    const focus = freshRouteFocus();
+    const main = mountMainLandmark();
+    focus.focusMainHeadingWhenMounted();
+    main.appendChild(document.createElement('p'));
+    await flushMutations();
+    expect(document.activeElement).toBe(document.body);
+    const h1 = mountHeading(main, 'Demo One 5G');
+    await flushMutations();
+    expect(document.activeElement).toBe(h1);
+  });
+
+  it('focusMainHeadingWhenMounted gives the focus up once the user has claimed it', async () => {
+    const focus = freshRouteFocus();
+    const main = mountMainLandmark();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    focus.focusMainHeadingWhenMounted();
+    input.focus();
+    // The H1 arrives late, but the user is already typing somewhere.
+    const h1 = mountHeading(main, 'Demo One 5G');
+    await flushMutations();
+    expect(document.activeElement).toBe(input);
+    expect(document.activeElement).not.toBe(h1);
+    // The watch is gone for good, not merely skipped once.
+    mountHeading(main, 'Second');
+    await flushMutations();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('focusMainHeadingWhenMounted replaces the watch a previous navigation left pending', async () => {
+    const focus = freshRouteFocus();
+    const first = mountMainLandmark();
+    focus.focusMainHeadingWhenMounted();
+    // A second route change before the first page ever produced an H1.
+    const second = mountMainLandmark();
+    focus.focusMainHeadingWhenMounted();
+    expect(first.isConnected).toBe(false);
+    const h1 = mountHeading(second, 'Demo Air 5G');
+    await flushMutations();
+    expect(document.activeElement).toBe(h1);
+  });
+
+  it('scheduleFocus defers the heading focus to after the next render', async () => {
+    const f = TestBed.createComponent(ShopLayout);
+    f.detectChanges();
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const main = raw.querySelector('main#main-content');
+    if (!(main instanceof HTMLElement)) throw new Error('Expected main HTMLElement');
+    const h1 = mountHeading(main, 'Pelda');
+    TestBed.inject(RouteFocusService).scheduleFocus();
+    expect(document.activeElement).not.toBe(h1);
+    f.detectChanges();
+    await f.whenStable();
+    expect(document.activeElement).toBe(h1);
+    f.destroy();
+  });
+
   it('browser back preserves URL query filters on /telefonok', async () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -474,5 +743,75 @@ describe('T11-AC05 cart badge wiring', () => {
     const badge = raw.querySelector('[data-testid="cart-badge"]');
     const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('3');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The constructor subscription each layout sets up is the line that turns
+// `pathChangeNavigationEnd$()` into an actual focus move. The tests above
+// exercise the service on its own and the layouts' markup on its own, so
+// that one line was executed by nothing: `marketing-layout.ts:41` came
+// back uncovered from the per-file 100% threshold after the switch from
+// `navigationEnd$()`.
+//
+// These drive a real navigation through a mounted layout instead of
+// calling the service directly, so the subscription, its `takeUntilDestroyed`
+// pipe and the `scheduleFocus()` call are all on the executed path.
+// ---------------------------------------------------------------------------
+
+describe('T11-AC03 each layout moves focus on a real path change', () => {
+  // Two empty routes rather than the real table: navigating the real
+  // `/telefonok` renders `CatalogPage` into the layout's outlet, which
+  // fires SDK requests this spec registers no handler for. The subject
+  // here is the layout's own subscription, and a path change is a path
+  // change whatever renders at the other end.
+  const stubRoutes = [
+    { path: 'egy', children: [] },
+    { path: 'ketto', children: [] },
+  ];
+
+  async function focusAfterNavigation(layout: Type<unknown>, url: string): Promise<string> {
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [layout],
+      providers: [provideRouter(stubRoutes), provideZonelessChangeDetection()],
+    });
+    await TestBed.compileComponents();
+
+    const fixture = TestBed.createComponent(layout);
+    fixture.detectChanges();
+    const host: unknown = fixture.nativeElement;
+    if (!(host instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    document.body.appendChild(host);
+    const main = host.querySelector('main#main-content');
+    if (!(main instanceof HTMLElement)) throw new Error('Expected main#main-content');
+
+    const heading = document.createElement('h1');
+    heading.textContent = 'Cel';
+    main.appendChild(heading);
+
+    await TestBed.inject(Router).navigateByUrl(url);
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const active = document.activeElement;
+    if (active === heading) return 'h1';
+    return active instanceof HTMLElement ? active.tagName : 'NONE';
+  }
+
+  it('MarketingLayout focuses the heading after a path change', async () => {
+    const where = await focusAfterNavigation(MarketingLayout, '/egy');
+    expect(where).toBe('h1');
+  });
+
+  it('ShopLayout focuses the heading after a path change', async () => {
+    const where = await focusAfterNavigation(ShopLayout, '/egy');
+    expect(where).toBe('h1');
+  });
+
+  it('CheckoutLayout focuses the heading after a path change', async () => {
+    const where = await focusAfterNavigation(CheckoutLayout, '/egy');
+    expect(where).toBe('h1');
   });
 });

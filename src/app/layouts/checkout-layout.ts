@@ -70,7 +70,7 @@ export class CheckoutLayout {
 
   constructor() {
     this.routeFocus
-      .navigationEnd$()
+      .pathChangeNavigationEnd$()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.routeFocus.scheduleFocus();
