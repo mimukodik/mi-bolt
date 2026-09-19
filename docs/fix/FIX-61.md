@@ -1,6 +1,13 @@
 # FIX-61 — Wire `OrderSubmission` and `PaymentProgress`, and settle the idempotent-retry key
 
-Status: PLANNED — not executed.
+Status: DONE — `OrderSubmission`/`PaymentProgress` are wired into
+`ReviewStep`; `commitDirectly()` now commits through
+`CheckoutFacade.commitOrder()`'s held per-fingerprint key instead of
+minting its own (a correction beyond the doc's literal text — see the
+commit body). `createPaymentIntent()` and the two cart/quote mutations
+still mint a fresh key per call (`FIX-66`'s scope); `checkout.routes.ts`
+and `cart.facade.ts` still each declare their own `freshIdempotencyKey`
+(`FIX-66`'s scope).
 Severity: blocker
 Source: Review round item N7, carried over from round one: `FIX-25`'s out-of-scope section (A4 findings F4 and F5). `docs/spec/screens.md:87`, `docs/spec/architecture.md:117` and `:121`, `docs/spec/components.md:626-635`. Decision **D1**.
 

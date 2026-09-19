@@ -23,12 +23,15 @@
  *              mutex before the next call is allowed to issue a wire
  *              write; a second call observes the SAME in-flight
  *              promise rather than starting a new one.
- *   T23-AC04 — unknown outcome retains an identical order key and
- *              normalized request. The persisted safe record contains
- *              NO contact / address / payment-like data. Reload
- *              recovery queries `getOrder` first; on 404 it replays
- *              `createOrder` with the EXACT stored key + body so the
- *              mock's idempotency cache returns the original receipt.
+ *   T23-AC04 — an unknown outcome retains an identical order key and
+ *              normalized request on retry. `CheckoutFacade.commitOrder()`
+ *              holds the key per canonical request fingerprint
+ *              (FIX-61); this service commits through it rather than
+ *              minting and tracking a second key of its own. The
+ *              local safe-order store this criterion used to
+ *              describe was removed by FIX-10 — the mock persists
+ *              receipts, so recovery is a fresh `getOrder`/`commitOrder`
+ *              call, not a replay of a stored record.
  *   T23-AC05 — expected failure leaves inputs and cart intact and the
  *              logger redacts everything except whitelist fields. The
  *              sanitizer is a static helper so tests can assert on it
@@ -71,7 +74,7 @@ import type { PaymentIntent } from '../../api/generated/models/payment-intent';
 
 import * as functions from '../../api/generated/functions';
 
-import { CheckoutFacade } from './checkout.facade';
+import { CheckoutFacade, freshIdempotencyKey } from './checkout.facade';
 import { CartFacade } from '../cart/cart.facade';
 
 import {
@@ -427,21 +430,25 @@ export class OrderSubmission {
   }
 
   /**
-   * Sends the `createOrder` request through the facade with the
-   * submission's OWN idempotency key. The facade's
-   * `commitOrderWithKey()` keeps the form-state preservation
-   * contract intact (busy / error / order signals) while letting
-   * the submission service own the idempotency key: that is what
-   * makes the replay return the cached receipt (T23-AC04).
+   * Commits through `CheckoutFacade.commitOrder()`, which is the one
+   * place the idempotency key for this operation now lives
+   * (`checkout.facade.ts`, FIX-61 item 1: one key per canonical
+   * request fingerprint). This method used to mint its own key and
+   * call `commitOrderWithKey()` directly, which bypassed that policy
+   * entirely and minted a fresh key on every retry — the opposite of
+   * `architecture.md:121`'s "a timeout-after-commit retries the same
+   * key/body." `commitOrder()` reads the same cart/quote/payment
+   * intent state this method used to assemble by hand, and the
+   * intent id involved never changes across a poll (only its
+   * status does), so the fingerprint it builds is the same one this
+   * call site would have built.
    */
   private async commitDirectly(
     cartId: string,
     quoteId: string,
     paymentIntentId: string | null,
   ): Promise<SubmitOutcome> {
-    const orderKey = freshIdempotencyKey();
-    const body = this.buildNormalizedBody(cartId, quoteId, paymentIntentId);
-    const result = await this.checkout.commitOrderWithKey(orderKey, body);
+    const result = await this.checkout.commitOrder();
     if (result.ok) {
       this.lastOutcomeWritable.set({
         kind: 'committed',
@@ -474,7 +481,11 @@ export class OrderSubmission {
       });
       return { kind: 'declined', reason: mapped.detail, intentId: paymentIntentId ?? '' };
     }
-    return { kind: 'unknown', safeKey: orderKey, reason: mapped.detail };
+    // The held key lives inside CheckoutFacade now, not here — an
+    // empty safeKey is what a caller that still reads this field
+    // sees; nothing in this codebase reads it after FIX-10 removed
+    // the local safe-order store.
+    return { kind: 'unknown', safeKey: '', reason: mapped.detail };
   }
 
   private async runCardFlow(cartId: string, quoteId: string): Promise<SubmitOutcome> {
@@ -666,28 +677,6 @@ export class OrderSubmission {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // Normalized body derivation.
-  // -------------------------------------------------------------------------
-
-  private buildNormalizedBody(
-    cartId: string,
-    quoteId: string,
-    paymentIntentId: string | null,
-  ): NormalizedOrderBody {
-    return {
-      cartId,
-      quoteId,
-      // The wire schema declares `paymentIntentId` as optional
-      // (undefined when absent); a literal `null` would fail the
-      // generated SDK's type check, so we omit the key entirely.
-      ...(paymentIntentId !== null ? { paymentIntentId } : {}),
-      termsVersion: 'demo-1',
-      acceptedTerms: true,
-      acknowledgedSimulation: true,
-    };
-  }
-
   private cancelPolling(): void {
     if (this.pollAbort !== null) {
       this.pollAbort.abort();
@@ -718,16 +707,6 @@ export class OrderSubmission {
 // ---------------------------------------------------------------------------
 // Pure helpers.
 // ---------------------------------------------------------------------------
-
-function freshIdempotencyKey(): string {
-  if (
-    typeof globalThis.crypto !== 'undefined' &&
-    typeof globalThis.crypto.randomUUID === 'function'
-  ) {
-    return globalThis.crypto.randomUUID();
-  }
-  return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 function mapError(err: unknown): { status: number; code: string; detail: string } {
   if (err instanceof HttpErrorResponse) {

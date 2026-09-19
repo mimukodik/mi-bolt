@@ -60,13 +60,15 @@
  * `DeliveryStep` do.
  */
 
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormField, type FieldTree } from '@angular/forms/signals';
 
 import { CheckoutFacade } from './checkout.facade';
 import { CartFacade } from '../cart/cart.facade';
 import { QuoteController, type QuoteState } from './quote-state';
+import { OrderSubmission } from './order-submission';
+import { PaymentProgress, type PaymentProgressTick } from './payment-progress';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -76,6 +78,7 @@ import { OrderSummary } from '../cart/order-summary';
 
 import type { CartItem } from '../../api/generated/models/cart-item';
 import type { CheckoutFormModel } from './checkout-form.model';
+import type { PaymentStatus } from '../../shared/types/payment-status';
 
 import { TermsDialog } from './terms-dialog';
 
@@ -101,6 +104,7 @@ type SubmitFailure =
     FormField,
     Button,
     LoadingState,
+    PaymentProgress,
     PriceBlock,
     StatusMessage,
     OrderSummary,
@@ -114,6 +118,8 @@ export class ReviewStep {
   private readonly checkoutFacade = inject(CheckoutFacade);
   private readonly quoteController = inject(QuoteController);
   private readonly router = inject(Router);
+  private readonly orderSubmission = inject(OrderSubmission);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** True while a network mutation (quote / payment intent / order)
    *  is in flight. */
@@ -127,6 +133,43 @@ export class ReviewStep {
   /** Null until a submit attempt fails; cleared by the next attempt
    *  and by a quote refresh. */
   readonly submitFailure = signal<SubmitFailure | null>(null);
+
+  /** Most recent progress tick from `OrderSubmission.watchProgress()`;
+   *  cleared at the start of every submission attempt. This
+   *  component — the orchestrator, per `components.md:632` — is what
+   *  polls the submission service; `PaymentProgress` never does. */
+  private readonly latestTick = signal<PaymentProgressTick | null>(null);
+
+  /** `PaymentProgress`'s `status` input, mapped from the live tick
+   *  while a submission is running and from `submitFailure` once it
+   *  has settled — several of `OrderSubmission`'s failure branches
+   *  (a missing quote, a rejected `demo_cod` commit) never emit a
+   *  tick at all, so `submitFailure` is the fallback that still
+   *  reaches this computed. */
+  readonly paymentStatus = computed<PaymentStatus>(() => {
+    const tick = this.latestTick();
+    if (tick !== null) {
+      switch (tick.state) {
+        case 'pending':
+        case 'attempt':
+          return 'pending';
+        case 'succeeded':
+          return 'succeeded';
+        case 'declined':
+          return 'declined';
+        case 'timeout':
+          return 'unknown';
+      }
+    }
+    const failure = this.submitFailure();
+    if (failure === null) return 'idle';
+    if (failure.kind === 'declined') return 'declined';
+    if (failure.kind === 'pending') return 'unknown';
+    return 'error';
+  });
+
+  /** `PaymentProgress`'s `pollCount` input. */
+  readonly pollCount = computed<number>(() => this.latestTick()?.attempt ?? 0);
 
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);
@@ -405,6 +448,15 @@ export class ReviewStep {
         void this.quoteController.refresh();
       }
     });
+
+    // This component is `OrderSubmission`'s orchestrator
+    // (`components.md:632`): it polls the submission service and
+    // maps each tick onto `PaymentProgress`'s declared inputs, so
+    // that component never subscribes to the service itself.
+    const stopWatching = this.orderSubmission.watchProgress((tick) => {
+      this.latestTick.set(tick);
+    });
+    this.destroyRef.onDestroy(stopWatching);
   }
 
   // ---------------------------------------------------------------------------
@@ -443,34 +495,48 @@ export class ReviewStep {
       return;
     }
     this.submitted.set(true);
+    await this.runSubmission();
+  }
+
+  /** Bound to `PaymentProgress`'s `(retryRequested)` from the
+   *  declined / unknown states. Runs the same submission again
+   *  without the CTA's `canSubmit()` gate — that gate refuses a
+   *  retry while the outcome is `pending`, which is exactly the
+   *  state this control exists to recover from. `CheckoutFacade`'s
+   *  held idempotency key (per-fingerprint) is what makes this a
+   *  true replay rather than a new request. */
+  async onPaymentRetry(): Promise<void> {
+    await this.runSubmission();
+  }
+
+  /** Bound to `PaymentProgress`'s `(changeMethodRequested)`. */
+  onPaymentChangeMethod(): void {
+    void this.router.navigate(['/penztar/szallitas']);
+  }
+
+  /** Orchestrates one submission attempt through `OrderSubmission`
+   *  and branches on the five `SubmitOutcome` kinds. */
+  private async runSubmission(): Promise<void> {
     this.submitFailure.set(null);
+    this.latestTick.set(null);
     this.submitting.set(true);
     try {
-      const paymentMethod = this.reviewForm().value().paymentMethod;
-      if (paymentMethod === 'demo_card') {
-        const intent = await this.checkoutFacade.createPaymentIntent();
-        if (!intent.ok) {
-          this.submitFailure.set({ kind: 'error', detail: intent.error.detail });
+      const outcome = await this.orderSubmission.submitOrder();
+      switch (outcome.kind) {
+        case 'committed':
+        case 'recovered':
+          await this.router.navigate(['/penztar/siker', outcome.orderId]);
           return;
-        }
-        if (intent.value.status === 'declined') {
-          this.submitFailure.set({ kind: 'declined', detail: '' });
+        case 'declined':
+          this.submitFailure.set({ kind: 'declined', detail: outcome.reason });
           return;
-        }
-        if (intent.value.status === 'pending') {
+        case 'pending-timeout':
           this.submitFailure.set({ kind: 'pending', detail: '' });
           return;
-        }
+        case 'unknown':
+          this.submitFailure.set({ kind: 'error', detail: outcome.reason });
+          return;
       }
-      const order = await this.checkoutFacade.commitOrder();
-      if (!order.ok) {
-        this.submitFailure.set({
-          kind: order.error.code === 'PAYMENT_DECLINED' ? 'declined' : 'error',
-          detail: order.error.detail,
-        });
-        return;
-      }
-      await this.router.navigate(['/penztar/siker', order.value.id]);
     } finally {
       this.submitting.set(false);
     }

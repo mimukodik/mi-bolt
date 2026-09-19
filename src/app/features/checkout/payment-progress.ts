@@ -12,8 +12,13 @@
  *     for every state change (`pending`, `attempt`, `succeeded`,
  *     `declined`, `timeout`).
  *   - `PaymentProgress` is the standalone component the review page
- *     hosts. It reads from the parent-owned `OrderSubmission`
- *     instance via DI; it does NOT issue any wire request itself.
+ *     hosts. It declares the `status`/`pollCount` inputs and the
+ *     `retryRequested`/`changeMethodRequested` outputs
+ *     `docs/spec/components.md:626-635` fixes; it does NOT inject
+ *     `OrderSubmission` or issue any wire request itself — the
+ *     orchestrator (the review step) polls the submission service and
+ *     maps each tick onto the two inputs (`components.md:632`:
+ *     "limit polling in orchestrator, never in template").
  *
  * Determinism rule: every tick carries the 1-indexed attempt number,
  * so a test can drive the fake clock once per attempt and assert on
@@ -22,20 +27,10 @@
  * swap the real browser timers in without a wrapper layer.
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  Service,
-  computed,
-  inject,
-  input,
-  signal,
-  type OnDestroy,
-  type Signal,
-  type WritableSignal,
-} from '@angular/core';
+import { Component, Service, computed, input, output, type Signal } from '@angular/core';
 
-import { OrderSubmission } from './order-submission';
+import type { PaymentStatus } from '../../shared/types/payment-status';
+import { Button } from '../../shared/ui/button/button';
 
 // ---------------------------------------------------------------------------
 // Deterministic clock — injectable so tests advance time without
@@ -133,52 +128,41 @@ export interface SubmitOutcomeSnapshot {
 // ---------------------------------------------------------------------------
 
 /**
- * Renders the pending-payment UX while `OrderSubmission` is polling.
- * The component is intentionally tiny: it reads from the service and
- * renders. No side effects, no network, no form binding.
+ * Renders the pending-payment UX. `components.md:626-635`'s declared
+ * surface: `status` and `pollCount` are the two signal inputs;
+ * `retryRequested` / `changeMethodRequested` are the two outputs. The
+ * orchestrator (the review step) owns polling `OrderSubmission` and
+ * mapping each tick onto these two inputs — this component issues no
+ * wire request and holds no reference to the submission service.
  */
 @Component({
   selector: 'app-payment-progress',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [Button],
   templateUrl: './payment-progress.html',
   styleUrl: './payment-progress.scss',
 })
-export class PaymentProgress implements OnDestroy {
-  private readonly submission = inject(OrderSubmission);
+export class PaymentProgress {
+  readonly status = input.required<PaymentStatus>();
+  readonly pollCount = input.required<number>();
 
-  /** Optional override for the max attempts; defaults to the constant. */
-  readonly maxAttemptsOverride = input<number | null>(null);
+  readonly retryRequested = output();
+  readonly changeMethodRequested = output();
 
-  /** The current tick rendered by the template. */
-  private readonly currentTick: WritableSignal<PaymentProgressTick | null> = signal(null);
-  readonly tick: Signal<PaymentProgressTick | null> = this.currentTick.asReadonly();
+  readonly maxAttempts: Signal<number> = computed(() => PAYMENT_POLL_MAX_ATTEMPTS);
 
-  /** Discrete view state derived from the tick. */
-  readonly state: Signal<PaymentProgressState | null> = computed(
-    () => this.currentTick()?.state ?? null,
-  );
-
-  /** 1-indexed attempt number. 0 before the first poll. */
-  readonly attempt: Signal<number> = computed(() => this.currentTick()?.attempt ?? 0);
-
-  /** Max attempts, exposed via signal input. */
-  readonly maxAttempts: Signal<number> = computed(
-    () => this.maxAttemptsOverride() ?? PAYMENT_POLL_MAX_ATTEMPTS,
-  );
-
-  /** Heading copy that follows the tick state. */
+  /** Heading copy that follows the current status. */
   readonly heading: Signal<string> = computed(() => {
-    switch (this.state()) {
+    switch (this.status()) {
       case 'pending':
         return 'Fizetési szándék ellenőrzése';
-      case 'attempt':
-        return 'Várakozás a fizetési szolgáltató válaszára';
       case 'succeeded':
         return 'Fizetés sikeres';
       case 'declined':
         return 'Fizetés elutasítva';
-      case 'timeout':
+      case 'unknown':
         return 'Időtúllépés';
+      case 'error':
+        return 'A rendelés leadása nem sikerült';
       default:
         return '';
     }
@@ -186,22 +170,17 @@ export class PaymentProgress implements OnDestroy {
 
   /** Attempt counter copy, e.g. "3 / 10". */
   readonly attemptLabel: Signal<string> = computed(() => {
-    const a = this.attempt();
+    const a = this.pollCount();
     const max = this.maxAttempts();
     return `${String(a)} / ${String(max)}`;
   });
 
-  private stopWatching: (() => void) | null = null;
-
-  constructor() {
-    this.stopWatching = this.submission.watchProgress((tick) => {
-      this.currentTick.set(tick);
-    });
+  onRetry(): void {
+    this.retryRequested.emit();
   }
 
-  ngOnDestroy(): void {
-    this.stopWatching?.();
-    this.stopWatching = null;
+  onChangeMethod(): void {
+    this.changeMethodRequested.emit();
   }
 }
 

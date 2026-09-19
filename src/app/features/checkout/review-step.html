@@ -233,23 +233,34 @@
         </div>
       </article>
 
+      @if (paymentStatus() !== 'idle' && paymentStatus() !== 'error') {
+        <!-- OrderSubmission's polling/decline/unknown outcomes render
+             through PaymentProgress (components.md:626), which owns
+             the retry / change-method controls for those states. -->
+        <app-payment-progress
+          [status]="paymentStatus()"
+          [pollCount]="pollCount()"
+          (retryRequested)="onPaymentRetry()"
+          (changeMethodRequested)="onPaymentChangeMethod()"
+        ></app-payment-progress>
+      }
       @if (submitFailure(); as failure) {
-        <div class="submit-failure" data-testid="review-submit-failure">
-          <app-status-message
-            [message]="submitFailureMessage()"
-            [severity]="failure.kind === 'pending' ? 'info' : 'error'"
-            [persistent]="true"
-          ></app-status-message>
-          @if (failure.kind !== 'pending') {
+        @if (failure.kind === 'error') {
+          <div class="submit-failure" data-testid="review-submit-failure">
+            <app-status-message
+              [message]="submitFailureMessage()"
+              severity="error"
+              [persistent]="true"
+            ></app-status-message>
             <app-button
               variant="secondary"
               size="comfortable"
               label="Fizetési mód módosítása"
-              (pressed)="onBack()"
+              (pressed)="onPaymentChangeMethod()"
               data-testid="review-change-payment"
             ></app-button>
-          }
-        </div>
+          </div>
+        }
       }
 
       <div class="actions" data-testid="review-actions">

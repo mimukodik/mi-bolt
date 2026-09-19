@@ -94,9 +94,21 @@ export interface CheckoutError {
 export type CheckoutMutationResult<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: CheckoutError };
 
-/** Generates an opaque idempotency key per intent. */
-function freshIdempotencyKey(): string {
-  return globalThis.crypto.randomUUID();
+/**
+ * Generates an opaque idempotency key per intent. Exported so
+ * `OrderSubmission` shares this one declaration (FIX-61) instead of
+ * keeping its own near-duplicate; the guarded fallback below is the
+ * safer of the two prior implementations and is kept as the sole
+ * body rather than the unguarded one this file used before.
+ */
+export function freshIdempotencyKey(): string {
+  if (
+    typeof globalThis.crypto !== 'undefined' &&
+    typeof globalThis.crypto.randomUUID === 'function'
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 /**
@@ -665,8 +677,35 @@ export class CheckoutFacade {
       acceptedTerms: true as const,
       acknowledgedSimulation: true as const,
     };
-    return this.commitOrderWithKey(freshIdempotencyKey(), body);
+    // architecture.md:117/:121 — "A retry sends the identical
+    // body/precondition." One key per canonical request fingerprint:
+    // reuse the held key while the fingerprint is unchanged, mint a
+    // fresh one only when it differs. Built over a key-sorted array
+    // rather than the object literal, so reordering the fields above
+    // cannot silently mint a new key for an identical request.
+    const fingerprint = JSON.stringify([
+      body.cartId,
+      body.quoteId,
+      'paymentIntentId' in body ? body.paymentIntentId : null,
+      body.termsVersion,
+      body.acceptedTerms,
+      body.acknowledgedSimulation,
+    ]);
+    const held = this.heldCommitOrderKey;
+    const idempotencyKey =
+      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
+    this.heldCommitOrderKey = { fingerprint, key: idempotencyKey };
+    const result = await this.commitOrderWithKey(idempotencyKey, body);
+    if (result.ok) {
+      // A genuinely new order must not inherit this fingerprint's key.
+      this.heldCommitOrderKey = null;
+    }
+    return result;
   }
+
+  /** Held idempotency key for the last `commitOrder()` fingerprint;
+   *  cleared on a terminal success (see `commitOrder()` above). */
+  private heldCommitOrderKey: { readonly fingerprint: string; readonly key: string } | null = null;
 
   /**
    * Commit with an externally supplied idempotency key. Used by

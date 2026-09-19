@@ -572,6 +572,126 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
 });
 
 // ---------------------------------------------------------------------------
+// FIX-61 — `commitDirectly()` commits through `CheckoutFacade.commitOrder()`,
+// which holds one idempotency key per canonical request fingerprint
+// (architecture.md:117/:121: "a retry sends the identical body/precondition").
+// This is the criterion the task exists for.
+// ---------------------------------------------------------------------------
+
+describe('FIX-61 the order-commit idempotency key is held per fingerprint', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('retrying an unknown outcome sends the SAME Idempotency-Key on both /orders requests', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    const submission = TestBed.inject(OrderSubmission);
+    submission.bindClock(makeFakeClock());
+
+    await fillContactDeliveryPayment(checkout, 'demo_cod');
+    checkout.form.acceptedTerms().value.set(true);
+    checkout.form.acknowledgedSimulation().value.set(true);
+
+    const keys: string[] = [];
+    let failNext = true;
+    server.use(
+      http.post('*/api/v1/orders', ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key') ?? '');
+        if (failNext) {
+          failNext = false;
+          return HttpResponse.json(
+            {
+              type: 'about:blank',
+              title: 'error',
+              status: 503,
+              code: 'SERVICE_UNAVAILABLE',
+              detail: 'Átmeneti hiba.',
+            },
+            { status: 503, headers: { 'content-type': 'application/problem+json' } },
+          );
+        }
+        return HttpResponse.json(
+          {
+            id: 'order-retry-1',
+            orderNumber: 'DEMO-000001',
+            createdAt: '2026-09-15T10:00:00.000Z',
+            deliveryOptionId: 'demo_pickup',
+            paymentMethod: 'demo_cod',
+            subtotal: { amount: 100, currency: 'HUF' },
+            shipping: { amount: 0, currency: 'HUF' },
+            total: { amount: 100, currency: 'HUF' },
+            items: [],
+            status: 'demo_confirmed',
+            notice: 'Demó',
+            isSimulation: true,
+          },
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }),
+    );
+
+    const first = await submission.submitOrder();
+    expect(first.kind).toBe<SubmitOutcome['kind']>('unknown');
+
+    const second = await submission.submitOrder();
+    expect(second.kind).toBe<SubmitOutcome['kind']>('committed');
+
+    expect(keys.length).toBe(2);
+    expect(keys[0]).not.toBe('');
+    expect(keys[0]).toBe(keys[1]);
+  });
+
+  it('changing the delivery option before retrying mints a DIFFERENT Idempotency-Key', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    const submission = TestBed.inject(OrderSubmission);
+    submission.bindClock(makeFakeClock());
+
+    await fillContactDeliveryPayment(checkout, 'demo_cod');
+    checkout.form.acceptedTerms().value.set(true);
+    checkout.form.acknowledgedSimulation().value.set(true);
+
+    const keys: string[] = [];
+    server.use(
+      http.post('*/api/v1/orders', ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key') ?? '');
+        return HttpResponse.json(
+          {
+            id: `order-${String(keys.length)}`,
+            orderNumber: 'DEMO-000001',
+            createdAt: '2026-09-15T10:00:00.000Z',
+            deliveryOptionId: 'demo_pickup',
+            paymentMethod: 'demo_cod',
+            subtotal: { amount: 100, currency: 'HUF' },
+            shipping: { amount: 0, currency: 'HUF' },
+            total: { amount: 100, currency: 'HUF' },
+            items: [],
+            status: 'demo_confirmed',
+            notice: 'Demó',
+            isSimulation: true,
+          },
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }),
+    );
+
+    const first = await submission.submitOrder();
+    expect(first.kind).toBe<SubmitOutcome['kind']>('committed');
+
+    // A genuinely new order after a terminal success must not inherit
+    // the previous fingerprint's key — a fresh quote changes the
+    // fingerprint (a new quote id), same as a real second purchase.
+    const requote = await checkout.createQuote();
+    expect(requote.ok).toBe(true);
+
+    const second = await submission.submitOrder();
+    expect(second.kind).toBe<SubmitOutcome['kind']>('committed');
+
+    expect(keys.length).toBe(2);
+    expect(keys[0]).not.toBe(keys[1]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // T23-AC05 — expected failure leaves inputs/cart intact and logs omit
 // contact / address / payment-like data.
 // ---------------------------------------------------------------------------

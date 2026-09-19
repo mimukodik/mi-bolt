@@ -62,6 +62,8 @@ import { QuoteController, mapQuoteError } from './quote-state';
 import { ReviewStep } from './review-step';
 import { ReviewPage } from './review-page';
 import { TermsDialog } from './terms-dialog';
+import { OrderSubmission } from './order-submission';
+import type { FakeClock } from './payment-progress';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
@@ -294,6 +296,50 @@ async function seedCartAndSession(
   }
   const quoteController = TestBed.inject(QuoteController);
   await quoteController.refresh();
+}
+
+/** Deterministic test clock — fires every queued callback once.
+ *  Mirrors `order-submission.spec.ts`'s own helper of the same
+ *  shape, so `OrderSubmission`'s polling loop never burns real
+ *  wall-clock seconds in this file either. */
+function makeFakeClock(): FakeClock {
+  let pendingCount = 0;
+  const callbacks = new Map<number, () => void>();
+  let nextId = 1;
+  return {
+    nowIso(): string {
+      return '2026-09-15T10:00:00.000Z';
+    },
+    setTimeoutFn(handler: () => void, _delayMs: number): number {
+      pendingCount += 1;
+      const id = nextId;
+      nextId += 1;
+      callbacks.set(id, handler);
+      return id;
+    },
+    clearTimeoutFn(id: number): void {
+      if (callbacks.delete(id)) {
+        pendingCount -= 1;
+      }
+    },
+    fire(): void {
+      const ordered = [...callbacks.entries()].sort(([a], [b]) => a - b);
+      callbacks.clear();
+      pendingCount = 0;
+      for (const [, cb] of ordered) cb();
+    },
+    pending(): number {
+      return pendingCount;
+    },
+  };
+}
+
+/** Drains microtasks + macrotasks so MSW responses resolve before the
+ *  next polling step, same rationale as `order-submission.spec.ts`. */
+async function flushAsync(iterations = 5): Promise<void> {
+  for (let i = 0; i < iterations; i += 1) {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1014,11 +1060,13 @@ describe('T22 wiring - ReviewStep uses T10 primitives and owns the demo-aware na
         return HttpResponse.json(
           {
             id: 'pi-1',
-            clientSecret: 'secret',
-            status: 'requires_confirmation',
+            cartId: 'cart-1',
+            quoteId: 'quote-1',
+            isSimulation: true,
+            status: 'succeeded',
             amount: { amount: 681970, currency: 'HUF' },
           },
-          { status: 200, headers: { 'content-type': 'application/json' } },
+          { status: 201, headers: { 'content-type': 'application/json' } },
         );
       }),
       http.post('*/api/v1/orders', () => {
@@ -1064,10 +1112,15 @@ describe('T22 wiring - ReviewStep uses T10 primitives and owns the demo-aware na
 });
 
 // ---------------------------------------------------------------------------
-// FIX-25 - a declined, pending or failed order commit is no longer silent.
+// FIX-25 / FIX-61 - a declined, pending or failed order commit is no
+// longer silent, and OrderSubmission + PaymentProgress are what drive
+// the declined / unknown states now (FIX-61 supersedes FIX-25's own
+// rendering path for those two; the generic "error" outcome — one
+// OrderSubmission never emits a progress tick for — is the one case
+// where FIX-25's original review-submit-failure block still renders).
 // ---------------------------------------------------------------------------
-describe('FIX-25 declined, pending and failed order commits surface on the review step', () => {
-  it('a declined payment intent renders the failure banner, keeps the CTA enabled, and a second submit retries', async () => {
+describe('FIX-25 / FIX-61 declined, unknown and failed order commits surface on the review step', () => {
+  it('a declined payment intent renders PaymentProgress in the declined state, keeps the CTA enabled, and its own retry resubmits', async () => {
     let paymentIntentCalls = 0;
     server.use(
       http.post('*/api/v1/payment-intents', () => {
@@ -1105,22 +1158,66 @@ describe('FIX-25 declined, pending and failed order commits surface on the revie
 
     expect(router.url).not.toContain('/penztar/siker');
     const root = getRootElement(fixture);
-    const banner = getElement(root, '[data-testid="review-submit-failure"]');
-    expect(banner.textContent).toContain('elutasítva');
-    expect(banner.textContent).toContain('megmaradtak');
-    expect(queryElement(root, '[data-testid="review-change-payment"]')).not.toBeNull();
+    const progress = getElement(root, '[data-testid="payment-progress"]');
+    expect(progress.getAttribute('data-state')).toBe('declined');
+    expect(progress.textContent).toContain('elutasítva');
+    expect(queryElement(root, '[data-testid="payment-progress-retry"]')).not.toBeNull();
+    expect(queryElement(root, '[data-testid="payment-progress-change-method"]')).not.toBeNull();
     expect(fixture.componentInstance.canSubmit()).toBe(true);
 
-    await fixture.componentInstance.onSubmit();
+    // PaymentProgress's own retry — not the main CTA — is what
+    // FIX-61 wires to a second submission attempt.
+    await fixture.componentInstance.onPaymentRetry();
     await fixture.whenStable();
 
     expect(paymentIntentCalls).toBe(2);
   });
 
-  it('an unknown (pending) payment outcome disables the CTA and says the outcome is not known', async () => {
+  it('changing payment method via PaymentProgress navigates to the delivery step', async () => {
     server.use(
-      http.post('*/api/v1/payment-intents', () => {
-        return HttpResponse.json(
+      http.post('*/api/v1/payment-intents', () =>
+        HttpResponse.json(
+          {
+            id: 'pi-declined',
+            cartId: 'cart-1',
+            quoteId: 'quote-1',
+            amount: { amount: 681970, currency: 'HUF' },
+            isSimulation: true,
+            status: 'declined',
+          },
+          { status: 201, headers: { 'content-type': 'application/json' } },
+        ),
+      ),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+    const router = TestBed.inject(Router);
+
+    const fixture = TestBed.createComponent(ReviewStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    checkoutFacade.form.acceptedTerms().value.set(true);
+    checkoutFacade.form.acknowledgedSimulation().value.set(true);
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onSubmit();
+    await fixture.whenStable();
+
+    fixture.componentInstance.onPaymentChangeMethod();
+    await fixture.whenStable();
+    expect(router.url).toBe('/penztar/szallitas');
+  });
+
+  it('a pending payment that never resolves renders PaymentProgress in the unknown state and disables the CTA', async () => {
+    const orderSubmission = TestBed.inject(OrderSubmission);
+    const fakeClock = makeFakeClock();
+    orderSubmission.bindClock(fakeClock);
+
+    server.use(
+      http.post('*/api/v1/payment-intents', () =>
+        HttpResponse.json(
           {
             id: 'pi-pending',
             cartId: 'cart-1',
@@ -1130,8 +1227,18 @@ describe('FIX-25 declined, pending and failed order commits surface on the revie
             status: 'pending',
           },
           { status: 201, headers: { 'content-type': 'application/json' } },
-        );
-      }),
+        ),
+      ),
+      http.get('*/api/v1/payment-intents/:id', () =>
+        HttpResponse.json({
+          id: 'pi-pending',
+          cartId: 'cart-1',
+          quoteId: 'quote-1',
+          amount: { amount: 681970, currency: 'HUF' },
+          isSimulation: true,
+          status: 'pending',
+        }),
+      ),
     );
 
     const cartFacade = TestBed.inject(CartFacade);
@@ -1141,51 +1248,40 @@ describe('FIX-25 declined, pending and failed order commits surface on the revie
     const fixture = TestBed.createComponent(ReviewStep);
     await fixture.whenStable();
     fixture.detectChanges();
-
     checkoutFacade.form.acceptedTerms().value.set(true);
     checkoutFacade.form.acknowledgedSimulation().value.set(true);
     fixture.detectChanges();
 
-    await fixture.componentInstance.onSubmit();
-    await fixture.whenStable();
+    const submitted = fixture.componentInstance.onSubmit();
+    await flushAsync();
+    for (let i = 0; i < 10; i += 1) {
+      fakeClock.fire();
+      await flushAsync();
+    }
+    await submitted;
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    const banner = getElement(root, '[data-testid="review-submit-failure"]');
-    expect(banner.textContent).toContain('nem ismert');
-    expect(banner.textContent).not.toContain('elutasítva');
-    expect(queryElement(root, '[data-testid="review-change-payment"]')).toBeNull();
+    const progress = getElement(root, '[data-testid="payment-progress"]');
+    expect(progress.getAttribute('data-state')).toBe('unknown');
+    expect(progress.textContent).not.toContain('elutasítva');
     expect(fixture.componentInstance.canSubmit()).toBe(false);
-
     const submitEl = getElement(root, '[data-testid="review-submit"] button');
     expect((submitEl as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('a rejected order commit renders the generic failure with the wire detail, and a refresh clears it', async () => {
+  it('a generic payment-intent failure (not a decline) renders the review-submit-failure block, and a refresh clears it', async () => {
     server.use(
       http.post('*/api/v1/payment-intents', () => {
         return HttpResponse.json(
           {
-            id: 'pi-succeeded',
-            cartId: 'cart-1',
-            quoteId: 'quote-1',
-            amount: { amount: 681970, currency: 'HUF' },
-            isSimulation: true,
-            status: 'succeeded',
-          },
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-      http.post('*/api/v1/orders', () => {
-        return HttpResponse.json(
-          {
             type: 'about:blank',
-            title: 'Payment declined',
-            status: 409,
-            code: 'PAYMENT_DECLINED',
-            detail: 'A szimulált fizetés elutasítva. Új fizetési szándékot kell létrehozni.',
+            title: 'error',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'Átmeneti hiba történt.',
           },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+          { status: 503, headers: { 'content-type': 'application/problem+json' } },
         );
       }),
     );
@@ -1208,8 +1304,9 @@ describe('FIX-25 declined, pending and failed order commits surface on the revie
 
     const root = getRootElement(fixture);
     const banner = getElement(root, '[data-testid="review-submit-failure"]');
-    expect(banner.textContent).toContain('elutasítva');
+    expect(banner.textContent).toContain('Átmeneti hiba történt.');
     expect(fixture.componentInstance.canSubmit()).toBe(true);
+    expect(queryElement(root, '[data-testid="payment-progress"]')).toBeNull();
 
     fixture.componentInstance.onRefresh();
     fixture.detectChanges();
@@ -1218,15 +1315,14 @@ describe('FIX-25 declined, pending and failed order commits surface on the revie
     expect(queryElement(root, '[data-testid="review-submit-failure"]')).toBeNull();
   });
 
-  it('neither a payment-intent nor an order-commit failure branch returns without setting submitFailure', () => {
+  it('onSubmit() delegates to OrderSubmission.submitOrder() rather than calling the facade directly', () => {
     const source = readFileSync(
       pathJoin(process.cwd(), 'src/app/features/checkout/review-step.ts'),
       'utf8',
     );
-    expect(source).toMatch(/intent\.value\.status/);
-    const onSubmitBody = source.slice(source.indexOf('async onSubmit'));
-    expect(onSubmitBody).not.toMatch(/if \(!intent\.ok\) \{\s*return;/);
-    expect(onSubmitBody).not.toMatch(/if \(!order\.ok\) \{\s*return;/);
+    expect(source).toMatch(/this\.orderSubmission\.submitOrder\(\)/);
+    expect(source).not.toMatch(/this\.checkoutFacade\.createPaymentIntent\(\)/);
+    expect(source).not.toMatch(/this\.checkoutFacade\.commitOrder\(\)/);
   });
 });
 
