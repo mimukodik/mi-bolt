@@ -200,6 +200,38 @@ function queryElement(parent: Element, selector: string): HTMLElement | null {
   return el;
 }
 
+function getButtonElement(parent: Element, selector: string): HTMLButtonElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLButtonElement)) {
+    throw new Error(`Expected HTMLButtonElement matching "${selector}"`);
+  }
+  return el;
+}
+
+function getInputElement(parent: Element, selector: string): HTMLInputElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLInputElement)) {
+    throw new Error(`Expected HTMLInputElement matching "${selector}"`);
+  }
+  return el;
+}
+
+/**
+ * Drains a mutation dispatched from a real DOM click. `fixture.whenStable()`
+ * does not reliably wait for the HTTP call issued from inside
+ * `CartFacade`'s dynamically-imported dispatch helpers (the same gap
+ * `add-to-cart.spec.ts`'s `tick()` works around), so this polls with real
+ * timers and re-renders between each tick instead.
+ */
+async function settleMutation(fixture: ComponentFixture<unknown>): Promise<void> {
+  for (let i = 0; i < 6; i += 1) {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 10);
+    });
+    fixture.detectChanges();
+  }
+}
+
 const fileCache = new Map<string, string>();
 
 async function findInWorkspace(targetName: string, dir: string): Promise<string | null> {
@@ -502,6 +534,160 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
     const root = getRootElement(fixture);
     const errorState = queryElement(root, 'app-error-state');
     expect(errorState).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX-21: only the cart line whose mutation is in flight is marked busy.
+// Behavioural criteria from docs/fix/FIX-21.md ("## Acceptance criteria").
+// ---------------------------------------------------------------------------
+describe('FIX-21 only the mutating line is disabled', () => {
+  it('FIX-21-AC01: an idle line at quantity 2 has no aria-busy and every control is enabled', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const lineEl = getElement(root, '[data-testid="cart-line"]');
+    expect(lineEl.hasAttribute('aria-busy')).toBe(false);
+
+    expect(getButtonElement(root, '[data-testid="quantity-decrement"]').disabled).toBe(false);
+    expect(getButtonElement(root, '[data-testid="quantity-increment"]').disabled).toBe(false);
+    expect(getButtonElement(root, '[data-testid="cart-line-remove"]').disabled).toBe(false);
+  });
+
+  it('FIX-21-AC02: clicking quantity-increment completes and updates the quantity and the line total', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="quantity-increment"]').click();
+    await settleMutation(fixture);
+
+    expect(getInputElement(root, '[data-testid="quantity-input"]').value).toBe('3');
+
+    const lineEl = getElement(root, '[data-testid="cart-line"]');
+    const totalsEl = getElement(lineEl, '.totals');
+    const lineTotalAmount = getElement(totalsEl, '[data-testid="price-amount"]');
+    expect(lineTotalAmount.textContent.trim()).toBe(PriceBlock.formatHuf(339_990 * 3));
+
+    expect(lineEl.hasAttribute('aria-busy')).toBe(false);
+  });
+
+  it('FIX-21-AC03: removing the last line empties the cart and renders the empty state', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 1);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="cart-line-remove"]').click();
+    await settleMutation(fixture);
+
+    expect(queryElement(root, '[data-testid="cart-line"]')).toBeNull();
+    const emptyState = queryElement(root, 'app-empty-state');
+    expect(emptyState).not.toBeNull();
+    expect(emptyState?.textContent).toContain('A kosarad üres');
+  });
+
+  it('FIX-21-AC04: during an in-flight mutation only the mutating line reports aria-busy', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem('demo-one-5g-silver-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const cartLineHosts = root.querySelectorAll('app-cart-line');
+    expect(cartLineHosts.length).toBe(2);
+    const firstHost = cartLineHosts[0];
+    const secondHost = cartLineHosts[1];
+    if (!(firstHost instanceof HTMLElement) || !(secondHost instanceof HTMLElement)) {
+      throw new Error('Expected HTMLElement cart-line hosts');
+    }
+
+    const firstLineEl = getElement(firstHost, '[data-testid="cart-line"]');
+    const secondLineEl = getElement(secondHost, '[data-testid="cart-line"]');
+
+    getButtonElement(firstHost, '[data-testid="quantity-increment"]').click();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(firstLineEl.getAttribute('aria-busy')).toBe('true');
+    expect(getButtonElement(firstHost, '[data-testid="quantity-decrement"]').disabled).toBe(true);
+    expect(getButtonElement(firstHost, '[data-testid="quantity-increment"]').disabled).toBe(true);
+    expect(getButtonElement(firstHost, '[data-testid="cart-line-remove"]').disabled).toBe(true);
+
+    expect(secondLineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(getButtonElement(secondHost, '[data-testid="quantity-decrement"]').disabled).toBe(false);
+    expect(getButtonElement(secondHost, '[data-testid="quantity-increment"]').disabled).toBe(false);
+    expect(getButtonElement(secondHost, '[data-testid="cart-line-remove"]').disabled).toBe(false);
+
+    await settleMutation(fixture);
+
+    expect(firstLineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(secondLineEl.hasAttribute('aria-busy')).toBe(false);
+  });
+
+  it('a mutation that fails still re-enables the line once it settles (R24 regression guard)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    // A 409 keeps the page in its "ready" state (unlike a generic error,
+    // which the state machine maps to the ErrorState screen), so this
+    // exercises exactly the failure path FIX-21's .finally() clear fixes:
+    // the line's own controls must come back even though the mutation
+    // did not succeed.
+    server.use(
+      http.patch('*/api/v1/carts/:cartId/items/:itemId', () => {
+        return HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:cart-version-conflict',
+            title: 'Ütközés',
+            status: 409,
+            code: 'CART_VERSION_CONFLICT',
+            detail: 'A kosár időközben megváltozott.',
+            fieldErrors: [],
+          },
+          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="quantity-increment"]').click();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const lineEl = getElement(root, '[data-testid="cart-line"]');
+    expect(lineEl.getAttribute('aria-busy')).toBe('true');
+
+    await settleMutation(fixture);
+
+    expect(lineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(getButtonElement(root, '[data-testid="quantity-decrement"]').disabled).toBe(false);
+    expect(getButtonElement(root, '[data-testid="quantity-increment"]').disabled).toBe(false);
+    expect(getButtonElement(root, '[data-testid="cart-line-remove"]').disabled).toBe(false);
   });
 });
 
