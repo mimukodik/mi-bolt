@@ -1,6 +1,6 @@
 # FIX-43 — Remove the test-only affordances and the dead public API from production markup
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 02d0235, a5c3399. Open: the catalogue test 02d0235 added (calling setupHarness()) still hits the pre-existing ActivatedRoute.queryParamMap stub defect and has never passed; AC08's grep cannot return the claimed result while header-nav and filter-panel still exist.
 Severity: major
 Source: A5 (test-suite sweep), A6 (idiom sweep), B2 (accessibility tree), orchestrator confirmation of the `Button` input.
 

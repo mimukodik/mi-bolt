@@ -1,6 +1,6 @@
 # FIX-24 — Catalogue: clearing the filters leaves the URL stale, and the sort control ignores it
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 766898e. Open: AC10 (comparing two template copies) has nothing left to compare since FIX-14 already merged them and is dropped; item 2's inline-template edit was made once rather than mirrored, per the commit's own note that FIX-24's premise was stale.
 Severity: major
 Source: B1 F5 (clear filters), B1 F6 (sort control), B3 R18 verdict.
 

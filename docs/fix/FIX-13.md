@@ -1,6 +1,6 @@
 # FIX-13 — Remove `createNodeServer`, the hand-rolled OpenAPI validator, and the unwired operation-parity script
 
-Status: PLANNED — not executed.
+Status: DONE — 1ff9a87, a2f560e. Deletes the unreferenced createNodeServer module and the redundant OpenAPI validator/parity scripts across its two legitimate commits.
 Severity: major
 Source: A2 finding 4 (`createNodeServer` is dead code), A2 finding 5 (the hand-rolled
 OpenAPI structural validator duplicates a standard linter), decision **D17** (the docs/fix

@@ -1,6 +1,6 @@
 # FIX-68 — Namespace the design-suite screenshot paths by Playwright project
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 839b4ba. Open: AC09's "100% of tracked screenshots carry a project prefix" is false — 20 unprefixed `<name>-<viewport>.png` files from e2e/design/primitives.spec.ts remain, and no task owns that spec's screenshot naming.
 Severity: major
 Source: Decision **D15**, item 13 (the FIX-54..FIX-61 unowned-defect sweep);
 `e2e/design/viewport-matrix.spec.ts:120-123`; `e2e/design/state-matrix.spec.ts:158-164`;

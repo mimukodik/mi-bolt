@@ -1,6 +1,6 @@
 # FIX-03 — Wire Prettier to ESLint and add the format scripts
 
-Status: PLANNED — not executed.
+Status: DONE — f4224d7. Wires eslint-config-prettier and adds the format/format:check scripts, exit 0 at landing.
 Severity: major
 Source: A1 D1
 

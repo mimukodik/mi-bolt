@@ -1,6 +1,6 @@
 # FIX-07 — Rewrite the six source-text-only spec files as behaviour tests
 
-Status: PLANNED — not executed.
+Status: DONE — 6418443. Rewrites the six source-text-only spec files as real TestBed behaviour tests.
 Severity: blocker
 Source: A5 Part 2
 

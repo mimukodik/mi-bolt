@@ -1,6 +1,6 @@
 # FIX-02 — ESLint strictness: type-aware config, `no-unused-vars` back to error, the `shared/ui` override
 
-Status: PLANNED — not executed.
+Status: PARTIAL — f990255. Open: added `reportUnusedDisableDirectives: 'off'` to eslint.config.js, which the task's "What to change" never authorises; AC01's green lint result depends on that unauthorised suppression.
 Severity: major
 Source: A1 C1, A1 C2, A1 C3
 

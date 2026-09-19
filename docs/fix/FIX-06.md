@@ -1,6 +1,6 @@
 # FIX-06 — Move the feature specs out of root `tests/` and co-locate them
 
-Status: PLANNED — not executed.
+Status: PARTIAL — e7834aa. Open: AC08's required `file:line — test — symptom — owner` failure-list format was never produced in the commit body; the 24-spec co-location itself landed and lint/build are green on the current tree.
 Severity: major
 Source: A1 F1, A5 Part 1
 

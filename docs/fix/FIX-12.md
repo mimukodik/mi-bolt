@@ -1,6 +1,6 @@
 # FIX-12 — Stop swallowing the bootstrap failure, and remove the phantom heading it leaves behind
 
-Status: PLANNED — not executed.
+Status: DONE — fc2515e, 936790f. Renders the retryable fatal state outside the component tree; 936790f later corrected the stale docblock clause fc2515e left behind.
 Severity: blocker
 Source: A2 finding 2, plus a browser finding (a second `<h1>` on `/` and on every
 `/penztar/*` route) that no auditor connected to it. They are one defect.

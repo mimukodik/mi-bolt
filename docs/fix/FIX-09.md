@@ -1,6 +1,6 @@
 # FIX-09 — Fix the 41 Playwright failures
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 919f849, 097501b. Open: AC04's required accounting still omits the 320px overflow failures the criterion names verbatim; AC07's "add-to-cart button absent" diagnosis is contradicted by the template in the same commit. AC03 itself is now met: 097501b brought e2e/design/primitives.spec.ts to 24/24.
 Severity: blocker
 Source: A5 Part 6, A5 Part 4
 

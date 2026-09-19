@@ -1,6 +1,6 @@
 # FIX-71 — Render real preview images in the product gallery's thumbnail row
 
-Status: PLANNED — not executed.
+Status: PARTIAL — b1f4156, a5c3399. Open: AC06's literal "grep returns nothing" cannot be satisfied without deleting the assertion or re-obfuscating the string; a5c3399 replaced the obfuscated form with a plain, honest one-line grep hit instead.
 Severity: major
 Source: Split out of FIX-23 item 6 by RULINGS-B2 (finding S5a-23): it shares no file, no
 cause, no symptom and no spec file with FIX-23's ?variant= contract work.

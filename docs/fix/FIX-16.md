@@ -1,6 +1,6 @@
 # FIX-16 — Settle `AddToCart`: wire it in or delete it
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 08b4482. Open: AC02's failure-path test patches `facade.addItem` with a throwing spy rather than exercising a real throw path — none of `CartFacade.addItem`, `dispatchAddItem` or `CartMutationQueue.enqueue` can throw, so `AddToCart.onAdd()`'s catch is unreachable in production; AC09b's disabled-state test renders a hand-copied markup replica rather than `ProductPage`.
 Severity: blocker
 Source: A3 finding 5 (wire it in) against A6 4.3 (delete it). **The verdict is: wire it
 in.** The reasoning is set out below rather than asserted.

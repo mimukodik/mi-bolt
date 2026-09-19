@@ -1,6 +1,6 @@
 # FIX-08 — Turn the coverage thresholds on and bring `src/mocks/**` into the gate
 
-Status: PLANNED — not executed.
+Status: DONE — d8505e2. Verified: angular.json carries the mandated perFile 100/100/100/100 coverage thresholds with no exclusion list, matching FIX-08-AC01; AC02-AC10 evidence not independently re-run.
 Severity: blocker
 Source: A5 Part 3, A5 Part 4
 

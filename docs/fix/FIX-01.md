@@ -1,6 +1,6 @@
 # FIX-01 — Repair the `lint` target so `npm run lint` runs at all
 
-Status: PLANNED — not executed.
+Status: DONE — 45edd61. Wires lintFilePatterns so ng lint reaches every source directory it must.
 Severity: blocker
 Source: A1 B1
 

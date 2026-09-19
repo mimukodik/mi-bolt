@@ -1,6 +1,6 @@
 # FIX-21 — Every cart line is permanently marked busy, so quantity and remove never work
 
-Status: PLANNED — not executed.
+Status: DONE — 43d5b43. Disables only the mutating cart line via a writable mutatingItemId signal cleared in .finally(); AC01-AC04 measured in-body.
 Severity: blocker
 Source: B1 F4 (browser), A4 (S4.1 row).
 

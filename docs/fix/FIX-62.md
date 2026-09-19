@@ -1,6 +1,6 @@
 # FIX-62 — Delete the coverage-canary subsystem D19 removed
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 98e9da4. Open: the surviving egress proof in e2e/network-isolation.spec.ts now asserts `{ ok: res.ok }` where the task's own replacement hard-codes `{ ok: true }`; since MSW answers an unhandled route with 404, the assertion passes on any non-2xx and proves nothing about egress.
 Severity: major
 Source: Decision **D19** item 1 (closing `D17-DESIGN.md` §4.4), and decision **D20** items
 2 and 3, which route two further consequences of the same deletion to this task (the E004

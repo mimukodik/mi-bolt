@@ -1,6 +1,6 @@
 # FIX-07b — Strip the source-text assertions out of the three mixed spec files
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 108b5e4, df1e7a8. Open: AC01's scoped grep now also hits src/main.spec.ts (added later by dd5b51a, outside this task), which the task's own anticipated-exception list does not cover; two of the three rewritten files replaced readFileSync(.scss) with ɵcmp.styles while keeping the same regex assertions.
 Severity: blocker
 Source: A5 Part 2 (and a correction to it); binding decision **D9**
 

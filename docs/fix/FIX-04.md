@@ -1,6 +1,6 @@
 # FIX-04 — Delete the hand-rolled vitest plugin and make `ng test` pass
 
-Status: PLANNED — not executed.
+Status: PARTIAL — 0b36e02, 3ed9c0e. Open: AC05's `grep -rn "reflect-metadata" src/` still hits src/app/features/home/home-page.spec.ts:39; official-builder migration and the duplicate-TestBed sweep (0 skipped) otherwise landed.
 Severity: blocker
 Source: A1 A1, A1 A2, A5 Part 0
 

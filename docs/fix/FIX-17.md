@@ -1,6 +1,6 @@
 # FIX-17 — Replace hardcoded colours and spacing with the existing tokens
 
-Status: PLANNED — not executed.
+Status: DONE — 0f8f900. Tokenises app.scss and payment-progress.scss per R04, 8 un-tokened literals left and recorded.
 Severity: major
 Source: A6 3.1, 3.2 and 3.3, with A6 3.2's count corrected against the repository — see
 Evidence.

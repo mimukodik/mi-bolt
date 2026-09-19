@@ -1,6 +1,6 @@
 # FIX-11 — Make `api:drift` detect the drift it exists for
 
-Status: PLANNED — not executed.
+Status: DONE — ca65cd5. Replaces api:drift with a real drift check and regenerates the SDK; byte-identical to the committed tree.
 Severity: blocker
 Source: A2 finding 6 (added by the orchestrator, contradicting A2's own earlier
 "byte-identical / genuinely unedited" conclusion — see Evidence), A1 (the lint target).

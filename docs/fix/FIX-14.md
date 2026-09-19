@@ -1,6 +1,6 @@
 # FIX-14 — Move the three inline templates and styles into their own files
 
-Status: PLANNED — not executed.
+Status: PARTIAL — c37def1. Open: the extraction itself is byte-faithful, but the line ranges written into AC05 (`67,264p`, `268,593p`) are stale against the real pre-image (`67,300p`, `304,631p`); the suite was red when this landed.
 Severity: major
 Source: A6 group 1 (1.1, 1.2, 1.3), with two of A6's claims corrected against the
 repository — see Evidence.
