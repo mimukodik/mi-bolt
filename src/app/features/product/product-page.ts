@@ -8,7 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, type ParamMap } from '@angular/router';
+import { ActivatedRoute, Router, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 function paramMapToSearchParams(params: ParamMap): URLSearchParams {
@@ -98,6 +98,7 @@ export class ProductPage {
   private readonly facade = inject(ProductFacade);
   private readonly cartFacade = inject(CartFacade);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   /** UI-driven image index. The parent owns the active image through
@@ -108,9 +109,10 @@ export class ProductPage {
 
   readonly vm = this.facade.vm;
 
-  readonly state = computed<'loading' | 'error' | 'success'>(() => {
+  readonly state = computed<'loading' | 'error' | 'notfound' | 'success'>(() => {
     const v = this.vm();
     if (v.status === 'loading') return 'loading';
+    if (v.status === 'notfound') return 'notfound';
     if (v.status === 'error') return 'error';
     return 'success';
   });
@@ -201,6 +203,16 @@ export class ProductPage {
 
   readonly errorMessage = computed<string>(() => this.vm().error ?? 'Ismeretlen hiba.');
 
+  /** Not-found copy names the requested slug when one was captured
+   *  (FIX-23 — S4.5's dedicated not-found state, distinct from a
+   *  transient request error). */
+  readonly notFoundMessage = computed<string>(() => {
+    const slug = this.currentSlug();
+    return slug.length > 0
+      ? `A(z) „${slug}” azonosítójú termék nem található. Nézd meg a telefonok listáját.`
+      : 'A keresett termék nem található. Nézd meg a telefonok listáját.';
+  });
+
   /** Sticky purchase rail is shown when a product is loaded AND the
    *  viewport is narrow. The CSS handles the visual show/hide via a
    *  media query; this flag additionally guards the runtime so the
@@ -237,6 +249,13 @@ export class ProductPage {
         const slug =
           (inputSlug !== '' ? inputSlug : this.route.snapshot.paramMap.get('slug')) ?? '';
         if (slug.length === 0) return;
+        // Skip the reload this page's own `syncVariantQuery()` navigation
+        // triggers: without this guard every swatch click would replay
+        // through `facade.load()`, resetting the status to `loading` and
+        // flashing the skeleton (FIX-23 item 3).
+        const incoming = queryParamMap.get('variant');
+        const applied = this.facade.currentVariantParams().get('variant');
+        if (slug === this.currentSlug() && incoming !== null && incoming === applied) return;
         const params = paramMapToSearchParams(queryParamMap);
         this.facade.load(slug, params);
       });
@@ -258,10 +277,23 @@ export class ProductPage {
 
   onColorChange(colorCode: string): void {
     this.facade.selectColor(colorCode);
+    this.syncVariantQuery();
   }
 
   onStorageChange(storageGb: number): void {
     this.facade.selectStorage(storageGb);
+    this.syncVariantQuery();
+  }
+
+  /** Mirror the current selection into `?variant=` so a reload and a
+   *  shared link restore it (screens.md S3 route contract). */
+  private syncVariantQuery(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { variant: this.facade.currentVariantParams().get('variant') },
+      queryParamsHandling: 'merge',
+      replaceUrl: false,
+    });
   }
 
   onImageChange(index: number): void {
@@ -307,5 +339,9 @@ export class ProductPage {
 
   onRetry(): void {
     this.facade.retry();
+  }
+
+  onBackToCatalog(): void {
+    void this.router.navigate(['/telefonok']);
   }
 }

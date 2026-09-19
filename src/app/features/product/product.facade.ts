@@ -28,6 +28,7 @@
  */
 
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, distinctUntilChanged, map, of, Subject, switchMap, tap } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
@@ -51,7 +52,7 @@ import {
 } from './variant-selection';
 
 /** Status of the most recent product load. */
-export type ProductStatus = 'idle' | 'loading' | 'success' | 'error';
+export type ProductStatus = 'idle' | 'loading' | 'success' | 'notfound' | 'error';
 
 /** A point-in-time view of the product page, derived from the live signals. */
 export interface ProductVm {
@@ -82,6 +83,11 @@ function describeError(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === 'string') return err;
   return 'Ismeretlen hiba a termék betöltése közben.';
+}
+
+/** True when the SDK error is a 404 — an unknown slug, not a transient failure. */
+export function isProductNotFound(err: unknown): boolean {
+  return err instanceof HttpErrorResponse && err.status === 404;
 }
 
 /**
@@ -150,7 +156,13 @@ export class ProductFacade {
         switchMap(({ slug }) =>
           this.api.invoke(getProduct, { slug }).pipe(
             map((product) => ({ kind: 'ok' as const, product })),
-            catchError((err: unknown) => of({ kind: 'err' as const, error: describeError(err) })),
+            catchError((err: unknown) =>
+              of({
+                kind: 'err' as const,
+                error: describeError(err),
+                notFound: isProductNotFound(err),
+              }),
+            ),
           ),
         ),
       )
@@ -158,7 +170,7 @@ export class ProductFacade {
         if (event.kind === 'ok') {
           this.onProductLoaded(event.product);
         } else {
-          this.statusSignal.set('error');
+          this.statusSignal.set(event.notFound ? 'notfound' : 'error');
           this.errorSignal.set(event.error);
         }
       });

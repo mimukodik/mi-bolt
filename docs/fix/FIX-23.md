@@ -1,6 +1,6 @@
 # FIX-23 — Product page: the `?variant=` contract and the not-found state
 
-Status: PLANNED — not executed.
+Status: PARTIAL — query-param read (item 1) was already fixed by f990255 (FIX-02) as a side effect, measured before this task started. This task lands items 2–6: URL write-back, the reload guard, the notfound status/state and the unit tests. Open: AC01–AC03, AC04–AC07 and AC09–AC10's browser-only halves are unverified in this session (unit tests only, per this session's mandate); deferred to the batched browser pass.
 Severity: blocker
 Source: B1 F2, F8, F9, F7; B3 F7 ("Product" row); A3 (ProductPage / ProductGallery rows).
 

@@ -16,6 +16,16 @@
           (retryRequested)="onRetry()"
         ></app-error-state>
       }
+      @case ('notfound') {
+        <app-error-state
+          [title]="'A termék nem található'"
+          [message]="notFoundMessage()"
+          [retryLabel]="'Vissza a telefonokhoz'"
+          [pending]="false"
+          [preserving]="true"
+          (retryRequested)="onBackToCatalog()"
+        ></app-error-state>
+      }
       @default {
         <div class="layout">
           <div class="gallery">

@@ -568,13 +568,16 @@ describe('T15 ProductFacade — route loading via the SDK', () => {
     expect(vm.addToCart.enabled).toBe(true);
   });
 
-  it('surfaces a 404 as an error status with a descriptive message and no product (AC04)', async () => {
+  it('surfaces a 404 as a dedicated notfound status with a descriptive message and no product (AC04, FIX-23)', async () => {
+    // FIX-23: a 404 for an unknown slug is its own 'notfound' status,
+    // distinct from a transient failure's 'error' — see
+    // isProductNotFound in product.facade.ts.
     const { facade, flushMicrotasks } = buildFacade();
     facade.load('demo-missing', new URLSearchParams());
     await flushMicrotasks();
 
     const vm = facade.vm();
-    expect(vm.status).toBe('error');
+    expect(vm.status).toBe('notfound');
     expect(vm.product).toBeNull();
     expect(vm.error).toMatch(/404|Ismeretlen|NOT_FOUND/);
     expect(vm.selectedVariant).toBeNull();

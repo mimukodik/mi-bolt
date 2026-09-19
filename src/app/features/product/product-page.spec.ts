@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { Location } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -13,7 +14,7 @@ import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
-import { ProductFacade } from './product.facade';
+import { isProductNotFound, ProductFacade } from './product.facade';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
 
@@ -149,6 +150,7 @@ async function createHarness(): Promise<{
   root: HTMLElement;
   facade: ProductFacade;
   cartFacade: CartFacade;
+  location: Location;
   tick: () => Promise<void>;
 }> {
   TestBed.configureTestingModule({
@@ -167,6 +169,7 @@ async function createHarness(): Promise<{
   const host = fixture.componentInstance;
   const facade = TestBed.inject(ProductFacade);
   const cartFacade = TestBed.inject(CartFacade);
+  const location = TestBed.inject(Location);
 
   const tick = async (): Promise<void> => {
     for (let i = 0; i < 8; i += 1) {
@@ -187,6 +190,7 @@ async function createHarness(): Promise<{
     root: getRootElement(fixture),
     facade,
     cartFacade,
+    location,
     tick,
   };
 }
@@ -493,16 +497,19 @@ describe('T16 product-page loading and error states', () => {
   });
 
   it('displays error state with retry action when product load fails', async () => {
+    // A 503 is a transient failure (FIX-23 distinguishes it from a 404,
+    // which is its own dedicated 'notfound' state — see the FIX-23
+    // describe block below).
     server.use(
       http.get(`${BASE_URL}/products/:slug`, () => {
         return HttpResponse.json(
           {
-            type: 'https://example.com/not-found',
-            title: 'Nem található',
-            status: 404,
-            detail: 'Product not found',
+            type: 'https://example.com/server-error',
+            title: 'Szolgáltatás nem elérhető',
+            status: 503,
+            detail: 'Service unavailable',
           },
-          { status: 404 },
+          { status: 503 },
         );
       }),
     );
@@ -531,6 +538,91 @@ describe('T16 product-page loading and error states', () => {
 
     expect(root.querySelector('app-error-state')).toBeNull();
     expect(root.querySelector('.layout')).not.toBeNull();
+  });
+});
+
+describe('FIX-23 product page ?variant= round trip and not-found state', () => {
+  it('FIX-23-AC01/AC02: selecting a different variant writes ?variant= to the URL', async () => {
+    const { fixture, root, location, tick } = await createHarness();
+
+    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverBtn.click();
+    await tick();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(location.path()).toContain('variant=demo-one-5g-silver-256');
+  });
+
+  it('FIX-23-AC03: a variant switch does not replay the load pipeline through a loading flash', async () => {
+    const { fixture, facade, root, tick } = await createHarness();
+
+    expect(facade.vm().status).toBe('success');
+
+    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverBtn.click();
+    await tick();
+    fixture.detectChanges();
+
+    // The URL-sync navigation this click triggers must not re-enter
+    // `facade.load()`, which resets status to 'loading' and clears the
+    // product — that would flash the skeleton on every swatch click.
+    expect(facade.vm().status).toBe('success');
+    expect(facade.vm().product).not.toBeNull();
+  });
+
+  it('FIX-23-AC04/AC05: an unresolvable ?variant= disables the add control with an explanation, and a valid selection clears it', async () => {
+    const { fixture, root, tick } = await createHarness();
+    const router = TestBed.inject(Router);
+
+    await router.navigate([], { queryParams: { variant: 'nonsense-variant-id' } });
+    await tick();
+    fixture.detectChanges();
+
+    expect(root.textContent).toContain('A linkben megadott változat nem található');
+    const addButton = queryButton(root, '.cta-desktop button');
+    expect(addButton.disabled).toBe(true);
+
+    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverBtn.click();
+    await tick();
+    fixture.detectChanges();
+
+    expect(root.textContent).not.toContain('A linkben megadott változat nem található');
+  });
+
+  it('FIX-23-AC06: a 404 renders the dedicated not-found state with a catalogue return, distinct from a transient error', async () => {
+    server.use(
+      http.get(`${BASE_URL}/products/:slug`, () => {
+        return HttpResponse.json(
+          {
+            type: 'https://example.com/not-found',
+            title: 'Nem található',
+            status: 404,
+            detail: 'Product not found',
+          },
+          { status: 404 },
+        );
+      }),
+    );
+
+    const { facade, root } = await createHarness();
+
+    expect(facade.vm().status).toBe('notfound');
+    expect(root.textContent).toContain('A termék nem található');
+    expect(root.textContent).not.toContain('Újrapróbálom');
+
+    const backButton = queryButton(root, 'app-error-state button');
+    expect(backButton.textContent).toContain('Vissza a telefonokhoz');
+  });
+
+  it('FIX-23: isProductNotFound distinguishes a 404 from a transient failure', () => {
+    const notFound = new HttpErrorResponse({ status: 404 });
+    const serverError = new HttpErrorResponse({ status: 503 });
+
+    expect(isProductNotFound(notFound)).toBe(true);
+    expect(isProductNotFound(serverError)).toBe(false);
+    expect(isProductNotFound(new Error('boom'))).toBe(false);
   });
 });
 
