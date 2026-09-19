@@ -341,6 +341,25 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
     expect(qtyControl).not.toBeNull();
   });
 
+  it('CartLine quantity control has a real accessible name, not a dangling label[for]', async () => {
+    const fixture = TestBed.createComponent(CartLine);
+    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const input = getInputElement(root, '[data-testid="quantity-input"]');
+    expect(input.getAttribute('aria-label')).toBe('Darabszám');
+
+    // `QuantityControl` has no `id` input, so a `[id]` binding on
+    // `<app-quantity-control>` lands on that host element rather than on
+    // the real `<input>` inside it. A `<label for="...">` pointing at that
+    // id is not associated with any labelable control at all — it used to
+    // exist here and pointed nowhere real. The name must come from the
+    // input's own `aria-label` instead, with no dangling label left behind.
+    expect(root.querySelector('label[for]')).toBeNull();
+  });
+
   it('CartLine emits removeRequested and uses an aria-label for the remove action', async () => {
     const fixture = TestBed.createComponent(CartLine);
     fixture.componentRef.setInput('line', DEMO_CART_ITEM);

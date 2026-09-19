@@ -26,9 +26,8 @@
     </div>
 
     <div class="quantity-row flex flex-col gap-2">
-      <label class="qty-label" [attr.for]="quantityId()">Darabszám</label>
+      <span class="qty-label" aria-hidden="true">Darabszám</span>
       <app-quantity-control
-        [id]="quantityId()"
         [value]="line().quantity"
         [min]="1"
         [max]="maxQuantity()"

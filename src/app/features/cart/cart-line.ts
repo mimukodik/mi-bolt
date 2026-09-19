@@ -44,8 +44,6 @@ export class CartLine {
   readonly quantityChanged = output<number>();
   readonly removeRequested = output<string>();
 
-  readonly quantityId = computed(() => `cart-line-qty-${this.line().id}`);
-
   /**
    * `PriceBlock` expects a unit in whole HUF; the wire-shaped
    * `unitPrice` already is. We re-export the value as `Money` so the
