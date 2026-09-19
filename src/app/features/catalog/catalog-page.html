@@ -137,9 +137,7 @@
                 actionLabel="Szűrők törlése"
                 actionVariant="primary"
                 (actionRequested)="onClearAll()"
-              >
-                <span data-testid="empty-reset" hidden></span>
-              </app-empty-state>
+              ></app-empty-state>
             </div>
           }
           @case ('error') {
@@ -153,9 +151,7 @@
                 [pending]="isRefreshing()"
                 [preserving]="true"
                 (retryRequested)="onRetry()"
-              >
-                <span data-testid="error-retry" hidden></span>
-              </app-error-state>
+              ></app-error-state>
             </div>
           }
           @default {

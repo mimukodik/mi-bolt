@@ -883,11 +883,9 @@ describe('T13-AC05 distinct visual states', () => {
     expect(root.querySelector('[data-testid="catalog-empty"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="empty-state"]')).not.toBeNull();
     expect(root.querySelectorAll('[data-testid="product-card"]').length).toBe(0);
-    // `EmptyState` renders its action as a real `app-button`; the
-    // `[data-testid="empty-reset"]` span `catalog-page.html` projects into
-    // `<app-empty-state>` is never rendered because `EmptyState`'s own
-    // template has no `<ng-content>` outlet to receive it, so the
-    // rendered reset action is asserted through the button it actually is.
+    // `EmptyState` renders its action as a real `app-button` from its own
+    // `actionLabel`/`actionVariant` inputs, so the reset action is asserted
+    // through the button it actually is.
     const reset = root.querySelector('[data-testid="catalog-empty"] app-button button');
     expect(reset).not.toBeNull();
     harness.cleanup();
@@ -900,10 +898,8 @@ describe('T13-AC05 distinct visual states', () => {
     const root = getRootElement(harness.fixture);
     expect(root.querySelector('[data-testid="catalog-error"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="error-state"]')).not.toBeNull();
-    // Same reasoning as the empty-state reset action above: `ErrorState`
-    // has no `<ng-content>` outlet, so the projected
-    // `[data-testid="error-retry"]` span never reaches the DOM. The real
-    // retry action is the `app-button` `ErrorState` renders itself.
+    // Same reasoning as the empty-state reset action above: the real retry
+    // action is the `app-button` `ErrorState` renders itself.
     const retry = root.querySelector('[data-testid="catalog-error"] app-button button');
     expect(retry).not.toBeNull();
     harness.cleanup();
