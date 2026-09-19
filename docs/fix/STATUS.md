@@ -212,7 +212,17 @@ into every later file in the worker; those became `server.use()`.
 ### The remaining failures, all owned
 
 - unit, 1: `src/app/layouts/layouts.spec.ts` `T11-AC04 … MobileDrawer depends
-  on the AccessibleDialog primitive` — same defect as the baseline's D5.
+  on the AccessibleDialog primitive`. This section first called it the same
+  defect as the baseline's D5; that was wrong, and measurement at commit
+  `26b95f8` refuted it. The two have nothing in common. D5 is real ARIA
+  duplication in the runtime DOM, two nested elements carrying
+  `role="dialog"`. This unit failure is the spec: `MobileDrawer` does import
+  and render `AccessibleDialog`, and the resolved `ɵcmp.dependencies` array
+  holds that very class, but its `Function.name` is `_AccessibleDialog`,
+  because Angular emits every decorated class as `var X = class _X { static
+  ɵfac … }` so its static initializers can reference it. 302 classes in this
+  bundle are emitted that way, so the name comparison at
+  `layouts.spec.ts:76-81` could never have matched under this toolchain.
 - e2e, 8: `e2e/checkout-f8.spec.ts:28` in both projects (defect D1, the
   product detail page rendering an error surface);
   `e2e/design/primitives.spec.ts:45` priceblock and productimage in both

@@ -73,13 +73,6 @@ function getComponentDependencies(comp: unknown): readonly unknown[] {
   return [];
 }
 
-function hasName(item: unknown, expectedName: string): boolean {
-  if (typeof item === 'function' && item.name === expectedName) {
-    return true;
-  }
-  return typeof item === 'object' && item !== null && 'name' in item && item.name === expectedName;
-}
-
 const colon = String.fromCharCode(58);
 
 describe('T11-AC01 layouts and route table', () => {
@@ -395,6 +388,11 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     expect(modal).toBe('true');
     const links = document.body.querySelectorAll('[role="dialog"] a');
     expect(links.length).toBe(2);
+    // Exactly one node may carry the dialog role. The CDK container
+    // carries it by default (DialogConfig.role), so a primitive that
+    // also stamps role="dialog" on its own panel nests two dialogs.
+    const dialogNodes = document.body.querySelectorAll('[role="dialog"]');
+    expect(dialogNodes.length).toBe(1);
   });
 
   it('MobileDrawer dialog is not a scaled desktop header', () => {
@@ -409,15 +407,18 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
 
   it('MobileDrawer depends on the AccessibleDialog primitive', () => {
     // Angular 22 exposes `ɵcmp.dependencies` as either an array (AOT
-    // output) or a function that returns the array (JIT output). The
-    // test runner here goes through vitest + the Angular JIT compiler,
-    // so accept both forms.
-    const deps = getComponentDependencies(MobileDrawer);
-    let found = false;
-    deps.forEach((d) => {
-      if (hasName(d, 'AccessibleDialog')) found = true;
-    });
-    expect(found).toBe(true);
+    // output) or a function that returns the array, so
+    // `getComponentDependencies` accepts both forms.
+    //
+    // The entries are matched by identity, never by `Function.name`: the
+    // build pipeline emits every decorated class as
+    // `var AccessibleDialog = class _AccessibleDialog { ... }`, so the
+    // runtime `name` is the bundler's inner alias `_AccessibleDialog` and
+    // no comparison against the source name can ever match.
+    expect(getComponentDependencies(MobileDrawer)).toContain(AccessibleDialog);
+    // Control: HeaderNav composes the drawer, not the dialog, so the
+    // same check has to come back negative for it.
+    expect(getComponentDependencies(HeaderNav)).not.toContain(AccessibleDialog);
   });
 });
 

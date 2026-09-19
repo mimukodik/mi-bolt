@@ -93,10 +93,16 @@ export class AccessibleDialog {
   private openInternal(): void {
     const restore = this.restoreTarget() ?? this.host.nativeElement;
     this.ref = this.dialog.open(this.body(), {
-      ariaLabel: this.label(),
-      ariaLabelledBy: this.labelledBy() ?? undefined,
-      ariaModal: true,
-      role: 'dialog',
+      // The dialog semantics (role, aria-modal and the accessible name)
+      // live on the `.panel` element in accessible-dialog.html, next to
+      // the heading and the close button they describe. `CdkDialogContainer`
+      // binds `role`, `aria-modal`, `aria-label` and `aria-labelledby` from
+      // this config, and `DialogConfig.role` defaults to 'dialog', so
+      // leaving those defaults in place wraps the panel in a second dialog
+      // node. `undefined` clears the bound attribute instead: the config is
+      // spread over the defaults, so the key still overrides them.
+      role: undefined,
+      ariaModal: undefined,
       hasBackdrop: true,
       disableClose: false,
       restoreFocus: restore,
