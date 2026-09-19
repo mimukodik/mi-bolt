@@ -22,7 +22,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { type RequestHandler } from 'msw';
-import { server } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
@@ -41,6 +41,11 @@ import {
   type MutationIntent,
   type DispatchResult,
 } from '../../../app/features/cart/cart-mutation-queue';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';

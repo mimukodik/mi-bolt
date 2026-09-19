@@ -16,7 +16,12 @@ import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { checkoutHandlersEntry } from '../../mocks/checkout/checkout.handlers';
 import { Repository } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
-import { server } from '../../../tests/msw-server';
+import { server, useMswServer } from '../../../tests/msw-server';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 interface CheckoutOptionsBody {
   deliveryOptions: { id: string }[];

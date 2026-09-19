@@ -30,7 +30,7 @@ import '@angular/compiler';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http, type RequestHandler } from 'msw';
-import { server } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../tests/msw-server';
 import { of } from 'rxjs';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -78,6 +78,11 @@ import {
 import { OrderReceiptComponent } from './order-receipt';
 import { SuccessStep } from './success-step';
 import { SuccessPage } from './success-page';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;

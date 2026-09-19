@@ -1,36 +1,23 @@
 /**
- * MSW unit setup - boots the Node service worker for the
- * contract-layer test runs.
+ * MSW unit setup - registers the Node service worker lifecycle for the
+ * runners that name this file as a `setupFiles` entry:
+ * `vitest.contract.config.ts` and the `test` target in `angular.json`.
  *
- * Lifecycle:
- *   beforeAll - start the server with `onUnhandledRequest: 'error'`
- *               so any request that escapes the registered handlers
- *               fails the surrounding test.
- *   afterEach - verify no handlers were left registered by a test
- *               and reset the request journal.
- *   afterAll  - close the server cleanly.
+ * The lifecycle itself lives in `./msw-server`; that file's doc comment says
+ * what each hook does and why the registration is a function call rather than
+ * three top-level hooks here.
  *
- * The handlers list starts empty on purpose: T02 owns the gate that
- * proves unhandled requests fail the suite; each test registers the
- * exact handlers it needs via `server.use(...)` so the absence of a
- * handler is a deliberate signal.
+ * Under `vitest.contract.config.ts` this module is a plain Vite module, so
+ * Vitest re-evaluates it per test file and the call below gives every file in
+ * the contract suite its own listen/close pair.
  *
- * The server instance itself lives in `./msw-server` — see that file's
- * doc comment for why. No spec file imports this module; only
- * `angular.json` and `vitest.contract.config.ts` name it as a setup file,
- * which keeps this body in the setup entry chunk so it re-runs per file.
+ * Under `ng test` the Angular unit-test builder serves this path as a one-line
+ * shim in front of a built chunk, so the call below runs once per worker
+ * process and reaches only that worker's first spec file. That is why every
+ * spec that uses the shared server calls `useMswServer()` itself; the call here
+ * is what keeps the contract runner working, and where the two overlap it costs
+ * nothing because `useMswServer()` guards the `listen()`.
  */
-import { afterAll, afterEach, beforeAll } from 'vitest';
-import { server } from './msw-server';
+import { useMswServer } from './msw-server';
 
-beforeAll(() => {
-  server?.listen({ onUnhandledRequest: 'error' });
-});
-
-afterEach(() => {
-  server?.resetHandlers();
-});
-
-afterAll(() => {
-  server?.close();
-});
+useMswServer();

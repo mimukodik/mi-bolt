@@ -28,7 +28,12 @@ import {
   normalizeContactFullName,
   normalizeContactPhone,
 } from '../../mocks/checkout/validate-checkout';
-import { server } from '../../../tests/msw-server';
+import { server, useMswServer } from '../../../tests/msw-server';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';

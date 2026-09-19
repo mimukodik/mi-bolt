@@ -26,7 +26,12 @@ import {
 } from '../mocks/scenarios';
 import { buildSnapshot } from './snapshot';
 import { DEMO_PRODUCT } from './cart/cart.handlers';
-import { server } from '../../tests/msw-server';
+import { server, useMswServer } from '../../tests/msw-server';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const SCENARIO_KEY = 'test-scenario';
 const STORAGE_KEY = snapshotKey(SCENARIO_KEY);

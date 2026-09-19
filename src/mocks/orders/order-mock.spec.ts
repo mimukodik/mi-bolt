@@ -40,7 +40,12 @@ import {
   type OrderReceipt,
 } from '../../mocks/orders/commit-order';
 import { CHECKOUT_OPTIONS as checkoutOptionsRuntime } from '../../mocks/checkout/checkout.handlers';
-import { server } from '../../../tests/msw-server';
+import { server, useMswServer } from '../../../tests/msw-server';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const SESSION_B = 'session-bbbbbbbbbbbb';
