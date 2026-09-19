@@ -175,18 +175,25 @@ describe('T13-AC04 ProductCard', () => {
     const frame = queryElement(raw, '[data-testid="product-card-image"]');
     // The aspect ratio MUST be exactly 4 / 3: R11 keeps the
     // optical size of the device consistent across the catalog.
-    expect(frame.style.aspectRatio.replace(/\s+/g, '')).toBe('4/3');
+    // ProductImage applies the input on its own inner `.root` element
+    // (product-image.html), not on the app-product-image host, so read
+    // it from where it actually lands.
+    const mediaRoot = queryElement(frame, '.root');
+    expect(mediaRoot.style.aspectRatio.replace(/\s+/g, '')).toBe('4/3');
     const photo = queryImage(raw, '[data-testid="image-photo"]');
     expect(photo.getAttribute('alt')).toContain('Demo One 5G');
     expect(photo.getAttribute('alt')).toContain('256 GB');
   });
 
   it('preserves the full device aspect: no cropping, object-fit contain', () => {
-    setup();
-    const css = getComponentStyles(ProductCard).join('\n');
-    expect(css).toContain('object-fit: contain');
+    const { fixture } = setup();
+    const raw = getRootElement(fixture);
+    const photo = queryImage(raw, '[data-testid="image-photo"]');
+    // object-fit: contain is declared in ProductImage's own stylesheet
+    // (product-image.scss), not ProductCard's; read the computed style
+    // of the rendered <img> rather than the wrong component's style text.
     // Cropping via object-fit: cover is explicitly disallowed (R11).
-    expect(css).not.toContain('object-fit: cover');
+    expect(getComputedStyle(photo).objectFit).toBe('contain');
   });
 
   it('renders the whole-HUF one-time price and the explicit one-time label', () => {
