@@ -1,6 +1,6 @@
 # FIX-18 — Home quick-filter links 404 instead of filtering the catalogue
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the three shortcuts now use `[queryParams]`; AC03 (href carries no `%3F`/`%3D`), AC05 (unit-test assertion, measured red against the old markup and green after), AC06 (`npm run build` exit 0) and AC07 (docblock corrected) all pass. Open: AC01, AC02 and AC04 are real-browser click-through criteria and this execution had no browser tool; deferred to the orchestrator's batched browser-verification pass.
 Severity: blocker
 Source: B3 F1 (orchestrator-confirmed at source), A3 finding 2, B1 F10.
 

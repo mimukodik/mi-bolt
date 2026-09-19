@@ -356,20 +356,26 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     const shortcuts = Array.from(raw.querySelectorAll('[data-testid^="shortcut-"]'));
     expect(shortcuts.length).toBeGreaterThanOrEqual(1);
 
-    // The routerLink directive URL-encodes the rendered href
-    // (`?` → `%3F`, `=` → `%3D`). Use `routerLink` instead of `href`
-    // so the assertion reads the canonical URL the router will use.
+    // A string `routerLink` containing a literal `?`/`=` is the FIX-18
+    // defect: the router treats it as a URL path and percent-encodes
+    // it (`?` → `%3F`, `=` → `%3D`), which 404s. The correct form is a
+    // static `routerLink="/telefonok"` plus a `[queryParams]` binding,
+    // which Angular's RouterLinkWithHref resolves into a real `href`
+    // with a properly-formed, unencoded query string. Read `href`
+    // (the actual navigation target), not the static `routerLink`
+    // attribute, and assert neither `%3F` nor `%3D` ever appears.
     let hasBoth = false;
     let has5g = false;
     let hasInStock = false;
     shortcuts.forEach((s) => {
-      const url = s.getAttribute('routerLink') ?? s.getAttribute('href') ?? '';
-      const decoded = decodeURIComponent(url);
-      if (decoded.includes('is5g=true') && decoded.includes('inStock=true')) {
+      const href = s.getAttribute('href') ?? '';
+      expect(href).not.toContain('%3F');
+      expect(href).not.toContain('%3D');
+      if (href.includes('is5g=true') && href.includes('inStock=true')) {
         hasBoth = true;
       }
-      if (decoded.includes('is5g=true')) has5g = true;
-      if (decoded.includes('inStock=true')) hasInStock = true;
+      if (href.includes('is5g=true')) has5g = true;
+      if (href.includes('inStock=true')) hasInStock = true;
     });
     expect(hasBoth).toBe(true);
     expect(has5g).toBe(true);

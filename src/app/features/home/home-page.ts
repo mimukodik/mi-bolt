@@ -33,7 +33,8 @@ const DOCUMENTED_FEATURED_SLUGS = [
  *
  *   - `Hero` — dark charcoal hero (R02) with the H1, the lead copy,
  *     the primary CTA that opens the catalogue and three category
- *     shortcuts that set valid 5G / inStock URL filters.
+ *     shortcuts that navigate to `/telefonok` with `is5g` / `inStock`
+ *     query parameters.
  *   - `FeaturedProducts` — four product cards rendered from the live
  *     `getProduct` responses. Loading and error states never substitute
  *     invented figures for a missing price (R14).

@@ -33,14 +33,23 @@
       data-testid="hero-shortcuts"
       aria-label="Gyors szűrők a katalógusban"
     >
-      <a routerLink="/telefonok?is5g=true" class="hero__shortcut" data-testid="shortcut-5g"
+      <a
+        routerLink="/telefonok"
+        [queryParams]="{ is5g: true }"
+        class="hero__shortcut"
+        data-testid="shortcut-5g"
         >5G készülékek</a
       >
-      <a routerLink="/telefonok?inStock=true" class="hero__shortcut" data-testid="shortcut-instock"
+      <a
+        routerLink="/telefonok"
+        [queryParams]="{ inStock: true }"
+        class="hero__shortcut"
+        data-testid="shortcut-instock"
         >Készleten</a
       >
       <a
-        routerLink="/telefonok?is5g=true&inStock=true"
+        routerLink="/telefonok"
+        [queryParams]="{ is5g: true, inStock: true }"
         class="hero__shortcut"
         data-testid="shortcut-5g-instock"
         >5G + készleten</a
