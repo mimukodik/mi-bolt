@@ -8,7 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, Router, type ParamMap } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 function paramMapToSearchParams(params: ParamMap): URLSearchParams {
@@ -34,6 +34,8 @@ import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block'
 import { QuantityControl } from '../../shared/ui/quantity-control/quantity-control';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+
+import type { Availability } from '../../api/generated/models/availability';
 
 /**
  * T16 — product detail page (S3).
@@ -80,6 +82,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
     ErrorState,
     LoadingState,
     AddToCart,
+    RouterLink,
   ],
   templateUrl: './product-page.html',
   styleUrl: './product-page.scss',
@@ -121,6 +124,25 @@ export class ProductPage {
   readonly productName = computed<string>(() => this.vm().product?.name ?? '');
   readonly brand = computed<string>(() => this.vm().product?.brand ?? '');
   readonly highlights = computed<readonly string[]>(() => this.vm().product?.highlights ?? []);
+
+  /** Marketing description from the wire model. Empty string while the
+   *  product is loading, so the template can skip the paragraph. */
+  readonly description = computed<string>(() => this.vm().product?.description ?? '');
+
+  /** Availability of the currently selected variant, or null when no
+   *  variant is selected yet. Never defaulted to in-stock. */
+  readonly selectedAvailability = computed<Availability | null>(
+    () => this.vm().selectedVariant?.availability ?? null,
+  );
+
+  /** Stock sentence for the selected variant. Empty while unknown. */
+  readonly stockMessage = computed<string>(() => {
+    const availability = this.selectedAvailability();
+    if (availability === null) return '';
+    return availability === 'in_stock'
+      ? 'Raktáron a demó készletben'
+      : 'Ez a konfiguráció elfogyott a demó készletből.';
+  });
 
   readonly specGroups = computed(() => this.vm().product?.specGroups ?? []);
 

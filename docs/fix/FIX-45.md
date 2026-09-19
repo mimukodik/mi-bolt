@@ -1,6 +1,6 @@
 # FIX-45 — Render the product page's breadcrumb, description, stock line and simulation note
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the breadcrumb, demo tag, description, stock line and simulation note all land, backed by five unit tests including the AC05b proof against a stubbed vm. The `letter-spacing` declaration was dropped rather than kept, per the doc's own stated option. Open: every real-browser AC (AC01–AC04, AC06, AC09–AC10) is unverified in this session (unit tests only, per this session's mandate); deferred to the batched browser pass.
 Severity: major
 Source: A3 (product screen sweep), B1 (product page browser walk), `docs/spec/screens.md:57`. Recorded as unowned in `FIX-23`'s out-of-scope section; this task is its owner.
 

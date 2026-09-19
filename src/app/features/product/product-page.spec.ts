@@ -3,7 +3,7 @@ import '@angular/compiler';
 
 import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Location } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
@@ -14,9 +14,33 @@ import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
-import { isProductNotFound, ProductFacade } from './product.facade';
+import { isProductNotFound, ProductFacade, type ProductVm } from './product.facade';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import type { Product } from '../../api/generated/models/product';
+import type { Variant } from '../../api/generated/models/variant';
+
+/**
+ * `src/mocks/repository`'s `Product`/`Variant` types declare their
+ * array fields `readonly`; the generated SDK's `Product` (which
+ * `ProductVm.product` is typed against) declares the same fields
+ * mutable. The two are structurally incompatible for direct
+ * assignment, so a stubbed `ProductVm` needs a fresh object built
+ * with mutable copies of every array `DEMO_PRODUCT` carries.
+ */
+function toGeneratedProduct(source: typeof DEMO_PRODUCT): Product {
+  const toVariant = (v: (typeof source.variants)[number]): Variant => ({
+    ...v,
+    images: [...v.images],
+  });
+  return {
+    ...source,
+    highlights: [...source.highlights],
+    variants: source.variants.map(toVariant),
+    defaultVariant: toVariant(source.defaultVariant),
+    specGroups: source.specGroups.map((g) => ({ ...g, rows: [...g.rows] })),
+  };
+}
 
 /**
  * T16 - Product detail page (S3).
@@ -120,6 +144,12 @@ class ProductPageHost {
   }
 }
 
+@Component({ template: '' })
+class StubCatalogPage {
+  /** Route target only; FIX-45-AC02 asserts on the resulting URL. */
+  readonly loaded = true;
+}
+
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
@@ -158,7 +188,7 @@ async function createHarness(): Promise<{
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
-      provideRouter([]),
+      provideRouter([{ path: 'telefonok', component: StubCatalogPage }]),
     ],
     teardown: { destroyAfterEach: true },
   });
@@ -538,6 +568,125 @@ describe('T16 product-page loading and error states', () => {
 
     expect(root.querySelector('app-error-state')).toBeNull();
     expect(root.querySelector('.layout')).not.toBeNull();
+  });
+});
+
+describe('FIX-45 product page breadcrumb, description, stock and demo notes', () => {
+  it('FIX-45-AC01/AC07: renders breadcrumb, demo tag, description and simulation note with the exact prototype copy', async () => {
+    const { root } = await createHarness();
+
+    const breadcrumb = queryElement(root, '[data-testid="product-breadcrumb"]');
+    expect(breadcrumb.textContent).toContain('Főoldal');
+    expect(breadcrumb.textContent).toContain('Mobiltelefonok');
+    expect(breadcrumb.textContent).toContain('Demo One 5G');
+
+    const demoTag = queryElement(root, '[data-testid="product-demo-tag"]');
+    expect(demoTag.textContent.trim()).toBe('DEMÓTERMÉK');
+
+    const description = queryElement(root, '[data-testid="product-description"]');
+    expect(description.textContent.trim()).toBe(
+      'Fiktív készülék a MiBolt webshop működésének bemutatásához. A kép illusztráció, az ár demóadat.',
+    );
+
+    const note = queryElement(root, '[data-testid="product-simulation-note"]');
+    expect(note.textContent.trim()).toBe('A rendelés kipróbálható, de nem jár valódi vásárlással.');
+  });
+
+  it('FIX-45-AC02: breadcrumb links navigate in-app rather than reloading', async () => {
+    const { root, location } = await createHarness();
+
+    const link = queryElement(
+      root,
+      '[data-testid="product-breadcrumb"] a[routerLink="/telefonok"]',
+    );
+    link.click();
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 20);
+    });
+
+    expect(location.path()).toBe('/telefonok');
+  });
+
+  it('FIX-45-AC04: stock line renders "Raktáron a demó készletben" for an in-stock variant', async () => {
+    const { root } = await createHarness();
+
+    const stock = queryElement(root, '[data-testid="product-stock"]');
+    expect(stock.textContent.trim()).toBe('Raktáron a demó készletben');
+    expect(stock.classList.contains('stock--out')).toBe(false);
+  });
+
+  it('FIX-45-AC04: stock line renders the out-of-stock sentence and the stock--out class for an unavailable variant', async () => {
+    const outOfStockProduct = {
+      ...DEMO_PRODUCT,
+      variants: DEMO_PRODUCT.variants.map((v, i) =>
+        i === 0 ? { ...v, availability: 'out_of_stock' as const } : v,
+      ),
+    };
+    server.use(
+      http.get(`${BASE_URL}/products/:slug`, () =>
+        HttpResponse.json(outOfStockProduct, { status: 200 }),
+      ),
+    );
+
+    const { root } = await createHarness();
+
+    const stock = queryElement(root, '[data-testid="product-stock"]');
+    expect(stock.textContent.trim()).toBe('Ez a konfiguráció elfogyott a demó készletből.');
+    expect(stock.classList.contains('stock--out')).toBe(true);
+  });
+
+  it('FIX-45-AC05b: proves the ?? null in item 1 — with a success vm whose selectedVariant is null, the stock line is absent and selectedAvailability() is null', async () => {
+    // The live facade never produces this shape: `currentVariant()`
+    // falls back to the product's default variant once a product is
+    // loaded, which is the point — the guard is for a wire shape the
+    // demo fixture happens not to send. Only a stubbed vm can put the
+    // page in the one state where `?? null` and `?? 'in_stock'` differ.
+    const vm = signal<ProductVm>({
+      status: 'success',
+      product: toGeneratedProduct(DEMO_PRODUCT),
+      selectedVariant: null,
+      selectedImage: null,
+      gallery: [],
+      galleryIndex: -1,
+      selectedColorCode: null,
+      selectedStorageGb: null,
+      quantity: 1,
+      quantityOverMax: false,
+      disabledCombinations: [],
+      invalidVariantQuery: null,
+      addToCart: { enabled: false, reason: null },
+      error: null,
+      variantQuery: null,
+      slug: DEMO_PRODUCT.slug,
+    });
+    const facadeStub: Pick<ProductFacade, 'vm'> = { vm };
+    const cartFacadeStub = {
+      ensureCart: async (): Promise<void> => {
+        // no-op
+      },
+      addItem: async (): Promise<void> => {
+        // no-op
+      },
+    };
+
+    TestBed.configureTestingModule({
+      imports: [ProductPage],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: ProductFacade, useValue: facadeStub },
+        { provide: CartFacade, useValue: cartFacadeStub },
+      ],
+      teardown: { destroyAfterEach: true },
+    });
+
+    const fixture = TestBed.createComponent(ProductPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedAvailability()).toBeNull();
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="product-stock"]')).toBeNull();
   });
 });
 
