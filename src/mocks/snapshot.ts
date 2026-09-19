@@ -3,6 +3,7 @@ import {
   type MockSnapshot,
   type PersistedCart,
   type PersistedReceipt,
+  type PersistedReceiptItem,
 } from './persistence';
 import { Repository } from './repository';
 
@@ -14,6 +15,24 @@ function toMoney(value: unknown): { amount: number; currency: string } {
     return { amount, currency };
   }
   return { amount: 0, currency: 'HUF' };
+}
+
+/** Narrows an unknown order item to a receipt line, degrading a malformed one. */
+function toReceiptItem(value: unknown): PersistedReceiptItem {
+  if (typeof value === 'object' && value !== null) {
+    const variantId =
+      'variantId' in value && typeof value.variantId === 'string' ? value.variantId : '';
+    const quantity = 'quantity' in value && typeof value.quantity === 'number' ? value.quantity : 1;
+    const unitPrice = toMoney('unitPrice' in value ? value.unitPrice : undefined);
+    const lineTotal = toMoney('lineTotal' in value ? value.lineTotal : undefined);
+    return { variantId, quantity, unitPrice, lineTotal };
+  }
+  return {
+    variantId: '',
+    quantity: 1,
+    unitPrice: toMoney(undefined),
+    lineTotal: toMoney(undefined),
+  };
 }
 
 /**
@@ -46,17 +65,9 @@ export function buildSnapshot(
   }
 
   const receipts: PersistedReceipt[] = repository.listOrders().map((o) => {
-    const orderRec = o as unknown as Record<string, unknown>;
-    const itemsRaw = Array.isArray(orderRec['items']) ? orderRec['items'] : [];
-    const items = itemsRaw.map((it: Record<string, unknown>) => ({
-      variantId: typeof it['variantId'] === 'string' ? it['variantId'] : '',
-      quantity: typeof it['quantity'] === 'number' ? it['quantity'] : 1,
-      unitPrice: toMoney(it['unitPrice']),
-      lineTotal: toMoney(it['lineTotal']),
-    }));
-    const paymentMethod = (
-      orderRec['paymentMethod'] === 'demo_cod' ? 'demo_cod' : 'demo_card'
-    ) satisfies 'demo_card' | 'demo_cod';
+    const items = (o.items ?? []).map((it) => toReceiptItem(it));
+    const paymentMethod = (o.paymentMethod === 'demo_cod' ? 'demo_cod' : 'demo_card') satisfies
+      'demo_card' | 'demo_cod';
     return {
       id: o.id,
       orderNumber: o.orderNumber,

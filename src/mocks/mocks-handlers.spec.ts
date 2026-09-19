@@ -395,6 +395,124 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
     expect(repository.ensureCart('sess-x').id).toBe(persistedCart.id);
     expect(repository.findCartBySession('sess-x')?.id).toBe(persistedCart.id);
   });
+
+  it('buildSnapshot round-trips a well-formed receipt item unchanged', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+    repository.saveOrder({
+      id: 'order-wellformed-1',
+      orderNumber: 'DEMO-000001',
+      sessionId: 'sess-wellformed',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      total: { amount: 10_000, currency: 'HUF' },
+      paymentMethod: 'demo_card',
+      items: [
+        {
+          variantId: 'demo-one-5g-graphite-256',
+          quantity: 2,
+          unitPrice: { amount: 5_000, currency: 'HUF' },
+          lineTotal: { amount: 10_000, currency: 'HUF' },
+        },
+      ],
+    });
+
+    const built = buildSnapshot(repository, 'sess-wellformed', Date.now());
+
+    expect(built.receipts).toHaveLength(1);
+    expect(built.receipts[0].items).toEqual([
+      {
+        variantId: 'demo-one-5g-graphite-256',
+        quantity: 2,
+        unitPrice: { amount: 5_000, currency: 'HUF' },
+        lineTotal: { amount: 10_000, currency: 'HUF' },
+      },
+    ]);
+  });
+
+  it('buildSnapshot degrades a malformed receipt item instead of dropping it', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+    repository.saveOrder({
+      id: 'order-malformed-1',
+      orderNumber: 'DEMO-000002',
+      sessionId: 'sess-malformed',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      total: { amount: 0, currency: 'HUF' },
+      items: [{ variantId: 42, quantity: 'two', unitPrice: null, lineTotal: 'not-money' }],
+    });
+
+    const built = buildSnapshot(repository, 'sess-malformed', Date.now());
+
+    expect(built.receipts).toHaveLength(1);
+    expect(built.receipts[0].items).toEqual([
+      {
+        variantId: '',
+        quantity: 1,
+        unitPrice: { amount: 0, currency: 'HUF' },
+        lineTotal: { amount: 0, currency: 'HUF' },
+      },
+    ]);
+  });
+
+  it('buildSnapshot maps paymentMethod to demo_cod only when the receipt says so', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+    repository.saveOrder({
+      id: 'order-cod-1',
+      orderNumber: 'DEMO-000003',
+      sessionId: 'sess-payment',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      total: { amount: 0, currency: 'HUF' },
+      paymentMethod: 'demo_cod',
+    });
+    repository.saveOrder({
+      id: 'order-other-1',
+      orderNumber: 'DEMO-000004',
+      sessionId: 'sess-payment',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      total: { amount: 0, currency: 'HUF' },
+      paymentMethod: 'something-else',
+    });
+    repository.saveOrder({
+      id: 'order-absent-1',
+      orderNumber: 'DEMO-000005',
+      sessionId: 'sess-payment',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      total: { amount: 0, currency: 'HUF' },
+    });
+
+    const built = buildSnapshot(repository, 'sess-payment', Date.now());
+    const byId = (id: string) => built.receipts.find((r) => r.id === id);
+
+    expect(byId('order-cod-1')?.paymentMethod).toBe('demo_cod');
+    expect(byId('order-other-1')?.paymentMethod).toBe('demo_card');
+    expect(byId('order-absent-1')?.paymentMethod).toBe('demo_card');
+  });
+
+  it('buildSnapshot produces an empty items array when the order has no items', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
+    repository.loadProducts([DEMO_PRODUCT]);
+    repository.saveOrder({
+      id: 'order-noitems-1',
+      orderNumber: 'DEMO-000006',
+      sessionId: 'sess-noitems',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      total: { amount: 0, currency: 'HUF' },
+    });
+
+    const built = buildSnapshot(repository, 'sess-noitems', Date.now());
+
+    expect(built.receipts).toHaveLength(1);
+    expect(built.receipts[0].items).toEqual([]);
+  });
 });
 
 describe('ensureCart does not resurrect an expired restored cart', () => {
