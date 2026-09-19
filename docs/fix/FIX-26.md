@@ -1,6 +1,6 @@
 # FIX-26 — Collapse the product page to one column on mobile and make the buy rail stick
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the SCSS (single-column base, `position: fixed` rail, `.cta-desktop` hidden below 1024px), the docblock correction and the structural regression spec all land. Open: every width-dependent AC (AC01–AC06, AC09–AC10) is a real-browser measurement this session did not run (unit tests only, per this session's mandate); deferred to the batched browser pass. The Playwright viewport-matrix run (AC06) was not executed either.
 Severity: blocker
 Source: B2 F1, B2 F18, B3 R22 (fail)
 

@@ -24,7 +24,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
   align-items: start;
 }
@@ -174,7 +174,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    position: sticky;
+    position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
@@ -193,6 +193,13 @@
     flex: 1 1 auto;
     display: flex;
     justify-content: flex-end;
+  }
+
+  /* Only one responsive primary control is focusable at a time
+     (screens.md S3): the fixed rail carries the CTA below 1024px, so
+     the in-flow desktop CTA is removed from the tab order here. */
+  .cta-desktop {
+    display: none;
   }
 }
 

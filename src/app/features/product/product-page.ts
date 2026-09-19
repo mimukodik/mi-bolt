@@ -55,7 +55,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
  *   - error   — `ErrorState` with a retry that calls `facade.retry()`.
  *   - success — gallery, configuration, buy panel, specifications.
  *
- * Mobile purchase rail (T16-AC04): at < 1024 px a sticky rail
+ * Mobile purchase rail (T16-AC04): at < 1024 px a fixed rail
  * sticks to the bottom of the viewport carrying the price + the
  * primary CTA. The rail uses
  * `padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-3))`
