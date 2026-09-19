@@ -1,6 +1,11 @@
 # FIX-10 — Make a reload restore the cart
 
-Status: PLANNED — not executed.
+Status: DONE — landed at commit `0b8f57e` ("fix: restore the cart across reload
+from the mock snapshot", 14 files). Three follow-up commits closed what this
+task's four parts left open: `b917469` (acquire the cart at boot so a reload
+restores it), `0b4fadf` (stop returning a restored cart past its expiry) and
+`d68b847` (drop `snapshot.ts`'s `as` cast). See `docs/fix/STATUS.md`, Phase 1,
+for the follow-up detail and the browser evidence.
 Severity: blocker
 Source: A2 finding 1, A2 "Adjacent uncoordinated workaround", B1 (reload of a filled cart),
 plus two gaps the orchestrator measured directly and named in Evidence below.
@@ -698,8 +703,11 @@ coverage thresholds (**FIX-04**, **FIX-08**) — and `npx playwright test` (**FI
       storage, the quantity and the subtotal shown. Press **F5**. After the reload the same
       line is present with the same variant, the same quantity and the same total, and the
       page does **not** render `A kosarad üres`. In the network log of the reloaded page
-      there is no `POST /api/v1/carts` that returns `201`; the cart arrives from a request
-      that returns the existing cart. `list_console_messages` reports zero errors. Capture a
+      the restored cart arrives through exactly one `POST /api/v1/carts` request that
+      returns `201` — Part 2 above already settles this: "The handler keeps returning
+      `201`; the wire contract is unchanged." That response is how the restored cart
+      arrives and is not a failure of this criterion. `list_console_messages` reports
+      zero errors. Capture a
       screenshot before and after the reload.
 - [ ] **FIX-10-AC02** **Real-browser check.** In the same tab after the reload,
       `sessionStorage.getItem('mi-bolt.demo-session')` returns a non-empty string, and it is

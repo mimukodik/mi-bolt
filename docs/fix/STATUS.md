@@ -264,6 +264,103 @@ defects came back, and all four are now owned by a task:
 
 ---
 
+## Phase 1 — FIX-10 cart-reload fix, three follow-up commits (2026-09-19)
+
+Measured against commit `d68b847` (branch `feat/mi-bolt-mvp-implementation`).
+FIX-10 itself landed at `0b8f57e` (row 14, section 1). Three further commits
+landed today close two gaps FIX-10's four `## What to change` parts left open
+and remove one `as` cast that task introduced; none of the three is a
+FIX-numbered task from the 74-task package.
+
+### The three commits
+
+- `b917469` fix: acquire the session cart at boot so a reload restores it —
+  `CartFacade`'s constructor now calls `ensureCart()`. Before this commit,
+  after F5 on a product page the header badge read `0` and
+  `[data-testid="cart-link"]`'s `aria-label` read `Kosár megnyitása, jelenleg
+  üres` while the session's cart still held the item. This is section 5's
+  **defect D2** ("the header cart badge does not rehydrate after a reload"),
+  now fixed.
+- `0b4fadf` fix: stop the mock handing back a cart past its expiry —
+  `Repository.ensureCart` checked only `status === 'active'`, never expiry, so
+  a cart restored from a snapshot older than the 24h cart TTL (but inside the
+  7-day snapshot window) came back with `201` and then `410`'d on the first
+  mutation.
+- `d68b847` refactor: read a persisted receipt item without a cast — removed
+  `snapshot.ts:49`'s `as unknown as Record<string, unknown>`.
+
+### Gate results at `d68b847`
+
+| gate | result |
+|---|---|
+| `npm run build` | 0 |
+| `npm run lint` | 0 |
+| `npm run format:check` | 0 |
+| `npm run test` | 39 test files passed (39), 741 tests passed (741), 0 failures; exits **1** on 231 pre-existing per-file coverage-threshold ERROR lines, none in a file these three commits touched |
+| `npx playwright test` | **not re-run since `0b8f57e`** — no Playwright number is recorded for this phase |
+
+### Browser verification, 1440x900
+
+Screenshots under `.visual-screenshots/2026-09-19-cart-reload-fix10/`
+(gitignored, named here as the evidence location).
+
+- **AC01** — after F5 the line `Demo Go · Grafit · 128 GB` still renders, unit
+  price `79 990`, quantity `1`, subtotal `79 990`; `A kosarad üres` is not
+  rendered. One `POST /api/v1/carts -> 201` — see the revised AC01 in
+  `docs/fix/FIX-10.md`.
+- **AC02** — `sessionStorage.getItem('mi-bolt.demo-session')` was
+  `f237bc57-41f4-4170-9533-a28f05992565` before and after the reload; the
+  post-reload `POST /api/v1/carts` carried request header
+  `x-demo-session: f237bc57-41f4-4170-9533-a28f05992565`.
+- **AC03** — a second tab at `/kosar` rendered `A kosarad üres` with its own
+  session id `c07b8b99-36b1-4399-9528-4524b820c85c`;
+  `Object.keys(localStorage)` was `[]` in both tabs.
+- **AC04** — a full demo checkout reached the success page with
+  `Rendelésszám DEMO-000001` and `Végösszeg 161 970`; identical after F5, with
+  the reload's log holding `POST /api/v1/carts [201]` and
+  `GET /api/v1/orders/771b9e08-… [200]` and no `POST /api/v1/orders`. The demo
+  notice rendered both times.
+- **AC05** — `grep -rn "sessionStorage\|localStorage" src/app` returns 6
+  matches, all in `src/app/core/api/demo-session.interceptor.ts`;
+  `grep -rn "localStorage" src` returns nothing.
+- **AC06** — every `.save(` hit under `src` is inside `src/mocks/`.
+- **AC07 / AC08** — four cases at `src/mocks/mocks-handlers.spec.ts` under
+  `describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart
+  reconnection')`. Section 4's earlier verdict ("the test FIX-10 itself added
+  … has never passed") predates these three commits and was not re-measured
+  case by case in this phase; it is left as recorded there rather than
+  overwritten on the strength of the suite-wide `0 failures` result above.
+- **Console** — zero errors on every screen visited; no request among the 170
+  captured returned a status of 400 or above.
+- **Regression exercised** — the quantity bump on a restored cart now returns
+  `PATCH .../items/… -> 200`, the line goes to quantity `2` and subtotal
+  `159 980` with the toast `A mennyiség frissítve.`, and neither
+  `A kosár nem érhető el` nor `A kosár lejárt.` appears. This exercises the
+  expiry defect fixed at `0b4fadf` end to end.
+
+Playwright was not re-run after these three commits; no Playwright figure is
+recorded for this phase, and none should be inferred from section 2's table.
+
+### Defects found while executing FIX-10
+
+| Defect | Status |
+|---|---|
+| Restored cart past its 24h TTL still returned `201` instead of expiring | fixed at `0b4fadf` |
+| `snapshot.ts:49`'s `as unknown as Record<string, unknown>` cast | fixed at `d68b847` |
+| 65 further `as` casts in hand-written source, 35 in the generated SDK, 79 in spec files | **deferred by the user's decision** to the documentation and governance phase; not started |
+
+### FIX-10-AC01, revised
+
+The clause forbidding a `POST /api/v1/carts` returning `201` on the reloaded
+page could not be satisfied: FIX-10's own Part 2 (`docs/fix/FIX-10.md:364`)
+keeps that handler returning `201` by design, and the restored cart arrives
+through exactly that request. The user decided to strike the clause rather
+than change the wire contract, the OpenAPI document and the generated SDK;
+`docs/fix/FIX-10.md`'s AC01 now states this plainly instead of flagging that
+request as a failure.
+
+---
+
 ## 3. The 118 failing tests, grouped by cause
 
 | Group | Tests | Cause | Verdict |
