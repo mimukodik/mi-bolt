@@ -534,6 +534,24 @@ describe('T16 product-page loading and error states', () => {
   });
 });
 
+describe('product-page quantity control has a real accessible name, not a dangling label[for]', () => {
+  it('quantity input carries an aria-label and no label[for] points at a non-labelable host', async () => {
+    const { root } = await createHarness();
+
+    // `QuantityControl` has no `id` input, so a `[id]` binding on
+    // `<app-quantity-control>` lands on that host element rather than on
+    // the real `<input>` inside it. A `<label for="...">` pointing at that
+    // id is not associated with any labelable control at all. The name
+    // must come from the input's own `aria-label` instead, with no
+    // dangling label left behind (identical defect fixed on the cart side
+    // in 68f14b7).
+    const input = root.querySelector('[data-testid="quantity-input"]');
+    expect(input).not.toBeNull();
+    expect(input?.getAttribute('aria-label')).toBe('Darabszám');
+    expect(root.querySelector('label[for]')).toBeNull();
+  });
+});
+
 describe('T16 product-page shared-primitive dependency wiring', () => {
   it('wires shared UI primitives: Button, PriceBlock, QuantityControl, ProductGallery, VariantSelector, SpecificationAccordion', async () => {
     const { root } = await createHarness();

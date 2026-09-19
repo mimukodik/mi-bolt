@@ -207,8 +207,6 @@ export class ProductPage {
    *  components inside the rail are not mounted when not needed. */
   readonly showStickyRail = computed(() => this.state() === 'success');
 
-  readonly quantityControlId = computed(() => 'product-quantity');
-
   constructor() {
     // Re-load the product whenever the slug input or the route's
     // slug param changes. The facade's `distinctUntilChanged` filter

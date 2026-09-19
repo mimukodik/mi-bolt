@@ -68,9 +68,8 @@
             ></app-variant-selector>
 
             <div class="quantity">
-              <label class="qty-label" [attr.for]="quantityControlId()">Darabszám</label>
+              <span class="qty-label" aria-hidden="true">Darabszám</span>
               <app-quantity-control
-                [id]="quantityControlId()"
                 [value]="quantity()"
                 [min]="1"
                 [max]="maxQuantity()"
