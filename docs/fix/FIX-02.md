@@ -1,6 +1,6 @@
 # FIX-02 — ESLint strictness: type-aware config, `no-unused-vars` back to error, the `shared/ui` override
 
-Status: PARTIAL — f990255. Open: added `reportUnusedDisableDirectives: 'off'` to eslint.config.js, which the task's "What to change" never authorises; AC01's green lint result depends on that unauthorised suppression.
+Status: PARTIAL — f990255, <pending>. Open: the unauthorised `reportUnusedDisableDirectives: 'off'` has been removed from eslint.config.js. Without it, `npm run lint` exits 0 but does not print "All files pass linting.": it reports 27 "Unused eslint-disable directive (no problems were reported)" warnings, one per file, all at `1:1`, all under `src/app/api/generated/**` (the same 27 whose header FIX-11 restored) — `strictTypeChecked` triggers no rule in any of them, so the file-wide `/* eslint-disable */` FIX-11 put there is reported unused. Per this doc's own "do not repair, do not add an ignores entry ... stop and report against FIX-11" instruction, AC01 is not met and this is reported against FIX-11 rather than resolved here.
 Severity: major
 Source: A1 C1, A1 C2, A1 C3
 

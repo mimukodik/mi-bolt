@@ -20,9 +20,6 @@ module.exports = defineConfig([
         tsconfigRootDir: __dirname,
       },
     },
-    linterOptions: {
-      reportUnusedDisableDirectives: 'off',
-    },
     processor: angular.processInlineTemplates,
     rules: {
       '@angular-eslint/directive-selector': [
