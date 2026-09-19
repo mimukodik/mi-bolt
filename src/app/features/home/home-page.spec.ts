@@ -36,7 +36,6 @@
  */
 
 // @vitest-environment jsdom
-import 'reflect-metadata';
 import { TestBed } from '@angular/core/testing';
 import { Injectable, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
