@@ -34,8 +34,8 @@ Explore and Plan agents). Referenced from `.claude/CLAUDE.md`.
   independently executable unit, so a phase, a stream or a task can be picked
   up, assigned, or turned into a ticket without a second pass to extract it
   from a larger document. Splitting by theme instead reads well and costs a
-  reverse engineering step every time the plan is used: the PX-488 plan set put
-  seven phases inside one 769 line document, and turning them into ten Linear
-  sub-issues later needed a separate extraction agent. Where the user names a
+  reverse engineering step every time the plan is used: one plan set put seven
+  phases inside a single 769 line document, and turning them into ten tickets
+  later needed a separate extraction agent. Where the user names a
   layout, that layout is the requirement, not a preference to weigh against
   tidiness.

@@ -71,15 +71,14 @@ answered says as much as the answers do.
 
 **Disjoint file lists are not the test.** Four of the eight collisions measured
 here contended over something that was in nobody's list: a coverage report on
-disk, a running server, rows in the database, a live browser session. Two agents
-whose file lists were perfectly disjoint were both authorised to run
-`pnpm coverage:changed-lines`, which writes and reads one
-`apps/plan/coverage/coverage-final.json`. File ownership is necessary and it
-settles file writes and nothing else.
+disk, a running server, a port, a live browser session. Two agents whose file
+lists were perfectly disjoint were both authorised to run the same coverage
+gate, which writes and reads one report file. File ownership is necessary and
+it settles file writes and nothing else.
 
 **The symbol case is the cheapest to check and the most expensive to miss.**
-One prompt in a measured run told an agent to import `stateVectorCovers` from
-`apps/plan/server/lib/plan-doc-write.ts` and forbade it to edit that file; the
+One prompt in a measured run told an agent to import a helper by name from a
+module it was forbidden to edit; the
 symbol was module-private at the time, so the instruction could not have
 compiled. The agent had no way to know, and that prompt was `model-routing`'s
 item 8 performed correctly: it named the file, named the sibling, and froze the
@@ -92,42 +91,37 @@ because the user asked.
 This list is here so no batch has to recall it. Each entry is something more
 than one agent can reach at once while their file lists stay disjoint.
 
-- **The coverage report.** `apps/plan/coverage/coverage-final.json` is written
-  by every `pnpm coverage:changed-lines` run and read by the next, so two agents
-  authorised to run that gate overwrite each other's evidence. **The resolution
-  taken here is that a batch's prompts carry no authorisation to run it.** That
-  is a decision this file makes rather than one it inherits:
-  `.claude/rules/code-standards.md` ("A subagent's green report is not a run")
-  leaves the run that counts with the orchestrator but does not forbid an
-  agent's own, so the branch loses no evidence, while the agent loses its one
-  look at its change against the changed-line bar and the first measurement
-  becomes the orchestrator's, after the batch returns. Four agents were left
-  unrestricted on this gate three hours after the first pair had been found
-  contending over it.
-- **The typegen output.** `agent-native typecheck`, which every
-  `pnpm --filter plan typecheck` runs, calls `react-router typegen` before
-  `tsc`, so one agent's typecheck rewrites `apps/plan/.react-router/types/`
-  underneath another's. The resolution is one step milder than the coverage
-  report's, because an agent that may not typecheck cannot tell a finished
-  change from a broken one: the typecheck goes to one agent in the batch and
-  comes out of every other prompt, and where two units both need it they run in
-  sequence.
-- **The dev server and its port**, through `apps/plan/scripts/dev.sh`. `restart`
-  takes the server down as surely as `stop` does, and a prompt saying "do not
-  stop the server" does not cover it. Name the script, not one of its
-  subcommands.
-- **The database container and its rows**, through
-  `apps/plan/scripts/local-database-docker.sh`. The rows are shared even where
-  the script is not: a gate that creates and deletes public fixture plans
-  changes what a reviewer's `WHERE visibility = 'public'` query returns while it
-  runs.
+- **The coverage report.** `coverage/unit/coverage-final.json` is written by
+  every `npm run test` run and read by the next, so two agents running the
+  suite in the same checkout overwrite each other's evidence. **A git worktree
+  removes this one**: measured 2026-09-19, a worktree made with
+  `git worktree add` plus a `node_modules` symlink to the main checkout builds
+  and tests with its own `coverage/`, so agents in separate worktrees do not
+  contend here at all. Two agents in the same checkout still do, and there the
+  resolution is that only one of them runs the suite.
+- **The generated API client.** `npm run api:generate` rewrites
+  `src/app/api/generated/`, and `npm run api:drift` fails when that output
+  differs from what is committed. One agent regenerating underneath another's
+  build is the same contention the coverage report has, and a worktree does not
+  escape it when both work from the same `ng-openapi-gen.json`.
+- **The dev server and its port.** `npm start` (`ng serve`) binds one port, and
+  a browser verification driving it is invalidated by any restart underneath.
+  Name the server rather than one command that touches it: a restart, a rebuild
+  and a second `ng serve` on the same port all break the same thing. An agent
+  that needs a built artifact served uses `scripts/serve-static.mjs` on a port
+  of its own, names that port in its report, and stops it. Ports leak: measured
+  2026-09-20, a static server started three days earlier was still holding one,
+  its own script file already deleted from disk.
+- **There is no database.** The backend is MSW, served in-process, so no
+  container and no rows are shared. `src/mocks/` state lives and dies with each
+  suite run.
 - **The live browser session** a `real-browser-sonnet` agent is driving, which
   any restart of the app underneath it invalidates.
 - **A leftover spec file, which the suite collects and the gate does not.** A
   `*.spec.*` file a finished agent left behind matches the `include` glob in
-  `apps/plan/vitest.config.ts`, so the next suite run executes it, while
-  `COVERAGE_EXCLUDE` in `packages/shared/vitest-coverage-config.ts` excludes
-  that same glob, so the changed-line gate never looks at it.
+  `angular.json`'s unit-test target, so the next suite run executes it, while
+  `coverageExclude` in that same target excludes `**/*.spec.ts`, so the
+  coverage figures never account for it.
 - **A leftover probe file, which the gate collects and the suite does not.** A
   `zz-probe.mts` misses that `include`, which needs a `.test.` or a `.spec.`
   segment, so no suite run touches it; `.mts` is in `COVERABLE_EXTENSIONS`, so
@@ -145,10 +139,10 @@ than one agent can reach at once while their file lists stay disjoint.
   `glob-check.mjs` while that sibling was still running; it reported the
   deletion and had nothing to restore the file from. Such a loss leaves nothing
   in the tree, so the `git status --short` read after the batch cannot find it.
-- **The dependency files**: `patches/`, `pnpm-workspace.yaml` and
-  `pnpm-lock.yaml`. An install or a `pnpm patch-commit` rewrites them for the
-  whole workspace, so they are one agent's at a time whatever files that agent
-  otherwise owns.
+- **The dependency files**: `package.json` and `package-lock.json`. An install
+  rewrites them for everyone, and every worktree here shares one `node_modules`
+  through a symlink, so an install in one reaches all of them. They are one
+  agent's at a time whatever files that agent otherwise owns.
 - **An exported symbol crossing an ownership boundary**, and its callers outside
   the owning agent's files. One agent rebuilt the internals of
   `applyPlanContentUpdate`, which had four callers outside the files it owned,

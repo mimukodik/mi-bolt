@@ -11,8 +11,8 @@ that do, `architect-opus`, `architect-opus-xhigh`, and `instructions-opus`,
 name in their own files what they may spawn and why.
 These rules bias toward caution over speed; for a trivial task I use judgment,
 but the rules under "Non-negotiables" hold for every task, trivial or not.
-Workspace conventions live in the root `CLAUDE.md`; app conventions live in
-`apps/<app>/AGENTS.md`; I merge project-specific instructions as needed.
+Workspace conventions live in the root `CLAUDE.md`; I merge project-specific
+instructions as needed.
 Skills own their own details; where a skill owns a rule, this file only points
 at it.
 
@@ -343,10 +343,10 @@ For multi-step tasks, state a brief plan:
 Strong success criteria let me loop independently. Weak criteria ("make it
 work") force constant clarification.
 
-- **Every bug gets a test after the fix**, so it cannot come back, and every
-  change ships **100% changed-line coverage**: every line it adds or modifies is
-  executed and asserted on by a test in the same commit. See
-  `.claude/rules/code-standards.md` for the bar and for what is excluded.
+- **Every bug gets a test in the same commit as its fix**, so it cannot come
+  back, measured red before the fix and green after. Coverage itself is an
+  aggregate floor rather than a per-line gate here; see
+  `.claude/rules/code-standards.md` for the numbers and why.
 - **Debugging maps the entire error space**: all occurrences, the root cause,
   and related locations. I do not stop at the first match.
 
@@ -357,34 +357,32 @@ work") force constant clarification.
 index into the main session, so I have already seen the topic list; the
 topic files themselves are never injected.
 
-- Never open these files directly. Pull in one topic through the CLI instead
-  of the directory: `pnpm claude:memory search "<term>"`,
-  `pnpm claude:memory read <topic>`, `pnpm claude:memory list`. Search returns
-  ranked `path:line` plus a one-line snippet, so I decide what to open.
-- **`search` also reads `.claude/retrospectives/`, and a hit there is
-  evidence, not a rule.** Memory hits print first and retrospective hits after
-  them; `.claude/shared-memory/CLAUDE.md` ("What `search` reads") owns how
-  those hits are marked and paged. A topic in this store is here because the
-  user approved it, while a retrospective report is one session's raw record,
-  declined proposals and later-disproved beliefs included: I follow such a hit
-  back to the file or commit it names and cite that, and where its proposal did
-  become a rule, that rule is in `.claude/CLAUDE.md` or `.claude/rules/` and is
-  the wording that binds.
-- Search before non-trivial work on a subsystem, tool, or file I have not
+**There is no `claude:memory` CLI in this repository**, whatever an older
+copy of this section said: `package.json` defines no such script, and the
+store is two files, `CLAUDE.md` and a `MEMORY.md` index that lists no entries.
+Read them directly — the indirection those rules described has nothing behind
+it here.
+
+- **`.claude/retrospectives/` is evidence, not a rule.** A topic in the store
+  is here because the user approved it; a retrospective report is one
+  session's raw record, declined proposals and later-disproved beliefs
+  included. I follow such a hit back to the file or commit it names and cite
+  that, and where its proposal did become a rule, that rule is in
+  `.claude/CLAUDE.md` or `.claude/rules/` and is the wording that binds.
+- Look here before non-trivial work on a subsystem, tool, or file I have not
   touched this session; when a command fails in a way not obviously my own
   change; when something takes more than one attempt to fix; and when the
   user says we have done this before or refers to an earlier session.
-- On a hit, read the topic. If it contradicts what I currently believe,
-  measure before concluding the entry is stale, and report a wrong entry to
-  the user rather than ignoring it.
+- On a hit, if it contradicts what I currently believe, measure before
+  concluding the entry is stale, and report a wrong entry to the user rather
+  than ignoring it.
 - Only the retrospective skill proposes an entry and only the user approves
-  it, then `pnpm claude:memory write` applies it. I never add an entry on my
-  own judgment; rules still go in `.claude/CLAUDE.md` or `.claude/rules/`.
+  it. I never add one on my own judgment; rules still go in
+  `.claude/CLAUDE.md` or `.claude/rules/`.
 - Reaches the main session and every custom agent under `.claude/agents/`,
   not the built-in Explore and Plan agents; when I delegate to those I
-  restate anything from memory they need directly in the delegation prompt.
-- `/memory-review` exists to prune this store and is the user's to run;
-  `pnpm claude:memory status` says whether one is due.
+  restate anything they need directly in the delegation prompt.
+- `/memory-review` exists to prune this store and is the user's to run.
 
 ## Rules split out into `.claude/rules/`
 
@@ -402,13 +400,13 @@ launch, which is why the SessionStart hook does not re-inject them.
   TypeScript (`satisfies` not `as`, `unknown` plus type guards not `any`,
   generic interfaces, existing type guards first), no machine-specific paths,
   the requirement that every user-visible change is tested in a real browser,
-  100% changed-line coverage with its configuration-level exclusion list, and
+  the aggregate coverage floor that replaced the 100% changed-line rule, and
   what makes a red check pre-existing rather than this branch's.
 - `browser-verification.md`: the mandatory real-browser verification loop
   through the `real-browser-sonnet` agent, the exemption rule, what does not
   count as verification, and the HTML report verification steps.
-- `session-lifecycle.md`: `mise` and the `dev.sh` / `local-database-docker.sh`
-  scripts, commit points and the `git-commit` skill, when a push and a pull
+- `session-lifecycle.md`: the npm scripts that exist and the dev server,
+  commit points and the `git-commit` skill, when a push and a pull
   request may run, the three ways the `/retrospective` skill runs, hooks, what
   an agent definition and a subagent prompt may carry, the second-reader review
   every instruction file change gets, working beside a parallel session, and

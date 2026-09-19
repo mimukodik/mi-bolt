@@ -1,62 +1,35 @@
 # Session lifecycle
 
 Tooling, commits, retrospective, hooks, agent definitions, instruction file
-review, parallel sessions, and language rules for the muhely workspace.
+review, parallel sessions, and language rules for the mi-bolt workspace.
 Loaded at launch as a project rule (no `paths` scope). Referenced from
 `.claude/CLAUDE.md`.
 
 ## Tools and startup
 
-- `mise` is mandatory. The root `mise.toml` pins the Node version; commands
-  run under `mise exec --` or inside an activated mise shell.
-- The database Docker container is managed exclusively by
-  `apps/plan/scripts/local-database-docker.sh` (`start|up`, `stop|down`,
-  `restart`, `status`, `check|ping|check-run`, `logs`, `psql|cli`), and the
-  app exclusively by `apps/plan/scripts/dev.sh` (start/stop/status/logs). A
-  manual `pnpm dev` or a custom docker command is forbidden.
-- **A gap in a wrapper script is closed in the wrapper, not stepped around.**
-  Where `local-database-docker.sh` or `dev.sh` does not reach what the work
-  needs, the missing subcommand or flag is added to the script, so the next
-  session finds it there. Where the session cannot close that gap, or may not
-  because the task it was given does not reach `apps/plan/scripts/`, it
-  reports the gap and what closing it would take, since widening the task is
-  the user's call under `.claude/CLAUDE.md` ("Surgical changes"). The direct
-  command runs only where the work can wait for neither of those, and then
-  the reason for it goes into the report or the commit body that carries the
-  work; saving a step is not such a reason. Reaching around a wrapper gives
-  up everything it does for its caller, which "Reading or writing the
-  database is a docker operation too" below itemises for `psql`, and gives it
-  up with nothing in the run's output to show what was lost, which is why
-  that last path carries its reason in writing rather than being taken
-  silently. The user dictated this twice in one session, the second time in
-  full: "ha azok nem tamogatnak valamit akkor jelezni kell, es megcsinalni
-  hogy tamogassak, kozvetlen parancs csak extra indokolt esetben
-  engedelyezett" ("if they do not support something then it has to be
-  flagged and made to support it, a direct command is permitted only in an
-  extra-justified case"). That session was bringing up a worktree that had
-  never been set up before: it ran `docker volume inspect` for the volume's
-  creation time and mount point, which `status` does not print although it
-  names the volume, copied the gitignored
-  `apps/plan/.docker-compose.local-database.env` out of another checkout by
-  hand, and wrote the app `.env` with a `printf`. No subcommand covers any of
-  the three.
-- **Reading or writing the database is a docker operation too.** Every SQL
-  statement goes through
-  `apps/plan/scripts/local-database-docker.sh psql -c "<sql>"`, never a raw
-  `docker exec <container> psql`: the subcommand passes its arguments through
-  to psql, resolves the container's credentials from
-  `.docker-compose.local-database.env`, refuses to run unless `docker inspect`
-  reports the container running, and picks `-i` or `-it` by TTY. Bypassing it
-  gives up all four. This binds the prompts I write for subagents as well:
-  handing an agent a raw docker command is the same violation as running it
-  myself.
-- A skill whose frontmatter carries `disable-model-invocation` can only be
-  started by the user typing it. A `Skill` tool call to one fails, so I check
-  the frontmatter before calling a skill I have not called before. The
-  bundled `/run`, `/verify` and `/run-skill-generator` are examples, and so is
-  this workspace's own `/memory-review`, which reviews the shared memory and
-  is deliberately user-invoked only. When one is needed, I ask the user to
-  run it and state the exact arguments to pass, rather than trying and
+- **npm, one package, no monorepo.** `package-lock.json` is the lockfile; there
+  is no `pnpm`, no `mise`, no `apps/`, no `packages/` and no workspace filter.
+  Every command is run from the repository root. The scripts that exist are
+  what `package.json` defines — today `start`, `build`, `watch`, `test`,
+  `lint`, `format`, `format:check`, `api:generate`, `api:drift`,
+  `coverage:manifest`, `coverage:unit:check`, `coverage:e2e:check`,
+  `check:traceability`, `check:test-policy` and `fix:status` — and a command
+  not in that list does not exist here however familiar it looks. Read the
+  list rather than recalling it; several rules in this directory once named
+  scripts that had never been defined, and an agent handed one of those fails
+  on the user's machine rather than on mine.
+- **The dev server is the orchestrator's, and there is no database.** `npm
+  start` runs `ng serve`; the backend is MSW, served in-process, so nothing
+  needs bringing up beside it. A spawned agent neither starts nor stops that
+  server: `.claude/rules/parallel-spawns.md` makes the port a shared resource,
+  and `.claude/rules/browser-verification.md` puts starting and stopping with
+  the orchestrator. An agent that needs a built artifact served uses
+  `scripts/serve-static.mjs` on a port of its own, names the port in its
+  report, and stops it when it is done.
+- **A skill whose frontmatter carries `disable-model-invocation` can only be
+  started by the user typing it.** A `Skill` tool call to one fails, so check
+  the frontmatter before calling a skill not called before. When one is needed,
+  ask the user to run it and state the exact arguments, rather than trying and
   failing first.
 - **Every path in a Bash call is absolute, because the working directory the
   call runs in is not that call's to assume.** In the main session a `cd`
@@ -69,10 +42,10 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   there does not carry at all. Five calls in one session failed that way and
   each was retried from an absolute base, which is the whole of the fix. A
   command that depends on the working directory rather than on a path
-  argument, `mise exec -- pnpm --filter <app> typecheck` run from the
-  workspace root among them, names that directory in the same call with
-  `cd <absolute path> &&` rather than inheriting it. This governs the calls I
-  run rather than what a file writes down: the wrapper scripts above are named
+  argument names that directory in the same call with `cd <absolute path> &&`
+  rather than inheriting it — which is also how an agent working in a git
+  worktree reaches its own checkout instead of the main one. This governs the
+  calls I run rather than what a file writes down: a script is named
   repository-relative because that is how a file names a path, and the call
   that runs one gives it in full; `.claude/rules/code-standards.md` bans a
   machine-specific path in a committed file, and an absolute path in a Bash
@@ -108,10 +81,9 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   means the condition is too narrow.
 - **Copy the wait's string from the program that prints it**, rather than
   typing it from memory, since one that differs in case or wording is a
-  condition that can never come true. One loop polled for `changed-line
-  coverage` while `scripts/coverage-changed-lines/analysis/gate.ts` prints
-  `Changed-line coverage:`; `grep -cE` on the finished log returned 0 for that
-  pattern, `ps` showed the loop at `04:43:55` elapsed, and the user had to
+  condition that can never come true. One loop polled a coverage gate's log for
+  a string in the wrong case; `grep -cE` on the finished log returned 0 for
+  that pattern, `ps` showed the loop at `04:43:55` elapsed, and the user had to
   raise it twice, the second time by quoting the command back. That loop did
   cover the failure states as well, and the branch that was going to fire was
   the misspelled one, so breadth is no substitute for the string being right.
@@ -153,14 +125,11 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   work with nothing published yet, measured on git 2.50.1. What disqualifies a
   branch is its relation to the work rather than its name: `main`, the branch
   this work was started from, and a branch left checked out from different
-  work are none of them this work's own. `feature/PX-488` is the one this work
-  was started from for a task branched off it, and is this work's own branch
-  for a task that is PX-488. The name is not invented: Linear's MCP surface
-  prints a `gitBranchName` for the issue and it is used verbatim, which is
-  where
-  `eggprojec/px-610-p2-server-core-authorization-shutdown-flush-agent-write-path`
-  came from, and with no issue there is nothing to copy, so the name is one of
-  the opening questions. That question may carry candidate names as its
+  work are none of them this work's own. `feat/mi-bolt-mvp-implementation` is
+  the branch this work sits on, cut from `main`. Where an issue tracker prints
+  a branch name for the issue, that name is used verbatim rather than invented;
+  with no issue there is nothing to copy, so the name is one of the opening
+  questions. That question may carry candidate names as its
   options: a name the user picked out of a list is not one I invented, and
   offering them makes it an ordinary choice question, which "Asking the user"
   in `.claude/CLAUDE.md` then covers unchanged. Work that has already landed
@@ -186,9 +155,8 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   the one who knows what interrupting a peer costs. A pushed commit is the
   user's call too, because putting the branch back rewrites published history.
   Otherwise the session moves nothing, says which commit is not its own or is
-  already pushed, and asks the user. One session's first commit landed on
-  `feature/PX-488` and moved at no cost because that commit had not been
-  pushed.
+  already pushed, and asks the user. One session's first commit landed on the
+  wrong branch and moved at no cost because that commit had not been pushed.
 - **One commit, one logical change.** The unit is the change, not the session
   and not the file count. A commit that a reviewer cannot describe in one
   sentence, or that could be reverted only by also reverting something
@@ -278,9 +246,10 @@ a file under `.claude/retrospectives/`, even with no proposal, because that
 file is what tells the SessionStart hook the session is covered up to the
 point it was written. Applying a proposal requires AskUserQuestion approval
 first; an approved new or modified skill must be written and tested with the
-`skill-creator` skill (plugin). Shared skills live in
-`packages/shared/.agents/skills/<name>/SKILL.md`, app-specific skills in
-`apps/<app>/.agents/skills/<name>/SKILL.md`.
+`skill-creator` skill (plugin). Skills live under `.agents/skills/<name>/SKILL.md`.
+`.claude/skills/` holds a second, independent copy of the same tree — two real
+directories, not a symlink pair — so an edit applied to one reaches half its
+readers; `.claude/rules/code-standards.md` owns that check.
 
 Every proposal's outcome goes back into the retrospective file, and writing it
 is the orchestrator's rather than the skill's: the skill runs as a fork that
@@ -308,12 +277,11 @@ section says how.
 
 `.claude/settings.json` wires them: SessionStart injects the shared memory
 index and a pending retrospectives scan, and no longer restates rules; Stop
-runs the Todo guard only. Source is in `.claude/hooks/`; test with
-`pnpm claude:hooks:test`, typecheck with `pnpm claude:hooks:typecheck`. The
-root `test` script chains the first and the root `typecheck` script the
-second, so a run at the workspace root covers this source, while a filtered
-run such as `pnpm --filter plan test` selects one package and never reaches
-it.
+runs the Todo guard only. Source is in `.claude/hooks/`. There is no script in
+`package.json` that tests or typechecks it, and `npm run test` does not reach
+it — `angular.json` scopes the unit runner to `src/`. A change there is
+verified by running the hook itself and reading its output, and the commit body
+records that command.
 
 A hook never restates a rule. Rules live in `.claude/CLAUDE.md` and
 `.claude/rules/`, and those files are already loaded at launch; a hook that
@@ -420,7 +388,7 @@ What the Hooks section says about a hook holds for the definitions in
 
 - More than one Claude session can work in this workspace at once. Shared
   surfaces are `.claude/settings.json`, `.claude/hooks/`, `.claude/rules/`,
-  `.claude/CLAUDE.md`, and `packages/shared/`.
+  `.claude/CLAUDE.md`, `.claude/agents/`, and both skill trees.
 - **I never message another session on my own judgment.** Changing a shared
   surface is not a reason to send anything. A SendMessage to a peer session
   goes out only when the user asks for it, and then it states what changed,

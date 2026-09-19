@@ -16,9 +16,10 @@ of the diff are necessary but never sufficient.
 
 **Required for every user-facing change:**
 
-1. Orchestrator: start the app through `apps/plan/scripts/dev.sh` (and the
-   database through `apps/plan/scripts/local-database-docker.sh`); never a
-   manual `pnpm dev`.
+1. Orchestrator: start the app with `npm start` (`ng serve`). There is no
+   database — the backend is MSW, served in-process. A spawned agent neither
+   starts nor stops that server; the port is a shared resource per
+   `.claude/rules/parallel-spawns.md`.
 2. Open the affected screen with `new_page` + `navigate_page`.
 3. Drive the actual changed behavior with `click`, `fill`, `press_key`:
    perform the user flow the change touches, do not just look at the page.
@@ -46,7 +47,7 @@ If I think a change is exempt, I say so explicitly and say why.
   the diff back.
 - A green typecheck, unit test, or vitest run.
 - An HTTP 200 from `curl` or a smoke-test request.
-- `mimukodik-design` compliance grep checks (shadows, gradients, and the
+- `mi-bolt-design` compliance grep checks (shadows, gradients, and the
   like).
 - A subagent asserting it "should work" without a snapshot, a screenshot, and
   a console-message check to show for it.
