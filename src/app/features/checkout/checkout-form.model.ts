@@ -36,6 +36,7 @@ import {
   hidden,
 } from '@angular/forms/signals';
 import type { WritableSignal } from '@angular/core';
+import { PHONE_INTERNATIONAL } from './contact.schema';
 
 /** Allowed delivery option ids (matches OpenAPI `optionId` enum). */
 export type DeliveryOptionId = 'home_delivery' | 'demo_pickup' | '';
@@ -72,8 +73,8 @@ export interface CheckoutFormModel {
   acknowledgedSimulation: boolean;
 }
 
-/** Phone regex shared between the schema and the test assertions. */
-export const PHONE_PATTERN = /^\+36[0-9]{8,9}$/;
+/** Re-exported under the historical name; the rule itself lives in contact.schema.ts. */
+export const PHONE_PATTERN = PHONE_INTERNATIONAL;
 
 /** HU postal code regex shared between the schema and the tests. */
 export const POSTAL_CODE_PATTERN = /^[1-9][0-9]{3}$/;

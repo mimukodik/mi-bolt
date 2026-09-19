@@ -28,10 +28,13 @@
  * route bound in `app.routes.ts` continues to resolve.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { describe, expect, it } from 'vitest';
+import { provideRouter, Router } from '@angular/router';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   CONTACT_EMAIL_MAX,
@@ -287,9 +290,12 @@ describe('T20-AC02 accessible label/autocomplete/error wiring and 422 mapping', 
     expect(emailInput?.getAttribute('autocomplete')).toBe('email');
     expect(phoneInput?.getAttribute('autocomplete')).toBe('tel');
 
-    expect(nameInput?.value).toBe('Teszt Elek');
-    expect(emailInput?.value).toBe('teszt@example.test');
-    expect(phoneInput?.value).toBe('+36 30 123 4567');
+    expect(nameInput?.value).toBe('');
+    expect(emailInput?.value).toBe('');
+    expect(phoneInput?.value).toBe('');
+    expect(nameInput?.getAttribute('placeholder')).toBe('Teszt Elek');
+    expect(emailInput?.getAttribute('placeholder')).toBe('teszt@example.test');
+    expect(phoneInput?.getAttribute('placeholder')).toBe('+36201234567');
   });
 
   it('every input has an aria-describedby pointing at a FormFieldMessage id', async () => {
@@ -405,7 +411,7 @@ describe('T20-AC03 demo notice, no marketing, fixture example.test values', () =
     expect(text.includes('fiók létrehozása')).toBe(false);
   });
 
-  it('seeds default fixture values that use example.test and a fictitious Hungarian address', async () => {
+  it('starts with an empty model; the example.test/Teszt Elek strings are placeholders only', async () => {
     TestBed.configureTestingModule({
       providers: TEST_PROVIDERS,
     });
@@ -414,11 +420,78 @@ describe('T20-AC03 demo notice, no marketing, fixture example.test values', () =
     fixture.detectChanges();
 
     const model = fixture.componentInstance.model();
-    expect(model.fullName).toBe('Teszt Elek');
-    expect(model.email).toBe('teszt@example.test');
-    expect(model.phone).toBe('+36 30 123 4567');
-    expect(model.email).toContain('example.test');
-    expect(model.phone).toContain('+36');
+    expect(model.fullName).toBe('');
+    expect(model.email).toBe('');
+    expect(model.phone).toBe('');
+
+    const root = getRootElement(fixture);
+    const nameInput = root.querySelector<HTMLInputElement>('#contact-fullname-input');
+    const emailInput = root.querySelector<HTMLInputElement>('#contact-email-input');
+    const phoneInput = root.querySelector<HTMLInputElement>('#contact-phone-input');
+    expect(nameInput?.getAttribute('placeholder')).toBe('Teszt Elek');
+    expect(emailInput?.getAttribute('placeholder')).toContain('example.test');
+    expect(phoneInput?.getAttribute('placeholder')).toContain('+36');
+  });
+
+  it('declares neither the email nor the phone regex locally, and imports both from contact.schema', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/app/features/checkout/contact-step.ts'),
+      'utf8',
+    );
+    expect(source).not.toMatch(/const\s+(EMAIL_RFC5322_SUBSET|PHONE_E164)\s*=/);
+    expect(source).toMatch(/EMAIL_RFC5322_SUBSET/);
+    expect(source).toMatch(/PHONE_INTERNATIONAL/);
+    expect(source).toMatch(/from\s+'\.\/contact\.schema'/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// E074 — an empty-form submit must not navigate, must show the error
+// summary, and must not send a draft request. docs/spec/test-scenarios.md:80
+// ---------------------------------------------------------------------------
+describe('E074 empty-form continue is blocked', () => {
+  it('does not navigate and shows the error summary when all three fields are empty', async () => {
+    TestBed.configureTestingModule({
+      providers: TEST_PROVIDERS,
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(ContactStep);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.model()).toEqual({ fullName: '', email: '', phone: '' });
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+    const root = getRootElement(fixture);
+    const summary = root.querySelector('[data-testid="contact-summary"]');
+    expect(summary).not.toBeNull();
+  });
+
+  it('navigates to /penztar/szallitas once all three fields are valid', async () => {
+    TestBed.configureTestingModule({
+      providers: TEST_PROVIDERS,
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(ContactStep);
+    fixture.componentInstance.model.set({
+      fullName: 'Teszt Elek',
+      email: 'teszt@example.test',
+      phone: '+36201234567',
+    });
+    fixture.detectChanges();
+
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/penztar/szallitas']);
   });
 });
 
@@ -460,6 +533,11 @@ describe('T20-AC04 pending save gates duplicate advance; failure retains fields 
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(ContactStep);
+    fixture.componentInstance.model.set({
+      fullName: 'Teszt Elek',
+      email: 'teszt@example.test',
+      phone: '+36201234567',
+    });
     fixture.detectChanges();
 
     await fixture.componentInstance.onSubmit();
@@ -518,6 +596,11 @@ describe('T20-AC04 pending save gates duplicate advance; failure retains fields 
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(ContactStep);
+    fixture.componentInstance.model.set({
+      fullName: 'Teszt Elek',
+      email: 'teszt@example.test',
+      phone: '+36201234567',
+    });
     fixture.detectChanges();
 
     await fixture.componentInstance.onSubmit();
@@ -546,6 +629,11 @@ describe('T20-AC04 pending save gates duplicate advance; failure retains fields 
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(ContactStep);
+    fixture.componentInstance.model.set({
+      fullName: 'Teszt Elek',
+      email: 'teszt@example.test',
+      phone: '+36201234567',
+    });
     fixture.detectChanges();
 
     await fixture.componentInstance.onSubmit();

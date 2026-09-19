@@ -77,6 +77,8 @@ import {
   CONTACT_NAME_MIN,
   CONTACT_PHONE_NATIONAL_DIGITS_MAX,
   CONTACT_PHONE_NATIONAL_DIGITS_MIN,
+  EMAIL_RFC5322_SUBSET,
+  PHONE_INTERNATIONAL,
   normalizeContact,
   pointerToFieldKey,
   type ContactFieldKey,
@@ -117,20 +119,12 @@ export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>('CONTAC
 });
 
 /**
- * Fixture defaults: synthetic data so the demo never hints at a
- * real person. `example.test` is reserved by RFC 2606 for exactly
- * this kind of use; "Teszt Elek" is a Hungarian placeholder name
- * used in test fixtures across the project.
+ * The form starts empty. The example values the prototype shows are
+ * placeholders on the inputs, not content: a pre-filled form would
+ * satisfy "All fields required" (screens.md S4.2) without the user
+ * having entered anything.
  */
-const INITIAL_CONTACT: ContactInput = {
-  fullName: 'Teszt Elek',
-  email: 'teszt@example.test',
-  phone: '+36 30 123 4567',
-};
-
-const EMAIL_RFC5322_SUBSET = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-
-const PHONE_E164 = /^\+36\d{8,9}$/;
+const EMPTY_CONTACT: ContactInput = { fullName: '', email: '', phone: '' };
 
 /** Convert the Signal Form errors array into the local FieldError shape. */
 function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readonly FieldError[] {
@@ -167,7 +161,7 @@ export class ContactStep {
   /** Form model. Mirrors the Signal Form root. The schema reads
    *  from this signal so submitting the form serializes the same
    *  values the user sees. */
-  readonly model = signal<ContactInput>({ ...INITIAL_CONTACT });
+  readonly model = signal<ContactInput>({ ...EMPTY_CONTACT });
 
   /** Pending save prevents duplicate advances. */
   readonly pendingSave = signal<boolean>(false);
@@ -233,7 +227,7 @@ export class ContactStep {
         email: '',
         phone: v,
       }).phone;
-      if (!PHONE_E164.test(normalized)) {
+      if (!PHONE_INTERNATIONAL.test(normalized)) {
         return {
           kind: 'invalidPhone',
           message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',

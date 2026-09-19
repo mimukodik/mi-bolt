@@ -1,6 +1,8 @@
 # FIX-20 — Contact step must validate on continue and must not pre-fill itself
 
-Status: PLANNED — not executed.
+Status: DONE — contact step starts empty with placeholders, blocks an invalid
+continue (E074 confirmed already correct, not reproduced), and the email/phone
+regexes are declared once in contact.schema.ts.
 Severity: blocker
 Source: B1 F3 (empty-form bypass), B3 F7 (prefill, "Contact" row), B2 "Uncertain" (prefill blocked B1's repro), A4 F1 (validation triplicated).
 

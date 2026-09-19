@@ -49,9 +49,9 @@ export interface NormalizedContact {
   phone: string;
 }
 
-const EMAIL_RFC5322_SUBSET = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+export const EMAIL_RFC5322_SUBSET = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
-const PHONE_INTERNATIONAL = /^\+36\d{8,9}$/;
+export const PHONE_INTERNATIONAL = /^\+36\d{8,9}$/;
 
 export function pointerToFieldKey(pointer: string): ContactFieldKey | null {
   if (pointer === '/fullName') return 'fullName';
