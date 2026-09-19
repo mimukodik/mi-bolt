@@ -1,14 +1,13 @@
-<section class="how" data-testid="how-demo-works" aria-labelledby="how-heading">
+<section id="how" class="how" data-testid="how-demo-works" aria-labelledby="how-heading">
   <div class="how__inner">
     <header class="how__header">
-      <h2 id="how-heading" class="how__title">Hogyan működik a demó?</h2>
-      <p class="how__lede">
-        Három lépésben végigmégy a vásárlási folyamaton — valódi tranzakció nélkül.
-      </p>
+      <h2 id="how-heading" class="how__title">Három lépés. Egy új kedvenc.</h2>
+      <p class="how__caption">Így működik a demó</p>
     </header>
     <ol class="how__grid" role="list">
-      @for (tile of tiles; track tile.id) {
+      @for (tile of tiles; track tile.id; let i = $index) {
         <li class="how__tile" [attr.data-testid]="tile.id">
+          <span class="how__number" aria-hidden="true">{{ numberLabel(i) }}</span>
           <span class="how__icon" aria-hidden="true">
             @switch (tile.id) {
               @case ('how-tile-browse') {

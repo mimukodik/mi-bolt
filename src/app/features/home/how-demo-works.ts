@@ -22,17 +22,17 @@ interface TileCopy {
 const TILES: readonly TileCopy[] = [
   {
     id: 'how-tile-browse',
-    title: 'Böngészés',
+    title: 'Válaszd ki a készüléked',
     body: 'Szűrj 5G-re, készletre vagy tárhelyre, és nézd meg a kiválasztott készülék részletes adatait.',
   },
   {
     id: 'how-tile-cart',
-    title: 'Kosár',
+    title: 'Állítsd össze a rendelést',
     body: 'A kiválasztott variánst bármikor visszakeresheted a kosárban — a demó a munkameneted során megőrzi.',
   },
   {
     id: 'how-tile-order',
-    title: 'Szimulált rendelés',
+    title: 'Próbáld végig a folyamatot',
     body: 'A pénztár végigmegy a demó lépésein; a rendelés nem kerül valódi feldolgozásra, sem számlázásra.',
   },
 ];
@@ -44,4 +44,9 @@ const TILES: readonly TileCopy[] = [
 })
 export class HowDemoWorks {
   readonly tiles = TILES;
+
+  /** Zero-padded step number ("01", "02", "03") for the tile at `index`. */
+  numberLabel(index: number): string {
+    return String(index + 1).padStart(2, '0');
+  }
 }

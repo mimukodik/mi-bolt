@@ -1,10 +1,10 @@
 <section class="featured" data-testid="featured-section" aria-labelledby="featured-heading">
   <div class="featured__inner">
     <header class="featured__header">
-      <h2 id="featured-heading" class="featured__title">Kiemelt készülékek</h2>
-      <p class="featured__lede">
-        A demóban elérhető négy kiemelt készülék — az árak a kiválasztott variánstól függenek.
-      </p>
+      <h2 id="featured-heading" class="featured__title">Készülékek, amiket érdemes megnézni</h2>
+      <a routerLink="/telefonok" class="featured__all-link" data-testid="featured-all-link"
+        >Minden telefon →</a
+      >
     </header>
     @if (allErrored()) {
       <div class="featured__grid-error" data-testid="error-state" role="status" aria-live="polite">
@@ -31,6 +31,7 @@
                     [routerLink]="['/telefonok', slot.product.slug]"
                     [attr.aria-label]="slot.product.name + ' — részletek'"
                   >
+                    <span class="featured__tag">DEMÓTERMÉK</span>
                     <div class="featured__image">
                       @if (firstImageSrc(slot.product); as src) {
                         <img

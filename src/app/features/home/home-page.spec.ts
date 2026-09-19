@@ -322,6 +322,37 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(root.textContent).toContain('MiBolt');
     expect(root.querySelector('[data-testid="hero-cta"]')).not.toBeNull();
   });
+
+  it('FIX-33-AC01: hero heading is the exact S1 copy, collapsed and trimmed', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(Hero);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const heading = root.querySelector('[data-testid="hero-heading"]');
+    expect(heading).not.toBeNull();
+    const collapsed = (heading?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    expect(collapsed).toBe('A következő mobilod. Egyszerűen.');
+  });
+
+  it('FIX-33-AC02: hero CTA row carries exactly two links, primary then secondary', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(Hero);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const row = root.querySelector('[data-testid="hero-cta-row"]');
+    expect(row).not.toBeNull();
+    const links = Array.from(row?.querySelectorAll('a') ?? []);
+    expect(links.length).toBe(2);
+    expect((links[0]?.textContent ?? '').trim().startsWith('Megnézem a telefonokat')).toBe(true);
+    expect(links[0]?.getAttribute('href')).toBe('/telefonok');
+    expect((links[1]?.textContent ?? '').trim()).toBe('Hogyan működik?');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -344,7 +375,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     expect(cta ? cta.getAttribute('href') : '').toBe('/telefonok');
   });
 
-  it('category shortcuts set valid 5G / inStock filters', async () => {
+  it('category shortcuts render the three spec categories with valid 5G / inStock filters', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -354,7 +385,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const shortcuts = Array.from(raw.querySelectorAll('[data-testid^="shortcut-"]'));
-    expect(shortcuts.length).toBeGreaterThanOrEqual(1);
+    expect(shortcuts.length).toBe(3);
 
     // A string `routerLink` containing a literal `?`/`=` is the FIX-18
     // defect: the router treats it as a URL path and percent-encodes
@@ -364,20 +395,24 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     // with a properly-formed, unencoded query string. Read `href`
     // (the actual navigation target), not the static `routerLink`
     // attribute, and assert neither `%3F` nor `%3D` ever appears.
-    let hasBoth = false;
+    const titles = shortcuts.map((s) => {
+      const titleEl = s.querySelector('.hero-shortcuts__title');
+      return titleEl === null ? '' : titleEl.textContent.trim();
+    });
+    expect(titles).toEqual(['Összes telefon', '5G készülékek', 'Raktáron']);
+
+    let hasAll = false;
     let has5g = false;
     let hasInStock = false;
     shortcuts.forEach((s) => {
       const href = s.getAttribute('href') ?? '';
       expect(href).not.toContain('%3F');
       expect(href).not.toContain('%3D');
-      if (href.includes('is5g=true') && href.includes('inStock=true')) {
-        hasBoth = true;
-      }
-      if (href.includes('is5g=true')) has5g = true;
-      if (href.includes('inStock=true')) hasInStock = true;
+      if (href === '/telefonok') hasAll = true;
+      if (href.includes('is5g=true') && !href.includes('inStock=true')) has5g = true;
+      if (href.includes('inStock=true') && !href.includes('is5g=true')) hasInStock = true;
     });
-    expect(hasBoth).toBe(true);
+    expect(hasAll).toBe(true);
     expect(has5g).toBe(true);
     expect(hasInStock).toBe(true);
   });
@@ -400,6 +435,20 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     expect(link).not.toBeNull();
     expect(link?.textContent).toContain('Részletek');
     expect(link?.getAttribute('href')).toContain('/telefonok/demo-one-5g');
+  });
+
+  it('FIX-33-AC04: featured section header carries a "Minden telefon" link to the catalogue', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(FeaturedProducts);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const link = root.querySelector<HTMLAnchorElement>('[data-testid="featured-all-link"]');
+    expect(link).not.toBeNull();
+    expect((link?.textContent ?? '').trim().startsWith('Minden telefon')).toBe(true);
+    expect(link?.getAttribute('href')).toBe('/telefonok');
   });
 });
 
@@ -559,9 +608,9 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
 
     const text = raw.querySelector('[data-testid="how-demo-works"]')?.textContent ?? '';
     expect(text.length).toBeGreaterThan(0);
-    expect(text).toMatch(/Böngészés/);
-    expect(text).toMatch(/Kosár/);
-    expect(text).toMatch(/Rendelés|Szimulált/);
+    expect(text).toMatch(/Válaszd ki a készüléked/);
+    expect(text).toMatch(/Állítsd össze a rendelést/);
+    expect(text).toMatch(/Próbáld végig a folyamatot/);
   });
 
   it('does not mention tariffs / internet / services / payments / bankcards', async () => {
@@ -602,9 +651,10 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const heroSection = raw.querySelector('[data-testid="hero-section"]');
     expect(heroSection).not.toBeNull();
-    const inner = heroSection ? heroSection.querySelector('.hero__inner') : null;
-    expect(inner).not.toBeNull();
-    const kids = inner ? Array.from(inner.children) : [];
+    // FIX-33 moves the shortcut band out of `.hero__inner` into its own
+    // sibling section after the hero, so the DOM order is asserted
+    // across the whole fixture (document order) rather than only among
+    // `.hero__inner`'s direct children.
     const expectedOrder = [
       'hero-heading',
       'hero-message',
@@ -612,10 +662,17 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
       'hero-illustration',
       'hero-shortcuts',
     ];
-    expectedOrder.forEach((id, idx) => {
-      const found = kids.findIndex((k) => k.getAttribute('data-testid') === id);
-      expect(found).toBe(idx);
+    const elements = expectedOrder.map((id) => raw.querySelector(`[data-testid="${id}"]`));
+    elements.forEach((el) => {
+      expect(el).not.toBeNull();
     });
+    for (let i = 0; i < elements.length - 1; i += 1) {
+      const a = elements[i];
+      const b = elements[i + 1];
+      if (a !== null && b !== null) {
+        expect(Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+      }
+    }
   });
 
   it('home page renders Hero before FeaturedProducts before HowDemoWorks', async () => {

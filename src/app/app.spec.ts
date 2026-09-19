@@ -85,7 +85,7 @@ describe('T01-AC05: root component', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const heading = raw.querySelector('h1');
     expect(heading).toBeTruthy();
-    expect(heading?.textContent).toContain('MiBolt');
+    expect(heading?.textContent).toContain('következő mobilod');
   });
 
   it('does not expose a fatal-startup element in the component tree', () => {

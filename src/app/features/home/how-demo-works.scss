@@ -37,13 +37,24 @@
   overflow-wrap: anywhere;
 }
 
-.how__lede {
+.how__caption {
   font-size: var(--type-body);
   line-height: var(--line-height-body);
   color: var(--color-text-secondary);
   margin: 0;
-  max-width: 64ch;
-  overflow-wrap: anywhere;
+}
+
+.how__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  font-size: var(--type-helper);
+  font-weight: var(--weight-bold);
+  color: var(--color-brand-ink);
+  background: var(--color-brand-accent-soft);
+  border-radius: var(--radius-badge);
 }
 
 .how__grid {
@@ -102,5 +113,11 @@
 
   .how__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .how__header {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
   }
 }

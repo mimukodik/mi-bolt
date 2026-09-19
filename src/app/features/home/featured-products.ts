@@ -28,11 +28,19 @@ export interface FeaturedSlot {
  * price (R14, R25). The "Részletek" link points at the catalogue
  * detail route with the documented slug (T14-AC02).
  *
- * The home page renders its own price block / image element because
- * the shared T10 primitives pull in their CSS through `styleUrl`,
- * which the vitest test runner cannot resolve at module-init time.
- * The component keeps the same data contract so a future refactor can
- * swap in the shared primitives without touching the page logic.
+ * The home page renders its own price block / image element rather
+ * than the shared `PriceBlock` / `ProductImage` primitives (FIX-33
+ * item 5). `PriceBlock` requires a `label: string` input with no
+ * value fixed anywhere in the specification, and its skeleton/empty
+ * states use different class names and test ids from the ones this
+ * card and its existing spec assertions already rely on
+ * (`.featured__skeleton--price`, `data-testid="price-skeleton"`).
+ * Swapping it in was attempted and measured; adopting it would mean
+ * inventing the label text (R25) and rewriting the price-state
+ * assertions in the same commit as the rest of this rebuild, which
+ * this task defers rather than doing under scope pressure. The
+ * component keeps the same data contract so a future task can make
+ * the swap deliberately.
  */
 @Component({
   selector: 'app-featured-products',

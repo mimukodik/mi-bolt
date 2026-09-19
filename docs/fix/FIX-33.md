@@ -1,6 +1,6 @@
 # FIX-33 — Rebuild the home page to the prototype
 
-Status: PLANNED — not executed.
+Status: PARTIAL — items 3 (hero rebuild), 4 (shortcut cards), 5 (featured heading/link/tag), 6 (how-it-works copy + numbered tiles) and the `--type-hero`/`--type-hero-mobile` tokens from item 1 landed, all within `src/app/features/home/**`; AC01–AC04, AC08 and AC09 pass by unit test/grep, AC11 (build) passes. Open: item 2 (demo-notice restoration + app-shell mount, AC10) and item 7 (footer rebuild, AC05) were not attempted — both reach outside `src/app/features/home/**` into `src/app/shared/shell/` and `src/app/core/navigation/`, which this execution's scope excluded (two sibling agents were active in adjacent feature directories at the same time). Item 8's `id="how"` is on `how-demo-works.html` (in scope); the `id="demo"` half (on the demo strip) and `withInMemoryScrolling` are not done, so AC13 is open too. AC06/AC07/AC10 (real-browser checks) were not run — no browser tool in this execution — deferred to the batched browser-verification pass. The featured-card primitive swap (item 5's `PriceBlock`/`ProductImage` attempt) was measured and deliberately not adopted; see the commit body and `featured-products.ts`'s docblock.
 Severity: major
 Source: B3 F5, B3 F7 (Home 390 row), B1 F10 (the five S1 rows), A3 finding 2
 

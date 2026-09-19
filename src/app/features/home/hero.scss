@@ -4,8 +4,9 @@
 /* T14 — Hero (S1).
        *
        * Dark shell hero for the marketing entry screen. Layout contract:
-       *   - mobile source order: heading, message, CTA, illustration, shortcuts
-       *   - desktop: two columns + shortcuts in their own row
+       *   - mobile source order: eyebrow, heading, message, CTA, illustration
+       *   - the three category shortcut cards render as a sibling section
+       *     directly after the hero, in their own row on wide viewports
        * The DOM order is fixed; CSS only repositions on wide viewports so the
        * order assertion in T14-AC05 is meaningful.
        */
@@ -24,14 +25,28 @@
   margin: 0 auto;
 }
 
+.hero__eyebrow {
+  font-size: var(--type-helper);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-brand-accent);
+  margin: 0;
+}
+
 .hero__title {
-  font-size: var(--type-page-title-mobile);
+  font-size: var(--type-hero-mobile);
   line-height: var(--line-height-heading);
   font-weight: var(--weight-bold);
   color: var(--color-text-inverse);
   margin: 0;
   overflow-wrap: anywhere;
   hyphens: auto;
+}
+
+.hero__title-accent {
+  display: block;
+  color: var(--color-brand-accent);
 }
 
 .hero__message {
@@ -75,33 +90,12 @@
   outline-offset: 2px;
 }
 
-.hero__illustration {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.hero__art {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  width: 100%;
-  max-width: 320px;
-}
-
-.hero__shortcuts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding-top: var(--space-2);
-}
-
-.hero__shortcut {
+.hero__cta-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: var(--size-control);
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-6);
   background: transparent;
   color: var(--color-text-inverse);
   font-size: var(--type-body);
@@ -115,15 +109,109 @@
     color var(--motion-fast) ease;
 }
 
-.hero__shortcut:hover {
+.hero__cta-secondary:hover {
   background: var(--color-brand-accent);
   color: var(--color-text-primary);
   border-color: var(--color-brand-accent);
 }
 
-.hero__shortcut:focus-visible {
+.hero__cta-secondary:focus-visible {
   outline: 3px solid var(--color-focus-dark);
   outline-offset: 2px;
+}
+
+.hero__illustration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hero__art {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  width: 100%;
+  max-width: 320px;
+}
+
+.hero__illustration-caption {
+  font-size: var(--type-meta);
+  color: var(--color-text-inverse-muted);
+  margin: 0;
+  text-align: center;
+}
+
+.hero-shortcuts {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-light);
+  padding: var(--space-5) var(--layout-gutter-mobile);
+  max-width: var(--layout-container-max);
+  margin: 0 auto;
+}
+
+.hero-shortcuts__card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-4) 0;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.hero-shortcuts__card:first-child {
+  border-top: none;
+}
+
+.hero-shortcuts__card:hover {
+  color: var(--color-brand-ink);
+}
+
+.hero-shortcuts__card:focus-visible {
+  outline: 3px solid var(--color-focus-light);
+  outline-offset: 2px;
+}
+
+.hero-shortcuts__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--size-control);
+  height: var(--size-control);
+  border-radius: var(--radius-control);
+  background: var(--color-brand-accent-soft);
+  color: var(--color-brand-ink);
+}
+
+.hero-shortcuts__icon--text {
+  font-size: var(--type-helper);
+  font-weight: var(--weight-bold);
+}
+
+.hero-shortcuts__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.hero-shortcuts__title {
+  font-size: var(--type-body);
+  font-weight: var(--weight-bold);
+}
+
+.hero-shortcuts__subtitle {
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+}
+
+.hero-shortcuts__arrow {
+  font-size: var(--type-body);
+  color: var(--color-text-secondary);
 }
 
 @media (min-width: 720px) {
@@ -132,20 +220,24 @@
   }
 
   .hero__title {
-    font-size: var(--type-page-title);
+    font-size: var(--type-hero);
   }
 
   .hero__inner {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
-      'heading  illustration'
-      'message  illustration'
-      'cta      illustration'
-      'shortcuts shortcuts';
-    column-gap: var(--space-8);
+      'eyebrow      illustration'
+      'heading      illustration'
+      'message      illustration'
+      'cta          illustration';
+    column-gap: var(--space-6);
     row-gap: var(--space-6);
     align-items: start;
+  }
+
+  .hero__eyebrow {
+    grid-area: eyebrow;
   }
 
   .hero__title {
@@ -165,9 +257,22 @@
     align-self: center;
   }
 
-  .hero__shortcuts {
-    grid-area: shortcuts;
-    border-top: 1px solid #2a3035;
-    padding-top: var(--space-5);
+  .hero-shortcuts {
+    padding: var(--space-6) var(--layout-gutter-desktop);
+    flex-direction: row;
+  }
+
+  .hero-shortcuts__card {
+    flex: 1;
+    align-items: center;
+    gap: var(--space-3);
+    border-top: none;
+    border-left: 1px solid var(--color-border-subtle);
+    padding: 0 var(--space-6);
+  }
+
+  .hero-shortcuts__card:first-child {
+    border-left: none;
+    padding-left: 0;
   }
 }
