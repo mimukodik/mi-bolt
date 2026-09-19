@@ -139,6 +139,121 @@ targets no unit run can load.
 
 ---
 
+## Phase 0 — test infrastructure repair (2026-09-19)
+
+Measured by the orchestrator at commit `a25d419`, against the baseline
+recorded in section 2. Nothing in the baseline table above was re-run or
+changed.
+
+### Gate results, baseline → now
+
+| gate | baseline | now |
+|---|---|---|
+| `npm run build` | 0 | 0 |
+| `npm run lint` | 1 | 0 |
+| `npm run format:check` | 1 | 0 |
+| `npx vitest run --config vitest.contract.config.ts` | 0 (4 files, 56 tests) | 0 (4 files, 56 tests) |
+| `npm run test` | 1 — 118 failed, 435 passed, **162 skipped** | 1 — **1 failed, 716 passed (717), 0 skipped**, run twice with identical results |
+| `npx playwright test` | 1 — 10 failed, 8 skipped, 248 passed | 1 — **8 failed, 8 skipped, 250 passed** |
+
+The unit suite still exits 1 on the pre-existing per-file coverage thresholds
+(233 and 237 `ERROR: Coverage` lines across the two runs), which is unchanged
+from the baseline and is not a regression.
+
+### The seven commits that produced this, in order
+
+- `36c64de` test: assert product card image on rendered DOM
+- `3ed9c0e` test: drop the duplicate TestBed bootstrap
+- `0192f9e` test: split the MSW server out of the setup entry
+- `d570d90` test: fix catalogue page spec crash and asserts
+- `3846949` style: run prettier on the six unformatted files
+- `00b5495` test: register the MSW lifecycle per spec file
+- `a25d419` test: put every spec on the one shared MSW server
+
+### Cause groups from section 3, and what happened to each
+
+- **A — duplicate `TestBed.initTestEnvironment`** (162 tests reported as
+  skipped): fixed, 16 spec files, `3ed9c0e`. 0 skipped now.
+- **B — `__dirname` resolving to the workspace root under the builder** (68
+  failures): fixed by importing the JSON fixture, `d570d90` and the
+  catalog-mock change.
+- **C — MSW not intercepting** (21 failures, later 83): the first diagnosis
+  was wrong. The real cause is that the Angular unit-test builder replaces
+  every `setupFiles` entry with a one-line shim when coverage is on
+  (`@angular/build/src/builders/unit-test/runners/vitest/plugins.js:298-308`),
+  and Vitest's per-file setup re-run invalidates only that shim module
+  (`vitest/dist/chunks/test.DNmyFkvJ.js:4287-4289`), so the chunk holding
+  `beforeAll(listen)` evaluated once per worker process. Measured: 7 setup
+  evaluations for 38 files with coverage on, 38 with `--coverage false`.
+  Fixed by `useMswServer()` called from the spec module, `00b5495`.
+- **D — compiled-CSS regex assertions** (2): fixed, `d570d90`.
+- **E — `ActivatedRoute` stub was a plain object** (25): fixed, `d570d90`.
+- **F — ProductCard assertions read the wrong component boundary** (2): fixed,
+  `36c64de`.
+
+### New finding: `msw@2.15.0` cannot have two Node servers listening in one process
+
+Every `setupServer()` is built on one module-level `InterceptorSource`
+(`node_modules/msw/lib/node/index.mjs:122-147`) whose `enable()` stacks
+another `request` listener on the same `BatchInterceptor` per call
+(`node_modules/msw/lib/core/experimental/sources/interceptor-source.mjs:19-22`),
+so two servers listening at once dispatch every request twice.
+`tests/setup-msw.ts` listens once per worker under `ng test`, so a spec with
+a private server collided with it whenever it was its worker's first file.
+That, and not the product, is why
+`src/app/features/checkout/order-submission.spec.ts:379` counted 20 polls
+against a cap of 10 and `:481` counted 2 `createOrder` calls against 1.
+Scoped run before: `Tests 2 failed | 12 passed (14)`; after:
+`Tests 14 passed (14)`. Eleven specs moved onto the shared server in
+`a25d419`. Three of them passed handlers to `resetHandlers()`, which
+permanently replaces a server's initial handler list and would have leaked
+into every later file in the worker; those became `server.use()`.
+
+### The remaining failures, all owned
+
+- unit, 1: `src/app/layouts/layouts.spec.ts` `T11-AC04 … MobileDrawer depends
+  on the AccessibleDialog primitive` — same defect as the baseline's D5.
+- e2e, 8: `e2e/checkout-f8.spec.ts:28` in both projects (defect D1, the
+  product detail page rendering an error surface);
+  `e2e/design/primitives.spec.ts:45` priceblock and productimage in both
+  projects (FIX-09-AC03); `e2e/design/primitives.spec.ts:60` dialog focus in
+  both projects (defect D5, `[role="dialog"]` resolving to 2 elements).
+
+### Unexplained improvement, flagged as unexplained rather than as a fix
+
+The baseline's two `e2e/design/viewport-matrix.spec.ts:95` failures at 320px
+(cart and success, `mi-bolt-design` only) now pass. Nothing in these seven
+commits touches e2e or application source — all of them change only
+`*.spec.ts` files and two files under `tests/` — so the cause was not
+established.
+
+### Browser verification
+
+`real-browser-sonnet` at commit `00b5495`, 17 screenshots under
+`.visual-screenshots/2026-09-19-p0-browser/`: catalogue listing, faceted
+filtering, product detail, variant selection, add-to-cart and the mobile
+drawer (open, focus trap, Escape) all render and behave correctly, zero
+console errors and zero failed network requests across the whole run. Four
+defects came back, and all four are now owned by a task:
+
+- the cart line's quantity and remove controls are permanently disabled
+  (`aria-busy="true"` never clears) — owned by `docs/fix/FIX-21.md`,
+  unexecuted; the empty-cart state is unreachable through the UI.
+- the header cart badge does not rehydrate after a reload although
+  `sessionStorage['mi-bolt.snapshot.default']` holds the item, while the cart
+  page itself rehydrates correctly — the baseline's defect D2.
+- "Összes szűrő törlése" clears the UI but not the URL, so a reload
+  re-applies the filter — owned by `docs/fix/FIX-24.md`, unexecuted.
+- the add-to-cart success toast's dismiss control renders as an empty
+  bordered box with no visible icon or text, though it carries the
+  accessible name "Bezárás" — the baseline's WCAG AA finding.
+- two Chrome DevTools issue-panel entries on `/penztar/kosar`: "A form field
+  element should have an id or name attribute" and "Incorrect use of
+  `<label for=FORM_ELEMENT>`", one each. Not console errors, but in scope
+  under the workspace's WCAG AA mandate.
+
+---
+
 ## 3. The 118 failing tests, grouped by cause
 
 | Group | Tests | Cause | Verdict |
