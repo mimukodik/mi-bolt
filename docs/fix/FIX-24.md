@@ -1,6 +1,6 @@
 # FIX-24 — Catalogue: clearing the filters leaves the URL stale, and the sort control ignores it
 
-Status: PARTIAL — 766898e. Open: AC10 (comparing two template copies) has nothing left to compare since FIX-14 already merged them and is dropped; item 2's inline-template edit was made once rather than mirrored, per the commit's own note that FIX-24's premise was stale.
+Status: DONE — 766898e. Verified against the tree 2026-09-20: CATALOG_QUERY_KEYS, serializeForRouter, the [selected] sort options and header-nav.ts's DestroyRef-backed searchDraft are all present. AC10 compared two template copies that FIX-14 had already merged into one, so it had nothing left to compare.
 Severity: major
 Source: B1 F5 (clear filters), B1 F6 (sort control), B3 R18 verdict.
 

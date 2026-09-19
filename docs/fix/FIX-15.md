@@ -1,6 +1,6 @@
 # FIX-15 — Delete the dead components and the speculative hook
 
-Status: PARTIAL — 627d6e0. Open: AC03's "exactly five lines" became two the moment FIX-06 landed, and the criterion's own stop condition for fewer than five was walked past; AC04 compares against db6d295, which was already non-empty.
+Status: DONE — 627d6e0. Verified against the tree 2026-09-20: src/app/home/ is absent, mobile-drawer-host.* intact, quote-state.ts has no onDestroy hook. AC03 and AC04 were criteria whose own premise FIX-06 and db6d295 had already removed, not open work.
 Severity: minor
 Source: A6 4.1, 4.2, 4.4 and 4.8; A3 settled question 1 and finding 10. **A6 4.4 is wrong
 and this task does not carry out its recommendation — see Evidence.**
