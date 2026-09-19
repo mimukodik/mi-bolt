@@ -15,33 +15,22 @@
  * exact handlers it needs via `server.use(...)` so the absence of a
  * handler is a deliberate signal.
  *
- * jsdom is a DOM inside a Node process, where msw/node works as expected.
- * Direct vitest runs load this file in Node. Only a real browser runner
- * has no process.
+ * The server instance itself lives in `./msw-server` — see that file's
+ * doc comment for why. No spec file imports this module; only
+ * `angular.json` and `vitest.contract.config.ts` name it as a setup file,
+ * which keeps this body in the setup entry chunk so it re-runs per file.
  */
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from './msw-server';
 
-const isNodeProcess = typeof process !== 'undefined' && Boolean(process.versions?.node);
+beforeAll(() => {
+  server?.listen({ onUnhandledRequest: 'error' });
+});
 
-let server!: ReturnType<typeof import('msw/node').setupServer>;
+afterEach(() => {
+  server?.resetHandlers();
+});
 
-if (isNodeProcess) {
-  // Dynamic import keeps `msw/node` (and the @mswjs/interceptors
-  // `node:http` references) out of the browser bundle entirely.
-  const { setupServer } = await import('msw/node');
-  server = setupServer();
-
-  beforeAll(() => {
-    server?.listen({ onUnhandledRequest: 'error' });
-  });
-
-  afterEach(() => {
-    server?.resetHandlers();
-  });
-
-  afterAll(() => {
-    server?.close();
-  });
-}
-
-export { server };
+afterAll(() => {
+  server?.close();
+});

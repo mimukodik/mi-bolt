@@ -40,7 +40,7 @@ import {
   type OrderReceipt,
 } from '../../mocks/orders/commit-order';
 import { CHECKOUT_OPTIONS as checkoutOptionsRuntime } from '../../mocks/checkout/checkout.handlers';
-import { server } from '../../../tests/setup-msw';
+import { server } from '../../../tests/msw-server';
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const SESSION_B = 'session-bbbbbbbbbbbb';

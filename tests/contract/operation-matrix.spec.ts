@@ -19,7 +19,7 @@ import '@angular/compiler';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 
-import { server } from '../setup-msw';
+import { server } from '../msw-server';
 import {
   HttpClient,
   HttpContext,

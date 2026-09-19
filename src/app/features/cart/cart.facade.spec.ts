@@ -22,7 +22,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { type RequestHandler } from 'msw';
-import { server } from '../../../../tests/setup-msw';
+import { server } from '../../../../tests/msw-server';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';

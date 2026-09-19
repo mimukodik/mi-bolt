@@ -20,7 +20,7 @@ import {
 } from '../../mocks/idempotency';
 import { Repository } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
-import { server } from '../../../tests/setup-msw';
+import { server } from '../../../tests/msw-server';
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const SESSION_B = 'session-bbbbbbbbbbbb';

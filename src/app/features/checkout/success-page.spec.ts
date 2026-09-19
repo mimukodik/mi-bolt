@@ -30,7 +30,7 @@ import '@angular/compiler';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http, type RequestHandler } from 'msw';
-import { server } from '../../../../tests/setup-msw';
+import { server } from '../../../../tests/msw-server';
 import { of } from 'rxjs';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';

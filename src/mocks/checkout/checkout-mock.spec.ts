@@ -28,7 +28,7 @@ import {
   normalizeContactFullName,
   normalizeContactPhone,
 } from '../../mocks/checkout/validate-checkout';
-import { server } from '../../../tests/setup-msw';
+import { server } from '../../../tests/msw-server';
 
 const SESSION_A = 'session-aaaaaaaaaaaa';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';

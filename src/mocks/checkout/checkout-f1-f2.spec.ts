@@ -16,7 +16,7 @@ import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { checkoutHandlersEntry } from '../../mocks/checkout/checkout.handlers';
 import { Repository } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
-import { server } from '../../../tests/setup-msw';
+import { server } from '../../../tests/msw-server';
 
 interface CheckoutOptionsBody {
   deliveryOptions: { id: string }[];

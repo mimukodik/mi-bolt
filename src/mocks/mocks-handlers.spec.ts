@@ -26,7 +26,7 @@ import {
 } from '../mocks/scenarios';
 import { buildSnapshot } from './snapshot';
 import { DEMO_PRODUCT } from './cart/cart.handlers';
-import { server } from '../../tests/setup-msw';
+import { server } from '../../tests/msw-server';
 
 const SCENARIO_KEY = 'test-scenario';
 const STORAGE_KEY = snapshotKey(SCENARIO_KEY);

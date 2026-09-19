@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { server } from './setup-msw';
+import { server } from './msw-server';
 
 describe('T02-AC05 unit network isolation', () => {
   it('rejects an unhandled /api/v1 business route', async () => {

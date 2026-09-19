@@ -40,7 +40,7 @@ import {
   type Ids,
   type ScenarioDescriptor,
 } from '../../mocks/scenarios';
-import { server } from '../../../tests/setup-msw';
+import { server } from '../../../tests/msw-server';
 
 // ---------------------------------------------------------------------------
 // Tiny product factories for the predicate tests
