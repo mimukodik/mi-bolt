@@ -1,6 +1,8 @@
 # FIX-55 — Make the checkout breadcrumbs navigate without a full page load
 
-Status: PLANNED — not executed.
+Status: DONE — the delivery step's three breadcrumbs use `routerLink`
+instead of a plain `href`; `grep -rn 'href="/' src --include='*.html'`
+now prints only `src/index.html`'s `<base>` tag.
 Severity: blocker
 Source: Review round item N3 (orchestrator-measured), confirmed at source and swept across the whole application by this task.
 

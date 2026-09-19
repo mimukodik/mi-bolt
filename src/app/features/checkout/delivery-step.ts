@@ -49,7 +49,7 @@
 
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
@@ -95,6 +95,7 @@ type LoadState =
     LoadingState,
     PaymentMethodSelector,
     PriceBlock,
+    RouterLink,
     StatusMessage,
   ],
   templateUrl: './delivery-step.html',

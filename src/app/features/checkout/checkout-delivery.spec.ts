@@ -34,7 +34,7 @@ import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
@@ -771,6 +771,39 @@ describe('FIX-44 onConfirm surfaces a failed save instead of returning silently'
     const root = getRootElement(fixture);
     expect(queryElement(root, '[data-testid="delivery-save-failure"]')).toBeNull();
     expect(router.url).toBe('/penztar/ellenorzes');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX-55 - the breadcrumbs navigate through the router, not a full page load.
+// ---------------------------------------------------------------------------
+describe('FIX-55 breadcrumbs route through the Angular router', () => {
+  it('the three breadcrumb anchors resolve real hrefs and a click is handled by the router', async () => {
+    const router = TestBed.inject(Router);
+    const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl');
+
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const anchors = root.querySelectorAll<HTMLAnchorElement>('nav.breadcrumbs a');
+    expect(anchors.length).toBe(3);
+    expect(Array.from(anchors).map((a) => a.getAttribute('href'))).toEqual([
+      '/',
+      '/penztar/kosar',
+      '/penztar/adatok',
+    ]);
+
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    anchors[1].dispatchEvent(event);
+
+    // RouterLink stops the document navigation and drives the
+    // router instead: the click's default is prevented and the
+    // router receives a navigation call, rather than the browser
+    // performing a full page load.
+    expect(event.defaultPrevented).toBe(true);
+    expect(navigateByUrlSpy).toHaveBeenCalled();
   });
 });
 
