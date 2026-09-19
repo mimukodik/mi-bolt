@@ -88,6 +88,12 @@ interface ReviewLineDisplay {
   readonly lineTotal: Money;
 }
 
+/** Outcome of the last submit attempt that did not produce an order. */
+type SubmitFailure =
+  | { readonly kind: 'declined'; readonly detail: string }
+  | { readonly kind: 'pending'; readonly detail: string }
+  | { readonly kind: 'error'; readonly detail: string };
+
 @Component({
   selector: 'app-review-step',
   imports: [
@@ -117,6 +123,10 @@ export class ReviewStep {
    *  flip the per-consent error state from "default" to
    *  "submitted-invalid". */
   readonly submitted = signal<boolean>(false);
+
+  /** Null until a submit attempt fails; cleared by the next attempt
+   *  and by a quote refresh. */
+  readonly submitFailure = signal<SubmitFailure | null>(null);
 
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);
@@ -329,6 +339,7 @@ export class ReviewStep {
    *  - no in-flight network mutation,
    *  - the payment method is set. */
   readonly canSubmit = computed<boolean>(() => {
+    if (this.submitFailure()?.kind === 'pending') return false;
     if (!this.quoteController.ready()) return false;
     if (!this.reviewForm().valid()) return false;
     if (this.busy()) return false;
@@ -359,6 +370,25 @@ export class ReviewStep {
       return 'A szimuláció tudomásulvétele szükséges a leadáshoz.';
     }
     return null;
+  });
+
+  /** Rendered when the last submit attempt did not produce an
+   *  order: a declined or failed commit, or an outcome that is not
+   *  yet known. screens.md S4.4: "Failed payment offers Retry/change
+   *  method… An uncertain response says processing outcome not
+   *  known, not definitive rejection." */
+  readonly submitFailureMessage = computed<string>(() => {
+    const failure = this.submitFailure();
+    if (failure === null) return '';
+    const preserved = 'A kosarad és az adataid megmaradtak.';
+    switch (failure.kind) {
+      case 'declined':
+        return `A szimulált fizetés elutasítva. ${preserved} Próbáld újra, vagy módosítsd a fizetési módot.`;
+      case 'pending':
+        return 'A demórendelés feldolgozás alatt… Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak. Nem küldünk újabb rendelést ismételt kattintásra.';
+      case 'error':
+        return `${failure.detail} ${preserved} Próbáld újra, vagy módosítsd a fizetési módot.`;
+    }
   });
 
   constructor() {
@@ -395,6 +425,7 @@ export class ReviewStep {
 
   onRefresh(): void {
     if (this.busy()) return;
+    this.submitFailure.set(null);
     void this.quoteController.refresh();
   }
 
@@ -412,19 +443,31 @@ export class ReviewStep {
       return;
     }
     this.submitted.set(true);
+    this.submitFailure.set(null);
     this.submitting.set(true);
     try {
       const paymentMethod = this.reviewForm().value().paymentMethod;
       if (paymentMethod === 'demo_card') {
         const intent = await this.checkoutFacade.createPaymentIntent();
         if (!intent.ok) {
-          // Payment-decline is surfaced through the cart facade's
-          // `error` signal; the form + cart are preserved.
+          this.submitFailure.set({ kind: 'error', detail: intent.error.detail });
+          return;
+        }
+        if (intent.value.status === 'declined') {
+          this.submitFailure.set({ kind: 'declined', detail: '' });
+          return;
+        }
+        if (intent.value.status === 'pending') {
+          this.submitFailure.set({ kind: 'pending', detail: '' });
           return;
         }
       }
       const order = await this.checkoutFacade.commitOrder();
       if (!order.ok) {
+        this.submitFailure.set({
+          kind: order.error.code === 'PAYMENT_DECLINED' ? 'declined' : 'error',
+          detail: order.error.detail,
+        });
         return;
       }
       await this.router.navigate(['/penztar/siker', order.value.id]);

@@ -35,6 +35,7 @@ import {
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
+import { readFileSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -1060,7 +1061,176 @@ describe('T22 wiring - ReviewStep uses T10 primitives and owns the demo-aware na
 
     expect(router.url).toBe('/penztar/siker/order-999');
   });
+});
 
+// ---------------------------------------------------------------------------
+// FIX-25 - a declined, pending or failed order commit is no longer silent.
+// ---------------------------------------------------------------------------
+describe('FIX-25 declined, pending and failed order commits surface on the review step', () => {
+  it('a declined payment intent renders the failure banner, keeps the CTA enabled, and a second submit retries', async () => {
+    let paymentIntentCalls = 0;
+    server.use(
+      http.post('*/api/v1/payment-intents', () => {
+        paymentIntentCalls += 1;
+        return HttpResponse.json(
+          {
+            id: `pi-${String(paymentIntentCalls)}`,
+            cartId: 'cart-1',
+            quoteId: 'quote-1',
+            amount: { amount: 681970, currency: 'HUF' },
+            isSimulation: true,
+            status: 'declined',
+          },
+          { status: 201, headers: { 'content-type': 'application/json' } },
+        );
+      }),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+    const router = TestBed.inject(Router);
+
+    const fixture = TestBed.createComponent(ReviewStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    checkoutFacade.form.acceptedTerms().value.set(true);
+    checkoutFacade.form.acknowledgedSimulation().value.set(true);
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onSubmit();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).not.toContain('/penztar/siker');
+    const root = getRootElement(fixture);
+    const banner = getElement(root, '[data-testid="review-submit-failure"]');
+    expect(banner.textContent).toContain('elutasítva');
+    expect(banner.textContent).toContain('megmaradtak');
+    expect(queryElement(root, '[data-testid="review-change-payment"]')).not.toBeNull();
+    expect(fixture.componentInstance.canSubmit()).toBe(true);
+
+    await fixture.componentInstance.onSubmit();
+    await fixture.whenStable();
+
+    expect(paymentIntentCalls).toBe(2);
+  });
+
+  it('an unknown (pending) payment outcome disables the CTA and says the outcome is not known', async () => {
+    server.use(
+      http.post('*/api/v1/payment-intents', () => {
+        return HttpResponse.json(
+          {
+            id: 'pi-pending',
+            cartId: 'cart-1',
+            quoteId: 'quote-1',
+            amount: { amount: 681970, currency: 'HUF' },
+            isSimulation: true,
+            status: 'pending',
+          },
+          { status: 201, headers: { 'content-type': 'application/json' } },
+        );
+      }),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+
+    const fixture = TestBed.createComponent(ReviewStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    checkoutFacade.form.acceptedTerms().value.set(true);
+    checkoutFacade.form.acknowledgedSimulation().value.set(true);
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onSubmit();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const banner = getElement(root, '[data-testid="review-submit-failure"]');
+    expect(banner.textContent).toContain('nem ismert');
+    expect(banner.textContent).not.toContain('elutasítva');
+    expect(queryElement(root, '[data-testid="review-change-payment"]')).toBeNull();
+    expect(fixture.componentInstance.canSubmit()).toBe(false);
+
+    const submitEl = getElement(root, '[data-testid="review-submit"] button');
+    expect((submitEl as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('a rejected order commit renders the generic failure with the wire detail, and a refresh clears it', async () => {
+    server.use(
+      http.post('*/api/v1/payment-intents', () => {
+        return HttpResponse.json(
+          {
+            id: 'pi-succeeded',
+            cartId: 'cart-1',
+            quoteId: 'quote-1',
+            amount: { amount: 681970, currency: 'HUF' },
+            isSimulation: true,
+            status: 'succeeded',
+          },
+          { status: 201, headers: { 'content-type': 'application/json' } },
+        );
+      }),
+      http.post('*/api/v1/orders', () => {
+        return HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: 'Payment declined',
+            status: 409,
+            code: 'PAYMENT_DECLINED',
+            detail: 'A szimulált fizetés elutasítva. Új fizetési szándékot kell létrehozni.',
+          },
+          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+
+    const fixture = TestBed.createComponent(ReviewStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    checkoutFacade.form.acceptedTerms().value.set(true);
+    checkoutFacade.form.acknowledgedSimulation().value.set(true);
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onSubmit();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const banner = getElement(root, '[data-testid="review-submit-failure"]');
+    expect(banner.textContent).toContain('elutasítva');
+    expect(fixture.componentInstance.canSubmit()).toBe(true);
+
+    fixture.componentInstance.onRefresh();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.submitFailure()).toBeNull();
+    expect(queryElement(root, '[data-testid="review-submit-failure"]')).toBeNull();
+  });
+
+  it('neither a payment-intent nor an order-commit failure branch returns without setting submitFailure', () => {
+    const source = readFileSync(
+      pathJoin(process.cwd(), 'src/app/features/checkout/review-step.ts'),
+      'utf8',
+    );
+    expect(source).toMatch(/intent\.value\.status/);
+    const onSubmitBody = source.slice(source.indexOf('async onSubmit'));
+    expect(onSubmitBody).not.toMatch(/if \(!intent\.ok\) \{\s*return;/);
+    expect(onSubmitBody).not.toMatch(/if \(!order\.ok\) \{\s*return;/);
+  });
+});
+
+describe('T22 review-step remaining wiring', () => {
   it('ReviewPage is re-exported from review-step so the lazy route still resolves', () => {
     expect(ReviewPage).toBe(ReviewStep);
   });

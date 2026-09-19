@@ -1,6 +1,9 @@
 # FIX-25 — A declined or failed order commit is completely silent
 
-Status: PLANNED — not executed.
+Status: DONE — a declined, pending or failed order commit now renders
+`[data-testid="review-submit-failure"]` instead of silently returning;
+`OrderSubmission`/`PaymentProgress` remain unwired (FIX-61's scope), and
+the idempotent-retry key policy is unchanged here (FIX-61's scope).
 Severity: blocker
 Source: A4 F9 (highest priority), B1 "Not covered" (no UI control reaches this path).
 

@@ -233,6 +233,25 @@
         </div>
       </article>
 
+      @if (submitFailure(); as failure) {
+        <div class="submit-failure" data-testid="review-submit-failure">
+          <app-status-message
+            [message]="submitFailureMessage()"
+            [severity]="failure.kind === 'pending' ? 'info' : 'error'"
+            [persistent]="true"
+          ></app-status-message>
+          @if (failure.kind !== 'pending') {
+            <app-button
+              variant="secondary"
+              size="comfortable"
+              label="Fizetési mód módosítása"
+              (pressed)="onBack()"
+              data-testid="review-change-payment"
+            ></app-button>
+          }
+        </div>
+      }
+
       <div class="actions" data-testid="review-actions">
         <app-button
           variant="secondary"

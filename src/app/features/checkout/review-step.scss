@@ -276,6 +276,12 @@
   min-width: 0;
 }
 
+.submit-failure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .actions {
   display: flex;
   flex-direction: column;
