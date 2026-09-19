@@ -17,7 +17,7 @@ import {
   SORT_MODES,
   serializeCatalogQuery,
   type CatalogQuery,
-  type SortMode,
+  type Sort,
 } from './catalog-query';
 import { FilterPanel } from './filter-panel';
 import { FilterDrawer } from './filter-drawer';
@@ -113,7 +113,7 @@ export class CatalogPage {
   readonly controlsDisabled = computed<boolean>(() => this.facade.vm().status === 'loading');
 
   /** Snapshot of the current sort option (defaults to 'recommended'). */
-  readonly currentSort = computed<SortMode>(() => this.facade.query().sort ?? 'recommended');
+  readonly currentSort = computed<Sort>(() => this.facade.query().sort ?? 'recommended');
 
   /** Snapshot of the current page size. */
   readonly currentPageSize = computed<12 | 24>(() => this.facade.query().pageSize);
@@ -142,7 +142,7 @@ export class CatalogPage {
   readonly appliedChipCount = computed<number>(() => this.appliedQuery().appliedChips.length);
 
   /** Sort modes exposed by the documented enum. */
-  readonly sortModes: readonly SortMode[] = SORT_MODES;
+  readonly sortModes: readonly Sort[] = SORT_MODES;
 
   readonly resultCountLabel = computed<string>(() => {
     const vm = this.facade.vm();
@@ -202,7 +202,7 @@ export class CatalogPage {
   }
 
   onSortChanged(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value as SortMode;
+    const value = (event.target as HTMLSelectElement).value as Sort;
     this.facade.setSort(value);
   }
 
@@ -268,7 +268,7 @@ export class CatalogPage {
   // Helpers
   // -------------------------------------------------------------------------
 
-  sortLabel(mode: SortMode): string {
+  sortLabel(mode: Sort): string {
     switch (mode) {
       case 'recommended':
         return 'Ajánlott sorrend';

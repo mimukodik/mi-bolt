@@ -19,14 +19,14 @@
  */
 
 /** Documented sort modes. Mirrors `listProducts.sort` in openapi.yaml. */
-export type SortMode = 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
+export type Sort = 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
 
 export const SORT_MODES = [
   'recommended',
   'price_asc',
   'price_desc',
   'name_asc',
-] as const satisfies readonly SortMode[];
+] as const satisfies readonly Sort[];
 
 /** Documented page sizes. Mirrors `listProducts.pageSize`. */
 export const ALLOWED_PAGE_SIZES: readonly (12 | 24)[] = [12, 24];
@@ -58,7 +58,7 @@ export interface CatalogQuery {
   readonly inStock?: boolean;
   readonly is5g?: boolean;
   readonly featured?: boolean;
-  readonly sort?: SortMode;
+  readonly sort?: Sort;
   readonly page: number;
   readonly pageSize: 12 | 24;
 }
@@ -119,7 +119,7 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     inStock?: boolean;
     is5g?: boolean;
     featured?: boolean;
-    sort?: SortMode;
+    sort?: Sort;
     page: number;
     pageSize: 12 | 24;
   } = { ...DEFAULT_CATALOG_QUERY };
@@ -185,7 +185,7 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
   if (sortRaw !== null) {
     const trimmed = sortRaw.trim();
     if ((SORT_MODES as readonly string[]).includes(trimmed)) {
-      query.sort = trimmed as SortMode;
+      query.sort = trimmed as Sort;
     }
   }
 

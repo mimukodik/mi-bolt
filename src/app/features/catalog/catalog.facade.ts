@@ -54,7 +54,7 @@ import {
   SEARCH_DEBOUNCE_MS,
   serializeCatalogQuery,
   type CatalogQuery,
-  type SortMode,
+  type Sort,
 } from './catalog-query';
 
 /** Status of the most recent `vm` snapshot. */
@@ -288,7 +288,7 @@ export class CatalogFacade {
   }
 
   /** Apply a sort mode and reset the page to 1. */
-  setSort(value: SortMode): void {
+  setSort(value: Sort): void {
     const current = this.querySignal();
     const next: CatalogQuery = { ...current, sort: value, page: 1 };
     this.queryChange$.next(next);

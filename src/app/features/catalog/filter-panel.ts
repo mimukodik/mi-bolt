@@ -1,6 +1,6 @@
 import { Component, computed, input, linkedSignal, output } from '@angular/core';
 
-import type { CatalogQuery, SortMode } from './catalog-query';
+import type { CatalogQuery, Sort } from './catalog-query';
 import { ALLOWED_STORAGE_GB, SORT_MODES } from './catalog-query';
 import type { FacetValue } from '../../api/generated/models/facet-value';
 
@@ -275,7 +275,7 @@ export class FilterPanel {
   }
 }
 
-// Keep `SortMode` and `SORT_MODES` imports live so future sort controls can
+// Keep `Sort` and `SORT_MODES` imports live so future sort controls can
 // reuse the same enum without re-importing it. The current FilterPanel does
 // not expose the sort control — sort lives in the toolbar.
-export const _sortMarker: readonly SortMode[] = SORT_MODES;
+export const _sortMarker: readonly Sort[] = SORT_MODES;

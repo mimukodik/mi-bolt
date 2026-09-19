@@ -37,7 +37,7 @@ import {
   serializeCatalogQuery,
   SORT_MODES,
   type CatalogQuery,
-  type SortMode,
+  type Sort,
 } from '../../../app/features/catalog/catalog-query';
 import type { FacetValue } from '../../../app/api/generated/models/facet-value';
 import type { ProductPage } from '../../../app/api/generated/models/product-page';
@@ -295,7 +295,7 @@ describe('T12-AC01 catalog-query codec', () => {
     const serialised = serializeCatalogQuery(sample);
     expect(serialised.get('sort')).toBe('price_desc');
     const reparsed = parseCatalogQuery(serialised);
-    expect(reparsed.sort).toBe<SortMode>('price_desc');
+    expect(reparsed.sort).toBe<Sort>('price_desc');
   });
 
   it('CATALOG_QUERY_KEYS covers every key serializeCatalogQuery can emit for a fully populated query (FIX-24-AC08)', () => {
@@ -462,7 +462,7 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     facade.setSort('price_asc');
     await tick();
     expect(api.calls.length).toBe(2);
-    expect(api.calls[1]?.sort).toBe<SortMode>('price_asc');
+    expect(api.calls[1]?.sort).toBe<Sort>('price_asc');
     expect(api.calls[1]?.page).toBe(1);
     api.resolve(emptyPage());
     await tick();
@@ -826,7 +826,7 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     expect(call?.maxPrice).toBe(200_000);
     expect(call?.inStock).toBe(true);
     expect(call?.is5g).toBe(true);
-    expect(call?.sort).toBe<SortMode>('price_desc');
+    expect(call?.sort).toBe<Sort>('price_desc');
     expect(call?.page).toBe(2);
     expect(call?.pageSize).toBe(24);
 

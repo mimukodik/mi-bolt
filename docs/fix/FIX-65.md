@@ -1,6 +1,6 @@
 # FIX-65 — Rename SortMode to Sort, the name the specification gives it
 
-Status: PLANNED — not executed.
+Status: DONE — `SortMode` renamed to `Sort` at every site under `src/app/features/catalog/` and its one spec file; `src/mocks/` untouched.
 Severity: major
 Source: Decision **D15** item 6. `docs/spec/components.md:7` and `:375`. Decisions **D1**
 and **D10**.
