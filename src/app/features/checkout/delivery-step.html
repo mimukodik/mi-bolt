@@ -132,6 +132,15 @@
             </div>
           </dl>
 
+          @if (saveFailure() !== null) {
+            <app-status-message
+              [message]="saveFailureMessage()"
+              severity="error"
+              [persistent]="true"
+              data-testid="delivery-save-failure"
+            ></app-status-message>
+          }
+
           <div class="actions">
             <app-button
               variant="secondary"

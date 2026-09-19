@@ -1,6 +1,9 @@
 # FIX-44 — Stop DeliveryStep.onConfirm() swallowing the save failure
 
-Status: PLANNED — not executed.
+Status: DONE — DeliveryStep.onConfirm() now surfaces a failed
+saveDeliverySection() or savePaymentMethod() through the same
+StatusMessage shape FIX-25 uses on the review step, instead of
+returning silently.
 Severity: blocker
 Source: A4 (checkout flow sweep), B1 (delivery step browser walk). Recorded as unowned in `FIX-22` and `FIX-25`; this task is its owner.
 

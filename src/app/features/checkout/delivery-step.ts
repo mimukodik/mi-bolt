@@ -56,12 +56,13 @@ import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
 import * as operations from '../../api/generated/functions';
 
-import { CheckoutFacade } from './checkout.facade';
+import { CheckoutFacade, type CheckoutError } from './checkout.facade';
 
 import { Button } from '../../shared/ui/button/button';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { Address } from '../../api/generated/models/address';
 import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
@@ -87,7 +88,15 @@ type LoadState =
 
 @Component({
   selector: 'app-delivery-step',
-  imports: [AddressForm, Button, ErrorState, LoadingState, PaymentMethodSelector, PriceBlock],
+  imports: [
+    AddressForm,
+    Button,
+    ErrorState,
+    LoadingState,
+    PaymentMethodSelector,
+    PriceBlock,
+    StatusMessage,
+  ],
   templateUrl: './delivery-step.html',
   styleUrl: './delivery-step.scss',
 })
@@ -104,6 +113,10 @@ export class DeliveryStep {
 
   readonly retrying = signal<boolean>(false);
   readonly confirmPending = signal<boolean>(false);
+
+  /** Detail of the last save attempt that failed. Null until a save
+   *  fails; cleared at the start of the next attempt. */
+  readonly saveFailure = signal<CheckoutError | null>(null);
 
   /** Selected delivery option id (null until the user picks one). */
   readonly selectedOptionId = signal<'home_delivery' | 'demo_pickup' | null>(null);
@@ -234,6 +247,19 @@ export class DeliveryStep {
     return state.detail;
   });
 
+  /** Rendered when the confirm action's save fails. Takes the
+   *  wire's own detail and adds the same "nothing was lost"
+   *  sentence FIX-25 uses for the identical situation on the
+   *  review step, so the two screens do not speak differently. */
+  readonly saveFailureMessage = computed<string>(() => {
+    const failure = this.saveFailure();
+    if (failure === null) return '';
+    if (failure.detail === '') {
+      return 'A kosarad és az adataid megmaradtak. Próbáld újra.';
+    }
+    return `${failure.detail} A kosarad és az adataid megmaradtak. Próbáld újra.`;
+  });
+
   // ---------------------------------------------------------------------------
   // Loading + retry
   // ---------------------------------------------------------------------------
@@ -302,6 +328,7 @@ export class DeliveryStep {
     if (!this.canConfirm()) return;
     const selection = this.snapshotChange(false);
     this.confirmPending.set(true);
+    this.saveFailure.set(null);
     // Emit the final selection once more, WITHOUT the
     // `requiresFreshReview` flag — the parent will use this as the
     // green light to advance to /penztar/ellenorzes.
@@ -319,12 +346,12 @@ export class DeliveryStep {
       this.syncFacadeForm(selection);
       const deliveryResult = await this.checkoutFacade.saveDeliverySection();
       if (!deliveryResult.ok) {
-        this.confirmPending.set(false);
+        this.saveFailure.set(deliveryResult.error);
         return;
       }
       const paymentResult = await this.checkoutFacade.savePaymentMethod();
       if (!paymentResult.ok) {
-        this.confirmPending.set(false);
+        this.saveFailure.set(paymentResult.error);
         return;
       }
       await this.router.navigate(['/penztar/ellenorzes']);

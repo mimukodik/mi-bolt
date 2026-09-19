@@ -30,7 +30,7 @@ import {
   ɵresolveComponentResources,
 } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
@@ -40,7 +40,7 @@ import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CartDomain } from '../../../mocks/cart/cart-domain';
-import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { checkoutHandlersEntry } from '../../../mocks/checkout/checkout.handlers';
 import { QuoteDomain } from '../../../mocks/checkout/quote-domain';
 import { IdempotencyStore } from '../../../mocks/idempotency';
@@ -227,7 +227,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   const env = makeEnv();
-  server.use(...checkoutHandlersEntry(env));
+  server.use(...cartHandlersEntry(env), ...checkoutHandlersEntry(env));
   TestBed.configureTestingModule({
     imports: [DeliveryStep, AddressForm, PaymentMethodSelector],
     providers: [
@@ -249,6 +249,20 @@ afterEach(() => {
   server.resetHandlers();
   TestBed.resetTestingModule();
 });
+
+/** Ensures a cart and a checkout session exist, so CheckoutFacade's
+ *  saveSection() calls have a cartId/cartVersion to PUT against. */
+async function seedCartAndSession(
+  cartFacade: CartFacade,
+  checkoutFacade: CheckoutFacade,
+): Promise<void> {
+  await cartFacade.ensureCart();
+  await cartFacade.addItem('demo-one-5g-graphite-256', 1);
+  const cart = cartFacade.cart();
+  if (cart !== null) {
+    await checkoutFacade.loadSession(cart.id, { clearOnLoad: false });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // T21-AC01 - home-only address, pickup removes it, "no real pickup place"
@@ -654,6 +668,109 @@ describe('FIX-22 one working continue button and a readable summary', () => {
     const occurrences = (feeRow.textContent.match(/Szállítási díj/g) ?? []).length;
     expect(occurrences).toBe(1);
     expect(fixture.componentInstance.deliveryLabel()).toBe(option.label);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX-44 - DeliveryStep.onConfirm() no longer swallows a save failure.
+// ---------------------------------------------------------------------------
+describe('FIX-44 onConfirm surfaces a failed save instead of returning silently', () => {
+  it('renders the failure banner when saveDeliverySection fails, and does not navigate', async () => {
+    server.use(
+      http.put('*/api/v1/checkout/:cartId', () => {
+        return HttpResponse.json(
+          { type: 'about:blank', title: 'error', status: 500, detail: 'A mentés sikertelen.' },
+          { status: 500, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    fixture.componentInstance.onOptionSelected('demo_pickup');
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onConfirm();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const banner = getElement(root, '[data-testid="delivery-save-failure"]');
+    expect(banner.textContent).toContain('A mentés sikertelen.');
+    expect(banner.textContent).toContain('megmaradtak');
+    expect(fixture.componentInstance.confirmPending()).toBe(false);
+  });
+
+  it('renders the failure banner when only savePaymentMethod fails (the second PUT)', async () => {
+    server.use(
+      http.put('*/api/v1/checkout/:cartId', async ({ request }) => {
+        const body = (await request.clone().json()) as Record<string, unknown>;
+        // The delivery-section PUT bodies { delivery: ... }; the
+        // payment-method PUT bodies { paymentMethod: ... }. Only the
+        // second one is made to fail, so the first (delivery) call
+        // goes through the real handler chain the beforeEach set up.
+        if (body['delivery'] !== undefined) {
+          return HttpResponse.json(
+            { cartId: 'stub-cart', cartVersion: 1 },
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          );
+        }
+        return HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: 'error',
+            status: 500,
+            detail: 'A fizetési mód mentése sikertelen.',
+          },
+          { status: 500, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    fixture.componentInstance.onOptionSelected('demo_pickup');
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onConfirm();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const banner = getElement(root, '[data-testid="delivery-save-failure"]');
+    expect(banner.textContent).toContain('A fizetési mód mentése sikertelen.');
+    expect(fixture.componentInstance.confirmPending()).toBe(false);
+  });
+
+  it('renders no failure banner and navigates when both saves succeed', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    fixture.componentInstance.onOptionSelected('demo_pickup');
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onConfirm();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(queryElement(root, '[data-testid="delivery-save-failure"]')).toBeNull();
+    expect(router.url).toBe('/penztar/ellenorzes');
   });
 });
 
