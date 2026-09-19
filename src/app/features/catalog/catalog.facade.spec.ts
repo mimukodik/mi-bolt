@@ -28,6 +28,7 @@ import { CatalogFacade } from '../../../app/features/catalog/catalog.facade';
 import {
   ALLOWED_PAGE_SIZES,
   ALLOWED_STORAGE_GB,
+  CATALOG_QUERY_KEYS,
   DEFAULT_CATALOG_QUERY,
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
@@ -295,6 +296,31 @@ describe('T12-AC01 catalog-query codec', () => {
     expect(serialised.get('sort')).toBe('price_desc');
     const reparsed = parseCatalogQuery(serialised);
     expect(reparsed.sort).toBe<SortMode>('price_desc');
+  });
+
+  it('CATALOG_QUERY_KEYS covers every key serializeCatalogQuery can emit for a fully populated query (FIX-24-AC08)', () => {
+    const fullyPopulated: CatalogQuery = {
+      q: 'demo',
+      brands: ['Apple', 'MiBolt'],
+      storageGb: [128, 256, 512],
+      minPrice: 10_000,
+      maxPrice: 999_999,
+      inStock: true,
+      is5g: true,
+      featured: true,
+      sort: 'price_desc',
+      page: 3,
+      pageSize: 24,
+    };
+    const serialised = serializeCatalogQuery(fullyPopulated);
+    const emittedKeys = new Set<string>(serialised.keys());
+    // A fully populated query forces every documented key to be
+    // emitted, so this also proves CATALOG_QUERY_KEYS is not merely a
+    // superset that happens to contain zero emitted keys.
+    expect(emittedKeys.size).toBe(CATALOG_QUERY_KEYS.length);
+    for (const key of emittedKeys) {
+      expect(CATALOG_QUERY_KEYS).toContain(key);
+    }
   });
 });
 
@@ -879,6 +905,16 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     facade.loadFromParams(serializeCatalogQuery(sample));
     expect(facade.query()).toEqual(sample);
     expect(serializeCatalogQuery(facade.query())).toEqual(serializeCatalogQuery(sample));
+  });
+
+  it('serialising the documented default query omits every CATALOG_QUERY_KEYS entry, so a reset resolves to null for each one under the router merge (FIX-24-AC08)', () => {
+    const serialised = serializeCatalogQuery(DEFAULT_CATALOG_QUERY);
+    for (const key of CATALOG_QUERY_KEYS) {
+      expect(serialised.has(key)).toBe(false);
+      // `URLSearchParams.get` returns null for an absent key — the
+      // same null the router merge needs to remove it from the URL.
+      expect(serialised.get(key)).toBeNull();
+    }
   });
 
   it('setFilters with undefined values clears the matching field (mobile Apply path) (AC05)', async () => {

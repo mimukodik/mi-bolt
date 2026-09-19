@@ -1,13 +1,15 @@
 import {
   Component,
   computed,
+  DestroyRef,
   inject,
   input,
   signal,
   viewChild,
   type ElementRef,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { CartCountFacade } from './cart-count-facade';
 import { MobileDrawer } from './mobile-drawer';
@@ -52,13 +54,26 @@ export class HeaderNav {
   /** Router instance — used to send the header search to the catalog page. */
   private readonly router = inject(Router);
 
+  /** Active route — used to mirror the header search input to the URL. */
+  private readonly route = inject(ActivatedRoute);
+
+  private readonly destroyRef = inject(DestroyRef);
+
   /** Mobile drawer open state. */
   readonly drawerOpen = signal(false);
 
-  /** Current draft of the header search input. Submitted to the
-   *  catalog on Enter; cleared after a successful navigation so a
-   *  second query does not see stale text. */
+  /** Current value of the header search input. It mirrors the URL's `q`
+   *  parameter rather than holding local state, so clearing the filters
+   *  on the catalogue also clears the box (R18). */
   readonly searchDraft = signal<string>('');
+
+  constructor() {
+    // The URL owns the active query; the input mirrors it, so clearing
+    // the filters on the catalogue also clears the box (R18).
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.searchDraft.set(params.get('q') ?? '');
+    });
+  }
 
   /** Reference to the menu trigger button for focus restoration. */
   private readonly menuTriggerRef = viewChild<ElementRef<HTMLElement>>('menuTrigger');
@@ -104,6 +119,5 @@ export class HeaderNav {
     const q = this.searchDraft().trim();
     if (q.length === 0) return;
     void this.router.navigate(['/telefonok'], { queryParams: { q } });
-    this.searchDraft.set('');
   }
 }

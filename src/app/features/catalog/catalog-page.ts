@@ -13,6 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CatalogFacade } from './catalog.facade';
 import {
+  CATALOG_QUERY_KEYS,
   SORT_MODES,
   serializeCatalogQuery,
   type CatalogQuery,
@@ -331,14 +332,18 @@ function buildChips(q: CatalogQuery): readonly AppliedChip[] {
 /**
  * Convert a CatalogQuery into the bare Router `queryParams` argument.
  * Delegates to `serializeCatalogQuery` so the URL the facade emits and
- * the URL the router writes stay byte-for-byte consistent.
+ * the URL the router writes stay byte-for-byte consistent. Every
+ * canonical key is emitted explicitly — `null` for a key the codec
+ * omitted — because `queryParamsHandling: 'merge'` only overwrites the
+ * keys it is given and only removes a key set explicitly to `null`; a
+ * key left out of this object would survive a reset undisturbed.
  */
 function serializeForRouter(q: CatalogQuery): Record<string, string | string[] | null> {
   const params = serializeCatalogQuery(q);
   const out: Record<string, string | string[] | null> = {};
-  for (const key of new Set<string>(params.keys())) {
+  for (const key of CATALOG_QUERY_KEYS) {
     const all = params.getAll(key);
-    out[key] = all.length > 1 ? all : (all[0] ?? null);
+    out[key] = all.length === 0 ? null : all.length > 1 ? all : (all[0] ?? null);
   }
   return out;
 }

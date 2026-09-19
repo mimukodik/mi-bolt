@@ -204,6 +204,21 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
   return query;
 }
 
+/** Every query-string key this codec owns, in canonical order. */
+export const CATALOG_QUERY_KEYS = [
+  'q',
+  'brand',
+  'storageGb',
+  'minPrice',
+  'maxPrice',
+  'inStock',
+  'is5g',
+  'featured',
+  'sort',
+  'page',
+  'pageSize',
+] as const;
+
 /**
  * Serialise a `CatalogQuery` to a canonical `URLSearchParams`. Default
  * values (`page=1`, `pageSize=12`, absent `sort`, absent `q`) are

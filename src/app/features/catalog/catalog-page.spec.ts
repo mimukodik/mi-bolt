@@ -965,3 +965,147 @@ describe('T13-AC URL round-trip', () => {
     harness.cleanup();
   });
 });
+
+// ===========================================================================
+// FIX-24: clearing the filters clears the URL, the sort control restores
+// from the URL, the header search box mirrors the URL, and a foreign query
+// parameter survives a filter change.
+// ===========================================================================
+
+describe('FIX-24-AC01 clearing the filters clears the URL', () => {
+  it('clicking applied-filters-clear removes every canonical query key from the URL', async () => {
+    const harness = await setupHarness();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    harness.captured.length = 0;
+
+    // Drive every canonical key to a non-default value through the
+    // facade, exactly the way a real filter/sort/page interaction
+    // would, so the query mirror effect writes each of them into the
+    // real router URL.
+    harness.facade.setFilters({
+      q: 'demo',
+      brands: ['MiBolt Demo'],
+      storageGb: [256],
+      minPrice: 10_000,
+      maxPrice: 500_000,
+      inStock: true,
+      is5g: true,
+      featured: true,
+      sort: 'price_desc',
+      page: 2,
+      pageSize: 24,
+    });
+    await harness.tick();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+
+    const canonicalKeys = [
+      'q=',
+      'brand=',
+      'storageGb=',
+      'minPrice=',
+      'maxPrice=',
+      'inStock=',
+      'is5g=',
+      'featured=',
+      'sort=',
+      'page=',
+      'pageSize=',
+    ];
+    const beforeClear = harness.location.path(true);
+    for (const key of canonicalKeys) {
+      expect(beforeClear).toContain(key);
+    }
+
+    const clearAll = queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="applied-filters-clear"]',
+    );
+    clearAll.click();
+    harness.fixture.detectChanges();
+    await harness.tick();
+    harness.respond(successPage([], 16));
+    await harness.waitForStatus('success');
+
+    const afterClear = harness.location.path(true);
+    for (const key of canonicalKeys) {
+      expect(afterClear).not.toContain(key);
+    }
+    harness.cleanup();
+  });
+});
+
+describe('FIX-24-AC03 clearing the filters restores the unfiltered result count', () => {
+  it('the result count returns to the unfiltered count after applied-filters-clear is clicked', async () => {
+    const harness = await setupHarness();
+    const unfilteredItems = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
+    harness.respond(successPage(unfilteredItems, 16));
+    await harness.waitForStatus('success');
+    const root = getRootElement(harness.fixture);
+    const unfilteredLabel = root.querySelector('[data-testid="result-count"]')?.textContent ?? '';
+    expect(unfilteredLabel).toContain('16');
+
+    harness.facade.setFilters({ q: 'demo', brands: ['MiBolt Demo'] });
+    await harness.tick();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    const filteredLabel = root.querySelector('[data-testid="result-count"]')?.textContent ?? '';
+    expect(filteredLabel).not.toBe(unfilteredLabel);
+
+    const clearAll = queryButton(root, '[data-testid="applied-filters-clear"]');
+    clearAll.click();
+    harness.fixture.detectChanges();
+    await harness.tick();
+    harness.respond(successPage(unfilteredItems, 16));
+    await harness.waitForStatus('success');
+
+    const restoredLabel = root.querySelector('[data-testid="result-count"]')?.textContent ?? '';
+    expect(restoredLabel).toBe(unfilteredLabel);
+    harness.cleanup();
+  });
+});
+
+describe('FIX-24-AC05 sort control restores the value the URL asked for', () => {
+  it('a fresh load of ?sort=price_desc&pageSize=24 selects the matching sort option and page size', async () => {
+    const harness = await setupHarness({ sort: 'price_desc', pageSize: '24' });
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    const root = getRootElement(harness.fixture);
+
+    const sortSelect = querySelect(root, '[data-testid="catalog-sort"]');
+    const selected = sortSelect.selectedOptions[0];
+    expect(selected).toBeDefined();
+    expect(selected.value).toBe('price_desc');
+
+    const pageSizeSelect = querySelect(root, '[data-testid="catalog-page-size"]');
+    expect(pageSizeSelect.value).toBe('24');
+    harness.cleanup();
+  });
+});
+
+describe('FIX-24-AC07 a foreign query parameter survives a filter change', () => {
+  it('mi-scenario=happy-path stays in the URL after a filter is applied', async () => {
+    const harness = await setupHarness();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    harness.captured.length = 0;
+
+    // Seed the real router URL with a parameter the catalogue does not
+    // own, the same way a scenario query string would already be
+    // present on a deep link before the user touches a filter.
+    await harness.router.navigate([], { queryParams: { 'mi-scenario': 'happy-path' } });
+    await harness.tick();
+    expect(harness.location.path(true)).toContain('mi-scenario=happy-path');
+
+    harness.facade.setInStock(true);
+    await harness.tick();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+
+    const afterFilter = harness.location.path(true);
+    expect(afterFilter).toContain('mi-scenario=happy-path');
+    expect(afterFilter).toContain('inStock=true');
+    harness.cleanup();
+  });
+});

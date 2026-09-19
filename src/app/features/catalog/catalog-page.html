@@ -43,12 +43,13 @@
             <select
               class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
               data-testid="catalog-sort"
-              [value]="currentSort()"
               [disabled]="isRefreshing()"
               (change)="onSortChanged($event)"
             >
               @for (mode of sortModes; track mode) {
-                <option [value]="mode">{{ sortLabel(mode) }}</option>
+                <option [value]="mode" [selected]="mode === currentSort()">
+                  {{ sortLabel(mode) }}
+                </option>
               }
             </select>
           </label>
