@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { PriceBlock } from './price-block';
-import type { AsyncStatus } from './price-block';
+import type { AsyncStatus } from '../../types/async-status';
 import type { Money } from './price-block';
 
 @Component({

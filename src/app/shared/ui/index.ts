@@ -2,7 +2,7 @@
 // Public surface consumed by feature modules and the demo showcase route.
 
 export { Button } from './button/button';
-export { PriceBlock, type AsyncStatus, type Money } from './price-block/price-block';
+export { PriceBlock, type Money } from './price-block/price-block';
 export { ProductImage, type ImageLike } from './product-image/product-image';
 export { ErrorState } from './error-state/error-state';
 export { LoadingState, type LoadingVariant } from './loading-state/loading-state';

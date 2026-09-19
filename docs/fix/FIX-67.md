@@ -1,6 +1,13 @@
 # FIX-67 — Move `AsyncStatus` out of the price-block primitive into a shared home
 
-Status: PLANNED — not executed.
+Status: DONE — `AsyncStatus` moved to `src/app/shared/types/async-status.ts`; `price-block.ts`
+and its spec import from there; the barrel no longer re-exports it.
+`grep -rln "AsyncStatus" src` returns exactly the three expected paths. `FIX-56` had not
+landed (`delivery-step.ts` does not import `AsyncStatus`), so item 5's conditional repair
+was not needed. `npm run build` exits 0. `npm run test`: 2 pre-existing failures in
+`src/app/features/product/product-gallery.spec.ts` carried over from this run's FIX-49
+commit (outside this task's own files); this task's own files (`price-block.spec.ts`) are
+green.
 Severity: minor
 Source: Decision **D15**, item 11 (the FIX-54..FIX-61 unowned-defect sweep); `docs/spec/components.md:7`; `src/app/shared/ui/price-block/price-block.ts:3`; `src/app/shared/ui/index.ts:5`.
 

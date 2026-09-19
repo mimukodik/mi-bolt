@@ -1,6 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-
-export type AsyncStatus = 'idle' | 'loading' | 'success' | 'empty' | 'error';
+import type { AsyncStatus } from '../../types/async-status';
 
 /**
  * Wire-shaped Money object used by the OpenAPI-generated SDK.
