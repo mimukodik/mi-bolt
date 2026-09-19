@@ -16,7 +16,7 @@
       <app-filter-panel
         [value]="facade.query()"
         [facets]="facade.vm().facets"
-        [disabled]="isRefreshing()"
+        [disabled]="controlsDisabled()"
         (filtersChanged)="onFiltersChanged($event)"
       ></app-filter-panel>
     </aside>
@@ -43,7 +43,7 @@
             <select
               class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
               data-testid="catalog-sort"
-              [disabled]="isRefreshing()"
+              [disabled]="controlsDisabled()"
               (change)="onSortChanged($event)"
             >
               @for (mode of sortModes; track mode) {
@@ -59,7 +59,7 @@
               class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
               data-testid="catalog-page-size"
               [value]="currentPageSize()"
-              [disabled]="isRefreshing()"
+              [disabled]="controlsDisabled()"
               (change)="onPageSizeChanged($event)"
             >
               <option value="12">12 / oldal</option>
@@ -172,19 +172,24 @@
             type="button"
             class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
             data-testid="pagination-prev"
-            [disabled]="currentPage() <= 1 || isRefreshing()"
+            [disabled]="currentPage() <= 1 || controlsDisabled()"
             (click)="onPageChanged(currentPage() - 1)"
           >
             Előző
           </button>
-          <span class="page page--current font-bold cursor-default" aria-current="page"
-            >{{ currentPage() }} / {{ totalPages() }}</span
+          <span
+            class="page page--current font-bold cursor-default"
+            data-testid="pagination-current"
+            #pageIndicator
+            tabindex="-1"
+            aria-current="page"
+            ><span class="sr-only">Oldal: </span>{{ currentPage() }} / {{ totalPages() }}</span
           >
           <button
             type="button"
             class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
             data-testid="pagination-next"
-            [disabled]="currentPage() >= totalPages() || isRefreshing()"
+            [disabled]="currentPage() >= totalPages() || controlsDisabled()"
             (click)="onPageChanged(currentPage() + 1)"
           >
             Következő
@@ -199,7 +204,7 @@
     [applied]="facade.query()"
     [facets]="facade.vm().facets"
     [opened]="drawerOpened()"
-    [disabled]="isRefreshing()"
+    [disabled]="controlsDisabled()"
     [restoreEl]="filterTrigger()?.nativeElement ?? null"
     (filtersChanged)="onFiltersChanged($event)"
     (closed)="closeDrawer()"

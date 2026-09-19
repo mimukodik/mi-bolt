@@ -79,11 +79,38 @@ export class CatalogPage {
   protected readonly filterTrigger =
     viewChild<ElementRef<HTMLButtonElement>>('filterDrawerTrigger');
 
+  /** The `x / y` indicator between the two pagination buttons — the
+   *  focus target a boundary click hands focus to. See
+   *  `handOffPaginationFocus()` for why it, and not a button. */
+  private readonly pageIndicator = viewChild<ElementRef<HTMLSpanElement>>('pageIndicator');
+
   /** Local UI flags that do NOT live in the URL. */
   readonly drawerOpened = signal<boolean>(false);
 
   /** True while a request is in flight AFTER the first response arrived. */
   readonly isRefreshing = computed<boolean>(() => this.facade.vm().status === 'refreshing');
+
+  /**
+   * True while the filter, sort, page-size and pagination controls are
+   * inert — the first load only, before there is anything to filter.
+   *
+   * It is deliberately NOT `isRefreshing()`. Every control in this page
+   * puts the facade into `refreshing` the instant it is touched, so
+   * binding `disabled` to that status disables the very control the
+   * user is operating: the browser then runs the unfocusing steps on
+   * it, focus falls to `<body>`, and every keystroke after the first
+   * one is dropped on the floor. Typing `150000` into the min-price box
+   * left `1` in it.
+   *
+   * What the disabled state was there for — "a slow network can't
+   * accumulate stale draft clicks" (see `FilterPanel`) — is already
+   * guaranteed one layer down and does not need the DOM: `CatalogFacade`
+   * sets `querySignal` synchronously before each request, so a second
+   * intent composes onto the first rather than onto stale state, and
+   * its `switchMap` unsubscribes the superseded request so a slow
+   * answer can never overwrite a newer one.
+   */
+  readonly controlsDisabled = computed<boolean>(() => this.facade.vm().status === 'loading');
 
   /** Snapshot of the current sort option (defaults to 'recommended'). */
   readonly currentSort = computed<SortMode>(() => this.facade.query().sort ?? 'recommended');
@@ -188,6 +215,7 @@ export class CatalogPage {
 
   onPageChanged(page: number): void {
     if (page < 1) return;
+    this.handOffPaginationFocus(page);
     this.facade.setPage(page);
   }
 
@@ -251,6 +279,58 @@ export class CatalogPage {
       case 'name_asc':
         return 'Név szerint';
     }
+  }
+
+  /**
+   * Hand focus to the page indicator when the requested page is a
+   * boundary — that is, when the pagination button the click was made
+   * on is about to disable itself.
+   *
+   * This is the FIX-25 symptom with a different cause, and the cause
+   * is why the cure is different too. Those controls were disabled by
+   * an in-flight request, which was simply wrong and was deleted.
+   * A pagination button at a boundary is disabled because page 1 has
+   * no previous page and the last page has no next one, which is
+   * correct, is the `disabled` the design skill's component table
+   * asks for ("Native disabled behavior"), and stays. What was wrong
+   * is only where focus went afterwards: a browser answers a focused
+   * element that stops being a focusable area by handing focus back
+   * to the viewport, so a keyboard user who paginated to the last
+   * page was dropped on `<body>` and had to tab from the top of the
+   * document again (WCAG 2.4.3 Focus Order, 2.4.7 Focus Visible).
+   * The same skill requires both halves — "Native disabled behavior"
+   * and "active focus must not be lost" — and only the second was
+   * being broken.
+   *
+   * The move runs here, before `setPage`, rather than after the
+   * re-render: focus leaves the button before Angular writes
+   * `disabled` to it, so the browser never runs its unfocusing steps
+   * at all and focus is not lost for even one frame.
+   *
+   * The target is the `x / y` indicator rather than the sibling
+   * button for two reasons. It is the one part of the widget that no
+   * page can disable — in the "last page, pressing Előző" direction
+   * the sibling is still disabled at the instant of the click, and
+   * `focus()` on a disabled button does nothing — and activating it
+   * cannot undo the navigation the user just made, which repeatedly
+   * pressing Enter on a sibling button would. It reads out the state
+   * the click produced ("Oldal: 2 / 2", `aria-current="page"`), and
+   * it already carries the `.page:focus-visible` ring, so the focus
+   * stays visible without a new style.
+   *
+   * Nothing is taken from the user here. `onPageChanged` is reachable
+   * only from those two buttons, so the focus this moves is the focus
+   * the click itself put on the button that is about to die — the
+   * unclaimed state `RouteFocusService.focusIsUnclaimed()` describes,
+   * one moment before the browser produces it. A page change that
+   * reaches no boundary returns without touching focus, which is what
+   * keeps this off the WCAG 3.2.2 (On Input) side of the line.
+   */
+  private handOffPaginationFocus(target: number): void {
+    // The template disables `pagination-prev` at page 1 and
+    // `pagination-next` at the last page; between them both stay live.
+    if (target > 1 && target < this.totalPages()) return;
+    this.pageIndicator()?.nativeElement.focus();
   }
 
   /**

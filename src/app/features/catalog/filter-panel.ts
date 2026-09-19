@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, input, linkedSignal, output } from '@angular/core';
 
 import type { CatalogQuery, SortMode } from './catalog-query';
 import { ALLOWED_STORAGE_GB, SORT_MODES } from './catalog-query';
@@ -6,6 +6,50 @@ import type { FacetValue } from '../../api/generated/models/facet-value';
 
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
+
+/**
+ * What a draft mirrors from the applied query: the one field it shows,
+ * plus whether the applied query still carries any filter at all.
+ */
+interface DraftSource {
+  /** The applied value of the mirrored field, rendered as input text. */
+  readonly field: string;
+  /** `hasActiveFilters()` — false once every filter has been cleared. */
+  readonly filtered: boolean;
+}
+
+/**
+ * `linkedSignal` computation shared by every draft below. A draft is an
+ * in-progress copy of one applied field, so the local edit has to win
+ * over an unrelated change to `value()`: Angular's own equality check
+ * only compares the *stored* draft value against the freshly computed
+ * one, so a plain `source` function would reset the draft on ANY change
+ * to `value()` and throw away a half-typed price the moment a brand is
+ * toggled.
+ *
+ * The applied value wins back in exactly two cases:
+ *   - the mirrored field itself changed — the edit was applied, or the
+ *     page replaced it;
+ *   - the applied query went from filtered to unfiltered, i.e. a clear.
+ *     This is the arm the field comparison cannot reach: a draft the
+ *     `invalid` state blocked from committing never entered `value()`,
+ *     so a clear looks like "no change" to it and the stale text would
+ *     stay on screen with nothing filtered behind it (T27 filter reset).
+ *
+ * The clear test is deliberately one-way. The other direction —
+ * unfiltered to filtered — is an unrelated control switching the first
+ * filter on while this draft is still uncommitted (a negative price,
+ * say), and that must leave the local edit alone.
+ */
+function keepDraftUnlessAppliedChanged(
+  source: DraftSource,
+  previous: { readonly source: DraftSource; readonly value: string } | undefined,
+): string {
+  if (previous === undefined) return source.field;
+  if (previous.source.field !== source.field) return source.field;
+  if (previous.source.filtered && !source.filtered) return source.field;
+  return previous.value;
+}
 
 /**
  * T13 — desktop filter sidebar (FilterPanel).
@@ -22,12 +66,27 @@ import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-
  *   - default       — every control shows the value held by the parent.
  *   - selected      — a brand / storage bucket / stock / 5G toggle is on.
  *   - focus         — every control carries a 2 px focus-visible ring.
- *   - disabled      — while the catalogue vm is refreshing or errored
- *                     (the parent disables the panel so a slow network
- *                     can't accumulate stale draft clicks).
+ *   - disabled      — while the catalogue is doing its FIRST load, and
+ *                     only then: there are no facets to pick from yet
+ *                     and no applied query to compose an intent onto.
+ *                     It is deliberately not bound to `refreshing`.
+ *                     Every control here puts the vm into `refreshing`
+ *                     the instant it is touched, so disabling on that
+ *                     status disables the control under the user's
+ *                     hands: the browser blurs it, focus falls to
+ *                     `<body>` and the rest of what they type is lost.
+ *                     The "a slow network can't accumulate stale draft
+ *                     clicks" guarantee that binding was reaching for
+ *                     lives in `CatalogFacade` instead — `querySignal`
+ *                     is written synchronously before each request and
+ *                     `switchMap` drops the superseded one. See
+ *                     `CatalogPage.controlsDisabled`.
  *   - invalid       — the price range fails the min <= max validation;
- *                     the apply intent is suppressed until the user
- *                     fixes it.
+ *                     the *price* apply intent is suppressed until the
+ *                     user fixes it. Every other control keeps applying,
+ *                     because `emit` composes the next query from the
+ *                     APPLIED value plus its own field and so can never
+ *                     propagate the rejected range.
  */
 @Component({
   selector: 'app-filter-panel',
@@ -51,35 +110,38 @@ export class FilterPanel {
   /** Emits the next complete CatalogQuery when the user changes a control. */
   readonly filtersChanged = output<CatalogQuery>();
 
-  // Local drafts for the controls that need an "in progress" copy.
-  private readonly minSignal = signal<string>('');
-  private readonly maxSignal = signal<string>('');
-  private readonly searchSignal = signal<string>('');
-
   /** Storage buckets exposed by the documented storage enum. */
   readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => ALLOWED_STORAGE_GB);
 
   /** Brand facets, falling back to an empty list when none are present. */
   readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
 
-  readonly minDraft = computed<string>(() => {
-    const local = this.minSignal();
-    if (local !== '') return local;
-    const min = this.value().minPrice;
-    return min === undefined ? '' : String(min);
+  // Local drafts for the controls that need an "in progress" copy. Each
+  // is a linkedSignal sourced from its applied field plus the "any
+  // filter left" flag: typing wins until the applied state changes in a
+  // way the draft must follow — the mirrored field itself changing, or
+  // every filter being cleared — at which point the draft re-derives
+  // instead of holding stale text (see keepDraftUnlessAppliedChanged,
+  // the class doc "invalid" note and T27 filter reset).
+  readonly minDraft = linkedSignal<DraftSource, string>({
+    source: () => {
+      const min = this.value().minPrice;
+      return { field: min === undefined ? '' : String(min), filtered: this.hasActiveFilters() };
+    },
+    computation: keepDraftUnlessAppliedChanged,
   });
 
-  readonly maxDraft = computed<string>(() => {
-    const local = this.maxSignal();
-    if (local !== '') return local;
-    const max = this.value().maxPrice;
-    return max === undefined ? '' : String(max);
+  readonly maxDraft = linkedSignal<DraftSource, string>({
+    source: () => {
+      const max = this.value().maxPrice;
+      return { field: max === undefined ? '' : String(max), filtered: this.hasActiveFilters() };
+    },
+    computation: keepDraftUnlessAppliedChanged,
   });
 
-  readonly searchDraft = computed<string>(() => {
-    const local = this.searchSignal();
-    if (local !== '') return local;
-    return this.value().q ?? '';
+  readonly searchDraft = linkedSignal<DraftSource, string>({
+    source: () => ({ field: this.value().q ?? '', filtered: this.hasActiveFilters() }),
+    computation: keepDraftUnlessAppliedChanged,
   });
 
   readonly hasActiveFilters = computed<boolean>(() => {
@@ -91,6 +153,7 @@ export class FilterPanel {
     if (q.maxPrice !== undefined) return true;
     if (q.inStock !== undefined) return true;
     if (q.is5g !== undefined) return true;
+    if (q.featured === true) return true;
     return false;
   });
 
@@ -111,14 +174,17 @@ export class FilterPanel {
 
   onSearchInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.searchSignal.set(value);
-    if (this.priceError() !== null) return;
+    this.searchDraft.set(value);
+    // Deliberately NOT gated on priceError(): `emit` composes the next
+    // query from the APPLIED value, so a rejected price range cannot
+    // ride along, and a term the user can read in the box has to reach
+    // the URL and the result count (R18).
     this.emit({ q: value.trim().length > 0 ? value.trim() : undefined });
   }
 
   onMinInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.minSignal.set(value);
+    this.minDraft.set(value);
     if (this.priceError() !== null) return;
     const parsed = this.parsePrice(value);
     this.emit({ minPrice: parsed ?? undefined });
@@ -126,7 +192,7 @@ export class FilterPanel {
 
   onMaxInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.maxSignal.set(value);
+    this.maxDraft.set(value);
     if (this.priceError() !== null) return;
     const parsed = this.parsePrice(value);
     this.emit({ maxPrice: parsed ?? undefined });
@@ -157,9 +223,11 @@ export class FilterPanel {
   }
 
   resetAll(): void {
-    this.minSignal.set('');
-    this.maxSignal.set('');
-    this.searchSignal.set('');
+    // The drafts are linkedSignals keyed on their applied field plus the
+    // "any filter left" flag. This emit clears every filter, so once the
+    // parent round-trips it each draft re-derives to '' on its own —
+    // a draft that was never applied included, which is why no manual
+    // clear is needed here (see keepDraftUnlessAppliedChanged).
     this.emit({
       q: undefined,
       brands: undefined,
@@ -168,6 +236,7 @@ export class FilterPanel {
       maxPrice: undefined,
       inStock: undefined,
       is5g: undefined,
+      featured: undefined,
     });
   }
 

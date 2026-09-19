@@ -1,0 +1,421 @@
+/**
+ * T27 fix — FilterPanel draft/reset regression suite.
+ *
+ * Root cause: the search / min-price / max-price boxes used to carry a
+ * private `signal` + `computed` "draft" pair that fell back to the
+ * applied `value()` only while the local signal was empty. A page-side
+ * clear (the "Összes szűrő törlése" link or the empty state's "Szűrők
+ * törlése" button) updates `value()` directly without ever touching that
+ * private signal, so the stale typed text stayed on screen while the
+ * applied query, the URL and the result count had already reset — see
+ * `.visual-screenshots/2026-09-19-showcase-catalog/07-catalog-after-reset-1440.png`.
+ *
+ * The fix replaces each draft with a `linkedSignal` sourced from the
+ * matching field of `value()` *plus* whether the applied query still
+ * carries any filter at all, so the applied value wins back on a change
+ * to the mirrored field and on a clear, while a `value()` change that
+ * leaves the mirrored field untouched (e.g. an unrelated brand toggle)
+ * does not throw away an uncommitted edit. The second half of that
+ * source is what covers a draft the `invalid` price state blocked from
+ * ever committing: its own field never changed, so a clear is invisible
+ * to the field comparison alone.
+ *
+ * The same round also removed the `priceError()` guard from
+ * `onSearchInput`, which dropped a typed search term whenever the price
+ * range happened to be invalid — an unrelated field silently refusing
+ * to filter.
+ *
+ * The suite follows the pattern of `product-card.spec.ts`: a thin host
+ * component drives the real `FilterPanel` through its public inputs and
+ * output, and every assertion reads the rendered DOM rather than the
+ * component's private state.
+ */
+
+import { TestBed } from '@angular/core/testing';
+import { Component, signal } from '@angular/core';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+
+import { DEFAULT_CATALOG_QUERY, type CatalogQuery } from './catalog-query';
+import { FilterPanel } from './filter-panel';
+
+beforeAll(async () => {
+  await TestBed.compileComponents();
+});
+
+afterEach(() => {
+  TestBed.resetTestingModule();
+});
+
+function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+  return raw;
+}
+
+function queryInput(parent: Element, selector: string): HTMLInputElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLInputElement)) throw new Error(`Expected HTMLInputElement: ${selector}`);
+  return el;
+}
+
+function queryElement(parent: Element, selector: string): HTMLElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
+  return el;
+}
+
+function queryButton(parent: Element, selector: string): HTMLButtonElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLButtonElement))
+    throw new Error(`Expected HTMLButtonElement: ${selector}`);
+  return el;
+}
+
+function fireInput(el: HTMLInputElement, value: string): void {
+  el.value = value;
+  el.dispatchEvent(new Event('input'));
+}
+
+// ---------------------------------------------------------------------------
+// Host: wires FilterPanel to a query signal the way CatalogPage does
+// (`[value]="facade.query()"`, `(filtersChanged)="onFiltersChanged($event)"`),
+// so a committed edit really does round-trip back into `value()`.
+// ---------------------------------------------------------------------------
+
+@Component({
+  imports: [FilterPanel],
+  template: `<app-filter-panel [value]="query()" (filtersChanged)="onFiltersChanged($event)" />`,
+})
+class HostComponent {
+  readonly query = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
+
+  onFiltersChanged(next: CatalogQuery): void {
+    this.query.set(next);
+  }
+}
+
+function setup(): {
+  fixture: ReturnType<typeof TestBed.createComponent<HostComponent>>;
+  host: HostComponent;
+} {
+  TestBed.configureTestingModule({ imports: [HostComponent] });
+  const fixture = TestBed.createComponent(HostComponent);
+  fixture.detectChanges();
+  return { fixture, host: fixture.componentInstance };
+}
+
+describe('T27 FilterPanel — draft/reset regression', () => {
+  it('empties the rendered search box when a page-side clear removes q from value()', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const search = queryInput(root, '[data-testid="filter-search-input"]');
+
+    fireInput(search, 'zzzno');
+    fixture.detectChanges();
+    expect(search.value).toBe('zzzno');
+
+    // A page-side "Összes szűrő törlése" / "Szűrők törlése" click does not
+    // go through FilterPanel.resetAll() — it updates the applied value()
+    // directly, exactly like the reproduction in the bug report.
+    host.query.set(DEFAULT_CATALOG_QUERY);
+    fixture.detectChanges();
+
+    expect(search.value).toBe('');
+  });
+
+  it('empties the rendered min-price box when a page-side clear removes minPrice from value()', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+
+    fireInput(min, '50000');
+    fixture.detectChanges();
+    expect(min.value).toBe('50000');
+
+    host.query.set(DEFAULT_CATALOG_QUERY);
+    fixture.detectChanges();
+
+    expect(min.value).toBe('');
+  });
+
+  it('empties the rendered max-price box when a page-side clear removes maxPrice from value()', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+
+    fireInput(max, '900000');
+    fixture.detectChanges();
+    expect(max.value).toBe('900000');
+
+    host.query.set(DEFAULT_CATALOG_QUERY);
+    fixture.detectChanges();
+
+    expect(max.value).toBe('');
+  });
+
+  it('keeps an uncommitted draft when value() changes in a field the draft does not mirror', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const inStockToggle = queryElement(root, '[data-testid="filter-inStock"]');
+
+    // Commit a valid max price.
+    fireInput(max, '10000');
+    fixture.detectChanges();
+
+    // Type a min price that makes the range invalid: min > max suppresses
+    // the emit, so this edit never reaches value().minPrice.
+    fireInput(min, '20000');
+    fixture.detectChanges();
+    expect(min.value).toBe('20000');
+    expect(queryElement(root, '[data-testid="filter-price-error"]')).toBeTruthy();
+
+    // An unrelated control (in-stock toggle) changes value(), but never
+    // touches minPrice. The uncommitted "20000" must survive.
+    inStockToggle.click();
+    fixture.detectChanges();
+
+    expect(min.value).toBe('20000');
+  });
+
+  it('lets the search box be cleared by hand instead of falling back to the applied term', () => {
+    const { fixture, host } = setup();
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, q: 'hello' });
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const search = queryInput(root, '[data-testid="filter-search-input"]');
+    expect(search.value).toBe('hello');
+
+    // Select-all + delete: the input fires with an empty string.
+    fireInput(search, '');
+    fixture.detectChanges();
+
+    expect(search.value).toBe('');
+  });
+
+  it('still clears the search box through the panel\'s own "Szűrők törlése" button', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const search = queryInput(root, '[data-testid="filter-search-input"]');
+
+    fireInput(search, 'zzzno');
+    fixture.detectChanges();
+    expect(search.value).toBe('zzzno');
+
+    // resetAll() no longer clears a private draft signal directly; it
+    // relies solely on the round-tripped value() update below. The
+    // testid lives on the <app-button> host, so click its inner
+    // native <button> to fire a real click event.
+    queryButton(root, '[data-testid="filter-reset"] button').click();
+    fixture.detectChanges();
+
+    expect(search.value).toBe('');
+  });
+
+  it('applies a search term typed while the price range is invalid, without leaking the rejected price', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const search = queryInput(root, '[data-testid="filter-search-input"]');
+
+    // Commit a valid max, then type a min that inverts the range.
+    fireInput(max, '1000');
+    fixture.detectChanges();
+    fireInput(min, '20000');
+    fixture.detectChanges();
+    expect(queryElement(root, '[data-testid="filter-price-error"]')).toBeTruthy();
+
+    fireInput(search, 'Sample');
+    fixture.detectChanges();
+
+    // The search term reaches the applied query; `emit` composes the
+    // next query from the APPLIED value, so the rejected min stays out
+    // and the committed max is untouched.
+    expect(host.query().q).toBe('Sample');
+    expect(host.query().minPrice).toBeUndefined();
+    expect(host.query().maxPrice).toBe(1000);
+    // The price range is still flagged as invalid.
+    expect(queryElement(root, '[data-testid="filter-price-error"]')).toBeTruthy();
+  });
+
+  it('empties a price box whose edit never reached value() when a page-side clear empties the query', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+
+    fireInput(max, '1000');
+    fixture.detectChanges();
+    fireInput(min, '20000');
+    fixture.detectChanges();
+    expect(min.value).toBe('20000');
+    // The inverted range suppressed the emit: minPrice never entered
+    // value(), so a clear leaves this draft's own source unchanged.
+    expect(host.query().minPrice).toBeUndefined();
+
+    host.query.set(DEFAULT_CATALOG_QUERY);
+    fixture.detectChanges();
+
+    expect(min.value).toBe('');
+    expect(max.value).toBe('');
+    expect(root.querySelector('[data-testid="filter-price-error"]')).toBeNull();
+  });
+
+  it('empties every box after the reported repro: invalid range, toggle, search, page-side clear', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const search = queryInput(root, '[data-testid="filter-search-input"]');
+    const inStockToggle = queryElement(root, '[data-testid="filter-inStock"]');
+
+    fireInput(max, '1000');
+    fixture.detectChanges();
+    fireInput(min, '20000');
+    fixture.detectChanges();
+    inStockToggle.click();
+    fixture.detectChanges();
+    fireInput(search, 'Sample');
+    fixture.detectChanges();
+
+    expect(max.value).toBe('1000');
+    expect(min.value).toBe('20000');
+    expect(search.value).toBe('Sample');
+
+    // "Összes szűrő törlése" on the page resets the applied query.
+    host.query.set(DEFAULT_CATALOG_QUERY);
+    fixture.detectChanges();
+
+    expect(search.value).toBe('');
+    expect(min.value).toBe('');
+    expect(max.value).toBe('');
+    expect(root.querySelector('[data-testid="filter-price-error"]')).toBeNull();
+  });
+
+  it('keeps an uncommitted draft when an unrelated control switches the first filter on', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const inStockToggle = queryElement(root, '[data-testid="filter-inStock"]');
+
+    // A negative min is invalid on its own, so nothing is applied yet:
+    // the query still carries no filter at all.
+    fireInput(min, '-5');
+    fixture.detectChanges();
+    expect(queryElement(root, '[data-testid="filter-price-error"]').textContent).toContain(
+      'A minimum ár nem lehet negatív.',
+    );
+    expect(host.query().minPrice).toBeUndefined();
+
+    // Unfiltered -> filtered is not a clear; the local edit survives.
+    inStockToggle.click();
+    fixture.detectChanges();
+
+    expect(min.value).toBe('-5');
+  });
+
+  it('clears a never-applied price draft through the panel\'s own "Szűrők törlése" button', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+
+    fireInput(max, '1000');
+    fixture.detectChanges();
+    fireInput(min, '20000');
+    fixture.detectChanges();
+    expect(min.value).toBe('20000');
+
+    queryButton(root, '[data-testid="filter-reset"] button').click();
+    fixture.detectChanges();
+
+    expect(min.value).toBe('');
+    expect(max.value).toBe('');
+  });
+
+  it('renders the Hungarian message for an inverted min/max range', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+
+    fireInput(max, '1000');
+    fixture.detectChanges();
+    fireInput(min, '2000');
+    fixture.detectChanges();
+
+    const error = queryElement(root, '[data-testid="filter-price-error"]');
+    expect(error.textContent).toContain('A minimum nem lehet nagyobb a maximum árnál.');
+  });
+});
+
+describe('FilterPanel — hasActiveFilters() and resetAll() cover featured', () => {
+  it('enables the reset button when featured is the only applied field', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const reset = queryButton(root, '[data-testid="filter-reset"] button');
+
+    // Default query: nothing applied, reset stays disabled.
+    expect(reset.disabled).toBe(true);
+
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, featured: true });
+    fixture.detectChanges();
+
+    expect(reset.disabled).toBe(false);
+  });
+
+  it('does not treat featured: false as an active filter', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const reset = queryButton(root, '[data-testid="filter-reset"] button');
+
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, featured: false });
+    fixture.detectChanges();
+
+    expect(reset.disabled).toBe(true);
+  });
+
+  it("clears featured through the panel's own reset button", () => {
+    const { fixture, host } = setup();
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, featured: true });
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+
+    queryButton(root, '[data-testid="filter-reset"] button').click();
+    fixture.detectChanges();
+
+    expect(host.query().featured).toBeUndefined();
+  });
+
+  it('clears an uncommitted invalid min-price draft through a page-side clear when featured is the only applied field', () => {
+    // Symptom 2 reproduction: with only `featured` applied, `filtered`
+    // (hasActiveFilters()) was already true->false-insensitive because it
+    // never counted `featured` at all, so a page-side clear (which never
+    // touches the applied `featured` filter directly, but replaces the
+    // whole query) failed to flip `filtered` and left the invalid draft
+    // on screen. With `featured` now counted, `filtered` starts true and
+    // a page-side clear correctly flips it to false.
+    const { fixture, host } = setup();
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, featured: true });
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+
+    fireInput(min, '-5');
+    fixture.detectChanges();
+    expect(queryElement(root, '[data-testid="filter-price-error"]').textContent).toContain(
+      'A minimum ár nem lehet negatív.',
+    );
+    expect(min.value).toBe('-5');
+
+    // Page-side clear: "Összes szűrő törlése" replaces the whole applied
+    // query, exactly like CatalogPage.onClearAll() -> facade.reset().
+    host.query.set(DEFAULT_CATALOG_QUERY);
+    fixture.detectChanges();
+
+    expect(min.value).toBe('');
+    expect(root.querySelector('[data-testid="filter-price-error"]')).toBeNull();
+  });
+});

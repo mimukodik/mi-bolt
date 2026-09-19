@@ -81,10 +81,22 @@ function queryButton(parent: Element, selector: string): HTMLButtonElement {
   return el;
 }
 
+function queryInput(parent: Element, selector: string): HTMLInputElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLInputElement)) throw new Error(`Expected HTMLInputElement: ${selector}`);
+  return el;
+}
+
 function querySelect(parent: Element, selector: string): HTMLSelectElement {
   const el = parent.querySelector(selector);
   if (!(el instanceof HTMLSelectElement))
     throw new Error(`Expected HTMLSelectElement: ${selector}`);
+  return el;
+}
+
+function queryElement(parent: Element, selector: string): HTMLElement {
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
   return el;
 }
 
@@ -1102,6 +1114,285 @@ describe('FIX-24-AC07 a foreign query parameter survives a filter change', () =>
     const afterFilter = harness.location.path(true);
     expect(afterFilter).toContain('mi-scenario=happy-path');
     expect(afterFilter).toContain('inStock=true');
+    harness.cleanup();
+  });
+});
+
+describe('FIX-25 a filter keystroke does not disable the box being typed into', () => {
+  /**
+   * The defect this suite pins, measured in Chrome at 1440x900 on
+   * `/telefonok`: clicking `filter-min-price` and pressing `1`, `5`,
+   * `0`, `0`, `0`, `0` left `1` in the box and `document.activeElement`
+   * on `BODY` from the first keystroke on. Every later keystroke went
+   * nowhere.
+   *
+   * The cause was `[disabled]="isRefreshing()"`: `CatalogFacade` sets
+   * `inFlightSignal` synchronously inside the `input` handler, so the
+   * vm reached `refreshing` and the panel disabled the control under
+   * the user's hands within the same change-detection pass. A browser
+   * answers that with the HTML focus fixup rule — a focused element
+   * that stops being a focusable area hands focus back to the viewport,
+   * i.e. `<body>` — and a disabled input takes no keystrokes.
+   *
+   * jsdom does NOT implement that rule (jsdom#3029, jsdom#2931):
+   * `document.activeElement` keeps pointing at the disabled input, so
+   * the focus loss itself is not observable here. What is observable,
+   * and what these tests assert, is the input that caused it: whether
+   * the control is disabled while the request it triggered is in
+   * flight. The focus assertions below are kept as the regression
+   * they are in a real browser, and are true in jsdom for the weaker
+   * reason that nothing blurred anything.
+   */
+  it('leaves the min-price box enabled and focused while its own request is in flight', async () => {
+    const harness = await setupHarness();
+    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    await harness.waitForStatus('success');
+
+    const min = queryInput(getRootElement(harness.fixture), '[data-testid="filter-min-price"]');
+    expect(min.disabled).toBe(false);
+    min.focus();
+
+    min.value = '1';
+    min.dispatchEvent(new Event('input', { bubbles: true }));
+    harness.fixture.detectChanges();
+
+    // The window the defect lived in really is open: the keystroke has
+    // put a request in flight and the vm is in `refreshing`.
+    expect(harness.facade.vm().status).toBe('refreshing');
+    expect(min.disabled).toBe(false);
+    expect(document.activeElement).toBe(min);
+
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    expect(min.disabled).toBe(false);
+    harness.cleanup();
+  });
+
+  it('keeps every character of 150000 typed one at a time', async () => {
+    const harness = await setupHarness();
+    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    await harness.waitForStatus('success');
+
+    const root = getRootElement(harness.fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    min.focus();
+
+    const characters = ['1', '5', '0', '0', '0', '0'];
+    for (const character of characters) {
+      const active = document.activeElement;
+      // A blurred box is the defect, so the loop asserts the focus is
+      // still where the user put it before each further keystroke.
+      expect(active).toBe(min);
+      min.value = min.value + character;
+      min.dispatchEvent(new Event('input', { bubbles: true }));
+      harness.fixture.detectChanges();
+      // In a browser this is the assertion that carries the test: a box
+      // disabled here is blurred, and the character after this one is
+      // dropped. jsdom cannot show the blur, so the disabled flag is
+      // what stands in for it.
+      expect(min.disabled).toBe(false);
+      harness.respond(successPage([], 0));
+      await harness.waitForStatus('empty');
+    }
+
+    const after = queryInput(getRootElement(harness.fixture), '[data-testid="filter-min-price"]');
+    expect(after.value).toBe('150000');
+    expect(harness.location.path(true)).toContain('minPrice=150000');
+    harness.cleanup();
+  });
+
+  it('still disables the panel and the toolbar during the first load', async () => {
+    // The disabled state is not deleted, only moved off `refreshing`:
+    // it belongs to the first load, where there are no facets to pick
+    // from, no applied query to compose an intent onto and nothing
+    // focused to blur.
+    const harness = await setupHarness();
+    expect(harness.facade.vm().status).toBe('loading');
+    const root = getRootElement(harness.fixture);
+    expect(queryInput(root, '[data-testid="filter-min-price"]').disabled).toBe(true);
+    expect(queryInput(root, '[data-testid="filter-search-input"]').disabled).toBe(true);
+    expect(queryButton(root, '[data-testid="filter-inStock"]').disabled).toBe(true);
+    expect(querySelect(root, '[data-testid="catalog-sort"]').disabled).toBe(true);
+
+    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    await harness.waitForStatus('success');
+    const settled = getRootElement(harness.fixture);
+    expect(queryInput(settled, '[data-testid="filter-min-price"]').disabled).toBe(false);
+    expect(querySelect(settled, '[data-testid="catalog-sort"]').disabled).toBe(false);
+    harness.cleanup();
+  });
+
+  it('leaves the brand toggle enabled while the click it caused is in flight', async () => {
+    // Same defect, same binding, a button rather than a text box: a
+    // disabled button the user has just clicked is blurred by the same
+    // focus fixup rule, which stranded keyboard users mid-panel.
+    const harness = await setupHarness();
+    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    await harness.waitForStatus('success');
+
+    const brand = queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="filter-brand-MiBolt Demo"]',
+    );
+    brand.focus();
+    brand.click();
+    harness.fixture.detectChanges();
+    expect(harness.facade.vm().status).toBe('refreshing');
+    expect(brand.disabled).toBe(false);
+    expect(document.activeElement).toBe(brand);
+
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    harness.cleanup();
+  });
+});
+
+// ===========================================================================
+// Pagination focus: a click that disables the button it was made on
+// ===========================================================================
+
+describe('pagination focus — reaching a boundary never drops focus on <body>', () => {
+  /**
+   * The defect, measured in Chrome at 1440x900 on `/telefonok` sorted
+   * by price ascending (16 results over two pages): clicking
+   * `pagination-next` onto page 2/2 left `document.activeElement` on
+   * `BODY`, and clicking `pagination-prev` back onto page 1/1 did the
+   * same. A keyboard user who had just paginated was left with no
+   * focus ring anywhere and had to tab from the top of the document
+   * again — WCAG 2.4.3 (Focus Order) and 2.4.7 (Focus Visible).
+   *
+   * It is NOT the FIX-25 cause. These buttons are not disabled by an
+   * in-flight request: `controlsDisabled()` is false throughout, and
+   * FIX-25 already took `isRefreshing()` off this binding. They are
+   * disabled by its other half — `currentPage() >= totalPages()` —
+   * which is correct, because the last page really has no next page.
+   * So the native `disabled` the design skill's component table asks
+   * for stays, and what changes is where focus goes: the click hands
+   * it to the `x / y` page indicator before the button can be
+   * disabled under it.
+   *
+   * jsdom does not implement the HTML focus fixup rule (jsdom#3029,
+   * jsdom#2931): a disabled element keeps `document.activeElement`
+   * pointing at it, so the `<body>` half of the defect cannot be
+   * reproduced here. The half that can be, and that these tests
+   * assert, is identical in both environments — focus ends on the
+   * page indicator. Before the fix it ends on the disabled button in
+   * jsdom and on `<body>` in Chrome, and both fail that assertion.
+   */
+
+  it('clicking Következő onto the last page moves focus to the page indicator', async () => {
+    const harness = await setupHarness();
+    harness.respond(
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+    );
+    await harness.waitForStatus('success');
+
+    const root = getRootElement(harness.fixture);
+    const next = queryButton(root, '[data-testid="pagination-next"]');
+    expect(next.disabled).toBe(false);
+    next.focus();
+    expect(document.activeElement).toBe(next);
+
+    next.click();
+    harness.fixture.detectChanges();
+
+    // The window the defect lives in is genuinely open: this click took
+    // the button it was made on to its own boundary.
+    expect(harness.facade.query().page).toBe(2);
+    expect(next.disabled).toBe(true);
+
+    const indicator = queryElement(root, '[data-testid="pagination-current"]');
+    expect(document.activeElement).toBe(indicator);
+    expect(document.activeElement).not.toBe(document.body);
+
+    await harness.tick();
+    harness.respond(
+      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+    );
+    await harness.waitForStatus('success');
+    harness.cleanup();
+  });
+
+  it('clicking Előző onto the first page moves focus to the page indicator', async () => {
+    const harness = await setupHarness({ page: '2' });
+    harness.respond(
+      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+    );
+    await harness.waitForStatus('success');
+
+    const root = getRootElement(harness.fixture);
+    const prev = queryButton(root, '[data-testid="pagination-prev"]');
+    expect(prev.disabled).toBe(false);
+    prev.focus();
+    expect(document.activeElement).toBe(prev);
+
+    prev.click();
+    harness.fixture.detectChanges();
+
+    expect(harness.facade.query().page).toBe(1);
+    expect(prev.disabled).toBe(true);
+
+    const indicator = queryElement(root, '[data-testid="pagination-current"]');
+    expect(document.activeElement).toBe(indicator);
+    expect(document.activeElement).not.toBe(document.body);
+
+    await harness.tick();
+    harness.respond(
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+    );
+    await harness.waitForStatus('success');
+    harness.cleanup();
+  });
+
+  it('a page change that disables neither button leaves focus on the button pressed', async () => {
+    // 30 results over three 12-item pages: page 1 -> page 2 reaches no
+    // boundary, so the hand-off must not fire. Moving focus off a
+    // control that is still live is the WCAG 3.2.2 (On Input) steal
+    // `RouteFocusService` refuses to make.
+    const harness = await setupHarness();
+    harness.respond(
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 30),
+    );
+    await harness.waitForStatus('success');
+
+    const root = getRootElement(harness.fixture);
+    const next = queryButton(root, '[data-testid="pagination-next"]');
+    next.focus();
+
+    next.click();
+    harness.fixture.detectChanges();
+
+    expect(harness.facade.query().page).toBe(2);
+    expect(next.disabled).toBe(false);
+    expect(document.activeElement).toBe(next);
+
+    await harness.tick();
+    harness.respond(
+      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 30, 2),
+    );
+    await harness.waitForStatus('success');
+    harness.cleanup();
+  });
+
+  it('a page change made with no pagination on screen moves no focus', async () => {
+    // Five results under a page size of 12: `shouldShowPagination()` is
+    // false, so there is no indicator to hand focus to, and whatever
+    // the user is in keeps it.
+    const harness = await setupHarness();
+    harness.respond(
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 5),
+    );
+    await harness.waitForStatus('success');
+
+    const root = getRootElement(harness.fixture);
+    expect(root.querySelector('[data-testid="catalog-pagination"]')).toBeNull();
+    const search = queryInput(root, '[data-testid="filter-search-input"]');
+    search.focus();
+
+    harness.fixture.componentInstance.onPageChanged(1);
+    harness.fixture.detectChanges();
+
+    expect(document.activeElement).toBe(search);
     harness.cleanup();
   });
 });
