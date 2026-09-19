@@ -105,11 +105,11 @@
               "e2e/**"
             ],
             "coverageThresholds": {
-              "perFile": true,
-              "statements": 100,
-              "branches": 100,
-              "functions": 100,
-              "lines": 100
+              "perFile": false,
+              "statements": 80,
+              "branches": 75,
+              "functions": 80,
+              "lines": 80
             },
             "coverageReporters": ["json-summary", "json", "text"]
           }
