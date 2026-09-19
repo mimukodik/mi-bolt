@@ -30,7 +30,6 @@ import { setupServer } from 'msw/node';
 import type { RequestHandler } from 'msw';
 
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -97,9 +96,6 @@ function buildHandlers(): readonly RequestHandler[] {
 }
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
   server.listen({ onUnhandledRequest: 'error' });
 });
 

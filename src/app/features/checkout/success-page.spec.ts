@@ -28,14 +28,13 @@ import '@angular/compiler';
  * to-end contract over MSW.
  */
 
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http, type RequestHandler } from 'msw';
 import { server } from '../../../../tests/setup-msw';
 import { of } from 'rxjs';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import {
   EnvironmentInjector,
   provideZonelessChangeDetection,
@@ -521,16 +520,6 @@ function configureTestBed(): void {
     teardown: { destroyAfterEach: true },
   });
 }
-
-beforeAll(() => {
-  try {
-    TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-      teardown: { destroyAfterEach: true },
-    });
-  } catch {
-    // Environment already initialized by runner
-  }
-});
 
 beforeEach(() => {
   currentEnv = makeEnv();

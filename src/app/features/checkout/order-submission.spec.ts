@@ -26,7 +26,6 @@ import { setupServer } from 'msw/node';
 import { HttpResponse, http, type RequestHandler } from 'msw';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { TestBed } from '@angular/core/testing';
 import {
   EnvironmentInjector,
@@ -102,9 +101,6 @@ function buildHandlers(): readonly RequestHandler[] {
 }
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
   server.listen({ onUnhandledRequest: 'error' });
 });
 

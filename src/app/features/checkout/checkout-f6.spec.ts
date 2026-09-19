@@ -30,10 +30,9 @@
  */
 import '@angular/compiler';
 // @vitest-environment jsdom
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
@@ -45,12 +44,6 @@ import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
 import { DeliveryStep } from '../../../app/features/checkout/delivery-step';
 
 const BASE_URL = 'http://localhost/api/v1';
-
-beforeAll(() => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
-});
 
 afterEach(() => {
   TestBed.resetTestingModule();

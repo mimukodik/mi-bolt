@@ -28,7 +28,6 @@ import '@angular/compiler';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
@@ -398,10 +397,6 @@ const delayedHandlers: DelayedHandler[] = [];
 const server = setupServer();
 
 beforeAll(() => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
-
   server.listen({ onUnhandledRequest: 'error' });
 
   TestBed.configureTestingModule({

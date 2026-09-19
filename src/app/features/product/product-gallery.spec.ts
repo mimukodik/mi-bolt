@@ -3,8 +3,7 @@ import '@angular/compiler';
 
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ProductGallery } from './product-gallery';
 import type { ImageLike } from '../../shared/ui/product-image/product-image';
@@ -114,16 +113,6 @@ function queryImage(parent: ParentNode, selector: string): HTMLImageElement {
   }
   return el;
 }
-
-beforeAll(() => {
-  try {
-    TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-      teardown: { destroyAfterEach: true },
-    });
-  } catch {
-    // Environment already initialized
-  }
-});
 
 beforeEach(() => {
   document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
@@ -245,7 +234,7 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     expect(thumb0.getAttribute('aria-label')).toBe('Ugrás a(z) 1. képre');
 
     sampleImages.forEach((image, index) => {
-      const thumb = queryButton(root, `[data-testid="gallery-thumb-${index}"]`);
+      const thumb = queryButton(root, `[data-testid="gallery-thumb-${String(index)}"]`);
       const img = queryImage(thumb, 'img.thumb-img');
       expect(img.getAttribute('src')).toBe(image.src);
       expect(thumb.querySelector('.thumb-' + 'mark')).toBeNull();

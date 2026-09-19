@@ -11,11 +11,9 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection, type Type } from '@angular/core';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { beforeAll } from 'vitest';
 
 import { routes } from '../../app/app.routes';
 import { checkoutRoutes } from '../../app/features/checkout/checkout.routes';
@@ -31,12 +29,6 @@ import { MobileDrawer } from '../../app/core/navigation/mobile-drawer';
 import { MobileDrawerHost } from '../../app/core/navigation/mobile-drawer-host';
 import { AccessibleDialog } from '../../app/shared/ui/accessible-dialog/accessible-dialog';
 import { FooterNav } from '../../app/core/navigation/footer-nav';
-
-beforeAll(() => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
-});
 
 function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
   return (typeof value === 'function' || typeof value === 'object') && value !== null;

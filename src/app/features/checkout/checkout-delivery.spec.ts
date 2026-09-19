@@ -30,7 +30,6 @@ import {
   ɵresolveComponentResources,
 } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideRouter } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -219,13 +218,6 @@ function makeEnv() {
 const server = setupServer();
 
 beforeAll(async () => {
-  try {
-    TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-      teardown: { destroyAfterEach: true },
-    });
-  } catch {
-    // Environment already initialized by runner
-  }
   server.listen({ onUnhandledRequest: 'error' });
 
   await ɵresolveComponentResources(resolveWorkspaceFile);

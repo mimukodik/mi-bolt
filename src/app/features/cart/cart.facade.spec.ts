@@ -16,11 +16,10 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { type RequestHandler } from 'msw';
 import { server } from '../../../../tests/setup-msw';
@@ -134,16 +133,6 @@ function attachRequestCapture(serverInstance: typeof server): () => void {
 }
 
 let detachCapture: (() => void) | null = null;
-
-beforeAll(() => {
-  try {
-    TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-      teardown: { destroyAfterEach: true },
-    });
-  } catch {
-    // Environment already initialized
-  }
-});
 
 beforeEach(() => {
   captures.length = 0;

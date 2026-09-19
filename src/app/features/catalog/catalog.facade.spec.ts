@@ -16,10 +16,8 @@
  */
 
 // @vitest-environment jsdom
-import 'reflect-metadata';
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideZonelessChangeDetection, Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -46,9 +44,6 @@ import type { ProductSummary } from '../../../app/api/generated/models/product-s
 import type { Variant } from '../../../app/api/generated/models/variant';
 
 beforeAll(async () => {
-  TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-    teardown: { destroyAfterEach: true },
-  });
   await TestBed.compileComponents();
 });
 

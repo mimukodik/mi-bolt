@@ -11,7 +11,6 @@ import {
   ɵresolveComponentResources,
 } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { readdir, readFile } from 'node:fs/promises';
@@ -223,13 +222,6 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
 const server = setupServer();
 
 beforeAll(async () => {
-  try {
-    TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting(), {
-      teardown: { destroyAfterEach: true },
-    });
-  } catch {
-    // Already initialized
-  }
   server.listen({ onUnhandledRequest: 'error' });
 
   await ɵresolveComponentResources(resolveWorkspaceFile);
@@ -716,7 +708,7 @@ describe('FIX-16 ProductPage add-to-cart integration', () => {
     expect(buttons.length).toBe(1);
     const disabledBtn = buttons[0];
     expect(disabledBtn.disabled).toBe(true);
-    expect(disabledBtn.textContent?.trim()).toBe('Kosárba teszem');
+    expect(disabledBtn.textContent.trim()).toBe('Kosárba teszem');
 
     // Arm 2: Selection is present -> app-add-to-cart rendered, no bare app-button
     host.selection.set(sampleSelection);
