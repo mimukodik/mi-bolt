@@ -29,7 +29,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
+import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { Api } from '../../../app/api/generated/api';
 import {
@@ -52,6 +52,11 @@ import {
   serializeVariantQuery,
   validateQuantity,
 } from '../../../app/features/product/variant-selection';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
 
@@ -394,11 +399,7 @@ interface DelayedHandler {
 const captures: CapturedRequest[] = [];
 const delayedHandlers: DelayedHandler[] = [];
 
-const server = setupServer();
-
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' });
-
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
@@ -409,7 +410,6 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  server.close();
   TestBed.resetTestingModule();
 });
 

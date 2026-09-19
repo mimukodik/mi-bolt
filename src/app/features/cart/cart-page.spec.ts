@@ -35,11 +35,11 @@ import {
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import { CartDomain } from '../../../mocks/cart/cart-domain';
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
@@ -60,6 +60,11 @@ import { CartLine } from './cart-line';
 import { CartPage } from './cart-page';
 import { OrderSummary } from './order-summary';
 import type { CartItem } from '../../api/generated/models/cart-item';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
 
@@ -245,17 +250,9 @@ function makeEnv() {
   return { repository, clock, ids, scenario, apiRoot: '/api/v1' };
 }
 
-const server = setupServer();
-
 beforeAll(async () => {
-  server.listen({ onUnhandledRequest: 'error' });
-
   await ɵresolveComponentResources(resolveWorkspaceFile);
   await TestBed.compileComponents();
-});
-
-afterAll(() => {
-  server.close();
 });
 
 beforeEach(async () => {

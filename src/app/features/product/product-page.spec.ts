@@ -6,9 +6,9 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
@@ -39,6 +39,11 @@ import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
  *     LoadingState, ProductGallery, VariantSelector, SpecificationAccordion.
  */
 
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
+
 const BASE_URL = 'http://localhost/api/v1';
 
 interface CapturedRequest {
@@ -61,19 +66,9 @@ function makeMockCart(cartId: string): Cart {
   } satisfies Cart;
 }
 
-const server = setupServer();
-
-beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' });
-});
-
-afterAll(() => {
-  server.close();
-});
-
 beforeEach(() => {
   capturedRequests.length = 0;
-  server.resetHandlers(
+  server.use(
     http.get(`${BASE_URL}/products/:slug`, ({ params }) => {
       const slug = params['slug'];
       if (slug === 'demo-one-5g') {

@@ -24,9 +24,9 @@
 import '@angular/compiler';
 
 // @vitest-environment jsdom
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http, type RequestHandler } from 'msw';
-import { setupServer } from 'msw/node';
+import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
@@ -77,6 +77,11 @@ import {
   successGuard,
 } from '../../../app/features/checkout/checkout.guards';
 
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
+
 const BASE_URL = 'http://localhost/api/v1';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';
 
@@ -103,7 +108,6 @@ function makeEnv(scenarioName = 'checkout-state-suite'): Env {
 }
 
 let currentEnv: Env;
-const server = setupServer();
 
 function buildHandlers(): readonly RequestHandler[] {
   return createHandlers({
@@ -114,14 +118,6 @@ function buildHandlers(): readonly RequestHandler[] {
     apiRoot: '/api/v1',
   });
 }
-
-beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' });
-});
-
-afterAll(() => {
-  server.close();
-});
 
 beforeEach(() => {
   currentEnv = makeEnv();

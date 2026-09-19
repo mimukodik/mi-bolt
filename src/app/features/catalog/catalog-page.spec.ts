@@ -29,9 +29,9 @@ import {
 } from '@angular/router';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
 import { BehaviorSubject } from 'rxjs';
 
+import { server, useMswServer } from '../../../../tests/msw-server';
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration, provideApiConfiguration } from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
@@ -41,6 +41,11 @@ import type { Variant } from '../../api/generated/models/variant';
 import type { ProductPage as ProductPageDTO } from '../../api/generated/models/product-page';
 import type { ProductSummary } from '../../api/generated/models/product-summary';
 import type { Money } from '../../shared/ui/price-block/price-block';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
 
@@ -168,8 +173,6 @@ interface Harness {
   cleanup: () => void;
 }
 
-const server = setupServer();
-
 function isMediaQueryListEvent(event: Event): event is MediaQueryListEvent {
   return 'matches' in event && 'media' in event;
 }
@@ -229,7 +232,6 @@ function installMatchMediaStub(): void {
 
 beforeAll(() => {
   installMatchMediaStub();
-  server.listen({ onUnhandledRequest: 'error' });
 
   TestBed.configureTestingModule({
     providers: [
@@ -254,7 +256,7 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
   // collapses the second call onto the first: it awaits the same promise
   // and returns a clone (a `Response` body can only be read once).
   const pending = new Map<string, Promise<Response>>();
-  server.resetHandlers(
+  server.use(
     http.get(`${BASE_URL}/products`, ({ request, requestId }) => {
       const existing = pending.get(requestId);
       if (existing !== undefined) return existing.then((response) => response.clone());

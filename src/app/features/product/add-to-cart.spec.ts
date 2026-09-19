@@ -12,11 +12,11 @@ import {
 } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import type { CartItem } from '../../api/generated/models/cart-item';
@@ -25,6 +25,11 @@ import { Button } from '../../shared/ui/button/button';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { CartFacade } from '../cart/cart.facade';
 import { AddToCart, type AddToCartSelection } from './add-to-cart';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 /**
  * T18 - add-to-cart surface on the product page.
@@ -219,17 +224,9 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
   return content;
 }
 
-const server = setupServer();
-
 beforeAll(async () => {
-  server.listen({ onUnhandledRequest: 'error' });
-
   await ɵresolveComponentResources(resolveWorkspaceFile);
   await TestBed.compileComponents();
-});
-
-afterAll(() => {
-  server.close();
 });
 
 beforeEach(() => {
@@ -237,7 +234,7 @@ beforeEach(() => {
   cartCounter = 0;
   currentCart = null;
 
-  server.resetHandlers(
+  server.use(
     http.post(`${BASE_URL}/carts`, async ({ request }) => {
       const bodyText = await request.text();
       const headers: Record<string, string> = {};

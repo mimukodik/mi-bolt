@@ -7,9 +7,6 @@
 //   2. repeated brand[] and storageGb[] query-array parameters are encoded
 //      with style=form, explode=true (the spec-mandated encoding),
 //   3. the SDK cannot bypass itself by accident — no operation is dropped.
-//
-// MSW is set up locally because tests/setup-msw.ts (T02) is not yet shipped.
-// When T02 lands, this file should swap its inline setup for that helper.
 
 // @vitest-environment jsdom
 import { readFile } from 'node:fs/promises';
@@ -17,7 +14,7 @@ import { resolve } from 'node:path';
 
 import '@angular/compiler';
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import yaml from 'js-yaml';
 import {
   HttpClient,
@@ -33,7 +30,7 @@ import {
 } from '@angular/platform-browser-dynamic/testing';
 import { firstValueFrom } from 'rxjs';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
+import { server, useMswServer } from '../msw-server';
 
 import { Api } from '../../src/app/api/generated/api';
 import {
@@ -45,6 +42,11 @@ import {
   demoSessionInterceptor,
   withIfMatch,
 } from '../../src/app/core/api/demo-session.interceptor';
+
+// The shared MSW server's lifecycle is registered here, in this file, because
+// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
+// process rather than once per file. See `tests/msw-server.ts`.
+useMswServer();
 
 const REPO_ROOT = resolve(__dirname, '../..');
 const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
@@ -284,8 +286,6 @@ function MINIMAL_PRODUCT(slug: string) {
   };
 }
 
-const server = setupServer(...handlers);
-
 beforeAll(async () => {
   TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting(), {
     teardown: { destroyAfterEach: true },
@@ -294,11 +294,6 @@ beforeAll(async () => {
   spec = yaml.load(raw) as OpenApiSpec;
   opRows = collectOperations(spec);
   seenOperationIds = new Set<string>();
-  server.listen({ onUnhandledRequest: 'error' });
-});
-
-afterAll(() => {
-  server.close();
 });
 
 afterEach(() => {
@@ -307,6 +302,10 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  // `useMswServer()`'s own `afterEach` clears every `server.use(...)`
+  // override after each test, so the fixed handler set is re-registered
+  // here rather than once at module scope.
+  server.use(...handlers);
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
