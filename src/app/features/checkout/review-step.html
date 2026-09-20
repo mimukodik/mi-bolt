@@ -1,31 +1,42 @@
-<section class="review" data-testid="review-page" [attr.data-status]="state()">
-  <header class="heading">
-    <nav aria-label="Navigáció" class="breadcrumbs">
-      <a class="breadcrumb" routerLink="/">Főoldal</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a class="breadcrumb" routerLink="/penztar/kosar">Kosár</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a class="breadcrumb" routerLink="/penztar/adatok">Adatok</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a class="breadcrumb" routerLink="/penztar/szallitas">Szállítás</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <span aria-current="page" class="breadcrumb is-current"> Ellenőrzés </span>
-    </nav>
-    <h1 class="title">Minden rendben?</h1>
-    <p class="demo-notice" data-testid="review-demo-notice" role="note">
+<section
+  class="review flex flex-col gap-(--space-6)"
+  data-testid="review-page"
+  [attr.data-status]="state()"
+>
+  <app-checkout-step-header current="Ellenőrzés" [crumbs]="crumbs">
+    <h1
+      class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+    >
+      Minden rendben?
+    </h1>
+    <p
+      class="demo-notice m-0 py-(--space-3) px-(--space-4) bg-(--color-brand-accent-soft) border border-(--color-brand-accent) rounded-(--radius-card) text-(color:--color-text-primary) text-(length:--type-helper) leading-(--line-height-body)"
+      data-testid="review-demo-notice"
+      role="note"
+    >
       <strong>Demó pénztár.</strong>
       A rendelés leadása nem küld valódi megrendelést, nem indít valódi fizetést, és nem küld
       e-mailt. Az adatok a böngésző memóriájában maradnak.
     </p>
-  </header>
+  </app-checkout-step-header>
 
-  <div class="layout" data-testid="review-layout">
-    <div class="column">
-      <article class="card" data-testid="review-contact">
-        <header class="card-header">
-          <h2 class="card-title">Kapcsolattartási adatok</h2>
+  <div
+    class="layout flex flex-col gap-(--space-5) lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-(--space-6) lg:items-start"
+    data-testid="review-layout"
+  >
+    <div class="column flex flex-col gap-(--space-5) min-w-0">
+      <article
+        class="card flex flex-col gap-(--space-3) p-(--space-5) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
+        data-testid="review-contact"
+      >
+        <header class="card-header flex items-center justify-between gap-(--space-3)">
+          <h2
+            class="card-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+          >
+            Kapcsolattartási adatok
+          </h2>
           <a
-            class="edit-link"
+            class="edit-link text-(length:--type-helper) text-(color:--color-brand-ink) underline"
             data-testid="review-edit-contact"
             routerLink="/penztar/adatok"
             (click)="onEditContact()"
@@ -33,7 +44,7 @@
             Módosítás
           </a>
         </header>
-        <dl class="data-list">
+        <dl class="data-list flex flex-col gap-(--space-2) m-0">
           <div class="row">
             <dt>Név</dt>
             <dd>{{ contactName() }}</dd>
@@ -49,11 +60,18 @@
         </dl>
       </article>
 
-      <article class="card" data-testid="review-delivery">
-        <header class="card-header">
-          <h2 class="card-title">Szállítási és fizetési mód</h2>
+      <article
+        class="card flex flex-col gap-(--space-3) p-(--space-5) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
+        data-testid="review-delivery"
+      >
+        <header class="card-header flex items-center justify-between gap-(--space-3)">
+          <h2
+            class="card-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+          >
+            Szállítási és fizetési mód
+          </h2>
           <a
-            class="edit-link"
+            class="edit-link text-(length:--type-helper) text-(color:--color-brand-ink) underline"
             data-testid="review-edit-delivery"
             routerLink="/penztar/szallitas"
             (click)="onEditDelivery()"
@@ -61,7 +79,7 @@
             Módosítás
           </a>
         </header>
-        <dl class="data-list">
+        <dl class="data-list flex flex-col gap-(--space-2) m-0">
           <div class="row">
             <dt>Szállítási mód</dt>
             <dd>{{ deliveryLabel() }}</dd>
@@ -86,20 +104,42 @@
         </dl>
       </article>
 
-      <article class="card" data-testid="review-items">
-        <header class="card-header">
-          <h2 class="card-title">Kosár tartalma</h2>
-          <span class="card-hint">{{ items().length }} tétel</span>
+      <article
+        class="card flex flex-col gap-(--space-3) p-(--space-5) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
+        data-testid="review-items"
+      >
+        <header class="card-header flex items-center justify-between gap-(--space-3)">
+          <h2
+            class="card-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+          >
+            Kosár tartalma
+          </h2>
+          <span class="card-hint text-(length:--type-helper) text-(color:--color-text-secondary)"
+            >{{ items().length }} tétel</span
+          >
         </header>
         @if (items().length === 0) {
-          <p class="empty" data-testid="review-items-empty">A kosár jelenleg üres.</p>
+          <p
+            class="empty m-0 text-(length:--type-helper) text-(color:--color-text-secondary)"
+            data-testid="review-items-empty"
+          >
+            A kosár jelenleg üres.
+          </p>
         } @else {
           <ul class="line-list">
             @for (line of lines(); track line.id) {
               <li class="line" data-testid="review-line">
                 <div class="line-body">
-                  <p class="line-name">{{ line.productName }}</p>
-                  <p class="line-variant">{{ line.variantLabel }}</p>
+                  <p
+                    class="line-name m-0 [font-weight:var(--weight-medium)] text-(color:--color-text-primary)"
+                  >
+                    {{ line.productName }}
+                  </p>
+                  <p
+                    class="line-variant m-0 text-(length:--type-helper) text-(color:--color-text-secondary)"
+                  >
+                    {{ line.variantLabel }}
+                  </p>
                   <p class="line-quantity">
                     {{ line.quantity }} ×
                     <app-price-block label="Egységár" status="success" [money]="line.unitPrice" />
@@ -153,16 +193,28 @@
         }
       </div>
 
-      <article class="card" data-testid="review-consents">
-        <h2 class="card-title">Demó feltételek</h2>
-        <p class="hint">Mindkét jelölőnégyzet elfogadása kötelező a demórendelés leadásához.</p>
+      <article
+        class="card flex flex-col gap-(--space-3) p-(--space-5) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
+        data-testid="review-consents"
+      >
+        <h2
+          class="card-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+        >
+          Demó feltételek
+        </h2>
+        <p class="hint m-0 text-(length:--type-helper) text-(color:--color-text-secondary)">
+          Mindkét jelölőnégyzet elfogadása kötelező a demórendelés leadásához.
+        </p>
 
         <div
-          class="consent"
+          class="consent flex flex-col gap-(--space-2) p-(--space-3) border border-(--color-border-subtle) rounded-(--radius-control)"
           data-testid="review-consent-terms"
           [attr.data-state]="termsConsentState()"
         >
-          <label class="consent-label" for="review-consent-terms-input">
+          <label
+            class="consent-label inline-flex items-start gap-(--space-3) cursor-pointer text-(length:--type-body) text-(color:--color-text-primary) leading-(--line-height-body)"
+            for="review-consent-terms-input"
+          >
             <input
               class="checkbox"
               data-testid="review-consent-terms-input"
@@ -172,7 +224,7 @@
               (blur)="onAcceptedTermsBlur()"
               (change)="onAcceptedTermsChange($event)"
             />
-            <span class="consent-text">
+            <span class="consent-text min-w-0">
               Elfogadom a
               <button
                 class="terms-link"
@@ -187,7 +239,7 @@
           </label>
           @if (termsConsentMessage() !== null) {
             <p
-              class="consent-message"
+              class="consent-message m-0 text-(length:--type-helper) text-(color:--color-status-error)"
               data-testid="review-consent-terms-message"
               id="review-consent-terms-message"
               role="alert"
@@ -198,11 +250,14 @@
         </div>
 
         <div
-          class="consent"
+          class="consent flex flex-col gap-(--space-2) p-(--space-3) border border-(--color-border-subtle) rounded-(--radius-control)"
           data-testid="review-consent-simulation"
           [attr.data-state]="simulationConsentState()"
         >
-          <label class="consent-label" for="review-consent-simulation-input">
+          <label
+            class="consent-label inline-flex items-start gap-(--space-3) cursor-pointer text-(length:--type-body) text-(color:--color-text-primary) leading-(--line-height-body)"
+            for="review-consent-simulation-input"
+          >
             <input
               class="checkbox"
               data-testid="review-consent-simulation-input"
@@ -212,14 +267,14 @@
               (blur)="onAcknowledgedSimulationBlur()"
               (change)="onAcknowledgedSimulationChange($event)"
             />
-            <span class="consent-text">
+            <span class="consent-text min-w-0">
               Tudomásul veszem, hogy ez egy szimuláció: nem történik valódi rendelés, fizetés vagy
               e-mail küldés.
             </span>
           </label>
           @if (simulationConsentMessage() !== null) {
             <p
-              class="consent-message"
+              class="consent-message m-0 text-(length:--type-helper) text-(color:--color-status-error)"
               data-testid="review-consent-simulation-message"
               id="review-consent-simulation-message"
               role="alert"
@@ -230,7 +285,10 @@
         </div>
       </article>
 
-      <div class="actions" data-testid="review-actions">
+      <div
+        class="actions flex flex-col gap-(--space-3) sm:flex-row sm:justify-between"
+        data-testid="review-actions"
+      >
         <app-button
           data-testid="review-submit"
           label="Demórendelés véglegesítése"
@@ -250,8 +308,16 @@
       }
     </div>
 
-    <aside aria-label="Rendelés végösszege" class="summary" data-testid="review-summary">
-      <h2 class="summary-title">Rendelés végösszege</h2>
+    <aside
+      aria-label="Rendelés végösszege"
+      class="summary flex flex-col gap-(--space-4) p-(--space-5) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) sticky top-(--space-5) sm:p-(--space-6)"
+      data-testid="review-summary"
+    >
+      <h2
+        class="summary-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)]"
+      >
+        Rendelés végösszege
+      </h2>
 
       @if (readySummary() !== null) {
         <app-order-summary
@@ -265,7 +331,7 @@
         </div>
       }
 
-      <dl class="summary-rows">
+      <dl class="summary-rows flex flex-col gap-(--space-3) m-0">
         <div class="row">
           <dt>Fizetési mód</dt>
           <dd data-testid="review-payment">{{ paymentLabel() }}</dd>

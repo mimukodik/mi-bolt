@@ -46,7 +46,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { FormField, submit, type FieldTree, type ValidationError } from '@angular/forms/signals';
 
 import { Button } from '../../shared/ui/button/button';
@@ -59,6 +58,7 @@ import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import type { AsyncStatus } from '../../shared/types/async-status';
 import type { Contact } from '../../api/generated/models/contact';
 
+import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';
 
 /**
@@ -85,22 +85,16 @@ export interface ContactSaveResult {
   message?: string;
 }
 
-/**
-Pluggable save function `ContactPage` (the owning container) calls.
-*/
+/** Pluggable save function `ContactPage` (the owning container) calls. */
 export type ContactDraftSaver = (contact: ContactSubmission) => Promise<ContactSaveResult>;
 
-/**
-injection token for the draft save.
-*/
+/** injection token for the draft save. */
 export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>('CONTACT_DRAFT_SAVER', {
   providedIn: 'root',
   factory: () => () => Promise.resolve({ ok: true }),
 });
 
-/**
-Convert the Signal Form errors array into the local FieldError shape.
-*/
+/** Convert the Signal Form errors array into the local FieldError shape. */
 function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readonly FieldError[] {
   const out: FieldError[] = [];
   for (const error of errors) {
@@ -116,7 +110,7 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
 
 @Component({
   selector: 'app-contact-step',
-  imports: [RouterLink, Button, FormField, FormFieldMessage, StatusMessage],
+  imports: [Button, CheckoutStepHeader, FormField, FormFieldMessage, StatusMessage],
   templateUrl: './contact-step.html',
   styleUrl: './contact-step.scss',
 })
@@ -130,9 +124,14 @@ export class ContactStep {
    *  invalid submission. */
   private readonly summaryRef = viewChild<ElementRef<HTMLElement>>('summary');
 
-  /**
-  `true` after the user has tried to submit at least once.
-  */
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
+   *  the previous template: Kosár, with this step (`Adatok`) as the
+   *  trailing non-link. */
+  protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Kosár', link: '/penztar/kosar' },
+  ];
+
+  /** `true` after the user has tried to submit at least once. */
   readonly submitted = signal<boolean>(false);
 
   /** `saveState:AsyncStatus` carries no payload (`components.md:551-557`),

@@ -267,6 +267,17 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     }
   });
 
+  it('T16-AC02: renders each thumbnail image with explicit width and height attributes from the model', async () => {
+    const { root } = await createHarness();
+
+    sampleImages.forEach((image, index) => {
+      const thumb = queryButton(root, `[data-testid="gallery-thumb-${String(index)}"]`);
+      const img = queryImage(thumb, 'img.thumb-img');
+      expect(img.getAttribute('width')).toBe(String(image.width));
+      expect(img.getAttribute('height')).toBe(String(image.height));
+    });
+  });
+
   it('T16-AC02: clicking a thumbnail emits imageSelected with that id and selects it', async () => {
     const { fixture, host, root } = await createHarness();
 

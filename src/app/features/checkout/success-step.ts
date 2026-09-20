@@ -41,7 +41,7 @@
 import type { ElementRef } from '@angular/core';
 import { Component, DestroyRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { Button } from '../../shared/ui/button/button';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
@@ -50,11 +50,10 @@ import { RouteFocusService } from '../../core/navigation/route-focus';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
+import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { OrderReceiptComponent } from './order-receipt';
 
-/**
-State of the hydration pipeline that lives on top of `CheckoutFacade.order()`.
-*/
+/** State of the hydration pipeline that lives on top of `CheckoutFacade.order()`. */
 type LoadState =
   { kind: 'loading' } | { kind: 'ready' } | { kind: 'missing' } | { kind: 'error'; detail: string };
 
@@ -62,7 +61,7 @@ const ORDER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,80}$/;
 
 @Component({
   selector: 'app-success-page',
-  imports: [RouterLink, Button, ErrorState, LoadingState, OrderReceiptComponent],
+  imports: [Button, CheckoutStepHeader, ErrorState, LoadingState, OrderReceiptComponent],
   templateUrl: './success-step.html',
   styleUrl: './success-step.scss',
 })
@@ -74,16 +73,12 @@ export class SuccessStep {
   private readonly destroyRef = inject(DestroyRef);
   private readonly routeFocus = inject(RouteFocusService);
 
-  /**
-  Raw order id from the URL. Lazily resolved through `paramMap`.
-  */
+  /** Raw order id from the URL. Lazily resolved through `paramMap`. */
   private readonly orderIdFromRoute = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
 
-  /**
-  Selected order id (or null when none was supplied).
-  */
+  /** Selected order id (or null when none was supplied). */
   readonly orderId = computed<string | null>(() => {
     const raw = this.orderIdFromRoute().get('orderId');
     if (raw === null) return null;
@@ -91,14 +86,10 @@ export class SuccessStep {
     return trimmed.length === 0 || !ORDER_ID_PATTERN.test(trimmed) ? null : trimmed;
   });
 
-  /**
-  Read-only view of the receipt from the facade (null until loaded).
-  */
+  /** Read-only view of the receipt from the facade (null until loaded). */
   readonly order = this.checkout.order;
 
-  /**
-  True when a receipt is rendered.
-  */
+  /** True when a receipt is rendered. */
   readonly hasReceipt = computed<boolean>(() => this.order() !== null);
 
   /**
@@ -110,24 +101,24 @@ export class SuccessStep {
    */
   readonly loadState = signal<LoadState>({ kind: 'loading' });
 
-  /**
-  True while a manual retry is in flight.
-  */
+  /** True while a manual retry is in flight. */
   readonly retrying = signal<boolean>(false);
 
-  /**
-  True while the "Új vásárlás" CTA is creating a fresh cart.
-  */
+  /** True while the "Új vásárlás" CTA is creating a fresh cart. */
   readonly startingNewCart = signal<boolean>(false);
 
-  /**
-  Reference to the H1 so the focus move lands on it.
-  */
+  /** Reference to the H1 so the focus move lands on it. */
   private readonly headingRef = viewChild<ElementRef<HTMLElement>>('successHeading');
 
-  /**
-  Truthy banner copy fed to ErrorState.
-  */
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
+   *  the previous template: Főoldal → Kosár, with this step (`Siker`) as
+   *  the trailing non-link. */
+  protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Főoldal', link: '/' },
+    { label: 'Kosár', link: '/penztar/kosar' },
+  ];
+
+  /** Truthy banner copy fed to ErrorState. */
   readonly missingMessage = computed<string>(() => {
     const id = this.orderId() ?? '';
     return id.length > 0
@@ -135,17 +126,13 @@ export class SuccessStep {
       : 'A keresett rendelés nem található. Indíts egy új pénztárat, vagy térj vissza a kosaradhoz.';
   });
 
-  /**
-  Truthy banner copy fed to ErrorState on a network / 5xx failure.
-  */
+  /** Truthy banner copy fed to ErrorState on a network / 5xx failure. */
   readonly errorMessage = computed<string>(() => {
     const s = this.loadState();
     return s.kind === 'error' ? s.detail : 'A rendelés visszatöltése nem sikerült.';
   });
 
-  /**
-  Retry button label.
-  */
+  /** Retry button label. */
   readonly retryLabel = computed<string>(() => 'Visszatöltés újra');
 
   constructor() {
@@ -212,9 +199,7 @@ export class SuccessStep {
     });
   }
 
-  /**
-  Subscribed once: move focus to the success heading.
-  */
+  /** Subscribed once: move focus to the success heading. */
   private scheduleHeadingFocus(heading: ElementRef<HTMLElement>): void {
     this.routeFocus
       .navigationEnd$()

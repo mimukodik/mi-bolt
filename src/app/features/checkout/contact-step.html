@@ -1,11 +1,10 @@
 <section class="contact flex flex-col gap-6" data-testid="contact-page">
-  <header class="heading flex flex-col gap-3">
-    <nav aria-label="Navigáció" class="breadcrumbs flex flex-wrap gap-2">
-      <a class="breadcrumb no-underline" routerLink="/penztar/kosar">Kosár</a>
-      <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
-      <span aria-current="page" class="breadcrumb is-current font-medium">Adatok</span>
-    </nav>
-    <h1 class="title m-0 font-bold">Kapcsolattartási adatok</h1>
+  <app-checkout-step-header current="Adatok" [crumbs]="crumbs">
+    <h1
+      class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+    >
+      Kapcsolattartási adatok
+    </h1>
     <p
       class="demo-notice m-0 p-3 px-4 rounded text-sm leading-relaxed"
       data-testid="contact-demo-notice"
@@ -15,7 +14,7 @@
       Kérlek, ne használj valós személyes adatokat — ez egy működési bemutató, nem küldünk valódi
       rendelést vagy e-mailt.
     </p>
-  </header>
+  </app-checkout-step-header>
 
   @if (saveState() === 'error') {
     <div class="save-error block" data-testid="contact-save-error">
