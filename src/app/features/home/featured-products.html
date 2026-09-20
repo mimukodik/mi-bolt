@@ -1,6 +1,12 @@
-<section class="featured" data-testid="featured-section" aria-labelledby="featured-heading">
-  <div class="featured__inner">
-    <header class="featured__header">
+<section
+  class="featured px-4 py-12 sm:px-6 lg:px-12 lg:py-16"
+  data-testid="featured-section"
+  aria-labelledby="featured-heading"
+>
+  <div class="featured__inner flex flex-col gap-6">
+    <header
+      class="featured__header flex flex-col gap-2 min-[720px]:flex-row min-[720px]:items-baseline min-[720px]:justify-between"
+    >
       <h2 id="featured-heading" class="featured__title">Készülékek, amiket érdemes megnézni</h2>
       <a routerLink="/telefonok" class="featured__all-link" data-testid="featured-all-link"
         >Minden telefon</a
@@ -17,10 +23,17 @@
         ></app-button>
       </div>
     } @else {
-      <ul class="featured__grid" data-testid="featured-grid" role="list">
+      <ul
+        class="featured__grid m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-4"
+        data-testid="featured-grid"
+        role="list"
+      >
         @if (loading()) {
           @for (placeholder of [0, 1, 2, 3]; track placeholder) {
-            <li class="featured__card" [attr.data-testid]="'featured-card-skeleton-' + placeholder">
+            <li
+              class="featured__card flex flex-col overflow-hidden"
+              [attr.data-testid]="'featured-card-skeleton-' + placeholder"
+            >
               <div class="featured__loading" data-testid="featured-loading">
                 <span
                   class="featured__skeleton featured__skeleton--image"
@@ -41,16 +54,20 @@
           }
         } @else {
           @for (item of items(); track item.id) {
-            <li class="featured__card" [attr.data-testid]="'featured-card-' + item.slug">
+            <li
+              class="featured__card flex flex-col overflow-hidden"
+              [attr.data-testid]="'featured-card-' + item.slug"
+            >
               <a
                 class="featured__media"
                 [routerLink]="['/telefonok', item.slug, { variant: item.variantId }]"
                 [attr.aria-label]="item.name + ' — részletek'"
               >
                 <span class="featured__tag">DEMÓTERMÉK</span>
-                <div class="featured__image">
+                <div class="featured__image block aspect-[4/5] overflow-hidden">
                   @if (firstImageSrc(item); as src) {
                     <img
+                      class="block h-full w-full object-contain"
                       [src]="src"
                       [alt]="firstImageAlt(item)"
                       decoding="async"
@@ -64,7 +81,7 @@
                   }
                 </div>
               </a>
-              <div class="featured__body">
+              <div class="featured__body flex flex-col gap-2 p-5">
                 <p class="featured__brand">{{ item.brand }}</p>
                 <h3 class="featured__name">{{ item.name }}</h3>
                 <p class="featured__price" data-testid="price-amount">
@@ -72,7 +89,7 @@
                   <span class="featured__price-currency" aria-hidden="true">Ft</span>
                 </p>
                 <a
-                  class="featured__details"
+                  class="featured__details mt-2 inline-flex min-h-12 min-w-12 items-center justify-center self-start no-underline"
                   [routerLink]="['/telefonok', item.slug, { variant: item.variantId }]"
                   [attr.data-testid]="'featured-details-' + item.slug"
                   >Részletek</a
