@@ -6,7 +6,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
 import { provideApiConfiguration } from './api/generated/api-configuration';
@@ -22,7 +22,14 @@ import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
  */
 const _provideZoneless: EnvironmentProviders = provideZonelessChangeDetection();
 const _provideHttpWithFetch = provideHttpClient(withInterceptors([demoSessionInterceptor]));
-const _provideRouter = provideRouter(routes, withComponentInputBinding());
+const _provideRouter = provideRouter(
+  routes,
+  withComponentInputBinding(),
+  withInMemoryScrolling({
+    anchorScrolling: 'enabled',
+    scrollPositionRestoration: 'enabled',
+  }),
+);
 const _provideApi: Provider = provideApiConfiguration(resolveApiRoot());
 
 /**
