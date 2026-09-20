@@ -72,11 +72,18 @@ function titleForStatus(status: number): string {
   return 'Unknown';
 }
 
-/** Build a deterministic 24-char lowercase-hex trace id from the clock. */
-export function buildTraceId(options: CreateHandlersOptions): string {
-  const ms = Date.parse(options.clock.now());
-  const hex = (ms >>> 0).toString(16).padStart(8, '0');
-  return (hex + '0000000000000000').slice(0, 24);
+/**
+ * Monotonic per-process counter used to build unique-per-call trace ids.
+ * The previous implementation derived the id from the scenario clock,
+ * which produced the same 24-hex string for every Problem body in a
+ * test with a fixed clock (and collided every ~49 days in the wild).
+ */
+let traceIdCounter = 0;
+
+/** Build a unique 24-char lowercase-hex trace id. */
+export function buildTraceId(_options: CreateHandlersOptions): string {
+  traceIdCounter = (traceIdCounter + 1) >>> 0;
+  return traceIdCounter.toString(16).padStart(24, '0');
 }
 
 /**
@@ -320,8 +327,12 @@ export class CartStore {
       cart.version += 1;
       cart.expiresAt = this.expiryFromNow();
     }
-    const totalQuantity = kept.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotalAmount = kept.reduce((sum, item) => sum + item.lineTotal.amount, 0);
+    let totalQuantity = 0;
+    let subtotalAmount = 0;
+    for (const item of kept) {
+      totalQuantity += item.quantity;
+      subtotalAmount += item.lineTotal.amount;
+    }
     const wire: Cart = {
       id: cart.id,
       version: cart.version,
