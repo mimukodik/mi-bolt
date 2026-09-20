@@ -27,7 +27,8 @@
   /* color status */
   --color-status-success: var(--color-success);
   --color-status-error: var(--color-error);
-  --color-status-warning: var(--color-primary);
+  --color-status-warning: var(--color-warning);
+  --color-status-warning-text: var(--color-warning-text);
   --color-status-info: var(--color-surface-sky);
 
   /* color focus */
