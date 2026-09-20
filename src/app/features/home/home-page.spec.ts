@@ -256,7 +256,7 @@ function pageFrom(items: readonly CatalogItem[]): ProductPage {
 // ---------------------------------------------------------------------------
 
 describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => {
-  it('hero uses the dark shell token (R02) and the orange accent token (R03)', async () => {
+  it('hero uses the navy shell token and the brand accent token, and its CTA is the lime pill (docs/design/yettel.md §9)', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -266,10 +266,40 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const css = getComponentStyles(Hero).join(' ');
-    const hasDark = css.includes('color-shell-dark');
-    const hasAlt = css.includes('mi-bolt-color-surface-dark');
-    expect(hasDark || hasAlt).toBe(true);
+    expect(css.includes('color-shell-dark')).toBe(true);
     expect(css.includes('color-brand-accent')).toBe(true);
+    // The browser pass caught .hero__cta rendering navy text on a navy
+    // ground with an 8px radius. --color-brand-accent now resolves to the
+    // lime #b4ff00, so the pair below is the lime pill with navy text, and
+    // the radius is the 24px --radius-pill every yettel .btn carries (§4).
+    const normalised = css
+      .replaceAll('%NS%', '')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s+/g, '');
+    const at = normalised.indexOf('.hero__cta{');
+    expect(at).toBeGreaterThan(-1);
+    const cta = normalised.slice(at, normalised.indexOf('}', at));
+    expect(cta).toContain('background:var(--color-brand-accent)');
+    expect(cta).toContain('color:var(--color-text-primary)');
+    expect(cta).toContain('padding:12pxvar(--space-6)');
+    // Both CTAs share the yettel .btn box: portal-font-bold, 16/24 and the
+    // 24px pill (docs/design/yettel.md §5).
+    const boxAt = normalised.indexOf('.hero__cta,.hero__cta-secondary{');
+    expect(boxAt).toBeGreaterThan(-1);
+    const box = normalised.slice(boxAt, normalised.indexOf('}', boxAt));
+    expect(box).toContain('border-radius:var(--radius-pill)');
+    expect(box).toContain('font-family:var(--font-family-bold)');
+    expect(box).toContain('font-size:var(--type-body)');
+    expect(box).toContain('line-height:24px');
+    // .btn-outline-lime on the navy hero: lime text and hairline, no fill.
+    // The selector has to sit at a rule boundary, or it would match inside
+    // the grouped `.hero__cta,.hero__cta-secondary` box rule above.
+    const secAt = normalised.indexOf('}.hero__cta-secondary{');
+    expect(secAt).toBeGreaterThan(-1);
+    const secondary = normalised.slice(secAt + 1, normalised.indexOf('}', secAt + 1));
+    expect(secondary).toContain('color:var(--color-brand-accent)');
+    expect(secondary).toContain('border:1pxsolidvar(--color-brand-accent)');
+    expect(secondary).toContain('background:transparent');
   });
 
   it('hero copy is live Hungarian text and contains no raster CTA image', async () => {
@@ -341,7 +371,9 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(row).not.toBeNull();
     const links = Array.from(row?.querySelectorAll('a') ?? []);
     expect(links.length).toBe(2);
-    expect((links[0]?.textContent ?? '').trim().startsWith('Megnézem a telefonokat')).toBe(true);
+    // yettel's buttons carry no arrow glyph ("Megnézem", "Belépés" on
+    // docs/design/yettel/screenshots/home-1920.png), so the label is exact.
+    expect((links[0]?.textContent ?? '').trim()).toBe('Megnézem a telefonokat');
     expect(links[0]?.getAttribute('href')).toBe('/telefonok');
     expect((links[1]?.textContent ?? '').trim()).toBe('Hogyan működik?');
   });

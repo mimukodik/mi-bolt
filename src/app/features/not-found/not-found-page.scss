@@ -30,23 +30,33 @@
   gap: var(--space-3);
 }
 
+/* Both links are the yettel .btn box: portal-font-bold 16/24, 12px 24px,
+   24px pill (docs/design/yettel.md §5). */
 .link {
   display: inline-flex;
   align-items: center;
-  min-height: var(--size-control);
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-control);
+  justify-content: center;
+  min-height: var(--button-height);
+  min-width: var(--button-height);
+  padding: 12px var(--space-6);
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-family-bold);
   font-size: var(--type-body);
+  line-height: 24px;
   text-decoration: none;
 }
 
+/* .btn--primary-inverse — the lime pill with navy text. */
 .link--primary {
   background: var(--color-brand-accent);
   color: var(--color-text-primary);
 }
 
+/* .btn-outline-navy — 1px off each padding edge keeps the box at 48px. */
 .link--secondary {
-  border: 1px solid var(--color-border-control);
+  padding: 11px 23px;
+  border: 1px solid var(--color-brand-ink);
   color: var(--color-brand-ink);
 }
 

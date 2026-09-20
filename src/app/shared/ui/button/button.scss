@@ -1,58 +1,67 @@
-/* MiBolt Button primitive styles. Tokens drive every value. */
+/* MiBolt Button primitive — docs/design/yettel.md §5 and §9 button recipes.
+   The invariant box and type (inline-flex, 12px 24px padding, 16/24) are
+   Tailwind utilities on the template; this sheet holds what utilities cannot
+   express: the variant colours behind the .is-* state classes, the states,
+   and the spinner. */
 
 .root {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
   min-height: var(--button-height);
   min-width: var(--button-height);
-  padding: 0 var(--space-4);
+  border: 0;
   border-radius: var(--button-radius);
-  border: 1px solid transparent;
-  font-family: inherit;
-  font-weight: var(--weight-medium);
-  font-size: var(--type-body);
-  line-height: 1;
-  color: var(--color-text-primary);
-  background: var(--color-brand-accent);
-  cursor: pointer;
+  font-family: var(--font-family-bold);
+  color: var(--color-primary);
+  background: var(--color-accent);
   transition:
     background-color var(--motion-fast) ease,
     border-color var(--motion-fast) ease,
     color var(--motion-fast) ease;
-  user-select: none;
-  white-space: nowrap;
 }
 
-.root.is-comfortable {
-  min-height: var(--button-height-comfortable);
-}
-
-/* secondary — white background, brand.ink text + border */
-.root.is-secondary {
-  background: var(--color-surface-light);
-  color: var(--color-brand-ink);
-  border-color: var(--color-brand-ink);
-}
-
-/* secondary on dark — transparent dark surface, light label, visible outline */
+/* The two outlined variants carry a 1px border, so each padding edge loses
+   the same pixel and the box stays the 48px .btn box (§5). */
+.root.is-secondary,
 .root.is-secondary-on-dark {
+  border: 1px solid;
+  padding: 11px 23px;
+}
+
+/* secondary — the outlined navy button (.btn-outline-navy) */
+.root.is-secondary {
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+}
+
+/* secondary on dark — .btn-outline-lime, yettel's outlined button for a navy
+   ground: lime text and hairline on a transparent fill */
+.root.is-secondary-on-dark {
+  color: var(--color-accent);
   background: transparent;
+  border-color: var(--color-accent);
+}
+
+/* navy — the filled .btn--primary, white on #002340 */
+.root.is-navy {
   color: var(--color-text-inverse);
-  border-color: var(--color-border-control);
+  background: var(--color-primary);
 }
 
 .root:hover:not(:disabled) {
-  background: var(--color-brand-accent-hover);
+  background: var(--color-accent-hover);
 }
 
 .root.is-secondary:hover:not(:disabled) {
-  background: var(--color-brand-accent-soft);
+  background: var(--color-surface-sky);
 }
 
 .root.is-secondary-on-dark:hover:not(:disabled) {
-  border-color: var(--color-text-inverse);
+  color: var(--color-primary);
+  background: var(--color-accent);
+}
+
+.root.is-navy:hover:not(:disabled) {
+  background: var(--color-primary-hover);
 }
 
 .root:active:not(:disabled) {
@@ -64,15 +73,17 @@
   outline-offset: 2px;
 }
 
-.root.is-secondary-on-dark:focus-visible,
-.root.is-secondary:focus-visible {
-  outline-color: var(--color-focus-light);
+/* The pill sits on a navy surface, where both the navy ring and a lime one
+   (the pill's own colour) disappear; white is the only ring that reads there
+   (docs/design/yettel.md §9). */
+.root.is-secondary-on-dark:focus-visible {
+  outline-color: var(--color-text-inverse);
 }
 
 .root:disabled {
-  background: var(--color-surface-section);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border-subtle);
+  color: var(--color-disabled-text);
+  background: var(--color-disabled-bg);
+  border-color: var(--color-disabled-bg);
   cursor: not-allowed;
 }
 

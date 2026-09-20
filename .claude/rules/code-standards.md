@@ -113,7 +113,7 @@ path-scoped rules trigger only on a read.
 - **A cut feature leaves nothing behind, and the mock data is not a reason to
   keep any of it.** When the user cuts a component, a route, a filter or a
   feature, it goes out of every layer in the same change: the type union, the
-  template, the SCSS, the handler, the fixture, and its tests, e2e included.
+  template, the SCSS, the handler, the fixture, and its tests.
   No compatibility shim, no "the old payload still parses so nothing breaks",
   no code parked against a future rebuild. What `src/mocks/` already serves is
   not a reason to keep one either: a fixture in a shape the code no longer

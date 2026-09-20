@@ -138,9 +138,8 @@ of this unit:
 - `src/mocks/**`
 - `src/app/shared/shell/**`
 - `src/app/features/home/hero.html`, `hero.scss`
-- `docs/fix/FIX-70.md`, `docs/fix/FIX-34.md`
 - `scripts/coder-agent/**`
-- anything under `e2e/`
+- (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 ## Step 6 — gates
 

@@ -39,8 +39,8 @@ module.exports = defineConfig([
         },
       ],
       // Forbid legacy `@Input()` / `@Output()` decorators in favor of the
-      // signal-based input() / output() / model() APIs. Backed by the
-      // mi-bolt-design skill and T01-AC03.
+      // signal-based input() / output() / model() APIs. Backed by
+      // T01-AC03.
       '@angular-eslint/prefer-signals': 'error',
       // Conventional guard / handler signatures take parameters the body
       // does not consume; the `_`-prefix is the project convention to
@@ -58,17 +58,14 @@ module.exports = defineConfig([
     },
   },
   {
-    // FIX-69 widens `lintFilePatterns` (angular.json) to include `tests/**/*.ts`
-    // and `e2e/**/*.ts`. Neither tree belongs to a TypeScript project
-    // (tsconfig.app.json and tsconfig.spec.json both include only `src/`), so
-    // this block gives ESLint the non-type-aware presets rather than the
-    // type-aware `extends` above — without a matching block at all, ESLint
-    // reports "File ignored because no matching configuration was supplied"
-    // for every file in these two trees and the widening buys nothing. FIX-46
-    // adds a second, later block matching these same two trees plus
-    // `src/**/*.spec.ts` that carries the `no-restricted-syntax` test-policy
-    // rule; this block carries no rule of its own.
-    files: ['tests/**/*.ts', 'e2e/**/*.ts'],
+    // FIX-69 widens `lintFilePatterns` (angular.json) to include `tests/**/*.ts`.
+    // That tree does not belong to a TypeScript project (tsconfig.app.json and
+    // tsconfig.spec.json both include only `src/`), so this block gives ESLint
+    // the non-type-aware presets rather than the type-aware `extends` above —
+    // without a matching block at all, ESLint reports "File ignored because no
+    // matching configuration was supplied" for every file in this tree and the
+    // widening buys nothing. This block carries no rule of its own.
+    files: ['tests/**/*.ts'],
     extends: [eslint.configs.recommended, tseslint.configs.recommended],
   },
   {

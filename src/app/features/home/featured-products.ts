@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Money } from '../../api/generated/models/money';
+import { Button } from '../../shared/ui/button/button';
 
 /** Status of the whole featured grid in the home page. */
 export type FeaturedStatus = 'loading' | 'success' | 'error';
@@ -44,7 +45,7 @@ export interface FeaturedState {
  */
 @Component({
   selector: 'app-featured-products',
-  imports: [RouterLink],
+  imports: [RouterLink, Button],
   templateUrl: './featured-products.html',
   styleUrl: './featured-products.scss',
 })

@@ -229,7 +229,7 @@ decision for the orchestrator's user.
 - `src/app/features/checkout/**` except `checkout.guards.ts` and
   `checkout-state.spec.ts`
 - `src/mocks/**`, `src/styles/**`, `src/app/shared/**`, `src/app/api/**`
-- `docs/**`, `.claude/**`, `scripts/**`, `e2e/**`
+- `docs/**`, `.claude/**`, `scripts/**` (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 Your files are exactly `src/app/features/checkout/checkout.guards.ts` and
 `src/app/features/checkout/checkout-state.spec.ts`. If the change makes another

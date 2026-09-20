@@ -1,216 +1,84 @@
-/* MiBolt HeaderNav primitive.
-   Brand-consistent dark shell (color-shell-dark) with orange accents
-   (color-brand-accent) and 64 px header height on desktop. The mobile
-   search bar is a separate full-width strip rendered by both the
-   marketing and shop variants; it appears at <= 640 px. */
+/* MiBolt HeaderNav. The bar is yettel's lime #b4ff00 strip carrying navy
+   brand, menu, icons and search (docs/design/yettel.md §5 "Header" and
+   docs/design/yettel/screenshots/home-1920.png); the box, flex and spacing
+   are Tailwind utilities on header-nav.html, so this sheet holds only the
+   per-surface colours, the active-link underline and the breakpoints. */
 
 :host {
   display: block;
 }
 
 .header {
-  background: var(--color-shell-dark);
-  color: var(--color-text-inverse);
-  border-bottom: 1px solid var(--color-shell-line);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-
-.header--checkout {
-  padding: 0;
+  background: var(--color-accent);
+  color: var(--color-primary);
 }
 
 .header__inner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: 64px;
-  padding: var(--space-2) var(--layout-gutter-mobile);
   max-width: var(--layout-container-max);
-  margin: 0 auto;
 }
 
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-inverse);
-  text-decoration: none;
-  min-height: var(--size-control);
+.brand__word,
+.brand__mark,
+.header__nav a,
+.header__back {
+  font-family: var(--font-family-bold);
 }
 
 .brand__mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--color-brand-accent);
-  color: var(--color-text-primary);
-  font-weight: var(--weight-bold);
-  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: var(--color-accent);
 }
 
-.brand__word {
-  font-weight: var(--weight-bold);
-  font-size: var(--type-card-title);
-  letter-spacing: 0.02em;
+/* .portal-header-menu__link:hover::before — a 3px bar with an 8px 8px 0 0
+   radius in the link's own colour (docs/design/yettel.md §5). */
+.header__nav a:hover::after,
+.header__nav a:focus-visible::after,
+.header__nav a.is-active::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  border-radius: 8px 8px 0 0;
+  background: currentColor;
 }
 
-.header__nav {
-  display: none;
-  gap: var(--space-4);
-  flex: 1 1 auto;
-  justify-content: center;
+.header__search,
+.mobile-search input {
+  background: var(--color-surface);
 }
 
-.header__nav a {
-  color: var(--color-text-inverse);
-  text-decoration: none;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-control);
-  min-height: var(--size-control);
-  display: inline-flex;
-  align-items: center;
-  font-size: var(--type-body);
-}
-
-.header__nav a:hover,
-.header__nav a:focus-visible {
-  color: var(--color-text-inverse);
-  text-decoration: underline;
-  text-underline-offset: 6px;
-}
-
-.header__nav a.is-active {
-  text-decoration: underline;
-  text-decoration-color: var(--color-brand-accent);
-  text-decoration-thickness: 3px;
-  text-underline-offset: 6px;
-}
-
-.header__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
-}
-
-.header__search {
-  display: none;
-  align-items: center;
-  background: var(--color-shell-line);
-  border-radius: var(--radius-control);
-  padding: 0 var(--space-3);
-  min-height: var(--size-control);
-}
-
-.header__search input {
-  background: transparent;
-  border: none;
-  color: var(--color-text-inverse);
-  outline: none;
-  min-width: 200px;
+.header__search input,
+.mobile-search input {
   font: inherit;
-  height: var(--size-control);
+  color: inherit;
 }
 
-.header__search input::placeholder {
-  color: var(--color-text-inverse-muted);
-}
-
-.cart {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-inverse);
-  text-decoration: none;
-  min-height: var(--size-control);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-control);
+.header__search input::placeholder,
+.mobile-search input::placeholder {
+  color: var(--color-text-muted);
 }
 
 .cart:hover,
-.cart:focus-visible {
-  background: var(--color-shell-line);
-}
-
-.cart__icon {
-  display: inline-flex;
-}
-
-.cart__label {
-  display: none;
-  font-size: var(--type-body);
-}
-
-.cart__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 var(--space-1);
-  background: var(--color-brand-accent);
-  color: var(--color-text-primary);
-  font-size: var(--type-meta);
-  font-weight: var(--weight-bold);
-  border-radius: var(--radius-badge);
-}
-
-.menu-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--size-control);
-  height: var(--size-control);
-  border-radius: var(--radius-control);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--color-text-inverse);
-  font-size: 1.25rem;
-  cursor: pointer;
-}
-
+.cart:focus-visible,
 .menu-trigger:hover {
-  background: var(--color-shell-line);
+  background: var(--color-accent-hover);
 }
 
-.menu-trigger:focus-visible {
-  outline: 2px solid var(--color-focus-dark);
-  outline-offset: 2px;
+/* .portal-header__cart-counter — 16px navy circle, white 10/16 text (§5). */
+.cart__badge {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-size: 10px;
+  line-height: 16px;
 }
 
 .mobile-search {
-  display: block;
-  padding: var(--space-2) var(--layout-gutter-mobile) var(--space-3);
-  background: var(--color-shell-dark);
-  border-top: 1px solid var(--color-shell-line);
+  background: var(--color-accent);
 }
 
-.mobile-search__field {
-  display: block;
-}
-
-.mobile-search input {
-  width: 100%;
-  min-height: var(--size-control);
-  padding: 0 var(--space-3);
-  background: var(--color-shell-line);
-  border: 1px solid transparent;
-  color: var(--color-text-inverse);
-  border-radius: var(--radius-control);
-  font: inherit;
-}
-
-.mobile-search input::placeholder {
-  color: var(--color-text-inverse-muted);
-}
-
+.menu-trigger:focus-visible,
 .mobile-search input:focus-visible {
-  outline: 2px solid var(--color-focus-dark);
+  outline: 2px solid var(--color-focus-light);
   outline-offset: 2px;
 }
 
@@ -223,76 +91,32 @@
   flex-wrap: wrap;
 }
 
-.header__label {
-  color: var(--color-text-inverse-muted);
-  font-size: var(--type-helper);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
+/* .btn-outline-navy on the lime bar; 1px off each padding edge keeps the
+   48px box every yettel .btn has (docs/design/yettel.md §5). */
 .header__back {
-  color: var(--color-text-inverse);
-  text-decoration: none;
-  padding: var(--space-2) var(--space-3);
-  min-height: var(--size-control);
-  display: inline-flex;
-  align-items: center;
-  border-radius: var(--radius-control);
-  border: 1px solid var(--color-brand-accent);
-  font-size: var(--type-body);
-  white-space: nowrap;
-  flex-shrink: 0;
+  padding: 11px 23px;
+  border: 1px solid var(--color-primary);
 }
 
-.header__back:hover,
+.header__back:hover {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
 .header__back:focus-visible {
-  background: var(--color-brand-accent);
-  color: var(--color-text-primary);
-  outline: none;
+  outline: 2px solid var(--color-focus-light);
+  outline-offset: 2px;
 }
 
 /* Desktop layout ----------------------------------------------------- */
 
 @media (min-width: 1024px) {
   .header__inner {
-    padding: var(--space-2) var(--layout-gutter-desktop);
-    gap: var(--space-6);
+    min-height: var(--size-header);
   }
 
-  .header__nav {
-    display: flex;
-  }
-
-  .header__search {
-    display: flex;
-  }
-
-  .cart__label {
-    display: inline;
-  }
-
-  .menu-trigger {
-    display: none;
-  }
-
-  .mobile-search {
-    display: none;
-  }
-}
-
-/* Narrow layout: full-width mobile search bar visible --------------- */
-@media (max-width: 640px) {
-  .header--default .mobile-search {
-    display: block;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .header,
-  .cart,
-  .menu-trigger,
-  .header__nav a,
-  .header__back {
-    transition: none;
+  .header__nav a {
+    font-size: var(--type-nav);
+    line-height: var(--leading-nav);
   }
 }

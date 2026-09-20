@@ -11,7 +11,7 @@
   },
   {
     "id": "RQ02",
-    "text": "Mandatory mi-bolt-design on every execution AND verification",
+    "text": "Mandatory citation of `docs/design/yettel.md` on every execution AND verification",
     "tasks": [
       "T00",
       "T10",
@@ -148,12 +148,12 @@
   },
   {
     "id": "RQ14",
-    "text": "100% independent E2E coverage",
+    "text": "No end-to-end suite",
     "tasks": [
       "T02",
       "T27"
     ],
-    "evidence": "Browser source coverage=100 independently + all declared behavior/state cases; no unit-counter merge."
+    "evidence": "There is no end-to-end suite, by the product owner's decision of 2026-09-20; verification of rendered surfaces is the real-browser pass described in docs/spec/testing.md."
   },
   {
     "id": "RQ15",

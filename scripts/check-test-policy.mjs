@@ -5,13 +5,12 @@
 // directive that would let a failing requirement pass the suite
 // silently. The forbidden list mirrors the `coverage-policy.json`
 // "forbidden" entry (`skip/todo/only`) and extends it with every
-// Vitest / Jest / Playwright spelling the user is likely to use.
+// Vitest / Jest spelling the user is likely to use.
 //
 // Scope:
 //   tests/**/*.spec.ts       (Vitest specs)
 //   tests/**/*.test.ts
 //   tests/contract/**/*.spec.ts
-//   e2e/**/*.spec.ts         (Playwright specs)
 //
 // Exits 0 with `test-policy:OK` and a per-pattern count when nothing
 // trips, exits 1 with a structured finding list otherwise. The exit
@@ -30,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = resolve(__dirname, '..');
 
-const SCAN_ROOTS = ['tests', 'e2e'];
+const SCAN_ROOTS = ['tests'];
 
 const SCAN_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
 
@@ -48,13 +47,8 @@ const PATTERNS = [
   { id: 'xtest', regex: /\bxtest\s*\(/ },
   { id: 'it-fixme', regex: /\b(it|test|spec)\.fixme\s*\(/ },
   { id: 'it-fails', regex: /\b(it|test|spec)\.fails\s*\(/ },
-  // Playwright
-  { id: 'pw-skip', regex: /\btest\.skip\s*\(/ },
-  { id: 'pw-fixme', regex: /\btest\.fixme\s*\(/ },
-  { id: 'pw-slow', regex: /\btest\.slow\s*\(/ },
-  { id: 'pw-only', regex: /\btest\.only\s*\(/ },
-  // Quarantine / soft disable aliases. These are not real Vitest /
-  // Playwright APIs, but the implementation intentionally rejects
+  // Quarantine / soft disable aliases. These are not real Vitest
+  // APIs, but the implementation intentionally rejects
   // ANY literal mention of "quarantine" inside a spec body so a
   // future author cannot invent one.
   { id: 'quarantine-marker', regex: /\b(flaky[_-]?quarantine|quarantine|skipQuarantine)\b/i },
@@ -135,7 +129,7 @@ function parseArgs(argv) {
 function help() {
   process.stdout.write(`Usage: check-test-policy.mjs [--strict]
 
-Scans tests/ and e2e/ for Vitest / Playwright focus, skip, todo,
+Scans tests/ for Vitest focus, skip, todo,
 quarantine and coverage-ignore directives that would let failing
 requirements pass the suite silently. Exits 0 on a clean scan, 1 on
 any finding. --strict also rejects coverage-ignore pragma comments.

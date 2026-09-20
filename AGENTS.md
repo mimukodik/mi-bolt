@@ -16,8 +16,8 @@ cites that document for each value it uses or checks; a value it does not
 carry is measured on `docs/design/yettel/css/portal.css` and added there
 before it is used. The earlier `mi-bolt-design` skill, its R01–R26 audit
 table and `docs/mi-bolt/execution/skill-location.json` are retired
-(2026-09-20); the task packets and repair notes under `docs/tasks/` and
-`docs/fix/` that cite them are history, not instructions.
+(2026-09-20), and the task packets and repair notes that cited them were
+deleted with it.
 
 ## Where the rest of the rules live
 
@@ -28,7 +28,6 @@ table and `docs/mi-bolt/execution/skill-location.json` are retired
 | Architecture, screens, components, testing, acceptance                  | `docs/spec/`                            |
 | The wire contract                                                       | `docs/api/openapi.yaml`                 |
 | Task packets and the dependency graph                                   | `docs/tasks/`                           |
-| The repair package for the defects found in the audit                   | `docs/fix/`                             |
 | The design authority, the captured yettel.hu source and the prototype   | `docs/design/yettel.md`, `docs/design/` |
 
 Do not restate what any of those say. The root `CLAUDE.md` is in the same

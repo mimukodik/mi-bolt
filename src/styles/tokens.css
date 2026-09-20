@@ -1,43 +1,39 @@
-/* mi-bolt design tokens — copied from .claude/skills/mi-bolt-design/assets/tokens.css
-   Source approval: mi-bolt-design 1.0.1
-   Naming: short names satisfy T10-AC01 (color-brand-accent, color-text-primary,
-   color-surface-light, color-surface-section, color-shell-dark, 8pt spacing
-   scale, 4pt sub-step, radius-card, radius-control). Long --mi-bolt-* aliases
-   are kept so deeper code can reference the canonical skill identifiers. */
+/* Legacy token names, each resolving to a yettel theme variable declared in src/styles.css. The mapping, row by row with its yettel source, is docs/design/yettel.md §9. */
 
 :root {
   /* color brand */
-  --color-brand-accent: #ff6a00;
-  --color-brand-accent-hover: #f05f00;
-  --color-brand-accent-soft: #fff0e6;
-  --color-brand-ink: #a83b00;
+  --color-brand-accent: var(--color-accent);
+  --color-brand-accent-hover: var(--color-accent-hover);
+  --color-brand-accent-soft: var(--color-surface-sky);
+  --color-brand-ink: var(--color-primary);
 
   /* color surface */
-  --color-surface-light: #ffffff;
-  --color-surface-section: #f5f6f7;
-  --color-shell-dark: #1b2024;
-  --color-shell-hero: #101416;
-  --color-shell-line: #2c333a;
+  --color-surface-light: var(--color-surface);
+  --color-surface-section: var(--color-surface-alt);
+  --color-shell-dark: var(--color-primary);
+  --color-shell-hero: var(--color-primary);
+  --color-shell-line: var(--color-primary-hover);
 
   /* color text */
-  --color-text-primary: #171b1f;
-  --color-text-secondary: #545b64;
-  --color-text-inverse: #ffffff;
-  --color-text-inverse-muted: #ccd0d5;
+  --color-text-primary: var(--color-text);
+  --color-text-secondary: var(--color-text-muted);
+  --color-text-inverse: var(--color-surface);
+  --color-text-inverse-muted: var(--color-line);
 
   /* color border */
-  --color-border-subtle: #dde1e5;
-  --color-border-control: #737b84;
+  --color-border-subtle: var(--color-line);
+  --color-border-control: var(--color-text-muted);
 
   /* color status */
-  --color-status-success: #166534;
-  --color-status-error: #b42318;
-  --color-status-warning: #854d0e;
-  --color-status-info: #174eb5;
+  --color-status-success: var(--color-success);
+  --color-status-error: var(--color-error);
+  --color-status-warning: var(--color-warning);
+  --color-status-warning-text: var(--color-warning-text);
+  --color-status-info: var(--color-surface-sky);
 
   /* color focus */
-  --color-focus-light: #174eb5;
-  --color-focus-dark: #ff9b54;
+  --color-focus-light: var(--color-primary);
+  --color-focus-dark: var(--color-accent);
 
   /* spacing scale: 8pt rhythm, 4pt sub-step */
   --space-1: 4px;
@@ -51,20 +47,33 @@
   --space-9: 48px;
   --space-10: 64px;
 
-  /* radius */
-  --radius-card: 8px;
-  --radius-control: 6px;
-  --radius-badge: 4px;
+  /* radius. --radius-card is not redeclared here: the theme variable of that
+     name is already the yettel 16px card radius, and a self-referencing
+     custom property would resolve to nothing. */
+  --radius-control: var(--radius-input);
+  --radius-badge: var(--radius-input);
 
   /* size */
   --size-control: 44px;
   --size-control-comfortable: 48px;
+  /* Desktop height of the header bar — .portal-header__bar{height:72px}
+     (docs/design/yettel.md §5 "Header"). */
+  --size-header: 72px;
   --size-icon: 20px;
   --size-icon-large: 24px;
 
   /* typography */
-  --font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-base: var(--font-sans);
+  /* The bold and light faces are declared here rather than in the @theme
+     block: Tailwind's --font-* namespace would turn them into font-family
+     utilities named font-bold and font-light. docs/design/yettel.md §3. */
+  --font-family-bold: 'portal-font-bold', sans-serif, arial;
+  --font-family-light: 'portal-font-light', sans-serif, arial;
   --type-body: 16px;
+  /* Header menu link — .portal-header-menu__link{font-size:20px;line-height:28px}
+     (docs/design/yettel.md §5 "Header"). */
+  --type-nav: 20px;
+  --leading-nav: 28px;
   --type-card-title: 18px;
   --type-section-title: 28px;
   --type-section-title-mobile: 24px;
@@ -94,56 +103,10 @@
   --motion-panel: 220ms;
 
   /* button specifics */
-  --button-radius: var(--radius-control);
-  --button-height: var(--size-control);
-  --button-height-comfortable: var(--size-control-comfortable);
-
-  /* canonical alias (skill package): mi-bolt- prefixed names */
-  --mi-bolt-color-brand-accent: var(--color-brand-accent);
-  --mi-bolt-color-brand-accentHover: var(--color-brand-accent-hover);
-  --mi-bolt-color-brand-accentSoft: var(--color-brand-accent-soft);
-  --mi-bolt-color-brand-ink: var(--color-brand-ink);
-  --mi-bolt-color-surface-page: var(--color-surface-light);
-  --mi-bolt-color-surface-subtle: var(--color-surface-section);
-  --mi-bolt-color-surface-dark: var(--color-shell-dark);
-  --mi-bolt-color-surface-hero: var(--color-shell-hero);
-  --mi-bolt-color-text-primary: var(--color-text-primary);
-  --mi-bolt-color-text-secondary: var(--color-text-secondary);
-  --mi-bolt-color-text-inverse: var(--color-text-inverse);
-  --mi-bolt-color-text-inverseMuted: var(--color-text-inverse-muted);
-  --mi-bolt-color-border-subtle: var(--color-border-subtle);
-  --mi-bolt-color-border-control: var(--color-border-control);
-  --mi-bolt-color-status-success: var(--color-status-success);
-  --mi-bolt-color-status-error: var(--color-status-error);
-  --mi-bolt-color-status-warning: var(--color-status-warning);
-  --mi-bolt-color-status-info: var(--color-status-info);
-  --mi-bolt-color-focus-light: var(--color-focus-light);
-  --mi-bolt-color-focus-dark: var(--color-focus-dark);
-  --mi-bolt-space-s4: var(--space-1);
-  --mi-bolt-space-s8: var(--space-2);
-  --mi-bolt-space-s12: var(--space-3);
-  --mi-bolt-space-s16: var(--space-4);
-  --mi-bolt-space-s20: var(--space-5);
-  --mi-bolt-space-s24: var(--space-6);
-  --mi-bolt-space-s32: var(--space-7);
-  --mi-bolt-space-s40: var(--space-8);
-  --mi-bolt-space-s48: var(--space-9);
-  --mi-bolt-space-s64: var(--space-10);
-  --mi-bolt-radius-card: var(--radius-card);
-  --mi-bolt-radius-button: var(--radius-control);
-  --mi-bolt-radius-input: var(--radius-control);
-  --mi-bolt-radius-badge: var(--radius-badge);
-  --mi-bolt-size-control: var(--size-control);
-  --mi-bolt-size-controlComfortable: var(--size-control-comfortable);
-  --mi-bolt-type-body: var(--type-body);
-  --mi-bolt-type-cardTitle: var(--type-card-title);
-  --mi-bolt-type-price: var(--type-price);
-  --mi-bolt-type-priceMobile: var(--type-price-mobile);
-  --mi-bolt-button-primaryBackground: var(--color-brand-accent);
-  --mi-bolt-button-primaryText: var(--color-text-primary);
-  --mi-bolt-button-secondaryText: var(--color-brand-ink);
-  --mi-bolt-button-height: var(--button-height);
-  --mi-bolt-button-radius: var(--button-radius);
+  --button-radius: var(--radius-pill);
+  /* The yettel .btn box is 12px + 24px line-height + 12px = 48px
+     (docs/design/yettel.md §5 "Primary button"). */
+  --button-height: var(--size-control-comfortable);
 }
 
 @media (prefers-reduced-motion: reduce) {

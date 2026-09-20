@@ -27,6 +27,12 @@
   // whose cross-axis margin is auto has the cross-axis stretch
   // suppressed.)
   width: 100%;
+  /* The free space in the shell's flex column belongs to the page, not to
+     the DEMÓ notice: this <main> is projected through <ng-content>, so only
+     the layout that declares it can reach it (Angular emulated style
+     encapsulation). Without this the footer leaves the viewport bottom on
+     a short page. */
+  flex: 1 1 auto;
   padding: var(--space-6) 0 var(--space-7);
   max-width: var(--layout-container-max);
   margin: 0 auto;

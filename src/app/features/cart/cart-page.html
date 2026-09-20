@@ -38,7 +38,7 @@
       <app-empty-state
         [title]="'A kosarad még üres.'"
         [message]="'Nézd meg a demókészülékeket, és válaszd ki a kedvenced.'"
-        [actionLabel]="'Telefonokat nézek →'"
+        [actionLabel]="'Telefonokat nézek'"
         [actionVariant]="'primary'"
         (actionRequested)="onContinueShopping()"
       ></app-empty-state>
@@ -87,13 +87,11 @@
         >
           <app-button
             variant="secondary"
-            size="comfortable"
             label="Vásárlás folytatása"
             (pressed)="onContinueShopping()"
           ></app-button>
           <app-button
             variant="primary"
-            size="comfortable"
             label="Tovább az adatokhoz"
             [loadingLabel]="'Ellenőrzés…'"
             [loading]="continuing()"

@@ -1,11 +1,11 @@
 /**
  * T05 — scenario descriptors, deterministic clocks and ids.
  *
- * The mock layer is split by test context: each scenario owns its own
- * Repository, its own clock origin and its own id counter. E2E specs
- * read `?mi-scenario=<name>` from `location.search` and pass the
- * resulting descriptor to the handler factory so two Playwright
- * contexts cannot leak state into each other.
+ * The mock layer is split by scenario: each scenario owns its own
+ * Repository, its own clock origin and its own id counter. The page
+ * reads `?mi-scenario=<name>` from `location.search` and passes the
+ * resulting descriptor to the handler factory so two scenario
+ * instances cannot leak state into each other.
  *
  * Clock + ids are factory-injected; the factory never falls back to
  * `Date.now()` or `Math.random()` so the same scenario name always
@@ -88,8 +88,8 @@ export const BUILT_IN_SCENARIOS: Readonly<Record<ScenarioName, ScenarioDescripto
  * Resolves a scenario by name. Unknown names yield a fresh descriptor
  * whose seed/offset match the default; the name is preserved so log
  * lines and snapshot keys stay accurate. Returning a default shape
- * (never throwing) keeps the bootstrap path safe when an E2E spec
- * passes an out-of-date name.
+ * (never throwing) keeps the bootstrap path safe when an out-of-date
+ * scenario name is passed.
  */
 export function resolveScenario(name: ScenarioName | null | undefined): ScenarioDescriptor {
   if (typeof name !== 'string' || name.length === 0) return DEFAULT_SCENARIO;
@@ -131,7 +131,7 @@ export function parseScenarioFromLocation(): ScenarioDescriptor {
 }
 
 /**
- * Fixed clock used by deterministic E2E specs. The clock advances by
+ * Fixed clock used by deterministic tests. The clock advances by
  * accumulation; `now()` always returns an ISO 8601 timestamp.
  */
 export function createFixedClock(initialIso: string): Clock {

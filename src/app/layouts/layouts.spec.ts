@@ -163,18 +163,27 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     await TestBed.compileComponents();
   });
 
-  it('MarketingLayout header has dark shell and brand label', () => {
+  it('MarketingLayout header is the lime bar with navy on it (docs/design/yettel.md §5)', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const header = raw.querySelector('header');
     expect(header).not.toBeNull();
-    const css = getComponentStyles(HeaderNav).join(' ');
-    const hasDark = css.includes('color-shell-dark');
-    const hasAlt = css.includes('mi-bolt-color-surface-dark');
-    const found = hasDark || hasAlt;
-    expect(found).toBe(true);
+    const css = getComponentStyles(HeaderNav)
+      .join(' ')
+      .replaceAll('%NS%', '')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s+/g, '');
+    // .portal-header__bar{height:72px;background:#b4ff00} with navy text —
+    // the header no longer takes the navy shell token, which still grounds
+    // the footer, the hero and the drawer.
+    const at = css.indexOf('.header{');
+    expect(at).toBeGreaterThan(-1);
+    const bar = css.slice(at, css.indexOf('}', at));
+    expect(bar).toContain('background:var(--color-accent)');
+    expect(bar).toContain('color:var(--color-primary)');
+    expect(css.includes('color-shell-dark')).toBe(false);
   });
 
   it('MarketingLayout exposes Hungarian nav links', () => {
@@ -887,5 +896,52 @@ describe('T11-AC03 each layout moves focus on a real path change', () => {
   it('CheckoutLayout focuses the heading after a path change', async () => {
     const where = await focusAfterNavigation(CheckoutLayout, '/egy');
     expect(where).toBe('h1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S0-G2 item D: the shell's free space belongs to the page, not to the DEMÓ
+// notice. `app-shell.scss` carried `:host > :nth-child(1) { flex: 1 1 auto }`
+// and the shell's first child is `<app-demo-notice>`, so the notice grew and
+// the footer stopped sitting at the bottom of a short page. The shell cannot
+// reach the page element at all: emulated encapsulation scopes a component's
+// styles to the elements of its own template, and `<main class="layout-main">`
+// is projected in through `<ng-content>`
+// (https://angular.dev/guide/components/styling#viewencapsulationemulated).
+// The fill therefore lives in the three layout sheets that declare
+// `.layout-main`. jsdom does not lay out, so the assertion is that the
+// declaration reached the built stylesheet, which is the invariant worth
+// pinning.
+// ---------------------------------------------------------------------------
+describe('S0-G2 item D: .layout-main carries the shell fill', () => {
+  function normalisedCss(comp: unknown): string {
+    return getComponentStyles(comp)
+      .join(' ')
+      .replaceAll('%NS%', '')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s+/g, '');
+  }
+
+  function layoutMainBody(comp: unknown): string {
+    const css = normalisedCss(comp);
+    const at = css.indexOf('.layout-main{');
+    expect(at).toBeGreaterThan(-1);
+    return css.slice(at, css.indexOf('}', at));
+  }
+
+  it('AppShell no longer grows its own first child', () => {
+    expect(normalisedCss(AppShell).includes('nth-child')).toBe(false);
+  });
+
+  it('MarketingLayout .layout-main is flex: 1 1 auto', () => {
+    expect(layoutMainBody(MarketingLayout)).toContain('flex:11auto');
+  });
+
+  it('ShopLayout .layout-main is flex: 1 1 auto', () => {
+    expect(layoutMainBody(ShopLayout)).toContain('flex:11auto');
+  });
+
+  it('CheckoutLayout .layout-main is flex: 1 1 auto', () => {
+    expect(layoutMainBody(CheckoutLayout)).toContain('flex:11auto');
   });
 });

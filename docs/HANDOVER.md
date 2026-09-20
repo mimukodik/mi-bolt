@@ -193,7 +193,6 @@ content area.
 - Two branches on `origin`: `feat/mi-bolt-mvp-implementation` and
   `run/deeplink-wait` (§1). Nothing else is left anywhere — no worktree to
   inherit, no background process, no runner to resume.
-- `docs/fix/` holds 77 fix docs: **40 DONE, 28 PARTIAL, 4 PLANNED, 2 BLOCKED**.
 
 ### Commits this session
 
@@ -266,12 +265,6 @@ Each of these is settled. Do not re-ask; execute.
 
 These were in the task list before this session and were never reached. Each
 needs its own `AskUserQuestion`, not a line in a report.
-
-- **#39** — what the Playwright suite measures against: two builds contradict.
-- **#40** — the design suite writes tracked screenshots on every run.
-- **#41** — the design-skill mandate points at a directory that does not exist.
-- **#62** — the design viewport suite writes blank screenshots
-  non-deterministically.
 
 ### Open work with no blocking question
 

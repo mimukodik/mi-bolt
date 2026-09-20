@@ -168,7 +168,7 @@ unit:
 - `docs/**`
 - `.claude/**`
 - `scripts/**`
-- anything under `e2e/`
+- (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 Any other file under `src/app/features/catalog/` is also out of scope: this
 unit is `catalog-query.ts` and its new spec, nothing else. If the change makes

@@ -11,8 +11,9 @@ every subagent except the built-in Explore and Plan agents). Referenced from
 **A question about how the framework behaves is answered from the
 documentation, not from a probe.** No scratch component, no throwaway app, no
 experiment built to see what happens. Before writing anything that depends on
-how Angular, the Angular CLI, the `@angular/build` builders, Vitest, MSW or
-Playwright behave, read it.
+how Angular, the Angular CLI, the `@angular/build` builders, Vitest or MSW
+behave, read it. There is no end-to-end suite in this project by decision
+(2026-09-20), so Playwright is not part of this list.
 
 The reason is the version. This workspace runs Angular 22, TypeScript 6 and
 ESLint 10, all newer than the model's training data, and that gap is an
@@ -54,8 +55,8 @@ prompts") covers the same failure for claims about this branch's history.
 ## Measuring this repository is a different thing, and is unchanged
 
 Everything the gates and the shell already do stays required: running
-`npm run test`, `npm run lint`, `npm run build` and `npm run fix:status` and
-reading the exit codes; grepping the tree; reading `angular.json`,
+`npm run test`, `npm run lint` and `npm run build` and reading the exit
+codes; grepping the tree; reading `angular.json`,
 `package.json` and `eslint.config.js`; `git log -S` to find when a line
 arrived. Reading the installed source under `node_modules/` to settle what a
 version actually ships is also measurement, not a probe.

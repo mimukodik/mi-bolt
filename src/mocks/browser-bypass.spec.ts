@@ -8,7 +8,7 @@
  * throws outside a real browser, so nothing under `src`/`tests` may
  * import it (see `src/main.spec.ts`'s own guard against that chain).
  *
- * T05-AC05 (`docs/tasks/T05.md:49`): "Unknown API endpoints cannot
+ * The requirement: "Unknown API endpoints cannot
  * pass through; local app/media assets are explicitly allowed.
  * External scripts, fonts, telemetry and business hosts are
  * disallowed."

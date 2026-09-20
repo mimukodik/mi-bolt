@@ -10,14 +10,11 @@
       <div class="featured__grid-error" data-testid="error-state" role="status" aria-live="polite">
         <p class="featured__error-title">A kiemelt termékek nem tölthetők be</p>
         <p class="featured__error-message">{{ errorMessage() }}</p>
-        <button
-          type="button"
-          class="featured__retry"
-          data-testid="retry-button"
-          (click)="retryRequested.emit()"
-        >
-          Újrapróbálom
-        </button>
+        <app-button
+          label="Újrapróbálom"
+          variant="primary"
+          (pressed)="retryRequested.emit()"
+        ></app-button>
       </div>
     } @else {
       <ul class="featured__grid" data-testid="featured-grid" role="list">

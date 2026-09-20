@@ -6,7 +6,7 @@ Tasks: T00, T01, T28.
 
 Acceptance evidence: Toolchain lock, build artifact inspection and static deep links.
 
-## RQ02 — Mandatory mi-bolt-design on every execution AND verification
+## RQ02 — Mandatory citation of `docs/design/yettel.md` on every execution AND verification
 
 Tasks: T00, T10, T25, T29.
 
@@ -78,11 +78,11 @@ Tasks: T02, T27.
 
 Acceptance evidence: Per-file and global statement/branch/function/line thresholds=100; inventory includes unvisited source.
 
-## RQ14 — 100% independent E2E coverage
+## RQ14 — no end-to-end suite
 
 Tasks: T02, T27.
 
-Acceptance evidence: Browser source coverage=100 independently + all declared behavior/state cases; no unit-counter merge.
+Acceptance evidence: there is no end-to-end suite, by the product owner's decision of 2026-09-20; verification of rendered surfaces is the real-browser pass described in `docs/spec/testing.md`.
 
 ## RQ15 — All tests use mocks; no real services
 

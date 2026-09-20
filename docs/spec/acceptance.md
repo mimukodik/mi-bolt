@@ -5,7 +5,7 @@ These are RELEASE GATES for the future Angular implementation, not results of th
 - [ ] **AC01** Latest stable Angular 22.x is resolved at execution, exact versions locked, supported peer dependencies verified; Angular 21/23/next/rc are rejected.
 - [ ] **AC02** The app is standalone, zoneless, client-rendered only; no SSR/prerender/hydration/server artifacts or Angular PWA worker.
 - [ ] **AC03** All authored interactive state uses signals; components use input()/output(), computed() for derived state and @if/@for/@switch with stable track keys. Signal Forms manages checkout.
-- [ ] **AC04** mi-bolt-design 1.0.1 is loaded for EVERY task execution and EVERY independent verification; R01–R26 applicability and evidence are attached; missing skill is a blocker.
+- [ ] **AC04** `docs/design/yettel.md` is cited for EVERY task execution and EVERY independent verification; the earlier design-skill R01–R26 gate is retired.
 - [ ] **AC05** Exactly four commerce screen families exist: Home, Catalogue, Product, Purchase. Three shells: Marketing, Shop, Checkout. Purchase includes cart/contact/delivery/review/success and their error states.
 - [ ] **AC06** Every screen and relevant state respects the provided semantic tokens, Hungarian copy, dark shell, orange primary actions, grid, typography and readable price hierarchy.
 - [ ] **AC07** All four families and wizard steps work at 320/390/768/1024/1440/1920 CSS px without page overflow; controls remain >=44px, including sticky mobile controls.
@@ -21,7 +21,7 @@ These are RELEASE GATES for the future Angular implementation, not results of th
 - [ ] **AC17** One reusable MSW handler/domain implementation runs in browser and Node. Mock boot is awaited before Angular. Unknown API traffic fails closed; no real-backend fallback.
 - [ ] **AC18** Every test uses deterministic mock state and fake clocks/IDs where needed; each context/test is isolated; after dependency provisioning the test environment cannot reach business internet hosts.
 - [ ] **AC19** UNIT: 100% per-file and overall executable statements, branches, functions and lines for all owned runtime sources. Unvisited files count as zero. Generated/vendor/test-only artifacts are explicitly classified, not covertly excluded.
-- [ ] **AC20** E2E: independent Chromium browser coverage reaches 100% statements, branches, functions and lines for every owned browser-runtime source, including MSW domain handlers. Unit coverage is never merged into it. Non-browser tooling has separate black-box integration coverage.
+- [ ] **AC20** E2E: there is no end-to-end suite, by the product owner's decision of 2026-09-20; verification of rendered surfaces is the real-browser pass described in `docs/spec/testing.md`.
 - [ ] **AC21** All declared requirements, component states and mandatory scenario rows have passing assertions in applicable Chromium/Firefox/WebKit suites; code execution alone is not sufficient functional coverage.
 - [ ] **AC22** No .skip/.todo/.only, coverage-ignore pragmas, lowered threshold, hidden unreachable-code exclusion or silent retry masks incomplete work; release repeat runs pass without automatic retries.
 - [ ] **AC23** Accessibility includes semantics, route focus, keyboard-only purchase, screen-reader names/errors, dialogs, reduced motion and 200% text sizing. Automated scans alone are not represented as WCAG certification.
@@ -29,4 +29,4 @@ These are RELEASE GATES for the future Angular implementation, not results of th
 - [ ] **AC25** No analytics, tag manager, tracking pixels, session replay, social integration, chat widget, external fonts, consent SaaS or unnecessary operator framework is shipped.
 - [ ] **AC26** Optimized static build meets declared budgets under a recorded profile, routes resolve under root/subpath, worker/index cache policy prevents stale boot, and API URLs never receive index.html as a fake JSON response.
 - [ ] **AC27** 3D is excluded by default. If approved, local licensed assets + lazy model-viewer + fallback + same quality requirements are mandatory and O01 blocks final acceptance.
-- [ ] **AC28** Clean-checkout generation, lint, unit coverage, E2E source/scenario coverage, contract tests, browser matrix, design audit and optimized build all pass with fresh artifacts. All task statuses and remaining limitations are truthful.
+- [ ] **AC28** Clean-checkout generation, lint, unit coverage, contract tests, browser matrix, design audit and optimized build all pass with fresh artifacts; there is no end-to-end suite, by the product owner's decision of 2026-09-20, so verification of rendered surfaces is the real-browser pass described in `docs/spec/testing.md`. All task statuses and remaining limitations are truthful.

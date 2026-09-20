@@ -29,7 +29,7 @@
 // Environment:
 //
 //   MI_BOLT_E2E_STATIC_DIR overrides the served directory (shared
-//   with the static server and Playwright webServer config).
+//   with the static server).
 
 import { gzipSync } from 'node:zlib';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
