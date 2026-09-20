@@ -30,8 +30,8 @@ import { Component, computed, input } from '@angular/core';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
-import type { OrderLine } from '../../api/generated/models/order-line';
-import type { OrderReceipt } from '../../api/generated/models/order-receipt';
+import type { OrderLine } from '../../api/legacy/models/order-line';
+import type { OrderReceipt } from '../../api/legacy/models/order-receipt';
 
 const PAYMENT_LABELS: Readonly<Record<OrderReceipt['paymentMethod'], string>> = {
   demo_card: 'Bankkártya (szimulált)',

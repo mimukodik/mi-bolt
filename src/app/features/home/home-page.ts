@@ -1,10 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { take } from 'rxjs';
 
-import { Api } from '../../api/generated/api';
-import { getConfig } from '../../api/generated/fn/configuration/get-config';
-import { getProduct } from '../../api/generated/fn/catalog/get-product';
-import type { Product } from '../../api/generated/models/product';
+import { Api } from '../../api/legacy/api';
+import { getConfig } from '../../api/legacy/fn/configuration/get-config';
+import { getProduct } from '../../api/legacy/fn/catalog/get-product';
+import type { Product } from '../../api/legacy/models/product';
 
 import { Hero } from './hero';
 import { FeaturedProducts, type FeaturedSlot } from './featured-products';

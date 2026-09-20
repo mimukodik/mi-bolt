@@ -38,8 +38,8 @@ import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
 
-import type { Cart } from '../../api/generated/models/cart';
-import type { Money } from '../../api/generated/models/money';
+import type { Cart } from '../../api/legacy/models/cart';
+import type { Money } from '../../api/legacy/models/money';
 
 type ScreenState = 'loading' | 'error' | 'empty' | 'ready';
 

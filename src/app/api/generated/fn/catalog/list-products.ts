@@ -8,41 +8,48 @@ import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
 import { ProductPage } from '../../models/product-page';
+import { ProductSort } from '../../models/product-sort';
+import { StorageGb } from '../../models/storage-gb';
 
 export interface ListProducts$Params {
 
 /**
- * Case-insensitive NFC-normalized substring over brand/name; trimmed.
+ * Case-insensitive, NFC-normalised substring over brand and name. Trimmed.
  */
   q?: string;
 
 /**
- * Repeat brand=A&brand=B; OR within this facet, AND across facets.
+ * Repeatable. OR within this facet, AND across facets.
  */
   brand?: Array<string>;
 
 /**
- * Repeat parameter; OR within facet.
+ * Repeatable. OR within this facet.
  */
-  storageGb?: Array<128 | 256 | 512>;
+  storageGb?: Array<StorageGb>;
 
 /**
- * Whole HUF inclusive; evaluated against variants, not unrelated cheapest variant.
+ * Repeatable colour code. OR within this facet.
+ */
+  color?: Array<string>;
+
+/**
+ * Inclusive lower bound in whole HUF. Must not exceed maxPrice.
  */
   minPrice?: number;
 
 /**
- * Must be >= minPrice.
+ * Inclusive upper bound in whole HUF.
  */
   maxPrice?: number;
   inStock?: boolean;
   is5g?: boolean;
-  featured?: boolean;
 
 /**
- * Stable product ID tie-break. Matching selected variant determines price sorting.
+ * Curated selection for the home page. At most four entries, in curated order.
  */
-  sort?: 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
+  featured?: boolean;
+  sort?: ProductSort;
   page?: number;
   pageSize?: 12 | 24;
 }
@@ -50,17 +57,18 @@ export interface ListProducts$Params {
 export function listProducts(http: HttpClient, rootUrl: string, params?: ListProducts$Params, context?: HttpContext): Observable<StrictHttpResponse<ProductPage>> {
   const rb = new RequestBuilder(rootUrl, listProducts.PATH, 'get');
   if (params) {
-    rb.query('q', params.q, {"style":"form","explode":true});
+    rb.query('q', params.q, {});
     rb.query('brand', params.brand, {"style":"form","explode":true});
     rb.query('storageGb', params.storageGb, {"style":"form","explode":true});
-    rb.query('minPrice', params.minPrice, {"style":"form","explode":true});
-    rb.query('maxPrice', params.maxPrice, {"style":"form","explode":true});
-    rb.query('inStock', params.inStock, {"style":"form","explode":true});
-    rb.query('is5g', params.is5g, {"style":"form","explode":true});
-    rb.query('featured', params.featured, {"style":"form","explode":true});
-    rb.query('sort', params.sort, {"style":"form","explode":true});
-    rb.query('page', params.page, {"style":"form","explode":true});
-    rb.query('pageSize', params.pageSize, {"style":"form","explode":true});
+    rb.query('color', params.color, {"style":"form","explode":true});
+    rb.query('minPrice', params.minPrice, {});
+    rb.query('maxPrice', params.maxPrice, {});
+    rb.query('inStock', params.inStock, {});
+    rb.query('is5g', params.is5g, {});
+    rb.query('featured', params.featured, {});
+    rb.query('sort', params.sort, {});
+    rb.query('page', params.page, {});
+    rb.query('pageSize', params.pageSize, {});
   }
 
   return http.request(

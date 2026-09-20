@@ -16,7 +16,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration } from '../../api/legacy/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 
 import { CartFacade } from '../cart/cart.facade';

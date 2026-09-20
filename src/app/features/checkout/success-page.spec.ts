@@ -50,8 +50,8 @@ import {
   provideRouter,
 } from '@angular/router';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import type { OrderReceipt } from '../../../app/api/generated/models/order-receipt';
+import { provideApiConfiguration } from '../../../app/api/legacy/api-configuration';
+import type { OrderReceipt } from '../../../app/api/legacy/models/order-receipt';
 
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 

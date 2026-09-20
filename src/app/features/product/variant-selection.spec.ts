@@ -31,14 +31,14 @@ import { TestBed } from '@angular/core/testing';
 import { http, HttpResponse } from 'msw';
 import { server, useMswServer } from '../../../../tests/msw-server';
 
-import { Api } from '../../../app/api/generated/api';
+import { Api } from '../../../app/api/legacy/api';
 import {
   ApiConfiguration,
   provideApiConfiguration,
-} from '../../../app/api/generated/api-configuration';
-import type { Image } from '../../../app/api/generated/models/image';
-import type { Product } from '../../../app/api/generated/models/product';
-import type { Variant } from '../../../app/api/generated/models/variant';
+} from '../../../app/api/legacy/api-configuration';
+import type { Image } from '../../../app/api/legacy/models/image';
+import type { Product } from '../../../app/api/legacy/models/product';
+import type { Variant } from '../../../app/api/legacy/models/variant';
 
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 import { ProductFacade } from '../../../app/features/product/product.facade';

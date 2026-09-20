@@ -39,7 +39,7 @@ import {
 import { DeliveryStep } from './delivery-step';
 import { PaymentMethodSelector, type PaymentMethod } from './payment-method-selector';
 
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
+import type { CheckoutOptions } from '../../api/legacy/models/checkout-options';
 
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;

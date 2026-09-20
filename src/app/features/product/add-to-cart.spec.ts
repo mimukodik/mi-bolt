@@ -21,7 +21,7 @@ import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import type { UiProblem } from '../../shared/types/ui-problem';
 import { AddToCart } from './add-to-cart';
 
-import type { Variant } from '../../api/generated/models/variant';
+import type { Variant } from '../../api/legacy/models/variant';
 
 const sampleVariant: Variant = {
   id: 'demo-one-5g-graphite-256',

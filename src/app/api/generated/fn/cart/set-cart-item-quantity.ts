@@ -11,22 +11,18 @@ import { Cart } from '../../models/cart';
 import { SetCartItemQuantityRequest } from '../../models/set-cart-item-quantity-request';
 
 export interface SetCartItemQuantity$Params {
-  cartId: string;
 
 /**
- * Key scoped to method + path + demo session, retained 24 hours. Same key and normalized body returns original result BEFORE current-version checks. Different body yields 409.
+ * Globally unique variant identifier. A variant is always exactly one cart line, so no separate line identifier exists.
  */
-  'Idempotency-Key': string;
-  itemId: string;
+  variantId: string;
       body: SetCartItemQuantityRequest
 }
 
 export function setCartItemQuantity(http: HttpClient, rootUrl: string, params: SetCartItemQuantity$Params, context?: HttpContext): Observable<StrictHttpResponse<Cart>> {
   const rb = new RequestBuilder(rootUrl, setCartItemQuantity.PATH, 'patch');
   if (params) {
-    rb.path('cartId', params.cartId, {});
-    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
-    rb.path('itemId', params.itemId, {});
+    rb.path('variantId', params.variantId, {});
     rb.body(params.body, 'application/json');
   }
 
@@ -40,4 +36,4 @@ export function setCartItemQuantity(http: HttpClient, rootUrl: string, params: S
   );
 }
 
-setCartItemQuantity.PATH = '/carts/{cartId}/items/{itemId}';
+setCartItemQuantity.PATH = '/cart/items/{variantId}';

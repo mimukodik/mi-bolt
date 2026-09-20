@@ -4,18 +4,23 @@
 import { Availability } from '../models/availability';
 import { Image } from '../models/image';
 import { Money } from '../models/money';
+import { StorageGb } from '../models/storage-gb';
 export interface CartItem {
   availability: Availability;
   colorName: string;
-  id: string;
   image: Image;
   lineTotal: Money;
+
+  /**
+   * Effective cap for this line. quantity never exceeds it; if stock drops below it, the server reduces quantity and reports a notice.
+   */
   maxQuantity: number;
   productId: string;
   productName: string;
   productSlug: string;
   quantity: number;
-  storageGb: number;
+  storageGb: StorageGb;
   unitPrice: Money;
   variantId: string;
+  variantSlug: string;
 }

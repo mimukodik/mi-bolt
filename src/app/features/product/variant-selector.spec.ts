@@ -6,7 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { VariantSelector } from './variant-selector';
-import type { Variant } from '../../api/generated/models/variant';
+import type { Variant } from '../../api/legacy/models/variant';
 
 /**
  * FIX-50 item 4 — `VariantSelector` reshaped to

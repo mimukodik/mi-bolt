@@ -35,9 +35,9 @@
  * with signals.
  */
 
-import type { Image } from '../../api/generated/models/image';
-import type { Product } from '../../api/generated/models/product';
-import type { Variant } from '../../api/generated/models/variant';
+import type { Image } from '../../api/legacy/models/image';
+import type { Product } from '../../api/legacy/models/product';
+import type { Variant } from '../../api/legacy/models/variant';
 
 /**
  * Maximum quantity the cart backend accepts for a single line. The

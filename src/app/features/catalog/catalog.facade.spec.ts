@@ -22,8 +22,8 @@ import { provideZonelessChangeDetection, Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { Api } from '../../../app/api/generated/api';
-import { listProducts } from '../../../app/api/generated/fn/catalog/list-products';
+import { Api } from '../../../app/api/legacy/api';
+import { listProducts } from '../../../app/api/legacy/fn/catalog/list-products';
 import { CatalogFacade } from '../../../app/features/catalog/catalog.facade';
 import {
   ALLOWED_PAGE_SIZES,
@@ -39,10 +39,10 @@ import {
   type CatalogQuery,
   type Sort,
 } from '../../../app/features/catalog/catalog-query';
-import type { FacetValue } from '../../../app/api/generated/models/facet-value';
-import type { ProductPage } from '../../../app/api/generated/models/product-page';
-import type { ProductSummary } from '../../../app/api/generated/models/product-summary';
-import type { Variant } from '../../../app/api/generated/models/variant';
+import type { FacetValue } from '../../../app/api/legacy/models/facet-value';
+import type { ProductPage } from '../../../app/api/legacy/models/product-page';
+import type { ProductSummary } from '../../../app/api/legacy/models/product-summary';
+import type { Variant } from '../../../app/api/legacy/models/variant';
 
 beforeAll(async () => {
   await TestBed.compileComponents();

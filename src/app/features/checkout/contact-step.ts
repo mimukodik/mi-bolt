@@ -56,7 +56,7 @@ import {
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { Contact } from '../../api/generated/models/contact';
+import type { Contact } from '../../api/legacy/models/contact';
 
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';

@@ -6,7 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ProductGallery } from './product-gallery';
-import type { Image } from '../../api/generated/models/image';
+import type { Image } from '../../api/legacy/models/image';
 
 /**
  * T16 / FIX-50 - Product gallery component (T16-AC02 / T16-AC05).

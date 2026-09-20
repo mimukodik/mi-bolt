@@ -37,10 +37,10 @@ import { contactGuard, deliveryGuard, reviewGuard, successGuard } from './checko
 
 import { CheckoutLayout } from '../../layouts/checkout-layout';
 
-import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { Api } from '../../api/legacy/api';
+import { ApiConfiguration } from '../../api/legacy/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
-import { updateCheckout } from '../../api/generated/fn/checkout/update-checkout';
+import { updateCheckout } from '../../api/legacy/fn/checkout/update-checkout';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';

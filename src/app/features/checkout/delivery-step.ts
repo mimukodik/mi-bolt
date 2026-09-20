@@ -57,10 +57,10 @@ import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block'
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { Address } from '../../api/generated/models/address';
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { DeliveryOption } from '../../api/generated/models/delivery-option';
-import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
+import type { Address } from '../../api/legacy/models/address';
+import type { CheckoutOptions } from '../../api/legacy/models/checkout-options';
+import type { DeliveryOption } from '../../api/legacy/models/delivery-option';
+import type { DeliverySelection } from '../../api/legacy/models/delivery-selection';
 
 export interface DeliverySelectionChange {
   readonly delivery: DeliverySelection;

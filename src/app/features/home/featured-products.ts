@@ -1,8 +1,8 @@
 import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { Product } from '../../api/generated/models/product';
-import type { Money } from '../../api/generated/models/money';
+import type { Product } from '../../api/legacy/models/product';
+import type { Money } from '../../api/legacy/models/money';
 
 /** Status of a single featured-product slot in the home grid. */
 export type FeaturedSlotStatus = 'loading' | 'success' | 'error';

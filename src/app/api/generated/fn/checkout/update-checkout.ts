@@ -11,20 +11,12 @@ import { CheckoutSession } from '../../models/checkout-session';
 import { UpdateCheckoutRequest } from '../../models/update-checkout-request';
 
 export interface UpdateCheckout$Params {
-  cartId: string;
-
-/**
- * Key scoped to method + path + demo session, retained 24 hours. Same key and normalized body returns original result BEFORE current-version checks. Different body yields 409.
- */
-  'Idempotency-Key': string;
       body: UpdateCheckoutRequest
 }
 
 export function updateCheckout(http: HttpClient, rootUrl: string, params: UpdateCheckout$Params, context?: HttpContext): Observable<StrictHttpResponse<CheckoutSession>> {
-  const rb = new RequestBuilder(rootUrl, updateCheckout.PATH, 'put');
+  const rb = new RequestBuilder(rootUrl, updateCheckout.PATH, 'patch');
   if (params) {
-    rb.path('cartId', params.cartId, {});
-    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
     rb.body(params.body, 'application/json');
   }
 
@@ -38,4 +30,4 @@ export function updateCheckout(http: HttpClient, rootUrl: string, params: Update
   );
 }
 
-updateCheckout.PATH = '/checkout/{cartId}';
+updateCheckout.PATH = '/checkout';

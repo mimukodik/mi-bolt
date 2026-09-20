@@ -12,7 +12,7 @@ import { buildContactForm, normalizeContact } from './contact.schema';
 import { CONTACT_DRAFT_SAVER, ContactStep } from './contact-step';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { Contact } from '../../api/generated/models/contact';
+import type { Contact } from '../../api/legacy/models/contact';
 
 @Component({
   selector: 'app-contact-page',

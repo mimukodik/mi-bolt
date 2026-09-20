@@ -4,14 +4,24 @@
 import { Availability } from '../models/availability';
 import { Image } from '../models/image';
 import { Money } from '../models/money';
+import { StorageGb } from '../models/storage-gb';
 export interface Variant {
   availability: Availability;
   colorCode: string;
   colorName: string;
   id: string;
   images: Array<Image>;
+
+  /**
+   * Effective per-line cap for this variant. Zero means it cannot be ordered, which is consistent with availability out_of_stock.
+   */
   maxQuantity: number;
   price: Money;
-  storageGb: 128 | 256 | 512;
+
+  /**
+   * Unique inside one product, used as the route segment after the product slug.
+   */
+  slug: string;
+  storageGb: StorageGb;
   swatchHex: string;
 }

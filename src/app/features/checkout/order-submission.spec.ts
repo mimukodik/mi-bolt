@@ -33,7 +33,7 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { provideApiConfiguration } from '../../../app/api/legacy/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';

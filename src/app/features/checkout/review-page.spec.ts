@@ -19,7 +19,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration } from '../../api/legacy/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 
 import { CartFacade } from '../cart/cart.facade';
@@ -27,10 +27,10 @@ import { CheckoutFacade } from './checkout.facade';
 import { OrderSubmission, type SubmitOutcome } from './order-submission';
 import { ReviewPage } from './review-page';
 
-import type { Cart } from '../../api/generated/models/cart';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { Quote } from '../../api/generated/models/quote';
+import type { Cart } from '../../api/legacy/models/cart';
+import type { CartItem } from '../../api/legacy/models/cart-item';
+import type { CheckoutSession } from '../../api/legacy/models/checkout-session';
+import type { Quote } from '../../api/legacy/models/quote';
 
 const BASE_URL = 'http://localhost/api/v1';
 

@@ -32,15 +32,15 @@ import { http, HttpResponse } from 'msw';
 import { BehaviorSubject } from 'rxjs';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { Api } from '../../api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../api/generated/api-configuration';
+import { Api } from '../../api/legacy/api';
+import { ApiConfiguration, provideApiConfiguration } from '../../api/legacy/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CatalogFacade } from './catalog.facade';
 import { CatalogPage } from './catalog-page';
 import { AsyncContent } from '../../shared/ui/async-content/async-content';
-import type { Variant } from '../../api/generated/models/variant';
-import type { ProductPage as ProductPageDTO } from '../../api/generated/models/product-page';
-import type { ProductSummary } from '../../api/generated/models/product-summary';
+import type { Variant } from '../../api/legacy/models/variant';
+import type { ProductPage as ProductPageDTO } from '../../api/legacy/models/product-page';
+import type { ProductSummary } from '../../api/legacy/models/product-summary';
 import type { Money } from '../../shared/ui/price-block/price-block';
 
 // The shared MSW server's lifecycle is registered here, in this file, because

@@ -10,15 +10,15 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import type { Cart } from '../../api/generated/models/cart';
+import { provideApiConfiguration } from '../../api/legacy/api-configuration';
+import type { Cart } from '../../api/legacy/models/cart';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
 import { isProductNotFound, ProductFacade, type ProductVm } from './product.facade';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
-import type { Product } from '../../api/generated/models/product';
-import type { Variant } from '../../api/generated/models/variant';
+import type { Product } from '../../api/legacy/models/product';
+import type { Variant } from '../../api/legacy/models/variant';
 
 /**
  * `src/mocks/repository`'s `Product`/`Variant` types declare their

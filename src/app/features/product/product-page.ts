@@ -30,8 +30,8 @@ import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { UiProblem } from '../../shared/types/ui-problem';
 
-import type { Availability } from '../../api/generated/models/availability';
-import type { Variant } from '../../api/generated/models/variant';
+import type { Availability } from '../../api/legacy/models/availability';
+import type { Variant } from '../../api/legacy/models/variant';
 
 /**
  * T16 — product detail page (S3).

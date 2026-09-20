@@ -27,9 +27,9 @@ import { describe, expect, it } from 'vitest';
 
 import { ReviewStep } from './review-step';
 
-import type { Cart } from '../../api/generated/models/cart';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { Quote } from '../../api/generated/models/quote';
+import type { Cart } from '../../api/legacy/models/cart';
+import type { CartItem } from '../../api/legacy/models/cart-item';
+import type { Quote } from '../../api/legacy/models/quote';
 import type { CheckoutDraft } from './checkout-form.model';
 import type { ReviewState } from './quote-state';
 

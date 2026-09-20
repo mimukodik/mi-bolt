@@ -48,7 +48,7 @@ import {
   type WritableSignal,
 } from '@angular/core';
 
-import type { Quote } from '../../api/generated/models/quote';
+import type { Quote } from '../../api/legacy/models/quote';
 
 import { CheckoutFacade, type CheckoutError } from './checkout.facade';
 
