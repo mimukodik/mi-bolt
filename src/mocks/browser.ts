@@ -9,11 +9,19 @@
  * page is not reaching the network for any business call.
  *
  * Static assets (Vite dev server chunks, `/mockServiceWorker.js`,
- * `/assets/...`) are explicitly bypassed so the page can still boot
- * in the demo / e2e environment. Every `/api/...` request no business
- * slice claims is answered with `HttpResponse.error()` instead, so a
- * page-side `fetch()` rejects with a real network error rather than
- * reaching the network or resolving with a status.
+ * `/assets/...`) are explicitly bypassed, but only when the request is
+ * addressed to the page's own origin — a pathname alone cannot tell
+ * the page's own `/assets/x.webp` from `https://cdn.example/assets/x.webp`.
+ * Every `/api/...` request no business slice claims is answered with
+ * `HttpResponse.error()` instead, so a page-side `fetch()` rejects with
+ * a real network error rather than reaching the network or resolving
+ * with a status. Every other cross-origin request — a script, a font,
+ * a telemetry beacon, another company's API — is answered with an
+ * explicit 403 rather than passed through: T05-AC05
+ * (`docs/tasks/T05.md:49`) requires that "external scripts, fonts,
+ * telemetry and business hosts are disallowed", and `docs/spec/
+ * architecture.md` §8 and `docs/spec/acceptance.md` AC25 build the
+ * whole demo on the premise that the page reaches no network at all.
  *
  * `createHandlers` builds the actual handler list from the injected
  * repository / clock / ids / scenario / apiRoot; T05 only owns the
@@ -39,6 +47,7 @@ import { Repository, type Product } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
+import { isSameOriginNonBusiness } from './business-route-predicates';
 
 // Force-load the slice handler modules so their module-level
 // registerBusinessHandlers(...) calls populate the create-handlers
@@ -95,18 +104,49 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
 }
 
 /**
- * Install a global passthrough for every non-business route. The
+ * Install a passthrough for the page's own non-business routes. The
  * dev server still serves its own Vite chunks, source maps and the
  * mockServiceWorker.js bundle; intercepting those would break the
- * page. `installUnclaimedApiRouteNetworkError` owns the `/api/...`
- * half with the exactly complementary predicate.
+ * page. `installUnclaimedApiRouteNetworkError` owns the same-origin
+ * `/api/...` half, and `installCrossOriginBlock` owns every request
+ * addressed to a different origin.
  */
 export function installBusinessRouteBypass(): void {
-  const bypassAllNonApi: HttpHandler = http.all(
-    ({ request }) => !new URL(request.url).pathname.startsWith('/api/'),
+  const pageOrigin = globalThis.location.origin;
+  const bypassSameOriginNonApi: HttpHandler = http.all(
+    ({ request }) => isSameOriginNonBusiness(new URL(request.url), pageOrigin),
     () => passthrough(),
   );
-  worker.use(bypassAllNonApi);
+  worker.use(bypassSameOriginNonApi);
+}
+
+/**
+ * Install the outright block for every request addressed to another
+ * origin — a script, a font, a telemetry beacon, another company's
+ * API. The resolver returns a 403 `Response`, so the request is
+ * answered inside the service worker and nothing ever leaves the
+ * browser; it does not `passthrough()` and does not throw, because a
+ * thrown error surfaces as a generic network error indistinguishable
+ * from an offline machine.
+ */
+export function installCrossOriginBlock(): void {
+  const pageOrigin = globalThis.location.origin;
+  const blockCrossOrigin: HttpHandler = http.all(
+    ({ request }) => new URL(request.url).origin !== pageOrigin,
+    ({ request }) => {
+      console.error(`[mi-bolt] blocked external request: ${request.method} ${request.url}`);
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'External request blocked',
+          status: 403,
+          detail: 'The MiBolt demo makes no external requests (T05-AC05).',
+        },
+        { status: 403 },
+      );
+    },
+  );
+  worker.use(blockCrossOrigin);
 }
 
 /**
@@ -121,9 +161,13 @@ export function installBusinessRouteBypass(): void {
  * `errorWith` forwards only a `Response` and answers anything else
  * with a 500 (`service-worker-source.ts:502-528`).
  *
- * The predicate is the exact complement of
- * `installBusinessRouteBypass`'s, so every request is claimed by
- * exactly one of the two and neither can shadow the other.
+ * This predicate matches any `/api/...` pathname regardless of
+ * origin, so on its own it would also catch a foreign origin's
+ * `/api/...` request; `installCrossOriginBlock`'s handler is
+ * registered so it is evaluated first and claims that case instead,
+ * with an explicit 403 rather than a generic network error. This
+ * catch-all is reached only for a same-origin `/api/...` request no
+ * business slice claimed.
  *
  * Register this BEFORE the business handlers. `use()` prepends each
  * call's handlers to the list
@@ -179,9 +223,11 @@ export async function startMockWorker(snapshot: MockSnapshot | null = null): Pro
   if (!environment.demo && !environment.e2e) return;
 
   // Registration order is evaluation order reversed, so the
-  // catch-all goes in first to be consulted last — after every
-  // business handler. See `installUnclaimedApiRouteNetworkError`.
+  // catch-all and the cross-origin block go in first to be consulted
+  // last — after every business handler and after the same-origin
+  // bypass. See `installUnclaimedApiRouteNetworkError`.
   installUnclaimedApiRouteNetworkError();
+  installCrossOriginBlock();
   installBusinessRouteBypass();
   for (const handler of buildBrowserHandlers(snapshot)) {
     worker.use(handler);
