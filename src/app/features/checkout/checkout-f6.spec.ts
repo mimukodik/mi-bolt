@@ -1,118 +1,82 @@
 /**
- * F6 regression pin: `DeliveryStep`'s selection-changed effect does
- * NOT loop forever in Angular v22 when both reading and writing the
- * internal `interactionCounter` signal.
+ * F6 (superseded by FIX-56): this file originally pinned a regression
+ * where `DeliveryStep`'s selection-changed `effect()` looped forever in
+ * Angular v22 by reading and writing its own `interactionCounter` signal
+ * inside the same effect. FIX-56 deleted that effect along with the
+ * `selectionChanged` output it fed — the component `DeliveryStep`
+ * replaced it with has no output for it to write into and no local
+ * "quote/intent must be invalidated" concern of its own left to drive one
+ * (`components.md:566-576` gives it none), so the read/write-same-signal
+ * shape this pin exists for no longer occurs anywhere in the file.
  *
- * Background (Angular v22):
- *   - `effect()` no longer requires `{ allowSignalWrites: true }`
- *     (the option is deprecated; writes are always permitted). See
- *     https://angular.dev/api/core/CreateEffectOptions.
- *   - `untracked()` only suppresses READ-tracking — a write inside
- *     `untracked()` still notifies dependents. See
- *     https://angular.dev/api/core/untracked.
- *   - The docs' canonical pattern for breaking a read/write loop on
- *     the same signal inside one effect is to put the READ inside
- *     `untracked()` so the effect never becomes a dependent.
- *
- * Before the fix, the F6 wrap only isolated the counter WRITE inside
- * `untracked`. The READ at the `if (this.interactionCounter() > 0)`
- * check was still tracked, so every counter write marked the effect
- * dirty and `EffectScheduler.flush()` re-ran the effect — confirmed
- * by a controlled microbench that capped at 51 runs in 50 ms. The
- * production test surfaces for `DeliveryStep` (F1/F2 and the source-
- * pattern suite) did not catch this because they do not await the
- * microtask boundary where the loop manifests.
- *
- * This spec creates the step, drives the same signal mutations a
- * user would (option, payment, address), then waits long enough for
- * the effect scheduler to flush. If the read is ever re-tracked,
- * `interactionCounter` grows without bound and this test fails.
+ * What still needs a regression pin post-FIX-56 is the *new* mechanism
+ * this task introduced in its place: `postalCode`/`city`/`line1`/`line2`
+ * are now `computed()` signals reading through the `fields()` input
+ * (the Signal Forms field tree), and `setPostalCode()` etc. write back
+ * into that same tree. A `computed()` that reads a signal sourced from an
+ * `input()` and is written back to via a *different* method (never
+ * assigning to itself) cannot loop the way the old effect did, but a
+ * rapid sequence of writes driven by real user typing exercises the same
+ * "many signal writes in a short window" shape the original F6 defect
+ * was found under — this test pins that the new mechanism stays stable
+ * and converges to the last value written, with no stale reads.
  */
-import '@angular/compiler';
-// @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { describe, expect, it } from 'vitest';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import { buildCheckoutForm, createInitialCheckoutFormModel } from './checkout-form.model';
+import { DeliveryStep } from './delivery-step';
 
-import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
-import { DeliveryStep } from '../../../app/features/checkout/delivery-step';
+import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
 
-const BASE_URL = 'http://localhost/api/v1';
+const OPTIONS: CheckoutOptions = {
+  deliveryOptions: [
+    {
+      id: 'home_delivery',
+      label: 'Házhoz szállítás',
+      fee: { amount: 1990, currency: 'HUF' },
+      requiresAddress: true,
+      description: 'demo',
+    },
+  ],
+  paymentMethods: ['demo_card', 'demo_cod'],
+  termsVersion: 'demo-1',
+};
 
-afterEach(() => {
-  TestBed.resetTestingModule();
-});
-
-function configureTestBed(): void {
-  TestBed.configureTestingModule({
-    providers: [
-      provideZonelessChangeDetection(),
-      provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
-      provideRouter([]),
-    ],
-    teardown: { destroyAfterEach: true },
-  });
-}
-
-describe('F6 — DeliveryStep effect does not loop on internal counter', () => {
-  beforeEach(() => {
-    configureTestBed();
-  });
-
-  it('interactionCounter stays bounded after a flurry of signal writes', async () => {
-    // Pin a ready state so the effect's `selectionChanged.set` branch
-    // fires once per change — mirroring the realistic F2 path.
-    TestBed.inject(CheckoutFacade);
-
-    const step = TestBed.runInInjectionContext(() => new DeliveryStep());
-
-    step.state.set({
-      kind: 'ready',
-      options: {
-        deliveryOptions: [
-          {
-            id: 'home_delivery',
-            label: 'Házhoz szállítás',
-            fee: { amount: 1990, currency: 'HUF' as const },
-            requiresAddress: true,
-            description: 'demo',
-          },
-        ],
-        paymentMethods: ['demo_card', 'demo_cod'],
-        termsVersion: 'demo-1',
-      },
+describe('F6 (superseded) — DeliveryStep address accessors stay stable under rapid writes', () => {
+  it('setPostalCode/setCity/setLine1/setLine2 converge to the last value with no stale reads', () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([])],
     });
+    const fixture = TestBed.createComponent(DeliveryStep);
+    const fields = TestBed.runInInjectionContext(() =>
+      buildCheckoutForm(signal(createInitialCheckoutFormModel())),
+    );
+    fixture.componentRef.setInput('options', OPTIONS);
+    fixture.componentRef.setInput('fields', fields);
+    fixture.detectChanges();
 
-    // Drive the exact signal mix a real user would: option, address,
-    // payment. Each write would, in the broken version, re-trigger the
-    // effect and let the counter-write loop compound.
-    step.selectedOptionId.set('home_delivery');
-    step.postalCode.set('1111');
-    step.city.set('Budapest');
-    step.line1.set('Példa utca 1.');
-    step.line2.set('');
-    step.addressSubmitted.set(true);
-    step.paymentMethod.set('demo_cod');
+    const step = fixture.componentInstance;
 
-    // Wait long enough for any microtask-pumped loop to surface.
-    // 50 ms is enough for hundreds of synchronous effect re-runs on
-    // a hot path; if the loop is back, the counter will be in the
-    // hundreds or thousands.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Drive a flurry of writes the way real typing would, well beyond
+    // what a single keystroke produces.
+    for (let i = 0; i < 50; i++) {
+      const n = String(i);
+      step.setPostalCode(`10${n}`);
+      step.setCity(`Város${n}`);
+      step.setLine1(`Utca ${n}.`);
+      step.setLine2(i % 2 === 0 ? `Emelet ${n}` : '');
+    }
+    fixture.detectChanges();
 
-    const counter = step.interactionCounter();
-    // The bound is generous on purpose: each user-visible mutation
-    // bumps the counter by exactly one in the fixed version, so a
-    // realistic run ends well under 20 even with one initial pass.
-    // A loopping effect would land in the hundreds inside the same
-    // 50 ms window.
-    expect(counter).toBeLessThan(50);
+    expect(step.postalCode()).toBe('1049');
+    expect(step.city()).toBe('Város49');
+    expect(step.line1()).toBe('Utca 49.');
+    expect(step.line2()).toBe('');
+    // The writes landed on the same shared field tree the container
+    // reads from — not on a local copy that could drift.
+    expect(fields.address.postalCode().value()).toBe('1049');
   });
 });

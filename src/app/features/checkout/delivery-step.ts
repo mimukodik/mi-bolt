@@ -1,20 +1,19 @@
 /**
  * T21 — DeliveryStep (S4.3).
  *
- * Replaces the T11 stub. Owns the delivery + payment method form on
- * the second checkout step. The component is purely presentational:
- * it loads `CheckoutOptions` from the wire, renders one radio per
- * delivery option, conditionally renders the `AddressForm` when the
- * chosen option requires an address, and emits a `selectionChanged`
- * event whenever ANY field changes — including the payment method.
- *
- * The page is intentionally NOT a facade: it owns local signals for
- * `optionId`, `paymentMethod`, the address values and the error /
- * loading / ready state machine. The parent (the future
- * `CheckoutFacade`) reads the snapshot through `(selectionChanged)`
- * and decides whether to call `updateCheckout`. Keeping the page
- * facade-free means the same signals can be replayed into the
- * facade once it lands without a rewrite of this template.
+ * FIX-56: brought back to the signature `docs/spec/components.md:566-576`
+ * declares. The component is purely presentational: it renders the
+ * delivery options and payment method the `options` input carries, reads
+ * and writes the address fields through the `fields` Signal Forms field
+ * tree the owning container passes in (the deliberate parent-owned
+ * two-way binding exception, `components.md:3`), and reports its
+ * `saveState` through `saveState()`. It fetches nothing over the wire,
+ * navigates nowhere and holds no error detail of its own — the container
+ * (`delivery-page.ts`) owns the `CheckoutOptions` fetch, the two facade
+ * saves, the navigation and the save-failure detail (the contract's
+ * `saveState` is a plain `AsyncStatus` with no room for a message, so the
+ * failure banner is the container's to render, mirroring `FIX-63`'s
+ * `ReviewPage` treatment of the identical shape).
  *
  * Wire-level invariants enforced here (so the parent cannot receive
  * a malformed payload):
@@ -34,160 +33,90 @@
  *               show tariff / installment / insurance / a real card
  *               field / a provider redirect.
  *
- *   T21-AC04 — Any change to the option, the address OR the payment
- *               method invalidates the previous quote + payment intent.
- *               The `selectionChanged` event carries a
- *               `requiresFreshReview` flag the parent can read.
- *               Selection is announced through a visible "Kiválasztva"
+ *   T21-AC04 — Selection is announced through a visible "Kiválasztva"
  *               badge plus an `aria-live="polite"` region so it is
- *               never indicated by color alone.
+ *               never indicated by color alone. Quote/payment-intent
+ *               invalidation on change is the container's concern now
+ *               that this component holds no `selectionChanged` output.
  *
- *   T21-AC05 — When `getCheckoutOptions` fails the page renders
- *               `ErrorState` with a retry button. It NEVER picks a
- *               fallback option or fabricates a free-shipping default.
+ *   T21-AC05 — The container renders `ErrorState` with a retry button
+ *               when `getCheckoutOptions` fails; this component never
+ *               picks a fallback option or fabricates a free-shipping
+ *               default.
  */
 
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { Component, computed, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
-import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
-import * as operations from '../../api/generated/functions';
-
-import { CheckoutFacade, type CheckoutError } from './checkout.facade';
+import { AddressForm } from './address-form';
+import { PaymentMethodSelector, type PaymentMethod } from './payment-method-selector';
+import type { CheckoutFieldTree } from './checkout-form.model';
 
 import { Button } from '../../shared/ui/button/button';
-import { ErrorState } from '../../shared/ui/error-state/error-state';
-import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
+import type { AsyncStatus } from '../../shared/types/async-status';
 import type { Address } from '../../api/generated/models/address';
 import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
 import type { DeliveryOption } from '../../api/generated/models/delivery-option';
 import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
 
-import { AddressForm } from './address-form';
-import { PaymentMethodSelector, type PaymentMethod } from './payment-method-selector';
-
 export interface DeliverySelectionChange {
   readonly delivery: DeliverySelection;
   readonly paymentMethod: PaymentMethod;
-  readonly requiresFreshReview: boolean;
 }
 
 const HOME_DELIVERY_FEE: Money = { amount: 1990, currency: 'HUF' };
 const PICKUP_FEE: Money = { amount: 0, currency: 'HUF' };
 
-type LoadState =
-  | { kind: 'loading' }
-  | { kind: 'error'; detail: string }
-  | { kind: 'ready'; options: CheckoutOptions };
-
 @Component({
   selector: 'app-delivery-step',
-  imports: [
-    AddressForm,
-    Button,
-    ErrorState,
-    LoadingState,
-    PaymentMethodSelector,
-    PriceBlock,
-    RouterLink,
-    StatusMessage,
-  ],
+  imports: [AddressForm, Button, PaymentMethodSelector, PriceBlock, RouterLink, StatusMessage],
   templateUrl: './delivery-step.html',
   styleUrl: './delivery-step.scss',
 })
 export class DeliveryStep {
-  private readonly http = inject(HttpClient);
-  private readonly checkoutFacade = inject(CheckoutFacade);
-  private readonly router = inject(Router);
-  private readonly api: Api;
+  readonly options = input.required<CheckoutOptions>();
+  readonly fields = input.required<CheckoutFieldTree>();
+  readonly saveState = input<AsyncStatus>('idle');
 
-  /** Current load state. `loading` until the first fetch resolves,
-   *  `error` when MSW or the wire rejected the request, `ready`
-   *  once the static CheckoutOptions payload is in memory. */
-  readonly state = signal<LoadState>({ kind: 'loading' });
-
-  readonly retrying = signal<boolean>(false);
-  readonly confirmPending = signal<boolean>(false);
-
-  /** Detail of the last save attempt that failed. Null until a save
-   *  fails; cleared at the start of the next attempt. */
-  readonly saveFailure = signal<CheckoutError | null>(null);
+  readonly continueRequested = output();
+  readonly retryOptions = output();
 
   /** Selected delivery option id (null until the user picks one). */
   readonly selectedOptionId = signal<'home_delivery' | 'demo_pickup' | null>(null);
 
-  /** Two-way bound address values from the `AddressForm`. */
-  readonly postalCode = signal<string>('');
-  readonly city = signal<string>('');
-  readonly line1 = signal<string>('');
-  readonly line2 = signal<string>('');
   readonly addressSubmitted = signal<boolean>(false);
   readonly addressSnapshot = signal<Address | null>(null);
 
   /** Current payment method — defaults to `demo_card`. */
   readonly paymentMethod = signal<PaymentMethod>('demo_card');
 
-  /** Snapshot the parent reads through the `(selectionChanged)` event. */
-  readonly selectionChanged = signal<DeliverySelectionChange | null>(null);
+  // ---------------------------------------------------------------------------
+  // Address field accessors — bound through the deliberate `fields()`
+  // parent-owned two-way exception (`components.md:3`).
+  // ---------------------------------------------------------------------------
 
-  /** Internal counter so the change-effect can ignore its first run. */
-  readonly interactionCounter = signal<number>(0);
+  readonly postalCode = computed(() => this.fields().address.postalCode().value());
+  readonly city = computed(() => this.fields().address.city().value());
+  readonly line1 = computed(() => this.fields().address.line1().value());
+  readonly line2 = computed(() => this.fields().address.line2().value());
 
-  /** Convenience accessor so the template does not need to switch
-   *  on `state().kind` itself. */
-  readonly readyOptions = computed<CheckoutOptions | null>(() => {
-    const s = this.state();
-    return s.kind === 'ready' ? s.options : null;
-  });
+  setPostalCode(value: string): void {
+    this.fields().address.postalCode().value.set(value);
+  }
 
-  constructor() {
-    // The generated `Api` class relies on Angular decorator metadata
-    // for constructor injection. The vitest esbuild pipeline strips
-    // that metadata, so we wire it manually from `HttpClient` and
-    // `ApiConfiguration`. The same `new Api(...)` call sees the live
-    // HttpClient in the browser.
-    this.api = new Api(inject(ApiConfiguration), this.http);
+  setCity(value: string): void {
+    this.fields().address.city().value.set(value);
+  }
 
-    // Any change to option / payment / address values must invalidate
-    // the previous quote + payment intent. The effect fires AFTER
-    // the initial signal priming so the first interaction is what
-    // arms the flag.
-    //
-    // F6 (Angular v22 effect-loop fix): `interactionCounter` is read
-    // and written inside the SAME effect. In v22, signal writes are
-    // permitted inside `effect()` (`allowSignalWrites` is deprecated,
-    // see https://angular.dev/api/core/CreateEffectOptions), so the
-    // earlier write-only `untracked` wrap did NOT break the loop —
-    // `untracked` only suppresses read-tracking (see
-    // https://angular.dev/api/core/untracked), it does NOT suppress
-    // write-triggered notifications. The effect still subscribed to
-    // the counter, every write marked it dirty, and the scheduler's
-    // `flush()` loop re-ran it forever. The fix per the v22 docs
-    // ("Wrap the read portion in untracked()…") is to move the READ
-    // of `interactionCounter` into `untracked` so the effect never
-    // becomes a dependent of the counter in the first place.
-    effect(() => {
-      this.selectedOptionId();
-      this.paymentMethod();
-      this.postalCode();
-      this.city();
-      this.line1();
-      this.line2();
-      untracked(() => {
-        if (this.interactionCounter() > 0) {
-          this.selectionChanged.set(this.snapshotChange(true));
-        }
-        this.interactionCounter.update((count) => count + 1);
-      });
-    });
+  setLine1(value: string): void {
+    this.fields().address.line1().value.set(value);
+  }
 
-    void this.loadOptions();
+  setLine2(value: string): void {
+    this.fields().address.line2().value.set(value);
   }
 
   // ---------------------------------------------------------------------------
@@ -204,19 +133,8 @@ export class DeliveryStep {
     return this.selectedOptionId() === 'home_delivery';
   });
 
-  readonly requiresFreshReview = computed<boolean>(() => {
-    const change = this.selectionChanged();
-    if (change === null) return false;
-    return change.requiresFreshReview;
-  });
-
-  readonly canProceedReady = computed<boolean>(() => {
-    return this.canConfirm();
-  });
-
   readonly canConfirm = computed<boolean>(() => {
-    if (this.confirmPending()) return false;
-    if (this.state().kind !== 'ready') return false;
+    if (this.saveState() === 'loading') return false;
     const optionId = this.selectedOptionId();
     if (optionId === null) return false;
     if (optionId === 'home_delivery') {
@@ -232,7 +150,7 @@ export class DeliveryStep {
    *  before final review." */
   readonly deliveryLabel = computed<string>(() => {
     const id = this.selectedOptionId();
-    const option = (this.readyOptions()?.deliveryOptions ?? []).find((o) => o.id === id);
+    const option = this.options().deliveryOptions.find((o) => o.id === id);
     return option?.label ?? 'Nincs kiválasztva';
   });
 
@@ -242,62 +160,20 @@ export class DeliveryStep {
     return 'Utánvét (demó)';
   });
 
-  readonly errorMessage = computed<string>(() => {
-    const state = this.state();
-    if (state.kind !== 'error') return '';
-    return state.detail;
-  });
-
-  /** Rendered when the confirm action's save fails. Takes the
-   *  wire's own detail and adds the same "nothing was lost"
-   *  sentence FIX-25 uses for the identical situation on the
-   *  review step, so the two screens do not speak differently. */
-  readonly saveFailureMessage = computed<string>(() => {
-    const failure = this.saveFailure();
-    if (failure === null) return '';
-    if (failure.detail === '') {
-      return 'A kosarad és az adataid megmaradtak. Próbáld újra.';
-    }
-    return `${failure.detail} A kosarad és az adataid megmaradtak. Próbáld újra.`;
-  });
+  /** `saveState:AsyncStatus` carries no payload (`components.md:570-572`), so
+   *  this message is a fixed, generic sentence rather than the wire's own
+   *  `detail` — the container renders the backend-detail-carrying failure
+   *  banner alongside this component, per R15 and FIX-56 item 4. */
+  readonly saveErrorMessage = 'A mentés sikertelen. Próbáld újra.';
 
   // ---------------------------------------------------------------------------
-  // Loading + retry
+  // User interactions
   // ---------------------------------------------------------------------------
 
   feeFor(option: DeliveryOption): Money {
     if (option.id === 'home_delivery') return HOME_DELIVERY_FEE;
     return PICKUP_FEE;
   }
-
-  async loadOptions(): Promise<void> {
-    try {
-      const response = await firstValueFrom(this.api.invoke(operations.getCheckoutOptions, {}));
-      // The page never silently picks a default option. The radio
-      // list iterates over the wire response so the user sees ONLY
-      // what the server told them is available.
-      this.state.set({ kind: 'ready', options: response });
-    } catch (_err) {
-      // The exact cause is surfaced through the network console; the
-      // user-visible message stays generic on purpose so we never
-      // leak backend detail (R15).
-      this.state.set({
-        kind: 'error',
-        detail: 'A szállítási és fizetési opciók betöltése sikertelen.',
-      });
-    }
-  }
-
-  onRetry(): void {
-    this.retrying.set(true);
-    void this.loadOptions().finally(() => {
-      this.retrying.set(false);
-    });
-  }
-
-  // ---------------------------------------------------------------------------
-  // User interactions
-  // ---------------------------------------------------------------------------
 
   radioId(id: 'home_delivery' | 'demo_pickup'): string {
     return `delivery-option-${id}`;
@@ -325,88 +201,23 @@ export class DeliveryStep {
     this.paymentMethod.set(method);
   }
 
-  async onConfirm(): Promise<void> {
+  onConfirm(): void {
     if (!this.canConfirm()) return;
-    const selection = this.snapshotChange(false);
-    this.confirmPending.set(true);
-    this.saveFailure.set(null);
-    // Emit the final selection once more, WITHOUT the
-    // `requiresFreshReview` flag — the parent will use this as the
-    // green light to advance to /penztar/ellenorzes.
-    this.selectionChanged.set(selection);
-
-    // Mirror the user's selection into the wizard facade's
-    // Signal Form model so the review step, the review guard,
-    // and any future checkout summary read the same source of
-    // truth. The facade then issues two PUTs against
-    // `/api/v1/checkout/{cartId}` to persist the delivery and
-    // paymentMethod sections; on success the route advances to
-    // `/penztar/ellenorzes` where the cart summary and the
-    // fresh-quote / consents flow take over.
-    try {
-      this.syncFacadeForm(selection);
-      const deliveryResult = await this.checkoutFacade.saveDeliverySection();
-      if (!deliveryResult.ok) {
-        this.saveFailure.set(deliveryResult.error);
-        return;
-      }
-      const paymentResult = await this.checkoutFacade.savePaymentMethod();
-      if (!paymentResult.ok) {
-        this.saveFailure.set(paymentResult.error);
-        return;
-      }
-      await this.router.navigate(['/penztar/ellenorzes']);
-    } finally {
-      this.confirmPending.set(false);
-    }
+    // Mirror the selection into the shared `fields()` tree the container
+    // also holds (`checkoutFacade.form`) so `saveDeliverySection()` /
+    // `savePaymentMethod()` see the user's final choice. The address
+    // sub-fields are already written there directly by `setPostalCode()`
+    // etc.; only the option id and payment method need copying across,
+    // since those two stay local signals for the reasons `onOptionSelected`
+    // / `onPaymentChanged` are kept "as they are".
+    const selection = this.snapshotChange();
+    this.fields().deliveryOptionId().value.set(selection.delivery.optionId);
+    this.fields().paymentMethod().value.set(selection.paymentMethod);
+    this.continueRequested.emit();
   }
 
-  /**
-   * Copies this step's local selection onto the
-   * `CheckoutFacade.form` FieldTree so the wizard as a whole sees
-   * the user's choice. Only the fields the user touched are
-   * updated — other sections (contact, consents) keep whatever
-   * hydrate brought in. The demo `address` is reset to an empty
-   * but valid shape when the user picked `demo_pickup` so a
-   * later round trip back to home_delivery does not surface
-   * stale city/line values.
-   */
-  private syncFacadeForm(selection: DeliverySelectionChange): void {
-    const form = this.checkoutFacade.form;
-    const optionId = selection.delivery.optionId;
-    form.deliveryOptionId().value.set(optionId);
-    form.paymentMethod().value.set(selection.paymentMethod);
-    const addressFields = {
-      postalCode: form.address.postalCode,
-      city: form.address.city,
-      line1: form.address.line1,
-      line2: form.address.line2,
-    };
-    if (optionId === 'home_delivery') {
-      const address = selection.delivery.address;
-      if (address !== undefined) {
-        addressFields.postalCode().value.set(address.postalCode);
-        addressFields.city().value.set(address.city);
-        addressFields.line1().value.set(address.line1);
-        addressFields.line2().value.set(address.line2 ?? '');
-      }
-    } else {
-      // Pickup path: zero the address fields so a future
-      // home_delivery round trip does not auto-fill with the
-      // previous selection. Country stays 'HU' — the only value
-      // the schema accepts.
-      addressFields.postalCode().value.set('');
-      addressFields.city().value.set('');
-      addressFields.line1().value.set('');
-      addressFields.line2().value.set('');
-    }
-  }
-
-  onBack(): void {
-    // Routing is owned by the parent facade in a future task. The
-    // page exposes the intent through `selectionChanged = null` so
-    // a future subscriber can navigate back to /penztar/adatok.
-    this.selectionChanged.set(null);
+  onRetry(): void {
+    this.retryOptions.emit();
   }
 
   // ---------------------------------------------------------------------------
@@ -424,15 +235,13 @@ export class DeliveryStep {
     );
   }
 
-  private snapshotChange(requiresFreshReview: boolean): DeliverySelectionChange {
+  private snapshotChange(): DeliverySelectionChange {
     const optionId = this.selectedOptionId();
     if (optionId === null) {
-      // Callers (the selection-changed effect and `onConfirm`) gate on
-      // `canConfirm()` or `interactionCounter > 0` before reaching here.
-      // A null optionId is a contract violation; surface it loudly so
-      // the failure is debuggable rather than masked by a type lie that
-      // crashes later in `syncFacadeForm(selection)` with "cannot read
-      // delivery of null".
+      // Callers gate on `canConfirm()` before reaching here. A null
+      // optionId is a contract violation; surface it loudly so the
+      // failure is debuggable rather than masked by a type lie that
+      // crashes later in the container.
       throw new Error('DeliveryStep.snapshotChange called without a selection');
     }
     const delivery: DeliverySelection =
@@ -440,7 +249,6 @@ export class DeliveryStep {
     return {
       delivery,
       paymentMethod: this.paymentMethod(),
-      requiresFreshReview,
     };
   }
 

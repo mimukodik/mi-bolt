@@ -280,3 +280,8 @@ export function buildCheckoutForm(
 ): FieldTree<CheckoutFormModel> {
   return form(model, checkoutFormSchema);
 }
+
+/** The Signal Forms field tree the CheckoutFacade owns. `components.md:570`
+ *  names this type `CheckoutFieldTree`; it is the return type of
+ *  `buildCheckoutForm` under the name the specification uses. */
+export type CheckoutFieldTree = FieldTree<CheckoutFormModel>;
