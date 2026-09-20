@@ -73,7 +73,7 @@ describe('StatusMessage primitive', () => {
   it('emits dismissed when the close button is clicked', () => {
     const { fixture, host } = setup();
     const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (!btn) {
+    if (btn === null) {
       throw new Error('Expected button');
     }
     btn.click();
@@ -94,7 +94,7 @@ describe('StatusMessage primitive', () => {
       host.severity.set(severity);
       fixture.detectChanges();
       const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-      if (!btn) {
+      if (btn === null) {
         throw new Error('Expected button');
       }
       // jsdom's computed-style engine (cssstyle) does not resolve CSS custom
