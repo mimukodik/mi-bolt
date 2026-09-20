@@ -39,7 +39,6 @@
  */
 
 import {
-  ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
@@ -69,7 +68,6 @@ const ORDER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,80}$/;
 
 @Component({
   selector: 'app-success-page',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, Button, ErrorState, LoadingState, OrderReceiptComponent],
   templateUrl: './success-step.html',
   styleUrl: './success-step.scss',

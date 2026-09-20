@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgOptimizedImage } from '@angular/common';
 import { AssetUrlError, resolveAssetUrl } from '../../media/resolve-asset-url';
 
 /**
@@ -29,6 +29,7 @@ export interface ImageLike {
  */
 @Component({
   selector: 'app-product-image',
+  imports: [NgOptimizedImage],
   templateUrl: './product-image.html',
   styleUrl: './product-image.scss',
 })

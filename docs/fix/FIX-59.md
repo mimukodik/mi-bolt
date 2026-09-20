@@ -1,6 +1,48 @@
 # FIX-59 — Finish the Angular-idiom sweep the earlier tasks left behind
 
-Status: PLANNED — not executed.
+Status: PARTIAL — all four prerequisites (`FIX-02`, `FIX-04`, `FIX-06`, `FIX-07`, `FIX-07b`,
+`FIX-14`) had landed; items 1, 3 and 4 land exactly as specified, item 2 lands for the two named
+images with one measured deviation, and item 6's two refutations are recorded without any file
+change; worktree commit (sha filled in by the orchestrator after cherry-pick). Per-item detail:
+
+- **Item 1** — the third `ChangeDetectionStrategy.OnPush` (`payment-progress.ts`) was already gone
+  before this task ran, removed as a side effect of **FIX-61** landing (confirmed —
+  `grep -n "ChangeDetectionStrategy" src/app/features/checkout/payment-progress.ts` returns
+  nothing). The other two (`success-step.ts`, `order-receipt.ts`) are removed here, decorator line
+  and import both. `grep -rn "ChangeDetectionStrategy" src` now prints nothing (AC01).
+- **Item 2 — one measured deviation from AC02's exact count.** A third `<img>` has appeared since
+  this document was written: `product-gallery.html:66`, a 20×20 thumbnail icon inside the gallery's
+  index-image list, built by `FIX-45`/`FIX-50` after this document's evidence was gathered. It is
+  **not migrated and not in this document's named scope** ("the two `<img>` elements" — only
+  `product-image.html` and `featured-products.html` are named in "What to change"); reported as a
+  finding rather than absorbed into this task or silently left unmentioned. `grep -rn "<img" src
+  --include='*.html' --include='*.ts'` now returns **three** real elements, not the two AC02 states,
+  because AC02 was written before that gallery markup existed. Both of the two the document does
+  name are migrated to `[ngSrc]`/`fill`, per the Angular documentation's fill-mode contract
+  (`position: relative` on the containing block, `object-fit` retained, no `width`/`height`) —
+  verified against `https://angular.dev/guide/image-optimization#using-fill-mode` rather than
+  assumed. `firstImageWidth`/`firstImageHeight` are deleted from `featured-products.ts`; `grep -rn
+  "firstImageWidth\|firstImageHeight" src` prints nothing.
+- **Item 3** — `catalog-page.html`'s `<section class="catalog">` now carries no Tailwind utility;
+  `catalog-page.scss`'s `.catalog` block is the surviving declaration. **FIX-34 had already landed**
+  and changed that block's values (padding split onto `:host`, `.catalog` left at `padding: 0`); per
+  this document's own instruction ("If FIX-34 has already landed and set different values on
+  `.catalog`, keep FIX-34's values and remove only the utilities"), FIX-34's SCSS is kept unchanged
+  and only the HTML class attribute is edited here.
+- **Item 4** — `resolveLazyResources()`, its docblock paragraphs and its three call sites are
+  deleted from `src/app/app.routes.ts`. `grep -c "resolveComponentResources"` and `grep -c
+  "resolveLazyResources"` both print `0`; `npm run test` exits `0` with the function gone (925
+  tests across 62 files, measured directly, not assumed).
+- **Item 6** — both refutations are recorded without touching either file: `src/core/bootstrap-demo.ts`
+  is not relocated (`docs/spec/architecture.md:76` states it belongs there); `grep -rn "@ViewChild"
+  src` returns nothing at all today, so **FIX-02** has already fully closed that item (the decorator
+  this document expected to still find at `accessible-dialog.ts:78` is gone); and `FIX-14`'s
+  out-of-scope section wrongly assigns `src/app/app.routes.ts:44-105` to `FIX-04` (`grep -n
+  "app.routes\|resolveLazyResources" docs/fix/FIX-04.md` returns nothing, confirmed again here).
+
+Open: **FIX-59-AC03, AC04 and AC06** are real-browser measurements deferred to the orchestrator's
+batched browser-verification pass. AC02 is reported **not fully met** for the reason above (a third,
+newer `<img>` exists and is out of this document's named scope) rather than silently marked passed.
 Severity: major
 Source: Review round item N7, carried over from round one. Recorded and deliberately not repaired in the out-of-scope sections of `FIX-14` and `FIX-15` and in `FIX-17`'s Evidence; this task is the owner of what survives a re-measurement.
 

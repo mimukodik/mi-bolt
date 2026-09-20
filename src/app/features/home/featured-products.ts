@@ -1,4 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
+import { NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 import type { Product } from '../../api/generated/models/product';
@@ -44,7 +45,7 @@ export interface FeaturedSlot {
  */
 @Component({
   selector: 'app-featured-products',
-  imports: [RouterLink],
+  imports: [RouterLink, NgOptimizedImage],
   templateUrl: './featured-products.html',
   styleUrl: './featured-products.scss',
 })
@@ -86,20 +87,6 @@ export class FeaturedProducts {
     if (images.length === 0) return product.name;
     const alt = images[0].alt;
     return alt.length > 0 ? alt : product.name;
-  }
-
-  firstImageWidth(product: Product): number | null {
-    const images = product.defaultVariant.images;
-    if (images.length === 0) return null;
-    const width = images[0].width;
-    return width > 0 ? width : null;
-  }
-
-  firstImageHeight(product: Product): number | null {
-    const images = product.defaultVariant.images;
-    if (images.length === 0) return null;
-    const height = images[0].height;
-    return height > 0 ? height : null;
   }
 
   initialFor(name: string): string {

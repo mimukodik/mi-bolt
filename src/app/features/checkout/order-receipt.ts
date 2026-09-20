@@ -26,7 +26,7 @@
  * breadcrumbs, "Új vásárlás" CTA); those live in `success-step.ts`.
  */
 
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
@@ -52,7 +52,6 @@ const SIMULATION_NOTICE =
 
 @Component({
   selector: 'app-order-receipt',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [PriceBlock],
   templateUrl: './order-receipt.html',
   styleUrl: './order-receipt.scss',
