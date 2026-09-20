@@ -3,10 +3,14 @@ import { Component, computed, input, output } from '@angular/core';
 /**
  * MiBolt Button primitive.
  *
- * Variants:
- * - `primary`   — orange background, dark text (single prominent CTA per unit).
- * - `secondary` — white background, brand.ink border + text (restrained).
- * - `secondaryOnDark` — transparent dark surface, light label + visible outline.
+ * Variants follow docs/design/yettel.md §5 and §9:
+ * - `primary`   — navy on lime `.btn--primary-inverse` (single prominent CTA
+ *   per unit); the lime pill is yettel's CTA on every captured screen.
+ * - `secondary` — the outlined navy `.btn-outline-navy` on white (restrained).
+ * - `secondaryOnDark` — the outlined lime `.btn-outline-lime` for navy shell
+ *   surfaces, where the focus ring has to be white rather than navy.
+ * - `navy` — the filled navy `.btn--primary`, white on `#002340`; the
+ *   "Belépés" pill on the lime bar in home-1920.png.
  *
  * Sizes:
  * - `standard`     — 44 px (the project minimum purchase-flow target).
@@ -27,7 +31,7 @@ import { Component, computed, input, output } from '@angular/core';
   styleUrl: './button.scss',
 })
 export class Button {
-  readonly variant = input<'primary' | 'secondary' | 'secondaryOnDark'>('primary');
+  readonly variant = input<'primary' | 'secondary' | 'secondaryOnDark' | 'navy'>('primary');
   readonly size = input<'standard' | 'comfortable'>('standard');
   readonly label = input.required<string>();
   readonly loadingLabel = input<string>('Betöltés…');

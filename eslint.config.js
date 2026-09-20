@@ -39,8 +39,8 @@ module.exports = defineConfig([
         },
       ],
       // Forbid legacy `@Input()` / `@Output()` decorators in favor of the
-      // signal-based input() / output() / model() APIs. Backed by the
-      // mi-bolt-design skill and T01-AC03.
+      // signal-based input() / output() / model() APIs. Backed by
+      // T01-AC03.
       '@angular-eslint/prefer-signals': 'error',
       // Conventional guard / handler signatures take parameters the body
       // does not consume; the `_`-prefix is the project convention to

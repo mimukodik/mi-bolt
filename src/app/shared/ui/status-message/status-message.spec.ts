@@ -98,7 +98,7 @@ describe('StatusMessage primitive', () => {
       }
       // jsdom's computed-style engine (cssstyle) does not resolve CSS custom
       // properties: `getComputedStyle(btn).color` on this button returns the
-      // literal string `var(--color-brand-ink)` rather than a resolved color,
+      // literal string `var(--color-primary)` rather than a resolved color,
       // and `getComputedStyle(root).backgroundColor` returns `rgba(0, 0, 0, 0)`
       // because the token stylesheet that defines `--color-surface-light` is
       // never loaded in this unit-test environment (measured directly against
@@ -106,12 +106,12 @@ describe('StatusMessage primitive', () => {
       // assertion). The real contrast outcome — computed color vs. computed
       // background-color actually differing — is therefore not observable
       // here, so this asserts the structural proxy the toast's fix turns on:
-      // the dismiss button must not carry `is-secondary-on-dark` (the
-      // dark-surface, light-on-transparent pairing that produced the
-      // 0:1 contrast on this light `.root` background) and must instead carry
-      // `is-secondary` (white background, brand-ink text/border — ~6.4:1 on
-      // `--color-surface-light`, verified against the token hex values in
-      // src/styles/tokens.css).
+      // the dismiss button must not carry `is-secondary-on-dark` (now the
+      // navy-on-lime primary-inverse recipe, which is meant for the navy
+      // shell surfaces and not for this light `.root` background) and must
+      // instead carry `is-secondary` (white background, navy text and border
+      // — #002340 on #ffffff is 16.3:1, computed from the yettel hex values
+      // in the @theme block of src/styles.css).
       expect(btn.classList.contains('is-secondary-on-dark')).toBe(false);
       expect(btn.classList.contains('is-secondary')).toBe(true);
     },
