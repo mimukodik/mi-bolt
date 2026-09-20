@@ -110,7 +110,7 @@ describe('T01: the unit suite does not boot the application', () => {
 
 /**
  * The three flags the MSW gates read. `src/main.ts:48` returns before
- * `prepareMocks()` when `production` is true, and both
+ * `startMocks()` when `production` is true, and both
  * `src/core/bootstrap-demo.ts` and `startMockWorker` in
  * `src/mocks/browser.ts` return early unless `demo` or `e2e` is true.
  */

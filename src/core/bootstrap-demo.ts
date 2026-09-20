@@ -1,7 +1,7 @@
 /**
  * T05 — bootstrap-demo entry point.
  *
- * `prepareMocks()` is the single public hook the rest of the
+ * `startMocks()` is the single public hook the rest of the
  * application calls before `bootstrapApplication`. It:
  *
  *   1. Resolves the active scenario from `?mi-scenario=`.
@@ -26,11 +26,12 @@ let preparedScenario: string | null = null;
 
 /**
  * Prepares the demo: hydrates the persistence snapshot and starts the
- * MSW worker. Returns the active scenario name when it finishes so
- * the caller can log it. Throws when either step fails; production
- * builds short-circuit and return the default scenario unchanged.
+ * MSW worker. Throws when either step fails; production builds
+ * short-circuit and return without starting anything. The active
+ * scenario name is recorded in `preparedScenario` and reachable
+ * through `getPreparedScenario()`.
  */
-export async function prepareMocks(): Promise<string> {
+export async function startMocks(): Promise<void> {
   if (environment.production) {
     // Defensive production gate. `src/main.ts` is supposed to skip
     // this module entirely via dynamic import, but if a stray call
@@ -43,7 +44,7 @@ export async function prepareMocks(): Promise<string> {
   }
   if (!environment.demo && !environment.e2e) {
     preparedScenario = 'production';
-    return preparedScenario;
+    return;
   }
   const scenario = parseScenarioFromLocation();
   const clock = createRealClock(scenario.clockOffsetMs);
@@ -59,10 +60,9 @@ export async function prepareMocks(): Promise<string> {
   const snapshot = persistence.hydrate(scenario.name);
   await startMockWorker(snapshot);
   preparedScenario = scenario.name;
-  return preparedScenario;
 }
 
-/** Returns the scenario name resolved by the most recent `prepareMocks` call. */
+/** Returns the scenario name resolved by the most recent `startMocks` call. */
 export function getPreparedScenario(): string | null {
   return preparedScenario;
 }

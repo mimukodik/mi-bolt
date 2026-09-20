@@ -23,7 +23,7 @@ registerLocaleData(localeHu, 'hu-HU');
  * -> MSW handler factory) is loaded via `import()` so the production
  * bundle's treeshaker can isolate the dependency chain into a chunk
  * that is only fetched when `environment.production === false`. A
- * static `import { prepareMocks }` would force the bundler to keep
+ * static `import { startMocks }` would force the bundler to keep
  * the module reachable as long as the binding is exported, which
  * would leak MSW, `setupWorker`, `startMockWorker` and the
  * `mockServiceWorker.js` URL into `main-*.js` even though the
@@ -37,7 +37,7 @@ registerLocaleData(localeHu, 'hu-HU');
  * surrounding test, both for the unit suite (msw/node setupServer)
  * and for the E2E suite (msw/browser setupWorker).
  *
- * `prepareMocks()` (T05) hydrates the sessionStorage snapshot
+ * `startMocks()` (T05) hydrates the sessionStorage snapshot
  * BEFORE starting the worker so the very first intercepted request
  * can already read the cart/receipt state from the previous tab.
  *
@@ -49,9 +49,9 @@ const start = async (): Promise<void> => {
     bootstrapApplication(App, appConfig).catch(showFatal);
     return;
   }
-  const { prepareMocks } = await import('./core/bootstrap-demo');
+  const { startMocks } = await import('./core/bootstrap-demo');
   try {
-    await prepareMocks();
+    await startMocks();
   } catch (err: unknown) {
     // MSW is the application's entire data layer, not a development
     // convenience: every screen would render an error or an empty
