@@ -6,7 +6,7 @@ These are acceptance requirements for the future application. This planning pack
 
 Four independent unit metrics must be100% both globally and per owned executable runtime file: statements, branches, functions, lines. The same four browser-runtime metrics must independently be100% through user-facing E2E actions. A100% unit run cannot fill an E2E gap. Passing100% of written tests is NOT100% source coverage, nor does source coverage prove correctness. The scenario/state/requirements matrix therefore adds independent behavioral assertions.
 
-The denominator is explicit and version-controlled in docs/mi-bolt/spec/coverage-policy.json and a generated source inventory. Include **all first-party runtime TypeScript**, including app bootstrap, guards, interceptors, facades, presentational behavior, parsing/validation, shared helpers and MSW mock handler/domain/persistence code. An unimported or unvisited file remains in the denominator with zero execution. Dead or impossible code requires a design correction, not an ignore annotation. No broad `core/**`, `mocks/**` or `errors/**` exclusions are allowed.
+The denominator is explicit and version-controlled in the `coverageInclude` and `coverageExclude` options of the `test` target in `angular.json`. Include **all first-party runtime TypeScript**, including app bootstrap, guards, interceptors, facades, presentational behavior, parsing/validation, shared helpers and MSW mock handler/domain/persistence code. An unimported or unvisited file remains in the denominator with zero execution. Dead or impossible code requires a design correction, not an ignore annotation. No broad `core/**`, `mocks/**` or `errors/**` exclusions are allowed.
 
 Classification boundaries, not hidden relaxations:
 
@@ -15,7 +15,7 @@ Classification boundaries, not hidden relaxations:
 * Node-only test adapters and build/gate tools cannot execute in a browser. They receive100% unit coverage and black-box command/integration coverage in their own process; do not falsely report them as Chromium UI coverage. Every target's classification is auditable. Shared mock domain code does execute in browser and MUST appear in E2E source coverage.
 * CSS/HTML design is not equated to JavaScript statement coverage. Every meaningful authored template control-flow state and interactive UI state needs an asserted DOM/state row and visual evidence, plus responsive/a11y audits.
 
-Any new file or changed coverage boundary needs an explicit classification. CI fails for absent reports, empty source maps, missing manifest entries, NaN/undefined metrics, unknown exclusions or an unreviewed exemption. No coverage-ignore pragmas or arbitrary green thresholds.
+Any new file or changed coverage boundary needs an explicit classification. A coverage run with an absent report, an empty source map, a NaN or undefined metric, an unknown exclusion or an unreviewed exemption is not evidence, and the task that produced it records that rather than a percentage. No coverage-ignore pragmas or arbitrary green thresholds.
 
 ## 2. Unit strategy
 
@@ -42,7 +42,7 @@ Example planned angular.json test target:
 }
 ```
 
-The additional source-manifest checker enforces per-file/unvisited-file coverage; do not assume a globally passing runner does that automatically. This is planned configuration to validate in T02 against the selected CLI schema, not a claim it was run here.
+Set `coverageThresholds.perFile` to `true` beside the four 100 values, so each file is measured against the threshold rather than the project aggregate, and leave the runner's `coverage.all` on so an unimported file appears in the report with zero execution instead of being absent from it. The builder exits non-zero when a threshold is unmet. This is planned configuration to validate in T02 against the selected CLI schema, not a claim it was run here.
 
 ## 3. E2E strategy and the MSW service-worker trap
 
@@ -50,11 +50,7 @@ Use Playwright with `serviceWorkers:'allow'` and browser `setupWorker`. The scen
 
 Do not enable serviceWorkers:block while claiming browser MSW is still used. Do not substitute page.route().fulfill() for the MSW business API. MSW can own traffic not visible to ordinary Playwright routing; the official Network guide explicitly calls this out. [S14]
 
-Closed-world network checks combine MSW's unhandled/response events, expected operation ownership, browser CSP and isolated runner network namespace/firewall (dependencies and browser executables provisioned earlier). Unknown business endpoints fail; same-origin static app chunks/images/worker are explicitly allowlisted. No external DNS/HTTP business traffic is allowed. A deliberate negative test proves egress blocks. Playwright request observation alone is not sufficient evidence for SW-owned traffic.
-
-E2E code coverage uses Chromium native JS coverage with original-source mapping and a complete source inventory. Playwright's Coverage API is Chromium-only, so Firefox/WebKit get functional scenario execution, not invented source metrics. A native V8→Istanbul mapping/normalization pipeline is validated first in T02 on branches, lazy chunks, missing files and full reloads. The official API warns resetOnNavigation:false alone does not guarantee preservation. Flush controlled page segments before reload/navigation/close, restart collection for the next document and merge by original source IDs; the canary proves bootstrap and lazy counts are retained. [S13]
-
-T02 is a HARD prerequisite: if V8 source mapping cannot faithfully express the chosen branch metrics, implement a test-only source-map-preserving Istanbul instrumentation pipeline for first-party emitted source and prove the same canaries. Do not invent an Angular CLI instrumentation option, downgrade to byte coverage, ignore uncovered branches or rename '100% journeys' to100% code. Choose and document the proven collector before feature implementation.
+Closed-world network checks combine MSW's unhandled/response events, expected operation ownership and browser CSP. Unknown business endpoints fail; same-origin static app chunks/images/worker are explicitly allowlisted. No external DNS/HTTP business traffic is allowed. A deliberate negative test proves egress blocks. Playwright request observation alone is not sufficient evidence for SW-owned traffic.
 
 Tests drive DOM/user events or public URL navigation. `page.evaluate` may set a test fixture/clock or read coverage artifacts; it may NOT call an internal facade/domain function to paint coverage green. Failures that are normally hard to reach come from MSW scenarios or controlled browser capability/storage errors, not calling branches manually.
 
@@ -104,34 +100,26 @@ For all four families plus5 purchase states:320,390,768,1024,1440,1920px; defaul
 
 Visual reference is the unchanged reference image in the separately installed skill plus its more precise written tokens/rules. Record deliberate changes: MiBolt live name replaces old raster branding, dark text corrects orange-button contrast, absent-scope commercial/marketing elements removed. Reuse screenshot dimensions and do not accept wholesale snapshot updates without review.
 
-## 7. Planned project commands and CI order
+## 7. Project commands
 
 Implement these exact package scripts in their owning tasks; they are not commands claimed executed for an absent app:
 
 ```text
 npm ci
-npm run verify:toolchain          T00 version/peer checks
-npm run verify:skill              skill validator + evidence checks
-npm run api:validate              OpenAPI + examples + business schema registry
-npm run api:generate              ng-openapi-gen --config ng-openapi-gen.json
-npm run api:drift                 clean generate + git diff --exit-code
-npm run lint                     TS/templates/boundaries/test-policy lint
-npm run test:unit                 ng test --watch=false --coverage
-npm run coverage:unit:check       complete inventory + per-file100% check
-npm run test:contract             all operation/status/schema/domain assertions
-npm run build:e2e                 proven coverage-enabled CSR test build
-npm run test:e2e:coverage         Chromium scenarios + segment collection
-npm run coverage:e2e:check        independent per-file100% + inventory
-npm run test:e2e:browsers         Chromium/Firefox/WebKit functional suite
-npm run test:design               state/viewport + accessibility checks
-npm run verify:traceability       requirements/tasks/scenarios/evidence coverage
-npm run build:demo                optimized mock-only static artifact
-npm run verify:budgets            transfer/code/layout thresholds
-npm run verify:release           aggregate all previous gates
+npm run lint              ng lint — TS, templates, and the test-policy rules
+npm run test              ng test — Vitest through @angular/build:unit-test, with coverage and per-file 100% thresholds
+npm run build              ng build — the optimized production artifact
+npm start                 ng serve — the local development server
+npm run build:e2e         ng build --configuration e2e — the artifact the Playwright static host serves
+npm run api:generate      ng-openapi-gen --config ng-openapi-gen.json
+npm run api:drift         api:generate, then git diff --exit-code on the generated SDK
+npm run format            prettier --write .
+npm run format:check      prettier --check .
+npx playwright test       the E2E suite: the Chromium, Firefox and WebKit projects
 ```
 
-Pipeline: install→version+skill→contract+SDK→lint→unit+contract→E2E coverage→cross-browser→design→optimized build+budgets→release evidence. Parallelize only independent jobs after their prerequisites. Browser tests use a local STATIC host, not a business backend. Final suite repeats3 times with retries disabled and reordered scenarios. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.
+There is no CI pipeline and no aggregate release gate. Each command is run directly by whoever does the work, and its exit code is recorded in that task's evidence under docs/mi-bolt/execution/. Two of the checks are configuration rather than commands of their own: bundle budgets are the Angular CLI's own `budgets` array in the `production` build configuration of angular.json, so `ng build` enforces them, and unit coverage thresholds are the `@angular/build:unit-test` builder's own `coverageThresholds`, so `ng test` enforces them. Browser tests use a local STATIC host, not a business backend. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.
 
 ## 8. Required evidence
 
-Per task: skill version/hash at implementation and independent review; revision; exact command+exit status; unit/E2E coverage source manifests; scenario assertions; actual screenshot viewports; issues fixed and reviewer result. Per release: full source metrics, operation matrix, requirement traceability, static-network log, builds, dependency versions and explicit limitations. Existing plan-package screenshots are not Angular implementation evidence.
+Per task: skill version/hash at implementation and independent review; revision; exact command+exit status; the unit coverage report; scenario assertions; actual screenshot viewports; issues fixed and reviewer result. Per release: full source metrics, operation matrix, requirement traceability, static-network log, builds, dependency versions and explicit limitations. Existing plan-package screenshots are not Angular implementation evidence.

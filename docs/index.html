@@ -5204,7 +5204,7 @@ Optional: true.</p>
 <li>Node-only test adapters and build/gate tools cannot execute in a browser. They receive100% unit coverage and black-box command/integration coverage in their own process; do not falsely report them as Chromium UI coverage. Every target's classification is auditable. Shared mock domain code does execute in browser and MUST appear in E2E source coverage.</li>
 <li>CSS/HTML design is not equated to JavaScript statement coverage. Every meaningful authored template control-flow state and interactive UI state needs an asserted DOM/state row and visual evidence, plus responsive/a11y audits.</li>
 </ul>
-<p>Any new file or changed coverage boundary needs an explicit classification. CI fails for absent reports, empty source maps, missing manifest entries, NaN/undefined metrics, unknown exclusions or an unreviewed exemption. No coverage-ignore pragmas or arbitrary green thresholds.</p>
+<p>Any new file or changed coverage boundary needs an explicit classification. A coverage run with an absent report, an empty source map, a NaN or undefined metric, an unknown exclusion or an unreviewed exemption is not evidence, and the task that produced it records that rather than a percentage. No coverage-ignore pragmas or arbitrary green thresholds.</p>
 <h2>2. Unit strategy</h2>
 <p>Use the Angular official <code>@angular/build:unit-test</code> builder with Vitest and coverage-v8. Angular's published configuration supports coverageInclude/coverageExclude/coverageThresholds/coverageReporters. Pin runner and coverage-provider versions compatibly with the selected Angular22 toolchain. [S11,S12]</p>
 <p>Use real Angular TestBed and generated SDK/HttpClient when testing data flow. <strong>MSW setupServer</strong> intercepts the outgoing request. Do not mock the Api service, HttpClient or facades just to avoid testing the HTTP boundary; do not replace business HTTP with provideHttpClientTesting/HttpTestingController. Pure functions receive deterministic fixture arguments; 'all tests use mocks' means all external data/dependencies are controlled, not that functions under test are mocked away.</p>
@@ -5259,31 +5259,23 @@ await expect(page.getByTestId('cart-subtotal')).toHaveText(/339\s*990\s*Ft/);
 <h2>6. Accessibility and visual matrix</h2>
 <p>For all four families plus5 purchase states:320,390,768,1024,1440,1920px; default+loading+error/empty as applicable. Add filtered drawer, variant disabled, image failure/zoom, contact invalid, review submitting/declined/expired/price changed and receipt states. Full keyboard journey includes all dialog types with focus restoration. Manual/automated checks cover contrast, names, order, sticky focus, reduced motion and200% text resizing. Axe scans supplement but do not certify WCAG compliance.</p>
 <p>Visual reference is the unchanged reference image in the separately installed skill plus its more precise written tokens/rules. Record deliberate changes: MiBolt live name replaces old raster branding, dark text corrects orange-button contrast, absent-scope commercial/marketing elements removed. Reuse screenshot dimensions and do not accept wholesale snapshot updates without review.</p>
-<h2>7. Planned project commands and CI order</h2>
+<h2>7. Project commands</h2>
 <p>Implement these exact package scripts in their owning tasks; they are not commands claimed executed for an absent app:</p>
 <pre><code class="language-text">npm ci
-npm run verify:toolchain          T00 version/peer checks
-npm run verify:skill              skill validator + evidence checks
-npm run api:validate              OpenAPI + examples + business schema registry
-npm run api:generate              ng-openapi-gen --config ng-openapi-gen.json
-npm run api:drift                 clean generate + git diff --exit-code
-npm run lint                     TS/templates/boundaries/test-policy lint
-npm run test:unit                 ng test --watch=false --coverage
-npm run coverage:unit:check       complete inventory + per-file100% check
-npm run test:contract             all operation/status/schema/domain assertions
-npm run build:e2e                 proven coverage-enabled CSR test build
-npm run test:e2e:coverage         Chromium scenarios + segment collection
-npm run coverage:e2e:check        independent per-file100% + inventory
-npm run test:e2e:browsers         Chromium/Firefox/WebKit functional suite
-npm run test:design               state/viewport + accessibility checks
-npm run verify:traceability       requirements/tasks/scenarios/evidence coverage
-npm run build:demo                optimized mock-only static artifact
-npm run verify:budgets            transfer/code/layout thresholds
-npm run verify:release           aggregate all previous gates
+npm run lint              ng lint — TS, templates, and the test-policy rules
+npm run test              ng test — Vitest through @angular/build:unit-test, with coverage and per-file 100% thresholds
+npm run build              ng build — the optimized production artifact
+npm start                 ng serve — the local development server
+npm run build:e2e         ng build --configuration e2e — the artifact the Playwright static host serves
+npm run api:generate      ng-openapi-gen --config ng-openapi-gen.json
+npm run api:drift         api:generate, then git diff --exit-code on the generated SDK
+npm run format            prettier --write .
+npm run format:check      prettier --check .
+npx playwright test       the E2E suite: the Chromium, Firefox and WebKit projects
 </code></pre>
-<p>Pipeline: install→version+skill→contract+SDK→lint→unit+contract→E2E coverage→cross-browser→design→optimized build+budgets→release evidence. Parallelize only independent jobs after their prerequisites. Browser tests use a local STATIC host, not a business backend. Final suite repeats3 times with retries disabled and reordered scenarios. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.</p>
+<p>There is no CI pipeline and no aggregate release gate. Each command is run directly by whoever does the work, and its exit code is recorded in that task's evidence under docs/mi-bolt/execution/. Two of the checks are configuration rather than commands of their own: bundle budgets are the Angular CLI's own <code>budgets</code> array in the <code>production</code> build configuration of angular.json, so <code>ng build</code> enforces them, and unit coverage thresholds are the <code>@angular/build:unit-test</code> builder's own <code>coverageThresholds</code>, so <code>ng test</code> enforces them. Browser tests use a local STATIC host, not a business backend. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.</p>
 <h2>8. Required evidence</h2>
-<p>Per task: skill version/hash at implementation and independent review; revision; exact command+exit status; unit/E2E coverage source manifests; scenario assertions; actual screenshot viewports; issues fixed and reviewer result. Per release: full source metrics, operation matrix, requirement traceability, static-network log, builds, dependency versions and explicit limitations. Existing plan-package screenshots are not Angular implementation evidence.</p>
+<p>Per task: skill version/hash at implementation and independent review; revision; exact command+exit status; the unit coverage report; scenario assertions; actual screenshot viewports; issues fixed and reviewer result. Per release: full source metrics, operation matrix, requirement traceability, static-network log, builds, dependency versions and explicit limitations. Existing plan-package screenshots are not Angular implementation evidence.</p>
 </div></details><details class="doc"><summary>Követelmény → feladat → bizonyíték nyomon követése</summary><div class="doc-body"><h1>Requirement traceability</h1>
 <h2>RQ01 — Angular 22 latest stable; no SSR</h2>
 <p>Tasks: T00, T01, T28.</p>
