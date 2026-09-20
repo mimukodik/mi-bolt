@@ -24,12 +24,20 @@ former 720px values) rules, leaving `.featured__title`, `.featured__header`, `.f
 this document's own carve-out for `.featured__title`. `checkout-layout.scss`'s `.steps { gap:
 var(--space-4) }` rule, bundled in the same single 768px block the document says to "replace…
 with the 640/1024 ladder", moved to 1024 along with the gutter since the document draws no
-distinction for it. **One defect found and not fixed, reported rather than acted on**:
-`hero.scss`'s `.hero-shortcuts` section (added by **FIX-33** after this document was written)
-declares `max-width: var(--layout-container-max)` and non-zero horizontal `padding` on the same
-selector — the exact anti-pattern this task exists to remove — but fixing it needs an inner
-wrapper element in `hero.html`, which is not one of this document's named "Eight paths" and not
-a template change this document authorizes; left alone and named here for a decision. Open: AC05,
+distinction for it. **The defect this document found and did not fix — `hero.scss`'s
+`.hero-shortcuts` section (added by FIX-33 after this document was written) declaring
+`max-width: var(--layout-container-max)` and non-zero horizontal `padding` on the same
+selector, needing an inner wrapper element in `hero.html` this document did not authorize
+— is now fixed**, in a separate worktree commit (sha given in the executor's report to
+the orchestrator, who rewrites it here after cherry-pick). `.hero-shortcuts` now carries
+only the gutter-bearing background and padding, on the same 16/24/48 (mobile/640/1024)
+ladder as `.hero` right above it in the same file; a new `.hero-shortcuts__inner` wrapper
+(added to `hero.html`, wrapping the three shortcut cards) carries `max-width:
+var(--layout-container-max); margin: 0 auto` and the `flex-direction` layout switch that
+previously lived on `.hero-shortcuts` itself. Covered by a new structural assertion in
+`home-page.spec.ts` (the outer/inner split renders); the shared centerline itself is a
+real-browser measurement, deferred to the orchestrator's batched browser-verification
+pass along with this document's own AC05–AC07. Open: AC05,
 AC06 and AC07 are real-browser measurements deferred to the orchestrator's batched
 browser-verification pass.
 Severity: major

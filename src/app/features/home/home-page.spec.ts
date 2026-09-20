@@ -434,6 +434,38 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     expect(hasInStock).toBe(true);
   });
 
+  // FIX-34 named `.hero-shortcuts` as a defect it found and did not fix:
+  // the section declared both `max-width` and non-zero horizontal
+  // `padding` on the same selector, the anti-pattern the same commit
+  // removed from every other container by splitting a gutter-bearing
+  // outer element from a `max-width` + `margin: auto` inner one. This
+  // asserts that split now holds here too. Before the fix, `.hero-shortcuts`
+  // had no `.hero-shortcuts__inner` child at all — the cards were direct
+  // children of the section that also carried the gutter padding — so
+  // this failed on `heroShortcuts.querySelector(...)` returning null.
+  it('.hero-shortcuts splits the gutter-bearing outer element from a max-width inner wrapper (FIX-34)', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const f = TestBed.createComponent(Hero);
+    f.componentRef.setInput('title', 'A következő mobilod.');
+    f.componentRef.setInput('subtitle', 'Egyszerűen.');
+    f.detectChanges();
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const heroShortcuts = raw.querySelector('[data-testid="hero-shortcuts"]');
+    expect(heroShortcuts).not.toBeNull();
+    const inner = heroShortcuts?.querySelector(':scope > .hero-shortcuts__inner') ?? null;
+    expect(inner).not.toBeNull();
+    // The three cards are children of the inner wrapper, not direct
+    // children of the gutter-bearing outer section.
+    const cardsInInner = inner?.querySelectorAll(':scope > .hero-shortcuts__card') ?? [];
+    expect(cardsInInner.length).toBe(3);
+    const directCards = heroShortcuts?.querySelectorAll(':scope > .hero-shortcuts__card') ?? [];
+    expect(directCards.length).toBe(0);
+  });
+
   it('featured product "Részletek" opens the correct slug', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
