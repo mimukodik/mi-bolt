@@ -55,7 +55,13 @@ import {
 
 const ZERO_HUF: Money = { amount: 0, currency: 'HUF' };
 
-export const TERMS_VERSION = 'demo-1';
+/**
+ * Demo defaults mirrored from the backend (`application.properties`,
+ * `mibolt.checkout.*`; docs/decisions/0010 there). Whole HUF.
+ */
+export const TERMS_VERSION = '2026-09';
+export const FREE_SHIPPING_THRESHOLD_HUF = 30000;
+export const CASH_ON_DELIVERY_MAX_CART_HUF = 300000;
 
 interface CheckoutDraft {
   contact?: Contact;
@@ -67,18 +73,20 @@ interface CheckoutDraft {
 const DELIVERY_OPTIONS: Readonly<Record<DeliveryOptionId, DeliveryOption>> = {
   home_delivery: {
     id: 'home_delivery',
-    label: 'Házhoz szállítás – demó',
-    description: 'Fiktív szállítási díj; nem indul valódi kézbesítés.',
-    fee: { amount: 1990, currency: 'HUF' },
+    label: 'Házhoz szállítás',
+    description: 'Futárral, 1–2 munkanapon belül.',
+    fee: { amount: 1490, currency: 'HUF' },
     requiresAddress: true,
+    estimatedDays: 2,
     available: true,
   },
   pickup_point: {
     id: 'pickup_point',
-    label: 'Demó átvételi pont',
-    description: 'Virtuális átvételi lehetőség; nincs valós üzletcím.',
-    fee: { amount: 0, currency: 'HUF' },
+    label: 'Átvételi pont',
+    description: 'Csomagponton, 2–3 munkanapon belül.',
+    fee: { amount: 990, currency: 'HUF' },
     requiresAddress: false,
+    estimatedDays: 3,
     available: true,
   },
 };
@@ -86,16 +94,16 @@ const DELIVERY_OPTIONS: Readonly<Record<DeliveryOptionId, DeliveryOption>> = {
 const PAYMENT_METHODS: Readonly<Record<PaymentMethodId, PaymentMethodOption>> = {
   card: {
     id: 'card',
-    label: 'Bankkártya – szimuláció',
-    description: 'Szimulált bankkártyás fizetés; valódi kártyaadatot sosem kérünk.',
+    label: 'Bankkártya',
+    description: 'Online kártyás fizetés.',
     fee: { amount: 0, currency: 'HUF' },
     available: true,
   },
   cash_on_delivery: {
     id: 'cash_on_delivery',
-    label: 'Utánvét – szimuláció',
-    description: 'Fiktív utánvét; átvételkor nem történik valódi fizetés.',
-    fee: { amount: 0, currency: 'HUF' },
+    label: 'Utánvét',
+    description: 'Készpénzzel vagy kártyával a futárnál.',
+    fee: { amount: 490, currency: 'HUF' },
     available: true,
   },
 };
@@ -163,20 +171,7 @@ export class CheckoutStore {
   options(sessionId: string): CheckoutOptionsOutcome {
     const cartResult = this.cart().get(sessionId);
     if (!cartResult.ok) return { ok: false, problem: cartResult.problem };
-    const cartEmpty = cartResult.cart.items.length === 0;
-    const unavailableReason: UnavailableReason = 'CART_EMPTY';
-    const deliveryOptions: DeliveryOption[] = Object.values(DELIVERY_OPTIONS).map((entry) =>
-      cartEmpty ? { ...entry, available: false, unavailableReason } : { ...entry },
-    );
-    const paymentMethods: PaymentMethodOption[] = Object.values(PAYMENT_METHODS).map((entry) =>
-      cartEmpty ? { ...entry, available: false, unavailableReason } : { ...entry },
-    );
-    const wire: CheckoutOptions = {
-      deliveryOptions,
-      paymentMethods,
-      termsVersion: TERMS_VERSION,
-    };
-    return { ok: true, options: wire };
+    return { ok: true, options: computeOptions(cartResult.cart) };
   }
 
   /** `GET /checkout` — cart read, no version bump. */
@@ -284,6 +279,18 @@ export class CheckoutStore {
         else fieldErrors.push(...result.errors);
       }
     }
+    const params: Record<string, unknown> = {};
+    const available = computeOptions(cartResult.cart);
+    const deliveryEntry = chosenDelivery(available, normalized);
+    if (deliveryEntry !== undefined && !deliveryEntry.available) {
+      fieldErrors.push({ path: '/delivery/optionId', code: 'DELIVERY_OPTION_UNAVAILABLE' });
+      params['reason'] = deliveryEntry.unavailableReason;
+    }
+    const paymentEntry = chosenPayment(available, normalized);
+    if (paymentEntry !== undefined && !paymentEntry.available) {
+      fieldErrors.push({ path: '/payment/method', code: 'PAYMENT_METHOD_UNAVAILABLE' });
+      params['reason'] = paymentEntry.unavailableReason;
+    }
     if (fieldErrors.length > 0) {
       return {
         ok: false,
@@ -291,7 +298,7 @@ export class CheckoutStore {
           422,
           'VALIDATION_FAILED',
           'One or more supplied fields are not acceptable.',
-          {},
+          params,
           fieldErrors,
         ),
       };
@@ -321,13 +328,16 @@ export class CheckoutStore {
     if (!cartResult.ok) return { ok: false, problem: cartResult.problem };
     const cart = cartResult.cart;
     const draft: CheckoutDraft = this.drafts.get(sessionId) ?? {};
-    const summary = buildSummary(cart, draft);
+    const options = computeOptions(cart);
+    const delivery = chosenDelivery(options, draft);
+    const payment = chosenPayment(options, draft);
+    const summary = buildSummary(cart, delivery, payment);
     const complete =
       draft.contact !== undefined &&
       draft.billing !== undefined &&
-      draft.delivery !== undefined &&
-      draft.payment !== undefined &&
-      cart.items.length > 0;
+      cart.items.length > 0 &&
+      delivery?.available === true &&
+      payment?.available === true;
     const session: CheckoutSession = { summary, complete, version: cart.version };
     if (draft.contact !== undefined) session.contact = draft.contact;
     if (draft.billing !== undefined) session.billing = draft.billing;
@@ -356,20 +366,65 @@ export class CheckoutStore {
   }
 }
 
-/** Build a CheckoutSummary from cart + draft; pure, no I/O. */
-function buildSummary(cart: Cart, draft: CheckoutDraft): CheckoutSummary {
-  const shippingFee = draft.delivery ? DELIVERY_OPTIONS[draft.delivery.optionId].fee : ZERO_HUF;
-  const paymentFee = draft.payment ? PAYMENT_METHODS[draft.payment.method].fee : ZERO_HUF;
+/**
+ * The options for a cart, with the backend's free-shipping and
+ * cash-on-delivery-cap rules applied (`CheckoutService.buildOptions`).
+ */
+function computeOptions(cart: Cart): CheckoutOptions {
+  const subtotal = cart.subtotal.amount;
+  const empty = cart.items.length === 0;
+  const free = subtotal >= FREE_SHIPPING_THRESHOLD_HUF;
+  const emptyReason: UnavailableReason = 'CART_EMPTY';
+  const deliveryOptions: DeliveryOption[] = Object.values(DELIVERY_OPTIONS).map((entry) => {
+    const fee: Money = free ? ZERO_HUF : entry.fee;
+    return empty
+      ? { ...entry, fee, available: false, unavailableReason: emptyReason }
+      : { ...entry, fee };
+  });
+  const codTooHigh = subtotal > CASH_ON_DELIVERY_MAX_CART_HUF;
+  const paymentMethods: PaymentMethodOption[] = Object.values(PAYMENT_METHODS).map((entry) => {
+    if (empty) return { ...entry, available: false, unavailableReason: emptyReason };
+    if (entry.id === 'cash_on_delivery' && codTooHigh) {
+      return { ...entry, available: false, unavailableReason: 'CART_VALUE_TOO_HIGH' };
+    }
+    return { ...entry };
+  });
+  return { deliveryOptions, paymentMethods, termsVersion: TERMS_VERSION };
+}
+
+/** The computed delivery option the draft points at, if any. */
+function chosenDelivery(
+  options: CheckoutOptions,
+  draft: CheckoutDraft,
+): DeliveryOption | undefined {
+  const optionId = draft.delivery?.optionId;
+  if (optionId === undefined) return undefined;
+  return options.deliveryOptions.find((entry) => entry.id === optionId);
+}
+
+/** The computed payment method the draft points at, if any. */
+function chosenPayment(
+  options: CheckoutOptions,
+  draft: CheckoutDraft,
+): PaymentMethodOption | undefined {
+  const method = draft.payment?.method;
+  if (method === undefined) return undefined;
+  return options.paymentMethods.find((entry) => entry.id === method);
+}
+
+/** Build a CheckoutSummary from the cart and the chosen entries; pure, no I/O. */
+function buildSummary(
+  cart: Cart,
+  delivery: DeliveryOption | undefined,
+  payment: PaymentMethodOption | undefined,
+): CheckoutSummary {
+  const shippingFee = delivery?.available === true ? delivery.fee : ZERO_HUF;
+  const paymentFee = payment?.available === true ? payment.fee : ZERO_HUF;
   const total: Money = {
     amount: cart.subtotal.amount + shippingFee.amount + paymentFee.amount,
     currency: 'HUF',
   };
-  return {
-    subtotal: cart.subtotal,
-    shippingFee,
-    paymentFee,
-    total,
-  };
+  return { subtotal: cart.subtotal, shippingFee, paymentFee, total };
 }
 
 // ---------------------------------------------------------------------------
@@ -418,7 +473,10 @@ function validateDelivery(
 ): { ok: true; delivery: DeliverySelection } | { ok: false; errors: FieldError[] } {
   const optionId = value['optionId'];
   if (optionId !== 'home_delivery' && optionId !== 'pickup_point') {
-    return { ok: false, errors: [{ path: '/delivery/optionId', code: 'UNKNOWN_DELIVERY_OPTION' }] };
+    return {
+      ok: false,
+      errors: [{ path: '/delivery/optionId', code: 'DELIVERY_OPTION_UNAVAILABLE' }],
+    };
   }
   const hasAddress = Object.prototype.hasOwnProperty.call(value, 'address');
   if (optionId === 'home_delivery') {
@@ -493,7 +551,7 @@ function validatePayment(
 ): { ok: true; payment: PaymentSelection } | { ok: false; errors: FieldError[] } {
   const method = value['method'];
   if (method !== 'card' && method !== 'cash_on_delivery') {
-    return { ok: false, errors: [{ path: '/payment/method', code: 'UNKNOWN_PAYMENT_METHOD' }] };
+    return { ok: false, errors: [{ path: '/payment/method', code: 'PAYMENT_METHOD_UNAVAILABLE' }] };
   }
   const payment: PaymentSelection = { method };
   return { ok: true, payment };
