@@ -1,6 +1,6 @@
 # FIX-52 — Stop overriding the user's font size, and settle the skip link
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the root font size is no longer pinned and the duplicated skip link is gone; commit 07937d7, with `src/app/app-skip-link.spec.ts` covering it. Open: the two criteria that only a browser can settle — the skip link being off-screen unfocused and on-screen focused, and the page honouring a raised browser font setting — are deferred to the batched browser-verification pass.
 Severity: major
 Source: B2 (responsive and accessibility sweep), A6 (idiom sweep), orchestrator note on the skip link. Recorded as unowned in `FIX-17`'s out-of-scope section; this task is its owner.
 

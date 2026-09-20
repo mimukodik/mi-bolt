@@ -1,6 +1,6 @@
 # FIX-51 — Close the MSW bypass hole, and rename `prepareMocks` to `startMocks`
 
-Status: PLANNED — not executed.
+Status: DONE — both parts landed: the same-origin bypass now gates on origin as well as pathname and a new `installCrossOriginBlock()` answers any foreign-origin request with an explicit 403, with evaluation order (business → same-origin bypass → cross-origin block → same-origin catch-all) resolving the overlap deterministically (9dd2174); and `prepareMocks` became `startMocks` (d1ff677). This document's plan quoted a pre-FIX-10 shape of `src/mocks/browser.ts` and assumed the predicate could be imported directly; it could not — that module's scope calls `setupWorker()` from `msw/browser`, which throws under vitest, and the first version of the new spec failed every case with `Invariant Violation: [MSW] Failed to execute setupWorker in a non-browser environment` before reaching the predicate at all. The predicate was extracted into `src/mocks/business-route-predicates.ts`, which imports no `msw`. Open: this document's own real-browser network check (service-worker interception cannot be reproduced in jsdom) is deferred to the batched browser-verification pass.
 Severity: blocker
 Source: A2 (API, contract and mock sweep). Recorded as unowned in `FIX-10`'s out-of-scope section; this task is its owner. Part 2 carries decision **D10** against `docs/tasks/T05.md:29`.
 
