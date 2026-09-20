@@ -1,6 +1,6 @@
 # FIX-16 — Settle `AddToCart`: wire it in or delete it
 
-Status: PARTIAL — 08b4482. Open: AC02's failure-path test patches `facade.addItem` with a throwing spy rather than exercising a real throw path — none of `CartFacade.addItem`, `dispatchAddItem` or `CartMutationQueue.enqueue` can throw, so `AddToCart.onAdd()`'s catch is unreachable in production; AC09b's disabled-state test renders a hand-copied markup replica rather than `ProductPage`.
+Status: DONE — 08b4482, closed by FIX-50. Both open items are resolved as a side effect of FIX-50's reshape: `AddToCart` no longer injects `CartFacade` or owns a try/catch at all (the throwing-spy test it required no longer applies to the reshaped component), and AC09b's disabled-state case now renders the real `ProductPage` (see `product-page.spec.ts`, "FIX-16/FIX-50 desktop CTA disabled state, against the real ProductPage") rather than a hand-copied markup replica.
 Severity: blocker
 Source: A3 finding 5 (wire it in) against A6 4.3 (delete it). **The verdict is: wire it
 in.** The reasoning is set out below rather than asserted.
