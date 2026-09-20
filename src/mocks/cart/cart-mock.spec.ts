@@ -381,6 +381,29 @@ describe('DELETE /cart/items/:variantId', () => {
     expect(body['items']).toEqual([]);
     expect(readNumber(body, 'version')).toBe(3);
   });
+
+  it('checks If-Match and expiry before the variant lookup', async () => {
+    await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+
+    const stale = await fetch('http://localhost/api/v1/cart/items/nope', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"9"' },
+    });
+    expect(stale.status).toBe(412);
+    const staleBody: unknown = await stale.json();
+    expectRecord(staleBody);
+    expect(staleBody['code']).toBe('CART_VERSION_CONFLICT');
+
+    clock.advanceMs(CART_TTL_MS);
+    const expired = await fetch('http://localhost/api/v1/cart/items/nope', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+    });
+    expect(expired.status).toBe(410);
+    const expiredBody: unknown = await expired.json();
+    expectRecord(expiredBody);
+    expect(expiredBody['code']).toBe('CART_EXPIRED');
+  });
 });
 
 describe('DELETE /cart/items (clear)', () => {
@@ -441,6 +464,30 @@ describe('expiry', () => {
     expectRecord(freshBody);
     expect(readNumber(freshBody, 'version')).toBe(1);
     expect(readString(freshBody, 'id').length).toBeGreaterThan(0);
+  });
+
+  it('pushes expiresAt forward on a mutation and leaves it alone on a read', async () => {
+    const created = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const createdBody: unknown = await created.json();
+    expectRecord(createdBody);
+    expect(readString(createdBody, 'expiresAt')).toBe('2026-09-21T10:00:00.000Z');
+
+    clock.advanceMs(60_000);
+    const added = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    expect(added.status).toBe(200);
+    const addedBody: unknown = await added.json();
+    expectRecord(addedBody);
+    expect(readString(addedBody, 'expiresAt')).toBe('2026-09-21T10:01:00.000Z');
+
+    clock.advanceMs(60_000);
+    const read = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const readBody: unknown = await read.json();
+    expectRecord(readBody);
+    expect(readString(readBody, 'expiresAt')).toBe('2026-09-21T10:01:00.000Z');
   });
 });
 

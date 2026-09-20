@@ -73,7 +73,7 @@ function titleForStatus(status: number): string {
 }
 
 /** Build a deterministic 24-char lowercase-hex trace id from the clock. */
-function buildTraceId(options: CreateHandlersOptions): string {
+export function buildTraceId(options: CreateHandlersOptions): string {
   const ms = Date.parse(options.clock.now());
   const hex = (ms >>> 0).toString(16).padStart(8, '0');
   return (hex + '0000000000000000').slice(0, 24);
@@ -156,14 +156,14 @@ export class CartStore {
 
   /** `DELETE /cart/items/:variantId` — drop a line; no-op when absent. */
   remove(sessionId: string, ifMatch: string | null, variantId: string): CartOutcome {
-    const hit = this.lookup(variantId);
-    if (!hit) {
-      return this.problem(404, 'NOT_FOUND', 'Unknown variant', { variantId });
-    }
     const cart = this.ensureFreshCart(sessionId);
     if (!cart.ok) return cart;
     const versionCheck = this.checkIfMatch(ifMatch, cart.cart.version);
     if (!versionCheck.ok) return versionCheck;
+    const hit = this.lookup(variantId);
+    if (!hit) {
+      return this.problem(404, 'NOT_FOUND', 'Unknown variant', { variantId });
+    }
     const before = cart.cart.lines.length;
     const kept = cart.cart.lines.filter((line) => line.variantId !== variantId);
     if (kept.length === before) {
@@ -215,8 +215,7 @@ export class CartStore {
   /** Build the initial stored cart for a fresh session. */
   private createStoredCart(): StoredCart {
     const createdAt = this.options.clock.now();
-    const expiresMs = Date.parse(createdAt) + CART_TTL_MS;
-    const expiresAt = new Date(expiresMs).toISOString();
+    const expiresAt = this.expiryFromNow();
     return {
       id: this.options.ids.uuid(),
       version: 1,
@@ -224,6 +223,11 @@ export class CartStore {
       expiresAt,
       lines: [],
     };
+  }
+
+  /** `now + CART_TTL_MS` as an ISO string, from the scenario clock. */
+  private expiryFromNow(): string {
+    return new Date(Date.parse(this.options.clock.now()) + CART_TTL_MS).toISOString();
   }
 
   /** True when `now >= expiresAt`. */
@@ -274,7 +278,11 @@ export class CartStore {
    * method: a mutation (`add`, `setQuantity`, `remove`, `clear`) bumps
    * the version once whether reconcile fires or not; a `get` only
    * bumps when reconcile actually changed the cart, so reads stay
-   * idempotent against the stored state.
+   * idempotent against the stored state. Whichever path bumps the
+   * version also pushes `expiresAt` to `now + CART_TTL_MS`, as the
+   * contract's `expiresAt` description and the backend's
+   * `CartService.finalize` do; a read that changes nothing leaves it
+   * alone.
    */
   private view(sessionId: string, bumpForMutation: boolean): CartOutcome {
     const cart = this.carts.get(sessionId);
@@ -310,6 +318,7 @@ export class CartStore {
     }
     if (changed || bumpForMutation) {
       cart.version += 1;
+      cart.expiresAt = this.expiryFromNow();
     }
     const totalQuantity = kept.reduce((sum, item) => sum + item.quantity, 0);
     const subtotalAmount = kept.reduce((sum, item) => sum + item.lineTotal.amount, 0);
