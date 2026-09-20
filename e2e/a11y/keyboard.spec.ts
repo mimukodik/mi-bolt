@@ -31,7 +31,7 @@ import { resolve } from 'node:path';
 
 import { expect, test } from '@playwright/test';
 
-const REPO_ROOT = resolve(__dirname, '..', '..', '..');
+const REPO_ROOT = resolve(__dirname, '..', '..');
 const SCREENSHOT_ROOT = resolve(REPO_ROOT, 'e2e/design/screenshots');
 
 type KeyboardStep = {
