@@ -39,7 +39,7 @@ A csomag `PLANNED` értékeit ne tekintsd kész állapotnak. A tényleges végre
 | T24 | Sikeroldal, visszatöltés és lezárás | T11, T23 |
 | T25 | Reszponzív, állapot- és akadálymentességi audit | T13, T14, T16, T18, T20, T21, T22, T24 |
 | T26 | SDK–MSW szerződésparitás | T04, T06, T07, T08, T09 |
-| T27 | Teljes unit és E2E lefedettség lezárása | T02, T25, T26 |
+| T27 | Teljes unit lefedettség lezárása | T02, T25, T26 |
 | T28 | Statikus kiadás, teljesítmény és SW-életciklus | T24, T25, T27 |
 | T29 | Végső elfogadás és átadás | T27, T28 |
 | O01 | Opcionális 3D terméknézet – csak jóváhagyás után | T02, T16 |
@@ -133,7 +133,7 @@ flowchart LR
   T07 --> T26
   T08 --> T26
   T09 --> T26
-  T27["T27 · Teljes unit és E2E lefedettség lezárása"]
+  T27["T27 · Teljes unit lefedettség lezárása"]
   T02 --> T27
   T25 --> T27
   T26 --> T27

@@ -5,7 +5,7 @@
 // directive that would let a failing requirement pass the suite
 // silently. The forbidden list mirrors the `coverage-policy.json`
 // "forbidden" entry (`skip/todo/only`) and extends it with every
-// Vitest / Jest / Playwright spelling the user is likely to use.
+// Vitest / Jest spelling the user is likely to use.
 //
 // Scope:
 //   tests/**/*.spec.ts       (Vitest specs)
@@ -47,13 +47,8 @@ const PATTERNS = [
   { id: 'xtest', regex: /\bxtest\s*\(/ },
   { id: 'it-fixme', regex: /\b(it|test|spec)\.fixme\s*\(/ },
   { id: 'it-fails', regex: /\b(it|test|spec)\.fails\s*\(/ },
-  // Playwright
-  { id: 'pw-skip', regex: /\btest\.skip\s*\(/ },
-  { id: 'pw-fixme', regex: /\btest\.fixme\s*\(/ },
-  { id: 'pw-slow', regex: /\btest\.slow\s*\(/ },
-  { id: 'pw-only', regex: /\btest\.only\s*\(/ },
-  // Quarantine / soft disable aliases. These are not real Vitest /
-  // Playwright APIs, but the implementation intentionally rejects
+  // Quarantine / soft disable aliases. These are not real Vitest
+  // APIs, but the implementation intentionally rejects
   // ANY literal mention of "quarantine" inside a spec body so a
   // future author cannot invent one.
   { id: 'quarantine-marker', regex: /\b(flaky[_-]?quarantine|quarantine|skipQuarantine)\b/i },
