@@ -1,6 +1,21 @@
 # FIX-41 — Style the 404 page and give it the catalogue link the spec requires
 
-Status: PLANNED — not executed.
+Status: PARTIAL — `NotFoundPage` now ships `not-found-page.scss` (tokens only, plus the
+named structural exceptions), the decorator gained `styleUrl`, and the template gained the
+`/telefonok` catalogue link, `data-testid`s and a `.title`/`.lede`/`.links`/`.link`
+class structure per this document's markup; worktree commit (sha filled in by the
+orchestrator after cherry-pick), spanning `not-found-page.ts`/`.html`, the new `.scss` and
+a new spec. One deviation from this document's own instruction: **FIX-06 has landed and
+moved feature specs out of root `tests/` into co-location beside their components**
+(confirmed — every other feature spec under `src/app/features/**` is co-located, not
+under `tests/`), so the new spec is `src/app/features/not-found/not-found-page.spec.ts`
+rather than `tests/not-found-page.spec.ts`, following the landed policy rather than this
+document's stale text. `FIX-35`'s row 16 about this same defect was searched for and not
+found in the current `docs/fix/FIX-35.md` — no duplicate anchor to reconcile. Open:
+**AC01–AC06** are real-browser checks (styled render, centreline, axe, focus rings,
+in-page navigation, 390 wrap) deferred to the orchestrator's batched browser-verification
+pass; the unit-level facts (two links, hrefs, heading text) are covered directly by the
+new spec instead.
 Severity: major
 Source: A6 (idiom sweep, the missing `.scss`), B1 (browser observation of the rendered 404), `docs/spec/screens.md:27`. Recorded as unowned in `FIX-15` and `FIX-14`; this task is its owner.
 
