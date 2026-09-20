@@ -24,8 +24,6 @@ Ez tervezési és végrehajtási dokumentáció, **nem kész Angular alkalmazás
 
 This needs repository access, command execution, real subagent spawning, a browser tool and the design reference [`design/yettel.md`](design/yettel.md). A [végrehajtási szabályok](spec/execution-rules.md) tartalmazzák a felderítést, a szerepköröket, a kötelező review-/javítási ciklust, a dependency-alapú sorrendet, a tesztkapukat és a végső átadást.
 
-**A skill nincs a ZIP-ben, és nincs a HTML-riportba sem beágyazva. A használata ettől még minden végrehajtásnál és ellenőrzésnél szigorúan kötelező.** A végrehajtó a meglévő harness-/projekt-/globális telepítést keresse meg; ne a docs alá készítsen másolatot.
-
 ## Hol mit találsz?
 
 | Cél | Belépő |
