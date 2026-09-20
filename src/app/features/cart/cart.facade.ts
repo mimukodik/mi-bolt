@@ -10,50 +10,55 @@
  *     cannot race (E039 — slow-cart-write);
  *   - binds `If-Match` to the version returned by the PREVIOUS
  *     dispatch, never the version visible at click time (AC02);
- *   - generates a fresh `Idempotency-Key` per intent and reuses the
- *     same key only on `retry()` (AC02);
  *   - waits for the authoritative server response before changing
  *     line totals so the UI never shows an unconfirmed state (AC03);
- *   - on 409 surfaces a `conflict` signal AND waits for an explicit
- *     `retry()` call. The failed intent is NOT auto-replayed; the
- *     user must consent (AC04);
- *   - on 404 / 410 raises `cartGone` / `cartExpired` so the UI can
- *     offer a fresh start. 401 is never invented for this
- *     unauthenticated demo (AC05);
- *   - acquires the session's cart once on construction so a reload
+ *   - on 412 surfaces a `conflict` signal, refetches in the background
+ *     AND waits for an explicit `retry()` call; the failed intent is
+ *     NOT auto-replayed (AC04);
+ *   - on 410 raises `cartExpired` and drops the snapshot; the next
+ *     `refetch()` gets a fresh cart because `GET /cart` creates one.
+ *     404 is an ordinary error (unknown variant). 401 is never invented
+ *     for this unauthenticated demo (AC05);
+ *   - fetches the session's cart once on construction so a reload
  *     restores it on every screen, not only on the cart page.
  *
  * The T11 `CartCountFacade` token is preserved as a re-export so
  * the existing header binding needs no change.
  */
 
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, type HttpContext } from '@angular/common/http';
 import { DestroyRef, Service, computed, inject, signal, type Signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, type Observable } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
+import {
+  addCartItem,
+  clearCart,
+  getCart,
+  removeCartItem,
+  setCartItemQuantity,
+} from '../../api/generated/functions';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
-import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 import type { Cart } from '../../api/generated/models/cart';
 import type { Money } from '../../api/generated/models/money';
+import { isRecord } from '../../shared/utils/is-record';
 
 import {
   CartMutationQueue,
   type DispatchInputs,
   type DispatchResult,
   type MutationIntent,
+  type MutationIntentKind,
 } from './cart-mutation-queue';
 
-/** Conflict payload surfaced to the UI when a 409 arrives. */
+/** Conflict payload surfaced to the UI when a 412 arrives. */
 export interface CartConflict {
   readonly code: 'CART_VERSION_CONFLICT';
-  readonly status: 409;
+  readonly status: 412;
   readonly detail: string;
-  /** Idempotency key the failed intent was issued under. */
-  readonly idempotencyKey: string;
   /** Kind of intent that conflicted (the one retry() will resubmit). */
-  readonly intentKind: MutationIntent['kind'];
+  readonly intentKind: MutationIntentKind;
   /** Server-reported version after the refetch. */
   readonly serverVersion: number;
 }
@@ -66,6 +71,8 @@ export interface CartError {
   readonly code: string;
   readonly status: number;
   readonly detail: string;
+  /** Problem `params` as sent, e.g. `{ max, requested }` on QUANTITY_LIMIT. */
+  readonly params?: Readonly<Record<string, unknown>>;
 }
 
 const ZERO_MONEY: Money = { amount: 0, currency: 'HUF' };
@@ -88,11 +95,11 @@ export class CartFacade {
   /** Public readonly cart signal. Null until `ensureCart()` lands. */
   readonly cart: Signal<Cart | null> = this.cartWritable.asReadonly();
 
-  /** Sum of all line quantities. 0 when no cart exists yet. */
+  /** Sum of all line quantities (`Cart.totalQuantity`, the header badge number). 0 when no cart is loaded. */
   readonly itemCount: Signal<number> = computed(() => {
     const cart = this.cartWritable();
     if (cart === null) return 0;
-    return cart.itemCount;
+    return cart.totalQuantity;
   });
 
   /** Authoritative subtotal in whole HUF. */
@@ -110,12 +117,8 @@ export class CartFacade {
   readonly error: Signal<CartError | null> = this.errorWritable.asReadonly();
 
   private readonly conflictWritable = signal<CartConflict | null>(null);
-  /** Last 409 conflict, or null. Cleared on the next successful dispatch. */
+  /** Last 412 conflict, or null. Cleared on the next successful dispatch. */
   readonly conflict: Signal<CartConflict | null> = this.conflictWritable.asReadonly();
-
-  private readonly cartGoneWritable = signal<boolean>(false);
-  /** True after the server returned 404 for the active cart. */
-  readonly cartGone: Signal<boolean> = this.cartGoneWritable.asReadonly();
 
   private readonly cartExpiredWritable = signal<boolean>(false);
   /** True after the server returned 410 for the active cart. */
@@ -123,8 +126,7 @@ export class CartFacade {
 
   /**
    * Holds the most recent failed intent so `retry()` can resubmit it
-   * with the SAME idempotency key. Cleared on the next successful
-   * dispatch.
+   * with the CURRENT version. Cleared on the next successful dispatch.
    */
   private lastFailedIntent: MutationIntent | null = null;
 
@@ -166,54 +168,31 @@ export class CartFacade {
     // `docs/spec/architecture.md:109` requires the CART to restore
     // across a reload, not the cart page to restore it, so the facade
     // acquires its own cart once here instead of waiting to be asked.
-    // `ensureCart()` resolves against the session's existing cart
-    // (`Repository.ensureCart`), so this restores a returning tab's
-    // cart and mints an empty one for a tab that has none. Failures
-    // land on the `error` signal exactly as a user-triggered call's
-    // would; the facade never throws on an HTTP error.
+    // `ensureCart()` issues `GET /cart`, which returns the session's
+    // cart and creates an empty one when the session has none.
+    // Failures land on the `error` signal exactly as a user-triggered
+    // call's would; the facade never throws on an HTTP error.
     void this.ensureCart();
   }
 
   /**
-   * Returns the active cart id or null. Exposed so future flows
-   * (e.g. checkout session create) can attach to it without
-   * re-reading `cart()?.id` everywhere.
-   */
-  get cartId(): string | null {
-    return this.cartWritable()?.id ?? null;
-  }
-
-  /**
-   * Creates the cart if none exists. Safe to call multiple times; the
-   * second call is a no-op when an active cart is already loaded. The
-   * `cartWritable` snapshot is re-checked inside the dispatch callback
-   * so two near-simultaneous calls collapse into a single server-side
-   * `POST /carts` instead of leaking an orphan cart.
+   * Loads the session cart once. Safe to call multiple times: a
+   * loaded snapshot makes it a no-op, and the snapshot is re-checked
+   * inside the queue callback so two near-simultaneous calls collapse
+   * into a single `GET /cart`.
    */
   async ensureCart(): Promise<void> {
-    if (this.cartWritable() !== null && this.cartWritable()?.status === 'active') {
+    if (this.cartWritable() !== null) {
       return;
     }
     const token = ++this.dispatchToken;
-    const intent: MutationIntent = {
-      kind: 'create',
-      idempotencyKey: freshIdempotencyKey(),
-      retry: false,
-      payload: { providerId: 'mi-bolt' },
-    };
+    const intent: MutationIntent = { kind: 'refetch', retry: false };
     const result = await this.queue.enqueue(intent, (inputs) => {
-      // Re-check inside the queue callback so a second ensureCart() that
-      // landed in the same microtask sees the cart the first call
-      // already created and short-circuits to a no-op dispatch.
       const existing = this.cartWritable();
-      if (existing?.status === 'active') {
-        return Promise.resolve({
-          ok: true as const,
-          cart: existing,
-          replayed: false,
-        });
+      if (existing !== null) {
+        return Promise.resolve({ ok: true as const, cart: existing });
       }
-      return this.dispatchCreate(inputs);
+      return this.dispatchRefetch(inputs);
     });
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
@@ -225,17 +204,12 @@ export class CartFacade {
    * Adds a variant to the cart. The intent is serialized behind
    * every other queued mutation, and its `If-Match` binds to the
    * version the PREVIOUS dispatch returned. Throws if no cart has
-   * been created yet (call `ensureCart()` first).
+   * been loaded yet (call `ensureCart()` first).
    */
   async addItem(variantId: string, quantity: number): Promise<void> {
     const token = ++this.dispatchToken;
-    const intent: MutationIntent = {
-      kind: 'addItem',
-      idempotencyKey: freshIdempotencyKey(),
-      retry: false,
-      payload: { variantId, quantity },
-    };
-    const result = await this.queue.enqueue(intent, (inputs) => this.dispatchAddItem(inputs));
+    const intent: MutationIntent = { kind: 'addItem', retry: false, variantId, quantity };
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatch(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
@@ -243,23 +217,15 @@ export class CartFacade {
   }
 
   /**
-   * Sets an absolute quantity on a line. The intent is serialized
-   * behind every other queued mutation; its `If-Match` binds to the
-   * latest server version. If the line disappears between enqueue
-   * and dispatch the server returns 404, which the facade maps to
-   * `cartGone`.
+   * Sets an absolute quantity on the line keyed by `variantId`. The
+   * intent is serialized behind every other queued mutation; its
+   * `If-Match` binds to the latest server version. A 404 means the
+   * line is not in the cart.
    */
-  async setQuantity(itemId: string, quantity: number): Promise<void> {
+  async setQuantity(variantId: string, quantity: number): Promise<void> {
     const token = ++this.dispatchToken;
-    const intent: MutationIntent = {
-      kind: 'setQuantity',
-      idempotencyKey: freshIdempotencyKey(),
-      retry: false,
-      payload: { itemId, quantity },
-    };
-    const result = await this.queue.enqueue(intent, async (inputs) =>
-      this.dispatchSetQuantity(inputs),
-    );
+    const intent: MutationIntent = { kind: 'setQuantity', retry: false, variantId, quantity };
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatch(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
@@ -267,21 +233,25 @@ export class CartFacade {
   }
 
   /**
-   * Removes a line from the cart. Serialized like every other
-   * mutation. A 404 here means the cart itself disappeared between
-   * enqueue and dispatch.
+   * Removes the line keyed by `variantId`; the server answers 200
+   * when the line is already gone. Serialized like every other
+   * mutation.
    */
-  async removeItem(itemId: string): Promise<void> {
+  async removeItem(variantId: string): Promise<void> {
     const token = ++this.dispatchToken;
-    const intent: MutationIntent = {
-      kind: 'removeItem',
-      idempotencyKey: freshIdempotencyKey(),
-      retry: false,
-      payload: { itemId },
-    };
-    const result = await this.queue.enqueue(intent, async (inputs) =>
-      this.dispatchRemoveItem(inputs),
-    );
+    const intent: MutationIntent = { kind: 'removeItem', retry: false, variantId };
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatch(inputs));
+    if (!this.shouldApplyResult(token)) return;
+    if (result.ok) {
+      this.applySuccess(result.cart);
+    }
+  }
+
+  /** Empties the cart (`DELETE /cart/items`). A no-op on the server when already empty. */
+  async clear(): Promise<void> {
+    const token = ++this.dispatchToken;
+    const intent: MutationIntent = { kind: 'clear', retry: false };
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatch(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
@@ -289,10 +259,10 @@ export class CartFacade {
   }
 
   /**
-   * Re-submits the most recent failed intent with the SAME
-   * idempotency key but the CURRENT expected version. No-op when
-   * no conflict is recorded. The contract requires this be an
-   * explicit user action; the facade never auto-replays.
+   * Re-submits the most recent failed intent with the CURRENT
+   * expected version. No-op when no conflict is recorded. The
+   * contract requires this be an explicit user action; the facade
+   * never auto-replays.
    */
   async retry(): Promise<void> {
     const failed = this.lastFailedIntent;
@@ -304,20 +274,7 @@ export class CartFacade {
     this.lastFailedIntent = null;
     const token = ++this.dispatchToken;
     const retryIntent: MutationIntent = { ...failed, retry: true };
-    const result = await this.queue.enqueue(retryIntent, (inputs) => {
-      switch (inputs.intent.kind) {
-        case 'create':
-          return this.dispatchCreate(inputs);
-        case 'addItem':
-          return this.dispatchAddItem(inputs);
-        case 'setQuantity':
-          return this.dispatchSetQuantity(inputs);
-        case 'removeItem':
-          return this.dispatchRemoveItem(inputs);
-        case 'refetch':
-          return this.dispatchRefetch(inputs);
-      }
-    });
+    const result = await this.queue.enqueue(retryIntent, (inputs) => this.dispatch(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
@@ -326,22 +283,13 @@ export class CartFacade {
 
   /**
    * Refetches the active cart without an `If-Match`. Called
-   * internally after a 409 to bring the local snapshot into sync
+   * internally after a 412 to bring the local snapshot into sync
    * with the server. Exposed for tests that need to simulate a
    * remote version bump.
    */
   async refetch(): Promise<void> {
-    const cartId = this.cartWritable()?.id;
-    if (cartId === undefined) {
-      return;
-    }
     const token = ++this.dispatchToken;
-    const intent: MutationIntent = {
-      kind: 'refetch',
-      idempotencyKey: freshIdempotencyKey(),
-      retry: false,
-      payload: { cartId },
-    };
+    const intent: MutationIntent = { kind: 'refetch', retry: false };
     const result = await this.queue.enqueue(intent, (inputs) => this.dispatchRefetch(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
@@ -358,7 +306,7 @@ export class CartFacade {
    * the header badge reads 0 even though past-receipt replay remains
    * available through the URL (T24-AC03). Synchronous and idempotent:
    *   - clears the local cart snapshot,
-   *   - clears conflict / cartGone / cartExpired / error overlays,
+   *   - clears conflict / cartExpired / error overlays,
    *   - drops any pending intent that was queued against the ordered
    *     cart (the user has moved on; replaying them now would resurrect
    *     the just-ordered items),
@@ -377,7 +325,6 @@ export class CartFacade {
     this.postOrderToken = this.dispatchToken;
     this.cartWritable.set(null);
     this.conflictWritable.set(null);
-    this.cartGoneWritable.set(false);
     this.cartExpiredWritable.set(false);
     this.errorWritable.set(null);
     this.lastFailedIntent = null;
@@ -396,37 +343,21 @@ export class CartFacade {
   }
 
   /**
-   * Test seam: points the local cart snapshot at an id the server
-   * has never seen, so the next mutation surfaces 404 and the
-   * `cartGone` signal flips. Production code does not call this.
-   */
-  _seedMissingCart(): void {
-    this.cartWritable.set({
-      id: 'cart-missing-001',
-      version: 1,
-      items: [],
-      itemCount: 0,
-      subtotal: { ...ZERO_MONEY },
-      status: 'active',
-      expiresAt: '2026-12-31T23:59:59.000Z',
-    });
-  }
-
-  /**
    * Test seam: replaces the local cart snapshot with one the unit
    * suite supplied. Production code does not call this; the layout
    * spec uses it to drive `itemCount` without standing up the full
    * create / mutate / refetch lifecycle.
    */
-  _seedCart(snapshot: Partial<Cart> & { id: string; itemCount: number }): void {
+  _seedCart(snapshot: Partial<Cart> & { id: string; totalQuantity: number }): void {
     this.cartWritable.set({
       id: snapshot.id,
       version: snapshot.version ?? 1,
       items: snapshot.items ?? [],
-      itemCount: snapshot.itemCount,
+      lineCount: snapshot.lineCount ?? snapshot.items?.length ?? 0,
+      totalQuantity: snapshot.totalQuantity,
       subtotal: snapshot.subtotal ?? { ...ZERO_MONEY },
-      status: snapshot.status ?? 'active',
       expiresAt: snapshot.expiresAt ?? '2026-12-31T23:59:59.000Z',
+      notices: snapshot.notices ?? [],
     });
   }
 
@@ -436,133 +367,70 @@ export class CartFacade {
   // sees an `HttpErrorResponse` directly.
   // -------------------------------------------------------------------------
 
-  private async dispatchCreate(inputs: DispatchInputs): Promise<DispatchResult> {
-    try {
-      const response = await firstValueFrom(
-        this.api.invoke((await import('../../api/generated/functions')).createCart, {
-          'Idempotency-Key': inputs.intent.idempotencyKey,
-          body: { providerId: 'mi-bolt' },
-        }),
-      );
-      return { ok: true, cart: response, replayed: false };
-    } catch (err) {
-      // Route the failure through `handleError` so a 409/410/404 on
-      // create surfaces in the same `conflict` / `cartGone` /
-      // `cartExpired` signals the rest of the mutation API uses.
-      return this.handleError(inputs, err);
+  private async dispatch(inputs: DispatchInputs): Promise<DispatchResult> {
+    const { intent, expectedVersion } = inputs;
+    if (intent.kind === 'refetch') {
+      return this.dispatchRefetch(inputs);
     }
-  }
-
-  private async dispatchAddItem(inputs: DispatchInputs): Promise<DispatchResult> {
-    const cartId = this.cartWritable()?.id;
-    if (cartId === undefined) {
-      // Route the missing-cart path through recordFailure so the
-      // `cartGone` signal flips the same way a 404 from the server
-      // would; otherwise the caller silently rejects with a NOT_FOUND
-      // result while the UI still believes the cart is alive.
-      const result = mapMissingCart();
-      this.recordFailure(inputs.intent, result);
+    if (expectedVersion === null) {
+      // A write needs the version GET /cart returned; callers run
+      // ensureCart() first, so this only fires when that fetch failed.
+      const result: DispatchResult = {
+        ok: false,
+        code: 'CART_NOT_LOADED',
+        status: 0,
+        detail: 'The cart has not been loaded; ensureCart() did not succeed.',
+      };
+      this.recordFailure(intent, result);
       return result;
     }
-    const payload = inputs.intent.payload as { variantId: string; quantity: number };
-    const context =
-      inputs.expectedVersion === null ? undefined : withIfMatch(inputs.expectedVersion);
+    const context = withIfMatch(expectedVersion);
     try {
-      const response = await firstValueFrom(
-        this.api.invoke(
-          (await import('../../api/generated/functions')).addCartItem,
-          {
-            cartId,
-            'Idempotency-Key': inputs.intent.idempotencyKey,
-            body: { variantId: payload.variantId, quantity: payload.quantity },
-          },
-          context,
-        ),
-      );
-      return { ok: true, cart: response, replayed: false };
+      const cart = await firstValueFrom(this.invokeWrite(intent, context));
+      return { ok: true, cart };
     } catch (err) {
       return this.handleError(inputs, err);
     }
   }
 
-  private async dispatchSetQuantity(inputs: DispatchInputs): Promise<DispatchResult> {
-    const cartId = this.cartWritable()?.id;
-    if (cartId === undefined) {
-      const result = mapMissingCart();
-      this.recordFailure(inputs.intent, result);
-      return result;
-    }
-    const payload = inputs.intent.payload as { itemId: string; quantity: number };
-    const context =
-      inputs.expectedVersion === null ? undefined : withIfMatch(inputs.expectedVersion);
-    try {
-      const response = await firstValueFrom(
-        this.api.invoke(
-          (await import('../../api/generated/functions')).setCartItemQuantity,
-          {
-            cartId,
-            'Idempotency-Key': inputs.intent.idempotencyKey,
-            itemId: payload.itemId,
-            body: { quantity: payload.quantity },
-          },
+  /** Picks the SDK call for a write intent; `refetch` never reaches here. */
+  private invokeWrite(
+    intent: Exclude<MutationIntent, { kind: 'refetch' }>,
+    context: HttpContext,
+  ): Observable<Cart> {
+    switch (intent.kind) {
+      case 'addItem':
+        return this.api.invoke(
+          addCartItem,
+          { body: { variantId: intent.variantId, quantity: intent.quantity } },
           context,
-        ),
-      );
-      return { ok: true, cart: response, replayed: false };
-    } catch (err) {
-      return this.handleError(inputs, err);
-    }
-  }
-
-  private async dispatchRemoveItem(inputs: DispatchInputs): Promise<DispatchResult> {
-    const cartId = this.cartWritable()?.id;
-    if (cartId === undefined) {
-      const result = mapMissingCart();
-      this.recordFailure(inputs.intent, result);
-      return result;
-    }
-    const payload = inputs.intent.payload as { itemId: string };
-    const context =
-      inputs.expectedVersion === null ? undefined : withIfMatch(inputs.expectedVersion);
-    try {
-      const response = await firstValueFrom(
-        this.api.invoke(
-          (await import('../../api/generated/functions')).removeCartItem,
-          {
-            cartId,
-            'Idempotency-Key': inputs.intent.idempotencyKey,
-            itemId: payload.itemId,
-          },
+        );
+      case 'setQuantity':
+        return this.api.invoke(
+          setCartItemQuantity,
+          { variantId: intent.variantId, body: { quantity: intent.quantity } },
           context,
-        ),
-      );
-      return { ok: true, cart: response, replayed: false };
-    } catch (err) {
-      return this.handleError(inputs, err);
+        );
+      case 'removeItem':
+        return this.api.invoke(removeCartItem, { variantId: intent.variantId }, context);
+      case 'clear':
+        return this.api.invoke(clearCart, {}, context);
     }
   }
 
   private async dispatchRefetch(inputs: DispatchInputs): Promise<DispatchResult> {
-    const payload = inputs.intent.payload as { cartId: string };
     try {
-      const response = await firstValueFrom(
-        this.api.invoke((await import('../../api/generated/functions')).getCart, {
-          cartId: payload.cartId,
-        }),
-      );
-      return { ok: true, cart: response, replayed: false };
+      const cart = await firstValueFrom(this.api.invoke(getCart, {}));
+      return { ok: true, cart };
     } catch (err) {
-      // Funnel refetch failures through `handleError` too: a 404 here
-      // means the cart disappeared between the original conflict and
-      // the refetch, which the UI must surface as `cartGone`.
       return this.handleError(inputs, err);
     }
   }
 
   // -------------------------------------------------------------------------
   // Centralized error mapping. Every dispatcher funnels through here so a
-  // 409 always lands in the conflict signal, a 410 always in cartExpired,
-  // and a 404 always in cartGone. Other Problems land in `error`.
+  // 412 always lands in the conflict signal, a 410 always in cartExpired,
+  // and other Problems land in `error`.
   // -------------------------------------------------------------------------
 
   private handleError(inputs: DispatchInputs, err: unknown): DispatchResult {
@@ -583,9 +451,8 @@ export class CartFacade {
       }
       const conflict: CartConflict = {
         code: 'CART_VERSION_CONFLICT',
-        status: 409,
+        status: 412,
         detail: result.detail,
-        idempotencyKey: intent.idempotencyKey,
         intentKind: intent.kind,
         // The refetch runs in the background and will overwrite this
         // with the post-refetch version. We report the last known
@@ -599,7 +466,6 @@ export class CartFacade {
       // stale conflict overlay; we keep `lastFailedIntent` set so the
       // user still has a retry affordance.
       this.errorWritable.set(null);
-      this.cartGoneWritable.set(false);
       this.cartExpiredWritable.set(false);
       // Fire-and-forget refetch so the next dispatch binds to a
       // fresh version. We do not await it here so the failed intent
@@ -608,30 +474,18 @@ export class CartFacade {
       return;
     }
     if (result.code === 'CART_EXPIRED') {
-      // Drop the local snapshot so the next ensureCart() actually
-      // creates a fresh cart instead of seeing an "active" status the
-      // server will reject. PRESERVE `lastFailedIntent`: the expired
-      // cart may have been caused by the refetch that followed the
-      // user's original conflict, not by the user's intent itself.
-      // Clearing it here would discard the recoverable Retry button
-      // the user is about to click (AC04).
+      // Drop the local snapshot so the next ensureCart() or
+      // refetch() issues `GET /cart`, which creates a fresh cart
+      // after the server forgot the expired one. PRESERVE
+      // `lastFailedIntent`: the expired cart may have been caused
+      // by the refetch that followed the user's original conflict,
+      // not by the user's intent itself. Clearing it here would
+      // discard the recoverable Retry button the user is about to
+      // click (AC04).
       this.cartWritable.set(null);
       this.cartExpiredWritable.set(true);
       this.conflictWritable.set(null);
       this.errorWritable.set(null);
-      this.cartGoneWritable.set(false);
-      return;
-    }
-    if (result.code === 'NOT_FOUND') {
-      // Same recovery rule: a 404 on any cart mutation means the cart
-      // no longer exists on the server, so the local snapshot must
-      // not block ensureCart() from starting over.
-      this.cartWritable.set(null);
-      this.cartGoneWritable.set(true);
-      this.conflictWritable.set(null);
-      this.cartExpiredWritable.set(false);
-      this.errorWritable.set(null);
-      this.lastFailedIntent = null;
       return;
     }
     // Generic failure branch: keep the lastFailedIntent if a conflict
@@ -642,12 +496,12 @@ export class CartFacade {
       code: result.code,
       status: result.status,
       detail: result.detail,
+      params: result.params,
     });
     if (this.conflictWritable() === null) {
       this.lastFailedIntent = null;
     }
     this.conflictWritable.set(null);
-    this.cartGoneWritable.set(false);
     this.cartExpiredWritable.set(false);
   }
 
@@ -662,7 +516,6 @@ export class CartFacade {
   private applySuccess(cart: Cart, options: { fromRefetch?: boolean } = {}): void {
     this.cartWritable.set(cart);
     this.conflictWritable.set(null);
-    this.cartGoneWritable.set(false);
     this.cartExpiredWritable.set(false);
     this.errorWritable.set(null);
     if (!options.fromRefetch) {
@@ -681,34 +534,28 @@ function mapError(err: unknown): DispatchResult {
     const body: unknown = err.error;
     let code = 'UNKNOWN';
     let detail = err.message;
-    if (typeof body === 'object' && body !== null) {
-      if ('code' in body && typeof body.code === 'string') {
-        code = body.code;
+    let params: Readonly<Record<string, unknown>> | undefined;
+    if (isRecord(body)) {
+      if (typeof body['code'] === 'string') {
+        code = body['code'];
       }
-      if ('detail' in body && typeof body.detail === 'string') {
-        detail = body.detail;
+      if (typeof body['detail'] === 'string') {
+        detail = body['detail'];
+      }
+      if (isRecord(body['params'])) {
+        params = body['params'];
       }
     }
-    if (err.status === 409 && code === 'CART_VERSION_CONFLICT') {
-      return { ok: false, code: 'CART_VERSION_CONFLICT', status: 409, detail };
-    }
-    if (err.status === 409 && code === 'OUT_OF_STOCK') {
-      return { ok: false, code: 'OUT_OF_STOCK', status: 409, detail };
-    }
-    if (err.status === 409 && code === 'IDEMPOTENCY_CONFLICT') {
-      return { ok: false, code: 'IDEMPOTENCY_CONFLICT', status: 409, detail };
+    if (err.status === 412 && code === 'CART_VERSION_CONFLICT') {
+      return { ok: false, code: 'CART_VERSION_CONFLICT', status: 412, detail, params };
     }
     if (err.status === 410 && code === 'CART_EXPIRED') {
-      return { ok: false, code: 'CART_EXPIRED', status: 410, detail };
+      return { ok: false, code: 'CART_EXPIRED', status: 410, detail, params };
     }
     if (err.status === 404 && code === 'NOT_FOUND') {
-      return { ok: false, code: 'NOT_FOUND', status: 404, detail };
+      return { ok: false, code: 'NOT_FOUND', status: 404, detail, params };
     }
-    return { ok: false, code, status: err.status, detail };
+    return { ok: false, code, status: err.status, detail, params };
   }
   return { ok: false, code: 'SERVICE_UNAVAILABLE', status: 0, detail: String(err) };
-}
-
-function mapMissingCart(): DispatchResult {
-  return { ok: false, code: 'NOT_FOUND', status: 404, detail: 'A kosár nem található.' };
 }
