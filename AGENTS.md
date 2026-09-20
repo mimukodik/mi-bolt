@@ -5,37 +5,31 @@ The specification lives under `docs/`. What follows states the rules that are
 specific to this repository and names the file that owns each of the others; it
 does not restate them.
 
-## The mi-bolt-design skill is mandatory, without exception
+## The design authority is `docs/design/yettel.md`
 
-Using the separately installed **`mi-bolt-design`** skill is strictly mandatory
-for every implementation and for every verification or review in this
-repository, without exception. This includes nonvisual work — build, API,
-mock, test-infrastructure and documentation tasks. Read the skill and its
-task-relevant references before implementation, and independently again before
-acceptance.
-
-The skill's `## 26 Verifiable Rules` table (R01–R26) is the audit checklist for
-every task. Each task records the applicability and outcome of every relevant
-R-rule. A nonvisual task may mark individual visual rules **not applicable**,
-but each N/A carries a one-sentence reason; silent omission is not a reason.
-
-The resolved path, approved version and SHA-256 of the installed skill are
-recorded in `docs/mi-bolt/execution/skill-location.json`, which is the only
-source of truth for those three values. Do not copy, reinstall, recreate or
-embed the skill inside this repository. A missing skill is a blocker, not
-permission to invent its content.
+The visual language of this application is the one captured from yettel.hu
+under `docs/design/yettel/` and written up in `docs/design/yettel.md`: colour
+tokens, typography, radii, the button, card, filter, header and gallery
+recipes, and the list- and device-page feature inventories against the
+backend contract. Every implementation and every review of a rendered surface
+cites that document for each value it uses or checks; a value it does not
+carry is measured on `docs/design/yettel/css/portal.css` and added there
+before it is used. The earlier `mi-bolt-design` skill, its R01–R26 audit
+table and `docs/mi-bolt/execution/skill-location.json` are retired
+(2026-09-20); the task packets and repair notes under `docs/tasks/` and
+`docs/fix/` that cite them are history, not instructions.
 
 ## Where the rest of the rules live
 
-| Subject                                                                 | Owner                          |
-| ----------------------------------------------------------------------- | ------------------------------ |
-| TypeScript, Angular, component, state, template and service conventions | the root `CLAUDE.md`           |
-| The execution contract and the non-negotiable engineering boundaries    | `docs/spec/execution-rules.md` |
-| Architecture, screens, components, testing, acceptance                  | `docs/spec/`                   |
-| The wire contract                                                       | `docs/api/openapi.yaml`        |
-| Task packets and the dependency graph                                   | `docs/tasks/`                  |
-| The repair package for the defects found in the audit                   | `docs/fix/`                    |
-| Visual references and the clickable prototype                           | `docs/design/`                 |
+| Subject                                                                 | Owner                                   |
+| ----------------------------------------------------------------------- | --------------------------------------- |
+| TypeScript, Angular, component, state, template and service conventions | the root `CLAUDE.md`                    |
+| The execution contract and the non-negotiable engineering boundaries    | `docs/spec/execution-rules.md`          |
+| Architecture, screens, components, testing, acceptance                  | `docs/spec/`                            |
+| The wire contract                                                       | `docs/api/openapi.yaml`                 |
+| Task packets and the dependency graph                                   | `docs/tasks/`                           |
+| The repair package for the defects found in the audit                   | `docs/fix/`                             |
+| The design authority, the captured yettel.hu source and the prototype   | `docs/design/yettel.md`, `docs/design/` |
 
 Do not restate what any of those say. The root `CLAUDE.md` is in the same
 directory as this file, so a pointer to it resolves for any agent, Claude or

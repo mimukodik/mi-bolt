@@ -2,11 +2,11 @@
 
 These files under docs/ are a planning handoff inside the application repository. They are NOT a completed Angular app. The repository root AGENTS.md is created or carefully merged in T00; this document does not overwrite existing project instructions.
 
-## Mandatory skill rule
+## Design authority
 
-**Using `mi-bolt-design` is STRICTLY MANDATORY for every implementation execution and every verification/review, without exception.** Resolve the separately installed skill using the harness's actual skill discovery or existing configured skill locations. Record its entrypoint, root, approved version 1.0.1 and SHA-256 in `docs/mi-bolt/execution/skill-location.json`. Read the skill and task-relevant references before implementation, and independently before each acceptance/re-review. Do not copy, reinstall, recreate or embed the skill inside this documentation package. A missing skill is a real blocker, not permission to invent its content. No API/testing/build task may skip the rule: mark individual visual rules not applicable with a reason, while retaining demo-data, truthfulness and review constraints.
+`docs/design/yettel.md` is the design reference for every implementation and every verification or review of a rendered surface: it carries the colour tokens, typography, radii and recipes captured from yettel.hu under `docs/design/yettel/`, and the feature inventories against the backend contract. Cite it for each value used or checked; a value it does not carry is measured on `docs/design/yettel/css/portal.css` and added there before use. The `mi-bolt-design` skill and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20; the task packets under `docs/tasks/` that cite them are the original planning record, not current instructions.
 
-The separately managed skill and all its related textual files stay in English. Public demo UI stays Hungarian. The original reference raster still contains superseded brand text; it remains immutable evidence, not live website text. Render the current brand as MiBolt in all functional UI.
+Public demo UI stays Hungarian; everything else committed to this repository is English. The original reference raster still contains superseded brand text; it remains immutable evidence, not live website text. Render the current brand as MiBolt in all functional UI.
 
 ## Non-negotiable engineering boundaries
 

@@ -1,8 +1,0 @@
-{
-  "entry": ".claude/skills/mi-bolt-design/SKILL.md",
-  "root": ".claude/skills/mi-bolt-design",
-  "sha256": {
-    "SKILL.md": "40faf71e00a3a494d88485eee16f4c3f27669ad13c0b2da8ba67202e9a29e8e5"
-  },
-  "approvedVersion": "1.0.1"
-}

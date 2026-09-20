@@ -389,7 +389,7 @@ it here.
 Every `.md` file under `.claude/rules/` without `paths` frontmatter is loaded
 at launch with the same priority as this file and reaches every subagent
 except the built-in Explore and Plan agents, so the rules in the files listed
-below are binding even though their text lives elsewhere. None of the seven
+below are binding even though their text lives elsewhere. None of the six
 is `paths`-scoped: scoped rules only inject on a matching read, and these must
 be in context before the first write. The directory has no `CLAUDE.md` of its
 own because every `.md` there is loaded as a rule; this section is its index.
@@ -417,13 +417,6 @@ launch, which is why the SessionStart hook does not re-inject them.
   called, that the URL goes in the report and in any spawn prompt that carries
   the fact, and where the line falls between measuring this repository, which
   is unchanged, and experimenting on the framework, which is not done.
-- `orchestrated-coding.md`: when a build is orchestrated at all, who codes and
-  who merges, that `scripts/coder-agent/.env` is never read, the two-runner
-  cap and the two Monitor watches each runner gets, when a reviewer pass may
-  start and the two-pass review cap, what a brief must spell out including the
-  exact commit commands the `-p` sandbox accepts, the self-check block every
-  report answers, and that a plan task is cut into runner-sized units before
-  any brief goes out.
 - `parallel-spawns.md`: the pre-flight that runs over a batch of agents before
   it goes out, what a batch shares beyond its file lists, the check that
   something one agent is told to use exists in the form the instruction
@@ -442,10 +435,6 @@ launch, which is why the SessionStart hook does not re-inject them.
   wording and formatting rules, the two comments finished work needs,
   attachments and sub-issues.
 
-## Design skill mandate
+## Design authority
 
-The `mi-bolt-design` skill is mandatory for every implementation and every verification step in this workspace, including nonvisual work such as build, API and test-infrastructure tasks. The skill is installed separately and is not part of this repository's documentation; the resolved path, approved version and SHA-256 are recorded in `docs/mi-bolt/execution/skill-location.json`, which is the only source of truth for those values.
-
-The skill's `## 26 Verifiable Rules` table (R01–R26) is the audit checklist for every implementation. Each task records the applicability and outcome of every relevant R-rule in its review file under `docs/mi-bolt/execution/tasks/Txx.md`. A nonvisual task may mark individual visual R-rules N/A, but each N/A carries a one-sentence reason in the same file; silent omission is not a reason.
-
-Do not copy, embed, paraphrase or rebuild the skill in this repository. The installed copy is the only authority.
+`docs/design/yettel.md` is the design reference for every rendered surface: colour tokens, typography, radii, the button, card, filter, header and gallery recipes with the yettel.hu selectors they came from, and the feature inventories against the backend contract. Every implementation and every review of a rendered surface cites it for each value used or checked, and a value it does not carry is measured on `docs/design/yettel/css/portal.css` and added there first. The `mi-bolt-design` skill, its R01–R26 audit table and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20 (user, in English: "retire it, the yettel document"); nothing cites them any more.
