@@ -42,7 +42,7 @@ import {
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
 import type { Cart } from '../../api/generated/models/cart';
 import type { Money } from '../../api/generated/models/money';
-import { isRecord } from '../../../mocks/is-record';
+import { isRecord } from '../../shared/utils/is-record';
 
 import {
   CartMutationQueue,
