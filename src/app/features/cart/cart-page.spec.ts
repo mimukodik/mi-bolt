@@ -20,8 +20,8 @@ import '@angular/compiler';
  *   T18-AC04 - Continue button is disabled for empty/invalid/pending
  *              cart and navigates to /penztar/adatok only after
  *              authoritative revalidation (`facade.ensureCart`).
- *   T18-AC05 - 339 990 x 2 = 679 980 HUF subtotal; with home
- *              delivery (1 990 HUF) total = 681 970 HUF. No monthly
+ *   T18-AC05 - 89 990 x 2 = 179 980 HUF subtotal; with home
+ *              delivery (1 990 HUF) total = 181 970 HUF. No monthly
  *              fee or hidden add-on copy.
  */
 
