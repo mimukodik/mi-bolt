@@ -14,12 +14,15 @@
  *   - the per-route `providers` array that wires the real
  *     `CONTACT_DRAFT_SAVER` factory on the `/adatok` step. The
  *     default `providedIn: 'root'` factory in `contact-step.ts`
- *     returns a no-op `{ ok: true }`, which previously let the
- *     submitter advance to `/penztar/szallitas` without ever
- *     reaching `PUT /api/v1/checkout/{cartId}`. Overriding the
- *     token here routes the save through `CartFacade` (cart id +
- *     version) and the generated SDK (the actual PUT) so the draft
- *     is persisted before navigation.
+ *     returns a no-op `{ ok: true }`; the override routes the save
+ *     through `CheckoutFacade.updateContact()` so the draft is
+ *     persisted through `PATCH /checkout` before navigation.
+ *
+ * The first route below mounts `PaymentReturnPage` at `path: ''`,
+ * because the 2.0.0 mock payment application returns the shopper to
+ * `/penztar?paymentIntentId=...` with a full page load, the SPA
+ * starts cold, and without this child `/penztar` falls through to
+ * the `**` route and lands on the 404 screen.
  *
  * The previous inline definition in `app.routes.ts` has been
  * replaced with a single `loadChildren: () => import(...)` so the
@@ -29,138 +32,35 @@
  */
 
 import type { Routes } from '@angular/router';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
 
 import { contactGuard, deliveryGuard, reviewGuard, successGuard } from './checkout.guards';
 
 import { CheckoutLayout } from '../../layouts/checkout-layout';
 
-import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
-import { withIfMatch } from '../../core/api/demo-session.interceptor';
-import { updateCheckout } from '../../api/generated/fn/checkout/update-checkout';
-
-import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
-import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 
 import {
   CONTACT_DRAFT_SAVER,
   type ContactDraftSaver,
-  type ContactSaveResult,
   type ContactSubmission,
 } from './contact-step';
-import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';
 
 /**
- * Maps a 422 body to the `ContactFieldKey`-keyed shape
- * `ContactSaveResult` exposes. Unknown paths (i.e. server errors
- * that do not target one of the three contact inputs) are dropped
- * because the Signal Form in `contact-step.ts` can only attach
- * errors to fields it knows about.
+ * Real `ContactDraftSaver` factory. The 2.0.0 `PATCH /checkout`
+ * returns the whole session, so `CheckoutFacade.updateContact()`
+ * already returns the new session and no merge step is needed
+ * client-side. `error.detail` is an English developer diagnostic
+ * (openapi.yaml:1490-1493) and `ContactStep` renders the fixed
+ * Hungarian `'A mentés sikertelen.'` for any failure and ignores
+ * the message, so the leaked detail is harmless — but no component
+ * should render it.
  */
-function mapFieldErrors(
-  entries: readonly { path: string; message: string }[],
-): Partial<
-  Record<ContactFieldKey, readonly { code: string; message: string; pointer?: string }[]>
-> {
-  const out: Partial<
-    Record<ContactFieldKey, readonly { code: string; message: string; pointer?: string }[]>
-  > = {};
-  for (const entry of entries) {
-    const key = pointerToFieldKey(entry.path);
-    if (key === null) continue;
-    const bucket = out[key] ?? [];
-    out[key] = [...bucket, { code: 'server', message: entry.message, pointer: entry.path }];
-  }
-  return out;
-}
-
-/**
- * Maps an SDK / network error to the `ContactSaveResult` shape the
- * contact-step's Signal Form `submit(action)` expects. Mirrors
- * `CheckoutFacade.mapError` for the fields the contact step
- * surfaces; nothing else in the wizard reads them.
- */
-function mapErrorToSaveResult(err: unknown): ContactSaveResult {
-  if (err instanceof HttpErrorResponse) {
-    const body = (err.error ?? {}) as {
-      detail?: string;
-      fieldErrors?: { path: string; message: string }[];
-    };
-    const fieldErrors = mapFieldErrors(body.fieldErrors ?? []);
-    return {
-      ok: false,
-      ...(Object.keys(fieldErrors).length > 0 ? { fieldErrors } : {}),
-      message: body.detail ?? err.message,
-    };
-  }
-  return { ok: false, message: String(err) };
-}
-
-/**
- * Real `ContactDraftSaver` factory. Reads the active cart id and
- * version from the root-provided `CartFacade`, then issues
- * `PUT /api/v1/checkout/{cartId}` with body `{ contact }` via the
- * generated SDK. Using `CartFacade` directly (rather than
- * `CheckoutFacade.saveSection`) avoids depending on the wizard's
- * `loadSession()` step — the contact page does not require the
- * session to be loaded yet to persist a draft.
- *
- * After the PUT succeeds the returned `CheckoutSession` body is
- * fed back into the root `CheckoutFacade` via `loadSession()` so
- * the wizard's `session` signal carries the new contact section.
- * Without this step the `deliveryGuard` would still see
- * `session.contact === undefined` and reject navigation to
- * `/penztar/szallitas`, leaving the user stuck on the contact
- * step even after a successful draft save (F2 fix).
- *
- * `useFactory` factories run inside an injection context, so
- * `inject()` is safe to call here even though this is a plain
- * function — same pattern `CartFacade` / `CheckoutFacade` use to
- * manually wire the generated SDK because Vitest's esbuild
- * pipeline does not emit `@Injectable()` decorator metadata.
- */
-function buildContactDraftSaver(
-  cartFacade: CartFacade,
-  checkoutFacade: CheckoutFacade,
-): ContactDraftSaver {
-  const api = new Api(inject(ApiConfiguration), inject(HttpClient));
-  return async (contact: ContactSubmission): Promise<ContactSaveResult> => {
-    const cart = cartFacade.cart();
-    if (cart === null) {
-      return { ok: false, message: 'A kosár nem áll készen.' };
-    }
-    try {
-      await firstValueFrom(
-        api.invoke(
-          updateCheckout,
-          {
-            cartId: cart.id,
-            'Idempotency-Key': freshIdempotencyKey(),
-            body: {
-              contact: {
-                fullName: contact.fullName,
-                email: contact.email,
-                phone: contact.phone,
-              },
-            },
-          },
-          withIfMatch(cart.version),
-        ),
-      );
-      // PUT 200 — mirror the server-side session into the wizard
-      // facade so `deliveryGuard` reads `session.contact` and lets
-      // the user advance to the delivery step.
-      await checkoutFacade.loadSession(cart.id, { clearOnLoad: false });
-      return { ok: true };
-    } catch (err) {
-      return mapErrorToSaveResult(err);
-    }
+const contactDraftSaverFactory =
+  (facade: CheckoutFacade): ContactDraftSaver =>
+  async (submission: ContactSubmission) => {
+    const result = await facade.updateContact(submission);
+    return result.ok ? { ok: true } : { ok: false, message: result.error.detail };
   };
-}
 
 /**
  * Route table for `/penztar/...`. The parent layout (`CheckoutLayout`)
@@ -168,6 +68,22 @@ function buildContactDraftSaver(
  * suppression, step indicator) wraps every child.
  */
 export const checkoutRoutes: Routes = [
+  {
+    // Payment-return cold start. `PaymentReturnPage` hydrates the
+    // cart and the session, reads the payment intent through the
+    // facade, then navigates to `/penztar/ellenorzes`. The bare
+    // `/penztar` with no query parameter redirects to the cart.
+    path: '',
+    component: CheckoutLayout,
+    data: { step: 'review' },
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./payment-return-page').then((m) => m.PaymentReturnPage),
+        title: 'MiBolt — Fizetés eredménye',
+      },
+    ],
+  },
   {
     path: 'kosar',
     component: CheckoutLayout,
@@ -197,8 +113,8 @@ export const checkoutRoutes: Routes = [
         providers: [
           {
             provide: CONTACT_DRAFT_SAVER,
-            useFactory: buildContactDraftSaver,
-            deps: [CartFacade, CheckoutFacade],
+            useFactory: contactDraftSaverFactory,
+            deps: [CheckoutFacade],
           },
         ],
         title: 'MiBolt — Kapcsolattartási adatok',
