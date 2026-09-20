@@ -1,8 +1,22 @@
-import { Component } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+
+import type { Image } from '../../api/generated/models/image';
 
 /**
  * `Hero` — dark charcoal hero for the home page (S1).
+ *
+ * `docs/spec/components.md:255` declares the signal-input surface as
+ * `title:string; subtitle:string; artwork:Image`. `title` and
+ * `subtitle` are `input.required` because the heading's two lines
+ * cannot render without them — `title` is the plain first line
+ * ("A következő mobilod."), `subtitle` is the accent-styled second
+ * line ("Egyszerűen."). The lead paragraph below the heading and the
+ * two CTA labels are not part of the declared contract and stay local
+ * to this component. `artwork` is optional and defaults to `null`:
+ * no real `Image` asset exists in this repository for the hero
+ * illustration today, so the decorative inline SVG renders unchanged
+ * until a future task supplies one (R25 — no invented asset).
  *
  * Layout contract:
  *   - Mobile (default) content order: eyebrow, heading, message, CTA
@@ -35,5 +49,7 @@ import { RouterLink } from '@angular/router';
   styleUrl: './hero.scss',
 })
 export class Hero {
-  protected readonly tag = 'app-hero';
+  readonly title = input.required<string>();
+  readonly subtitle = input.required<string>();
+  readonly artwork = input<Image | null>(null);
 }

@@ -2,7 +2,6 @@ import type { Routes } from '@angular/router';
 
 import { MarketingLayout } from './layouts/marketing-layout';
 import { ShopLayout } from './layouts/shop-layout';
-import { CheckoutLayout } from './layouts/checkout-layout';
 
 /**
  * Root route table (T11).
@@ -167,8 +166,9 @@ export const routes: Routes = [
   },
   {
     path: 'penztar',
-    component: CheckoutLayout,
-    // The checkout subtree (guards + lazy steps) lives in
+    // The checkout subtree (guards + lazy steps + CheckoutLayout,
+    // mounted once per step so its `step` signal input can be a real
+    // route `data` binding — FIX-64) lives in
     // `features/checkout/checkout.routes.ts`; mounting it through
     // `loadChildren` is what actually wires `contactGuard`,
     // `deliveryGuard`, `reviewGuard` and `successGuard` — without

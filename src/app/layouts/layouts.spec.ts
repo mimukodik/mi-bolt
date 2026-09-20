@@ -215,6 +215,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
 
   it('CheckoutLayout removes search but retains return-to-shop navigation', () => {
     const f = TestBed.createComponent(CheckoutLayout);
+    f.componentRef.setInput('step', 'cart');
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -229,6 +230,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
 
   it('CheckoutLayout shows the four numbered step labels', () => {
     const f = TestBed.createComponent(CheckoutLayout);
+    f.componentRef.setInput('step', 'cart');
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -275,6 +277,9 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
     layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
+      if (L === CheckoutLayout) {
+        f.componentRef.setInput('step', 'cart');
+      }
       f.detectChanges();
       const raw: unknown = f.nativeElement;
       if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -288,6 +293,9 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
     layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
+      if (L === CheckoutLayout) {
+        f.componentRef.setInput('step', 'cart');
+      }
       f.detectChanges();
       const raw: unknown = f.nativeElement;
       if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -743,6 +751,9 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
     layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
+      if (L === CheckoutLayout) {
+        f.componentRef.setInput('step', 'cart');
+      }
       f.detectChanges();
       const raw: unknown = f.nativeElement;
       if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -789,6 +800,9 @@ describe('T11-AC03 each layout moves focus on a real path change', () => {
     await TestBed.compileComponents();
 
     const fixture = TestBed.createComponent(layout);
+    if (layout === CheckoutLayout) {
+      fixture.componentRef.setInput('step', 'cart');
+    }
     fixture.detectChanges();
     const host: unknown = fixture.nativeElement;
     if (!(host instanceof HTMLElement)) throw new Error('Expected HTMLElement');

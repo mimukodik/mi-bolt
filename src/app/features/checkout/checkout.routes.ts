@@ -35,6 +35,8 @@ import { firstValueFrom } from 'rxjs';
 
 import { contactGuard, deliveryGuard, reviewGuard, successGuard } from './checkout.guards';
 
+import { CheckoutLayout } from '../../layouts/checkout-layout';
+
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
@@ -178,49 +180,79 @@ function buildContactDraftSaver(
 export const checkoutRoutes: Routes = [
   {
     path: 'kosar',
-    loadComponent: () => import('../cart/cart-page').then((m) => m.CartPage),
-    title: 'MiBolt — Kosár',
+    component: CheckoutLayout,
     data: { step: 'cart' },
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('../cart/cart-page').then((m) => m.CartPage),
+        title: 'MiBolt — Kosár',
+      },
+    ],
   },
   {
     path: 'adatok',
-    canMatch: [contactGuard],
-    loadComponent: () => import('./contact-page').then((m) => m.ContactPage),
-    // Override the root-provided no-op default with the real
-    // facade-backed saver. Lives on the route (not the component)
-    // so the binding survives any re-creation of the lazy chunk
-    // and so the wizard's other steps do not pick up a Checkout
-    // dependency they do not use.
-    providers: [
+    component: CheckoutLayout,
+    data: { step: 'contact' },
+    children: [
       {
-        provide: CONTACT_DRAFT_SAVER,
-        useFactory: buildContactDraftSaver,
-        deps: [CartFacade, CheckoutFacade],
+        path: '',
+        canMatch: [contactGuard],
+        loadComponent: () => import('./contact-page').then((m) => m.ContactPage),
+        // Override the root-provided no-op default with the real
+        // facade-backed saver. Lives on the route (not the component)
+        // so the binding survives any re-creation of the lazy chunk
+        // and so the wizard's other steps do not pick up a Checkout
+        // dependency they do not use.
+        providers: [
+          {
+            provide: CONTACT_DRAFT_SAVER,
+            useFactory: buildContactDraftSaver,
+            deps: [CartFacade, CheckoutFacade],
+          },
+        ],
+        title: 'MiBolt — Kapcsolattartási adatok',
       },
     ],
-    title: 'MiBolt — Kapcsolattartási adatok',
-    data: { step: 'contact' },
   },
   {
     path: 'szallitas',
-    canMatch: [deliveryGuard],
-    loadComponent: () => import('./delivery-page').then((m) => m.DeliveryPage),
-    title: 'MiBolt — Szállítás és fizetés',
+    component: CheckoutLayout,
     data: { step: 'delivery' },
+    children: [
+      {
+        path: '',
+        canMatch: [deliveryGuard],
+        loadComponent: () => import('./delivery-page').then((m) => m.DeliveryPage),
+        title: 'MiBolt — Szállítás és fizetés',
+      },
+    ],
   },
   {
     path: 'ellenorzes',
-    canMatch: [reviewGuard],
-    loadComponent: () => import('./review-page').then((m) => m.ReviewPage),
-    title: 'MiBolt — Rendelés ellenőrzése',
+    component: CheckoutLayout,
     data: { step: 'review' },
+    children: [
+      {
+        path: '',
+        canMatch: [reviewGuard],
+        loadComponent: () => import('./review-page').then((m) => m.ReviewPage),
+        title: 'MiBolt — Rendelés ellenőrzése',
+      },
+    ],
   },
   {
     path: 'siker/:orderId',
-    canActivate: [successGuard],
-    loadComponent: () => import('./success-step').then((m) => m.SuccessStep),
-    title: 'MiBolt — Demórendelés elkészült',
+    component: CheckoutLayout,
     data: { step: 'success' },
+    children: [
+      {
+        path: '',
+        canActivate: [successGuard],
+        loadComponent: () => import('./success-step').then((m) => m.SuccessStep),
+        title: 'MiBolt — Demórendelés elkészült',
+      },
+    ],
   },
 ];
 

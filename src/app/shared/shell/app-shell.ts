@@ -1,4 +1,5 @@
 import { Component, inject, input } from '@angular/core';
+import { Router } from '@angular/router';
 
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
 import { FooterNav } from '../../core/navigation/footer-nav';
@@ -16,8 +17,9 @@ import { DemoNotice } from './demo-notice';
  * facade; the shell subscribes through the readonly `itemCount` signal
  * so the change is a single-line swap with no consumer edits.
  *
- * The checkout variant hides the standard footer: the demo terms dialog
- * inside the review step carries the legal copy instead.
+ * The checkout variant renders the footer in its compact form: the
+ * demo terms dialog inside the review step carries the legal copy,
+ * so the footer itself needs less room there.
  */
 @Component({
   selector: 'app-app-shell',
@@ -33,8 +35,21 @@ export class AppShell {
 
   private readonly cart = inject(CartCountFacade);
 
-  /** Whether to render the standard footer. Checkout uses a compact footer. */
-  readonly showFooter = input<boolean>(true);
+  private readonly router = inject(Router);
+
+  /** Whether the footer renders in its compact form. The checkout layout is
+   *  the only caller that sets this; every other shell uses the default. */
+  readonly compact = input<boolean>(false);
+
+  /**
+   * Destination of the footer's demo explainer. `'how'` is the
+   * post-FIX-33 shape, where the surviving link is
+   * "Hogyan működik a demó?" and its target is the home page's
+   * how-it-works section (`id="how"`, `FIX-42`/`FIX-33` item 8).
+   */
+  onDemoInfo(): void {
+    void this.router.navigate(['/'], { fragment: 'how' });
+  }
 
   /** Make the variant easy to set from the parent. */
   asVariant(v: HeaderVariant): HeaderVariant {

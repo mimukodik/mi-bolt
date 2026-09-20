@@ -1,6 +1,4 @@
 <app-header-nav [variant]="variant()" />
 <app-demo-notice />
 <ng-content></ng-content>
-@if (showFooter()) {
-  <app-footer-nav />
-}
+<app-footer-nav [compact]="compact()" (demoInfoRequested)="onDemoInfo()" />

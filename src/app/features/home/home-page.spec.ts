@@ -17,8 +17,11 @@
  *      tokens, copy, structure) with regex. This is the convention
  *      the project already follows (see product-gallery.spec.ts).
  *   2. Standalone rendering: render the Hero and HowDemoWorks
- *      components directly. They have inline styles and no signal
- *      inputs, so the JIT compiler resolves them in vitest.
+ *      components directly. `Hero` declares `title`/`subtitle`
+ *      (required) and `artwork` (optional) as signal inputs
+ *      (`docs/spec/components.md:255`, FIX-64); every direct
+ *      `TestBed.createComponent(Hero)` site below binds `title` and
+ *      `subtitle` with `componentRef.setInput` before `detectChanges`.
  *   3. Orchestration via StubApi: instantiate HomePage's facade
  *      behaviour with a stub `Api` that exposes the same
  *      `invoke(fn, params)` surface the production facade uses. We
@@ -280,6 +283,8 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
+    f.componentRef.setInput('title', 'A következő mobilod.');
+    f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const css = getComponentStyles(Hero).join(' ');
     const hasDark = css.includes('color-shell-dark');
@@ -294,6 +299,8 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
+    f.componentRef.setInput('title', 'A következő mobilod.');
+    f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -317,6 +324,8 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(Hero);
+    fixture.componentRef.setInput('title', 'A következő mobilod.');
+    fixture.componentRef.setInput('subtitle', 'Egyszerűen.');
     fixture.detectChanges();
     const root = getRootElement(fixture);
     expect(root.textContent).toContain('MiBolt');
@@ -329,6 +338,8 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(Hero);
+    fixture.componentRef.setInput('title', 'A következő mobilod.');
+    fixture.componentRef.setInput('subtitle', 'Egyszerűen.');
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const heading = root.querySelector('[data-testid="hero-heading"]');
@@ -343,6 +354,8 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(Hero);
+    fixture.componentRef.setInput('title', 'A következő mobilod.');
+    fixture.componentRef.setInput('subtitle', 'Egyszerűen.');
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const row = root.querySelector('[data-testid="hero-cta-row"]');
@@ -367,6 +380,8 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
+    f.componentRef.setInput('title', 'A következő mobilod.');
+    f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -381,6 +396,8 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
+    f.componentRef.setInput('title', 'A következő mobilod.');
+    f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -646,6 +663,8 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     });
     await TestBed.compileComponents();
     const f = TestBed.createComponent(Hero);
+    f.componentRef.setInput('title', 'A következő mobilod.');
+    f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
@@ -709,7 +728,10 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
     await TestBed.compileComponents();
-    TestBed.createComponent(Hero).detectChanges();
+    const heroFixture = TestBed.createComponent(Hero);
+    heroFixture.componentRef.setInput('title', 'A következő mobilod.');
+    heroFixture.componentRef.setInput('subtitle', 'Egyszerűen.');
+    heroFixture.detectChanges();
     const css = getComponentStyles(Hero).join(' ');
     const hasWrap =
       css.includes('overflow-wrap') || css.includes('word-break') || css.includes('hyphens');

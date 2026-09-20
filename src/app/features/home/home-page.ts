@@ -52,6 +52,16 @@ const DOCUMENTED_FEATURED_SLUGS = [
 export class HomePage {
   private readonly api = inject(Api);
 
+  /**
+   * Hero heading text, relocated character-for-character from
+   * `hero.html`'s H1 so `Hero` can declare `title`/`subtitle` as the
+   * signal inputs `docs/spec/components.md:255` requires (FIX-64).
+   * `title` is the plain first line; `subtitle` is the accent-styled
+   * second line.
+   */
+  protected readonly heroTitle = 'A következő mobilod.';
+  protected readonly heroSubtitle = 'Egyszerűen.';
+
   /** IDs of the featured products, or `null` while the config is loading. */
   private readonly featuredSlugsSignal = signal<readonly string[] | null>(null);
 
