@@ -23,13 +23,7 @@
  */
 
 import { inject } from '@angular/core';
-import {
-  Router,
-  type CanActivateFn,
-  type CanMatchFn,
-  type UrlSegment,
-  type UrlTree,
-} from '@angular/router';
+import { Router, type CanActivateFn, type CanMatchFn, type UrlTree } from '@angular/router';
 
 import type { Cart } from '../../api/generated/models/cart';
 import type { OrderReceipt } from '../../api/generated/models/order-receipt';
@@ -230,49 +224,3 @@ export const successGuard: CanActivateFn = (route): boolean | UrlTree => {
   // matches and the page resolves the receipt through GET.
   return true;
 };
-
-/**
- * Factory for guard functions that need to read the URL segments
- * to decide where to send the user. Currently unused but exported
- * for tests that drive the guards directly without a Router.
- *
- * The cart-not-loaded case is told apart from the cart-loaded-empty
- * case so a fresh document load reaches the cart page with a
- * `deep-link` reason rather than a misleading `empty-cart` one;
- * see the three `CanMatchFn` guards above for the rationale.
- */
-export function guardForSegment(step: 'cart' | 'contact' | 'delivery' | 'review' | 'success') {
-  return (_segments: readonly UrlSegment[]): boolean | UrlTree => {
-    const checkout = inject(CheckoutFacade);
-    const cart = inject(CartFacade);
-    const cartSnapshot = cart.cart();
-    if (cartSnapshot === null) {
-      return redirectToStep('cart', 'deep-link');
-    }
-    if (cartSnapshot.items.length === 0) {
-      return redirectToStep('cart', 'empty-cart');
-    }
-    if (step === 'success') {
-      return checkout.order() !== null ? true : redirectToStep('cart', 'deep-link');
-    }
-    const session = checkout.session();
-    const target = step;
-    if (target === 'contact') {
-      return true;
-    }
-    if (target === 'delivery') {
-      if (session?.contact === undefined) {
-        return redirectToStep('contact', 'incomplete');
-      }
-      return true;
-    }
-    // review
-    if (session?.contact === undefined) {
-      return redirectToStep('contact', 'incomplete');
-    }
-    if (session.delivery === undefined || session.paymentMethod === undefined) {
-      return redirectToStep('delivery', 'incomplete');
-    }
-    return true;
-  };
-}
