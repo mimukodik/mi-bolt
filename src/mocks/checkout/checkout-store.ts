@@ -76,7 +76,7 @@ const DELIVERY_OPTIONS: Readonly<Record<DeliveryOptionId, DeliveryOption>> = {
   pickup_point: {
     id: 'pickup_point',
     label: 'Demó átvételi pont',
-    description: 'Virtuális átvételi lehetőség; nincs valódi üzletcím.',
+    description: 'Virtuális átvételi lehetőség; nincs valós üzletcím.',
     fee: { amount: 0, currency: 'HUF' },
     requiresAddress: false,
     available: true,
@@ -113,7 +113,7 @@ export type CheckoutReadResult =
   | { ok: true; cart: Cart; draft: CheckoutDraft; session: CheckoutSession }
   | { ok: false; problem: Problem };
 
-function titleForStatus(status: number): string {
+export function titleForStatus(status: number): string {
   if (status === 400) return 'Invalid request';
   if (status === 404) return 'Resource not found';
   if (status === 409) return 'Conflict';
@@ -121,6 +121,27 @@ function titleForStatus(status: number): string {
   if (status === 412) return 'Precondition failed';
   if (status === 422) return 'Unprocessable content';
   return 'Unknown';
+}
+
+/** The one place a checkout / order Problem body is assembled (design §7). */
+export function checkoutProblem(
+  options: CreateHandlersOptions,
+  status: number,
+  code: ProblemCode,
+  detail: string,
+  params: Record<string, unknown>,
+  fieldErrors: readonly FieldError[] = [],
+): Problem {
+  return {
+    type: problemType(code),
+    title: titleForStatus(status),
+    status,
+    code,
+    detail,
+    traceId: buildTraceId(options),
+    fieldErrors: [...fieldErrors],
+    params,
+  };
 }
 
 /**
@@ -329,21 +350,9 @@ export class CheckoutStore {
     code: ProblemCode,
     detail: string,
     params: Record<string, unknown>,
-    fieldErrors: readonly { path: string; code: string }[],
+    fieldErrors: readonly FieldError[] = [],
   ): Problem {
-    const errors: FieldError[] = fieldErrors.map(
-      (entry) => ({ path: entry.path, code: entry.code }) satisfies FieldError,
-    );
-    return {
-      type: problemType(code),
-      title: titleForStatus(status),
-      status,
-      code,
-      detail,
-      traceId: buildTraceId(this.storeOptions),
-      fieldErrors: errors,
-      params,
-    };
+    return checkoutProblem(this.storeOptions, status, code, detail, params, fieldErrors);
   }
 }
 
@@ -388,53 +397,20 @@ function validateBilling(
   value: Record<string, unknown>,
 ): { ok: true; billing: BillingDetails } | { ok: false; errors: FieldError[] } {
   const name = normalizeContactFullName(value['name']);
+  const nameErrors: FieldError[] =
+    name === null ? [{ path: '/billing/name', code: 'NAME_LENGTH' }] : [];
   const addressRaw = value['address'];
   if (!isRecord(addressRaw)) {
-    const errors: FieldError[] = [
-      ...(name === null ? [{ path: '/billing/name', code: 'NAME_LENGTH' }] : []),
-      { path: '/billing/address', code: 'SECTION_MISSING' },
-    ];
-    return { ok: false, errors };
+    return {
+      ok: false,
+      errors: [...nameErrors, { path: '/billing/address', code: 'SECTION_MISSING' }],
+    };
   }
-  const countryCode = normalizeAddressCountryCode(addressRaw['countryCode']);
-  const postalCode = normalizeAddressPostalCode(addressRaw['postalCode']);
-  const city = normalizeAddressCity(addressRaw['city']);
-  const line1 = normalizeAddressLine1(addressRaw['line1']);
-  const line2Raw = normalizeAddressLine2(addressRaw['line2']);
-  const errors: FieldError[] = [];
-  if (name === null) errors.push({ path: '/billing/name', code: 'NAME_LENGTH' });
-  if (countryCode === null)
-    errors.push({ path: '/billing/address/countryCode', code: 'COUNTRY_NOT_SUPPORTED' });
-  if (postalCode === null)
-    errors.push({ path: '/billing/address/postalCode', code: 'POSTAL_CODE_FORMAT' });
-  if (city === null) errors.push({ path: '/billing/address/city', code: 'CITY_LENGTH' });
-  if (line1 === null) errors.push({ path: '/billing/address/line1', code: 'LINE1_LENGTH' });
-  let line2: string | undefined;
-  if (line2Raw === null) errors.push({ path: '/billing/address/line2', code: 'LINE2_LENGTH' });
-  else if (line2Raw !== undefined) line2 = line2Raw;
-  if (
-    errors.length > 0 ||
-    name === null ||
-    countryCode === null ||
-    postalCode === null ||
-    city === null ||
-    line1 === null
-  ) {
-    return { ok: false, errors };
+  const address = validateDeliveryAddress(addressRaw, '/billing/address');
+  if (address.errors.length > 0 || name === null) {
+    return { ok: false, errors: [...nameErrors, ...address.errors] };
   }
-  return {
-    ok: true,
-    billing: {
-      name,
-      address: {
-        countryCode,
-        postalCode,
-        city,
-        line1,
-        ...(line2 !== undefined ? { line2 } : {}),
-      },
-    },
-  };
+  return { ok: true, billing: { name, address: address.address } };
 }
 
 function validateDelivery(
