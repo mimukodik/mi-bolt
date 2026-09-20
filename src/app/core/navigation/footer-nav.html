@@ -1,9 +1,19 @@
-<footer class="footer px-4 py-6" role="contentinfo" [class.footer--compact]="compact()">
-  <div class="footer__inner mx-auto flex flex-wrap items-center gap-4 justify-between">
-    <span class="footer__brand font-bold tracking-wide">MiBolt</span>
-    <p class="footer__legal m-0">
+<footer
+  class="footer px-4 py-6 sm:px-12 sm:py-8"
+  role="contentinfo"
+  [class.footer--compact]="compact()"
+>
+  <div class="footer__inner flex flex-wrap items-center justify-between gap-4">
+    <span class="footer__brand font-bold tracking-[0.02em]">MiBolt</span>
+    <p class="footer__legal m-0 min-w-0 shrink grow basis-60">
       Mobilválasztás egyszerűen. Ez egy bemutató webshop: minden termék, ár és rendelés demóadat.
     </p>
-    <button type="button" class="footer__cta" (click)="onDemoInfo()">Hogyan működik a demó?</button>
+    <button
+      type="button"
+      class="footer__cta inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center"
+      (click)="onDemoInfo()"
+    >
+      Hogyan működik a demó?
+    </button>
   </div>
 </footer>

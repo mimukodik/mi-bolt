@@ -10,12 +10,7 @@
   <p class="message m-0">{{ message() }}</p>
   @if (!persistent()) {
     <div class="actions inline-flex items-center">
-      <app-button
-        variant="secondary"
-        size="standard"
-        label="Bezárás"
-        (pressed)="dismissed.emit()"
-      ></app-button>
+      <app-button variant="secondary" label="Bezárás" (pressed)="dismissed.emit()"></app-button>
     </div>
   }
 </div>

@@ -4,12 +4,6 @@
   min-height: 100dvh;
 }
 
-/* The demo notice is the shell's first child since it moved above the
-   header, so the index that carries the fill moves with it. */
-:host > :nth-child(1) {
-  flex: 1 1 auto;
-}
-
 :host > ng-content {
   display: contents;
 }

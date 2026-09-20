@@ -732,7 +732,8 @@ tokens to navy.
 | `--color-border-control` | `--color-text-muted` | `#80919f` | `.portal-tab-switcher{background-color:#002340;border:solid 2px #80919f}` — yettel's own control border (§4); it is 3.2:1 on white, where `--color-line-strong` `#dddfe1`, the other candidate, is 1.3:1 and so below the 3:1 WCAG 1.4.11 minimum a control border needs |
 | `--color-status-success` | `--color-success` | `#5cb85c` | `.valid-feedback{color:#5cb85c}` (§2) |
 | `--color-status-error` | `--color-error` | `#d9534f` | `.invalid-feedback{color:#d9534f}` (§2) |
-| `--color-status-warning` | `--color-primary` | `#002340` | yettel's warning is `.alert-warning{background-color:#ffd500;color:#332b00}`, a dark-on-yellow pair, while both consumers here set white text on the token; navy keeps those two banners legible until a warning surface is designed |
+| `--color-status-warning` | `--color-warning` | `#ffd500` | `.alert-warning{background-color:#ffd500;color:#332b00}` (§2) — yettel's own warning ground. The first version of this row resolved to navy `#002340` because both consumers wrote white on the token and yellow would have swallowed it; the pair is dark-on-yellow, so the row below supplies the text colour and the two consumers were switched to it on 2026-09-20 |
+| `--color-status-warning-text` | `--color-warning-text` | `#332b00` | `.alert-warning{…;color:#332b00}` (§2) — the dark olive yettel writes on that yellow. It carries the DEMÓ memory bar's text, its hairline and its badge (`demo-notice.scss` `.demo-notice--memory`) and the checkout freshness flag (`delivery-step.scss` `.fresh-flag`). Both theme variables are named `--color-warning*` rather than `--color-status-warning*`: a legacy name pointing at a theme variable of the same name is a self-referencing custom property that resolves to nothing, the failure `src/styles/tokens.css` already records for `--radius-card` |
 | `--color-status-info` | `--color-surface-sky` | `#c4dfe9` | `.alert{display:flex;background-color:#c4dfe9;border-radius:0 0 16px 16px}` (§2) |
 | `--color-focus-light` | `--color-primary` | `#002340` | yettel sets `outline:none !important` on `.btn` and carries no focus recipe; navy is the brand ink and is 16.3:1 on white, where lime would be 1.35:1 |
 | `--color-focus-dark` | `--color-accent` | `#b4ff00` | `.portal-header-menu__link{color:#b4ff00}` and `.thumbnail-container.active{border:2px solid #b4ff00}` — lime is what reads on navy (§5). The exceptions are the controls that are themselves lime on a navy ground — `is-secondary-on-dark`, the footer CTA and the two hero CTAs — whose ring is `--color-text-inverse`, and the lime header bar, where a lime ring is invisible and `--color-focus-light` is used |
@@ -767,7 +768,7 @@ navy ground is white. Three rules cover every consumer in the build:
   `.skip-link:focus` ring, which sits outside the link on the white page and
   uses `--color-focus-light`.
 
-Three further things this table does not do, each for a measured reason.
+Four further things this table does not do, each for a measured reason.
 
 - **The header is lime, with navy on it, and the token is not what carries
   it.** `home-1920.png` renders a lime `#b4ff00` bar with a navy wordmark,
@@ -789,6 +790,21 @@ Three further things this table does not do, each for a measured reason.
   why that token no longer appears in the sheet. `--color-shell-dark` stays
   navy and still grounds the footer and the hero, which is what §7's
   `.portal-footer` and the capture's footer and quick-links band show.
+- **The mobile drawer stays a light panel with navy links.** yettel's own
+  mobile menu declares no ground: none of the 15 `.portal-mobile-main-menu`
+  rules in `docs/design/yettel/css/portal.css` sets a `background-color`
+  (`grep -oE '[^}]{0,200}\{[^}]*\}' docs/design/yettel/css/portal.css | grep
+  portal-mobile-main-menu`, measured 2026-09-20), and what it does set is
+  written for a light one:
+  `.portal-mobile-main-menu .portal-header-menu__link{font-family:"portal-font-bold",sans-serif,arial;font-size:20px;line-height:28px;display:block;padding:21px 0;border-bottom:1px solid #e5e9ec;color:#002340}`,
+  `.portal-mobile-main-menu .portal-header-menu__item{border-bottom:1px solid #f3f3f3}`
+  and `.portal-mobile-main-menu__language-select{color:#9194a0}`. The drawer
+  therefore keeps the panel `accessible-dialog.scss` draws in
+  `--color-surface-light`, `--color-text-primary` on its links and
+  `--color-surface-section` for their hover and focus tint; `mobile-drawer.scss`
+  and `mobile-drawer.html` are unchanged by this pass. Navy is the ground of
+  the footer and the hero, not of the menu.
+
 - **The three weights stay numbers** (`--weight-regular: 400`,
   `--weight-medium: 500`, `--weight-bold: 700`). yettel expresses weight as a
   separate face rather than as a weight of one family — §3's three

@@ -34,16 +34,19 @@
   min-width: 0;
 }
 
+/* yettel's warning is a dark-on-yellow pair, .alert-warning{background-color:
+   #ffd500;color:#332b00} (docs/design/yettel.md §9), so the memory bar is the
+   yellow ground with #332b00 text, hairline and badge. */
 .demo-notice--memory {
   background: var(--color-status-warning);
-  border-bottom-color: var(--color-status-warning);
-  color: var(--color-text-inverse);
+  border-bottom-color: var(--color-status-warning-text);
+  color: var(--color-status-warning-text);
 }
 
 .demo-notice--memory .demo-notice__badge {
-  background: var(--color-text-inverse);
+  background: var(--color-status-warning-text);
   color: var(--color-status-warning);
-  border-color: var(--color-text-inverse);
+  border-color: var(--color-status-warning-text);
 }
 
 @media (min-width: 768px) {

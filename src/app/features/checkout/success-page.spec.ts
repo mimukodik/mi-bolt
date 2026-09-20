@@ -695,7 +695,7 @@ describe('T24 runtime: success step wire-level behaviour', () => {
 // fixes: one H1 and exactly one navigation CTA.
 // ---------------------------------------------------------------------------
 describe('FIX-35 success page copy matches screens.md:91', () => {
-  it('h1 is "Elkészült a demórendelésed." and exactly one nav action, "Vissza a telefonokhoz →", points at /telefonok', async () => {
+  it('h1 is "Elkészült a demórendelésed." and exactly one nav action, "Vissza a telefonokhoz", points at /telefonok', async () => {
     const orderId = await commitHappyPath();
 
     TestBed.resetTestingModule();
@@ -750,6 +750,6 @@ describe('FIX-35 success page copy matches screens.md:91', () => {
     expect(actions).not.toBeNull();
     const buttons = actions?.querySelectorAll('button') ?? [];
     expect(buttons.length).toBe(1);
-    expect(buttons[0]?.textContent?.trim()).toBe('Vissza a telefonokhoz →');
+    expect(buttons[0]?.textContent?.trim()).toBe('Vissza a telefonokhoz');
   });
 });

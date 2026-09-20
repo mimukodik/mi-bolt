@@ -18,10 +18,6 @@
     color var(--motion-fast) ease;
 }
 
-.root.is-comfortable {
-  min-height: var(--button-height-comfortable);
-}
-
 /* The two outlined variants carry a 1px border, so each padding edge loses
    the same pixel and the box stays the 48px .btn box (§5). */
 .root.is-secondary,

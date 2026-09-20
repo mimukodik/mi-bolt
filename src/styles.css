@@ -30,6 +30,8 @@
 
   --color-success: #5cb85c;
   --color-error: #d9534f;
+  --color-warning: #ffd500;
+  --color-warning-text: #332b00;
 
   --color-disabled-bg: #e5e9ec;
   --color-disabled-text: #80919f;
