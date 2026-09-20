@@ -36,6 +36,7 @@ import {
   hidden,
 } from '@angular/forms/signals';
 import type { WritableSignal } from '@angular/core';
+import type { CheckoutSession } from '../../api/generated/models/checkout-session';
 import { PHONE_INTERNATIONAL } from './contact.schema';
 
 /** Allowed delivery option ids (matches OpenAPI `optionId` enum). */
@@ -285,3 +286,10 @@ export function buildCheckoutForm(
  *  names this type `CheckoutFieldTree`; it is the return type of
  *  `buildCheckoutForm` under the name the specification uses. */
 export type CheckoutFieldTree = FieldTree<CheckoutFormModel>;
+
+/** The spec's own shape (components.md:7 — "Shared types"): the three
+ *  optional draft fields out of the six `CheckoutFacade.session()`
+ *  carries. Structural typing lets a full `CheckoutSession` bind
+ *  directly to a `[draft]` input typed this way — the extra fields on
+ *  the wider type are simply ignored. */
+export type CheckoutDraft = Pick<CheckoutSession, 'contact' | 'delivery' | 'paymentMethod'>;

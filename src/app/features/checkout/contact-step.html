@@ -17,16 +17,13 @@
     </p>
   </header>
 
-  @if (saveError(); as err) {
+  @if (saveState() === 'error') {
     <div class="save-error block" data-testid="contact-save-error">
-      <app-error-state
-        [title]="'A mentés nem sikerült'"
-        [message]="err"
-        [retryLabel]="'Újrapróbálkozás'"
-        [pending]="pendingSave()"
-        [preserving]="true"
-        (retryRequested)="onRetry()"
-      ></app-error-state>
+      <app-status-message
+        [message]="saveErrorMessage"
+        severity="error"
+        [persistent]="true"
+      ></app-status-message>
     </div>
   }
 
@@ -51,7 +48,7 @@
         inputmode="text"
         class="min-h-10 p-2 px-3 font-inherit rounded"
         placeholder="Teszt Elek"
-        [formField]="contactForm.fullName"
+        [formField]="contactFields().fullName"
         [attr.aria-invalid]="fullNameInvalid() ? 'true' : null"
         aria-describedby="contact-fullname-message"
         data-testid="contact-fullname-input"
@@ -76,7 +73,7 @@
         inputmode="email"
         class="min-h-10 p-2 px-3 font-inherit rounded"
         placeholder="teszt@example.test"
-        [formField]="contactForm.email"
+        [formField]="contactFields().email"
         [attr.aria-invalid]="emailInvalid() ? 'true' : null"
         aria-describedby="contact-email-message"
         data-testid="contact-email-input"
@@ -101,7 +98,7 @@
         inputmode="tel"
         class="min-h-10 p-2 px-3 font-inherit rounded"
         placeholder="+36201234567"
-        [formField]="contactForm.phone"
+        [formField]="contactFields().phone"
         [attr.aria-invalid]="phoneInvalid() ? 'true' : null"
         aria-describedby="contact-phone-message"
         data-testid="contact-phone-input"
@@ -147,17 +144,11 @@
       class="form-actions flex flex-col-reverse gap-3 lg:flex-row lg:justify-between lg:items-center"
     >
       <app-button
-        variant="secondary"
-        size="comfortable"
-        label="Vissza a kosárhoz"
-        (pressed)="onBack()"
-      ></app-button>
-      <app-button
         variant="primary"
         size="comfortable"
         label="Tovább a szállításhoz"
         loadingLabel="Mentés…"
-        [loading]="pendingSave()"
+        [loading]="saveState() === 'loading'"
         [disabled]="!canSubmit()"
         (pressed)="onSubmit()"
         data-testid="contact-submit"

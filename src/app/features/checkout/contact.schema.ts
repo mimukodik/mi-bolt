@@ -16,7 +16,25 @@
  *
  * The schema also owns the JSONpointer → field mapping the
  * checkout facade (T19) will reuse when it surfaces 422 server errors.
+ *
+ * `contactFormSchema`/`buildContactForm` (FIX-63) are the Signal Forms
+ * wiring `ContactPage` (the owning container) uses to build the
+ * `contactFields` field tree it passes down to `ContactStep` — the same
+ * schema `ContactStep` used to build inline before FIX-63 moved
+ * responsibility for the SDK/save call up to the container. Mirrors
+ * `checkoutFormSchema`/`buildCheckoutForm` in `checkout-form.model.ts`.
  */
+
+import {
+  type FieldTree,
+  type SchemaFn,
+  form,
+  maxLength as maxLengthRule,
+  required,
+  validate,
+} from '@angular/forms/signals';
+import type { WritableSignal } from '@angular/core';
+import type { Contact } from '../../api/generated/models/contact';
 
 export type ContactFieldKey = 'fullName' | 'email' | 'phone';
 
@@ -139,4 +157,86 @@ export function validateContact(input: ContactInput): ContactValidationResult {
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Signal Forms schema for `Contact`. Mirrors `validateContact` above —
+ * the same trim-aware bounds and the same normalized-phone check — so
+ * the live form and the pure validator never drift. Moved here from
+ * `ContactStep`'s inline `form(this.model, (path) => {...})` by FIX-63,
+ * which gave `ContactStep` a declared `contactFields` input instead of
+ * building its own field tree.
+ */
+export const contactFormSchema: SchemaFn<Contact> = (path) => {
+  required(path.fullName, {
+    message: 'A teljes név kötelező.',
+  });
+  maxLengthRule(path.fullName, CONTACT_NAME_MAX, {
+    message: 'A teljes név legfeljebb 100 karakter lehet.',
+  });
+  validate(path.fullName, ({ value }) => {
+    const v = value().trim();
+    if (v.length === 0) return null;
+    if (v.length < CONTACT_NAME_MIN) {
+      return {
+        kind: 'tooShort',
+        message: 'Add meg a teljes neved (legalább 2 karakter).',
+      };
+    }
+    return null;
+  });
+
+  required(path.email, {
+    message: 'Az e-mail cím kötelező.',
+  });
+  maxLengthRule(path.email, CONTACT_EMAIL_MAX, {
+    message: 'Az e-mail cím legfeljebb 254 karakter lehet.',
+  });
+  validate(path.email, ({ value }) => {
+    const v = value().trim();
+    if (v.length === 0) return null;
+    if (!EMAIL_RFC5322_SUBSET.test(v)) {
+      return {
+        kind: 'invalidFormat',
+        message: 'Adj meg egy érvényes e-mail címet.',
+      };
+    }
+    return null;
+  });
+
+  required(path.phone, {
+    message: 'A telefonszám kötelező.',
+  });
+  validate(path.phone, ({ value }) => {
+    const v = value().trim();
+    if (v.length === 0) return null;
+    const normalized = normalizeContact({
+      fullName: '',
+      email: '',
+      phone: v,
+    }).phone;
+    if (!PHONE_INTERNATIONAL.test(normalized)) {
+      return {
+        kind: 'invalidPhone',
+        message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+      };
+    }
+    if (
+      normalized.length - 3 < CONTACT_PHONE_NATIONAL_DIGITS_MIN ||
+      normalized.length - 3 > CONTACT_PHONE_NATIONAL_DIGITS_MAX
+    ) {
+      return {
+        kind: 'invalidPhone',
+        message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+      };
+    }
+    return null;
+  });
+};
+
+/** Builds the Signal Forms FieldTree the `ContactPage` container owns
+ *  and passes down as `contactFields`. Mirrors `buildCheckoutForm` in
+ *  `checkout-form.model.ts`. */
+export function buildContactForm(model: WritableSignal<Contact>): FieldTree<Contact> {
+  return form(model, contactFormSchema);
 }

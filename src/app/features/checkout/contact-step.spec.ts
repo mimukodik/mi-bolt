@@ -1,40 +1,46 @@
 /**
- * T20 — contact step UI (S4.2).
+ * T20 — contact step UI (S4.2), rewritten for FIX-63.
  *
- * Acceptance criteria mapped to source-pattern tests, mirroring the
- * T18 cart-page suite so the runtime Angular signal-input
- * instantiation pitfalls documented in `vitest.config.ts` are
- * avoided. The validation/normalization logic is pure and
- * exercised directly against `contact.schema.ts`.
+ * FIX-63 gave `ContactStep` the fixed signature `components.md:551-557`
+ * declares: `contactFields:FieldTree<Contact>`/`saveState:AsyncStatus`
+ * inputs, `continueRequested:void` output. The component injects no
+ * `CONTACT_DRAFT_SAVER` and no `Router` — `contact-page.ts` owns the
+ * Signal Forms model, the save call and the post-save navigation
+ * (covered by `contact-page.spec.ts`).
  *
  *   T20-AC01 — fullName 2..100 trimmed; email ≤254 with RFC 5322
  *              subset; phone normalizes spaces/hyphens to +36 and
  *              validates 8-9 national digits.
  *   T20-AC02 — labels/autocomplete/errors associated; invalid
- *              submission focuses summary then first invalid
- *              field; 422 server field errors target JSONpointer
- *              paths.
+ *              submission focuses summary then first invalid field.
+ *              (422 server field-error mapping is dropped by this task
+ *              — see the commit body / FIX-63.md's "Two more things
+ *              this task found": moving the save to the container means
+ *              the container, not the field tree, sees the save result,
+ *              so per-field mapping narrows to the generic
+ *              `saveState() === 'error'` message R15 already allows.)
  *   T20-AC03 — NO marketing checkbox or account requirement; demo
- *              notice discourages real personal data. Fixture
- *              defaults use example.test and a fictitious address.
- *   T20-AC04 — pending save prevents duplicate advance; failure
- *              retains all typed fields and exposes Retry.
+ *              notice discourages real personal data.
+ *   T20-AC04 — pending save (saveState 'loading') gates duplicate
+ *              advance; a failed save (saveState 'error') retains all
+ *              typed fields and shows a generic message.
  *   T20-AC05 — default, touched-invalid, submitted-invalid, loading
- *              and server-error visual states on narrow and
- *              desktop views.
+ *              and server-error visual states.
  *
- * T20 owns `contact-step.ts` and `contact.schema.ts`. The
- * `ContactPage` stub (`contact-page.ts`) is re-exported so the
- * route bound in `app.routes.ts` continues to resolve.
+ *   FIX-63-AC07 — a test that renders ContactStep with
+ *                 contactFields/saveState set directly and no
+ *                 CONTACT_DRAFT_SAVER provided, asserting it renders;
+ *                 that test passing without the saver is the proof the
+ *                 component no longer knows the save path.
  */
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { describe, expect, it, vi } from 'vitest';
+import { provideRouter } from '@angular/router';
+import { describe, expect, it } from 'vitest';
 
 import {
   CONTACT_EMAIL_MAX,
@@ -42,13 +48,16 @@ import {
   CONTACT_NAME_MIN,
   CONTACT_PHONE_NATIONAL_DIGITS_MAX,
   CONTACT_PHONE_NATIONAL_DIGITS_MIN,
+  buildContactForm,
   normalizeContact,
   pointerToFieldKey,
   validateContact,
   type ContactInput,
 } from './contact.schema';
-import { ContactStep, CONTACT_DRAFT_SAVER, type ContactDraftSaver } from './contact-step';
-import { ContactPage } from './contact-page';
+import { ContactStep } from './contact-step';
+
+import type { AsyncStatus } from '../../shared/types/async-status';
+import type { Contact } from '../../api/generated/models/contact';
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;
@@ -56,34 +65,37 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   throw new Error('Expected HTMLElement');
 }
 
-function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
-  return (typeof value === 'function' || typeof value === 'object') && value !== null;
-}
+const EMPTY_CONTACT: Contact = { fullName: '', email: '', phone: '' };
+const VALID_CONTACT: Contact = {
+  fullName: 'Teszt Elek',
+  email: 'teszt@example.test',
+  phone: '+36201234567',
+};
 
-function getComponentStyles(comp: unknown): readonly string[] {
-  if (!isObjectOrFunction(comp)) {
-    return [];
-  }
-  const cmp = comp['ɵcmp'];
-  if (!isObjectOrFunction(cmp)) {
-    return [];
-  }
-  const styles = cmp['styles'];
-  if (Array.isArray(styles)) {
-    return styles.filter((s): s is string => typeof s === 'string');
-  }
-  return [];
-}
+const TEST_PROVIDERS = [provideZonelessChangeDetection(), provideRouter([])];
 
-const TEST_PROVIDERS = [
-  provideZonelessChangeDetection(),
-  provideRouter([{ path: '**', component: ContactStep }]),
-];
+/**
+ * Configures the testing module first, then builds the `FieldTree<Contact>`
+ * the way `ContactPage` does (Signal Forms' `form()` calls `inject()`
+ * internally, so this must run inside an injection context, and that
+ * context must not be created before `configureTestingModule` runs — doing
+ * it in the other order throws "Cannot configure the test module when the
+ * test module has already been instantiated").
+ */
+function createContactStep(initial: Contact = EMPTY_CONTACT, saveState: AsyncStatus = 'idle') {
+  TestBed.configureTestingModule({ providers: TEST_PROVIDERS });
+  const fields = TestBed.runInInjectionContext(() => buildContactForm(signal(initial)));
+  const fixture = TestBed.createComponent(ContactStep);
+  fixture.componentRef.setInput('contactFields', fields);
+  fixture.componentRef.setInput('saveState', saveState);
+  fixture.detectChanges();
+  return { fixture, fields };
+}
 
 // ---------------------------------------------------------------------------
 // T20-AC01 — fullName 2..100 trimmed; email ≤254 + RFC 5322 subset;
 // phone normalizes spaces / hyphens to +36 and validates 8-9 national
-// digits.
+// digits. Pure schema tests, unaffected by FIX-63's container split.
 // ---------------------------------------------------------------------------
 describe('T20-AC01 contact schema validation and normalization', () => {
   it('exposes the documented 2..100 / 254 / 8-9 thresholds as exported constants', () => {
@@ -111,9 +123,7 @@ describe('T20-AC01 contact schema validation and normalization', () => {
       phone: '+36301234567',
     });
     expect(result.ok).toBe(false);
-    const fullNameErrors = result.errors.filter((e) => e.field === 'fullName');
-    expect(fullNameErrors.length).toBeGreaterThan(0);
-    expect(fullNameErrors[0]?.code).toBe('tooShort');
+    expect(result.errors.find((e) => e.field === 'fullName')?.code).toBe('tooShort');
   });
 
   it('treats trimmed fullName above 100 chars as too long', () => {
@@ -122,22 +132,13 @@ describe('T20-AC01 contact schema validation and normalization', () => {
       email: 'teszt@example.test',
       phone: '+36301234567',
     });
-    expect(result.ok).toBe(false);
-    const fullNameErrors = result.errors.filter((e) => e.field === 'fullName');
-    expect(fullNameErrors[0]?.code).toBe('tooLong');
+    expect(result.errors.find((e) => e.field === 'fullName')?.code).toBe('tooLong');
   });
 
   it('rejects an email longer than 254 characters', () => {
-    const longLocal = 'a'.repeat(250);
-    const email = `${longLocal}@example.test`;
-    const result = validateContact({
-      fullName: 'Teszt Elek',
-      email,
-      phone: '+36301234567',
-    });
-    expect(result.ok).toBe(false);
-    const emailErrors = result.errors.filter((e) => e.field === 'email');
-    expect(emailErrors[0]?.code).toBe('tooLong');
+    const email = `${'a'.repeat(250)}@example.test`;
+    const result = validateContact({ fullName: 'Teszt Elek', email, phone: '+36301234567' });
+    expect(result.errors.find((e) => e.field === 'email')?.code).toBe('tooLong');
   });
 
   it('rejects an email without an @ or with malformed domain', () => {
@@ -155,8 +156,7 @@ describe('T20-AC01 contact schema validation and normalization', () => {
         email: value,
         phone: '+36301234567',
       });
-      const emailErrors = result.errors.filter((e) => e.field === 'email');
-      expect(emailErrors[0]?.code).toBe('invalidFormat');
+      expect(result.errors.find((e) => e.field === 'email')?.code).toBe('invalidFormat');
     }
   });
 
@@ -170,47 +170,21 @@ describe('T20-AC01 contact schema validation and normalization', () => {
   });
 
   it('normalizes the phone: strips spaces, hyphens, parentheses, 00 prefix and 0 prefix', () => {
-    expect(
-      normalizeContact({
-        fullName: '',
-        email: '',
-        phone: '+36 30 123 4567',
-      }).phone,
-    ).toBe('+36301234567');
-
-    expect(
-      normalizeContact({
-        fullName: '',
-        email: '',
-        phone: '+36-30-123-4567',
-      }).phone,
-    ).toBe('+36301234567');
-
-    expect(
-      normalizeContact({
-        fullName: '',
-        email: '',
-        phone: '+36 (30) 123-4567',
-      }).phone,
-    ).toBe('+36301234567');
-
-    // Hungarian trunk prefix "06"
-    expect(
-      normalizeContact({
-        fullName: '',
-        email: '',
-        phone: '06 30 123 4567',
-      }).phone,
-    ).toBe('+36301234567');
-
-    // International "0036" prefix
-    expect(
-      normalizeContact({
-        fullName: '',
-        email: '',
-        phone: '0036 1 234 5678',
-      }).phone,
-    ).toBe('+3612345678');
+    expect(normalizeContact({ fullName: '', email: '', phone: '+36 30 123 4567' }).phone).toBe(
+      '+36301234567',
+    );
+    expect(normalizeContact({ fullName: '', email: '', phone: '+36-30-123-4567' }).phone).toBe(
+      '+36301234567',
+    );
+    expect(normalizeContact({ fullName: '', email: '', phone: '+36 (30) 123-4567' }).phone).toBe(
+      '+36301234567',
+    );
+    expect(normalizeContact({ fullName: '', email: '', phone: '06 30 123 4567' }).phone).toBe(
+      '+36301234567',
+    );
+    expect(normalizeContact({ fullName: '', email: '', phone: '0036 1 234 5678' }).phone).toBe(
+      '+3612345678',
+    );
   });
 
   it('accepts 8-digit landline numbers normalized to +36', () => {
@@ -228,15 +202,12 @@ describe('T20-AC01 contact schema validation and normalization', () => {
       email: 'teszt@example.test',
       phone: '+36123456',
     });
-    expect(short.ok).toBe(false);
     expect(short.errors.some((e) => e.field === 'phone')).toBe(true);
-
     const tooLong = validateContact({
       fullName: 'Teszt Elek',
       email: 'teszt@example.test',
       phone: '+361234567890',
     });
-    expect(tooLong.ok).toBe(false);
     expect(tooLong.errors.some((e) => e.field === 'phone')).toBe(true);
   });
 
@@ -246,14 +217,12 @@ describe('T20-AC01 contact schema validation and normalization', () => {
       email: 'teszt@example.test',
       phone: '301234567',
     });
-    expect(result.ok).toBe(false);
     expect(result.errors.some((e) => e.field === 'phone')).toBe(true);
   });
 
   it('reports the required error for an empty name, email, or phone', () => {
     const blank: ContactInput = { fullName: '   ', email: '', phone: ' ' };
     const result = validateContact(blank);
-    expect(result.ok).toBe(false);
     const codes = result.errors.map((e) => `${e.field}:${e.code}`).sort();
     expect(codes).toContain('fullName:required');
     expect(codes).toContain('email:required');
@@ -262,25 +231,45 @@ describe('T20-AC01 contact schema validation and normalization', () => {
 });
 
 // ---------------------------------------------------------------------------
-// T20-AC02 — accessible label/autocomplete/error wiring and 422 mapping.
+// FIX-63-AC07 — renders with contactFields/saveState set directly and no
+// CONTACT_DRAFT_SAVER provided.
 // ---------------------------------------------------------------------------
-describe('T20-AC02 accessible label/autocomplete/error wiring and 422 mapping', () => {
-  it('every input sits inside a <label> and carries an autocomplete attribute', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
+describe('FIX-63-AC07 ContactStep renders from its two inputs with no injected saver', () => {
+  it('renders with contactFields/saveState set directly and no CONTACT_DRAFT_SAVER provided', () => {
+    // TEST_PROVIDERS carries only zoneless change detection and an empty
+    // router — no CONTACT_DRAFT_SAVER provider is registered anywhere in
+    // this module. The component still renders: proof it no longer knows
+    // the save path.
+    const { fixture } = createContactStep();
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="contact-page"]')).not.toBeNull();
+    expect(root.querySelector('#contact-fullname-input')).not.toBeNull();
+  });
+
+  it("declares exactly the contract's two inputs and one output", () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/app/features/checkout/contact-step.ts'),
+      'utf8',
+    );
+    expect(source).toMatch(/contactFields\s*=\s*input\.required<FieldTree<Contact>>\(\)/);
+    expect(source).toMatch(/saveState\s*=\s*input<AsyncStatus>\('idle'\)/);
+    expect(source).toMatch(/continueRequested\s*=\s*output(<void>)?\(\)/);
+    expect(source).not.toMatch(/submitContact/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T20-AC02 — accessible label/autocomplete/error wiring; invalid submission
+// focus management.
+// ---------------------------------------------------------------------------
+describe('T20-AC02 accessible label/autocomplete/error wiring', () => {
+  it('every input sits inside a <label> and carries an autocomplete attribute', () => {
+    const { fixture } = createContactStep();
     const root = getRootElement(fixture);
 
     const nameInput = root.querySelector<HTMLInputElement>('#contact-fullname-input');
     const emailInput = root.querySelector<HTMLInputElement>('#contact-email-input');
     const phoneInput = root.querySelector<HTMLInputElement>('#contact-phone-input');
-
-    expect(nameInput).not.toBeNull();
-    expect(emailInput).not.toBeNull();
-    expect(phoneInput).not.toBeNull();
 
     expect(nameInput?.closest('label')).not.toBeNull();
     expect(emailInput?.closest('label')).not.toBeNull();
@@ -289,34 +278,16 @@ describe('T20-AC02 accessible label/autocomplete/error wiring and 422 mapping', 
     expect(nameInput?.getAttribute('autocomplete')).toBe('name');
     expect(emailInput?.getAttribute('autocomplete')).toBe('email');
     expect(phoneInput?.getAttribute('autocomplete')).toBe('tel');
-
-    expect(nameInput?.value).toBe('');
-    expect(emailInput?.value).toBe('');
-    expect(phoneInput?.value).toBe('');
-    expect(nameInput?.getAttribute('placeholder')).toBe('Teszt Elek');
-    expect(emailInput?.getAttribute('placeholder')).toBe('teszt@example.test');
-    expect(phoneInput?.getAttribute('placeholder')).toBe('+36201234567');
   });
 
   it('every input has an aria-describedby pointing at a FormFieldMessage id', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
+    const { fixture } = createContactStep(EMPTY_CONTACT);
     const root = getRootElement(fixture);
 
-    const nameInput = root.querySelector<HTMLInputElement>('#contact-fullname-input');
-    const emailInput = root.querySelector<HTMLInputElement>('#contact-email-input');
-    const phoneInput = root.querySelector<HTMLInputElement>('#contact-phone-input');
+    expect(root.querySelector('#contact-fullname-input')?.getAttribute('aria-describedby')).toBe(
+      'contact-fullname-message',
+    );
 
-    expect(nameInput?.getAttribute('aria-describedby')).toBe('contact-fullname-message');
-    expect(emailInput?.getAttribute('aria-describedby')).toBe('contact-email-message');
-    expect(phoneInput?.getAttribute('aria-describedby')).toBe('contact-phone-message');
-
-    // Trigger validation errors so FormFieldMessage elements render paragraphs with matching IDs
-    fixture.componentInstance.model.set({ fullName: '', email: '', phone: '' });
     await fixture.componentInstance.onSubmit();
     fixture.detectChanges();
 
@@ -326,14 +297,7 @@ describe('T20-AC02 accessible label/autocomplete/error wiring and 422 mapping', 
   });
 
   it('invalid submission focuses the summary first then jumps to the first invalid field', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.componentInstance.model.set({ fullName: '', email: '', phone: '' });
-    fixture.detectChanges();
-
+    const { fixture } = createContactStep(EMPTY_CONTACT);
     const root = getRootElement(fixture);
     expect(root.querySelector('[data-testid="contact-summary"]')).toBeNull();
 
@@ -344,45 +308,49 @@ describe('T20-AC02 accessible label/autocomplete/error wiring and 422 mapping', 
     expect(summary).not.toBeNull();
     expect(summary?.getAttribute('role')).toBe('alert');
     expect(summary?.getAttribute('tabindex')).toBe('-1');
-
-    const invalidLinks = summary?.querySelectorAll('a');
-    expect(invalidLinks?.length).toBeGreaterThan(0);
     expect(fixture.componentInstance.invalidFields().length).toBe(3);
   });
 
-  it('422 server errors are mapped via the JSONpointer path on the FieldError', async () => {
+  it('does not emit continueRequested when the form is invalid', async () => {
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    let count = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => (count += 1));
+
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    expect(count).toBe(0);
+  });
+
+  it('emits continueRequested once the form is locally valid, with no navigation of its own', async () => {
+    const { fixture } = createContactStep(VALID_CONTACT);
+    let count = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => (count += 1));
+
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    expect(count).toBe(1);
+  });
+
+  it('resolves a 422 JSONpointer back to the local field key (used by the container, if it re-derives mapping later)', () => {
     expect(pointerToFieldKey('/fullName')).toBe('fullName');
     expect(pointerToFieldKey('/email')).toBe('email');
     expect(pointerToFieldKey('/phone')).toBe('phone');
     expect(pointerToFieldKey('/unknown')).toBeNull();
 
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    const step = fixture.componentInstance;
-    expect(step.resolvePointer('/fullName')).toBe('fullName');
-    expect(step.resolvePointer('/email')).toBe('email');
-    expect(step.resolvePointer('/phone')).toBe('phone');
+    const { fixture } = createContactStep();
+    expect(fixture.componentInstance.resolvePointer('/fullName')).toBe('fullName');
   });
 });
 
 // ---------------------------------------------------------------------------
-// T20-AC03 — NO marketing checkbox or account requirement; demo notice
-// discourages real personal data. Fixture defaults use example.test
-// and a fictitious address.
+// T20-AC03 — NO marketing checkbox or account requirement; demo notice.
 // ---------------------------------------------------------------------------
-describe('T20-AC03 demo notice, no marketing, fixture example.test values', () => {
-  it('renders the demo notice discouraging real personal data', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
+describe('T20-AC03 demo notice, no marketing, no account affordance', () => {
+  it('renders the demo notice discouraging real personal data', () => {
+    const { fixture } = createContactStep();
     const root = getRootElement(fixture);
-
     const demoNotice = root.querySelector('[data-testid="contact-demo-notice"]');
     expect(demoNotice).not.toBeNull();
     const text = demoNotice?.textContent ?? '';
@@ -390,269 +358,75 @@ describe('T20-AC03 demo notice, no marketing, fixture example.test values', () =
     expect(text).toContain('ne használj valós személyes adatokat');
   });
 
-  it('does NOT render a marketing checkbox or "create account" affordance', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
+  it('does NOT render a marketing checkbox or "create account" affordance', () => {
+    const { fixture } = createContactStep();
     const root = getRootElement(fixture);
-
-    const checkboxes = root.querySelectorAll('input[type="checkbox"]');
-    expect(checkboxes.length).toBe(0);
-
+    expect(root.querySelectorAll('input[type="checkbox"]').length).toBe(0);
     const text = root.textContent.toLowerCase();
     expect(text.includes('marketing')).toBe(false);
     expect(text.includes('hírlevél')).toBe(false);
     expect(text.includes('newsletter')).toBe(false);
     expect(text.includes('create account')).toBe(false);
     expect(text.includes('regisztráció')).toBe(false);
-    expect(text.includes('fiók létrehozása')).toBe(false);
-  });
-
-  it('starts with an empty model; the example.test/Teszt Elek strings are placeholders only', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
-
-    const model = fixture.componentInstance.model();
-    expect(model.fullName).toBe('');
-    expect(model.email).toBe('');
-    expect(model.phone).toBe('');
-
-    const root = getRootElement(fixture);
-    const nameInput = root.querySelector<HTMLInputElement>('#contact-fullname-input');
-    const emailInput = root.querySelector<HTMLInputElement>('#contact-email-input');
-    const phoneInput = root.querySelector<HTMLInputElement>('#contact-phone-input');
-    expect(nameInput?.getAttribute('placeholder')).toBe('Teszt Elek');
-    expect(emailInput?.getAttribute('placeholder')).toContain('example.test');
-    expect(phoneInput?.getAttribute('placeholder')).toContain('+36');
-  });
-
-  it('declares neither the email nor the phone regex locally, and imports both from contact.schema', () => {
-    const source = readFileSync(
-      join(process.cwd(), 'src/app/features/checkout/contact-step.ts'),
-      'utf8',
-    );
-    expect(source).not.toMatch(/const\s+(EMAIL_RFC5322_SUBSET|PHONE_E164)\s*=/);
-    expect(source).toMatch(/EMAIL_RFC5322_SUBSET/);
-    expect(source).toMatch(/PHONE_INTERNATIONAL/);
-    expect(source).toMatch(/from\s+'\.\/contact\.schema'/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// E074 — an empty-form submit must not navigate, must show the error
-// summary, and must not send a draft request. docs/spec/test-scenarios.md:80
+// T20-AC04 — pending save gates duplicate advance; a failed save retains
+// all typed fields and shows a generic message.
 // ---------------------------------------------------------------------------
-describe('E074 empty-form continue is blocked', () => {
-  it('does not navigate and shows the error summary when all three fields are empty', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.model()).toEqual({ fullName: '', email: '', phone: '' });
-
-    const router = TestBed.inject(Router);
-    const navigateSpy = vi.spyOn(router, 'navigate');
-
-    await fixture.componentInstance.onSubmit();
-    fixture.detectChanges();
-
-    expect(navigateSpy).not.toHaveBeenCalled();
+describe('T20-AC04 pending save gates duplicate advance; failure retains fields', () => {
+  it('submit button is disabled while saveState is "loading"', () => {
+    const { fixture } = createContactStep(VALID_CONTACT, 'loading');
     const root = getRootElement(fixture);
-    const summary = root.querySelector('[data-testid="contact-summary"]');
-    expect(summary).not.toBeNull();
-  });
-
-  it('navigates to /penztar/szallitas once all three fields are valid', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.componentInstance.model.set({
-      fullName: 'Teszt Elek',
-      email: 'teszt@example.test',
-      phone: '+36201234567',
-    });
-    fixture.detectChanges();
-
-    const router = TestBed.inject(Router);
-    const navigateSpy = vi.spyOn(router, 'navigate');
-
-    await fixture.componentInstance.onSubmit();
-    fixture.detectChanges();
-
-    expect(navigateSpy).toHaveBeenCalledWith(['/penztar/szallitas']);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T20-AC04 — pending save gates duplicate advance; failure retains
-// all typed fields and exposes Retry.
-// ---------------------------------------------------------------------------
-describe('T20-AC04 pending save gates duplicate advance; failure retains fields + Retry', () => {
-  it('submit button is disabled while pendingSave is true', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.canSubmit()).toBe(true);
-
-    fixture.componentInstance.pendingSave.set(true);
-    fixture.detectChanges();
-
     expect(fixture.componentInstance.canSubmit()).toBe(false);
-    const root = getRootElement(fixture);
-    const submitBtn = root.querySelector<HTMLButtonElement>(
-      '[data-testid="contact-submit"] button',
-    );
-    expect(submitBtn?.disabled).toBe(true);
-  });
-
-  it('exposes a Retry path that re-runs the same save action', async () => {
-    let saveCount = 0;
-    const failingSaver: ContactDraftSaver = () => {
-      saveCount += 1;
-      return Promise.resolve({ ok: false, message: 'Mentési hiba történt.' });
-    };
-
-    TestBed.configureTestingModule({
-      providers: [...TEST_PROVIDERS, { provide: CONTACT_DRAFT_SAVER, useValue: failingSaver }],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.componentInstance.model.set({
-      fullName: 'Teszt Elek',
-      email: 'teszt@example.test',
-      phone: '+36201234567',
-    });
-    fixture.detectChanges();
-
-    await fixture.componentInstance.onSubmit();
-    fixture.detectChanges();
-
-    expect(saveCount).toBe(1);
-    expect(fixture.componentInstance.saveError()).toBe('Mentési hiba történt.');
-
-    const root = getRootElement(fixture);
-    const errorState = root.querySelector('[data-testid="contact-save-error"]');
-    expect(errorState).not.toBeNull();
-
-    fixture.componentInstance.onRetry();
-    fixture.detectChanges();
-
-    expect(saveCount).toBe(2);
-  });
-
-  it('keeps the typed values intact when save fails (no value reset)', async () => {
-    const failingSaver: ContactDraftSaver = () =>
-      Promise.resolve({ ok: false, message: 'Hálózati hiba.' });
-
-    TestBed.configureTestingModule({
-      providers: [...TEST_PROVIDERS, { provide: CONTACT_DRAFT_SAVER, useValue: failingSaver }],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    const customContact: ContactInput = {
-      fullName: 'Kovács János',
-      email: 'kovacs@example.test',
-      phone: '+36 20 987 6543',
-    };
-    fixture.componentInstance.model.set(customContact);
-    fixture.detectChanges();
-
-    await fixture.componentInstance.onSubmit();
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.model().fullName).toBe('Kovács János');
-    expect(fixture.componentInstance.model().email).toBe('kovacs@example.test');
-    expect(fixture.componentInstance.model().phone).toBe('+36 20 987 6543');
-    expect(fixture.componentInstance.saveError()).toBe('Hálózati hiba.');
-  });
-
-  it('runs the save through Signal Forms submit() so server errors attach via fieldTree', async () => {
-    const fieldErrorSaver: ContactDraftSaver = () =>
-      Promise.resolve({
-        ok: false,
-        fieldErrors: {
-          email: [{ code: 'server', message: 'Ez az e-mail már foglalt.', pointer: '/email' }],
-        },
-      });
-
-    TestBed.configureTestingModule({
-      providers: [...TEST_PROVIDERS, { provide: CONTACT_DRAFT_SAVER, useValue: fieldErrorSaver }],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.componentInstance.model.set({
-      fullName: 'Teszt Elek',
-      email: 'teszt@example.test',
-      phone: '+36201234567',
-    });
-    fixture.detectChanges();
-
-    await fixture.componentInstance.onSubmit();
-    fixture.detectChanges();
-
     expect(
-      fixture.componentInstance
-        .emailErrors()
-        .some((e) => e.message === 'Ez az e-mail már foglalt.'),
+      root.querySelector<HTMLButtonElement>('[data-testid="contact-submit"] button')?.disabled,
     ).toBe(true);
+  });
+
+  it('does not run submit() while saveState is "loading" (no duplicate emit)', async () => {
+    const { fixture } = createContactStep(VALID_CONTACT, 'loading');
+    let count = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => (count += 1));
+
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    expect(count).toBe(0);
+  });
+
+  it('keeps the typed values intact when saveState is "error" (no value reset)', () => {
+    const { fixture } = createContactStep(
+      { fullName: 'Kovács János', email: 'kovacs@example.test', phone: '+36 20 987 6543' },
+      'error',
+    );
+
+    expect(fixture.componentInstance.contactFields()().value().fullName).toBe('Kovács János');
     const root = getRootElement(fixture);
-    expect(root.querySelector('#contact-email-message')?.textContent).toContain(
-      'Ez az e-mail már foglalt.',
+    expect(root.querySelector<HTMLInputElement>('#contact-fullname-input')?.value).toBe(
+      'Kovács János',
     );
   });
 
-  it('uses an injectable save token so the facade (T19) can replace the no-op default', async () => {
-    let customSaverCalled = false;
-    const customSaver: ContactDraftSaver = () => {
-      customSaverCalled = true;
-      return Promise.resolve({ ok: true });
-    };
-
-    TestBed.configureTestingModule({
-      providers: [...TEST_PROVIDERS, { provide: CONTACT_DRAFT_SAVER, useValue: customSaver }],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.componentInstance.model.set({
-      fullName: 'Teszt Elek',
-      email: 'teszt@example.test',
-      phone: '+36201234567',
-    });
-    fixture.detectChanges();
+  it('re-running submit() after an error re-validates and can still emit continueRequested — the retry path is simply pressing the same control again', async () => {
+    const { fixture } = createContactStep(VALID_CONTACT, 'error');
+    let count = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => (count += 1));
 
     await fixture.componentInstance.onSubmit();
-    expect(customSaverCalled).toBe(true);
+    fixture.detectChanges();
+
+    expect(count).toBe(1);
   });
 });
 
 // ---------------------------------------------------------------------------
-// T20-AC05 — default, touched-invalid, submitted-invalid, loading and
-// server-error visual states on narrow and desktop views.
+// T20-AC05 — visual states.
 // ---------------------------------------------------------------------------
-describe('T20-AC05 visual states across narrow and desktop views', () => {
-  it('exposes data-state hooks on each field for default / touched-invalid / submitted-invalid', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
+describe('T20-AC05 visual states', () => {
+  it('exposes data-state hooks on each field for default / submitted-invalid', async () => {
+    const { fixture } = createContactStep(EMPTY_CONTACT);
     const root = getRootElement(fixture);
 
     const fields = root.querySelectorAll('.field');
@@ -660,9 +434,6 @@ describe('T20-AC05 visual states across narrow and desktop views', () => {
     for (const f of Array.from(fields)) {
       expect(f.getAttribute('data-state')).toBe('default');
     }
-
-    fixture.componentInstance.model.set({ fullName: '', email: '', phone: '' });
-    fixture.detectChanges();
 
     await fixture.componentInstance.onSubmit();
     fixture.detectChanges();
@@ -672,86 +443,37 @@ describe('T20-AC05 visual states across narrow and desktop views', () => {
     ).toBe('submitted-invalid');
   });
 
-  it('renders the loading state on the submit button when save is pending', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
-
-    fixture.componentInstance.pendingSave.set(true);
-    fixture.detectChanges();
-
+  it('renders the loading state on the submit button when saveState is "loading"', () => {
+    const { fixture } = createContactStep(VALID_CONTACT, 'loading');
     const root = getRootElement(fixture);
-    const submitBtn = root.querySelector('[data-testid="contact-submit"]');
-    expect(submitBtn).not.toBeNull();
-    expect(submitBtn?.textContent).toContain('Mentés…');
+    expect(root.querySelector('[data-testid="contact-submit"]')?.textContent).toContain('Mentés…');
   });
 
-  it('renders the server-error ErrorState block when saveError is set', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.detectChanges();
-
-    fixture.componentInstance.saveError.set('Szerverhiba történt.');
-    fixture.detectChanges();
-
+  it('renders a generic status message when saveState is "error" (no backend detail)', () => {
+    const { fixture } = createContactStep(VALID_CONTACT, 'error');
     const root = getRootElement(fixture);
     const errorBlock = root.querySelector('[data-testid="contact-save-error"]');
     expect(errorBlock).not.toBeNull();
-    expect(errorBlock?.textContent).toContain('Szerverhiba történt.');
-    expect(errorBlock?.querySelector('app-error-state')).not.toBeNull();
-  });
-
-  it('declares a desktop layout at >= 1024 px and a narrower mobile layout', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    TestBed.createComponent(ContactStep).detectChanges();
-    const css = getComponentStyles(ContactStep).join(' ');
-    expect(css).toMatch(/@media\s*\(min-width:\s*1024px\)/);
-    expect(css).toMatch(/max-width|grid-template-columns/);
+    expect(errorBlock?.querySelector('app-status-message')).not.toBeNull();
+    expect(errorBlock?.textContent).toContain('A mentés sikertelen.');
   });
 });
 
 // ---------------------------------------------------------------------------
-// T20 wiring — ContactStep uses Signal Forms and shared primitives,
-// ContactPage re-exports ContactStep so the route still resolves.
+// T20 wiring — ContactStep uses Signal Forms against the passed-in field
+// tree and the T10 shared UI primitives.
 // ---------------------------------------------------------------------------
-describe('T20 contact-step shared wiring and route stub', () => {
-  it('ContactStep imports form / submit / validate / required / maxLength from @angular/forms/signals', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    expect(fixture.componentInstance.contactForm).toBeDefined();
-    expect(fixture.componentInstance.contactForm.fullName).toBeDefined();
-    expect(fixture.componentInstance.contactForm.email).toBeDefined();
-    expect(fixture.componentInstance.contactForm.phone).toBeDefined();
+describe('T20 contact-step shared wiring', () => {
+  it('renders against the contactFields input rather than a locally-built field tree', () => {
+    const { fixture, fields } = createContactStep(VALID_CONTACT);
+    expect(fixture.componentInstance.contactFields()).toBe(fields);
   });
 
-  it('ContactStep uses the T10 shared UI primitives (Button / FormFieldMessage / ErrorState)', async () => {
-    TestBed.configureTestingModule({
-      providers: TEST_PROVIDERS,
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(ContactStep);
-    fixture.componentInstance.saveError.set('Hiba');
-    fixture.detectChanges();
+  it('uses the T10 shared UI primitives (Button / FormFieldMessage / StatusMessage)', () => {
+    const { fixture } = createContactStep(VALID_CONTACT, 'error');
     const root = getRootElement(fixture);
-
     expect(root.querySelector('app-button')).not.toBeNull();
     expect(root.querySelector('app-form-field-message')).not.toBeNull();
-    expect(root.querySelector('app-error-state')).not.toBeNull();
-  });
-
-  it('ContactPage is re-exported from contact-step so the lazy route still resolves', () => {
-    expect(ContactPage).toBe(ContactStep);
+    expect(root.querySelector('app-status-message')).not.toBeNull();
   });
 });

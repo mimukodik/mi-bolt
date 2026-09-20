@@ -160,3 +160,52 @@ export class QuoteController {
     }
   }
 }
+
+/** `components.md:7`'s shared `ReviewState`, spelled the way that line spells it and the
+ *  way every other union on it is implemented in this repository
+ *  (`AsyncStatus` at `price-block.ts:3` before FIX-67 moved it, `CheckoutStep` at
+ *  `checkout-layout.ts:25`). It carries no payload: `quote` is `ReviewStep`'s own
+ *  declared input (`components.md:615`) and the backend `detail` string is not
+ *  rendered (R15). */
+export type ReviewState =
+  'quoting' | 'ready' | 'expired' | 'price-changed' | 'stock-error' | 'submitting' | 'error';
+
+/** Maps the internal `QuoteController` state machine onto `components.md:7`'s
+ *  seven-member `ReviewState` (FIX-63). `field-error` — a quote-fetch failure that
+ *  is neither a price, stock nor expiry rejection — maps onto the spec's own
+ *  `error` member, the only producer of that member.
+ *
+ *  `paymentOutcomeUnknown` is true while a `SubmitFailure` is `'pending'`: the demo
+ *  payment may still land and no second order may be sent. That maps onto the
+ *  specification's own `submitting` member — as far as the screen is concerned the
+ *  submission is still in flight — which disables the CTA through `canSubmit()`'s
+ *  `state() === 'ready'` test.
+ *
+ *  A `declined` or generic `error` outcome deliberately maps to nothing here. The
+ *  quote is untouched, so the state stays `ready`, the CTA stays enabled, and a
+ *  retry is still possible. That failure is rendered by `ReviewPage`, which is also
+ *  where the backend `detail` stays: it never enters this type. */
+export function toReviewState(
+  state: QuoteState,
+  submitting: boolean,
+  paymentOutcomeUnknown: boolean,
+): ReviewState {
+  if (state.kind === 'ready' && (submitting || paymentOutcomeUnknown)) {
+    return 'submitting';
+  }
+  switch (state.kind) {
+    case 'idle':
+    case 'loading':
+      return 'quoting';
+    case 'ready':
+      return 'ready';
+    case 'quote-expired':
+      return 'expired';
+    case 'price-changed':
+      return 'price-changed';
+    case 'out-of-stock':
+      return 'stock-error';
+    case 'field-error':
+      return 'error';
+  }
+}

@@ -1,4 +1,4 @@
-<section class="review" [attr.data-status]="stateKind()" data-testid="review-page">
+<section class="review" [attr.data-status]="state()" data-testid="review-page">
   <header class="heading">
     <nav class="breadcrumbs" aria-label="Navigáció">
       <a routerLink="/" class="breadcrumb">Főoldal</a>
@@ -122,43 +122,44 @@
         }
       </article>
 
-      @if (state() !== null) {
-        <div class="status-row" data-testid="review-status">
-          @switch (state()!.kind) {
-            @case ('loading') {
-              <app-loading-state variant="lines" label="Árajánlat frissítése"></app-loading-state>
-            }
-            @case ('price-changed') {
-              <app-status-message
-                [message]="priceChangedMessage()"
-                severity="error"
-                [persistent]="true"
-              ></app-status-message>
-            }
-            @case ('quote-expired') {
-              <app-status-message
-                [message]="quoteExpiredMessage()"
-                severity="error"
-                [persistent]="true"
-              ></app-status-message>
-            }
-            @case ('out-of-stock') {
-              <app-status-message
-                [message]="outOfStockMessage()"
-                severity="error"
-                [persistent]="true"
-              ></app-status-message>
-            }
-            @case ('field-error') {
-              <app-status-message
-                [message]="fieldErrorMessage()"
-                severity="error"
-                [persistent]="true"
-              ></app-status-message>
-            }
+      <div class="status-row" data-testid="review-status">
+        @switch (state()) {
+          @case ('quoting') {
+            <app-loading-state variant="lines" label="Árajánlat frissítése"></app-loading-state>
           }
-        </div>
-      }
+          @case ('price-changed') {
+            <app-status-message
+              [message]="priceChangedMessage"
+              severity="error"
+              [persistent]="true"
+            ></app-status-message>
+          }
+          @case ('expired') {
+            <app-status-message
+              [message]="quoteExpiredMessage"
+              severity="error"
+              [persistent]="true"
+            ></app-status-message>
+          }
+          @case ('stock-error') {
+            <app-status-message
+              [message]="outOfStockMessage"
+              severity="error"
+              [persistent]="true"
+            ></app-status-message>
+          }
+          @case ('error') {
+            <app-status-message
+              [message]="errorMessage"
+              severity="error"
+              [persistent]="true"
+            ></app-status-message>
+          }
+          @case ('submitting') {
+            <app-loading-state variant="lines" label="Véglegesítés…"></app-loading-state>
+          }
+        }
+      </div>
 
       <article class="card" data-testid="review-consents">
         <h2 class="card-title">Demó feltételek</h2>
@@ -174,7 +175,9 @@
               id="review-consent-terms-input"
               type="checkbox"
               class="checkbox"
-              [formField]="reviewForm.acceptedTerms"
+              [checked]="acceptedTerms()"
+              (change)="onAcceptedTermsChange($event)"
+              (blur)="onAcceptedTermsBlur()"
               data-testid="review-consent-terms-input"
             />
             <span class="consent-text">
@@ -212,7 +215,9 @@
               id="review-consent-simulation-input"
               type="checkbox"
               class="checkbox"
-              [formField]="reviewForm.acknowledgedSimulation"
+              [checked]="acknowledgedSimulation()"
+              (change)="onAcknowledgedSimulationChange($event)"
+              (blur)="onAcknowledgedSimulationBlur()"
               data-testid="review-consent-simulation-input"
             />
             <span class="consent-text">
@@ -233,50 +238,13 @@
         </div>
       </article>
 
-      @if (paymentStatus() !== 'idle' && paymentStatus() !== 'error') {
-        <!-- OrderSubmission's polling/decline/unknown outcomes render
-             through PaymentProgress (components.md:626), which owns
-             the retry / change-method controls for those states. -->
-        <app-payment-progress
-          [status]="paymentStatus()"
-          [pollCount]="pollCount()"
-          (retryRequested)="onPaymentRetry()"
-          (changeMethodRequested)="onPaymentChangeMethod()"
-        ></app-payment-progress>
-      }
-      @if (submitFailure(); as failure) {
-        @if (failure.kind === 'error') {
-          <div class="submit-failure" data-testid="review-submit-failure">
-            <app-status-message
-              [message]="submitFailureMessage()"
-              severity="error"
-              [persistent]="true"
-            ></app-status-message>
-            <app-button
-              variant="secondary"
-              size="comfortable"
-              label="Fizetési mód módosítása"
-              (pressed)="onPaymentChangeMethod()"
-              data-testid="review-change-payment"
-            ></app-button>
-          </div>
-        }
-      }
-
       <div class="actions" data-testid="review-actions">
-        <app-button
-          variant="secondary"
-          size="comfortable"
-          label="Vissza a szállításhoz"
-          (pressed)="onBack()"
-          data-testid="review-back"
-        ></app-button>
         <app-button
           variant="primary"
           size="comfortable"
           [label]="'Demórendelés véglegesítése'"
           [loadingLabel]="'Véglegesítés…'"
-          [loading]="submitting()"
+          [loading]="state() === 'submitting'"
           [disabled]="!canSubmit()"
           (pressed)="onSubmit()"
           data-testid="review-submit"

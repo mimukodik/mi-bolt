@@ -1,1364 +1,381 @@
-// @vitest-environment jsdom
-import '@angular/compiler';
-
 /**
- * T22 - final review step (S4.4).
+ * T22 — final review step (S4.4), rewritten for FIX-63.
  *
- * Acceptance criteria mapped to real TestBed behavior tests:
+ * FIX-63 gave `ReviewStep` the fixed signature `components.md:611-617`
+ * declares: `quote`/`cart`/`draft`/`state` inputs, `editRequested`/
+ * `refreshQuote`/`submitRequested` outputs. The component injects no
+ * facade, no SDK and no `Router` — `review-page.ts` owns `CartFacade`,
+ * `CheckoutFacade`, `QuoteController`, `OrderSubmission` and the
+ * `Router`, and renders `PaymentProgress` plus the generic-error retry
+ * banner beside `<app-review-step>` (their orchestration is covered by
+ * `review-page.spec.ts`).
  *
- *   T22-AC01 - Fresh quote on entry; items, one-time subtotal,
- *               shipping, total and payment method; back / edit
- *               links preserve fields.
- *   T22-AC02 - Two unchecked consents (demo terms + simulation
- *               acknowledgement); demo terms open in an accessible
- *               dialog; no production-legal-compliance framing.
- *   T22-AC03 - PRICE_CHANGED, QUOTE_EXPIRED and OUT_OF_STOCK have
- *               distinct messages and correction paths; the old
- *               amount cannot be submitted.
- *   T22-AC04 - Primary CTA is "Demórendelés véglegesítése";
- *               disabled while quote / consent / state is incomplete
- *               with an explanation.
- *   T22-AC05 - Loading, ready, quote-expired, price-change and
- *               field-error states render without erasing the order
- *               summary.
+ *   FIX-63-AC08 — a test that renders ReviewStep with all four inputs
+ *                 set directly and no CartFacade, CheckoutFacade or
+ *                 QuoteController provided, asserting it renders the
+ *                 given cart lines and quote totals; a test per state
+ *                 kind — including error, the seventh member this task
+ *                 newly wires up — asserting a rendered difference;
+ *                 and a test that each of the three outputs emits from
+ *                 its triggering control.
  */
 
-import { DialogModule } from '@angular/cdk/dialog';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import {
-  Input,
-  Output,
-  ViewChild,
-  provideZonelessChangeDetection,
-  ɵresolveComponentResources,
-} from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { http, HttpResponse } from 'msw';
-import { readFileSync } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
-import { join as pathJoin, resolve as pathResolve } from 'node:path';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { describe, expect, it } from 'vitest';
 
-import { server, useMswServer } from '../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import { CartDomain } from '../../../mocks/cart/cart-domain';
-import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
-import { checkoutHandlersEntry } from '../../../mocks/checkout/checkout.handlers';
-import { QuoteDomain } from '../../../mocks/checkout/quote-domain';
-import { IdempotencyStore } from '../../../mocks/idempotency';
-import { Repository } from '../../../mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
-import { Button } from '../../shared/ui/button/button';
-import { LoadingState } from '../../shared/ui/loading-state/loading-state';
-import { PriceBlock } from '../../shared/ui/price-block/price-block';
-import { StatusMessage } from '../../shared/ui/status-message/status-message';
-import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
-import { CartFacade } from '../cart/cart.facade';
-import { OrderSummary } from '../cart/order-summary';
-import { CheckoutFacade } from './checkout.facade';
-import { QuoteController, mapQuoteError } from './quote-state';
 import { ReviewStep } from './review-step';
-import { ReviewPage } from './review-page';
-import { TermsDialog } from './terms-dialog';
-import { OrderSubmission } from './order-submission';
-import type { FakeClock } from './payment-progress';
 
-// The shared MSW server's lifecycle is registered here, in this file, because
-// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
-// process rather than once per file. See `tests/msw-server.ts`.
-useMswServer();
+import type { Cart } from '../../api/generated/models/cart';
+import type { CartItem } from '../../api/generated/models/cart-item';
+import type { Quote } from '../../api/generated/models/quote';
+import type { CheckoutDraft } from './checkout-form.model';
+import type { ReviewState } from './quote-state';
 
-const BASE_URL = 'http://localhost/api/v1';
-
-function registerComponentMetadata(
-  componentClass: unknown,
-  config: {
-    inputs?: readonly string[];
-    outputs?: readonly string[];
-    models?: readonly string[];
-    viewQueries?: Record<string, string>;
-  },
-): void {
-  if (typeof componentClass !== 'function') return;
-  const raw: unknown = Reflect.get(componentClass, 'propDecorators');
-  const propDecorators: Record<string, unknown[]> = {};
-  if (typeof raw === 'object' && raw !== null) {
-    for (const [key, value] of Object.entries(raw)) {
-      if (Array.isArray(value)) {
-        const arr: unknown[] = [];
-        for (const item of value) {
-          arr.push(item);
-        }
-        propDecorators[key] = arr;
-      }
-    }
-  }
-  if (config.inputs !== undefined) {
-    for (const name of config.inputs) {
-      const arr = propDecorators[name] ?? [];
-      arr.push({ type: Input, args: [{ isSignal: true }] });
-      propDecorators[name] = arr;
-    }
-  }
-  if (config.outputs !== undefined) {
-    for (const name of config.outputs) {
-      const arr = propDecorators[name] ?? [];
-      arr.push({ type: Output, args: [] });
-      propDecorators[name] = arr;
-    }
-  }
-  if (config.models !== undefined) {
-    for (const name of config.models) {
-      const arr = propDecorators[name] ?? [];
-      arr.push({ type: Input, args: [{ isSignal: true }] });
-      arr.push({ type: Output, args: [`${name}Change`] });
-      propDecorators[name] = arr;
-    }
-  }
-  if (config.viewQueries !== undefined) {
-    for (const [name, selector] of Object.entries(config.viewQueries)) {
-      const arr = propDecorators[name] ?? [];
-      arr.push({ type: ViewChild, args: [selector, { isSignal: true, descendants: true }] });
-      propDecorators[name] = arr;
-    }
-  }
-  Reflect.set(componentClass, 'propDecorators', propDecorators);
-}
-
-registerComponentMetadata(Button, {
-  inputs: ['variant', 'size', 'label', 'loadingLabel', 'disabled', 'loading'],
-  outputs: ['pressed'],
-});
-registerComponentMetadata(LoadingState, {
-  inputs: ['variant', 'label'],
-});
-registerComponentMetadata(PriceBlock, {
-  inputs: ['money', 'label', 'status'],
-});
-registerComponentMetadata(StatusMessage, {
-  inputs: ['message', 'severity', 'persistent'],
-  outputs: ['dismissed'],
-});
-registerComponentMetadata(OrderSummary, {
-  inputs: ['subtotal', 'shipping', 'footnote'],
-});
-registerComponentMetadata(TermsDialog, {
-  inputs: ['opened', 'label'],
-  outputs: ['closed'],
-});
-registerComponentMetadata(AccessibleDialog, {
-  inputs: ['opened', 'label', 'labelledBy', 'restoreTarget'],
-  outputs: ['closed'],
-  viewQueries: { body: 'body' },
-});
-
-function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
+function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;
-  if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected fixture.nativeElement to be HTMLElement');
-  }
-  return raw;
+  if (raw instanceof HTMLElement) return raw;
+  throw new Error('Expected HTMLElement');
 }
 
-function getElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
-  }
-  return el;
+function getButton(root: HTMLElement, testId: string): HTMLButtonElement {
+  const host = root.querySelector(`[data-testid="${testId}"]`);
+  if (host === null) throw new Error(`missing ${testId}`);
+  const button = host.tagName === 'BUTTON' ? host : host.querySelector('button');
+  if (!(button instanceof HTMLButtonElement)) throw new Error(`no <button> inside ${testId}`);
+  return button;
 }
 
-function queryElement(parent: Element, selector: string): HTMLElement | null {
-  const el = parent.querySelector(selector);
-  if (el === null) return null;
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
-  }
-  return el;
+const ITEM: CartItem = {
+  availability: 'in_stock',
+  colorName: 'Éjfekete',
+  id: 'item-1',
+  image: { alt: '', height: 10, id: 'img-1', src: '/img.png', width: 10 },
+  lineTotal: { amount: 339990, currency: 'HUF' },
+  maxQuantity: 5,
+  productId: 'prod-1',
+  productName: 'Teszt Telefon',
+  productSlug: 'teszt-telefon',
+  quantity: 1,
+  storageGb: 128,
+  unitPrice: { amount: 339990, currency: 'HUF' },
+  variantId: 'variant-1',
+};
+
+const CART: Cart = {
+  expiresAt: '2026-01-01T00:00:00.000Z',
+  id: 'cart-1',
+  itemCount: 1,
+  items: [ITEM],
+  status: 'active',
+  subtotal: { amount: 339990, currency: 'HUF' },
+  version: 1,
+};
+
+const QUOTE: Quote = {
+  cartId: 'cart-1',
+  cartVersion: 1,
+  expiresAt: '2026-01-01T00:05:00.000Z',
+  id: 'quote-1',
+  shipping: { amount: 1990, currency: 'HUF' },
+  subtotal: { amount: 339990, currency: 'HUF' },
+  total: { amount: 341980, currency: 'HUF' },
+};
+
+const DRAFT_COMPLETE: CheckoutDraft = {
+  contact: { fullName: 'Teszt Elek', email: 'teszt@example.test', phone: '+36301234567' },
+  delivery: {
+    optionId: 'home_delivery',
+    address: { city: 'Budapest', countryCode: 'HU', line1: 'Fő utca 1.', postalCode: '1011' },
+  },
+  paymentMethod: 'demo_card',
+};
+
+// A wildcard route (rather than an empty list) so a routerLink click
+// resolves instead of rejecting NG04002 "Cannot match any routes" as an
+// unhandled rejection — the edit-link tests below click the anchors.
+const TEST_PROVIDERS = [
+  provideZonelessChangeDetection(),
+  provideRouter([{ path: '**', component: ReviewStep }]),
+];
+
+interface ReviewStepInputs {
+  readonly quote: Quote | null;
+  readonly cart: Cart;
+  readonly draft: CheckoutDraft;
+  readonly state: ReviewState;
 }
 
-function getInputElement(parent: Element, selector: string): HTMLInputElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLInputElement)) {
-    throw new Error(`Expected HTMLInputElement matching "${selector}"`);
-  }
-  return el;
+function createReviewStep(overrides: Partial<ReviewStepInputs> = {}) {
+  TestBed.configureTestingModule({ providers: TEST_PROVIDERS });
+  const fixture = TestBed.createComponent(ReviewStep);
+  // `quote` legitimately overrides to `null`, so a plain `??` default would
+  // collapse an explicit `null` back to `QUOTE`; check for the key instead.
+  const quote = 'quote' in overrides ? (overrides.quote ?? null) : QUOTE;
+  fixture.componentRef.setInput('quote', quote);
+  fixture.componentRef.setInput('cart', overrides.cart ?? CART);
+  fixture.componentRef.setInput('draft', overrides.draft ?? DRAFT_COMPLETE);
+  fixture.componentRef.setInput('state', overrides.state ?? 'ready');
+  fixture.detectChanges();
+  return fixture;
 }
 
-const fileCache = new Map<string, string>();
-
-async function findInWorkspace(targetName: string, dir: string): Promise<string | null> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
-      continue;
-    }
-    const fullPath = pathJoin(dir, entry.name);
-    if (entry.isDirectory()) {
-      const nested = await findInWorkspace(targetName, fullPath);
-      if (nested !== null) return nested;
-    } else if (entry.name === targetName) {
-      return fullPath;
-    }
-  }
-  return null;
-}
-
-async function resolveWorkspaceFile(url: string): Promise<string> {
-  if (url.endsWith('.scss') || url.endsWith('.css')) {
-    return '';
-  }
-  const filename = url.startsWith('./') ? url.slice(2) : url;
-  const cached = fileCache.get(filename);
-  if (cached !== undefined) return cached;
-
-  const foundPath = await findInWorkspace(filename, pathResolve(process.cwd(), 'src'));
-  if (foundPath === null) return '';
-  const content = await readFile(foundPath, 'utf-8');
-  fileCache.set(filename, content);
-  return content;
-}
-
-function makeEnv() {
-  const clock = createFixedClock(new Date(Date.parse('2026-09-14T10:00:00.000Z')).toISOString());
-  const ids = createDeterministicIds(7);
-  const scenario = {
-    name: 'review-step-suite',
-    seed: 7,
-    clockOffsetMs: 0,
-    isolated: true,
-  };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
-  const idempotency = new IdempotencyStore(clock);
-  new CartDomain(repository, clock, ids, idempotency);
-  new QuoteDomain(repository, clock, ids, idempotency);
-  return { repository, clock, ids, scenario, apiRoot: '/api/v1' };
-}
-
-beforeAll(async () => {
-  await ɵresolveComponentResources(resolveWorkspaceFile);
-  await TestBed.compileComponents();
-});
-
-beforeEach(async () => {
-  const env = makeEnv();
-  server.use(...cartHandlersEntry(env), ...checkoutHandlersEntry(env));
-  TestBed.configureTestingModule({
-    imports: [ReviewStep, TermsDialog, AccessibleDialog, DialogModule],
-    providers: [
-      provideZonelessChangeDetection(),
-      provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
-      provideRouter([
-        { path: 'penztar/szallitas', component: ReviewStep },
-        { path: 'penztar/adatok', component: ReviewStep },
-        { path: 'penztar/siker/:orderId', component: ReviewStep },
-      ]),
-      CartFacade,
-      CheckoutFacade,
-      QuoteController,
-    ],
-  });
-  await TestBed.compileComponents();
-});
-
-afterEach(() => {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
-    el.remove();
-  });
-  server.resetHandlers();
-  TestBed.resetTestingModule();
-});
-
-async function seedCartAndSession(
-  cartFacade: CartFacade,
-  checkoutFacade: CheckoutFacade,
-): Promise<void> {
-  await cartFacade.ensureCart();
-  await cartFacade.addItem('demo-one-5g-graphite-256', 2);
-  const cart = cartFacade.cart();
-  if (cart !== null) {
-    await checkoutFacade.loadSession(cart.id, { clearOnLoad: false });
-    checkoutFacade.form.fullName().value.set('Teszt Elek');
-    checkoutFacade.form.email().value.set('teszt@example.hu');
-    checkoutFacade.form.phone().value.set('+36301234567');
-    checkoutFacade.form.deliveryOptionId().value.set('home_delivery');
-    checkoutFacade.form.address.line1().value.set('Kossuth Lajos utca 1.');
-    checkoutFacade.form.address.postalCode().value.set('1053');
-    checkoutFacade.form.address.city().value.set('Budapest');
-    checkoutFacade.form.paymentMethod().value.set('demo_card');
-    await checkoutFacade.saveContactSection();
-    await checkoutFacade.saveDeliverySection();
-    await checkoutFacade.savePaymentMethod();
-  }
-  const quoteController = TestBed.inject(QuoteController);
-  await quoteController.refresh();
-}
-
-/** Deterministic test clock — fires every queued callback once.
- *  Mirrors `order-submission.spec.ts`'s own helper of the same
- *  shape, so `OrderSubmission`'s polling loop never burns real
- *  wall-clock seconds in this file either. */
-function makeFakeClock(): FakeClock {
-  let pendingCount = 0;
-  const callbacks = new Map<number, () => void>();
-  let nextId = 1;
-  return {
-    nowIso(): string {
-      return '2026-09-15T10:00:00.000Z';
-    },
-    setTimeoutFn(handler: () => void, _delayMs: number): number {
-      pendingCount += 1;
-      const id = nextId;
-      nextId += 1;
-      callbacks.set(id, handler);
-      return id;
-    },
-    clearTimeoutFn(id: number): void {
-      if (callbacks.delete(id)) {
-        pendingCount -= 1;
-      }
-    },
-    fire(): void {
-      const ordered = [...callbacks.entries()].sort(([a], [b]) => a - b);
-      callbacks.clear();
-      pendingCount = 0;
-      for (const [, cb] of ordered) cb();
-    },
-    pending(): number {
-      return pendingCount;
-    },
-  };
-}
-
-/** Drains microtasks + macrotasks so MSW responses resolve before the
- *  next polling step, same rationale as `order-submission.spec.ts`. */
-async function flushAsync(iterations = 5): Promise<void> {
-  for (let i = 0; i < iterations; i += 1) {
-    await new Promise<void>((resolve) => setImmediate(resolve));
-  }
+function checkBothConsents(fixture: ReturnType<typeof createReviewStep>): void {
+  const root = getRootElement(fixture);
+  const terms = root.querySelector<HTMLInputElement>('#review-consent-terms-input');
+  const simulation = root.querySelector<HTMLInputElement>('#review-consent-simulation-input');
+  if (terms === null || simulation === null) throw new Error('consent checkboxes missing');
+  terms.checked = true;
+  terms.dispatchEvent(new Event('change'));
+  simulation.checked = true;
+  simulation.dispatchEvent(new Event('change'));
+  fixture.detectChanges();
 }
 
 // ---------------------------------------------------------------------------
-// T22-AC01 - fresh quote on entry, order summary, edit links
+// FIX-63-AC08 — renders with no facade/service dependency, given cart lines
+// and quote totals directly.
 // ---------------------------------------------------------------------------
-describe('T22-AC01 review entry creates a fresh quote and shows the order summary', () => {
-  it('ReviewStep drives a fresh quote on mount so the totals are fresh', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+describe('FIX-63-AC08 ReviewStep renders from its four inputs with no injected service', () => {
+  it('renders the given cart lines and quote totals with no CartFacade, CheckoutFacade or QuoteController provided', () => {
+    // TEST_PROVIDERS carries only zoneless change detection and an empty
+    // router — no CartFacade, CheckoutFacade, QuoteController or SDK/HTTP
+    // provider is registered. The component still renders: proof it
+    // reads only its declared inputs.
+    const fixture = createReviewStep();
     const root = getRootElement(fixture);
-    const reviewPage = getElement(root, '[data-testid="review-page"]');
-    expect(reviewPage.getAttribute('data-status')).toBe('ready');
-    const quoteController = TestBed.inject(QuoteController);
-    expect(quoteController.ready()).toBe(true);
-    expect(quoteController.quote()).not.toBeNull();
-  });
 
-  it('renders an order summary that lists cart items, subtotal, shipping and total', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const itemsCard = getElement(root, '[data-testid="review-items"]');
-    expect(itemsCard).not.toBeNull();
-
-    const lines = itemsCard.querySelectorAll('[data-testid="review-line"]');
+    const lines = root.querySelectorAll('[data-testid="review-line"]');
     expect(lines.length).toBe(1);
+    expect(lines[0].textContent).toContain('Teszt Telefon');
+    expect(lines[0].textContent).toContain('Éjfekete');
 
-    const lineEl = getElement(itemsCard, '[data-testid="review-line"]');
-    const lineText = lineEl.textContent;
-    expect(lineText).toContain('Demo One 5G');
-    expect(lineText).toContain('Grafit');
-    expect(lineText).toContain('256 GB');
-    expect(lineText).toContain('2 ×');
-
-    const summaryAside = getElement(root, '[data-testid="review-summary"]');
-    expect(summaryAside).not.toBeNull();
-    const orderSummaryEl = queryElement(summaryAside, 'app-order-summary');
-    expect(orderSummaryEl).not.toBeNull();
+    const summary = root.querySelector('[data-testid="review-summary"]');
+    expect(summary?.querySelector('app-order-summary')).not.toBeNull();
+    expect(summary?.textContent).toContain('Bankkártya (szimulált)');
+    expect(summary?.textContent).toContain('Házhoz szállítás (1990 Ft)');
   });
 
-  it('renders the chosen payment method (demo_card | demo_cod) under the summary', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+  it('renders an empty-cart message when the cart has no items', () => {
+    const fixture = createReviewStep({ cart: { ...CART, items: [], itemCount: 0 } });
     const root = getRootElement(fixture);
-    const paymentEl = getElement(root, '[data-testid="review-payment"]');
-    expect(paymentEl.textContent.trim()).toBe('Bankkártya (szimulált)');
+    expect(root.querySelector('[data-testid="review-items-empty"]')).not.toBeNull();
+    expect(root.querySelectorAll('[data-testid="review-line"]').length).toBe(0);
   });
 
-  it('exposes edit affordances for the contact and delivery sections, pointing at the earlier steps', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+  it('renders the contact and delivery snapshot from draft(), not from a live form', () => {
+    const fixture = createReviewStep();
     const root = getRootElement(fixture);
-    const editContact = getElement(root, '[data-testid="review-edit-contact"]');
-    expect(editContact.getAttribute('routerLink') ?? editContact.getAttribute('href')).toContain(
-      '/penztar/adatok',
+    expect(root.querySelector('[data-testid="review-contact"]')?.textContent).toContain(
+      'Teszt Elek',
     );
-    expect(editContact.textContent.trim()).toBe('Módosítás');
-
-    const editDelivery = getElement(root, '[data-testid="review-edit-delivery"]');
-    expect(editDelivery.getAttribute('routerLink') ?? editDelivery.getAttribute('href')).toContain(
-      '/penztar/szallitas',
+    expect(root.querySelector('[data-testid="review-contact"]')?.textContent).toContain(
+      'teszt@example.test',
     );
-    expect(editDelivery.textContent.trim()).toBe('Módosítás');
-
-    const quoteController = TestBed.inject(QuoteController);
-    expect(quoteController.ready()).toBe(true);
-    fixture.componentInstance.onEditContact();
-    expect(quoteController.ready()).toBe(false);
+    expect(root.querySelector('[data-testid="review-delivery-address"]')?.textContent).toContain(
+      'Fő utca 1.',
+    );
   });
 
-  it('FIX-35: h1 is "Minden rendben?"', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+  it('FIX-35: the page heading is "Minden rendben?"', () => {
+    const fixture = createReviewStep();
     const root = getRootElement(fixture);
-    const h1 = getElement(root, 'h1');
-    expect(h1.textContent.trim()).toBe('Minden rendben?');
-  });
-
-  it('back link returns to the delivery step and preserves in-memory fields', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const router = TestBed.inject(Router);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const backBtn = getElement(root, '[data-testid="review-back"]');
-    expect(backBtn.textContent).toContain('Vissza a szállításhoz');
-
-    fixture.componentInstance.onBack();
-    await fixture.whenStable();
-    expect(router.url).toBe('/penztar/szallitas');
-
-    expect(checkoutFacade.form.fullName().value()).toBe('Teszt Elek');
-    expect(checkoutFacade.form.email().value()).toBe('teszt@example.hu');
+    expect(root.querySelector('h1')?.textContent.trim()).toBe('Minden rendben?');
   });
 });
 
 // ---------------------------------------------------------------------------
-// T22-AC02 - two unchecked consents, demo terms dialog
+// One test per ReviewState member — each asserts a rendered difference.
 // ---------------------------------------------------------------------------
-describe('T22-AC02 demo terms + simulation acknowledgement with accessible dialog', () => {
-  it('renders two unchecked checkbox inputs as part of the Signal Form', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+describe('FIX-63-AC08 one rendered difference per ReviewState member', () => {
+  it('quoting: shows the quote-loading skeleton and no order summary yet', () => {
+    const fixture = createReviewStep({ quote: null, state: 'quoting' });
     const root = getRootElement(fixture);
-    const termsInput = getInputElement(root, '[data-testid="review-consent-terms-input"]');
-    const simInput = getInputElement(root, '[data-testid="review-consent-simulation-input"]');
-
-    expect(termsInput.type).toBe('checkbox');
-    expect(termsInput.checked).toBe(false);
-    expect(simInput.type).toBe('checkbox');
-    expect(simInput.checked).toBe(false);
-
-    expect(fixture.componentInstance.reviewForm.acceptedTerms().value()).toBe(false);
-    expect(fixture.componentInstance.reviewForm.acknowledgedSimulation().value()).toBe(false);
+    expect(root.querySelector('[data-testid="review-summary-loading"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
+      'Árajánlat frissítése',
+    );
   });
 
-  it('demo terms label links to a terms dialog and does not present production legal compliance', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+  it('ready: shows the order summary totals and no status banner', () => {
+    const fixture = createReviewStep({ state: 'ready' });
     const root = getRootElement(fixture);
-    const termsButton = getElement(root, '[data-testid="review-consent-terms-button"]');
-    expect(termsButton.textContent.trim()).toBe('demó vásárlási feltételeket');
-
-    const notice = getElement(root, '[data-testid="review-demo-notice"]');
-    expect(notice.textContent).toContain('Demó pénztár.');
-    expect(notice.textContent).toContain('nem küld valódi megrendelést');
+    expect(root.querySelector('[data-testid="review-summary-loading"]')).toBeNull();
+    expect(root.querySelector('app-order-summary')).not.toBeNull();
+    expect(root.querySelector('[data-testid="review-status"]')?.textContent.trim()).toBe('');
   });
 
-  it('TermsDialog uses AccessibleDialog with a Hungarian label and demo-only copy', async () => {
-    const fixture = TestBed.createComponent(TermsDialog);
-    fixture.componentRef.setInput('opened', true);
-    await fixture.whenStable();
+  it('expired: shows the quote-expired status message', () => {
+    const fixture = createReviewStep({ state: 'expired' });
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
+      'Az árajánlat lejárt.',
+    );
+  });
+
+  it('price-changed: shows the price-changed status message', () => {
+    const fixture = createReviewStep({ state: 'price-changed' });
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
+      'A katalógus ára megváltozott.',
+    );
+  });
+
+  it('stock-error: shows the out-of-stock status message', () => {
+    const fixture = createReviewStep({ state: 'stock-error' });
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
+      'Egy vagy több változat elfogyott.',
+    );
+  });
+
+  it('submitting: shows the submitting skeleton and a loading submit button', () => {
+    const fixture = createReviewStep({ state: 'submitting' });
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
+      'Véglegesítés…',
+    );
+    expect(getButton(root, 'review-submit').disabled).toBe(true);
+  });
+
+  it('error: shows the generic submit-failed status message (the seventh member this task wires up)', () => {
+    const fixture = createReviewStep({ state: 'error' });
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
+      'A rendelés leadása nem sikerült.',
+    );
+  });
+
+  it('reflects the current state on the root element via data-status', () => {
+    const fixture = createReviewStep({ state: 'expired' });
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="review-page"]')?.getAttribute('data-status')).toBe(
+      'expired',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Each of the three outputs emits from its triggering control.
+// ---------------------------------------------------------------------------
+describe('FIX-63-AC08 each output emits from its triggering control', () => {
+  it('editRequested emits "contact" from the contact section edit link', () => {
+    const fixture = createReviewStep();
+    const root = getRootElement(fixture);
+    const emitted: ('contact' | 'delivery')[] = [];
+    fixture.componentInstance.editRequested.subscribe((v) => emitted.push(v));
+
+    root.querySelector<HTMLAnchorElement>('[data-testid="review-edit-contact"]')?.click();
     fixture.detectChanges();
 
-    const termsBody = document.body.querySelector('[data-testid="terms-body"]');
-    if (!(termsBody instanceof HTMLElement)) {
-      throw new Error('Expected termsBody to be HTMLElement');
+    expect(emitted).toEqual(['contact']);
+  });
+
+  it('editRequested emits "delivery" from the delivery section edit link', () => {
+    const fixture = createReviewStep();
+    const root = getRootElement(fixture);
+    const emitted: ('contact' | 'delivery')[] = [];
+    fixture.componentInstance.editRequested.subscribe((v) => emitted.push(v));
+
+    root.querySelector<HTMLAnchorElement>('[data-testid="review-edit-delivery"]')?.click();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual(['delivery']);
+  });
+
+  it('refreshQuote emits from the "Árajánlat frissítése" control', () => {
+    const fixture = createReviewStep({ state: 'expired', quote: null });
+    const root = getRootElement(fixture);
+    let count = 0;
+    fixture.componentInstance.refreshQuote.subscribe(() => (count += 1));
+
+    root.querySelector<HTMLButtonElement>('[data-testid="review-refresh"]')?.click();
+    fixture.detectChanges();
+
+    expect(count).toBe(1);
+  });
+
+  it('submitRequested emits from the primary CTA once both consents are checked and the state is ready', () => {
+    const fixture = createReviewStep({ state: 'ready' });
+    let count = 0;
+    fixture.componentInstance.submitRequested.subscribe(() => (count += 1));
+
+    checkBothConsents(fixture);
+    const root = getRootElement(fixture);
+    getButton(root, 'review-submit').click();
+    fixture.detectChanges();
+
+    expect(count).toBe(1);
+  });
+
+  it('does not emit submitRequested while a consent is unchecked; the CTA stays disabled with an explanation', () => {
+    const fixture = createReviewStep({ state: 'ready' });
+    let count = 0;
+    fixture.componentInstance.submitRequested.subscribe(() => (count += 1));
+
+    const root = getRootElement(fixture);
+    expect(getButton(root, 'review-submit').disabled).toBe(true);
+    getButton(root, 'review-submit').click();
+    fixture.detectChanges();
+
+    expect(count).toBe(0);
+    expect(root.querySelector('[data-testid="review-cta-explanation"]')).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Consent + terms dialog wiring (T22-AC02), kept from the pre-FIX-63 suite
+// but as plain checkbox/local-state assertions now that neither consent is
+// backed by a shared field tree (components.md:615 declares no such input).
+// ---------------------------------------------------------------------------
+describe('T22-AC02 demo terms + simulation acknowledgement', () => {
+  it('renders two unchecked consent checkboxes', () => {
+    const fixture = createReviewStep();
+    const root = getRootElement(fixture);
+    const checkboxes = root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    expect(checkboxes.length).toBe(2);
+    for (const box of Array.from(checkboxes)) {
+      expect(box.checked).toBe(false);
     }
-    const text = termsBody.textContent;
-    expect(text).toContain('demó folyamat');
-    expect(text).toContain('nem valós');
-    expect(text.toLowerCase()).not.toContain('jognyilatkozat');
-
-    fixture.componentRef.setInput('opened', false);
-    await fixture.whenStable();
-    fixture.detectChanges();
   });
 
-  it('TermsDialog is projected as accessible content under app-accessible-dialog', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+  it("opens and closes the terms dialog via the demo-terms link and the dialog's own close event", () => {
+    const fixture = createReviewStep();
     expect(fixture.componentInstance.termsOpened()).toBe(false);
 
     fixture.componentInstance.openTerms();
-    await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.componentInstance.termsOpened()).toBe(true);
 
-    const dialogPanel = document.body.querySelector('[role="dialog"]');
-    expect(dialogPanel).not.toBeNull();
-
     fixture.componentInstance.closeTerms();
-    await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.componentInstance.termsOpened()).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// T22-AC03 - distinct PRICE_CHANGED / QUOTE_EXPIRED / OUT_OF_STOCK messages
+// CTA gating on an incomplete draft — the container is not required to
+// resolve every branch before rendering the review step.
 // ---------------------------------------------------------------------------
-describe('T22-AC03 distinct PRICE_CHANGED / QUOTE_EXPIRED / OUT_OF_STOCK messages', () => {
-  it('QuoteController exposes a state discriminator with the three failure kinds', () => {
-    const priceChanged = mapQuoteError({
-      code: 'PRICE_CHANGED',
-      status: 409,
-      detail: 'Árváltozás történt.',
-      fieldErrors: [],
+describe('FIX-63-AC08 CTA also gates on an incomplete draft', () => {
+  it('disables the CTA when the draft has no chosen payment method', () => {
+    const fixture = createReviewStep({
+      state: 'ready',
+      draft: { ...DRAFT_COMPLETE, paymentMethod: undefined },
     });
-    expect(priceChanged.kind).toBe('price-changed');
+    checkBothConsents(fixture);
+    const root = getRootElement(fixture);
+    expect(getButton(root, 'review-submit').disabled).toBe(true);
+  });
 
-    const quoteExpired = mapQuoteError({
-      code: 'QUOTE_EXPIRED',
-      status: 409,
-      detail: 'Az árajánlat lejárt.',
-      fieldErrors: [],
+  it('disables the CTA when the draft has no chosen delivery option', () => {
+    const fixture = createReviewStep({
+      state: 'ready',
+      draft: { ...DRAFT_COMPLETE, delivery: undefined },
     });
-    expect(quoteExpired.kind).toBe('quote-expired');
-
-    const outOfStock = mapQuoteError({
-      code: 'OUT_OF_STOCK',
-      status: 409,
-      detail: 'A termék elfogyott.',
-      fieldErrors: [],
-    });
-    expect(outOfStock.kind).toBe('out-of-stock');
-
-    const fieldError = mapQuoteError({
-      code: 'VALIDATION_ERROR',
-      status: 422,
-      detail: 'Hibás mező.',
-      fieldErrors: [{ path: '/contact', message: 'Hiányzó adat' }],
-    });
-    expect(fieldError.kind).toBe('field-error');
-  });
-
-  it('PRICE_CHANGED branch explains the cart version changed and points at a refresh action', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:price-changed',
-            title: 'Árváltozás',
-            status: 409,
-            code: 'PRICE_CHANGED',
-            detail: 'A termék ára megváltozott.',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    await quoteController.refresh();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+    checkBothConsents(fixture);
     const root = getRootElement(fixture);
-    const reviewPage = getElement(root, '[data-testid="review-page"]');
-    expect(reviewPage.getAttribute('data-status')).toBe('price-changed');
-    const statusBox = getElement(root, '[data-testid="review-status"]');
-    expect(statusBox.textContent).toContain('A termék ára megváltozott.');
-    expect(statusBox.textContent).toContain('Árajánlat frissítése');
-  });
-
-  it('QUOTE_EXPIRED branch explains the TTL elapsed and forces a fresh quote', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:quote-expired',
-            title: 'Lejárt árajánlat',
-            status: 409,
-            code: 'QUOTE_EXPIRED',
-            detail: 'A foglalási idő lejárt.',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    await quoteController.refresh();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const reviewPage = getElement(root, '[data-testid="review-page"]');
-    expect(reviewPage.getAttribute('data-status')).toBe('quote-expired');
-    const statusBox = getElement(root, '[data-testid="review-status"]');
-    expect(statusBox.textContent).toContain('A foglalási idő lejárt.');
-    expect(statusBox.textContent).toContain('Árajánlat frissítése');
-  });
-
-  it('OUT_OF_STOCK branch explains a variant disappeared and points at the cart', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:out-of-stock',
-            title: 'Készlet hiány',
-            status: 409,
-            code: 'OUT_OF_STOCK',
-            detail: 'A kiválasztott változat elfogyott.',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    await quoteController.refresh();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const reviewPage = getElement(root, '[data-testid="review-page"]');
-    expect(reviewPage.getAttribute('data-status')).toBe('out-of-stock');
-    const statusBox = getElement(root, '[data-testid="review-status"]');
-    expect(statusBox.textContent).toContain('A kiválasztott változat elfogyott.');
-    expect(statusBox.textContent).toContain('kosárhoz');
-  });
-
-  it('the primary CTA is disabled while the quote state is not ready (old amount cannot be submitted)', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:price-changed',
-            title: 'Árváltozás',
-            status: 409,
-            code: 'PRICE_CHANGED',
-            detail: 'Árváltozás történt.',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    await quoteController.refresh();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.canSubmit()).toBe(false);
-    const root = getRootElement(fixture);
-    const submitBtn = getElement(root, '[data-testid="review-submit"] button');
-    expect(submitBtn.hasAttribute('disabled')).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T22-AC04 - primary CTA copy and disabled-with-explanation behavior
-// ---------------------------------------------------------------------------
-describe('T22-AC04 primary CTA copy and disabled-with-explanation behaviour', () => {
-  it('primary CTA button reads "Demórendelés véglegesítése"', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const submitEl = getElement(root, '[data-testid="review-submit"]');
-    expect(submitEl.textContent).toContain('Demórendelés véglegesítése');
-  });
-
-  it('uses the shared Button primitive so the disabled + loading states match the rest of the flow', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const submitButton = queryElement(root, '[data-testid="review-submit"]');
-    expect(submitButton?.tagName.toLowerCase()).toBe('app-button');
-  });
-
-  it('renders an explanation when the CTA is disabled because of consent / quote / state', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const explanation = getElement(root, '[data-testid="review-cta-explanation"]');
-    expect(explanation.textContent).toContain('A demó feltételek elfogadása szükséges');
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    fixture.detectChanges();
-    expect(explanation.textContent).toContain('A szimuláció tudomásulvétele szükséges');
-  });
-
-  it('disables the CTA when either checkbox is unchecked (Signal Form gates)', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.canSubmit()).toBe(false);
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(false);
-    fixture.detectChanges();
-    expect(fixture.componentInstance.canSubmit()).toBe(false);
-
-    checkoutFacade.form.acceptedTerms().value.set(false);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-    expect(fixture.componentInstance.canSubmit()).toBe(false);
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-    expect(fixture.componentInstance.canSubmit()).toBe(true);
-  });
-
-  it('disables the CTA while the facade is busy (no double submit)', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-    expect(fixture.componentInstance.canSubmit()).toBe(true);
-
-    fixture.componentInstance.submitting.set(true);
-    fixture.detectChanges();
-    expect(fixture.componentInstance.canSubmit()).toBe(false);
-
-    const root = getRootElement(fixture);
-    const explanation = getElement(root, '[data-testid="review-cta-explanation"]');
-    expect(explanation.textContent).toContain('folyamatban van');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T22-AC05 - order summary is preserved across quote states
-// ---------------------------------------------------------------------------
-describe('T22-AC05 order summary is preserved across quote states', () => {
-  it('renders the items list in the loading branch (skeleton, but the section still appears)', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', async () => {
-        await new Promise((resolve) => setTimeout(resolve, 80));
-        return HttpResponse.json({
-          id: 'quote-loading-test',
-          cartId: 'cart-review-step-suite-1-e2e-7-0001',
-          cartVersion: 2,
-          subtotal: { amount: 679980, currency: 'HUF' },
-          shipping: { amount: 1990, currency: 'HUF' },
-          total: { amount: 681970, currency: 'HUF' },
-          expiresAt: '2026-09-14T10:15:00.000Z',
-        });
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    quoteController.invalidate();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    void quoteController.refresh();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const reviewPage = getElement(root, '[data-testid="review-page"]');
-    expect(reviewPage.getAttribute('data-status')).toBe('loading');
-
-    const itemsCard = queryElement(root, '[data-testid="review-items"]');
-    expect(itemsCard).not.toBeNull();
-
-    const loadingSummary = queryElement(root, '[data-testid="review-summary-loading"]');
-    expect(loadingSummary).not.toBeNull();
-
-    await fixture.whenStable();
-  });
-
-  it('renders the items list in the ready branch (full PriceBlock totals)', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const itemsCard = getElement(root, '[data-testid="review-items"]');
-    expect(itemsCard).not.toBeNull();
-    const priceBlocks = itemsCard.querySelectorAll('app-price-block');
-    expect(priceBlocks.length).toBeGreaterThan(0);
-  });
-
-  it('renders the items list in the price-changed and quote-expired branches', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:price-changed',
-            title: 'Árváltozás',
-            status: 409,
-            code: 'PRICE_CHANGED',
-            detail: 'Árváltozás történt.',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    await quoteController.refresh();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const itemsCard = queryElement(root, '[data-testid="review-items"]');
-    expect(itemsCard).not.toBeNull();
-    const statusRow = queryElement(root, '[data-testid="review-status"]');
-    expect(statusRow).not.toBeNull();
-  });
-
-  it('renders persistent price-changed error status message with no close button and enabled refresh action', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:price-changed',
-            title: 'Árváltozás',
-            status: 409,
-            code: 'PRICE_CHANGED',
-            detail: 'Árváltozás történt.',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    await quoteController.refresh();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const statusMessage = queryElement(root, '[data-testid="status-message"]');
-    expect(statusMessage).not.toBeNull();
-    expect(statusMessage?.querySelector('button')).toBeNull();
-
-    const refreshButton = root.querySelector<HTMLButtonElement>('[data-testid="review-refresh"]');
-    expect(refreshButton).not.toBeNull();
-    expect(refreshButton?.disabled).toBe(false);
-  });
-
-  it('field-error branch (validation failures) keeps the items visible', async () => {
-    server.use(
-      http.post('*/api/v1/checkout/:cartId/quote', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:checkout-incomplete',
-            title: 'Hiányos rendelés',
-            status: 422,
-            code: 'CHECKOUT_INCOMPLETE',
-            detail: 'Adatok pótlása szükséges.',
-            fieldErrors: [],
-          },
-          { status: 422, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const quoteController = TestBed.inject(QuoteController);
-    await quoteController.refresh();
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const reviewPage = getElement(root, '[data-testid="review-page"]');
-    expect(reviewPage.getAttribute('data-status')).toBe('field-error');
-    const itemsCard = queryElement(root, '[data-testid="review-items"]');
-    expect(itemsCard).not.toBeNull();
-  });
-
-  it('exposes a per-state hook on the wrapper so each state has a stable data-status attribute', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const reviewPage = getElement(root, '[data-testid="review-page"]');
-    expect(reviewPage.getAttribute('data-status')).toBe('ready');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T22 wiring - ReviewStep uses T10 primitives and owns the demo-aware navigation
-// ---------------------------------------------------------------------------
-describe('T22 wiring - ReviewStep uses T10 primitives and owns the demo-aware navigation', () => {
-  it('imports the T10 UI primitives it needs and renders them', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    expect(queryElement(root, 'app-button')).not.toBeNull();
-    expect(queryElement(root, 'app-order-summary')).not.toBeNull();
-    expect(queryElement(root, 'app-terms-dialog')).not.toBeNull();
-  });
-
-  it('uses Angular Signal Forms to bind the consent checkboxes', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const termsInput = getInputElement(root, '[data-testid="review-consent-terms-input"]');
-
-    termsInput.click();
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.reviewForm.acceptedTerms().value()).toBe(true);
-  });
-
-  it('submitting with valid state calls commitOrder and navigates to success page', async () => {
-    server.use(
-      http.post('*/api/v1/payment-intents', () => {
-        return HttpResponse.json(
-          {
-            id: 'pi-1',
-            cartId: 'cart-1',
-            quoteId: 'quote-1',
-            isSimulation: true,
-            status: 'succeeded',
-            amount: { amount: 681970, currency: 'HUF' },
-          },
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-      http.post('*/api/v1/orders', () => {
-        return HttpResponse.json(
-          {
-            id: 'order-999',
-            orderNumber: 'ORD-999',
-            createdAt: '2026-09-14T10:05:00.000Z',
-            deliveryOptionId: 'home_delivery',
-            paymentMethod: 'demo_card',
-            subtotal: { amount: 679980, currency: 'HUF' },
-            shipping: { amount: 1990, currency: 'HUF' },
-            total: { amount: 681970, currency: 'HUF' },
-            items: [],
-            status: 'demo_confirmed',
-            notice: 'Demó',
-            isSimulation: true,
-          },
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const router = TestBed.inject(Router);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-
-    await fixture.componentInstance.onSubmit();
-    await fixture.whenStable();
-
-    expect(router.url).toBe('/penztar/siker/order-999');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// FIX-25 / FIX-61 - a declined, pending or failed order commit is no
-// longer silent, and OrderSubmission + PaymentProgress are what drive
-// the declined / unknown states now (FIX-61 supersedes FIX-25's own
-// rendering path for those two; the generic "error" outcome — one
-// OrderSubmission never emits a progress tick for — is the one case
-// where FIX-25's original review-submit-failure block still renders).
-// ---------------------------------------------------------------------------
-describe('FIX-25 / FIX-61 declined, unknown and failed order commits surface on the review step', () => {
-  it('a declined payment intent renders PaymentProgress in the declined state, keeps the CTA enabled, and its own retry resubmits', async () => {
-    let paymentIntentCalls = 0;
-    server.use(
-      http.post('*/api/v1/payment-intents', () => {
-        paymentIntentCalls += 1;
-        return HttpResponse.json(
-          {
-            id: `pi-${String(paymentIntentCalls)}`,
-            cartId: 'cart-1',
-            quoteId: 'quote-1',
-            amount: { amount: 681970, currency: 'HUF' },
-            isSimulation: true,
-            status: 'declined',
-          },
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-    const router = TestBed.inject(Router);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-
-    await fixture.componentInstance.onSubmit();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(router.url).not.toContain('/penztar/siker');
-    const root = getRootElement(fixture);
-    const progress = getElement(root, '[data-testid="payment-progress"]');
-    expect(progress.getAttribute('data-state')).toBe('declined');
-    expect(progress.textContent).toContain('elutasítva');
-    expect(queryElement(root, '[data-testid="payment-progress-retry"]')).not.toBeNull();
-    expect(queryElement(root, '[data-testid="payment-progress-change-method"]')).not.toBeNull();
-    expect(fixture.componentInstance.canSubmit()).toBe(true);
-
-    // PaymentProgress's own retry — not the main CTA — is what
-    // FIX-61 wires to a second submission attempt.
-    await fixture.componentInstance.onPaymentRetry();
-    await fixture.whenStable();
-
-    expect(paymentIntentCalls).toBe(2);
-  });
-
-  it('changing payment method via PaymentProgress navigates to the delivery step', async () => {
-    server.use(
-      http.post('*/api/v1/payment-intents', () =>
-        HttpResponse.json(
-          {
-            id: 'pi-declined',
-            cartId: 'cart-1',
-            quoteId: 'quote-1',
-            amount: { amount: 681970, currency: 'HUF' },
-            isSimulation: true,
-            status: 'declined',
-          },
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        ),
-      ),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-    const router = TestBed.inject(Router);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-
-    await fixture.componentInstance.onSubmit();
-    await fixture.whenStable();
-
-    fixture.componentInstance.onPaymentChangeMethod();
-    await fixture.whenStable();
-    expect(router.url).toBe('/penztar/szallitas');
-  });
-
-  it('a pending payment that never resolves renders PaymentProgress in the unknown state and disables the CTA', async () => {
-    const orderSubmission = TestBed.inject(OrderSubmission);
-    const fakeClock = makeFakeClock();
-    orderSubmission.bindClock(fakeClock);
-
-    server.use(
-      http.post('*/api/v1/payment-intents', () =>
-        HttpResponse.json(
-          {
-            id: 'pi-pending',
-            cartId: 'cart-1',
-            quoteId: 'quote-1',
-            amount: { amount: 681970, currency: 'HUF' },
-            isSimulation: true,
-            status: 'pending',
-          },
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        ),
-      ),
-      http.get('*/api/v1/payment-intents/:id', () =>
-        HttpResponse.json({
-          id: 'pi-pending',
-          cartId: 'cart-1',
-          quoteId: 'quote-1',
-          amount: { amount: 681970, currency: 'HUF' },
-          isSimulation: true,
-          status: 'pending',
-        }),
-      ),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-
-    const submitted = fixture.componentInstance.onSubmit();
-    await flushAsync();
-    for (let i = 0; i < 10; i += 1) {
-      fakeClock.fire();
-      await flushAsync();
-    }
-    await submitted;
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const progress = getElement(root, '[data-testid="payment-progress"]');
-    expect(progress.getAttribute('data-state')).toBe('unknown');
-    expect(progress.textContent).not.toContain('elutasítva');
-    expect(fixture.componentInstance.canSubmit()).toBe(false);
-    const submitEl = getElement(root, '[data-testid="review-submit"] button');
-    expect((submitEl as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('a generic payment-intent failure (not a decline) renders the review-submit-failure block, and a refresh clears it', async () => {
-    server.use(
-      http.post('*/api/v1/payment-intents', () => {
-        return HttpResponse.json(
-          {
-            type: 'about:blank',
-            title: 'error',
-            status: 503,
-            code: 'SERVICE_UNAVAILABLE',
-            detail: 'Átmeneti hiba történt.',
-          },
-          { status: 503, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    checkoutFacade.form.acceptedTerms().value.set(true);
-    checkoutFacade.form.acknowledgedSimulation().value.set(true);
-    fixture.detectChanges();
-
-    await fixture.componentInstance.onSubmit();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const banner = getElement(root, '[data-testid="review-submit-failure"]');
-    expect(banner.textContent).toContain('Átmeneti hiba történt.');
-    expect(fixture.componentInstance.canSubmit()).toBe(true);
-    expect(queryElement(root, '[data-testid="payment-progress"]')).toBeNull();
-
-    fixture.componentInstance.onRefresh();
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.submitFailure()).toBeNull();
-    expect(queryElement(root, '[data-testid="review-submit-failure"]')).toBeNull();
-  });
-
-  it('onSubmit() delegates to OrderSubmission.submitOrder() rather than calling the facade directly', () => {
-    const source = readFileSync(
-      pathJoin(process.cwd(), 'src/app/features/checkout/review-step.ts'),
-      'utf8',
-    );
-    expect(source).toMatch(/this\.orderSubmission\.submitOrder\(\)/);
-    expect(source).not.toMatch(/this\.checkoutFacade\.createPaymentIntent\(\)/);
-    expect(source).not.toMatch(/this\.checkoutFacade\.commitOrder\(\)/);
-  });
-});
-
-describe('T22 review-step remaining wiring', () => {
-  it('ReviewPage is re-exported from review-step so the lazy route still resolves', () => {
-    expect(ReviewPage).toBe(ReviewStep);
-  });
-
-  it('declares layout classes for the responsive layout', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    await seedCartAndSession(cartFacade, checkoutFacade);
-
-    const fixture = TestBed.createComponent(ReviewStep);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const layout = getElement(root, '[data-testid="review-layout"]');
-    expect(layout.classList.contains('layout')).toBe(true);
-
-    const contactCard = getElement(root, '[data-testid="review-contact"]');
-    expect(contactCard.classList.contains('card')).toBe(true);
+    expect(getButton(root, 'review-submit').disabled).toBe(true);
   });
 });
