@@ -1,6 +1,37 @@
 # FIX-34 — Put every page on one centerline and one spacing scale
 
-Status: PLANNED — not executed.
+Status: PARTIAL — `--layout-gutter-tablet: 24px` added to `tokens.css`; every one of the five
+named containers (catalogue, product page, checkout shell, primitives showcase, home's hero/
+featured/how-it-works) now splits the outer gutter-bearing element from the inner
+`max-width: var(--layout-container-max); margin: 0 auto;` element, on the 16/24/48 (mobile/640/
+1024) ladder; the grid gap is `var(--space-6)` (24px) on both grids; worktree commit (sha filled
+in by the orchestrator after cherry-pick). Several files had moved since this document was
+written and the fix was applied to the tree as it now stands, not to the document's stale line
+numbers: (1) `catalog-page.ts` no longer carries inline `template`/`styles` — **FIX-60** already
+extracted them into real `catalog-page.html`/`.scss` files, so this task edited
+`catalog-page.scss` directly rather than an inline TS block; (2) the catalogue's actual card
+grid (the `gap: var(--space-5)` this task targets) had already moved out of `catalog-page.*`
+entirely by that same FIX-60 extraction, into `src/app/shared/ui/async-content/async-content.scss`'s
+`.grid` (confirmed — `catalog-page.spec.ts`'s own comments say "FIX-60 moved the grid rules out
+of CatalogPage into AsyncContent, which now owns the `[data-testid="catalog-grid"]` element"), so
+the gap fix landed there instead of the document's named `catalog-page.ts:351`; (3)
+`product-page.scss` and `checkout-layout.scss` have evolved past the document's quoted line
+numbers (post-FIX-26/FIX-50/FIX-56) but keep the same `.page`/`.layout-main` shape the document
+describes, so the same outer/inner split was applied to the current file content. `featured-products.scss`'s and `how-demo-works.scss`'s `.featured`/`.how` gutter rules were pulled out of
+their surviving 720px block into new 640px (gutter only) and 1024px (full rule, matching the
+former 720px values) rules, leaving `.featured__title`, `.featured__header`, `.featured__all-link`,
+`.how__title`, `.how__grid` and `.how__header` at their existing 720px breakpoint untouched, per
+this document's own carve-out for `.featured__title`. `checkout-layout.scss`'s `.steps { gap:
+var(--space-4) }` rule, bundled in the same single 768px block the document says to "replace…
+with the 640/1024 ladder", moved to 1024 along with the gutter since the document draws no
+distinction for it. **One defect found and not fixed, reported rather than acted on**:
+`hero.scss`'s `.hero-shortcuts` section (added by **FIX-33** after this document was written)
+declares `max-width: var(--layout-container-max)` and non-zero horizontal `padding` on the same
+selector — the exact anti-pattern this task exists to remove — but fixing it needs an inner
+wrapper element in `hero.html`, which is not one of this document's named "Eight paths" and not
+a template change this document authorizes; left alone and named here for a decision. Open: AC05,
+AC06 and AC07 are real-browser measurements deferred to the orchestrator's batched
+browser-verification pass.
 Severity: major
 Source: B3 F7 (Catalogue row, Grid gap row), B3 R05 fail, B3 R06 fail
 

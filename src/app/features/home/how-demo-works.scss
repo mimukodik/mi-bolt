@@ -15,6 +15,13 @@
   scroll-margin-top: var(--space-10);
 }
 
+@media (min-width: 640px) {
+  .how {
+    padding-left: var(--layout-gutter-tablet);
+    padding-right: var(--layout-gutter-tablet);
+  }
+}
+
 .how__inner {
   display: flex;
   flex-direction: column;
@@ -103,11 +110,13 @@
   overflow-wrap: anywhere;
 }
 
-@media (min-width: 720px) {
+@media (min-width: 1024px) {
   .how {
     padding: var(--space-10) var(--layout-gutter-desktop);
   }
+}
 
+@media (min-width: 720px) {
   .how__title {
     font-size: var(--type-section-title);
   }

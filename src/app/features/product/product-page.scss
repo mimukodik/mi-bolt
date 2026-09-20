@@ -3,6 +3,13 @@
 
 :host {
   display: block;
+  padding: 0 var(--layout-gutter-mobile);
+}
+
+@media (min-width: 640px) {
+  :host {
+    padding: 0 var(--layout-gutter-tablet);
+  }
 }
 
 .page {
@@ -10,7 +17,7 @@
   display: block;
   max-width: var(--layout-container-max);
   margin: 0 auto;
-  padding: var(--space-6) var(--layout-gutter-mobile) var(--space-10);
+  padding: var(--space-6) 0 var(--space-10);
   background: var(--color-surface-light);
   color: var(--color-text-primary);
   box-sizing: border-box;
@@ -178,8 +185,12 @@
 
 /* T16-AC01 — desktop layout. */
 @media (min-width: 1024px) {
+  :host {
+    padding: 0 var(--layout-gutter-desktop);
+  }
+
   .page {
-    padding: var(--space-8) var(--layout-gutter-desktop) var(--space-10);
+    padding: var(--space-8) 0 var(--space-10);
   }
 
   .layout {

@@ -5,7 +5,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: var(--space-5);
+  gap: var(--space-6);
   min-height: 240px;
 }
 

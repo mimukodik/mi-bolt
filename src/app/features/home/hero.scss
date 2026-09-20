@@ -17,6 +17,13 @@
   padding: var(--space-9) var(--layout-gutter-mobile);
 }
 
+@media (min-width: 640px) {
+  .hero {
+    padding-left: var(--layout-gutter-tablet);
+    padding-right: var(--layout-gutter-tablet);
+  }
+}
+
 .hero__inner {
   display: flex;
   flex-direction: column;
@@ -214,11 +221,13 @@
   color: var(--color-text-secondary);
 }
 
-@media (min-width: 720px) {
+@media (min-width: 1024px) {
   .hero {
     padding: var(--space-10) var(--layout-gutter-desktop);
   }
+}
 
+@media (min-width: 720px) {
   .hero__title {
     font-size: var(--type-hero);
   }

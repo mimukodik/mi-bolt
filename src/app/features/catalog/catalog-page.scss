@@ -2,6 +2,19 @@
   display: block;
   background: var(--color-surface-light);
   color: var(--color-text-primary);
+  padding: var(--space-6) var(--layout-gutter-mobile);
+}
+
+@media (min-width: 640px) {
+  :host {
+    padding: var(--space-6) var(--layout-gutter-tablet);
+  }
+}
+
+@media (min-width: 1024px) {
+  :host {
+    padding: var(--space-7) var(--layout-gutter-desktop);
+  }
 }
 
 .catalog {
@@ -10,13 +23,7 @@
   gap: var(--space-7);
   max-width: var(--layout-container-max);
   margin: 0 auto;
-  padding: var(--space-6) var(--space-4);
-}
-
-@media (min-width: 1024px) {
-  .catalog {
-    padding: var(--space-7) var(--layout-gutter-desktop);
-  }
+  padding: 0;
 }
 
 .heading {

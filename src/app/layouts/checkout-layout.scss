@@ -1,12 +1,19 @@
 :host {
   display: block;
+  padding: 0 var(--layout-gutter-mobile);
+}
+
+@media (min-width: 640px) {
+  :host {
+    padding: 0 var(--layout-gutter-tablet);
+  }
 }
 
 .layout-main {
   display: block;
   background: var(--color-surface-light);
   color: var(--color-text-primary);
-  padding: var(--space-6) var(--layout-gutter-mobile) var(--space-7);
+  padding: var(--space-6) 0 var(--space-7);
   max-width: var(--layout-container-max);
   margin: 0 auto;
   scroll-margin-top: 80px;
@@ -61,9 +68,13 @@
   white-space: nowrap;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
+  :host {
+    padding: 0 var(--layout-gutter-desktop);
+  }
+
   .layout-main {
-    padding: var(--space-7) var(--layout-gutter-desktop) var(--space-8);
+    padding: var(--space-7) 0 var(--space-8);
   }
 
   .steps {
