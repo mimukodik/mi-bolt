@@ -57,22 +57,31 @@ const SIMULATION_NOTICE =
   styleUrl: './order-receipt.scss',
 })
 export class OrderReceiptComponent {
-  /** The wire-shaped receipt payload. Required. */
+  /**
+  The wire-shaped receipt payload. Required.
+  */
   readonly receipt = input.required<OrderReceipt>();
 
-  /** Friendly Hungarian label for the payment method. */
+  /**
+  Friendly Hungarian label for the payment method.
+  */
   readonly paymentLabel = computed<string>(() => PAYMENT_LABELS[this.receipt().paymentMethod]);
 
-  /** Friendly Hungarian label for the delivery option. */
+  /**
+  Friendly Hungarian label for the delivery option.
+  */
   readonly deliveryLabel = computed<string>(() => DELIVERY_LABELS[this.receipt().deliveryOptionId]);
 
-  /** The simulation notice copy. Pulled from the receipt body when present. */
+  /**
+  The simulation notice copy. Pulled from the receipt body when present.
+  */
   readonly simulationNotice = computed<string>(() => {
     const fromWire = this.receipt().notice.trim();
-    if (typeof fromWire === 'string' && fromWire.length > 0) return fromWire;
-    return SIMULATION_NOTICE;
+    return typeof fromWire === 'string' && fromWire.length > 0 ? fromWire : SIMULATION_NOTICE;
   });
 
-  /** Exported so unit-style assertions and other consumers can count items. */
+  /**
+  Exported so unit-style assertions and other consumers can count items.
+  */
   readonly lineItems = computed<readonly OrderLine[]>(() => this.receipt().items);
 }

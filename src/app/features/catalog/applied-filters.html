@@ -7,10 +7,10 @@
       >
         <span class="chip__label">{{ chip.label }}</span>
         <button
-          type="button"
           class="chip__remove bg-transparent border-0 cursor-pointer px-1 min-h-10 leading-none"
-          [attr.aria-label]="'Szűrő eltávolítása: ' + chip.label"
-          [attr.data-testid]="'applied-chip-remove-' + testId(chip.name)"
+          type="button"
+          [attr.aria-label]="`Szűrő eltávolítása: ${chip.label}`"
+          [attr.data-testid]="`applied-chip-remove-${testId(chip.name)}`"
           (click)="onRemove(chip.name, chip.value)"
         >
           ×
@@ -18,9 +18,9 @@
       </span>
     }
     <button
-      type="button"
       class="chip-clear bg-transparent border-0 font-inherit cursor-pointer px-2 py-1 min-h-10"
       data-testid="applied-filters-clear"
+      type="button"
       (click)="cleared.emit()"
     >
       Összes szűrő törlése

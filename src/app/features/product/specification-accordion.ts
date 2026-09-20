@@ -27,12 +27,16 @@ import type { SpecGroup } from '../../api/generated/models/spec-group';
 })
 export class SpecificationAccordion {
   readonly groups = input.required<readonly SpecGroup[]>();
-  /** Optional group id kept open by default (others start collapsed). */
+  /**
+  Optional group id kept open by default (others start collapsed).
+  */
   readonly openedGroupId = input<string | null>(null);
 
   private readonly openSet = signal<ReadonlySet<string>>(new Set<string>());
 
-  /** A computed view of which group ids are currently open. */
+  /**
+  A computed view of which group ids are currently open.
+  */
   readonly open = computed<ReadonlySet<string>>(() => {
     const seed = this.openedGroupId();
     if (seed === null) return this.openSet();

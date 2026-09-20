@@ -2,10 +2,10 @@ import { Component, DestroyRef, computed, effect, inject, input, signal } from '
 import { ActivatedRoute, Router, RouterLink, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-function paramMapToSearchParams(params: ParamMap): URLSearchParams {
+function parameterMapToSearchParameters(parameters: ParamMap): URLSearchParams {
   const search = new URLSearchParams();
-  for (const key of params.keys) {
-    for (const v of params.getAll(key)) {
+  for (const key of parameters.keys) {
+    for (const v of parameters.getAll(key)) {
       search.append(key, v);
     }
   }
@@ -105,8 +105,7 @@ export class ProductPage {
     const v = this.vm();
     if (v.status === 'loading') return 'loading';
     if (v.status === 'notfound') return 'notfound';
-    if (v.status === 'error') return 'error';
-    return 'success';
+    return v.status === 'error' ? 'error' : 'success';
   });
 
   readonly product = computed(() => this.vm().product);
@@ -124,7 +123,9 @@ export class ProductPage {
     () => this.vm().selectedVariant?.availability ?? null,
   );
 
-  /** Stock sentence for the selected variant. Empty while unknown. */
+  /**
+  Stock sentence for the selected variant. Empty while unknown.
+  */
   readonly stockMessage = computed<string>(() => {
     const availability = this.selectedAvailability();
     if (availability === null) return '';
@@ -137,8 +138,7 @@ export class ProductPage {
 
   readonly gallery = computed(() => {
     const variant = this.vm().selectedVariant;
-    if (variant === null) return [];
-    return variant.images;
+    return variant === null ? [] : variant.images;
   });
 
   /** Id of the image the facade's atomic view model currently selects.
@@ -161,18 +161,17 @@ export class ProductPage {
     const product = this.product();
     if (product === null) return null;
     const match = product.variants.find((v) => v.colorCode === code);
-    return match ? match.colorName : code;
+    return match !== undefined ? match.colorName : code;
   });
 
   readonly selectedStorageLabel = computed<string | null>(() => {
     const gb = this.selectedStorageGb();
-    if (gb === null) return null;
-    return `${String(gb)} GB`;
+    return gb === null ? null : `${String(gb)} GB`;
   });
 
   readonly devicePrice = computed<Money | null>(() => {
     const variant = this.vm().selectedVariant;
-    return variant ? variant.price : null;
+    return variant !== null ? variant.price : null;
   });
 
   readonly devicePriceStatus = computed<'idle' | 'loading' | 'success' | 'empty' | 'error'>(() => {
@@ -180,8 +179,7 @@ export class ProductPage {
     if (v.status === 'loading') return 'loading';
     if (v.status === 'error') return 'error';
     if (v.product === null) return 'idle';
-    if (v.selectedVariant === null) return 'empty';
-    return 'success';
+    return v.selectedVariant === null ? 'empty' : 'success';
   });
 
   readonly quantity = computed(() => this.vm().quantity);
@@ -206,7 +204,9 @@ export class ProductPage {
    *  its own (docs/spec/architecture.md:57, components.md:409). */
   readonly addPending = signal<boolean>(false);
 
-  /** Last cart-mutation failure, or null. Same single owner. */
+  /**
+  Last cart-mutation failure, or null. Same single owner.
+  */
   readonly addError = signal<UiProblem | null>(null);
 
   /** Confirmation text after a successful add. `AddToCartControl`
@@ -241,12 +241,11 @@ export class ProductPage {
     // emitted twice.
     effect(() => {
       const inputSlug = this.slug();
-      const slug = (inputSlug !== '' ? inputSlug : this.route.snapshot.paramMap.get('slug')) ?? '';
-      if (slug.length === 0) return;
-      if (slug === this.currentSlug()) return;
+      const slug = (inputSlug === '' ? this.route.snapshot.paramMap.get('slug') : inputSlug) ?? '';
+      if (slug.length === 0 || slug === this.currentSlug()) return;
       this.currentSlug.set(slug);
-      const params = paramMapToSearchParams(this.route.snapshot.queryParamMap);
-      this.facade.load(slug, params);
+      const parameters = parameterMapToSearchParameters(this.route.snapshot.queryParamMap);
+      this.facade.load(slug, parameters);
     });
 
     // Route navigation updates (e.g. browser back / forward) replay
@@ -259,20 +258,20 @@ export class ProductPage {
     // snapshot captured at mount time.
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((queryParamMap) => {
+      .subscribe((queryParameterMap) => {
         const inputSlug = this.slug();
         const slug =
-          (inputSlug !== '' ? inputSlug : this.route.snapshot.paramMap.get('slug')) ?? '';
+          (inputSlug === '' ? this.route.snapshot.paramMap.get('slug') : inputSlug) ?? '';
         if (slug.length === 0) return;
         // Skip the reload this page's own `syncVariantQuery()` navigation
         // triggers: without this guard every swatch click would replay
         // through `facade.load()`, resetting the status to `loading` and
         // flashing the skeleton (FIX-23 item 3).
-        const incoming = queryParamMap.get('variant');
+        const incoming = queryParameterMap.get('variant');
         const applied = this.facade.currentVariantParams().get('variant');
         if (slug === this.currentSlug() && incoming !== null && incoming === applied) return;
-        const params = paramMapToSearchParams(queryParamMap);
-        this.facade.load(slug, params);
+        const parameters = parameterMapToSearchParameters(queryParameterMap);
+        this.facade.load(slug, parameters);
       });
   }
 
@@ -373,8 +372,7 @@ export class ProductPage {
    *  the one whose `variantId` matches the user's selection. */
   private findAddedLine(variantId: string): { variantId: string } | null {
     const cart = this.cartFacade.cart();
-    if (cart === null) return null;
-    return cart.items.find((item) => item.variantId === variantId) ?? null;
+    return cart === null ? null : (cart.items.find((item) => item.variantId === variantId) ?? null);
   }
 
   /** Composes the Hungarian confirmation body the StatusMessage

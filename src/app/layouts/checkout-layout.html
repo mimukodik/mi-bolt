@@ -1,20 +1,20 @@
 <app-app-shell variant="checkout" [compact]="true">
-  <main id="main-content" tabindex="-1" class="layout-main block scroll-mt-20">
+  <main class="layout-main block scroll-mt-20" id="main-content" tabindex="-1">
     <ol
-      class="steps m-0 p-0 mb-6 flex flex-wrap gap-3 list-none"
       aria-label="Pénztár lépései"
+      class="steps m-0 p-0 mb-6 flex flex-wrap gap-3 list-none"
       data-testid="checkout-steps"
     >
       @for (item of steps; track item.key) {
         <li
           class="steps__item inline-flex items-center gap-2 px-3 py-2 rounded min-h-10"
-          [class.is-current]="item.key === step()"
           [attr.aria-current]="item.key === step() ? 'step' : null"
+          [class.is-current]="item.key === step()"
         >
           @if (isStepComplete($index)) {
             <span
-              class="steps__index inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
               aria-hidden="true"
+              class="steps__index inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
               >✓</span
             >
           } @else {

@@ -49,14 +49,18 @@ function redirectToStep(
 
 function stepPath(step: 'cart' | 'contact' | 'delivery' | 'review'): string {
   switch (step) {
-    case 'cart':
+    case 'cart': {
       return 'kosar';
-    case 'contact':
+    }
+    case 'contact': {
       return 'adatok';
-    case 'delivery':
+    }
+    case 'delivery': {
       return 'szallitas';
-    case 'review':
+    }
+    case 'review': {
       return 'ellenorzes';
+    }
   }
 }
 
@@ -76,16 +80,14 @@ function redirectForCartSnapshot(
   existingOrder: OrderReceipt | null,
 ): UrlTree | null {
   if (cartSnapshot === null) {
-    if (existingOrder !== null) {
-      return redirectToSuccess(existingOrder.id);
-    }
-    return redirectToStep('cart', 'deep-link');
+    return existingOrder === null
+      ? redirectToStep('cart', 'deep-link')
+      : redirectToSuccess(existingOrder.id);
   }
   if (cartSnapshot.items.length === 0) {
-    if (existingOrder !== null) {
-      return redirectToSuccess(existingOrder.id);
-    }
-    return redirectToStep('cart', 'empty-cart');
+    return existingOrder === null
+      ? redirectToStep('cart', 'empty-cart')
+      : redirectToSuccess(existingOrder.id);
   }
   return null;
 }
@@ -115,8 +117,7 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
   const cartResult = redirectForCartSnapshot(cart.cart(), checkout.order());
-  if (cartResult !== null) return cartResult;
-  return true;
+  return cartResult ?? true;
 };
 
 /**
@@ -145,10 +146,7 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
   const cartResult = redirectForCartSnapshot(cart.cart(), checkout.order());
   if (cartResult !== null) return cartResult;
   const session = checkout.session();
-  if (session?.contact === undefined) {
-    return redirectToStep('contact', 'incomplete');
-  }
-  return true;
+  return session?.contact === undefined ? redirectToStep('contact', 'incomplete') : true;
 };
 
 /**
@@ -180,10 +178,9 @@ export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =>
   if (session?.contact === undefined) {
     return redirectToStep('contact', 'incomplete');
   }
-  if (session.delivery === undefined || session.paymentMethod === undefined) {
-    return redirectToStep('delivery', 'incomplete');
-  }
-  return true;
+  return session.delivery === undefined || session.paymentMethod === undefined
+    ? redirectToStep('delivery', 'incomplete')
+    : true;
 };
 
 /**

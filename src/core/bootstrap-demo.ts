@@ -21,7 +21,9 @@ import { startMockWorker } from '../mocks/browser';
 import { createBrowserPersistence } from '../mocks/persistence';
 import { createRealClock, parseScenarioFromLocation } from '../mocks/scenarios';
 
-/** Tracks the last prepared scenario for diagnostics. */
+/**
+Tracks the last prepared scenario for diagnostics.
+*/
 let preparedScenario: string | null = null;
 
 /**
@@ -72,17 +74,23 @@ export async function startMocks(): Promise<void> {
   preparedScenario = scenario.name;
 }
 
-/** Returns the scenario name resolved by the most recent `startMocks` call. */
+/**
+Returns the scenario name resolved by the most recent `startMocks` call.
+*/
 export function getPreparedScenario(): string | null {
   return preparedScenario;
 }
 
-/** Returns the persistence mode determined by the most recent `startMocks` call. */
+/**
+Returns the persistence mode determined by the most recent `startMocks` call.
+*/
 export function getPreparedPersistenceMode(): 'durable' | 'memory' {
   return preparedPersistenceMode;
 }
 
-/** Test-only escape hatch that clears the cached scenario name. */
+/**
+Test-only escape hatch that clears the cached scenario name.
+*/
 export function resetPreparedScenarioForTests(): void {
   preparedScenario = null;
 }

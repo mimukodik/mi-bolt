@@ -36,9 +36,9 @@
  *                        form actions.
  */
 
+import type { ElementRef } from '@angular/core';
 import {
   Component,
-  ElementRef,
   InjectionToken,
   computed,
   input,
@@ -102,7 +102,7 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
     out.push({
       code: error.kind,
       message: error.message ?? error.kind,
-      ...(pointer !== undefined ? { pointer } : {}),
+      ...(pointer !== undefined && { pointer }),
     });
   }
   return out;
@@ -215,7 +215,7 @@ export class ContactStep {
   // ---- Actions ------------------------------------------------------
 
   async onSubmit(event?: Event): Promise<void> {
-    if (event && typeof event.preventDefault === 'function') {
+    if (event !== undefined && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
     if (this.saveState() === 'loading') return;
@@ -223,19 +223,18 @@ export class ContactStep {
     this.submitted.set(true);
 
     const contactFields = this.contactFields();
-    const ok = await submit(contactFields, {
-      action: () => {
+    const isOk = await submit(contactFields, {
+      action: () =>
         // No network call from inside the field tree's own submit flow —
         // the container performs the save when `continueRequested` fires.
-        return Promise.resolve(undefined);
-      },
+        Promise.resolve(undefined),
       onInvalid: () => {
         this.focusSummary();
         this.focusFirstInvalidField();
       },
     });
 
-    if (!ok) {
+    if (!isOk) {
       if (this.contactFields()().invalid()) {
         this.focusSummary();
         this.focusFirstInvalidField();
@@ -248,9 +247,9 @@ export class ContactStep {
 
   focusSummary(): void {
     queueMicrotask(() => {
-      const ref = this.summaryRef();
-      if (ref === undefined) return;
-      ref.nativeElement.focus();
+      const reference = this.summaryRef();
+      if (reference === undefined) return;
+      reference.nativeElement.focus();
     });
   }
 
@@ -276,8 +275,7 @@ export class ContactStep {
     if (this.saveState() === 'error') return 'server-error';
     if (this.saveState() === 'loading') return 'loading';
     if (invalid && this.submitted()) return 'submitted-invalid';
-    if (invalid && touched) return 'touched-invalid';
-    return 'default';
+    return invalid && touched ? 'touched-invalid' : 'default';
   }
 
   resolvePointer(pointer: string): ContactFieldKey | null {

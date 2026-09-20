@@ -66,8 +66,8 @@ const STRICT_PATTERNS = [
 ];
 
 function shouldScan(entry) {
-  const ext = extname(entry);
-  if (!SCAN_EXTENSIONS.has(ext)) return false;
+  const extension = extname(entry);
+  if (!SCAN_EXTENSIONS.has(extension)) return false;
   // Skip dependency / build outputs that may live inside the scan
   // roots in some workspaces.
   if (entry.includes(`${sep}node_modules${sep}`)) return false;
@@ -75,25 +75,25 @@ function shouldScan(entry) {
   return true;
 }
 
-function walk(dir, acc) {
-  if (!existsSync(dir)) return acc;
+function walk(dir, accumulator) {
+  if (!existsSync(dir)) return accumulator;
   for (const entry of readdirSync(dir)) {
     const child = join(dir, entry);
     const st = statSync(child);
-    if (st.isDirectory()) walk(child, acc);
-    else if (st.isFile() && shouldScan(child)) acc.push(child);
+    if (st.isDirectory()) walk(child, accumulator);
+    else if (st.isFile() && shouldScan(child)) accumulator.push(child);
   }
-  return acc;
+  return accumulator;
 }
 
-function stripComments(src) {
+function stripComments(source) {
   // Strip block and line comments so a literal "@skip" inside a
   // description string does not trigger the policy. We are checking
   // whether the SPEC is committing to skip a requirement, not
   // whether a comment mentions skip.
-  let out = src;
-  out = out.replace(/\/\*[\s\S]*?\*\//g, '');
-  out = out.replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  let out = source;
+  out = out.replaceAll(/\/\*[\s\S]*?\*\//g, '');
+  out = out.replaceAll(/(^|[^:])\/\/[^\n]*/g, '$1');
   return out;
 }
 
@@ -117,13 +117,13 @@ function scanFile(absPath) {
   return findings;
 }
 
-function parseArgs(argv) {
-  const args = { strict: false, help: false };
+function parseArguments(argv) {
+  const arguments_ = { strict: false, help: false };
   for (const token of argv) {
-    if (token === '--strict') args.strict = true;
-    else if (token === '--help' || token === '-h') args.help = true;
+    if (token === '--strict') arguments_.strict = true;
+    else if (token === '--help' || token === '-h') arguments_.help = true;
   }
-  return args;
+  return arguments_;
 }
 
 function help() {
@@ -136,9 +136,9 @@ any finding. --strict also rejects coverage-ignore pragma comments.
 `);
 }
 
-const args = parseArgs(process.argv.slice(2));
-const strict = args.strict;
-if (args.help) {
+const arguments_ = parseArguments(process.argv.slice(2));
+const strict = arguments_.strict;
+if (arguments_.help) {
   help();
   process.exit(0);
 }
@@ -154,14 +154,14 @@ for (const file of files) {
 }
 
 if (findings.length > 0) {
-  const grouped = findings.reduce((acc, f) => {
+  const grouped = findings.reduce((accumulator, f) => {
     const key = `${f.file}:${f.line}`;
-    acc[key] ??= { file: f.file, line: f.line, patterns: new Set() };
-    acc[key].patterns.add(f.pattern);
-    return acc;
+    accumulator[key] ??= { file: f.file, line: f.line, patterns: new Set() };
+    accumulator[key].patterns.add(f.pattern);
+    return accumulator;
   }, {});
   const lines = Object.values(grouped)
-    .map((g) => `  - ${g.file}:${g.line}  ${Array.from(g.patterns).join(', ')}`)
+    .map((g) => `  - ${g.file}:${g.line}  ${[...g.patterns].join(', ')}`)
     .join('\n');
   process.stderr.write(
     `\ntest-policy:FAIL — ${findings.length} finding(s) in ${Object.keys(grouped).length} location(s) across ${scanned} files:\n${lines}\n`,

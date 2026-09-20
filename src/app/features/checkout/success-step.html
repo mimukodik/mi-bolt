@@ -1,32 +1,32 @@
 <section class="success" data-testid="success-page">
-  <app-checkout-step-header [crumbs]="crumbs" current="Siker">
+  <app-checkout-step-header current="Siker" [crumbs]="crumbs">
     @if (hasReceipt()) {
       <svg
+        aria-hidden="true"
         class="success-check"
+        data-testid="success-check"
+        focusable="false"
+        height="48"
         viewBox="0 0 48 48"
         width="48"
-        height="48"
-        focusable="false"
-        aria-hidden="true"
-        data-testid="success-check"
       >
-        <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="3" />
+        <circle cx="24" cy="24" fill="none" r="22" stroke="currentColor" stroke-width="3" />
         <path
           d="M14 24.5 L20.5 31 L34 16.5"
           fill="none"
           stroke="currentColor"
-          stroke-width="3"
           stroke-linecap="round"
           stroke-linejoin="round"
+          stroke-width="3"
         />
       </svg>
     }
     <h1
       #successHeading
-      id="success-heading"
-      tabindex="-1"
       class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
       data-testid="success-heading"
+      id="success-heading"
+      tabindex="-1"
     >
       @if (hasReceipt()) {
         Elkészült a demórendelésed.
@@ -48,29 +48,29 @@
   @switch (loadState().kind) {
     @case ('loading') {
       <div class="loading" data-testid="success-loading">
-        <app-loading-state variant="block" label="A rendelés visszatöltése"></app-loading-state>
+        <app-loading-state label="A rendelés visszatöltése" variant="block" />
       </div>
     }
     @case ('missing') {
       <div class="recovery" data-testid="success-missing">
         <app-error-state
-          [title]="'A rendelés nem található'"
+          retryLabel="Vissza a kosárhoz"
+          title="A rendelés nem található"
           [message]="missingMessage()"
-          [retryLabel]="'Vissza a kosárhoz'"
           [pending]="false"
           (retryRequested)="onBackToCart()"
-        ></app-error-state>
+        />
       </div>
     }
     @case ('error') {
       <div class="recovery" data-testid="success-error">
         <app-error-state
-          [title]="'A visszatöltés nem sikerült'"
+          title="A visszatöltés nem sikerült"
           [message]="errorMessage()"
-          [retryLabel]="retryLabel()"
           [pending]="retrying()"
+          [retryLabel]="retryLabel()"
           (retryRequested)="onRetry()"
-        ></app-error-state>
+        />
       </div>
     }
     @default {
@@ -79,7 +79,7 @@
           <div class="column">
             <app-order-receipt [receipt]="order()!" />
           </div>
-          <aside class="actions" aria-label="További lépések" data-testid="success-actions">
+          <aside aria-label="További lépések" class="actions" data-testid="success-actions">
             <h2 class="actions__title">További lépések</h2>
             <p class="actions__intro">
               A rendeléshez tartozó azonosítót megoszthatod az ügyfélszolgálattal, vagy indíthatsz
@@ -87,14 +87,14 @@
             </p>
             <div class="actions__buttons">
               <app-button
-                variant="primary"
-                label="Vissza a telefonokhoz"
-                [loadingLabel]="'Új kosár létrehozása…'"
-                [loading]="startingNewCart()"
-                [disabled]="startingNewCart()"
-                (pressed)="onStartNewShopping()"
                 data-testid="success-new-shopping"
-              ></app-button>
+                label="Vissza a telefonokhoz"
+                loadingLabel="Új kosár létrehozása…"
+                variant="primary"
+                [disabled]="startingNewCart()"
+                [loading]="startingNewCart()"
+                (pressed)="onStartNewShopping()"
+              />
             </div>
             <p class="actions__hint">
               Az új vásárlás friss kosarat hoz létre; a korábbi rendelés adatai továbbra is

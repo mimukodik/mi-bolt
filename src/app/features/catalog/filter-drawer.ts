@@ -37,25 +37,37 @@ import { isHTMLInputElement } from '../../shared/utils/event-target';
   styleUrl: './filter-drawer.scss',
 })
 export class FilterDrawer {
-  /** Applied filters (the source of truth). */
+  /**
+  Applied filters (the source of truth).
+  */
   readonly applied = input.required<CatalogQuery>();
 
-  /** Live facets. */
+  /**
+  Live facets.
+  */
   readonly facets = input<{
     readonly brands: readonly FacetValue[];
     readonly storageGb: readonly FacetValue[];
   } | null>(null);
 
-  /** Whether the drawer is mounted. */
+  /**
+  Whether the drawer is mounted.
+  */
   readonly opened = input<boolean>(false);
 
-  /** Whether the controls are inert (loading / error). */
+  /**
+  Whether the controls are inert (loading / error).
+  */
   readonly disabled = input<boolean>(false);
 
-  /** Emits the committed draft exactly once per Apply press. */
+  /**
+  Emits the committed draft exactly once per Apply press.
+  */
   readonly filtersChanged = output<CatalogQuery>();
 
-  /** Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop). */
+  /**
+  Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop).
+  */
   readonly closed = output();
 
   // -------------------------------------------------------------------------
@@ -69,10 +81,14 @@ export class FilterDrawer {
   private readonly draftMin = signal<string>('');
   private readonly draftMax = signal<string>('');
 
-  /** Storage buckets exposed by the documented storage enum. */
+  /**
+  Storage buckets exposed by the documented storage enum.
+  */
   readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => [128, 256, 512]);
 
-  /** Brand facets, falling back to an empty list when none are present. */
+  /**
+  Brand facets, falling back to an empty list when none are present.
+  */
   readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
 
   /** Element that should regain focus when the dialog closes. The parent
@@ -89,9 +105,9 @@ export class FilterDrawer {
     const max = this.parsePrice(this.draftMax());
     if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
     if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    if (min !== null && max !== null && min > max)
-      return 'A minimum nem lehet nagyobb a maximum árnál.';
-    return null;
+    return min !== null && max !== null && min > max
+      ? 'A minimum nem lehet nagyobb a maximum árnál.'
+      : null;
   });
 
   readonly canApply = computed<boolean>(() => !this.disabled() && this.priceError() === null);
@@ -204,8 +220,6 @@ export class FilterDrawer {
 
   private parsePrice(raw: string): number | null {
     const trimmed = raw.trim();
-    if (trimmed.length === 0) return null;
-    if (!/^-?\d+$/.test(trimmed)) return null;
-    return Number(trimmed);
+    return trimmed.length === 0 || !/^-?\d+$/.test(trimmed) ? null : Number(trimmed);
   }
 }

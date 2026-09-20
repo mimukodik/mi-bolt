@@ -1,13 +1,12 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { LoadingState } from './loading-state';
 import type { LoadingVariant } from './loading-state';
 
 @Component({
   imports: [LoadingState],
-  template: `
-    <app-loading-state [variant]="variant()" [label]="label()" [role]="role()"></app-loading-state>
-  `,
+  template: ` <app-loading-state [label]="label()" [role]="role()" [variant]="variant()" /> `,
 })
 class HostComponent {
   readonly variant = signal<LoadingVariant>('block');
@@ -18,7 +17,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected HTMLElement');
+    throw new TypeError('Expected HTMLElement');
   }
   return raw;
 }

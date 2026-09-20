@@ -2,7 +2,8 @@
 import '@angular/compiler';
 
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { MobileBuyRail } from './mobile-buy-rail';
@@ -20,16 +21,16 @@ import type { Money } from '../../shared/ui/price-block/price-block';
   imports: [MobileBuyRail],
   template: `
     <app-mobile-buy-rail
-      [money]="money()"
       [available]="available()"
-      [pending]="pending()"
       [error]="error()"
+      [money]="money()"
+      [pending]="pending()"
       (addRequested)="onAddRequested()"
-    ></app-mobile-buy-rail>
+    />
   `,
 })
 class TestHostComponent {
-  readonly money = signal<Money | null>({ amount: 339990, currency: 'HUF' });
+  readonly money = signal<Money | null>({ amount: 339_990, currency: 'HUF' });
   readonly available = signal<boolean>(true);
   readonly pending = signal<boolean>(false);
   readonly error = signal<UiProblem | null>(null);
@@ -47,10 +48,10 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function queryButton(parent: ParentNode, selector: string): HTMLButtonElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLButtonElement))
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLButtonElement))
     throw new Error(`Expected HTMLButtonElement: ${selector}`);
-  return el;
+  return element;
 }
 
 afterEach(() => {
@@ -117,9 +118,9 @@ describe('MobileBuyRail (FIX-50 extraction from product-page.html)', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const statusEl = root.querySelector('[data-testid="status-message"]');
-    expect(statusEl).not.toBeNull();
-    expect(statusEl?.textContent).toContain(
+    const statusElement = root.querySelector('[data-testid="status-message"]');
+    expect(statusElement).not.toBeNull();
+    expect(statusElement?.textContent).toContain(
       'A termék hozzáadása nem sikerült; a kosár változatlan.',
     );
 

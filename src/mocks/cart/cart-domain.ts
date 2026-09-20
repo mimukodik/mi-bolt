@@ -28,14 +28,8 @@
  */
 
 import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
-import {
-  type Cart,
-  type CartLine,
-  type Image,
-  type Money,
-  type Variant,
-  Repository,
-} from '../repository';
+import type { Repository as Repo } from '../repository';
+import { type Cart, type CartLine, type Image, type Money, type Variant } from '../repository';
 import type { Clock, Ids } from '../scenarios';
 // `idempotency` only stores carts this module produced, so the guard's
 // false branch is unreachable today. It is kept so a future invariant
@@ -43,13 +37,19 @@ import type { Clock, Ids } from '../scenarios';
 // `replay.body` where a `CartSnapshot` is expected.
 import { isCartSnapshot } from './is-cart-snapshot';
 
-/** Demo-config maximum line quantity (matches OpenAPI demoConfig.maximumLineQuantity). */
+/**
+Demo-config maximum line quantity (matches OpenAPI demoConfig.maximumLineQuantity).
+*/
 export const MAX_LINE_QUANTITY = 5;
 
-/** Cart expires 24h after creation (matches the OpenAPI Cart.expiresAt example). */
+/**
+Cart expires 24h after creation (matches the OpenAPI Cart.expiresAt example).
+*/
 const CART_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
-/** Stable types for the cart wire contract. */
+/**
+Stable types for the cart wire contract.
+*/
 export type CartItem = CartLine;
 export type CartSnapshot = Cart;
 
@@ -74,10 +74,14 @@ export interface Problem {
   fieldErrors: FieldError[];
 }
 
-/** Result of a cart operation — discriminated union. */
+/**
+Result of a cart operation — discriminated union.
+*/
 export type CartResult<T> = { ok: true; value: T } | { ok: false; problem: Problem };
 
-/** Inputs grouped per operation; the handler layer maps HTTP into these. */
+/**
+Inputs grouped per operation; the handler layer maps HTTP into these.
+*/
 export interface CreateCartInput {
   sessionId: string;
   idempotencyKey: string;
@@ -132,13 +136,15 @@ export const HeaderRules = {
  */
 export class CartDomain {
   constructor(
-    private readonly repository: Repository,
+    private readonly repository: Repo,
     private readonly clock: Clock,
     private readonly ids: Ids,
     private readonly idempotency: IdempotencyStore,
   ) {}
 
-  /** POST /carts — create an empty demo cart. */
+  /**
+  POST /carts — create an empty demo cart.
+  */
   createCart(input: CreateCartInput): CartResult<CartSnapshot> {
     const session = this.validateSession(input.sessionId);
     if (!session.ok) return session;
@@ -149,7 +155,7 @@ export class CartDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) {
+    if (replay !== null && isCartSnapshot(replay.body)) {
       // The idempotency cache outlives the cart's own 24h expiry by
       // design (the cache window and the cart window both start at
       // creation time but live in separate state). A replay that
@@ -158,13 +164,10 @@ export class CartDomain {
       // 410 CART_EXPIRED instead and let the caller start over with
       // a fresh key.
       const replayedCart = replay.body;
-      if (this.isExpired(replayedCart)) {
-        return err(CartDomain.cartExpired());
-      }
-      return ok(replayedCart);
+      return this.isExpired(replayedCart) ? error(CartDomain.cartExpired()) : ok(replayedCart);
     }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
-      return err(CartDomain.idempotencyConflict());
+      return error(CartDomain.idempotencyConflict());
     }
 
     const cart = this.repository.ensureCart(input.sessionId);
@@ -172,21 +175,22 @@ export class CartDomain {
     return ok(cart);
   }
 
-  /** GET /carts/{cartId} — read authoritative cart state. */
+  /**
+  GET /carts/{cartId} — read authoritative cart state.
+  */
   getCart(input: GetCartInput): CartResult<CartSnapshot> {
     const session = this.validateSession(input.sessionId);
     if (!session.ok) return session;
     const cart = this.repository.getCart(input.cartId);
     if (cart?.sessionId !== input.sessionId) {
-      return err(CartDomain.notFound());
+      return error(CartDomain.notFound());
     }
-    if (this.isExpired(cart)) {
-      return err(CartDomain.cartExpired());
-    }
-    return ok(cart);
+    return this.isExpired(cart) ? error(CartDomain.cartExpired()) : ok(cart);
   }
 
-  /** POST /carts/{cartId}/items — add or merge a variant into the cart. */
+  /**
+  POST /carts/{cartId}/items — add or merge a variant into the cart.
+  */
   addCartItem(input: AddCartItemInput): CartResult<CartSnapshot> {
     const session = this.validateSession(input.sessionId);
     if (!session.ok) return session;
@@ -204,26 +208,26 @@ export class CartDomain {
     });
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
+    if (replay !== null && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
-      return err(CartDomain.idempotencyConflict());
+      return error(CartDomain.idempotencyConflict());
     }
 
     const cart = this.repository.getCart(input.cartId);
     if (cart?.sessionId !== input.sessionId) {
-      return err(CartDomain.notFound());
+      return error(CartDomain.notFound());
     }
     if (this.isExpired(cart)) {
-      return err(CartDomain.cartExpired());
+      return error(CartDomain.cartExpired());
     }
     if (cart.status !== 'active') {
-      return err(CartDomain.notFound());
+      return error(CartDomain.notFound());
     }
-    if (!lookup) {
-      return err(CartDomain.notFound());
+    if (lookup === undefined) {
+      return error(CartDomain.notFound());
     }
     if (cart.version !== ifMatch.value) {
-      return err(CartDomain.versionConflict());
+      return error(CartDomain.versionConflict());
     }
     const quantityCheck = this.validateQuantity(input.quantity, lookup.variant);
     if (!quantityCheck.ok) return quantityCheck;
@@ -232,27 +236,28 @@ export class CartDomain {
     const existing = cart.items.find((line) => line.variantId === input.variantId);
     const mergedQuantity = (existing?.quantity ?? 0) + input.quantity;
     if (mergedQuantity > cap) {
-      return err(
+      return error(
         CartDomain.quantityLimit(
           `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
         ),
       );
     }
     if (lookup.variant.availability !== 'in_stock') {
-      return err(CartDomain.outOfStock());
+      return error(CartDomain.outOfStock());
     }
 
     const snapshot = CartDomain.buildVariantSnapshot(lookup.product, lookup.variant);
-    const items = existing
-      ? cart.items.map((line) =>
-          line.variantId === input.variantId
-            ? CartDomain.bumpLine(line, mergedQuantity, lookup.variant.price)
-            : line,
-        )
-      : [
-          ...cart.items,
-          CartDomain.makeLine(this.ids.uuid(), snapshot, mergedQuantity, lookup.variant.price),
-        ];
+    const items =
+      existing !== undefined
+        ? cart.items.map((line) =>
+            line.variantId === input.variantId
+              ? CartDomain.bumpLine(line, mergedQuantity, lookup.variant.price)
+              : line,
+          )
+        : [
+            ...cart.items,
+            CartDomain.makeLine(this.ids.uuid(), snapshot, mergedQuantity, lookup.variant.price),
+          ];
 
     const updated: Cart = {
       ...cart,
@@ -264,7 +269,9 @@ export class CartDomain {
     return ok(updated);
   }
 
-  /** PATCH /carts/{cartId}/items/{itemId} — set absolute quantity on a line. */
+  /**
+  PATCH /carts/{cartId}/items/{itemId} — set absolute quantity on a line.
+  */
   setCartItemQuantity(input: SetCartItemQuantityInput): CartResult<CartSnapshot> {
     const session = this.validateSession(input.sessionId);
     if (!session.ok) return session;
@@ -278,45 +285,45 @@ export class CartDomain {
     const payloadHash = hashPayload({ quantity: input.quantity });
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
+    if (replay !== null && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
-      return err(CartDomain.idempotencyConflict());
+      return error(CartDomain.idempotencyConflict());
     }
 
     const cart = this.repository.getCart(input.cartId);
     if (cart?.sessionId !== input.sessionId) {
-      return err(CartDomain.notFound());
+      return error(CartDomain.notFound());
     }
     if (this.isExpired(cart)) {
-      return err(CartDomain.cartExpired());
+      return error(CartDomain.cartExpired());
     }
     if (cart.status !== 'active') {
-      return err(CartDomain.notFound());
+      return error(CartDomain.notFound());
     }
     if (cart.version !== ifMatch.value) {
-      return err(CartDomain.versionConflict());
+      return error(CartDomain.versionConflict());
     }
     const line = cart.items.find((entry) => entry.id === input.itemId);
-    if (!line) {
-      return err(CartDomain.notFound());
+    if (line === undefined) {
+      return error(CartDomain.notFound());
     }
     const lookup = this.repository.getVariant(line.variantId);
-    if (!lookup) {
-      return err(CartDomain.notFound());
+    if (lookup === undefined) {
+      return error(CartDomain.notFound());
     }
     const quantityCheck = this.validateQuantity(input.quantity, lookup.variant);
     if (!quantityCheck.ok) return quantityCheck;
 
     const cap = Math.min(lookup.variant.maxQuantity, MAX_LINE_QUANTITY);
     if (input.quantity > cap) {
-      return err(
+      return error(
         CartDomain.quantityLimit(
           `A sor mennyisége nem haladhatja meg a(z) ${String(cap)} darabot.`,
         ),
       );
     }
     if (lookup.variant.availability !== 'in_stock' && input.quantity > 0) {
-      return err(CartDomain.outOfStock());
+      return error(CartDomain.outOfStock());
     }
 
     const updated: Cart = {
@@ -333,7 +340,9 @@ export class CartDomain {
     return ok(updated);
   }
 
-  /** DELETE /carts/{cartId}/items/{itemId} — remove a line and return updated cart. */
+  /**
+  DELETE /carts/{cartId}/items/{itemId} — remove a line and return updated cart.
+  */
   removeCartItem(input: RemoveCartItemInput): CartResult<CartSnapshot> {
     const session = this.validateSession(input.sessionId);
     if (!session.ok) return session;
@@ -347,26 +356,26 @@ export class CartDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
+    if (replay !== null && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
-      return err(CartDomain.idempotencyConflict());
+      return error(CartDomain.idempotencyConflict());
     }
 
     const cart = this.repository.getCart(input.cartId);
     if (cart?.sessionId !== input.sessionId) {
-      return err(CartDomain.notFound());
+      return error(CartDomain.notFound());
     }
     if (this.isExpired(cart)) {
-      return err(CartDomain.cartExpired());
+      return error(CartDomain.cartExpired());
     }
     if (cart.status !== 'active') {
-      return err(CartDomain.notFound());
+      return error(CartDomain.notFound());
     }
     if (cart.version !== ifMatch.value) {
-      return err(CartDomain.versionConflict());
+      return error(CartDomain.versionConflict());
     }
-    if (!cart.items.some((entry) => entry.id === input.itemId)) {
-      return err(CartDomain.notFound());
+    if (cart.items.every((entry) => entry.id !== input.itemId)) {
+      return error(CartDomain.notFound());
     }
 
     const updated: Cart = {
@@ -386,7 +395,7 @@ export class CartDomain {
 
   validateSession(sessionId: string): CartResult<string> {
     if (!HeaderRules.sessionPattern.test(sessionId)) {
-      return err({
+      return error({
         status: 400,
         code: 'VALIDATION_FAILED',
         detail: 'Érvénytelen X-Demo-Session fejléc.',
@@ -400,7 +409,7 @@ export class CartDomain {
 
   validateIfMatch(ifMatch: string | null): CartResult<number> {
     if (ifMatch === null) {
-      return err({
+      return error({
         status: 400,
         code: 'VALIDATION_FAILED',
         detail: 'Hiányzó If-Match fejléc.',
@@ -408,7 +417,7 @@ export class CartDomain {
       });
     }
     if (!HeaderRules.ifMatchPattern.test(ifMatch)) {
-      return err({
+      return error({
         status: 400,
         code: 'VALIDATION_FAILED',
         detail: 'Érvénytelen If-Match formátum.',
@@ -419,7 +428,7 @@ export class CartDomain {
     }
     const version = Number.parseInt(ifMatch.slice(1, -1), 10);
     if (!Number.isFinite(version) || version < 1) {
-      return err({
+      return error({
         status: 400,
         code: 'VALIDATION_FAILED',
         detail: 'Érvénytelen If-Match verzió.',
@@ -433,7 +442,7 @@ export class CartDomain {
 
   validateIdempotencyKey(key: string | null): CartResult<string> {
     if (key === null) {
-      return err({
+      return error({
         status: 400,
         code: 'VALIDATION_FAILED',
         detail: 'Hiányzó Idempotency-Key fejléc.',
@@ -441,7 +450,7 @@ export class CartDomain {
       });
     }
     if (key.length < HeaderRules.idempotencyMin || key.length > HeaderRules.idempotencyMax) {
-      return err({
+      return error({
         status: 400,
         code: 'VALIDATION_FAILED',
         detail: 'Érvénytelen Idempotency-Key hossz.',
@@ -458,7 +467,7 @@ export class CartDomain {
 
   validateQuantity(quantity: unknown, variant: Variant): CartResult<number> {
     if (typeof quantity !== 'number' || !Number.isInteger(quantity)) {
-      return err({
+      return error({
         status: 422,
         code: 'QUANTITY_LIMIT',
         detail: 'A mennyiség egész szám kell legyen.',
@@ -466,7 +475,7 @@ export class CartDomain {
       });
     }
     if (quantity < 1 || quantity > MAX_LINE_QUANTITY) {
-      return err({
+      return error({
         status: 422,
         code: 'QUANTITY_LIMIT',
         detail: `A mennyiség 1 és ${String(MAX_LINE_QUANTITY)} közé eshet.`,
@@ -479,7 +488,7 @@ export class CartDomain {
       });
     }
     if (quantity > variant.maxQuantity) {
-      return err({
+      return error({
         status: 422,
         code: 'QUANTITY_LIMIT',
         detail: `A változathoz legfeljebb ${String(variant.maxQuantity)} darab rendelhető.`,
@@ -501,8 +510,7 @@ export class CartDomain {
   isExpired(cart: Cart): boolean {
     const nowMs = Date.parse(this.clock.now());
     const expiresAtMs = Date.parse(cart.expiresAt);
-    if (!Number.isFinite(nowMs) || !Number.isFinite(expiresAtMs)) return false;
-    return nowMs >= expiresAtMs;
+    return !Number.isFinite(nowMs) || !Number.isFinite(expiresAtMs) ? false : nowMs >= expiresAtMs;
   }
 
   static buildVariantSnapshot(
@@ -609,9 +617,11 @@ function ok<T>(value: T): CartResult<T> {
   return { ok: true, value };
 }
 
-function err(problem: Problem): CartResult<never> {
+function error(problem: Problem): CartResult<never> {
   return { ok: false, problem };
 }
 
-/** Test-only: lets the cart expire by advancing the clock without exposing CART_EXPIRY_MS. */
+/**
+Test-only: lets the cart expire by advancing the clock without exposing CART_EXPIRY_MS.
+*/
 export const CART_DURATION_MS = CART_EXPIRY_MS;

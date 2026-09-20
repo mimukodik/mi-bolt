@@ -33,8 +33,8 @@ import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { Api } from '../../../app/api/generated/api';
 import {
-  ApiConfiguration,
-  provideApiConfiguration,
+  ApiConfiguration as ApiConfig,
+  provideApiConfiguration as provideApiConfig,
 } from '../../../app/api/generated/api-configuration';
 import type { Image } from '../../../app/api/generated/models/image';
 import type { Product } from '../../../app/api/generated/models/product';
@@ -97,7 +97,7 @@ function makeVariant(
     price: money(price),
     availability,
     maxQuantity,
-    images: images ? [...images] : [makeImage(`${id}-front`)],
+    images: images !== undefined ? [...images] : [makeImage(`${id}-front`)],
   };
 }
 
@@ -403,7 +403,7 @@ beforeAll(() => {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
@@ -418,8 +418,8 @@ beforeEach(() => {
   delayedHandlers.length = 0;
 
   server.use(
-    http.get(`${BASE_URL}/config`, () => {
-      return HttpResponse.json({
+    http.get(`${BASE_URL}/config`, () =>
+      HttpResponse.json({
         providerId: 'mi-bolt',
         displayName: 'MiBolt',
         currency: 'HUF',
@@ -427,13 +427,13 @@ beforeEach(() => {
         termsVersion: 'demo-1',
         featuredSlugs: [],
         maximumLineQuantity: 5,
-      });
-    }),
+      }),
+    ),
     http.get(`${BASE_URL}/products/:slug`, ({ params, request }) => {
       const slug = String(params['slug']);
       captures.push({ method: request.method, url: request.url, slug });
       const delayed = delayedHandlers.find((h) => h.slug === slug);
-      if (delayed) {
+      if (delayed !== undefined) {
         return new Promise<Response>((resolve) => {
           delayed.resolve = () => {
             resolve(HttpResponse.json(delayed.payload));
@@ -484,7 +484,7 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       // The generated Api class is partially compiled; vitest's esbuild
       // pipeline does not emit constructor metadata so TestBed cannot
       // read its `(config, http)` signature. An explicit factory makes
@@ -492,8 +492,8 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
       // wiring (the Angular CLI build emits the metadata normally).
       {
         provide: Api,
-        useFactory: (config: ApiConfiguration, http: HttpClient) => new Api(config, http),
-        deps: [ApiConfiguration, HttpClient],
+        useFactory: (config: ApiConfig, http: HttpClient) => new Api(config, http),
+        deps: [ApiConfig, HttpClient],
       },
       ProductFacade,
     ],
@@ -507,8 +507,10 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
       // task boundaries (Subject emission, RxJS subscription, fetch
       // Promise resolution, MSW interceptor). Yield enough ticks for
       // every link in the chain to complete.
-      for (let i = 0; i < 20; i += 1) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      for (let index = 0; index < 20; index += 1) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 0);
+        });
       }
     },
   };
@@ -605,7 +607,7 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     facade.selectVariant('demo-one-5g-silver-256');
     const vm = facade.vm();
     expect(vm.selectedVariant?.id).toBe('demo-one-5g-silver-256');
-    expect(vm.gallery.map((i) => i.id)).toEqual(['demo-one-5g-silver-256-front']);
+    expect(vm.gallery.map((index) => index.id)).toEqual(['demo-one-5g-silver-256-front']);
     expect(vm.galleryIndex).toBe(0);
     expect(vm.selectedImage?.id).toBe('demo-one-5g-silver-256-front');
   });
@@ -756,7 +758,7 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
       resolve: () => undefined,
     });
     const proPayload = payloadForSlug('demo-pro-5g');
-    if (!proPayload) throw new Error('Expected payload for demo-pro-5g');
+    if (proPayload === null) throw new Error('Expected payload for demo-pro-5g');
     delayedHandlers.push({
       slug: 'demo-pro-5g',
       payload: proPayload,
@@ -767,17 +769,23 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
 
     facade.load('demo-one-5g', new URLSearchParams());
     // Yield so the first request is in flight before we issue the second.
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
     facade.load('demo-pro-5g', new URLSearchParams());
     // Yield so the second request is in flight before we resolve it.
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
 
     // Resolve only the second request: the first must be cancelled
     // by switchMap and never reach the product signal.
     const second = delayedHandlers.find((h) => h.slug === 'demo-pro-5g');
-    if (!second) throw new Error('Expected second handler');
+    if (second === undefined) throw new Error('Expected second handler');
     second.resolve();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
 
     // expect.poll retries the assertion until it holds, covering the
     // MSW -> fetch -> SDK -> RxJS -> signal chain in whatever order the
@@ -790,9 +798,11 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
     // Resolving the first handler after cancellation must NOT swap the
     // product back to demo-one-5g.
     const first = delayedHandlers.find((h) => h.slug === 'demo-one-5g');
-    if (!first) throw new Error('Expected first handler');
+    if (first === undefined) throw new Error('Expected first handler');
     first.resolve();
-    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
     expect(facade.vm().product?.slug).toBe('demo-pro-5g');
   });
 
@@ -815,13 +825,13 @@ describe('T15 ProductFacade — currentVariantParams round-trips through the URL
     facade.load('demo-one-5g', new URLSearchParams());
     await flushMicrotasks();
     facade.selectVariant('demo-one-5g-silver-128');
-    const params = facade.currentVariantParams();
-    expect(params.get('variant')).toBe('demo-one-5g-silver-128');
+    const parameters = facade.currentVariantParams();
+    expect(parameters.get('variant')).toBe('demo-one-5g-silver-128');
   });
 
   it('produces an empty params when the product is still loading', () => {
     const { facade } = buildFacade();
-    const params = facade.currentVariantParams();
-    expect(params.toString()).toBe('');
+    const parameters = facade.currentVariantParams();
+    expect(parameters.toString()).toBe('');
   });
 });

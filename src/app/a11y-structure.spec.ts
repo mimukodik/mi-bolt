@@ -16,7 +16,8 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter, type Params } from '@angular/router';
 import { http, HttpResponse } from 'msw';
@@ -25,7 +26,10 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../tests/msw-server';
 import { Api } from './api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from './api/generated/api-configuration';
+import {
+  ApiConfiguration as ApiConfig,
+  provideApiConfiguration as provideApiConfig,
+} from './api/generated/api-configuration';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
 import type { ProductPage as ProductPageDTO } from './api/generated/models/product-page';
 import type { ProductSummary } from './api/generated/models/product-summary';
@@ -69,7 +73,7 @@ function money(amount: number): Money {
 describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
   @Component({
     imports: [ProductPage],
-    template: `<app-product-page [slug]="slug()"></app-product-page>`,
+    template: `<app-product-page [slug]="slug()" />`,
   })
   class ProductPageHost {
     readonly slug = signal('demo-one-5g');
@@ -98,7 +102,7 @@ describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
       imports: [ProductPageHost],
       providers: [
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
         provideRouter([]),
       ],
       teardown: { destroyAfterEach: true },
@@ -120,8 +124,8 @@ describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
 // ---------------------------------------------------------------------------
 
 describe('FIX-29 fact 2 — ProductCard image is decorative', () => {
-  function makeImage(id: string, src: string, alt: string): Variant['images'][number] {
-    return { id, src, alt, width: 320, height: 400 };
+  function makeImage(id: string, source: string, alt: string): Variant['images'][number] {
+    return { id, src: source, alt, width: 320, height: 400 };
   }
 
   function makeSummary(): ProductSummary {
@@ -265,13 +269,13 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
         colorName: 'Grafit',
         storageGb: 256,
         quantity: 1,
-        unitPrice: money(339990),
-        lineTotal: money(339990),
+        unitPrice: money(339_990),
+        lineTotal: money(339_990),
       },
     ],
-    subtotal: money(339990),
+    subtotal: money(339_990),
     shipping: money(0),
-    total: money(339990),
+    total: money(339_990),
     paymentMethod: 'demo_cod',
     deliveryOptionId: 'demo_pickup',
     notice: 'Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés — ez egy demó folyamat.',
@@ -291,8 +295,8 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const meta = root.querySelector('[data-testid="receipt-meta"]');
-    if (!meta) throw new Error('Expected receipt-meta section');
-    const pairs = Array.from(meta.querySelectorAll('dt, dd'));
+    if (meta === null) throw new Error('Expected receipt-meta section');
+    const pairs = [...meta.querySelectorAll('dt, dd')];
     expect(pairs.length).toBeGreaterThan(0);
     expect(pairs.every((n) => n.closest('dl') !== null)).toBe(true);
   });
@@ -312,9 +316,9 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
   class StaticMediaQueryList extends EventTarget implements MediaQueryList {
     readonly matches: boolean = true;
     readonly media: string;
-    onchange: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null = null;
+    onchange: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null = null;
     private readonly legacyListeners = new Map<
-      (this: MediaQueryList, ev: MediaQueryListEvent) => unknown,
+      (this: MediaQueryList, event: MediaQueryListEvent) => unknown,
       EventListener
     >();
 
@@ -324,7 +328,7 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     }
 
     addListener(
-      callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
+      callback: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null,
     ): void {
       if (callback === null) return;
       const wrapped: EventListener = (event) => {
@@ -335,7 +339,7 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     }
 
     removeListener(
-      callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
+      callback: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null,
     ): void {
       if (callback === null) return;
       const wrapped = this.legacyListeners.get(callback);
@@ -346,8 +350,8 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
   }
 
   function installMatchMediaStub(): void {
-    if (typeof window.matchMedia === 'function') return;
-    window.matchMedia = (query: string): MediaQueryList => new StaticMediaQueryList(query);
+    if (typeof globalThis.matchMedia === 'function') return;
+    globalThis.matchMedia = (query: string): MediaQueryList => new StaticMediaQueryList(query);
   }
 
   beforeAll(() => {
@@ -374,7 +378,7 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
             colorName: 'Grafit',
             swatchHex: '#343B43',
             storageGb: 256,
-            price: money(339990),
+            price: money(339_990),
             availability: 'in_stock',
             maxQuantity: 5,
             images: [
@@ -406,11 +410,11 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
       imports: [CatalogPage],
       providers: [
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
         {
           provide: Api,
-          useFactory: (config: ApiConfiguration, http: HttpClient) => new Api(config, http),
-          deps: [ApiConfiguration, HttpClient],
+          useFactory: (config: ApiConfig, http: HttpClient) => new Api(config, http),
+          deps: [ApiConfig, HttpClient],
         },
         provideRouter([]),
         {
@@ -429,8 +433,10 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     const fixture = TestBed.createComponent(CatalogPage);
     fixture.detectChanges();
 
-    for (let i = 0; i < 20 && facade.vm().status !== 'success'; i += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    for (let index = 0; index < 20 && facade.vm().status !== 'success'; index += 1) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
       fixture.detectChanges();
     }
     return fixture;
@@ -439,7 +445,7 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
   it('renders an h2 before its first h3 in document order (FIX-29-AC02)', async () => {
     const fixture = await renderWithOneResult();
     const root = getRootElement(fixture);
-    const headings = Array.from(root.querySelectorAll('h1, h2, h3'));
+    const headings = [...root.querySelectorAll('h1, h2, h3')];
     const firstH2Index = headings.findIndex((h) => h.tagName === 'H2');
     const firstH3Index = headings.findIndex((h) => h.tagName === 'H3');
     expect(firstH2Index).toBeGreaterThanOrEqual(0);

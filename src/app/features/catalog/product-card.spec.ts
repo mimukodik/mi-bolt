@@ -53,10 +53,7 @@ function getComponentStyles(comp: unknown): readonly string[] {
     return [];
   }
   const styles = cmp['styles'];
-  if (Array.isArray(styles)) {
-    return styles.filter((s): s is string => typeof s === 'string');
-  }
-  return [];
+  return Array.isArray(styles) ? styles.filter((s): s is string => typeof s === 'string') : [];
 }
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
@@ -66,22 +63,23 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
+  return element;
 }
 
 function queryAnchor(parent: Element, selector: string): HTMLAnchorElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLAnchorElement))
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLAnchorElement))
     throw new Error(`Expected HTMLAnchorElement: ${selector}`);
-  return el;
+  return element;
 }
 
 function queryImage(parent: Element, selector: string): HTMLImageElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLImageElement)) throw new Error(`Expected HTMLImageElement: ${selector}`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLImageElement))
+    throw new Error(`Expected HTMLImageElement: ${selector}`);
+  return element;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,11 +90,11 @@ function money(amount: number): Money {
   return { amount, currency: 'HUF' };
 }
 
-function makeImage(id: string, src: string, alt: string): Variant['images'][number] {
-  return { id, src, alt, width: 320, height: 400 };
+function makeImage(id: string, source: string, alt: string): Variant['images'][number] {
+  return { id, src: source, alt, width: 320, height: 400 };
 }
 
-function makeSummary(opts: {
+function makeSummary(options: {
   readonly id: string;
   readonly slug: string;
   readonly brand?: string;
@@ -109,34 +107,35 @@ function makeSummary(opts: {
   readonly imageSrc?: string;
   readonly is5g?: boolean;
 }): ProductSummary {
-  const colorCode = opts.colorName ? opts.colorName.toLowerCase() : 'graphite';
-  const imageId = `${opts.id}-front`;
-  const storageVal = opts.storageGb ?? 256;
+  const colorCode = options.colorName !== undefined ? options.colorName.toLowerCase() : 'graphite';
+  const imageId = `${options.id}-front`;
+  const storageValue = options.storageGb ?? 256;
   const variant: Variant = {
-    id: `${opts.id}-${String(storageVal)}-${colorCode}`,
+    id: `${options.id}-${String(storageValue)}-${colorCode}`,
     colorCode,
-    colorName: opts.colorName ?? 'Grafit',
+    colorName: options.colorName ?? 'Grafit',
     swatchHex: '#343B43',
-    storageGb: storageVal,
-    price: money(opts.price ?? 339_990),
-    availability: opts.availability ?? 'in_stock',
+    storageGb: storageValue,
+    price: money(options.price ?? 339_990),
+    availability: options.availability ?? 'in_stock',
     maxQuantity: 5,
     images: [
       makeImage(
         imageId,
-        opts.imageSrc ?? `/assets/products/${colorCode}-front.webp`,
-        `${opts.name}, ${opts.colorName ?? 'Grafit'}, ${String(storageVal)} GB`,
+        options.imageSrc ?? `/assets/products/${colorCode}-front.webp`,
+        `${options.name}, ${options.colorName ?? 'Grafit'}, ${String(storageValue)} GB`,
       ),
     ],
   };
   return {
-    id: opts.id,
-    slug: opts.slug,
-    brand: opts.brand ?? 'MiBolt Demo',
-    name: opts.name,
-    highlights: opts.highlights ? [...opts.highlights] : ['6,7″ kijelző', '50 MP kamera'],
+    id: options.id,
+    slug: options.slug,
+    brand: options.brand ?? 'MiBolt Demo',
+    name: options.name,
+    highlights:
+      options.highlights !== undefined ? [...options.highlights] : ['6,7″ kijelző', '50 MP kamera'],
     defaultVariant: variant,
-    is5g: opts.is5g ?? true,
+    is5g: options.is5g ?? true,
     isDemo: true,
   };
 }
@@ -179,7 +178,7 @@ describe('T13-AC04 ProductCard', () => {
     // (product-image.html), not on the app-product-image host, so read
     // it from where it actually lands.
     const mediaRoot = queryElement(frame, '.root');
-    expect(mediaRoot.style.aspectRatio.replace(/\s+/g, '')).toBe('4/3');
+    expect(mediaRoot.style.aspectRatio.replaceAll(/\s+/g, '')).toBe('4/3');
     // FIX-29 item 3 (axe image-redundant-alt): the card passes
     // [decorative]="true" because the name, colour and storage already
     // render as visible text below the image (product-card.html:17-28),
@@ -204,13 +203,13 @@ describe('T13-AC04 ProductCard', () => {
   it('renders the whole-HUF one-time price and the explicit one-time label', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339990 }),
+      makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339_990 }),
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const priceEl = queryElement(root, '[data-testid="price-amount"]');
+    const priceElement = queryElement(root, '[data-testid="price-amount"]');
     // 339 990: non-breaking space U+00A0 separator, integer HUF.
-    expect(priceEl.textContent.replace(/\s+/g, ' ').trim()).toBe('339 990');
+    expect(priceElement.textContent.replaceAll(/\s+/g, ' ').trim()).toBe('339 990');
     const label = queryElement(root, '.label');
     expect(label.textContent).toContain('Egyszeri');
   });
@@ -228,7 +227,7 @@ describe('T13-AC04 ProductCard', () => {
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const text = root.textContent.replace(/\s+/g, ' ');
+    const text = root.textContent.replaceAll(/\s+/g, ' ');
     expect(text).toContain('Ezüst');
     expect(text).toContain('128 GB');
   });

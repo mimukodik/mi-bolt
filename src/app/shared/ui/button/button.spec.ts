@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { Button } from './button';
 
@@ -6,14 +7,14 @@ import { Button } from './button';
   imports: [Button],
   template: `
     <app-button
-      [variant]="variant()"
-      [label]="label()"
-      [loadingLabel]="loadingLabel()"
       [disabled]="disabled()"
+      [label]="label()"
       [loading]="loading()"
+      [loadingLabel]="loadingLabel()"
       [type]="type()"
+      [variant]="variant()"
       (pressed)="clickCount.set(clickCount() + 1)"
-    ></app-button>
+    />
   `,
 })
 class HostComponent {

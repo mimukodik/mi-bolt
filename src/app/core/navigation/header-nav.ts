@@ -46,21 +46,31 @@ const STANDARD_LINKS: readonly NavLink[] = [
   styleUrl: './header-nav.scss',
 })
 export class HeaderNav {
-  /** Variant decides which chrome the header exposes. */
+  /**
+  Variant decides which chrome the header exposes.
+  */
   readonly variant = input<HeaderVariant>('marketing');
 
-  /** Cart line-item total signal — provided in root by `CartCountFacade`. */
+  /**
+  Cart line-item total signal — provided in root by `CartCountFacade`.
+  */
   readonly cartFacade = inject(CartCountFacade);
 
-  /** Router instance — used to send the header search to the catalog page. */
+  /**
+  Router instance — used to send the header search to the catalog page.
+  */
   private readonly router = inject(Router);
 
-  /** Active route — used to mirror the header search input to the URL. */
+  /**
+  Active route — used to mirror the header search input to the URL.
+  */
   private readonly route = inject(ActivatedRoute);
 
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Mobile drawer open state. */
+  /**
+  Mobile drawer open state.
+  */
   readonly drawerOpen = signal(false);
 
   /** Current value of the header search input. It mirrors the URL's `q`
@@ -71,32 +81,38 @@ export class HeaderNav {
   constructor() {
     // The URL owns the active query; the input mirrors it, so clearing
     // the filters on the catalogue also clears the box (R18).
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      this.searchDraft.set(params.get('q') ?? '');
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((parameters) => {
+      this.searchDraft.set(parameters.get('q') ?? '');
     });
   }
 
-  /** Reference to the menu trigger button for focus restoration. */
+  /**
+  Reference to the menu trigger button for focus restoration.
+  */
   private readonly menuTriggerRef = viewChild<ElementRef<HTMLElement>>('menuTrigger');
 
-  /** Stable trigger element handle that the drawer can read after view init. */
+  /**
+  Stable trigger element handle that the drawer can read after view init.
+  */
   readonly menuTriggerEl = computed<HTMLElement | null>(() => {
     this.drawerOpen();
     return this.menuTriggerRef()?.nativeElement ?? null;
   });
 
-  /** Links rendered in the nav and the mobile drawer. */
-  readonly navLinks = computed<readonly NavLink[]>(() => {
-    if (this.variant() === 'checkout') return [];
-    return STANDARD_LINKS;
-  });
+  /**
+  Links rendered in the nav and the mobile drawer.
+  */
+  readonly navLinks = computed<readonly NavLink[]>(() =>
+    this.variant() === 'checkout' ? [] : STANDARD_LINKS,
+  );
 
-  /** Accessible label for the cart link, formatted in Hungarian. */
+  /**
+  Accessible label for the cart link, formatted in Hungarian.
+  */
   readonly cartLabel = computed(() => {
     const n = this.cartFacade.itemCount();
     if (n === 0) return 'Kosár megnyitása, jelenleg üres';
-    if (n === 1) return 'Kosár megnyitása, 1 termék';
-    return `Kosár megnyitása, ${String(n)} termék`;
+    return n === 1 ? 'Kosár megnyitása, 1 termék' : `Kosár megnyitása, ${String(n)} termék`;
   });
 
   toggleDrawer(): void {
@@ -107,7 +123,9 @@ export class HeaderNav {
     this.drawerOpen.set(false);
   }
 
-  /** Capture the typed search value into the draft signal. */
+  /**
+  Capture the typed search value into the draft signal.
+  */
   onSearchDraftInput(event: Event): void {
     if (!isHTMLInputElement(event.target)) return;
     this.searchDraft.set(event.target.value);

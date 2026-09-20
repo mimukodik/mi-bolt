@@ -74,26 +74,24 @@ export const PHONE_INTERNATIONAL = /^\+36\d{8,9}$/;
 export function pointerToFieldKey(pointer: string): ContactFieldKey | null {
   if (pointer === '/fullName') return 'fullName';
   if (pointer === '/email') return 'email';
-  if (pointer === '/phone') return 'phone';
-  return null;
+  return pointer === '/phone' ? 'phone' : null;
 }
 
 export function normalizeContact(input: ContactInput): NormalizedContact {
-  const fullName = input.fullName.trim().replace(/\s+/g, ' ');
+  const fullName = input.fullName.trim().replaceAll(/\s+/g, ' ');
   const email = input.email.trim();
   const phone = normalizePhone(input.phone);
   return { fullName, email, phone };
 }
 
 export function normalizePhone(raw: string): string {
-  const stripped = raw.trim().replace(/[\s\-()]/g, '');
+  const stripped = raw.trim().replaceAll(/[\s\-()]/g, '');
   if (stripped.length === 0) return '';
   if (stripped.startsWith('+36')) return stripped;
   if (stripped.startsWith('0036')) return '+36' + stripped.slice(4);
   if (stripped.startsWith('06')) return '+36' + stripped.slice(2);
   if (/^0\d+$/.test(stripped)) return '+36' + stripped.slice(1);
-  if (/^36\d+$/.test(stripped)) return '+' + stripped;
-  return stripped;
+  return /^36\d+$/.test(stripped) ? '+' + stripped : stripped;
 }
 
 export function validateContact(input: ContactInput): ContactValidationResult {

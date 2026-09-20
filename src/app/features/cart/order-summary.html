@@ -1,27 +1,19 @@
 <aside
-  class="summary flex flex-col gap-4 p-5 rounded"
   aria-label="Rendelés összesítése"
+  class="summary flex flex-col gap-4 p-5 rounded"
   data-testid="order-summary"
 >
   <h2 class="title m-0 font-bold">Rendelés összesítése</h2>
 
   <div class="rows flex flex-col gap-3">
     <div class="row row--subtotal flex flex-col gap-1" data-testid="order-summary-subtotal">
-      <app-price-block
-        [money]="subtotal()"
-        [label]="'Részösszeg'"
-        [status]="subtotalStatus()"
-      ></app-price-block>
+      <app-price-block label="Részösszeg" [money]="subtotal()" [status]="subtotalStatus()" />
     </div>
 
     <div class="row row--shipping flex flex-col gap-1" data-testid="order-summary-shipping">
       <span class="label">Szállítás</span>
       @if (shipping()) {
-        <app-price-block
-          [money]="shipping()!"
-          [label]="'Szállítási díj'"
-          [status]="'success'"
-        ></app-price-block>
+        <app-price-block label="Szállítási díj" status="success" [money]="shipping()!" />
       } @else {
         <span class="placeholder" data-testid="shipping-placeholder">
           A következő lépésben választod ki.
@@ -30,11 +22,7 @@
     </div>
 
     <div class="row row--total flex flex-col gap-0" data-testid="order-summary-total">
-      <app-price-block
-        [money]="total()"
-        [label]="'Végösszeg'"
-        [status]="totalStatus()"
-      ></app-price-block>
+      <app-price-block label="Végösszeg" [money]="total()" [status]="totalStatus()" />
     </div>
   </div>
 

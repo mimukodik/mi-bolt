@@ -5,7 +5,7 @@ import {
   type PersistedReceipt,
   type PersistedReceiptItem,
 } from './persistence';
-import { Repository } from './repository';
+import type { Repository as Repo } from './repository';
 
 function toMoney(value: unknown): { amount: number; currency: string } {
   if (typeof value === 'object' && value !== null) {
@@ -17,7 +17,9 @@ function toMoney(value: unknown): { amount: number; currency: string } {
   return { amount: 0, currency: 'HUF' };
 }
 
-/** Narrows an unknown order item to a receipt line, degrading a malformed one. */
+/**
+Narrows an unknown order item to a receipt line, degrading a malformed one.
+*/
 function toReceiptItem(value: unknown): PersistedReceiptItem {
   if (typeof value === 'object' && value !== null) {
     const variantId =
@@ -41,30 +43,26 @@ function toReceiptItem(value: unknown): PersistedReceiptItem {
  * unknown top-level key makes the next hydrate() discard the entry,
  * so this builder is the only place the snapshot is composed.
  */
-export function buildSnapshot(
-  repository: Repository,
-  sessionId: string,
-  nowMs: number,
-): MockSnapshot {
+export function buildSnapshot(repo: Repo, sessionId: string, nowMs: number): MockSnapshot {
   const savedAt = new Date(nowMs).toISOString();
   const expiresAt = new Date(nowMs + 24 * 60 * 60 * 1000).toISOString();
-  const cartObj = repository.findCartBySession(sessionId);
+  const cartObject = repo.findCartBySession(sessionId);
 
   let cart: PersistedCart | undefined = undefined;
-  if (cartObj) {
+  if (cartObject !== undefined) {
     cart = {
-      id: cartObj.id,
-      version: cartObj.version,
-      items: cartObj.items.map((item) => ({
+      id: cartObject.id,
+      version: cartObject.version,
+      items: cartObject.items.map((item) => ({
         id: item.id,
         variantId: item.variantId,
         quantity: item.quantity,
       })),
-      lastUpdatedAt: cartObj.createdAt,
+      lastUpdatedAt: cartObject.createdAt,
     };
   }
 
-  const receipts: PersistedReceipt[] = repository.listOrders().map((o) => {
+  const receipts: PersistedReceipt[] = repo.listOrders().map((o) => {
     const items = (o.items ?? []).map((it) => toReceiptItem(it));
     const paymentMethod = (o.paymentMethod === 'demo_cod' ? 'demo_cod' : 'demo_card') satisfies
       'demo_card' | 'demo_cod';

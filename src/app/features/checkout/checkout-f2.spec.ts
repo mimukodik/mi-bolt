@@ -16,7 +16,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 
 import { CartFacade } from '../cart/cart.facade';
@@ -34,7 +34,7 @@ function configureTestBed(): void {
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       provideRouter([]),
     ],
     teardown: { destroyAfterEach: true },

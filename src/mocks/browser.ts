@@ -36,7 +36,7 @@ import { environment } from '../environments/environment';
 // items array.
 import productsFixture from '../../docs/api/fixtures/products.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
-import { Repository, type Product } from './repository';
+import { Repository as Repo, type Product } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
@@ -61,12 +61,12 @@ export const worker = setupWorker();
  */
 const PRODUCTION_SCENARIO_NAME = 'production';
 
-function loadCatalogFixture(repository: Repository, scenarioName: string): void {
+function loadCatalogFixture(repo: Repo, scenarioName: string): void {
   if (scenarioName === PRODUCTION_SCENARIO_NAME) {
-    repository.loadProducts([]);
+    repo.loadProducts([]);
     return;
   }
-  repository.loadProducts(productsFixture as readonly Product[]);
+  repo.loadProducts(productsFixture as readonly Product[]);
 }
 
 /**
@@ -78,20 +78,17 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const scenario = parseScenarioFromLocation();
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
-  const repository = new Repository(scenario, ids, clock);
-  loadCatalogFixture(repository, scenario.name);
+  const repo = new Repo(scenario, ids, clock);
+  loadCatalogFixture(repo, scenario.name);
   const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
   return {
-    repository,
+    repository: repo,
     clock,
     ids,
     scenario,
     apiRoot: '/api/v1',
     persist: (sessionId: string) => {
-      persistence.save(
-        scenario.name,
-        buildSnapshot(repository, sessionId, Date.parse(clock.now())),
-      );
+      persistence.save(scenario.name, buildSnapshot(repo, sessionId, Date.parse(clock.now())));
     },
   };
 }
@@ -191,10 +188,10 @@ export function buildBrowserHandlers(
   snapshot: MockSnapshot | null = null,
 ): ReturnType<typeof createHandlers> {
   const options = resolveBrowserHandlerOptions();
-  if (snapshot?.cart) {
+  if (snapshot?.cart !== undefined) {
     options.repository.loadPersistedCart(snapshot.cart, snapshot.simulatedSessionId);
   }
-  if (snapshot?.receipts) {
+  if (snapshot?.receipts !== undefined) {
     options.repository.loadPersistedOrders(snapshot.receipts, snapshot.simulatedSessionId);
   }
   // The demo configuration adds the dispatcher shell so a misrouted

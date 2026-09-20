@@ -42,13 +42,12 @@ export class QuantityControl {
     const text = this.draft();
     if (text === null) return this.value();
     const n = Number.parseInt(text, 10);
-    return Number.isFinite(n) ? n : Number.NaN;
+    return Number.isFinite(n) ? n : NaN;
   });
 
   readonly invalid = computed(() => {
     const v = this.draftValue();
-    if (!Number.isFinite(v)) return false;
-    return v < this.min() || v > this.max();
+    return Number.isFinite(v) ? v < this.min() || v > this.max() : false;
   });
 
   readonly decrementDisabled = computed(
@@ -67,10 +66,9 @@ export class QuantityControl {
     if (v < this.min()) {
       return `A megadott mennyiség nem lehet kevesebb mint ${String(this.min())}.`;
     }
-    if (v > this.max()) {
-      return `A megadott mennyiség nem lehet több mint ${String(this.max())}.`;
-    }
-    return null;
+    return v > this.max()
+      ? `A megadott mennyiség nem lehet több mint ${String(this.max())}.`
+      : null;
   });
 
   decrement(): void {

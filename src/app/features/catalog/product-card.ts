@@ -39,36 +39,48 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
 export class ProductCard {
   readonly product = input.required<ProductSummary>();
 
-  /** Matching variant exposed through the summary's `defaultVariant`. */
+  /**
+  Matching variant exposed through the summary's `defaultVariant`.
+  */
   readonly variant = computed(() => this.product().defaultVariant);
 
-  /** Money payload for the PriceBlock — converted from the variant. */
+  /**
+  Money payload for the PriceBlock — converted from the variant.
+  */
   readonly price = computed(() => this.variant().price);
 
-  /** First image of the variant's gallery. */
+  /**
+  First image of the variant's gallery.
+  */
   readonly image = computed<ImageLike>(() => {
     const first = this.variant().images[0];
     return {
       src: first.src,
-      alt: first.alt || `${this.product().name} illusztráció`,
+      alt: first.alt !== '' ? first.alt : `${this.product().name} illusztráció`,
       width: first.width,
       height: first.height,
     };
   });
 
-  /** Up to two highlights, never invented beyond what the API supplies. */
+  /**
+  Up to two highlights, never invented beyond what the API supplies.
+  */
   readonly visibleHighlights = computed<readonly string[]>(() =>
     this.product().highlights.slice(0, 2),
   );
 
-  /** Router link to the product page, including the matching variant id. */
+  /**
+  Router link to the product page, including the matching variant id.
+  */
   readonly detailsLink = computed(() => {
     const slug = this.product().slug;
     const variantId = this.variant().id;
     return ['/telefonok', slug, { variant: variantId }];
   });
 
-  /** Concatenated accessible name for the image link. */
+  /**
+  Concatenated accessible name for the image link.
+  */
   readonly ariaLabel = computed(() => {
     const p = this.product();
     const v = this.variant();

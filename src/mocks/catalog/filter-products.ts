@@ -22,10 +22,14 @@
 
 import type { Product, Variant } from '../repository';
 
-/** Sort modes published by the OpenAPI `sort` query parameter. */
+/**
+Sort modes published by the OpenAPI `sort` query parameter.
+*/
 export type SortMode = 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
 
-/** Filter shape produced by `parseCatalogFilter`. */
+/**
+Filter shape produced by `parseCatalogFilter`.
+*/
 export interface CatalogFilter {
   q?: string;
   brands?: readonly string[];
@@ -40,13 +44,17 @@ export interface CatalogFilter {
   pageSize: 12 | 24;
 }
 
-/** A single product paired with the variant that satisfied its filter. */
+/**
+A single product paired with the variant that satisfied its filter.
+*/
 export interface ProductMatch {
   product: Product;
   matchingVariant: Variant;
 }
 
-/** A page of matches sliced from the sorted match list. */
+/**
+A page of matches sliced from the sorted match list.
+*/
 export interface PaginatedMatches {
   items: readonly ProductMatch[];
   total: number;
@@ -54,19 +62,29 @@ export interface PaginatedMatches {
   pageSize: 12 | 24;
 }
 
-/** Default page size when the client omits `pageSize`. */
+/**
+Default page size when the client omits `pageSize`.
+*/
 export const DEFAULT_PAGE_SIZE: 12 | 24 = 12;
 
-/** Page sizes the API accepts. Any other value is a 400. */
+/**
+Page sizes the API accepts. Any other value is a 400.
+*/
 export const ALLOWED_PAGE_SIZES: readonly (12 | 24)[] = [12, 24];
 
-/** Storage sizes the API accepts as filter values. */
+/**
+Storage sizes the API accepts as filter values.
+*/
 export const ALLOWED_STORAGE_GB: readonly number[] = [128, 256, 512];
 
-/** Storage sizes the API can advertise in facet counts. */
+/**
+Storage sizes the API can advertise in facet counts.
+*/
 export const FACET_STORAGE_GB: readonly number[] = [128, 256, 512];
 
-/** All valid sort mode values, used by the parser for validation. */
+/**
+All valid sort mode values, used by the parser for validation.
+*/
 export const SORT_MODES: readonly SortMode[] = [
   'recommended',
   'price_asc',
@@ -74,22 +92,30 @@ export const SORT_MODES: readonly SortMode[] = [
   'name_asc',
 ];
 
-/** True when `value` is one of the published sort modes; a guard so the parser can narrow without a cast. */
+/**
+True when `value` is one of the published sort modes; a guard so the parser can narrow without a cast.
+*/
 export function isSortMode(value: unknown): value is SortMode {
   return typeof value === 'string' && SORT_MODES.some((mode) => mode === value);
 }
 
-/** Trim, NFC-normalise and lowercase a free-form string. */
+/**
+Trim, NFC-normalise and lowercase a free-form string.
+*/
 export function normalizeQuery(raw: string): string {
   return raw.trim().toLowerCase().normalize('NFC');
 }
 
-/** Trim/lowercase a brand string; drops empty entries. */
+/**
+Trim/lowercase a brand string; drops empty entries.
+*/
 export function normalizeBrand(raw: string): string {
   return raw.trim().toLowerCase().normalize('NFC');
 }
 
-/** Normalise an array of brand filter values; drops empty entries. */
+/**
+Normalise an array of brand filter values; drops empty entries.
+*/
 export function normalizeBrands(raw: readonly string[]): readonly string[] {
   const result: string[] = [];
   for (const b of raw) {
@@ -108,14 +134,16 @@ export function normalizeBrands(raw: readonly string[]): readonly string[] {
 export function findMatchingVariant(product: Product, filter: CatalogFilter): Variant | null {
   let best: Variant | null = null;
   for (const variant of product.variants) {
-    if (filter.storageGb !== undefined && filter.storageGb.length > 0) {
-      if (!filter.storageGb.includes(variant.storageGb)) continue;
-    }
+    if (
+      filter.storageGb !== undefined &&
+      filter.storageGb.length > 0 &&
+      !filter.storageGb.includes(variant.storageGb)
+    )
+      continue;
     if (filter.minPrice !== undefined && variant.price.amount < filter.minPrice) continue;
     if (filter.maxPrice !== undefined && variant.price.amount > filter.maxPrice) continue;
-    if (filter.inStock === true) {
-      if (variant.availability !== 'in_stock' || variant.maxQuantity < 1) continue;
-    }
+    if (filter.inStock === true && (variant.availability !== 'in_stock' || variant.maxQuantity < 1))
+      continue;
     if (
       best === null ||
       variant.price.amount < best.price.amount ||
@@ -162,8 +190,7 @@ export function matchProduct(
   }
 
   const matchingVariant = findMatchingVariant(product, filter);
-  if (matchingVariant === null) return null;
-  return { product, matchingVariant };
+  return matchingVariant === null ? null : { product, matchingVariant };
 }
 
 /**
@@ -174,35 +201,35 @@ export function matchProduct(
  * variant id) so the catalogue page is deterministic out of the box.
  */
 export function sortMatches(matches: readonly ProductMatch[], mode: SortMode): ProductMatch[] {
-  const copy = matches.slice();
+  const copy = [...matches];
   const byProductId = (a: ProductMatch, b: ProductMatch): number =>
     a.product.id.localeCompare(b.product.id);
   switch (mode) {
-    case 'price_asc':
+    case 'price_asc': {
       return copy.sort((a, b) => {
         const priceDiff = a.matchingVariant.price.amount - b.matchingVariant.price.amount;
-        if (priceDiff !== 0) return priceDiff;
-        return byProductId(a, b);
+        return priceDiff === 0 ? byProductId(a, b) : priceDiff;
       });
-    case 'price_desc':
+    }
+    case 'price_desc': {
       return copy.sort((a, b) => {
         const priceDiff = b.matchingVariant.price.amount - a.matchingVariant.price.amount;
-        if (priceDiff !== 0) return priceDiff;
-        return byProductId(a, b);
+        return priceDiff === 0 ? byProductId(a, b) : priceDiff;
       });
-    case 'name_asc':
+    }
+    case 'name_asc': {
       return copy.sort((a, b) => {
         const nameDiff = a.product.name.localeCompare(b.product.name);
-        if (nameDiff !== 0) return nameDiff;
-        return byProductId(a, b);
+        return nameDiff === 0 ? byProductId(a, b) : nameDiff;
       });
+    }
     case 'recommended':
-    default:
+    default: {
       return copy.sort((a, b) => {
         const priceDiff = a.matchingVariant.price.amount - b.matchingVariant.price.amount;
-        if (priceDiff !== 0) return priceDiff;
-        return byProductId(a, b);
+        return priceDiff === 0 ? byProductId(a, b) : priceDiff;
       });
+    }
   }
 }
 
@@ -246,7 +273,9 @@ export function paginateMatches(
 // Query parameter parsing + validation
 // ---------------------------------------------------------------------------
 
-/** Discriminated union of every parse-time failure. */
+/**
+Discriminated union of every parse-time failure.
+*/
 export type FilterParseError =
   | { code: 'INVALID_BRAND'; field: 'brand'; detail: string }
   | { code: 'INVALID_STORAGE'; field: 'storageGb'; detail: string }
@@ -256,19 +285,18 @@ export type FilterParseError =
   | { code: 'INVALID_PAGE'; field: 'page'; detail: string }
   | { code: 'INVALID_PAGE_SIZE'; field: 'pageSize'; detail: string };
 
-/** Result of parsing the `listProducts` query string. */
+/**
+Result of parsing the `listProducts` query string.
+*/
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: FilterParseError };
 
-function parseBooleanParam(raw: string): boolean | 'invalid' {
+function parseBooleanParameter(raw: string): boolean | 'invalid' {
   if (raw === 'true') return true;
-  if (raw === 'false') return false;
-  return 'invalid';
+  return raw === 'false' ? false : 'invalid';
 }
 
-function parseIntegerParam(raw: string): number | 'invalid' {
-  if (raw.length === 0) return 'invalid';
-  if (!/^-?\d+$/.test(raw)) return 'invalid';
-  return Number(raw);
+function parseIntegerParameter(raw: string): number | 'invalid' {
+  return raw.length === 0 || !/^-?\d+$/.test(raw) ? 'invalid' : Number(raw);
 }
 
 /**
@@ -277,16 +305,16 @@ function parseIntegerParam(raw: string): number | 'invalid' {
  * `page=abc`, `pageSize=13`, `sort=newest`) become a 400-friendly
  * `FilterParseError`; the handler turns the error into a Problem JSON.
  */
-export function parseCatalogFilter(params: URLSearchParams): ParseResult<CatalogFilter> {
+export function parseCatalogFilter(parameters: URLSearchParams): ParseResult<CatalogFilter> {
   const filter: CatalogFilter = {
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
   };
 
-  const q = params.get('q');
+  const q = parameters.get('q');
   if (q !== null) filter.q = q;
 
-  const brands = params.getAll('brand');
+  const brands = parameters.getAll('brand');
   if (brands.length > 0) {
     for (const b of brands) {
       if (b.trim().length === 0) {
@@ -303,11 +331,11 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     filter.brands = brands;
   }
 
-  const storageRaw = params.getAll('storageGb');
+  const storageRaw = parameters.getAll('storageGb');
   if (storageRaw.length > 0) {
     const storageGb: number[] = [];
     for (const raw of storageRaw) {
-      const parsed = parseIntegerParam(raw);
+      const parsed = parseIntegerParameter(raw);
       if (parsed === 'invalid' || !ALLOWED_STORAGE_GB.includes(parsed)) {
         return {
           ok: false,
@@ -323,9 +351,9 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     filter.storageGb = storageGb;
   }
 
-  const minPriceRaw = params.get('minPrice');
+  const minPriceRaw = parameters.get('minPrice');
   if (minPriceRaw !== null) {
-    const parsed = parseIntegerParam(minPriceRaw);
+    const parsed = parseIntegerParameter(minPriceRaw);
     if (parsed === 'invalid' || parsed < 0) {
       return {
         ok: false,
@@ -338,9 +366,9 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     }
     filter.minPrice = parsed;
   }
-  const maxPriceRaw = params.get('maxPrice');
+  const maxPriceRaw = parameters.get('maxPrice');
   if (maxPriceRaw !== null) {
-    const parsed = parseIntegerParam(maxPriceRaw);
+    const parsed = parseIntegerParameter(maxPriceRaw);
     if (parsed === 'invalid' || parsed < 0) {
       return {
         ok: false,
@@ -368,9 +396,9 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     };
   }
 
-  const inStockRaw = params.get('inStock');
+  const inStockRaw = parameters.get('inStock');
   if (inStockRaw !== null) {
-    const parsed = parseBooleanParam(inStockRaw);
+    const parsed = parseBooleanParameter(inStockRaw);
     if (parsed === 'invalid') {
       return {
         ok: false,
@@ -384,9 +412,9 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     filter.inStock = parsed;
   }
 
-  const is5gRaw = params.get('is5g');
+  const is5gRaw = parameters.get('is5g');
   if (is5gRaw !== null) {
-    const parsed = parseBooleanParam(is5gRaw);
+    const parsed = parseBooleanParameter(is5gRaw);
     if (parsed === 'invalid') {
       return {
         ok: false,
@@ -400,9 +428,9 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     filter.is5g = parsed;
   }
 
-  const featuredRaw = params.get('featured');
+  const featuredRaw = parameters.get('featured');
   if (featuredRaw !== null) {
-    const parsed = parseBooleanParam(featuredRaw);
+    const parsed = parseBooleanParameter(featuredRaw);
     if (parsed === 'invalid') {
       return {
         ok: false,
@@ -416,7 +444,7 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     filter.featured = parsed;
   }
 
-  const sortRaw = params.get('sort');
+  const sortRaw = parameters.get('sort');
   if (sortRaw !== null) {
     if (!isSortMode(sortRaw)) {
       return {
@@ -431,9 +459,9 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     filter.sort = sortRaw;
   }
 
-  const pageRaw = params.get('page');
+  const pageRaw = parameters.get('page');
   if (pageRaw !== null) {
-    const parsed = parseIntegerParam(pageRaw);
+    const parsed = parseIntegerParameter(pageRaw);
     if (parsed === 'invalid' || parsed < 1) {
       return {
         ok: false,
@@ -447,9 +475,9 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
     filter.page = parsed;
   }
 
-  const pageSizeRaw = params.get('pageSize');
+  const pageSizeRaw = parameters.get('pageSize');
   if (pageSizeRaw !== null) {
-    const parsed = parseIntegerParam(pageSizeRaw);
+    const parsed = parseIntegerParameter(pageSizeRaw);
     if (parsed === 'invalid' || (parsed !== 12 && parsed !== 24)) {
       return {
         ok: false,

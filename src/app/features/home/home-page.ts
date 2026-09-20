@@ -62,13 +62,19 @@ export class HomePage {
   protected readonly heroTitle = 'A következő mobilod.';
   protected readonly heroSubtitle = 'Egyszerűen.';
 
-  /** IDs of the featured products, or `null` while the config is loading. */
+  /**
+  IDs of the featured products, or `null` while the config is loading.
+  */
   private readonly featuredSlugsSignal = signal<readonly string[] | null>(null);
 
-  /** Per-slug request state captured from the SDK round-trips. */
+  /**
+  Per-slug request state captured from the SDK round-trips.
+  */
   private readonly slotsBySlugSignal = signal<ReadonlyMap<string, FeaturedSlot>>(new Map());
 
-  /** Stable list of `slots` derived from the two signals above. */
+  /**
+  Stable list of `slots` derived from the two signals above.
+  */
   readonly slots = computed<readonly FeaturedSlot[]>(() => {
     const ids = this.featuredSlugsSignal();
     if (ids === null) return [];
@@ -127,7 +133,9 @@ export class HomePage {
       });
   }
 
-  /** Issue a single `getProduct` request and fold the result into the slot map. */
+  /**
+  Issue a single `getProduct` request and fold the result into the slot map.
+  */
   private loadOneFeatured(slug: string): void {
     this.api
       .invoke<{ slug: string }, Product>(getProduct, { slug })
@@ -141,12 +149,12 @@ export class HomePage {
             error: null,
           }));
         },
-        error: (err: unknown) => {
+        error: (error: unknown) => {
           this.updateSlot(slug, () => ({
             slug,
             status: 'error',
             product: null,
-            error: describeError(err),
+            error: describeError(error),
           }));
         },
       });
@@ -157,16 +165,16 @@ export class HomePage {
    * on every change so consumers can rely on identity-based change
    * detection without us ever mutating a previously-emitted value.
    */
-  private updateSlot(slug: string, next: (prev: FeaturedSlot) => FeaturedSlot): void {
-    const prev = this.slotsBySlugSignal();
-    const current = prev.get(slug) ?? {
+  private updateSlot(slug: string, next: (previous: FeaturedSlot) => FeaturedSlot): void {
+    const previous = this.slotsBySlugSignal();
+    const current = previous.get(slug) ?? {
       slug,
       status: 'loading' as const,
       product: null,
       error: null,
     };
     const updated = next(current);
-    const map = new Map(prev);
+    const map = new Map(previous);
     map.set(slug, updated);
     this.slotsBySlugSignal.set(map);
   }
@@ -188,8 +196,7 @@ export class HomePage {
   }
 }
 
-function describeError(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return 'Ismeretlen hiba a termék betöltése közben.';
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === 'string' ? error : 'Ismeretlen hiba a termék betöltése közben.';
 }

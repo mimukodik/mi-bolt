@@ -40,17 +40,10 @@ import {
   provideZonelessChangeDetection,
   runInInjectionContext,
 } from '@angular/core';
-import {
-  ActivatedRoute,
-  ActivatedRouteSnapshot,
-  RouterStateSnapshot,
-  UrlSegment,
-  UrlTree,
-  convertToParamMap,
-  provideRouter,
-} from '@angular/router';
+import type { ActivatedRouteSnapshot, RouterStateSnapshot, UrlSegment } from '@angular/router';
+import { ActivatedRoute, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../../app/api/generated/api-configuration';
 import type { OrderReceipt } from '../../../app/api/generated/models/order-receipt';
 
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
@@ -58,7 +51,7 @@ import { demoSessionInterceptor } from '../../../app/core/api/demo-session.inter
 import { createHandlers } from '../../../mocks/create-handlers';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
 import { IdempotencyStore } from '../../../mocks/idempotency';
-import { Repository } from '../../../mocks/repository';
+import { Repository as Repo } from '../../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
 // Side-effect imports - register cart / checkout / payment / order handlers in the T05 dispatcher registry.
@@ -103,10 +96,7 @@ function getComponentStyles(comp: unknown): readonly string[] {
     return [];
   }
   const styles = cmp['styles'];
-  if (Array.isArray(styles)) {
-    return styles.filter((s): s is string => typeof s === 'string');
-  }
-  return [];
+  return Array.isArray(styles) ? styles.filter((s): s is string => typeof s === 'string') : [];
 }
 
 const BASE_URL = 'http://localhost/api/v1';
@@ -129,13 +119,13 @@ describe('T24-AC01 receipt content (DEMO order number, line items, total, method
         colorName: 'Grafit',
         storageGb: 256,
         quantity: 1,
-        unitPrice: { amount: 339990, currency: 'HUF' },
-        lineTotal: { amount: 339990, currency: 'HUF' },
+        unitPrice: { amount: 339_990, currency: 'HUF' },
+        lineTotal: { amount: 339_990, currency: 'HUF' },
       },
     ],
-    subtotal: { amount: 339990, currency: 'HUF' },
+    subtotal: { amount: 339_990, currency: 'HUF' },
     shipping: { amount: 0, currency: 'HUF' },
-    total: { amount: 339990, currency: 'HUF' },
+    total: { amount: 339_990, currency: 'HUF' },
     paymentMethod: 'demo_cod',
     deliveryOptionId: 'demo_pickup',
     notice: 'Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés — ez egy demó folyamat.',
@@ -207,7 +197,7 @@ describe('T24-AC02 refresh restores the receipt and never POSTs another order', 
           },
         },
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     await TestBed.compileComponents();
@@ -220,7 +210,7 @@ describe('T24-AC02 refresh restores the receipt and never POSTs another order', 
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     const facade = TestBed.inject(CheckoutFacade);
@@ -240,7 +230,7 @@ describe('T24-AC02 refresh restores the receipt and never POSTs another order', 
           },
         },
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     await TestBed.compileComponents();
@@ -263,7 +253,7 @@ describe('T24-AC03 cart badge resets and past receipt replay is preserved', () =
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     const cart = TestBed.inject(CartFacade);
@@ -275,7 +265,7 @@ describe('T24-AC03 cart badge resets and past receipt replay is preserved', () =
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     const cart = TestBed.inject(CartFacade);
@@ -290,7 +280,7 @@ describe('T24-AC03 cart badge resets and past receipt replay is preserved', () =
         provideZonelessChangeDetection(),
         provideRouter([{ path: '**', component: SuccessStep }]),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     await TestBed.compileComponents();
@@ -311,7 +301,7 @@ describe('T24-AC03 cart badge resets and past receipt replay is preserved', () =
           },
         },
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     await TestBed.compileComponents();
@@ -347,7 +337,7 @@ describe('T24-AC04 browser back to the wizard cannot resubmit', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     const route = {
@@ -372,7 +362,7 @@ describe('T24-AC05 keyboard focus on the success heading', () => {
         provideZonelessChangeDetection(),
         provideRouter([{ path: '**', component: SuccessStep }]),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     await TestBed.compileComponents();
@@ -392,7 +382,7 @@ describe('T24-AC05 keyboard focus on the success heading', () => {
         provideZonelessChangeDetection(),
         provideRouter([{ path: '**', component: SuccessStep }]),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     await TestBed.compileComponents();
@@ -437,7 +427,7 @@ describe('T24 route + module wiring', () => {
         provideZonelessChangeDetection(),
         provideRouter([{ path: '**', component: SuccessStep }]),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
     });
     await TestBed.compileComponents();
@@ -480,14 +470,14 @@ describe('T24 route + module wiring', () => {
 // source-pattern check.
 // ---------------------------------------------------------------------------
 
-interface Env {
-  repository: Repository;
+interface Environment {
+  repository: Repo;
   clock: ReturnType<typeof createFixedClock>;
   ids: ReturnType<typeof createDeterministicIds>;
   scenario: { name: string; seed: number; clockOffsetMs: number; isolated: boolean };
 }
 
-function makeEnv(scenarioName = 'success-page-suite'): Env {
+function makeEnvironment(scenarioName = 'success-page-suite'): Environment {
   const clock = createFixedClock(new Date(Date.parse('2026-09-15T09:00:00.000Z')).toISOString());
   const ids = createDeterministicIds(7);
   const scenario = {
@@ -496,20 +486,20 @@ function makeEnv(scenarioName = 'success-page-suite'): Env {
     clockOffsetMs: 0,
     isolated: true,
   };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
+  const repo = new Repo(scenario, ids, clock);
+  repo.loadProducts([DEMO_PRODUCT]);
   new IdempotencyStore(clock);
-  return { repository, clock, ids, scenario };
+  return { repository: repo, clock, ids, scenario };
 }
 
-let currentEnv: Env;
+let currentEnvironment: Environment;
 
 function buildHandlers(): readonly RequestHandler[] {
   return createHandlers({
-    repository: currentEnv.repository,
-    clock: currentEnv.clock,
-    ids: currentEnv.ids,
-    scenario: currentEnv.scenario,
+    repository: currentEnvironment.repository,
+    clock: currentEnvironment.clock,
+    ids: currentEnvironment.ids,
+    scenario: currentEnvironment.scenario,
     apiRoot: '/api/v1',
   });
 }
@@ -519,7 +509,7 @@ function configureTestBed(): void {
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       provideRouter([]),
     ],
     teardown: { destroyAfterEach: true },
@@ -527,13 +517,13 @@ function configureTestBed(): void {
 }
 
 beforeEach(() => {
-  currentEnv = makeEnv();
+  currentEnvironment = makeEnvironment();
   server.use(...buildHandlers());
   TestBed.resetTestingModule();
   configureTestBed();
 });
 
-async function seedCartWithItem(): Promise<string> {
+function seedCartWithItem(): Promise<string> {
   return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
     const facade = TestBed.inject(CartFacade);
     await facade.ensureCart();
@@ -544,7 +534,7 @@ async function seedCartWithItem(): Promise<string> {
   });
 }
 
-async function commitHappyPath(): Promise<string> {
+function commitHappyPath(): Promise<string> {
   return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
     const cart = TestBed.inject(CartFacade);
     const checkout = TestBed.inject(CheckoutFacade);
@@ -703,7 +693,7 @@ describe('FIX-35 success page copy matches screens.md:91', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
         provideRouter([]),
         {
           provide: ActivatedRoute,
@@ -719,8 +709,8 @@ describe('FIX-35 success page copy matches screens.md:91', () => {
     // via a GET, mirroring a reload — commitHappyPath's facade instance
     // was destroyed by resetTestingModule above.
     server.use(
-      http.get('*/api/v1/orders/:orderId', () => {
-        return HttpResponse.json({
+      http.get('*/api/v1/orders/:orderId', () =>
+        HttpResponse.json({
           id: orderId,
           orderNumber: 'DEMO-2026-0002',
           createdAt: '2026-09-15T09:00:00.000Z',
@@ -733,8 +723,8 @@ describe('FIX-35 success page copy matches screens.md:91', () => {
           paymentMethod: 'demo_cod',
           deliveryOptionId: 'demo_pickup',
           notice: 'A demórendelés elkészült. Nem történt valódi fizetés.',
-        });
-      }),
+        }),
+      ),
     );
 
     const fixture = TestBed.createComponent(SuccessStep);

@@ -27,15 +27,9 @@ import {
 import { IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
 
-import {
-  OrderDomain,
-  PaymentIntentStore,
-  StockTracker,
-  getSharedStores,
-  type OrderProblem,
-  type OrderReceipt,
-} from './commit-order';
-import { QuoteDomain } from '../checkout/quote-domain';
+import type { PaymentIntentStore, StockTracker } from './commit-order';
+import { OrderDomain, getSharedStores, type OrderProblem, type OrderReceipt } from './commit-order';
+import type { QuoteDomain } from '../checkout/quote-domain';
 
 // ---------------------------------------------------------------------------
 // Header validation rules — mirror the cart / checkout / payment layers.
@@ -51,7 +45,7 @@ function problemResponse(
   problem: OrderProblem,
   traceId: string,
 ): HttpResponse<Record<string, unknown>> {
-  const code = problem.code.toLowerCase().replace(/_/g, '-');
+  const code = problem.code.toLowerCase().replaceAll('_', '-');
   const body: Record<string, unknown> = {
     type: `urn:mi-bolt:problem:${code}`,
     title: problem.detail,
@@ -96,7 +90,9 @@ interface OrderRequestBody {
   acknowledgedSimulation?: unknown;
 }
 
-/** True when `value` is a JSON object the field-level checks below can read. */
+/**
+True when `value` is a JSON object the field-level checks below can read.
+*/
 function isOrderRequestBody(value: unknown): value is OrderRequestBody {
   return isRecord(value);
 }
@@ -149,15 +145,15 @@ function readOrderBody(
   if (termsVersion.length === 0) {
     fieldErrors.push({ path: '/termsVersion', message: 'A termsVersion mező kötelező.' });
   }
-  const acceptedTerms: boolean = record.acceptedTerms === true;
-  if (!acceptedTerms) {
+  const isAcceptedTerms: boolean = record.acceptedTerms === true;
+  if (!isAcceptedTerms) {
     fieldErrors.push({
       path: '/acceptedTerms',
       message: 'Az acceptedTerms mező kötelező és értéke true kell legyen.',
     });
   }
-  const acknowledgedSimulation: boolean = record.acknowledgedSimulation === true;
-  if (!acknowledgedSimulation) {
+  const isAcknowledgedSimulation: boolean = record.acknowledgedSimulation === true;
+  if (!isAcknowledgedSimulation) {
     fieldErrors.push({
       path: '/acknowledgedSimulation',
       message: 'Az acknowledgedSimulation mező kötelező és értéke true kell legyen.',
@@ -176,8 +172,8 @@ function readOrderBody(
       quoteId,
       paymentIntentId,
       termsVersion,
-      acceptedTerms,
-      acknowledgedSimulation,
+      acceptedTerms: isAcceptedTerms,
+      acknowledgedSimulation: isAcknowledgedSimulation,
     },
   };
 }

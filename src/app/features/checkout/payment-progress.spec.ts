@@ -7,7 +7,8 @@
  * orchestrator (the review step) feeds it.
  */
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
 import { PaymentProgress } from './payment-progress';
 import type { PaymentStatus } from '../../shared/types/payment-status';
@@ -16,11 +17,11 @@ import type { PaymentStatus } from '../../shared/types/payment-status';
   imports: [PaymentProgress],
   template: `
     <app-payment-progress
-      [status]="status()"
       [pollCount]="pollCount()"
-      (retryRequested)="retryCount.set(retryCount() + 1)"
+      [status]="status()"
       (changeMethodRequested)="changeMethodCount.set(changeMethodCount() + 1)"
-    ></app-payment-progress>
+      (retryRequested)="retryCount.set(retryCount() + 1)"
+    />
   `,
 })
 class HostComponent {
@@ -33,7 +34,7 @@ class HostComponent {
 function getRoot(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected HTMLElement');
+    throw new TypeError('Expected HTMLElement');
   }
   return raw;
 }
@@ -57,9 +58,9 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     host.pollCount.set(3);
     fixture.detectChanges();
     const root = getRoot(fixture);
-    const el = root.querySelector('[data-testid="payment-progress"]');
-    expect(el?.getAttribute('data-state')).toBe('pending');
-    expect(el?.textContent).toContain('3 / 10');
+    const element = root.querySelector('[data-testid="payment-progress"]');
+    expect(element?.getAttribute('data-state')).toBe('pending');
+    expect(element?.textContent).toContain('3 / 10');
     expect(root.querySelector('progress')).not.toBeNull();
   });
 
@@ -67,9 +68,9 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     const { fixture, host } = setup();
     host.status.set('succeeded');
     fixture.detectChanges();
-    const el = getRoot(fixture).querySelector('[data-testid="payment-progress"]');
-    expect(el?.getAttribute('data-state')).toBe('succeeded');
-    expect(el?.textContent).toContain('sikeres');
+    const element = getRoot(fixture).querySelector('[data-testid="payment-progress"]');
+    expect(element?.getAttribute('data-state')).toBe('succeeded');
+    expect(element?.textContent).toContain('sikeres');
   });
 
   it('renders the declined state with retry and change-method controls, and a distinct message', () => {
@@ -77,9 +78,9 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     host.status.set('declined');
     fixture.detectChanges();
     const root = getRoot(fixture);
-    const el = root.querySelector('[data-testid="payment-progress"]');
-    expect(el?.getAttribute('data-state')).toBe('declined');
-    expect(el?.textContent).toContain('elutasítva');
+    const element = root.querySelector('[data-testid="payment-progress"]');
+    expect(element?.getAttribute('data-state')).toBe('declined');
+    expect(element?.textContent).toContain('elutasítva');
     expect(root.querySelector('[data-testid="payment-progress-retry"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="payment-progress-change-method"]')).not.toBeNull();
   });
@@ -89,9 +90,9 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     host.status.set('unknown');
     fixture.detectChanges();
     const root = getRoot(fixture);
-    const el = root.querySelector('[data-testid="payment-progress"]');
-    expect(el?.getAttribute('data-state')).toBe('unknown');
-    expect(el?.textContent).not.toContain('elutasítva');
+    const element = root.querySelector('[data-testid="payment-progress"]');
+    expect(element?.getAttribute('data-state')).toBe('unknown');
+    expect(element?.textContent).not.toContain('elutasítva');
     expect(root.querySelector('[data-testid="payment-progress-retry"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="payment-progress-change-method"]')).not.toBeNull();
   });
@@ -101,9 +102,9 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     host.status.set('error');
     fixture.detectChanges();
     const root = getRoot(fixture);
-    const el = root.querySelector('[data-testid="payment-progress"]');
-    expect(el?.getAttribute('data-state')).toBe('error');
-    expect(el?.textContent).toContain('nem sikerült');
+    const element = root.querySelector('[data-testid="payment-progress"]');
+    expect(element?.getAttribute('data-state')).toBe('error');
+    expect(element?.textContent).toContain('nem sikerült');
     expect(root.querySelector('[data-testid="payment-progress-retry"]')).toBeNull();
     expect(root.querySelector('[data-testid="payment-progress-change-method"]')).toBeNull();
   });
@@ -114,8 +115,8 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     for (const status of ['pending', 'succeeded', 'declined', 'unknown', 'error'] as const) {
       host.status.set(status);
       fixture.detectChanges();
-      const el = getRoot(fixture).querySelector('[data-testid="payment-progress"]');
-      headings.add(el?.querySelector('h2')?.textContent ?? '');
+      const element = getRoot(fixture).querySelector('[data-testid="payment-progress"]');
+      headings.add(element?.querySelector('h2')?.textContent ?? '');
     }
     expect(headings.size).toBe(5);
   });
@@ -124,11 +125,11 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     const { fixture, host } = setup();
     host.status.set('declined');
     fixture.detectChanges();
-    const btn = getRoot(fixture).querySelector<HTMLButtonElement>(
+    const button = getRoot(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="payment-progress-retry"] button',
     );
-    if (btn === null) throw new Error('Expected the retry button');
-    btn.click();
+    if (button === null) throw new Error('Expected the retry button');
+    button.click();
     expect(host.retryCount()).toBe(1);
   });
 
@@ -136,11 +137,11 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     const { fixture, host } = setup();
     host.status.set('declined');
     fixture.detectChanges();
-    const btn = getRoot(fixture).querySelector<HTMLButtonElement>(
+    const button = getRoot(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="payment-progress-change-method"] button',
     );
-    if (btn === null) throw new Error('Expected the change-method button');
-    btn.click();
+    if (button === null) throw new Error('Expected the change-method button');
+    button.click();
     expect(host.changeMethodCount()).toBe(1);
   });
 
@@ -149,15 +150,15 @@ describe('PaymentProgress — declared status/pollCount inputs and the two outpu
     host.status.set('unknown');
     fixture.detectChanges();
     const root = getRoot(fixture);
-    const retryBtn = root.querySelector<HTMLButtonElement>(
+    const retryButton = root.querySelector<HTMLButtonElement>(
       '[data-testid="payment-progress-retry"] button',
     );
-    const changeBtn = root.querySelector<HTMLButtonElement>(
+    const changeButton = root.querySelector<HTMLButtonElement>(
       '[data-testid="payment-progress-change-method"] button',
     );
-    if (retryBtn === null || changeBtn === null) throw new Error('Expected both buttons');
-    retryBtn.click();
-    changeBtn.click();
+    if (retryButton === null || changeButton === null) throw new Error('Expected both buttons');
+    retryButton.click();
+    changeButton.click();
     expect(host.retryCount()).toBe(1);
     expect(host.changeMethodCount()).toBe(1);
   });

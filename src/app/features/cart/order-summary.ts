@@ -59,7 +59,6 @@ export class OrderSummary {
 
   readonly totalStatus = computed<'success' | 'empty'>(() => {
     const shipping = this.shipping();
-    if (shipping === null) return 'empty';
-    return 'success';
+    return shipping === null ? 'empty' : 'success';
   });
 }

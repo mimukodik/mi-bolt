@@ -1,19 +1,19 @@
 <header class="heading flex flex-col gap-(--space-3)">
   <nav
-    class="breadcrumbs flex flex-wrap gap-(--space-2) text-(length:--type-helper) text-(color:--color-text-secondary)"
     aria-label="Navigáció"
+    class="breadcrumbs flex flex-wrap gap-(--space-2) text-(length:--type-helper) text-(color:--color-text-secondary)"
   >
     @for (crumb of crumbs(); track crumb.link) {
       <a
-        [routerLink]="crumb.link"
         class="breadcrumb text-(color:--color-text-secondary) no-underline hover:underline focus-visible:underline"
+        [routerLink]="crumb.link"
         >{{ crumb.label }}</a
       >
       <span aria-hidden="true" class="breadcrumb__sep mx-(--space-1)">/</span>
     }
     <span
-      class="breadcrumb is-current text-(color:--color-text-primary) [font-weight:var(--weight-medium)]"
       aria-current="page"
+      class="breadcrumb is-current text-(color:--color-text-primary) [font-weight:var(--weight-medium)]"
       >{{ current() }}</span
     >
   </nav>

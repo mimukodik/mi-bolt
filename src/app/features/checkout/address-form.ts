@@ -168,14 +168,13 @@ export class AddressForm {
   readonly line1DescribedBy = computed(() => 'address-line1-message');
   readonly line2DescribedBy = computed(() => 'address-line2-message');
 
-  readonly isComplete = computed<boolean>(() => {
-    return (
+  readonly isComplete = computed<boolean>(
+    () =>
       this.postalErrors().length === 0 &&
       this.cityErrors().length === 0 &&
       this.line1Errors().length === 0 &&
-      this.line2Errors().length === 0
-    );
-  });
+      this.line2Errors().length === 0,
+  );
 
   /** Snapshot the current input values into the wire-shaped `Address`
    *  object. Returns `null` if the form has any visible error so the
@@ -188,24 +187,28 @@ export class AddressForm {
       postalCode: this.postalCode().trim(),
       city: this.city().trim(),
       line1: this.line1().trim(),
-      ...(line2.length > 0 ? { line2 } : {}),
+      ...(line2.length > 0 && { line2 }),
     };
   });
 
   markTouched(field: 'postalCode' | 'city' | 'line1' | 'line2'): void {
     switch (field) {
-      case 'postalCode':
+      case 'postalCode': {
         this.touchedPostalInternal.set(true);
         return;
-      case 'city':
+      }
+      case 'city': {
         this.touchedCityInternal.set(true);
         return;
-      case 'line1':
+      }
+      case 'line1': {
         this.touchedLine1Internal.set(true);
         return;
-      case 'line2':
+      }
+      case 'line2': {
         this.touchedLine2Internal.set(true);
         return;
+      }
     }
   }
 

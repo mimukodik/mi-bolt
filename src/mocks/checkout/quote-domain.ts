@@ -31,7 +31,7 @@
 import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
 import type { Cart, CartLine, Money } from '../repository';
-import { Repository } from '../repository';
+import type { Repository as Repo } from '../repository';
 import type { Clock, Ids } from '../scenarios';
 import {
   normalizeAddressCity,
@@ -44,21 +44,30 @@ import {
   normalizeContactPhone,
 } from './validate-checkout';
 
-/** Quote lives exactly 5 mock-clock minutes from creation. */
+/**
+Quote lives exactly 5 mock-clock minutes from creation.
+*/
 export const QUOTE_TTL_MS = 5 * 60 * 1000;
 
 function isMoney(value: unknown): value is Money {
-  if (!isRecord(value)) return false;
-  return typeof value['amount'] === 'number' && typeof value['currency'] === 'string';
+  return isRecord(value)
+    ? typeof value['amount'] === 'number' && typeof value['currency'] === 'string'
+    : false;
 }
 
-/** Allowed payment methods (matches OpenAPI `paymentMethod` enum). */
+/**
+Allowed payment methods (matches OpenAPI `paymentMethod` enum).
+*/
 type PaymentMethod = 'demo_card' | 'demo_cod';
 
-/** Allowed delivery option ids (matches OpenAPI `optionId` enum). */
+/**
+Allowed delivery option ids (matches OpenAPI `optionId` enum).
+*/
 export type DeliveryOptionId = 'home_delivery' | 'demo_pickup';
 
-/** Issue codes used by the mock domain; mirrors `ProblemCode`. */
+/**
+Issue codes used by the mock domain; mirrors `ProblemCode`.
+*/
 export type ProblemCode =
   | 'VALIDATION_FAILED'
   | 'VALIDATION_ERROR'
@@ -86,14 +95,18 @@ export interface Problem {
 
 export type Result<T> = { ok: true; value: T } | { ok: false; problem: Problem };
 
-/** Normalized contact section the draft retains. */
+/**
+Normalized contact section the draft retains.
+*/
 export interface NormalizedContact {
   fullName: string;
   email: string;
   phone: string;
 }
 
-/** Normalized address section the draft retains (HU only). */
+/**
+Normalized address section the draft retains (HU only).
+*/
 export interface NormalizedAddress {
   countryCode: 'HU';
   postalCode: string;
@@ -102,20 +115,26 @@ export interface NormalizedAddress {
   line2?: string;
 }
 
-/** Normalized delivery section the draft retains. */
+/**
+Normalized delivery section the draft retains.
+*/
 export interface NormalizedDelivery {
   optionId: DeliveryOptionId;
   address?: NormalizedAddress;
 }
 
-/** Volatile per-cart draft — contact / delivery / paymentMethod. */
+/**
+Volatile per-cart draft — contact / delivery / paymentMethod.
+*/
 export interface CheckoutDraft {
   contact?: NormalizedContact;
   delivery?: NormalizedDelivery;
   paymentMethod?: PaymentMethod;
 }
 
-/** Wire `Quote` body (per OpenAPI). */
+/**
+Wire `Quote` body (per OpenAPI).
+*/
 export interface QuoteSnapshot {
   id: string;
   cartId: string;
@@ -126,7 +145,9 @@ export interface QuoteSnapshot {
   expiresAt: string;
 }
 
-/** Returned by `getSession` — draft + optional active quote. */
+/**
+Returned by `getSession` — draft + optional active quote.
+*/
 export interface CheckoutSessionSnapshot {
   cartId: string;
   cartVersion: number;
@@ -140,16 +161,15 @@ export interface CheckoutSessionSnapshot {
  * fields that identify the shape rather than every field.
  */
 function isQuoteSnapshot(value: unknown): value is QuoteSnapshot {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value['id'] === 'string' &&
-    typeof value['cartId'] === 'string' &&
-    typeof value['cartVersion'] === 'number' &&
-    isMoney(value['subtotal']) &&
-    isMoney(value['shipping']) &&
-    isMoney(value['total']) &&
-    typeof value['expiresAt'] === 'string'
-  );
+  return isRecord(value)
+    ? typeof value['id'] === 'string' &&
+        typeof value['cartId'] === 'string' &&
+        typeof value['cartVersion'] === 'number' &&
+        isMoney(value['subtotal']) &&
+        isMoney(value['shipping']) &&
+        isMoney(value['total']) &&
+        typeof value['expiresAt'] === 'string'
+    : false;
 }
 
 /**
@@ -159,13 +179,15 @@ function isQuoteSnapshot(value: unknown): value is QuoteSnapshot {
  * top-level fields are checked (mirrors `isQuoteSnapshot` above).
  */
 function isCheckoutSessionSnapshot(value: unknown): value is CheckoutSessionSnapshot {
-  if (!isRecord(value)) return false;
-  if (typeof value['cartId'] !== 'string') return false;
-  if (typeof value['cartVersion'] !== 'number') return false;
-  if (!isRecord(value['draft'])) return false;
+  if (
+    !isRecord(value) ||
+    typeof value['cartId'] !== 'string' ||
+    typeof value['cartVersion'] !== 'number' ||
+    !isRecord(value['draft'])
+  )
+    return false;
   const quote = value['quote'];
-  if (quote !== undefined && !isQuoteSnapshot(quote)) return false;
-  return true;
+  return quote === undefined || isQuoteSnapshot(quote);
 }
 
 /**
@@ -174,25 +196,26 @@ function isCheckoutSessionSnapshot(value: unknown): value is CheckoutSessionSnap
  * per the same "identify the shape" scope as `isQuoteSnapshot` above.
  */
 function isCartLine(value: unknown): value is CartLine {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value['id'] === 'string' &&
-    typeof value['productId'] === 'string' &&
-    typeof value['productSlug'] === 'string' &&
-    typeof value['productName'] === 'string' &&
-    typeof value['variantId'] === 'string' &&
-    typeof value['colorName'] === 'string' &&
-    typeof value['storageGb'] === 'number' &&
-    isRecord(value['image']) &&
-    typeof value['quantity'] === 'number' &&
-    isMoney(value['unitPrice']) &&
-    isMoney(value['lineTotal']) &&
-    (value['availability'] === 'in_stock' || value['availability'] === 'out_of_stock') &&
-    typeof value['maxQuantity'] === 'number'
-  );
+  return isRecord(value)
+    ? typeof value['id'] === 'string' &&
+        typeof value['productId'] === 'string' &&
+        typeof value['productSlug'] === 'string' &&
+        typeof value['productName'] === 'string' &&
+        typeof value['variantId'] === 'string' &&
+        typeof value['colorName'] === 'string' &&
+        typeof value['storageGb'] === 'number' &&
+        isRecord(value['image']) &&
+        typeof value['quantity'] === 'number' &&
+        isMoney(value['unitPrice']) &&
+        isMoney(value['lineTotal']) &&
+        (value['availability'] === 'in_stock' || value['availability'] === 'out_of_stock') &&
+        typeof value['maxQuantity'] === 'number'
+    : false;
 }
 
-/** True when `value` is a `Cart`. */
+/**
+True when `value` is a `Cart`.
+*/
 function isCart(value: unknown): value is Cart {
   if (!isRecord(value)) return false;
   const items = value['items'];
@@ -208,13 +231,16 @@ function isCart(value: unknown): value is Cart {
   );
 }
 
-/** True when `value` is the `{ quote, cart }` pair `createQuote` caches for replay. */
+/**
+True when `value` is the `{ quote, cart }` pair `createQuote` caches for replay.
+*/
 function isQuoteReplayResult(value: unknown): value is { quote: QuoteSnapshot; cart: Cart } {
-  if (!isRecord(value)) return false;
-  return isQuoteSnapshot(value['quote']) && isCart(value['cart']);
+  return isRecord(value) ? isQuoteSnapshot(value['quote']) && isCart(value['cart']) : false;
 }
 
-/** Lightweight session/rules/helpers shared with the handler layer. */
+/**
+Lightweight session/rules/helpers shared with the handler layer.
+*/
 export const HeaderRules = {
   sessionPattern: /^[a-zA-Z0-9_-]{8,80}$/,
   ifMatchPattern: /^"[0-9]+"$/,
@@ -228,11 +254,12 @@ export const HeaderRules = {
 // ---------------------------------------------------------------------------
 
 function readField(value: unknown, key: string): unknown {
-  if (!isRecord(value)) return undefined;
-  return value[key];
+  return isRecord(value) ? value[key] : undefined;
 }
 
-/** Returns the normalized HU address from an untrusted record, or null when invalid. */
+/**
+Returns the normalized HU address from an untrusted record, or null when invalid.
+*/
 
 function validateAddress(value: unknown):
   | {
@@ -370,8 +397,9 @@ function validateDelivery(value: unknown):
       };
     }
     const address = validateAddress(addressRaw);
-    if (!address.ok) return address;
-    return { ok: true, value: { optionId: 'home_delivery', address: address.value } };
+    return address.ok
+      ? { ok: true, value: { optionId: 'home_delivery', address: address.value } }
+      : address;
   }
   // demo_pickup
   if (hasAddressKey && addressRaw !== undefined && addressRaw !== null) {
@@ -441,13 +469,15 @@ export class QuoteDomain {
   private readonly quotes = new Map<string, QuoteRecord>();
 
   constructor(
-    private readonly repository: Repository,
+    private readonly repository: Repo,
     private readonly clock: Clock,
     private readonly ids: Ids,
     private readonly idempotency: IdempotencyStore,
   ) {}
 
-  /** Reads the (volatile) session shape used by `getCheckoutSession`. */
+  /**
+  Reads the (volatile) session shape used by `getCheckoutSession`.
+  */
   getSession(cartId: string, currentCartVersion: number): CheckoutSessionSnapshot {
     const draft = this.drafts.get(cartId)?.draft ?? {};
     const quote = this.getActiveQuote(cartId, currentCartVersion) ?? undefined;
@@ -473,7 +503,7 @@ export class QuoteDomain {
    */
   getActiveQuote(cartId: string, currentCartVersion: number): QuoteSnapshot | null {
     const record = this.quotes.get(cartId);
-    if (!record) return null;
+    if (record === undefined) return null;
     if (record.quote.cartVersion !== currentCartVersion) {
       this.quotes.delete(cartId);
       return null;
@@ -517,7 +547,7 @@ export class QuoteDomain {
     const payloadHash = hashPayload(input.body);
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) {
+    if (replay !== null) {
       // The replay body is stored verbatim by `this.idempotency.record(...)`
       // below with the exact `snapshot` this method builds, so the guard's
       // false branch cannot be reached with the current call sites (mirrors
@@ -533,18 +563,18 @@ export class QuoteDomain {
       return ok(replay.body);
     }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
-      return err(idempotencyConflict());
+      return error(idempotencyConflict());
     }
 
     const cart = this.repository.getCart(input.cartId);
     if (cart?.sessionId !== input.sessionId) {
-      return err(notFound());
+      return error(notFound());
     }
     if (this.isExpired(cart)) {
-      return err(cartExpired());
+      return error(cartExpired());
     }
     if (cart.version !== ifMatch.value) {
-      return err(versionConflict());
+      return error(versionConflict());
     }
 
     const body = input.body;
@@ -559,7 +589,7 @@ export class QuoteDomain {
       }
     }
     if (unknownKeys.length > 0) {
-      return err({
+      return error({
         status: 400,
         code: 'VALIDATION_FAILED',
         detail: 'A kérés ismeretlen mezőt tartalmaz.',
@@ -570,7 +600,7 @@ export class QuoteDomain {
       });
     }
     if (presentSections.length === 0) {
-      return err({
+      return error({
         status: 422,
         code: 'VALIDATION_ERROR',
         detail: 'A kérésnek legalább egy szekciót tartalmaznia kell.',
@@ -587,41 +617,41 @@ export class QuoteDomain {
 
     if (presentSections.includes('contact')) {
       const result = validateContact(readField(body, 'contact'));
-      if (!result.ok) {
-        fieldErrors.push(...result.errors);
-      } else {
+      if (result.ok) {
         nextContact = result.value;
+      } else {
+        fieldErrors.push(...result.errors);
       }
     }
 
     if (presentSections.includes('delivery')) {
       const result = validateDelivery(readField(body, 'delivery'));
-      if (!result.ok) {
-        fieldErrors.push(...result.errors);
-      } else {
+      if (result.ok) {
         nextDelivery = result.value;
+      } else {
+        fieldErrors.push(...result.errors);
       }
     }
 
     if (presentSections.includes('paymentMethod')) {
       const result = validatePaymentMethod(readField(body, 'paymentMethod'));
-      if (!result.ok) {
-        fieldErrors.push(...result.errors);
-      } else {
+      if (result.ok) {
         nextPaymentMethod = result.value;
+      } else {
+        fieldErrors.push(...result.errors);
       }
     }
 
     if (fieldErrors.length > 0) {
-      return err(validationError('A kérés egyes mezői érvénytelenek.', fieldErrors));
+      return error(validationError('A kérés egyes mezői érvénytelenek.', fieldErrors));
     }
 
     const prior = this.drafts.get(input.cartId)?.draft ?? {};
     const merged: CheckoutDraft = {
       ...prior,
-      ...(nextContact !== undefined ? { contact: nextContact } : {}),
-      ...(nextDelivery !== undefined ? { delivery: nextDelivery } : {}),
-      ...(nextPaymentMethod !== undefined ? { paymentMethod: nextPaymentMethod } : {}),
+      ...(nextContact !== undefined && { contact: nextContact }),
+      ...(nextDelivery !== undefined && { delivery: nextDelivery }),
+      ...(nextPaymentMethod !== undefined && { paymentMethod: nextPaymentMethod }),
     };
     this.drafts.set(input.cartId, { draft: merged });
 
@@ -656,7 +686,7 @@ export class QuoteDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) {
+    if (replay !== null) {
       // The replay body is stored verbatim by `this.idempotency.record(...)`
       // below with the exact `result` this method builds, so the guard's
       // false branch cannot be reached with the current call sites (mirrors
@@ -672,23 +702,23 @@ export class QuoteDomain {
       return ok(replay.body);
     }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
-      return err(idempotencyConflict());
+      return error(idempotencyConflict());
     }
 
     const cart = this.repository.getCart(input.cartId);
     if (cart?.sessionId !== input.sessionId) {
-      return err(notFound());
+      return error(notFound());
     }
     if (this.isExpired(cart)) {
-      return err(cartExpired());
+      return error(cartExpired());
     }
     if (cart.version !== ifMatch.value) {
-      return err(versionConflict());
+      return error(versionConflict());
     }
 
     // 1. Empty cart => CHECKOUT_INCOMPLETE /cart
     if (cart.items.length === 0) {
-      return err(
+      return error(
         checkoutIncomplete('A kosár üres, árajánlat nem készíthető.', [
           { path: '/cart', message: 'A kosár jelenleg üres.' },
         ]),
@@ -699,20 +729,20 @@ export class QuoteDomain {
     const draft = this.drafts.get(input.cartId)?.draft ?? {};
     const delivery = draft.delivery;
     const draftErrors: FieldError[] = [];
-    if (!draft.contact) {
+    if (draft.contact === undefined) {
       draftErrors.push({ path: '/contact', message: 'A kapcsolat kitöltése kötelező.' });
     }
-    if (!delivery) {
+    if (delivery === undefined) {
       draftErrors.push({ path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' });
     }
-    if (!draft.paymentMethod) {
+    if (draft.paymentMethod === undefined) {
       draftErrors.push({
         path: '/paymentMethod',
         message: 'A fizetési mód kiválasztása kötelező.',
       });
     }
-    if (draftErrors.length > 0 || !delivery) {
-      return err(checkoutIncomplete('A fizetési adatok hiányosak.', draftErrors));
+    if (draftErrors.length > 0 || delivery === undefined) {
+      return error(checkoutIncomplete('A fizetési adatok hiányosak.', draftErrors));
     }
 
     // 3. Stock recheck + price recheck
@@ -726,7 +756,7 @@ export class QuoteDomain {
     let subtotal = 0;
     const updatedItems: CartLine[] = cart.items.map((line, index) => {
       const lookup = this.repository.getVariant(line.variantId);
-      if (!lookup) {
+      if (lookup === undefined) {
         outOfStockLines.push(line.id);
         return line;
       }
@@ -752,9 +782,9 @@ export class QuoteDomain {
       // Apply the price rewrite before any status check so a line that
       // is both out-of-stock and price-changed keeps its new price in
       // the cart even though the call still surfaces 409 OUT_OF_STOCK.
-      const atomicItems: CartLine[] = updatedItems.map((line, idx) => {
-        const mismatch = mismatchedLines.find((m) => m.lineIndex === idx);
-        if (!mismatch) {
+      const atomicItems: CartLine[] = updatedItems.map((line, index) => {
+        const mismatch = mismatchedLines.find((m) => m.lineIndex === index);
+        if (mismatch === undefined) {
           return line;
         }
         const lineTotal: Money = {
@@ -773,11 +803,11 @@ export class QuoteDomain {
     }
 
     if (outOfStockLines.length > 0) {
-      return err(outOfStock());
+      return error(outOfStock());
     }
 
     if (mismatchedLines.length > 0) {
-      return err(priceChanged());
+      return error(priceChanged());
     }
 
     // 4. Subtotal + shipping + total
@@ -805,8 +835,7 @@ export class QuoteDomain {
   isExpired(cart: Cart): boolean {
     const nowMs = Date.parse(this.clock.now());
     const expiresAtMs = Date.parse(cart.expiresAt);
-    if (!Number.isFinite(nowMs) || !Number.isFinite(expiresAtMs)) return false;
-    return nowMs >= expiresAtMs;
+    return !Number.isFinite(nowMs) || !Number.isFinite(expiresAtMs) ? false : nowMs >= expiresAtMs;
   }
 
   isExpiredQuote(quote: QuoteSnapshot): boolean {
@@ -816,8 +845,7 @@ export class QuoteDomain {
   private isExpiredRecord(record: { expiresAt: string }): boolean {
     const nowMs = Date.parse(this.clock.now());
     const expiresMs = Date.parse(record.expiresAt);
-    if (!Number.isFinite(nowMs) || !Number.isFinite(expiresMs)) return false;
-    return nowMs >= expiresMs;
+    return !Number.isFinite(nowMs) || !Number.isFinite(expiresMs) ? false : nowMs >= expiresMs;
   }
 
   private computeExpiresAt(): string {
@@ -834,7 +862,7 @@ function ok<T>(value: T): Result<T> {
   return { ok: true, value };
 }
 
-function err(problem: Problem): Result<never> {
+function error(problem: Problem): Result<never> {
   return { ok: false, problem };
 }
 
@@ -897,7 +925,7 @@ export function validationError(detail: string, fieldErrors: FieldError[]): Prob
 
 function validateSession(sessionId: string): Result<string> {
   if (!HeaderRules.sessionPattern.test(sessionId)) {
-    return err({
+    return error({
       status: 400,
       code: 'VALIDATION_FAILED',
       detail: 'Érvénytelen X-Demo-Session fejléc.',
@@ -911,7 +939,7 @@ function validateSession(sessionId: string): Result<string> {
 
 function validateIfMatch(ifMatch: number | null): Result<number> {
   if (ifMatch === null) {
-    return err({
+    return error({
       status: 400,
       code: 'VALIDATION_FAILED',
       detail: 'Hiányzó If-Match fejléc.',
@@ -919,7 +947,7 @@ function validateIfMatch(ifMatch: number | null): Result<number> {
     });
   }
   if (!Number.isInteger(ifMatch) || ifMatch < 1) {
-    return err({
+    return error({
       status: 400,
       code: 'VALIDATION_FAILED',
       detail: 'Érvénytelen If-Match verzió.',
@@ -933,7 +961,7 @@ function validateIfMatch(ifMatch: number | null): Result<number> {
 
 function validateIdempotencyKey(key: string | null): Result<string> {
   if (key === null) {
-    return err({
+    return error({
       status: 400,
       code: 'VALIDATION_FAILED',
       detail: 'Hiányzó Idempotency-Key fejléc.',
@@ -941,7 +969,7 @@ function validateIdempotencyKey(key: string | null): Result<string> {
     });
   }
   if (key.length < HeaderRules.idempotencyMin || key.length > HeaderRules.idempotencyMax) {
-    return err({
+    return error({
       status: 400,
       code: 'VALIDATION_FAILED',
       detail: 'Érvénytelen Idempotency-Key hossz.',

@@ -1,9 +1,9 @@
 <section
   class="review flex flex-col gap-(--space-6)"
-  [attr.data-status]="state()"
   data-testid="review-page"
+  [attr.data-status]="state()"
 >
-  <app-checkout-step-header [crumbs]="crumbs" current="Ellenőrzés">
+  <app-checkout-step-header current="Ellenőrzés" [crumbs]="crumbs">
     <h1
       class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
     >
@@ -36,9 +36,9 @@
             Kapcsolattartási adatok
           </h2>
           <a
-            routerLink="/penztar/adatok"
             class="edit-link text-(length:--type-helper) text-(color:--color-brand-ink) underline"
             data-testid="review-edit-contact"
+            routerLink="/penztar/adatok"
             (click)="onEditContact()"
           >
             Módosítás
@@ -71,9 +71,9 @@
             Szállítási és fizetési mód
           </h2>
           <a
-            routerLink="/penztar/szallitas"
             class="edit-link text-(length:--type-helper) text-(color:--color-brand-ink) underline"
             data-testid="review-edit-delivery"
+            routerLink="/penztar/szallitas"
             (click)="onEditDelivery()"
           >
             Módosítás
@@ -142,19 +142,15 @@
                   </p>
                   <p class="line-quantity">
                     {{ line.quantity }} ×
-                    <app-price-block
-                      [money]="line.unitPrice"
-                      [label]="'Egységár'"
-                      [status]="'success'"
-                    ></app-price-block>
+                    <app-price-block label="Egységár" status="success" [money]="line.unitPrice" />
                   </p>
                 </div>
                 <div class="line-total">
                   <app-price-block
+                    label="Sor végösszeg"
+                    status="success"
                     [money]="line.lineTotal"
-                    [label]="'Sor végösszeg'"
-                    [status]="'success'"
-                  ></app-price-block>
+                  />
                 </div>
               </li>
             }
@@ -165,38 +161,34 @@
       <div class="status-row" data-testid="review-status">
         @switch (state()) {
           @case ('quoting') {
-            <app-loading-state variant="lines" label="Árajánlat frissítése"></app-loading-state>
+            <app-loading-state label="Árajánlat frissítése" variant="lines" />
           }
           @case ('price-changed') {
             <app-status-message
-              [message]="priceChangedMessage"
               severity="error"
+              [message]="priceChangedMessage"
               [persistent]="true"
-            ></app-status-message>
+            />
           }
           @case ('expired') {
             <app-status-message
-              [message]="quoteExpiredMessage"
               severity="error"
+              [message]="quoteExpiredMessage"
               [persistent]="true"
-            ></app-status-message>
+            />
           }
           @case ('stock-error') {
             <app-status-message
-              [message]="outOfStockMessage"
               severity="error"
+              [message]="outOfStockMessage"
               [persistent]="true"
-            ></app-status-message>
+            />
           }
           @case ('error') {
-            <app-status-message
-              [message]="errorMessage"
-              severity="error"
-              [persistent]="true"
-            ></app-status-message>
+            <app-status-message severity="error" [message]="errorMessage" [persistent]="true" />
           }
           @case ('submitting') {
-            <app-loading-state variant="lines" label="Véglegesítés…"></app-loading-state>
+            <app-loading-state label="Véglegesítés…" variant="lines" />
           }
         }
       </div>
@@ -216,29 +208,29 @@
 
         <div
           class="consent flex flex-col gap-(--space-2) p-(--space-3) border border-(--color-border-subtle) rounded-(--radius-control)"
-          [attr.data-state]="termsConsentState()"
           data-testid="review-consent-terms"
+          [attr.data-state]="termsConsentState()"
         >
           <label
             class="consent-label inline-flex items-start gap-(--space-3) cursor-pointer text-(length:--type-body) text-(color:--color-text-primary) leading-(--line-height-body)"
             for="review-consent-terms-input"
           >
             <input
+              class="checkbox"
+              data-testid="review-consent-terms-input"
               id="review-consent-terms-input"
               type="checkbox"
-              class="checkbox"
               [checked]="acceptedTerms()"
-              (change)="onAcceptedTermsChange($event)"
               (blur)="onAcceptedTermsBlur()"
-              data-testid="review-consent-terms-input"
+              (change)="onAcceptedTermsChange($event)"
             />
             <span class="consent-text min-w-0">
               Elfogadom a
               <button
-                type="button"
                 class="terms-link"
-                (click)="openTerms()"
                 data-testid="review-consent-terms-button"
+                type="button"
+                (click)="openTerms()"
               >
                 demó vásárlási feltételeket
               </button>
@@ -248,8 +240,8 @@
           @if (termsConsentMessage() !== null) {
             <p
               class="consent-message m-0 text-(length:--type-helper) text-(color:--color-status-error)"
-              id="review-consent-terms-message"
               data-testid="review-consent-terms-message"
+              id="review-consent-terms-message"
               role="alert"
             >
               {{ termsConsentMessage() }}
@@ -259,21 +251,21 @@
 
         <div
           class="consent flex flex-col gap-(--space-2) p-(--space-3) border border-(--color-border-subtle) rounded-(--radius-control)"
-          [attr.data-state]="simulationConsentState()"
           data-testid="review-consent-simulation"
+          [attr.data-state]="simulationConsentState()"
         >
           <label
             class="consent-label inline-flex items-start gap-(--space-3) cursor-pointer text-(length:--type-body) text-(color:--color-text-primary) leading-(--line-height-body)"
             for="review-consent-simulation-input"
           >
             <input
+              class="checkbox"
+              data-testid="review-consent-simulation-input"
               id="review-consent-simulation-input"
               type="checkbox"
-              class="checkbox"
               [checked]="acknowledgedSimulation()"
-              (change)="onAcknowledgedSimulationChange($event)"
               (blur)="onAcknowledgedSimulationBlur()"
-              data-testid="review-consent-simulation-input"
+              (change)="onAcknowledgedSimulationChange($event)"
             />
             <span class="consent-text min-w-0">
               Tudomásul veszem, hogy ez egy szimuláció: nem történik valódi rendelés, fizetés vagy
@@ -283,8 +275,8 @@
           @if (simulationConsentMessage() !== null) {
             <p
               class="consent-message m-0 text-(length:--type-helper) text-(color:--color-status-error)"
-              id="review-consent-simulation-message"
               data-testid="review-consent-simulation-message"
+              id="review-consent-simulation-message"
               role="alert"
             >
               {{ simulationConsentMessage() }}
@@ -298,14 +290,14 @@
         data-testid="review-actions"
       >
         <app-button
-          variant="primary"
-          [label]="'Demórendelés véglegesítése'"
-          [loadingLabel]="'Véglegesítés…'"
-          [loading]="state() === 'submitting'"
-          [disabled]="!canSubmit()"
-          (pressed)="onSubmit()"
           data-testid="review-submit"
-        ></app-button>
+          label="Demórendelés véglegesítése"
+          loadingLabel="Véglegesítés…"
+          variant="primary"
+          [disabled]="!canSubmit()"
+          [loading]="state() === 'submitting'"
+          (pressed)="onSubmit()"
+        />
       </div>
 
       @if (ctaExplanation() !== null) {
@@ -316,8 +308,8 @@
     </div>
 
     <aside
-      class="summary flex flex-col gap-(--space-4) p-(--space-5) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) sticky top-(--space-5) sm:p-(--space-6)"
       aria-label="Rendelés végösszege"
+      class="summary flex flex-col gap-(--space-4) p-(--space-5) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) sticky top-(--space-5) sm:p-(--space-6)"
       data-testid="review-summary"
     >
       <h2
@@ -328,13 +320,13 @@
 
       @if (readySummary() !== null) {
         <app-order-summary
-          [subtotal]="readySummary()!.subtotal"
-          [shipping]="readySummary()!.shipping"
           [footnote]="summaryFootnote()"
-        ></app-order-summary>
+          [shipping]="readySummary()!.shipping"
+          [subtotal]="readySummary()!.subtotal"
+        />
       } @else {
         <div class="summary-loading" data-testid="review-summary-loading">
-          <app-loading-state variant="lines" label="Árajánlat betöltése"></app-loading-state>
+          <app-loading-state label="Árajánlat betöltése" variant="lines" />
         </div>
       }
 
@@ -356,16 +348,16 @@
       </dl>
 
       <button
-        type="button"
         class="refresh"
-        (click)="onRefresh()"
-        [disabled]="busy()"
         data-testid="review-refresh"
+        type="button"
+        [disabled]="busy()"
+        (click)="onRefresh()"
       >
         Árajánlat frissítése
       </button>
     </aside>
   </div>
 
-  <app-terms-dialog [opened]="termsOpened()" (closed)="closeTerms()"></app-terms-dialog>
+  <app-terms-dialog [opened]="termsOpened()" (closed)="closeTerms()" />
 </section>

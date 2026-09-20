@@ -18,7 +18,7 @@ import { App } from './app';
 
 describe('FIX-52 skip link', () => {
   beforeEach(async () => {
-    document.body.innerHTML = '';
+    document.body.replaceChildren();
     TestBed.configureTestingModule({
       imports: [App],
       providers: [provideRouter([]), provideZonelessChangeDetection()],
@@ -33,7 +33,7 @@ describe('FIX-52 skip link', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const skip = raw.querySelector('a.skip-link');
     if (!(skip instanceof HTMLAnchorElement)) throw new Error('Expected the skip link anchor');
-    expect(Array.from(skip.classList)).toEqual(['skip-link']);
+    expect([...skip.classList]).toEqual(['skip-link']);
     expect(skip.getAttribute('href')).toBe('#main-content');
     expect(skip.textContent.trim()).toBe('Ugrás a tartalomhoz');
   });

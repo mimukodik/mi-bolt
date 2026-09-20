@@ -16,10 +16,11 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 
 import { CartFacade } from '../cart/cart.facade';
@@ -41,10 +42,11 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement | null {
-  const el = parent.querySelector(selector);
-  if (el === null) return null;
-  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement matching "${selector}"`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (element === null) return null;
+  if (!(element instanceof HTMLElement))
+    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  return element;
 }
 
 const ITEM: CartItem = {
@@ -52,14 +54,14 @@ const ITEM: CartItem = {
   colorName: 'Éjfekete',
   id: 'item-1',
   image: { alt: '', height: 10, id: 'img-1', src: '/img.png', width: 10 },
-  lineTotal: { amount: 339990, currency: 'HUF' },
+  lineTotal: { amount: 339_990, currency: 'HUF' },
   maxQuantity: 5,
   productId: 'prod-1',
   productName: 'Teszt Telefon',
   productSlug: 'teszt-telefon',
   quantity: 1,
   storageGb: 128,
-  unitPrice: { amount: 339990, currency: 'HUF' },
+  unitPrice: { amount: 339_990, currency: 'HUF' },
   variantId: 'variant-1',
 };
 
@@ -69,7 +71,7 @@ const CART: Cart = {
   itemCount: 1,
   items: [ITEM],
   status: 'active',
-  subtotal: { amount: 339990, currency: 'HUF' },
+  subtotal: { amount: 339_990, currency: 'HUF' },
   version: 1,
 };
 
@@ -87,8 +89,8 @@ const QUOTE: Quote = {
   expiresAt: '2026-01-01T00:05:00.000Z',
   id: 'quote-1',
   shipping: { amount: 0, currency: 'HUF' },
-  subtotal: { amount: 339990, currency: 'HUF' },
-  total: { amount: 339990, currency: 'HUF' },
+  subtotal: { amount: 339_990, currency: 'HUF' },
+  total: { amount: 339_990, currency: 'HUF' },
 };
 
 afterEach(() => {
@@ -101,7 +103,7 @@ function configureTestBed(): void {
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       provideRouter([]),
     ],
     teardown: { destroyAfterEach: true },
@@ -119,7 +121,7 @@ function pinCartSessionAndQuote(): void {
   vi.spyOn(checkoutFacade, 'createQuote').mockResolvedValue({ ok: true, value: QUOTE });
 }
 
-async function createReadyReviewPage() {
+async function createReadyReviewPage(): Promise<ComponentFixture<ReviewPage>> {
   pinCartSessionAndQuote();
   const fixture = TestBed.createComponent(ReviewPage);
   await fixture.whenStable();

@@ -4,23 +4,23 @@
     <meta charset="utf-8" />
     <title>MiBolt — Mobil webshop</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
     <meta
-      name="description"
       content="A MiBolt demó — magyar nyelvű, csak helyi, szimulált mobil webshop."
+      name="description"
     />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link href="favicon.ico" rel="icon" type="image/x-icon" />
   </head>
   <body>
     <app-root></app-root>
     <template id="mi-bolt-fatal">
-      <div class="app-fatal" role="alert" aria-live="assertive">
+      <div aria-live="assertive" class="app-fatal" role="alert">
         <h1 class="app-fatal__title">A MiBolt demó indítása sikertelen</h1>
         <p class="app-fatal__body">
           A bemutató nem tudott elindulni. Frissítsd az oldalt, vagy ellenőrizd a böngésző konzolját
           a részletekért.
         </p>
-        <button type="button" class="app-fatal__retry" data-testid="fatal-retry">Újratöltés</button>
+        <button class="app-fatal__retry" data-testid="fatal-retry" type="button">Újratöltés</button>
       </div>
     </template>
   </body>

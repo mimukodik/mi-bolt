@@ -71,21 +71,24 @@ export class ReviewPage {
     if (tick !== null) {
       switch (tick.state) {
         case 'pending':
-        case 'attempt':
+        case 'attempt': {
           return 'pending';
-        case 'succeeded':
+        }
+        case 'succeeded': {
           return 'succeeded';
-        case 'declined':
+        }
+        case 'declined': {
           return 'declined';
-        case 'timeout':
+        }
+        case 'timeout': {
           return 'unknown';
+        }
       }
     }
     const failure = this.submitFailure();
     if (failure === null) return 'idle';
     if (failure.kind === 'declined') return 'declined';
-    if (failure.kind === 'pending') return 'unknown';
-    return 'error';
+    return failure.kind === 'pending' ? 'unknown' : 'error';
   });
 
   readonly pollCount = computed<number>(() => this.latestTick()?.attempt ?? 0);
@@ -105,12 +108,15 @@ export class ReviewPage {
     if (failure === null) return '';
     const preserved = 'A kosarad és az adataid megmaradtak.';
     switch (failure.kind) {
-      case 'declined':
+      case 'declined': {
         return `A szimulált fizetés elutasítva. ${preserved} Próbáld újra, vagy módosítsd a fizetési módot.`;
-      case 'pending':
+      }
+      case 'pending': {
         return 'A demórendelés feldolgozás alatt… Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak. Nem küldünk újabb rendelést ismételt kattintásra.';
-      case 'error':
+      }
+      case 'error': {
         return `${failure.detail} ${preserved} Próbáld újra, vagy módosítsd a fizetési módot.`;
+      }
     }
   });
 
@@ -175,18 +181,22 @@ export class ReviewPage {
       const outcome = await this.orderSubmission.submitOrder();
       switch (outcome.kind) {
         case 'committed':
-        case 'recovered':
+        case 'recovered': {
           await this.router.navigate(['/penztar/siker', outcome.orderId]);
           return;
-        case 'declined':
+        }
+        case 'declined': {
           this.submitFailure.set({ kind: 'declined', detail: outcome.reason });
           return;
-        case 'pending-timeout':
+        }
+        case 'pending-timeout': {
           this.submitFailure.set({ kind: 'pending', detail: '' });
           return;
-        case 'unknown':
+        }
+        case 'unknown': {
           this.submitFailure.set({ kind: 'error', detail: outcome.reason });
           return;
+        }
       }
     } finally {
       this.submitting.set(false);

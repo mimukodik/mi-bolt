@@ -13,13 +13,17 @@
  * mutation methods.
  */
 
-/** Money in whole HUF, no minor units. */
+/**
+Money in whole HUF, no minor units.
+*/
 export interface Money {
   amount: number;
   currency: 'HUF';
 }
 
-/** Single product image rendered by the catalogue and PDP. */
+/**
+Single product image rendered by the catalogue and PDP.
+*/
 export interface Image {
   id: string;
   src: string;
@@ -28,10 +32,14 @@ export interface Image {
   height: number;
 }
 
-/** Stock state of a single variant. */
+/**
+Stock state of a single variant.
+*/
 export type Availability = 'in_stock' | 'out_of_stock';
 
-/** One SKU of a product (color × storage). */
+/**
+One SKU of a product (color × storage).
+*/
 export interface Variant {
   id: string;
   colorCode: string;
@@ -44,20 +52,26 @@ export interface Variant {
   images: readonly Image[];
 }
 
-/** One spec row in a spec group. */
+/**
+One spec row in a spec group.
+*/
 export interface SpecRow {
   label: string;
   value: string;
 }
 
-/** One spec group shown on the product page. */
+/**
+One spec group shown on the product page.
+*/
 export interface SpecGroup {
   id: string;
   title: string;
   rows: readonly SpecRow[];
 }
 
-/** Full catalogue product — matches the OpenAPI `Product` schema. */
+/**
+Full catalogue product — matches the OpenAPI `Product` schema.
+*/
 export interface Product {
   id: string;
   slug: string;
@@ -72,7 +86,9 @@ export interface Product {
   specGroups: readonly SpecGroup[];
 }
 
-/** Full Cart shape — T07 owns version, totals, expiry. */
+/**
+Full Cart shape — T07 owns version, totals, expiry.
+*/
 export interface Cart {
   id: string;
   version: number;
@@ -83,7 +99,9 @@ export interface Cart {
   expiresAt: string;
 }
 
-/** Full Cart line — T07 carries the variant snapshot the client renders. */
+/**
+Full Cart line — T07 carries the variant snapshot the client renders.
+*/
 export interface CartLine {
   id: string;
   productId: string;
@@ -100,7 +118,9 @@ export interface CartLine {
   maxQuantity: number;
 }
 
-/** Minimal OrderReceipt shape — T09 expands with full receipt items. */
+/**
+Minimal OrderReceipt shape — T09 expands with full receipt items.
+*/
 export interface OrderReceipt {
   id: string;
   orderNumber: string;
@@ -117,9 +137,12 @@ export interface OrderReceipt {
   notice?: string;
 }
 
+import type { PersistedCart, PersistedReceipt } from './persistence';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 
-/** Cart expires 24h after creation. Matches the OpenAPI Cart.expiresAt example. */
+/**
+Cart expires 24h after creation. Matches the OpenAPI Cart.expiresAt example.
+*/
 const CART_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export class Repository {
@@ -130,9 +153,13 @@ export class Repository {
   private readonly cartsBySession = new Map<string, string>();
   private readonly orders = new Map<string, OrderReceipt>();
   private readonly idempotency = new Map<string, unknown>();
-  /** Monotonic counter so cart ids stay deterministic per scenario. */
+  /**
+  Monotonic counter so cart ids stay deterministic per scenario.
+  */
   private cartCounter = 0;
-  /** Monotonic counter for order numbers (`DEMO-NNNNNN`). */
+  /**
+  Monotonic counter for order numbers (`DEMO-NNNNNN`).
+  */
   private orderCounter = 0;
 
   constructor(
@@ -141,7 +168,9 @@ export class Repository {
     private readonly clock: Clock,
   ) {}
 
-  /** Read-only access to the scenario descriptor. */
+  /**
+  Read-only access to the scenario descriptor.
+  */
   getScenario(): ScenarioDescriptor {
     return this.scenario;
   }
@@ -164,22 +193,30 @@ export class Repository {
     }
   }
 
-  /** Lists every product currently in the catalog. */
+  /**
+  Lists every product currently in the catalog.
+  */
   listProducts(): readonly Product[] {
-    return Array.from(this.products.values());
+    return [...this.products.values()];
   }
 
-  /** Looks up a product by id. */
+  /**
+  Looks up a product by id.
+  */
   getProductById(id: string): Product | undefined {
     return this.products.get(id);
   }
 
-  /** Looks up a product by slug. */
+  /**
+  Looks up a product by slug.
+  */
   getProductBySlug(slug: string): Product | undefined {
     return this.productsBySlug.get(slug);
   }
 
-  /** Creates an empty cart for the given demo session and returns it. */
+  /**
+  Creates an empty cart for the given demo session and returns it.
+  */
   createCart(sessionId: string): Cart {
     this.cartCounter += 1;
     const cartId = `cart-${this.scenario.name}-${this.cartCounter.toString(36)}-${this.ids.uuid()}`;
@@ -206,7 +243,7 @@ export class Repository {
    */
   ensureCart(sessionId: string): Cart {
     const existing = this.cartsBySession.get(sessionId);
-    if (existing) {
+    if (existing !== undefined) {
       const cart = this.carts.get(existing);
       if (cart?.status === 'active' && !this.isCartExpired(cart)) return cart;
     }
@@ -223,11 +260,12 @@ export class Repository {
   private isCartExpired(cart: Cart): boolean {
     const nowMs = Date.parse(this.clock.now());
     const expiresAtMs = Date.parse(cart.expiresAt);
-    if (!Number.isFinite(nowMs) || !Number.isFinite(expiresAtMs)) return false;
-    return nowMs >= expiresAtMs;
+    return !Number.isFinite(nowMs) || !Number.isFinite(expiresAtMs) ? false : nowMs >= expiresAtMs;
   }
 
-  /** Looks up a cart by id. */
+  /**
+  Looks up a cart by id.
+  */
   getCart(cartId: string): Cart | undefined {
     return this.carts.get(cartId);
   }
@@ -245,27 +283,37 @@ export class Repository {
     this.carts.set(cart.id, cart);
   }
 
-  /** Looks up a variant by id across every loaded product. */
+  /**
+  Looks up a variant by id across every loaded product.
+  */
   getVariant(variantId: string): { product: Product; variant: Variant } | undefined {
     return this.variantsById.get(variantId);
   }
 
-  /** Lists every cart owned by the scenario. Tests use it for isolation checks. */
+  /**
+  Lists every cart owned by the scenario. Tests use it for isolation checks.
+  */
   listCarts(): readonly Cart[] {
-    return Array.from(this.carts.values());
+    return [...this.carts.values()];
   }
 
-  /** Stores an order receipt. T09 calls this on commit. */
+  /**
+  Stores an order receipt. T09 calls this on commit.
+  */
   saveOrder(receipt: OrderReceipt): void {
     this.orders.set(receipt.id, receipt);
   }
 
-  /** Looks up an order by id. */
+  /**
+  Looks up an order by id.
+  */
   getOrder(id: string): OrderReceipt | undefined {
     return this.orders.get(id);
   }
 
-  /** Generates the next deterministic order number (`DEMO-NNNNNN`). */
+  /**
+  Generates the next deterministic order number (`DEMO-NNNNNN`).
+  */
   nextOrderNumber(): string {
     this.orderCounter += 1;
     const padded = this.orderCounter.toString().padStart(6, '0');
@@ -280,7 +328,9 @@ export class Repository {
     return this.idempotency.get(key);
   }
 
-  /** Records an idempotency outcome. */
+  /**
+  Records an idempotency outcome.
+  */
   setIdempotency(key: string, value: unknown): void {
     this.idempotency.set(key, value);
   }
@@ -292,14 +342,14 @@ export class Repository {
    * Lines whose `variantId` is unknown are silently dropped so a
    * fixture removal between sessions never crashes the rehydrate.
    */
-  loadPersistedCart(persisted: import('./persistence').PersistedCart, sessionId: string): void {
+  loadPersistedCart(persisted: PersistedCart, sessionId: string): void {
     const items: CartLine[] = [];
     for (const line of persisted.items) {
       const lookup = this.variantsById.get(line.variantId);
-      if (!lookup) continue;
+      if (lookup === undefined) continue;
       const variant = lookup.variant;
       const firstImage = variant.images.at(0);
-      if (!firstImage) continue;
+      if (firstImage === undefined) continue;
       items.push({
         id: line.id,
         productId: lookup.product.id,
@@ -340,20 +390,20 @@ export class Repository {
    */
   findCartBySession(sessionId: string): Cart | undefined {
     const cartId = this.cartsBySession.get(sessionId);
-    if (cartId === undefined) return undefined;
-    return this.carts.get(cartId);
+    return cartId === undefined ? undefined : this.carts.get(cartId);
   }
 
-  /** Lists every committed receipt. The snapshot builder reads it. */
+  /**
+  Lists every committed receipt. The snapshot builder reads it.
+  */
   listOrders(): readonly OrderReceipt[] {
-    return Array.from(this.orders.values());
+    return [...this.orders.values()];
   }
 
-  /** Restores persisted order receipts from snapshot across reload. */
-  loadPersistedOrders(
-    receipts: readonly import('./persistence').PersistedReceipt[],
-    sessionId: string,
-  ): void {
+  /**
+  Restores persisted order receipts from snapshot across reload.
+  */
+  loadPersistedOrders(receipts: readonly PersistedReceipt[], sessionId: string): void {
     for (const r of receipts) {
       const items = r.items.map((it) => {
         const lookup = this.variantsById.get(it.variantId);

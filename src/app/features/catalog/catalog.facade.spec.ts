@@ -55,23 +55,30 @@ beforeAll(async () => {
 // captured request params via `lastCall()`.
 // ---------------------------------------------------------------------------
 
-type ListProductsParams = Parameters<typeof listProducts>[2];
+type ListProductsParameters = Parameters<typeof listProducts>[2];
 
 @Injectable({ providedIn: 'root' })
 class StubApi {
-  /** Latest params passed to `invoke(listProducts, ...)`. */
-  readonly calls: ListProductsParams[] = [];
+  /**
+  Latest params passed to `invoke(listProducts, ...)`.
+  */
+  readonly calls: ListProductsParameters[] = [];
   /** Active response stream: replaced per call so a previous error
    * or completion does not poison the next subscriber. */
   private current$: Subject<ProductPage> = new Subject<ProductPage>();
-  /** Optional pre-recorded error for the next call. */
+  /**
+  Optional pre-recorded error for the next call.
+  */
   nextError: unknown = null;
 
-  invoke(fn: typeof listProducts, params: ListProductsParams): Observable<ProductPage> {
-    if (fn !== listProducts) {
+  invoke(
+    function_: typeof listProducts,
+    parameters: ListProductsParameters,
+  ): Observable<ProductPage> {
+    if (function_ !== listProducts) {
       throw new Error('StubApi only handles listProducts in this spec.');
     }
-    this.calls.push(params);
+    this.calls.push(parameters);
     // A fresh Subject per call so a Subject error / complete from
     // a previous call does not short-circuit the new subscription.
     const stream$ = new Subject<ProductPage>();
@@ -83,8 +90,8 @@ class StubApi {
         next: (page) => {
           subscriber.next(page);
         },
-        error: (err) => {
-          subscriber.error(err);
+        error: (error_) => {
+          subscriber.error(error_);
         },
         complete: () => {
           subscriber.complete();
@@ -101,12 +108,16 @@ class StubApi {
     });
   }
 
-  /** Resolve the most recently issued call with `response`. */
+  /**
+  Resolve the most recently issued call with `response`.
+  */
   resolve(response: ProductPage): void {
     this.current$.next(response);
   }
 
-  /** Reject the most recently issued call with `error`. */
+  /**
+  Reject the most recently issued call with `error`.
+  */
   reject(error: unknown): void {
     this.current$.error(error);
   }
@@ -187,8 +198,8 @@ describe('T12-AC01 catalog-query codec', () => {
   });
 
   it('round-trips brand[] without duplicates (AC01)', () => {
-    const params = new URLSearchParams('brand=Apple&brand=Apple&brand=MiBolt');
-    const parsed = parseCatalogQuery(params);
+    const parameters = new URLSearchParams('brand=Apple&brand=Apple&brand=MiBolt');
+    const parsed = parseCatalogQuery(parameters);
     expect(parsed.brands).toEqual(['Apple', 'MiBolt']);
     const serialised = serializeCatalogQuery(parsed);
     expect(serialised.getAll('brand')).toEqual(['Apple', 'MiBolt']);
@@ -196,24 +207,26 @@ describe('T12-AC01 catalog-query codec', () => {
   });
 
   it('round-trips storageGb[] without duplicates (AC01)', () => {
-    const params = new URLSearchParams('storageGb=128&storageGb=128&storageGb=256&storageGb=512');
-    const parsed = parseCatalogQuery(params);
+    const parameters = new URLSearchParams(
+      'storageGb=128&storageGb=128&storageGb=256&storageGb=512',
+    );
+    const parsed = parseCatalogQuery(parameters);
     expect(parsed.storageGb).toEqual([128, 256, 512]);
     const serialised = serializeCatalogQuery(parsed);
     expect(serialised.getAll('storageGb')).toEqual(['128', '256', '512']);
   });
 
   it('drops empty / whitespace-only brand values', () => {
-    const params = new URLSearchParams('brand=&brand=%20%20&brand=MiBolt');
-    const parsed = parseCatalogQuery(params);
+    const parameters = new URLSearchParams('brand=&brand=%20%20&brand=MiBolt');
+    const parsed = parseCatalogQuery(parameters);
     expect(parsed.brands).toEqual(['MiBolt']);
     const serialised = serializeCatalogQuery(parsed);
     expect(serialised.getAll('brand')).toEqual(['MiBolt']);
   });
 
   it('drops unknown storage values and empty / invalid sort modes', () => {
-    const params = new URLSearchParams('storageGb=999&storageGb=128&sort=newest&sort=');
-    const parsed = parseCatalogQuery(params);
+    const parameters = new URLSearchParams('storageGb=999&storageGb=128&sort=newest&sort=');
+    const parsed = parseCatalogQuery(parameters);
     expect(parsed.storageGb).toEqual([128]);
     expect(parsed.sort).toBeUndefined();
   });
@@ -331,13 +344,21 @@ describe('T12-AC01 catalog-query codec', () => {
 interface SetupHandle {
   facade: CatalogFacade;
   api: StubApi;
-  /** Resolve the most recently issued call with `response`. */
+  /**
+  Resolve the most recently issued call with `response`.
+  */
   respond: (response: ProductPage) => void;
-  /** Reject the most recently issued call with `error`. */
+  /**
+  Reject the most recently issued call with `error`.
+  */
   reject: (error: unknown) => void;
-  /** Drain pending microtasks / macrotasks. */
+  /**
+  Drain pending microtasks / macrotasks.
+  */
   tick: () => Promise<void>;
-  /** Wait for the search debounce (300 ms) to elapse. */
+  /**
+  Wait for the search debounce (300 ms) to elapse.
+  */
   waitDebounce: () => Promise<void>;
 }
 
@@ -349,9 +370,14 @@ function setupFacade(): SetupHandle {
   });
   const facade = TestBed.inject(CatalogFacade);
 
-  const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+  const tick = (): Promise<void> =>
+    new Promise((r) => {
+      setTimeout(r, 0);
+    });
   const waitDebounce = async (): Promise<void> => {
-    await new Promise((r) => setTimeout(r, SEARCH_DEBOUNCE_MS + 20));
+    await new Promise((r) => {
+      setTimeout(r, SEARCH_DEBOUNCE_MS + 20);
+    });
   };
 
   return {
@@ -382,9 +408,13 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     expect(SEARCH_DEBOUNCE_MS).toBe(300);
 
     facade.setSearch('a');
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => {
+      setTimeout(r, 50);
+    });
     facade.setSearch('ap');
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => {
+      setTimeout(r, 50);
+    });
     facade.setSearch('app');
     // Still inside the 300 ms window from the last setSearch.
     expect(api.calls.length).toBe(0);
@@ -424,7 +454,7 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     await tick();
     expect(api.calls.length).toBe(1);
 
-    facade.setSearch('   ');
+    facade.setSearch(' '.repeat(3));
     await waitDebounce();
     await tick();
     expect(api.calls.length).toBe(2);
@@ -516,14 +546,14 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     const { facade } = setupFacade();
     facade.toggleBrand('Apple');
     facade.toggleBrand('MiBolt');
-    const params = facade.currentParams();
-    expect(params.getAll('brand')).toEqual(['Apple', 'MiBolt']);
-    expect(params.has('page')).toBe(false);
+    const parameters = facade.currentParams();
+    expect(parameters.getAll('brand')).toEqual(['Apple', 'MiBolt']);
+    expect(parameters.has('page')).toBe(false);
   });
 
   it('toggleBrand with an empty string is a no-op', async () => {
     const { facade, api, tick } = setupFacade();
-    facade.toggleBrand('   ');
+    facade.toggleBrand(' '.repeat(3));
     await tick();
     expect(api.calls.length).toBe(0);
   });
@@ -538,7 +568,7 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
 
     facade.toggleStorage(256);
     await tick();
-    expect(api.calls[api.calls.length - 1]?.storageGb).toBeUndefined();
+    expect(api.calls.at(-1)?.storageGb).toBeUndefined();
     api.resolve(emptyPage());
     await tick();
   });
@@ -553,7 +583,7 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     api.resolve(emptyPage());
     await tick();
 
-    const last = api.calls[api.calls.length - 1];
+    const last = api.calls.at(-1);
     expect(last?.minPrice).toBe(10_000);
     expect(last?.maxPrice).toBe(200_000);
     expect(last?.inStock).toBe(true);
@@ -811,10 +841,10 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
 describe('T12-AC05 URL round-trip + direct-link restore', () => {
   it('loadFromParams restores search + filters + page + sort (AC05)', async () => {
     const { facade, api, tick } = setupFacade();
-    const params = new URLSearchParams(
+    const parameters = new URLSearchParams(
       'q=apple&brand=Apple&brand=MiBolt&storageGb=256&minPrice=10000&maxPrice=200000&inStock=true&is5g=true&sort=price_desc&page=2&pageSize=24',
     );
-    facade.loadFromParams(params);
+    facade.loadFromParams(parameters);
     await tick();
     expect(api.calls.length).toBe(1);
 
@@ -836,8 +866,8 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
 
   it('loadFromParams canonicalises unknown / malformed values rather than rejecting (AC05)', async () => {
     const { facade, api, tick } = setupFacade();
-    const params = new URLSearchParams('sort=newest&storageGb=999&page=abc&inStock=foo');
-    facade.loadFromParams(params);
+    const parameters = new URLSearchParams('sort=newest&storageGb=999&page=abc&inStock=foo');
+    facade.loadFromParams(parameters);
     await tick();
     const call = api.calls[0];
     expect(call?.sort).toBeUndefined();
@@ -858,12 +888,12 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     api.resolve(emptyPage());
     await tick();
 
-    const params = facade.currentParams();
-    expect(params.getAll('brand')).toEqual(['Apple', 'MiBolt']);
-    expect(params.get('sort')).toBe('name_asc');
-    expect(params.get('page')).toBe('2');
-    expect(params.has('pageSize')).toBe(false);
-    expect(params.has('q')).toBe(false);
+    const parameters = facade.currentParams();
+    expect(parameters.getAll('brand')).toEqual(['Apple', 'MiBolt']);
+    expect(parameters.get('sort')).toBe('name_asc');
+    expect(parameters.get('page')).toBe('2');
+    expect(parameters.has('pageSize')).toBe(false);
+    expect(parameters.has('q')).toBe(false);
   });
 
   it('reset() restores the documented defaults (AC05)', async () => {
@@ -878,7 +908,7 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     facade.reset();
     await tick();
     // toggleBrand + setSort + setPage + reset = 4 calls in total.
-    const resetCall = api.calls[api.calls.length - 1];
+    const resetCall = api.calls.at(-1);
     expect(resetCall?.brand).toBeUndefined();
     expect(resetCall?.sort).toBeUndefined();
     expect(resetCall?.page).toBe(DEFAULT_PAGE);
@@ -893,7 +923,7 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
       q: 'demo',
       brands: ['Apple', 'MiBolt'],
       storageGb: [128, 256],
-      minPrice: 1_000,
+      minPrice: 1000,
       maxPrice: 999_999,
       inStock: true,
       is5g: false,

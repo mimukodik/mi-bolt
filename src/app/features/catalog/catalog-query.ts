@@ -20,7 +20,9 @@
 
 import type { FilterIdentity } from '../../shared/types/filter-identity';
 
-/** Documented sort modes. Mirrors `listProducts.sort` in openapi.yaml. */
+/**
+Documented sort modes. Mirrors `listProducts.sort` in openapi.yaml.
+*/
 export type Sort = 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
 
 export const SORT_MODES = [
@@ -30,10 +32,14 @@ export const SORT_MODES = [
   'name_asc',
 ] as const satisfies readonly Sort[];
 
-/** Documented page sizes. Mirrors `listProducts.pageSize`. */
+/**
+Documented page sizes. Mirrors `listProducts.pageSize`.
+*/
 export const ALLOWED_PAGE_SIZES: readonly (12 | 24)[] = [12, 24];
 
-/** Documented storage sizes in GB. Mirrors `listProducts.storageGb`. */
+/**
+Documented storage sizes in GB. Mirrors `listProducts.storageGb`.
+*/
 export const ALLOWED_STORAGE_GB: readonly (128 | 256 | 512)[] = [128, 256, 512];
 
 /** Guard rather than cast: a parsed `sort` value is `unknown` until the
@@ -48,13 +54,19 @@ export function isStorageBucket(value: number): value is 128 | 256 | 512 {
   return ALLOWED_STORAGE_GB.some((gb) => gb === value);
 }
 
-/** Default page size used when the URL omits `pageSize`. */
+/**
+Default page size used when the URL omits `pageSize`.
+*/
 export const DEFAULT_PAGE_SIZE: 12 | 24 = 12;
 
-/** Default page number used when the URL omits `page`. */
+/**
+Default page number used when the URL omits `page`.
+*/
 export const DEFAULT_PAGE = 1 as const;
 
-/** Search-input debounce applied before a query fires, in milliseconds. */
+/**
+Search-input debounce applied before a query fires, in milliseconds.
+*/
 export const SEARCH_DEBOUNCE_MS = 300;
 
 /**
@@ -93,40 +105,44 @@ export interface CatalogFilters {
   readonly is5g: boolean;
 }
 
-/** A `CatalogQuery` with no filters applied — the documented defaults. */
+/**
+A `CatalogQuery` with no filters applied — the documented defaults.
+*/
 export const DEFAULT_CATALOG_QUERY: CatalogQuery = {
   page: DEFAULT_PAGE,
   pageSize: DEFAULT_PAGE_SIZE,
 };
 
-/** Drop empty / whitespace-only entries while preserving first-seen order. */
+/**
+Drop empty / whitespace-only entries while preserving first-seen order.
+*/
 function dedupePreserveOrder(items: readonly string[]): readonly string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const item of items) {
     const trimmed = item.trim();
-    if (trimmed.length === 0) continue;
-    if (seen.has(trimmed)) continue;
+    if (trimmed.length === 0 || seen.has(trimmed)) continue;
     seen.add(trimmed);
     out.push(trimmed);
   }
   return out;
 }
 
-/** Parse a decimal integer literal; returns null for empty / non-numeric. */
+/**
+Parse a decimal integer literal; returns null for empty / non-numeric.
+*/
 function parseInteger(raw: string): number | null {
   const trimmed = raw.trim();
-  if (trimmed.length === 0) return null;
-  if (!/^-?\d+$/.test(trimmed)) return null;
-  return Number(trimmed);
+  return trimmed.length === 0 || !/^-?\d+$/.test(trimmed) ? null : Number(trimmed);
 }
 
-/** Parse a strict `true` / `false` literal; returns null otherwise. */
+/**
+Parse a strict `true` / `false` literal; returns null otherwise.
+*/
 function parseBoolean(raw: string): boolean | null {
   const trimmed = raw.trim();
   if (trimmed === 'true') return true;
-  if (trimmed === 'false') return false;
-  return null;
+  return trimmed === 'false' ? false : null;
 }
 
 /**
@@ -136,7 +152,7 @@ function parseBoolean(raw: string): boolean | null {
  * — they are dropped, which matches T06's wire parser surfacing the
  * underlying 400 but lets the UI degrade safely on direct links.
  */
-export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
+export function parseCatalogQuery(parameters: URLSearchParams): CatalogQuery {
   // Build into a mutable accumulator, then return as the readonly
   // shape. `CatalogQuery` is intentionally `readonly` so consumers
   // treat it as immutable; the codec is the single mutator.
@@ -154,63 +170,61 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     pageSize: 12 | 24;
   } = { ...DEFAULT_CATALOG_QUERY };
 
-  const q = params.get('q');
+  const q = parameters.get('q');
   if (q !== null) {
     const trimmed = q.trim();
     if (trimmed.length > 0) query.q = trimmed;
   }
 
-  const brandsRaw = params.getAll('brand');
+  const brandsRaw = parameters.getAll('brand');
   if (brandsRaw.length > 0) {
     const deduped = dedupePreserveOrder(brandsRaw);
     if (deduped.length > 0) query.brands = deduped;
   }
 
-  const storageRaw = params.getAll('storageGb');
+  const storageRaw = parameters.getAll('storageGb');
   if (storageRaw.length > 0) {
     const seen = new Set<128 | 256 | 512>();
     const parsed: (128 | 256 | 512)[] = [];
     for (const raw of storageRaw) {
-      const num = parseInteger(raw);
-      if (num === null) continue;
-      if (!isStorageBucket(num)) continue;
-      if (seen.has(num)) continue;
-      seen.add(num);
-      parsed.push(num);
+      const number_ = parseInteger(raw);
+      if (number_ === null || !isStorageBucket(number_) || seen.has(number_)) continue;
+      seen.add(number_);
+      parsed.push(number_);
     }
     if (parsed.length > 0) query.storageGb = parsed;
   }
 
-  const minPriceRaw = params.get('minPrice');
+  const minPriceRaw = parameters.get('minPrice');
   if (minPriceRaw !== null) {
-    const num = parseInteger(minPriceRaw);
-    if (num !== null && num >= 0) query.minPrice = num;
+    const number_ = parseInteger(minPriceRaw);
+    if (number_ !== null && number_ >= 0) query.minPrice = number_;
   }
-  const maxPriceRaw = params.get('maxPrice');
+  const maxPriceRaw = parameters.get('maxPrice');
   if (maxPriceRaw !== null) {
-    const num = parseInteger(maxPriceRaw);
-    if (num !== null && num >= 0) query.maxPrice = num;
+    const number_ = parseInteger(maxPriceRaw);
+    if (number_ !== null && number_ >= 0) query.maxPrice = number_;
   }
 
-  const inStockRaw = params.get('inStock');
+  const inStockRaw = parameters.get('inStock');
   if (inStockRaw !== null) {
     const parsed = parseBoolean(inStockRaw);
     if (parsed !== null) query.inStock = parsed;
   }
 
-  const is5gRaw = params.get('is5g');
+  const is5gRaw = parameters.get('is5g');
   if (is5gRaw !== null) {
     const parsed = parseBoolean(is5gRaw);
     if (parsed !== null) query.is5g = parsed;
   }
 
-  const featuredRaw = params.get('featured');
+  const featuredRaw = parameters.get('featured');
   if (featuredRaw !== null) {
     const parsed = parseBoolean(featuredRaw);
     if (parsed !== null) query.featured = parsed;
   }
 
-  const sortRaw = params.get('sort');
+  const sortRaw = parameters.get('sort');
   if (sortRaw !== null) {
     const trimmed = sortRaw.trim();
     if (isSort(trimmed)) {
@@ -218,22 +232,24 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     }
   }
 
-  const pageRaw = params.get('page');
+  const pageRaw = parameters.get('page');
   if (pageRaw !== null) {
-    const num = parseInteger(pageRaw);
-    if (num !== null && num >= 1) query.page = num;
+    const number_ = parseInteger(pageRaw);
+    if (number_ !== null && number_ >= 1) query.page = number_;
   }
 
-  const pageSizeRaw = params.get('pageSize');
+  const pageSizeRaw = parameters.get('pageSize');
   if (pageSizeRaw !== null) {
-    const num = parseInteger(pageSizeRaw);
-    if (num === 12 || num === 24) query.pageSize = num;
+    const number_ = parseInteger(pageSizeRaw);
+    if (number_ === 12 || number_ === 24) query.pageSize = number_;
   }
 
   return query;
 }
 
-/** Every query-string key this codec owns, in canonical order. */
+/**
+Every query-string key this codec owns, in canonical order.
+*/
 export const CATALOG_QUERY_KEYS = [
   'q',
   'brand',
@@ -256,15 +272,15 @@ export const CATALOG_QUERY_KEYS = [
  * array duplicates collapse to the first-seen entry in input order.
  */
 export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
-  const params = new URLSearchParams();
+  const parameters = new URLSearchParams();
 
   if (query.q !== undefined && query.q.trim().length > 0) {
-    params.set('q', query.q.trim());
+    parameters.set('q', query.q.trim());
   }
 
   if (query.brands !== undefined && query.brands.length > 0) {
     const deduped = dedupePreserveOrder(query.brands);
-    for (const brand of deduped) params.append('brand', brand);
+    for (const brand of deduped) parameters.append('brand', brand);
   }
 
   if (query.storageGb !== undefined && query.storageGb.length > 0) {
@@ -275,22 +291,22 @@ export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
       seen.add(bucket);
       ordered.push(bucket);
     }
-    for (const bucket of ordered) params.append('storageGb', String(bucket));
+    for (const bucket of ordered) parameters.append('storageGb', String(bucket));
   }
 
-  if (query.minPrice !== undefined) params.set('minPrice', String(query.minPrice));
-  if (query.maxPrice !== undefined) params.set('maxPrice', String(query.maxPrice));
+  if (query.minPrice !== undefined) parameters.set('minPrice', String(query.minPrice));
+  if (query.maxPrice !== undefined) parameters.set('maxPrice', String(query.maxPrice));
 
-  if (query.inStock !== undefined) params.set('inStock', String(query.inStock));
-  if (query.is5g !== undefined) params.set('is5g', String(query.is5g));
-  if (query.featured !== undefined) params.set('featured', String(query.featured));
+  if (query.inStock !== undefined) parameters.set('inStock', String(query.inStock));
+  if (query.is5g !== undefined) parameters.set('is5g', String(query.is5g));
+  if (query.featured !== undefined) parameters.set('featured', String(query.featured));
 
-  if (query.sort !== undefined) params.set('sort', query.sort);
+  if (query.sort !== undefined) parameters.set('sort', query.sort);
 
-  if (query.page !== DEFAULT_PAGE) params.set('page', String(query.page));
-  if (query.pageSize !== DEFAULT_PAGE_SIZE) params.set('pageSize', String(query.pageSize));
+  if (query.page !== DEFAULT_PAGE) parameters.set('page', String(query.page));
+  if (query.pageSize !== DEFAULT_PAGE_SIZE) parameters.set('pageSize', String(query.pageSize));
 
-  return params;
+  return parameters;
 }
 
 /** One removable chip in `AppliedFilters`' chip row. `name` is a

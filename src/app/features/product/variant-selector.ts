@@ -37,8 +37,7 @@ export class VariantSelector {
 
   private readonly selectedVariant = computed<Variant | null>(() => {
     const id = this.selectedId();
-    if (id === null) return null;
-    return this.variants().find((v) => v.id === id) ?? null;
+    return id === null ? null : (this.variants().find((v) => v.id === id) ?? null);
   });
 
   readonly selectedColorCode = computed<string | null>(
@@ -48,7 +47,9 @@ export class VariantSelector {
     () => this.selectedVariant()?.storageGb ?? null,
   );
 
-  /** Distinct color buckets derived from the variant list. */
+  /**
+  Distinct color buckets derived from the variant list.
+  */
   readonly colorOptions = computed(() => {
     const map = new Map<string, { colorCode: string; colorName: string; swatchHex: string }>();
     for (const variant of this.variants()) {
@@ -59,10 +60,12 @@ export class VariantSelector {
         swatchHex: variant.swatchHex,
       });
     }
-    return Array.from(map.values());
+    return [...map.values()];
   });
 
-  /** Distinct storage buckets derived from the variant list. */
+  /**
+  Distinct storage buckets derived from the variant list.
+  */
   readonly storageOptions = computed(() => {
     const seen = new Set<number>();
     const list: { storageGb: number }[] = [];
@@ -78,18 +81,17 @@ export class VariantSelector {
     const code = this.selectedColorCode();
     if (code === null) return '—';
     const match = this.colorOptions().find((c) => c.colorCode === code);
-    return match ? match.colorName : code;
+    return match !== undefined ? match.colorName : code;
   });
 
   readonly selectedStorageLabel = computed<string>(() => {
     const value = this.selectedStorageGb();
-    if (value === null) return '—';
-    return `${String(value)} GB`;
+    return value === null ? '—' : `${String(value)} GB`;
   });
 
   private lookupColorName(colorCode: string): string {
     const match = this.colorOptions().find((c) => c.colorCode === colorCode);
-    return match ? match.colorName : colorCode;
+    return match !== undefined ? match.colorName : colorCode;
   }
 
   /** Every (color, storage) pair with no matching variant, and the
@@ -107,8 +109,8 @@ export class VariantSelector {
     const out: { colorCode: string; storageGb: number; reason: string }[] = [];
     for (const colorCode of colorSet) {
       for (const storageGb of storageSet) {
-        const exists = list.some((v) => v.colorCode === colorCode && v.storageGb === storageGb);
-        if (exists) continue;
+        const isExists = list.some((v) => v.colorCode === colorCode && v.storageGb === storageGb);
+        if (isExists) continue;
         out.push({
           colorCode,
           storageGb,
@@ -145,7 +147,7 @@ export class VariantSelector {
     if (this.disabled() || this.isColorDisabled(colorCode)) return;
     const storage = this.selectedStorageGb();
     const match = this.variants().find((v) => v.colorCode === colorCode && v.storageGb === storage);
-    if (match) this.variantSelected.emit(match.id);
+    if (match !== undefined) this.variantSelected.emit(match.id);
   }
 
   /** Resolves the exact (currentColor, storage) pair and emits its
@@ -154,25 +156,25 @@ export class VariantSelector {
     if (this.disabled() || this.isStorageDisabled(storageGb)) return;
     const color = this.selectedColorCode();
     const match = this.variants().find((v) => v.colorCode === color && v.storageGb === storageGb);
-    if (match) this.variantSelected.emit(match.id);
+    if (match !== undefined) this.variantSelected.emit(match.id);
   }
 
   isColorDisabled(colorCode: string): boolean {
     if (this.disabled()) return true;
     const storage = this.selectedStorageGb();
-    if (storage === null) return false;
-    return this.disabledCombinations().some(
-      (d) => d.colorCode === colorCode && d.storageGb === storage,
-    );
+    return storage === null
+      ? false
+      : this.disabledCombinations().some(
+          (d) => d.colorCode === colorCode && d.storageGb === storage,
+        );
   }
 
   isStorageDisabled(storageGb: number): boolean {
     if (this.disabled()) return true;
     const color = this.selectedColorCode();
-    if (color === null) return false;
-    return this.disabledCombinations().some(
-      (d) => d.colorCode === color && d.storageGb === storageGb,
-    );
+    return color === null
+      ? false
+      : this.disabledCombinations().some((d) => d.colorCode === color && d.storageGb === storageGb);
   }
 
   colorDisabledReasonId(colorCode: string): string | null {

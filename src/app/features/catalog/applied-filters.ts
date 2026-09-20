@@ -8,8 +8,7 @@ import type { FilterIdentity } from '../../shared/types/filter-identity';
  *  test-ids the pre-extraction inline markup used. */
 function chipTestId(name: FilterIdentity['name']): string {
   if (name === 'brands') return 'brand';
-  if (name === 'storageGb') return 'storage';
-  return name;
+  return name === 'storageGb' ? 'storage' : name;
 }
 
 /**

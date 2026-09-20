@@ -1,36 +1,33 @@
 @switch (state().kind) {
   @case ('loading') {
     <div class="loading" data-testid="delivery-loading">
-      <app-loading-state
-        variant="lines"
-        label="Szállítási és fizetési opciók betöltése"
-      ></app-loading-state>
+      <app-loading-state label="Szállítási és fizetési opciók betöltése" variant="lines" />
     </div>
   }
   @case ('error') {
     <app-error-state
-      [title]="'Az opciók nem érhetők el'"
+      retryLabel="Újrapróbálom"
+      title="Az opciók nem érhetők el"
       [message]="errorMessage()"
-      [retryLabel]="'Újrapróbálom'"
       [pending]="retrying()"
       (retryRequested)="onRetry()"
-    ></app-error-state>
+    />
   }
   @case ('ready') {
     @if (saveFailure(); as failure) {
       <app-status-message
-        [message]="saveFailureMessage()"
-        severity="error"
-        [persistent]="true"
         data-testid="delivery-save-failure-detail"
-      ></app-status-message>
+        severity="error"
+        [message]="saveFailureMessage()"
+        [persistent]="true"
+      />
     }
     <app-delivery-step
-      [options]="readyOptions()!"
       [fields]="checkoutFacade.form"
+      [options]="readyOptions()!"
       [saveState]="saveState()"
       (continueRequested)="onContinueRequested()"
       (retryOptions)="onRetryOptions()"
-    ></app-delivery-step>
+    />
   }
 }

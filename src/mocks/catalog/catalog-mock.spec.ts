@@ -30,7 +30,7 @@ import {
 } from '../../mocks/catalog/filter-products';
 import { buildFacets } from '../../mocks/catalog/facets';
 import type { Money, Product, Variant } from '../../mocks/repository';
-import { Repository } from '../../mocks/repository';
+import { Repository as Repo } from '../../mocks/repository';
 import type { CreateHandlersOptions } from '../../mocks/create-handlers';
 import {
   createDeterministicIds,
@@ -117,7 +117,7 @@ describe('normalizeQuery / normalizeBrand(s)', () => {
   it('trims, lowercases and NFC-normalises a search string', () => {
     expect(normalizeQuery('  Demo ')).toBe('demo');
     expect(normalizeQuery('ÁRVÍZTŰRŐ')).toBe(normalizeQuery('árvíztűrő'));
-    expect(normalizeQuery('   ')).toBe('');
+    expect(normalizeQuery(' '.repeat(3))).toBe('');
   });
 
   it('normalises a single brand value', () => {
@@ -179,7 +179,7 @@ describe('findMatchingVariant', () => {
     const b = product('p-B', 'b', 'BrandX', 'B', true, [variant('b-1', 100_000, 256)]);
     const matchB = matchProduct(b, EMPTY_FILTER, new Set());
     const matchA = matchProduct(a, EMPTY_FILTER, new Set());
-    if (!matchA || !matchB) {
+    if (matchA === null || matchB === null) {
       throw new Error('expected matches');
     }
     const sorted = sortMatches([matchB, matchA], 'price_asc').map((m) => m.product.id);
@@ -198,7 +198,9 @@ describe('matchProduct (AC01 same-variant conjunction)', () => {
     expect(matchProduct(p, { ...EMPTY_FILTER, q: 'mibolt' }, featuredSet)?.product.id).toBe('p-1');
     expect(matchProduct(p, { ...EMPTY_FILTER, q: 'nope' }, featuredSet)).toBeNull();
     // Empty q after normalize applies no filter.
-    expect(matchProduct(p, { ...EMPTY_FILTER, q: '   ' }, featuredSet)?.product.id).toBe('p-1');
+    expect(matchProduct(p, { ...EMPTY_FILTER, q: ' '.repeat(3) }, featuredSet)?.product.id).toBe(
+      'p-1',
+    );
   });
 
   it('applies brand filter as OR within the facet', () => {
@@ -303,7 +305,7 @@ describe('sortMatches', () => {
   });
 
   it('returns a fresh array - the input is not mutated', () => {
-    const original = matches.slice();
+    const original = [...matches];
     sortMatches(matches, 'price_desc');
     expect(matches.map((m) => m.product.id)).toEqual(original.map((m) => m.product.id));
   });
@@ -317,7 +319,7 @@ describe('paginateMatches', () => {
       matchingVariant: v,
     };
   }
-  const matches = Array.from({ length: 5 }, (_, i) => mk(`p-${String(i)}`));
+  const matches = Array.from({ length: 5 }, (_, index) => mk(`p-${String(index)}`));
 
   it('returns the requested page of items', () => {
     const page = paginateMatches(matches, 1, 12);
@@ -328,7 +330,9 @@ describe('paginateMatches', () => {
   });
 
   it('slices the right segment for mid-range pages', () => {
-    const many = Array.from({ length: 25 }, (_, i) => mk(`p-${i.toString().padStart(2, '0')}`));
+    const many = Array.from({ length: 25 }, (_, index) =>
+      mk(`p-${index.toString().padStart(2, '0')}`),
+    );
     const page = paginateMatches(many, 2, 12);
     expect(page.items.map((m) => m.product.id)).toEqual([
       'p-12',
@@ -383,94 +387,100 @@ describe('filterProducts', () => {
 // parseCatalogFilter - every error path is exercised
 // ---------------------------------------------------------------------------
 
-function paramsOf(qs: string): URLSearchParams {
+function parametersOf(qs: string): URLSearchParams {
   return new URLSearchParams(qs);
 }
 
 describe('parseCatalogFilter happy paths', () => {
   it('returns the documented defaults', () => {
-    const result = parseCatalogFilter(paramsOf(''));
+    const result = parseCatalogFilter(parametersOf(''));
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value.page).toBe(1);
-      expect(result.value.pageSize).toBe(12);
-      expect(result.value.sort).toBeUndefined();
+    if (!result.ok) {
+      return;
     }
+
+    expect(result.value.page).toBe(1);
+    expect(result.value.pageSize).toBe(12);
+    expect(result.value.sort).toBeUndefined();
   });
 
   it('parses every supported query parameter', () => {
     const result = parseCatalogFilter(
-      paramsOf(
+      parametersOf(
         'q=demo&brand=MiBolt&brand=Sample&storageGb=128&storageGb=256&minPrice=10000&maxPrice=500000&inStock=true&is5g=true&featured=true&sort=price_desc&page=2&pageSize=24',
       ),
     );
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value.q).toBe('demo');
-      expect(result.value.brands).toEqual(['MiBolt', 'Sample']);
-      expect(result.value.storageGb).toEqual([128, 256]);
-      expect(result.value.minPrice).toBe(10_000);
-      expect(result.value.maxPrice).toBe(500_000);
-      expect(result.value.inStock).toBe(true);
-      expect(result.value.is5g).toBe(true);
-      expect(result.value.featured).toBe(true);
-      expect(result.value.sort).toBe('price_desc');
-      expect(result.value.page).toBe(2);
-      expect(result.value.pageSize).toBe(24);
+    if (!result.ok) {
+      return;
     }
+
+    expect(result.value.q).toBe('demo');
+    expect(result.value.brands).toEqual(['MiBolt', 'Sample']);
+    expect(result.value.storageGb).toEqual([128, 256]);
+    expect(result.value.minPrice).toBe(10_000);
+    expect(result.value.maxPrice).toBe(500_000);
+    expect(result.value.inStock).toBe(true);
+    expect(result.value.is5g).toBe(true);
+    expect(result.value.featured).toBe(true);
+    expect(result.value.sort).toBe('price_desc');
+    expect(result.value.page).toBe(2);
+    expect(result.value.pageSize).toBe(24);
   });
 
   it('accepts false booleans and a recommended sort', () => {
     const result = parseCatalogFilter(
-      paramsOf('inStock=false&is5g=false&featured=false&sort=recommended'),
+      parametersOf('inStock=false&is5g=false&featured=false&sort=recommended'),
     );
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.value.inStock).toBe(false);
-      expect(result.value.is5g).toBe(false);
-      expect(result.value.featured).toBe(false);
-      expect(result.value.sort).toBe('recommended');
+    if (!result.ok) {
+      return;
     }
+
+    expect(result.value.inStock).toBe(false);
+    expect(result.value.is5g).toBe(false);
+    expect(result.value.featured).toBe(false);
+    expect(result.value.sort).toBe('recommended');
   });
 });
 
 describe('parseCatalogFilter validation errors (AC04)', () => {
   it('rejects an empty brand[] value with 400', () => {
-    const result = parseCatalogFilter(paramsOf('brand='));
+    const result = parseCatalogFilter(parametersOf('brand='));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('INVALID_BRAND');
   });
 
   it('rejects non-integer storageGb with 400', () => {
-    const r1 = parseCatalogFilter(paramsOf('storageGb=abc'));
+    const r1 = parseCatalogFilter(parametersOf('storageGb=abc'));
     expect(r1.ok).toBe(false);
     if (!r1.ok) expect(r1.error.code).toBe('INVALID_STORAGE');
 
-    const r2 = parseCatalogFilter(paramsOf('storageGb=999'));
+    const r2 = parseCatalogFilter(parametersOf('storageGb=999'));
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.error.code).toBe('INVALID_STORAGE');
   });
 
   it('rejects non-integer / negative prices with 400', () => {
-    const r1 = parseCatalogFilter(paramsOf('minPrice=abc'));
+    const r1 = parseCatalogFilter(parametersOf('minPrice=abc'));
     expect(r1.ok).toBe(false);
     if (!r1.ok) expect(r1.error.code).toBe('INVALID_PRICE');
 
-    const r2 = parseCatalogFilter(paramsOf('minPrice=-1'));
+    const r2 = parseCatalogFilter(parametersOf('minPrice=-1'));
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.error.code).toBe('INVALID_PRICE');
 
-    const r3 = parseCatalogFilter(paramsOf('maxPrice=foo'));
+    const r3 = parseCatalogFilter(parametersOf('maxPrice=foo'));
     expect(r3.ok).toBe(false);
     if (!r3.ok) expect(r3.error.code).toBe('INVALID_PRICE');
 
-    const r4 = parseCatalogFilter(paramsOf('maxPrice=-5'));
+    const r4 = parseCatalogFilter(parametersOf('maxPrice=-5'));
     expect(r4.ok).toBe(false);
     if (!r4.ok) expect(r4.error.code).toBe('INVALID_PRICE');
   });
 
   it('rejects minPrice > maxPrice with 400', () => {
-    const result = parseCatalogFilter(paramsOf('minPrice=100000&maxPrice=50000'));
+    const result = parseCatalogFilter(parametersOf('minPrice=100000&maxPrice=50000'));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('INVALID_PRICE');
   });
@@ -478,14 +488,14 @@ describe('parseCatalogFilter validation errors (AC04)', () => {
   it('rejects non-boolean values for inStock / is5g / featured', () => {
     const cases = ['inStock=foo', 'is5g=1', 'featured=yes'];
     for (const qs of cases) {
-      const result = parseCatalogFilter(paramsOf(qs));
+      const result = parseCatalogFilter(parametersOf(qs));
       expect(result.ok, qs).toBe(false);
       if (!result.ok) expect(result.error.code, qs).toBe('INVALID_BOOLEAN');
     }
   });
 
   it('rejects unknown sort modes with 400', () => {
-    const result = parseCatalogFilter(paramsOf('sort=newest'));
+    const result = parseCatalogFilter(parametersOf('sort=newest'));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('INVALID_SORT');
   });
@@ -493,14 +503,14 @@ describe('parseCatalogFilter validation errors (AC04)', () => {
   it('rejects non-positive or non-integer page values with 400', () => {
     const cases = ['page=abc', 'page=0', 'page=-1', 'page=1.5'];
     for (const qs of cases) {
-      const result = parseCatalogFilter(paramsOf(qs));
+      const result = parseCatalogFilter(parametersOf(qs));
       expect(result.ok, qs).toBe(false);
       if (!result.ok) expect(result.error.code, qs).toBe('INVALID_PAGE');
     }
   });
 
   it('rejects empty price values with 400', () => {
-    const result = parseCatalogFilter(paramsOf('minPrice='));
+    const result = parseCatalogFilter(parametersOf('minPrice='));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('INVALID_PRICE');
   });
@@ -508,7 +518,7 @@ describe('parseCatalogFilter validation errors (AC04)', () => {
   it('rejects pageSize values that are not 12 or 24', () => {
     const cases = ['pageSize=13', 'pageSize=abc', 'pageSize=12.5'];
     for (const qs of cases) {
-      const result = parseCatalogFilter(paramsOf(qs));
+      const result = parseCatalogFilter(parametersOf(qs));
       expect(result.ok, qs).toBe(false);
       if (!result.ok) expect(result.error.code, qs).toBe('INVALID_PAGE_SIZE');
     }
@@ -597,12 +607,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isProduct(value: unknown): value is Product {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value['id'] === 'string' &&
-    typeof value['slug'] === 'string' &&
-    Array.isArray(value['variants'])
-  );
+  return isRecord(value)
+    ? typeof value['id'] === 'string' &&
+        typeof value['slug'] === 'string' &&
+        Array.isArray(value['variants'])
+    : false;
 }
 
 function isProductArray(value: unknown): value is readonly Product[] {
@@ -616,12 +625,11 @@ interface ConfigResponse {
 }
 
 function isConfigResponse(data: unknown): data is ConfigResponse {
-  if (!isRecord(data)) return false;
-  return (
-    typeof data['providerId'] === 'string' &&
-    Array.isArray(data['featuredSlugs']) &&
-    typeof data['maximumLineQuantity'] === 'number'
-  );
+  return isRecord(data)
+    ? typeof data['providerId'] === 'string' &&
+        Array.isArray(data['featuredSlugs']) &&
+        typeof data['maximumLineQuantity'] === 'number'
+    : false;
 }
 
 interface ProductItem {
@@ -648,10 +656,9 @@ interface ProductPageResponse {
 }
 
 function isProductPageResponse(data: unknown): data is ProductPageResponse {
-  if (!isRecord(data)) return false;
-  return (
-    typeof data['total'] === 'number' && Array.isArray(data['items']) && isRecord(data['facets'])
-  );
+  return isRecord(data)
+    ? typeof data['total'] === 'number' && Array.isArray(data['items']) && isRecord(data['facets'])
+    : false;
 }
 
 interface ProblemResponse {
@@ -661,8 +668,7 @@ interface ProblemResponse {
 }
 
 function isProblemResponse(data: unknown): data is ProblemResponse {
-  if (!isRecord(data)) return false;
-  return typeof data['code'] === 'string';
+  return isRecord(data) ? typeof data['code'] === 'string' : false;
 }
 
 interface ProductDetailResponse {
@@ -672,12 +678,11 @@ interface ProductDetailResponse {
 }
 
 function isProductDetailResponse(data: unknown): data is ProductDetailResponse {
-  if (!isRecord(data)) return false;
-  return (
-    typeof data['slug'] === 'string' &&
-    Array.isArray(data['variants']) &&
-    Array.isArray(data['specGroups'])
-  );
+  return isRecord(data)
+    ? typeof data['slug'] === 'string' &&
+        Array.isArray(data['variants']) &&
+        Array.isArray(data['specGroups'])
+    : false;
 }
 
 async function readJson<T>(response: Response, guard: (data: unknown) => data is T): Promise<T> {
@@ -695,15 +700,15 @@ function makeHandlerOptions(): CreateHandlersOptions {
   const scenario: ScenarioDescriptor = DEFAULT_SCENARIO;
   const ids: Ids = createDeterministicIds(scenario.seed);
   const clock: Clock = createFixedClock('2026-09-14T10:00:00.000Z');
-  const repository = new Repository(scenario, ids, clock);
+  const repo = new Repo(scenario, ids, clock);
   // The handler file is Node-free; the statically imported fixture
   // seeds the per-test repository instead.
   const parsed: unknown = productsFixture;
   if (!isProductArray(parsed)) {
     throw new Error('Invalid products fixture');
   }
-  repository.loadProducts(parsed);
-  return { repository, clock, ids, scenario, apiRoot: API_ROOT };
+  repo.loadProducts(parsed);
+  return { repository: repo, clock, ids, scenario, apiRoot: API_ROOT };
 }
 
 beforeEach(() => {
@@ -767,33 +772,33 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
       id: string;
       price: number;
     }
-    const rows: Row[] = body.items.map((i) => ({
-      id: i.id,
-      price: i.defaultVariant.price.amount,
+    const rows: Row[] = body.items.map((index) => ({
+      id: index.id,
+      price: index.defaultVariant.price.amount,
     }));
-    for (let i = 1; i < rows.length; i++) {
-      const prev = rows[i - 1];
-      const curr = rows[i];
-      const priceUp = curr.price > prev.price;
-      const priceTied = curr.price === prev.price;
-      const idOrdered = curr.id.localeCompare(prev.id) >= 0;
-      expect(priceUp || (priceTied && idOrdered)).toBe(true);
+    for (let index = 1; index < rows.length; index++) {
+      const previous = rows[index - 1];
+      const current = rows[index];
+      const isPriceUp = current.price > previous.price;
+      const isPriceTied = current.price === previous.price;
+      const isIdOrdered = current.id.localeCompare(previous.id) >= 0;
+      expect(isPriceUp || (isPriceTied && isIdOrdered)).toBe(true);
     }
   });
 
   it('sort=price_desc returns products in reverse price order', async () => {
     const response = await fetch(`${BASE_URL}/products?sort=price_desc&pageSize=24`);
     const body = await readJson(response, isProductPageResponse);
-    const amounts = body.items.map((i) => i.defaultVariant.price.amount);
-    const sorted = amounts.slice().sort((a, b) => b - a);
+    const amounts = body.items.map((index) => index.defaultVariant.price.amount);
+    const sorted = [...amounts].sort((a, b) => b - a);
     expect(amounts).toEqual(sorted);
   });
 
   it('sort=name_asc returns products in alphabetical name order', async () => {
     const response = await fetch(`${BASE_URL}/products?sort=name_asc&pageSize=24`);
     const body = await readJson(response, isProductPageResponse);
-    const names = body.items.map((i) => i.name);
-    const sorted = names.slice().sort((a, b) => a.localeCompare(b));
+    const names = body.items.map((index) => index.name);
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
     expect(names).toEqual(sorted);
   });
 
@@ -802,7 +807,7 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     const a = await readJson(resA, isProductPageResponse);
     const resB = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
     const b = await readJson(resB, isProductPageResponse);
-    expect(a.items.map((i) => i.id)).toEqual(b.items.map((i) => i.id));
+    expect(a.items.map((index) => index.id)).toEqual(b.items.map((index) => index.id));
   });
 
   it('repeated brand[] params are applied as OR within the facet (AC05)', async () => {
@@ -941,14 +946,14 @@ describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
     const scenario = DEFAULT_SCENARIO;
     const ids = createDeterministicIds(scenario.seed);
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const repository = new Repository(scenario, ids, clock);
+    const repo = new Repo(scenario, ids, clock);
     const parsed: unknown = productsFixture;
     if (!isProductArray(parsed)) {
       throw new Error('Invalid products fixture');
     }
-    repository.loadProducts(parsed);
+    repo.loadProducts(parsed);
     const handlers = buildCatalogHandlers({
-      repository,
+      repository: repo,
       clock,
       ids,
       scenario,

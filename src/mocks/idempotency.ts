@@ -20,16 +20,22 @@
 import { isRecord } from './is-record';
 import type { Clock } from './scenarios';
 
-/** OpenAPI Idempotency-Key window — 24 hours from first success. */
+/**
+OpenAPI Idempotency-Key window — 24 hours from first success.
+*/
 export const IDEMPOTENCY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-/** Outcome cached for a successful (or domain-rejected) replay. */
+/**
+Outcome cached for a successful (or domain-rejected) replay.
+*/
 export interface IdempotencyOutcome {
   status: number;
   body: unknown;
 }
 
-/** Internal record — payload hash + expiry so replays do not leak. */
+/**
+Internal record — payload hash + expiry so replays do not leak.
+*/
 type IdempotencyRecord = IdempotencyOutcome & {
   payloadHash: string;
   expiresAtMs: number;
@@ -102,13 +108,12 @@ export class IdempotencyStore {
    */
   find(key: string, payloadHash: string): IdempotencyOutcome | null {
     const record = this.entries.get(key);
-    if (!record) return null;
+    if (record === undefined) return null;
     if (this.isExpired(record)) {
       this.entries.delete(key);
       return null;
     }
-    if (record.payloadHash !== payloadHash) return null;
-    return { status: record.status, body: record.body };
+    return record.payloadHash === payloadHash ? { status: record.status, body: record.body } : null;
   }
 
   /**
@@ -119,7 +124,7 @@ export class IdempotencyStore {
    */
   hasConflictingPayload(key: string, payloadHash: string): boolean {
     const record = this.entries.get(key);
-    if (!record) return false;
+    if (record === undefined) return false;
     if (this.isExpired(record)) {
       this.entries.delete(key);
       return false;
@@ -142,12 +147,16 @@ export class IdempotencyStore {
     });
   }
 
-  /** Test-only: returns the number of cached entries (including expired). */
+  /**
+  Test-only: returns the number of cached entries (including expired).
+  */
   size(): number {
     return this.entries.size;
   }
 
-  /** Test-only: drops every cached entry. */
+  /**
+  Test-only: drops every cached entry.
+  */
   clear(): void {
     this.entries.clear();
   }

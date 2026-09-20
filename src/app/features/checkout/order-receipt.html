@@ -1,8 +1,8 @@
 <article class="receipt flex flex-col gap-5 p-5 rounded" data-testid="order-receipt">
   <header class="receipt__header flex flex-col gap-3 pb-4 border-b">
     <span
-      class="receipt__badge inline-flex self-start items-center px-3 py-1 rounded-full font-bold tracking-wider"
       aria-hidden="true"
+      class="receipt__badge inline-flex self-start items-center px-3 py-1 rounded-full font-bold tracking-wider"
       data-testid="receipt-demo-badge"
       >DEMO</span
     >
@@ -17,7 +17,7 @@
     </p>
   </header>
 
-  <section class="receipt__lines" aria-label="Rendelt termékek" data-testid="receipt-lines">
+  <section aria-label="Rendelt termékek" class="receipt__lines" data-testid="receipt-lines">
     <h3 class="receipt__section-title m-0 mb-3 font-bold">Termékek</h3>
     <ul class="lines m-0 p-0 list-none flex flex-col gap-3">
       @for (line of receipt().items; track line.variantId) {
@@ -34,11 +34,7 @@
             <span class="line__quantity-value">{{ line.quantity }} db</span>
           </div>
           <div class="line__totals">
-            <app-price-block
-              [money]="line.lineTotal"
-              [label]="'Sor végösszeg'"
-              [status]="'success'"
-            ></app-price-block>
+            <app-price-block label="Sor végösszeg" status="success" [money]="line.lineTotal" />
           </div>
         </li>
       } @empty {
@@ -47,7 +43,7 @@
     </ul>
   </section>
 
-  <section class="receipt__totals" aria-label="Összegzés" data-testid="receipt-totals">
+  <section aria-label="Összegzés" class="receipt__totals" data-testid="receipt-totals">
     <h3 class="receipt__section-title m-0 mb-3 font-bold">Összegzés</h3>
     <dl class="totals flex flex-col gap-2 m-0">
       <div
@@ -56,11 +52,7 @@
       >
         <dt class="m-0">Részösszeg</dt>
         <dd class="m-0">
-          <app-price-block
-            [money]="receipt().subtotal"
-            [label]="'Részösszeg'"
-            [status]="'success'"
-          ></app-price-block>
+          <app-price-block label="Részösszeg" status="success" [money]="receipt().subtotal" />
         </dd>
       </div>
       <div
@@ -69,11 +61,7 @@
       >
         <dt class="m-0">Szállítási díj</dt>
         <dd class="m-0">
-          <app-price-block
-            [money]="receipt().shipping"
-            [label]="'Szállítási díj'"
-            [status]="'success'"
-          ></app-price-block>
+          <app-price-block label="Szállítási díj" status="success" [money]="receipt().shipping" />
         </dd>
       </div>
       <div
@@ -82,19 +70,15 @@
       >
         <dt class="m-0 font-bold">Végösszeg</dt>
         <dd class="m-0 font-bold">
-          <app-price-block
-            [money]="receipt().total"
-            [label]="'Végösszeg'"
-            [status]="'success'"
-          ></app-price-block>
+          <app-price-block label="Végösszeg" status="success" [money]="receipt().total" />
         </dd>
       </div>
     </dl>
   </section>
 
   <section
-    class="receipt__meta flex flex-col gap-2 p-4 rounded"
     aria-label="Fizetés és szállítás"
+    class="receipt__meta flex flex-col gap-2 p-4 rounded"
     data-testid="receipt-meta"
   >
     <dl class="meta__list flex flex-col gap-2 m-0">
@@ -123,16 +107,16 @@
   </section>
 
   <p
-    class="receipt__notice m-0 p-3 px-4 rounded leading-relaxed"
-    role="status"
     aria-live="polite"
+    class="receipt__notice m-0 p-3 px-4 rounded leading-relaxed"
     data-testid="receipt-simulation-notice"
+    role="status"
   >
     <strong>Demo figyelmeztetés.</strong>
     {{ simulationNotice() }}
   </p>
 
   <div class="receipt__actions flex flex-wrap gap-3" data-testid="receipt-actions">
-    <ng-content></ng-content>
+    <ng-content />
   </div>
 </article>
