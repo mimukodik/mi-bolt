@@ -12,6 +12,8 @@
  * produces the same order of generated values.
  */
 
+import { isRecord } from './is-record';
+
 /** Identifier of a scenario as carried in URLs and test fixtures. */
 export type ScenarioName = string;
 
@@ -102,14 +104,29 @@ export function resolveScenario(name: ScenarioName | null | undefined): Scenario
 }
 
 /**
+ * True when `value` carries a `location.search` string, the shape
+ * `parseScenarioFromLocation` needs. `globalThis` is read as `unknown`
+ * first because a Node/SSR runtime has no `location` at all, whatever
+ * the DOM lib types assume.
+ */
+function hasLocationSearch(value: unknown): value is { location: { search: string } } {
+  if (!isRecord(value)) return false;
+  if (!('location' in value)) return false;
+  const location = value['location'];
+  if (!isRecord(location)) return false;
+  if (!('search' in location)) return false;
+  return typeof location['search'] === 'string';
+}
+
+/**
  * Reads `?mi-scenario=<name>` from `globalThis.location` when present.
  * Returns the default scenario descriptor when the document lacks
  * `location` (Node, SSR) or the query param is absent.
  */
 export function parseScenarioFromLocation(): ScenarioDescriptor {
-  const locationLike = (globalThis as { location?: { search?: string } }).location;
-  if (!locationLike || typeof locationLike.search !== 'string') return DEFAULT_SCENARIO;
-  const params = new URLSearchParams(locationLike.search);
+  const globalScope: unknown = globalThis;
+  if (!hasLocationSearch(globalScope)) return DEFAULT_SCENARIO;
+  const params = new URLSearchParams(globalScope.location.search);
   return resolveScenario(params.get('mi-scenario'));
 }
 

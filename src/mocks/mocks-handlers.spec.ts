@@ -219,6 +219,27 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
       warn.mockRestore();
     }
   });
+
+  it('falls back to in-memory storage when globalThis.sessionStorage is not storage-like', () => {
+    // Reject arm of `hasSessionStorage` (src/mocks/persistence.ts):
+    // an object present at `globalThis.sessionStorage` but missing the
+    // getItem/setItem/removeItem methods is treated the same as no
+    // sessionStorage at all, rather than being handed to the adapter and
+    // failing on first use.
+    const original = rawStorage();
+    (globalThis as { sessionStorage?: unknown }).sessionStorage = { notAStorage: true };
+    try {
+      const persistence = createBrowserPersistence({
+        nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+      });
+      const snapshot = makeSnapshot();
+      persistence.save(SCENARIO_KEY, snapshot);
+      expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
+      expect(persistence.isDenied()).toBe(false);
+    } finally {
+      (globalThis as { sessionStorage?: Storage | null }).sessionStorage = original;
+    }
+  });
 });
 
 describe('T05-AC06 scenario isolation', () => {
@@ -273,6 +294,40 @@ describe('T05-AC06 scenario isolation', () => {
     // Missing location / missing param falls back to default.
     delete (globalThis as { location?: unknown }).location;
     expect(parseScenarioFromLocation().name).toBe('default');
+  });
+
+  it('parseScenarioFromLocation falls back to default when location.search is not a string', () => {
+    // Reject arm of `hasLocationSearch` (src/mocks/scenarios.ts): a
+    // `location` object is present, but `search` is missing/non-string.
+    // An array is used (rather than e.g. a number) because
+    // `new URLSearchParams(...)` would otherwise silently coerce a
+    // non-string value instead of surfacing the guard's absence.
+    const original = (globalThis as { location?: Location }).location;
+    (globalThis as { location?: unknown }).location = { search: ['not-a-string'] };
+    try {
+      expect(parseScenarioFromLocation().name).toBe('default');
+    } finally {
+      if (original === undefined) {
+        delete (globalThis as { location?: unknown }).location;
+      } else {
+        (globalThis as { location?: Location }).location = original;
+      }
+    }
+  });
+
+  it('parseScenarioFromLocation falls back to default when globalThis.location is not an object', () => {
+    // Reject arm of `hasLocationSearch` at its outer `isRecord` check.
+    const original = (globalThis as { location?: Location }).location;
+    (globalThis as { location?: unknown }).location = 'not-an-object';
+    try {
+      expect(parseScenarioFromLocation().name).toBe('default');
+    } finally {
+      if (original === undefined) {
+        delete (globalThis as { location?: unknown }).location;
+      } else {
+        (globalThis as { location?: Location }).location = original;
+      }
+    }
   });
 });
 

@@ -21,7 +21,7 @@ import '../../mocks/payment/payment.handlers';
 import '../../mocks/orders/order.handlers';
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CartDomain } from '../../mocks/cart/cart-domain';
-import { IdempotencyStore } from '../../mocks/idempotency';
+import { deriveIdempotencyKey, hashPayload, IdempotencyStore } from '../../mocks/idempotency';
 import { Repository } from '../../mocks/repository';
 import {
   createDeterministicIds,
@@ -574,6 +574,57 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
     expect(noAck.ok).toBe(false);
     if (noAck.ok) return;
     expect(noAck.problem.fieldErrors[0]?.path).toBe('/acknowledgedSimulation');
+  });
+});
+
+describe('OrderDomain OrderReceipt guard (isOrderReceipt reject arm)', () => {
+  it('throws when a cached order replay body does not match the OrderReceipt contract', async () => {
+    // Reject arm of `isOrderReceipt` (src/mocks/orders/commit-order.ts) on
+    // the replay path: the idempotency cache is seeded directly with a body
+    // that is not a valid OrderReceipt, at the exact key/hash `createOrder`
+    // will look up, so the replay branch runs against corrupted state.
+    const env = makeEnv();
+    const ready = await readyCheckout(env, 'demo_cod');
+    const idempotencyKey = `${IDEMPOTENCY_KEY_BASE}-corrupt-replay`;
+    const orderInput = {
+      sessionId: SESSION_A,
+      idempotencyKey,
+      cartId: ready.cartId,
+      quoteId: ready.quoteId,
+      paymentIntentId: null,
+      termsVersion: 'demo-1',
+      acceptedTerms: true,
+      acknowledgedSimulation: true,
+    };
+    const idemKey = deriveIdempotencyKey('POST', '/orders', SESSION_A, idempotencyKey);
+    const payloadHash = hashPayload({
+      cartId: orderInput.cartId,
+      quoteId: orderInput.quoteId,
+      paymentIntentId: orderInput.paymentIntentId,
+      termsVersion: orderInput.termsVersion,
+      acceptedTerms: orderInput.acceptedTerms,
+      acknowledgedSimulation: orderInput.acknowledgedSimulation,
+    });
+    env.idempotency.record(idemKey, payloadHash, { status: 201, body: { not: 'a-receipt' } });
+    expect(() => env.orderDomain.createOrder(orderInput)).toThrow(/not a valid OrderReceipt/);
+  });
+
+  it('throws when a stored order does not match the OrderReceipt contract', () => {
+    // Reject arm of `isOrderReceipt` on the `getOrder` path: the repository
+    // accepts its own (looser) OrderReceipt type, so a record saved without
+    // the domain's required fields is a legitimate value to store but not a
+    // legitimate one to read back as a full receipt.
+    const env = makeEnv();
+    env.repository.saveOrder({
+      id: 'order-corrupt-1',
+      orderNumber: 'DEMO-000999',
+      sessionId: SESSION_A,
+      createdAt: env.clock.now(),
+      total: { amount: 1000, currency: 'HUF' },
+    });
+    expect(() =>
+      env.orderDomain.getOrder({ sessionId: SESSION_A, orderId: 'order-corrupt-1' }),
+    ).toThrow(/not a valid OrderReceipt/);
   });
 });
 
@@ -1497,6 +1548,26 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
       body: 'not-json',
     });
     expect(response.status).toBe(400);
+  });
+
+  it('rejects an array JSON body as 400 with the top-level "invalid JSON" detail', async () => {
+    // Reject arm of `isOrderRequestBody` (src/mocks/orders/order.handlers.ts):
+    // valid JSON that parses to an array is not a request-body record, so it
+    // is rejected before any per-field check runs.
+    const response = await fetch(url('/orders'), {
+      method: 'POST',
+      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-array-body`),
+      body: JSON.stringify([]),
+    });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as {
+      code: string;
+      detail: string;
+      fieldErrors: unknown[];
+    };
+    expect(body.code).toBe('VALIDATION_FAILED');
+    expect(body.detail).toBe('A kérés törzse érvénytelen JSON.');
+    expect(body.fieldErrors).toEqual([]);
   });
 
   it('returns 404 from getOrder for an unknown order id', async () => {

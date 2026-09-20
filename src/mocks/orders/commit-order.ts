@@ -27,7 +27,14 @@
  */
 
 import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
-import { type CartLine, type Money, type Variant, Repository } from '../repository';
+import { isRecord } from '../is-record';
+import {
+  type CartLine,
+  type Money,
+  type OrderReceipt as PersistedOrderReceipt,
+  type Variant,
+  Repository,
+} from '../repository';
 import type { Clock, Ids } from '../scenarios';
 import { QUOTE_TTL_MS, type DeliveryOptionId, QuoteDomain } from '../checkout/quote-domain';
 
@@ -231,6 +238,58 @@ const SIMULATION_NOTICE =
   'A demórendelés elkészült. Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés.';
 
 // ---------------------------------------------------------------------------
+// OrderReceipt type guards — replace the `replay.body as OrderReceipt` and
+// `stored as unknown as ...` casts. The idempotency cache and the
+// repository's own (looser) `OrderReceipt` type both carry `unknown`/
+// optional data from this file's own point of view, so narrowing them
+// needs a runtime proof rather than an assertion.
+// ---------------------------------------------------------------------------
+
+function isMoney(value: unknown): value is Money {
+  if (!isRecord(value)) return false;
+  return typeof value['amount'] === 'number' && typeof value['currency'] === 'string';
+}
+
+function isOrderLineSnapshot(value: unknown): value is OrderLineSnapshot {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value['productName'] === 'string' &&
+    typeof value['variantId'] === 'string' &&
+    typeof value['colorName'] === 'string' &&
+    typeof value['storageGb'] === 'number' &&
+    typeof value['quantity'] === 'number' &&
+    isMoney(value['unitPrice']) &&
+    isMoney(value['lineTotal'])
+  );
+}
+
+/**
+ * True when `value` is a fully-populated `OrderReceipt` — every field
+ * `createOrder` always sets, so this also narrows the repository's own
+ * (partially optional) `OrderReceipt` type read back by `getOrder`.
+ */
+function isOrderReceipt(value: unknown): value is OrderReceipt {
+  if (!isRecord(value)) return false;
+  const items = value['items'];
+  return (
+    typeof value['id'] === 'string' &&
+    typeof value['orderNumber'] === 'string' &&
+    typeof value['createdAt'] === 'string' &&
+    value['status'] === 'demo_confirmed' &&
+    value['isSimulation'] === true &&
+    Array.isArray(items) &&
+    items.every(isOrderLineSnapshot) &&
+    isMoney(value['subtotal']) &&
+    isMoney(value['shipping']) &&
+    isMoney(value['total']) &&
+    (value['paymentMethod'] === 'demo_card' || value['paymentMethod'] === 'demo_cod') &&
+    (value['deliveryOptionId'] === 'home_delivery' ||
+      value['deliveryOptionId'] === 'demo_pickup') &&
+    typeof value['notice'] === 'string'
+  );
+}
+
+// ---------------------------------------------------------------------------
 // OrderDomain inputs / problems / result.
 // ---------------------------------------------------------------------------
 
@@ -314,7 +373,21 @@ export class OrderDomain {
 
     // 3. Replay BEFORE cart status / expiry / stock checks
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) return ok(replay.body as OrderReceipt);
+    if (replay) {
+      // The replay body is stored verbatim by `this.idempotency.record(...)`
+      // below with the exact `receipt` this method builds, so the guard's
+      // false branch cannot be reached with the current call sites (mirrors
+      // `payment.handlers.ts`'s `isRecord(replay.body)` guard). It still has
+      // to be proven rather than asserted; a proven-impossible corruption is
+      // an internal contract violation, not a client-facing problem code, so
+      // it throws instead of returning an invented `OrderProblem`.
+      if (!isOrderReceipt(replay.body)) {
+        throw new Error(
+          `[mi-bolt] cached order replay for key ${idemKey} is not a valid OrderReceipt`,
+        );
+      }
+      return ok(replay.body);
+    }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return err(idempotencyConflict());
     }
@@ -466,7 +539,16 @@ export class OrderDomain {
     if (!session.ok) return session;
     const stored = this.repository.getOrder(input.orderId);
     if (!stored) return err(notFound('A rendelés nem található.'));
-    return ok(stripSession(stored as unknown as { sessionId?: string } & Record<string, unknown>));
+    // `Repository`'s own `OrderReceipt` type leaves every field but
+    // id/orderNumber/sessionId/createdAt/total optional; `saveOrder` above
+    // is this domain's only writer and always fills them in
+    // (`{ ...receipt, sessionId }`), so the guard's false branch is an
+    // internal contract violation rather than a reachable client error —
+    // same reasoning as the replay guard above.
+    if (!isOrderReceipt(stored)) {
+      throw new Error(`[mi-bolt] stored order ${input.orderId} is not a valid OrderReceipt`);
+    }
+    return ok(stripSession(stored));
   }
 
   // -------------------------------------------------------------------------
@@ -550,9 +632,9 @@ function sumMoney(items: readonly Money[]): Money {
 }
 
 /** Drops the internal sessionId before returning the receipt to a caller. */
-function stripSession(stored: { sessionId?: string } & Record<string, unknown>): OrderReceipt {
+function stripSession(stored: PersistedOrderReceipt & OrderReceipt): OrderReceipt {
   const { sessionId: _sessionId, ...rest } = stored;
-  return rest as unknown as OrderReceipt;
+  return rest;
 }
 
 // ---------------------------------------------------------------------------

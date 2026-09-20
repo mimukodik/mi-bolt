@@ -25,6 +25,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { IdempotencyStore } from '../idempotency';
+import { isRecord } from '../is-record';
 
 import {
   OrderDomain,
@@ -95,6 +96,11 @@ interface OrderRequestBody {
   acknowledgedSimulation?: unknown;
 }
 
+/** True when `value` is a JSON object the field-level checks below can read. */
+function isOrderRequestBody(value: unknown): value is OrderRequestBody {
+  return isRecord(value);
+}
+
 function readOrderBody(
   body: unknown,
   traceId: string,
@@ -111,13 +117,13 @@ function readOrderBody(
       };
     }
   | { ok: false; response: HttpResponse<Record<string, unknown>> } {
-  if (!body || typeof body !== 'object') {
+  if (!isOrderRequestBody(body)) {
     return {
       ok: false,
       response: badRequest('A kérés törzse érvénytelen JSON.', traceId),
     };
   }
-  const record = body as OrderRequestBody;
+  const record = body;
   const fieldErrors: { path: string; message: string }[] = [];
   const cartId = typeof record.cartId === 'string' ? record.cartId : '';
   if (cartId.length === 0) {

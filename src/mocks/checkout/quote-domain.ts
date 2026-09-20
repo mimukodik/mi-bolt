@@ -47,6 +47,11 @@ import {
 /** Quote lives exactly 5 mock-clock minutes from creation. */
 export const QUOTE_TTL_MS = 5 * 60 * 1000;
 
+function isMoney(value: unknown): value is Money {
+  if (!isRecord(value)) return false;
+  return typeof value['amount'] === 'number' && typeof value['currency'] === 'string';
+}
+
 /** Allowed payment methods (matches OpenAPI `paymentMethod` enum). */
 type PaymentMethod = 'demo_card' | 'demo_cod';
 
@@ -127,6 +132,86 @@ export interface CheckoutSessionSnapshot {
   cartVersion: number;
   draft: CheckoutDraft;
   quote?: QuoteSnapshot;
+}
+
+/**
+ * True when `value` is a `QuoteSnapshot`. Used to narrow an idempotency
+ * replay body back out of the cache's `unknown` storage — checks the
+ * fields that identify the shape rather than every field.
+ */
+function isQuoteSnapshot(value: unknown): value is QuoteSnapshot {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value['id'] === 'string' &&
+    typeof value['cartId'] === 'string' &&
+    typeof value['cartVersion'] === 'number' &&
+    isMoney(value['subtotal']) &&
+    isMoney(value['shipping']) &&
+    isMoney(value['total']) &&
+    typeof value['expiresAt'] === 'string'
+  );
+}
+
+/**
+ * True when `value` is a `CheckoutSessionSnapshot`. Used to narrow
+ * `updateDraft`'s idempotency replay body — the nested `draft` sections
+ * are already free-form / optional on the wire, so only the identifying
+ * top-level fields are checked (mirrors `isQuoteSnapshot` above).
+ */
+function isCheckoutSessionSnapshot(value: unknown): value is CheckoutSessionSnapshot {
+  if (!isRecord(value)) return false;
+  if (typeof value['cartId'] !== 'string') return false;
+  if (typeof value['cartVersion'] !== 'number') return false;
+  if (!isRecord(value['draft'])) return false;
+  const quote = value['quote'];
+  if (quote !== undefined && !isQuoteSnapshot(quote)) return false;
+  return true;
+}
+
+/**
+ * True when `value` is a `CartLine`. Checks the identifying/scalar
+ * fields; `image` is only checked for being an object, not deep-verified,
+ * per the same "identify the shape" scope as `isQuoteSnapshot` above.
+ */
+function isCartLine(value: unknown): value is CartLine {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value['id'] === 'string' &&
+    typeof value['productId'] === 'string' &&
+    typeof value['productSlug'] === 'string' &&
+    typeof value['productName'] === 'string' &&
+    typeof value['variantId'] === 'string' &&
+    typeof value['colorName'] === 'string' &&
+    typeof value['storageGb'] === 'number' &&
+    isRecord(value['image']) &&
+    typeof value['quantity'] === 'number' &&
+    isMoney(value['unitPrice']) &&
+    isMoney(value['lineTotal']) &&
+    (value['availability'] === 'in_stock' || value['availability'] === 'out_of_stock') &&
+    typeof value['maxQuantity'] === 'number'
+  );
+}
+
+/** True when `value` is a `Cart`. */
+function isCart(value: unknown): value is Cart {
+  if (!isRecord(value)) return false;
+  const items = value['items'];
+  return (
+    typeof value['id'] === 'string' &&
+    typeof value['version'] === 'number' &&
+    (value['status'] === 'active' || value['status'] === 'ordered') &&
+    typeof value['sessionId'] === 'string' &&
+    Array.isArray(items) &&
+    items.every(isCartLine) &&
+    typeof value['createdAt'] === 'string' &&
+    typeof value['expiresAt'] === 'string'
+  );
+}
+
+/** True when `value` is the `{ quote, cart }` pair `createQuote` caches for replay. */
+function isQuoteReplayResult(value: unknown): value is { quote: QuoteSnapshot; cart: Cart } {
+  if (!isRecord(value)) return false;
+  return isQuoteSnapshot(value['quote']) && isCart(value['cart']);
 }
 
 /** Lightweight session/rules/helpers shared with the handler layer. */
@@ -432,7 +517,21 @@ export class QuoteDomain {
     const payloadHash = hashPayload(input.body);
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) return ok(replay.body as CheckoutSessionSnapshot);
+    if (replay) {
+      // The replay body is stored verbatim by `this.idempotency.record(...)`
+      // below with the exact `snapshot` this method builds, so the guard's
+      // false branch cannot be reached with the current call sites (mirrors
+      // `payment.handlers.ts`'s `isRecord(replay.body)` guard). A proven-
+      // impossible corruption is an internal contract violation, not a
+      // client-facing problem code, so it throws instead of returning an
+      // invented `Problem`.
+      if (!isCheckoutSessionSnapshot(replay.body)) {
+        throw new Error(
+          `[mi-bolt] cached checkout draft replay for key ${idemKey} is not a valid CheckoutSessionSnapshot`,
+        );
+      }
+      return ok(replay.body);
+    }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return err(idempotencyConflict());
     }
@@ -557,7 +656,21 @@ export class QuoteDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) return ok(replay.body as { quote: QuoteSnapshot; cart: Cart });
+    if (replay) {
+      // The replay body is stored verbatim by `this.idempotency.record(...)`
+      // below with the exact `result` this method builds, so the guard's
+      // false branch cannot be reached with the current call sites (mirrors
+      // `payment.handlers.ts`'s `isRecord(replay.body)` guard). A proven-
+      // impossible corruption is an internal contract violation, not a
+      // client-facing problem code, so it throws instead of returning an
+      // invented `Problem`.
+      if (!isQuoteReplayResult(replay.body)) {
+        throw new Error(
+          `[mi-bolt] cached quote replay for key ${idemKey} is not a valid quote/cart pair`,
+        );
+      }
+      return ok(replay.body);
+    }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return err(idempotencyConflict());
     }

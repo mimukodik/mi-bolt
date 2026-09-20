@@ -20,6 +20,7 @@
  * understands why a reload would lose the cart.
  */
 
+import { isRecord } from './is-record';
 import type { ScenarioName } from './scenarios';
 
 /** Snapshot key prefix; the scenario name namespaces the entry. */
@@ -157,11 +158,32 @@ export function snapshotKey(scenarioName: ScenarioName): string {
   return `${SNAPSHOT_KEY_PREFIX}${scenarioName}`;
 }
 
+/** True when `value` is an object shaped like `StorageLike` (get/set/remove item). */
+function isStorageLike(value: unknown): value is StorageLike {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value['getItem'] === 'function' &&
+    typeof value['setItem'] === 'function' &&
+    typeof value['removeItem'] === 'function'
+  );
+}
+
+/**
+ * True when `value` carries a storage-like `sessionStorage`. `globalThis`
+ * is read as `unknown` first because a Node/SSR runtime has no
+ * `sessionStorage` at all, whatever the DOM lib types assume.
+ */
+function hasSessionStorage(value: unknown): value is { sessionStorage: StorageLike } {
+  if (!isRecord(value)) return false;
+  if (!('sessionStorage' in value)) return false;
+  return isStorageLike(value['sessionStorage']);
+}
+
 /** Detects Node and other non-DOM environments where sessionStorage is missing. */
 function resolveDefaultStorage(): StorageLike | null {
-  const candidate = (globalThis as { sessionStorage?: StorageLike | undefined }).sessionStorage;
-  if (!candidate) return null;
-  return candidate;
+  const globalScope: unknown = globalThis;
+  if (!hasSessionStorage(globalScope)) return null;
+  return globalScope.sessionStorage;
 }
 
 /**
@@ -266,8 +288,8 @@ export class Persistence {
  * downstream code can rely on the narrow shape.
  */
 function isValidSnapshot(value: unknown): value is MockSnapshot {
-  if (!value || typeof value !== 'object') return false;
-  const v = record(value);
+  if (!isRecord(value)) return false;
+  const v = value;
   if (typeof v['schemaVersion'] !== 'number') return false;
   if (v['providerId'] !== 'mi-bolt') return false;
   if (typeof v['simulatedSessionId'] !== 'string') return false;
@@ -298,8 +320,8 @@ function isValidSnapshot(value: unknown): value is MockSnapshot {
 }
 
 function isValidCart(value: unknown): value is PersistedCart {
-  if (!value || typeof value !== 'object') return false;
-  const c = record(value);
+  if (!isRecord(value)) return false;
+  const c = value;
   if (typeof c['id'] !== 'string') return false;
   if (typeof c['version'] !== 'number') return false;
   if (!Array.isArray(c['items'])) return false;
@@ -315,8 +337,8 @@ function isValidCart(value: unknown): value is PersistedCart {
 }
 
 function isValidCartLine(value: unknown): value is PersistedCartLine {
-  if (!value || typeof value !== 'object') return false;
-  const i = record(value);
+  if (!isRecord(value)) return false;
+  const i = value;
   if (typeof i['id'] !== 'string') return false;
   if (typeof i['variantId'] !== 'string') return false;
   if (!isPositiveInteger(i['quantity'])) return false;
@@ -328,8 +350,8 @@ function isValidCartLine(value: unknown): value is PersistedCartLine {
 }
 
 function isValidReceipt(value: unknown): value is PersistedReceipt {
-  if (!value || typeof value !== 'object') return false;
-  const r = record(value);
+  if (!isRecord(value)) return false;
+  const r = value;
   if (typeof r['id'] !== 'string') return false;
   if (typeof r['orderNumber'] !== 'string') return false;
   if (typeof r['createdAt'] !== 'string') return false;
@@ -348,8 +370,8 @@ function isValidReceipt(value: unknown): value is PersistedReceipt {
 }
 
 function isValidReceiptItem(value: unknown): value is PersistedReceiptItem {
-  if (!value || typeof value !== 'object') return false;
-  const i = record(value);
+  if (!isRecord(value)) return false;
+  const i = value;
   if (typeof i['variantId'] !== 'string') return false;
   if (!isPositiveInteger(i['quantity'])) return false;
   if (!isValidMoney(i['unitPrice'])) return false;
@@ -362,8 +384,8 @@ function isValidReceiptItem(value: unknown): value is PersistedReceiptItem {
 }
 
 function isValidMoney(value: unknown): value is { amount: number; currency: string } {
-  if (!value || typeof value !== 'object') return false;
-  const m = record(value);
+  if (!isRecord(value)) return false;
+  const m = value;
   if (typeof m['amount'] !== 'number' || !Number.isFinite(m['amount']) || m['amount'] < 0)
     return false;
   if (typeof m['currency'] !== 'string') return false;
@@ -374,8 +396,4 @@ function isPositiveInteger(value: unknown): value is number {
   return (
     typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
   );
-}
-
-function record(value: object): Record<string, unknown> {
-  return value as Record<string, unknown>;
 }

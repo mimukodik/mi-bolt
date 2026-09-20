@@ -13,7 +13,7 @@ import { createHandlers } from '../../mocks/create-handlers';
 // checkout wire tests can drive `addCartItem` between quote attempts.
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CartDomain } from '../../mocks/cart/cart-domain';
-import { IdempotencyStore } from '../../mocks/idempotency';
+import { deriveIdempotencyKey, hashPayload, IdempotencyStore } from '../../mocks/idempotency';
 import type { Product, Variant } from '../../mocks/repository';
 import { Repository } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
@@ -956,6 +956,72 @@ describe('QuoteDomain error paths and session guards', () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected rejection');
     expect(result.problem.fieldErrors[0]?.path).toBe('/paymentMethod');
+  });
+});
+
+describe('QuoteDomain replay guards (isCheckoutSessionSnapshot / isQuoteReplayResult reject arm)', () => {
+  it('throws when a cached updateDraft replay body does not match CheckoutSessionSnapshot', async () => {
+    // Reject arm of `isCheckoutSessionSnapshot` (src/mocks/checkout/quote-domain.ts):
+    // the idempotency cache is seeded directly with a body that is not a
+    // valid CheckoutSessionSnapshot, at the exact key/hash `updateDraft`
+    // will look up.
+    const env = makeEnv();
+    const seeded = await seedCart(env);
+    const idempotencyKey = `${IDEMPOTENCY_KEY_BASE}-corrupt-draft-replay`;
+    const body = { contact: completeValidContact() };
+    const idemKey = deriveIdempotencyKey(
+      'PUT',
+      `/checkout/${seeded.id}`,
+      SESSION_A,
+      idempotencyKey,
+    );
+    const payloadHash = hashPayload(body);
+    env.idempotency.record(idemKey, payloadHash, { status: 200, body: { not: 'a-snapshot' } });
+    expect(() =>
+      env.quoteDomain.updateDraft({
+        sessionId: SESSION_A,
+        cartId: seeded.id,
+        cartVersion: seeded.version,
+        idempotencyKey,
+        body,
+      }),
+    ).toThrow(/not a valid CheckoutSessionSnapshot/);
+  });
+
+  it('throws when a cached createQuote replay body does not match the quote/cart pair', async () => {
+    // Reject arm of `isQuoteReplayResult`: same technique, on the
+    // `createQuote` path (`POST /checkout/{cartId}/quote`, hash of `{}`).
+    const env = makeEnv();
+    const seeded = await seedCart(env);
+    const draft = env.quoteDomain.updateDraft({
+      sessionId: SESSION_A,
+      cartId: seeded.id,
+      cartVersion: seeded.version,
+      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-corrupt-quote-draft`,
+      body: {
+        contact: completeValidContact(),
+        delivery: completeValidDelivery(),
+        paymentMethod: 'demo_cod',
+      },
+    });
+    if (!draft.ok) throw new Error('expected draft update to succeed');
+    const idempotencyKey = `${IDEMPOTENCY_KEY_BASE}-corrupt-quote-replay`;
+    const idemKey = deriveIdempotencyKey(
+      'POST',
+      `/checkout/${seeded.id}/quote`,
+      SESSION_A,
+      idempotencyKey,
+    );
+    const payloadHash = hashPayload({});
+    env.idempotency.record(idemKey, payloadHash, { status: 200, body: { not: 'a-quote-pair' } });
+    expect(() =>
+      env.quoteDomain.createQuote({
+        sessionId: SESSION_A,
+        cartId: seeded.id,
+        cartVersion: draft.value.cartVersion,
+        idempotencyKey,
+      }),
+    ).toThrow(/not a valid quote\/cart pair/);
   });
 });
 
