@@ -8,7 +8,6 @@
       "AGENTS.md",
       "docs/mi-bolt/execution/decisions.md",
       "docs/mi-bolt/execution/toolchain-lock.json",
-      "scripts/verify-skill-evidence.mjs",
       "docs/mi-bolt/execution/skill-location.json"
     ],
     "interface": "Input: delivered specification and mi-bolt-design 1.0.1. Output: immutable project constraints, stable Angular-22 lock manifest and review evidence schema.",
