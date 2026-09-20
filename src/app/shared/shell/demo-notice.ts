@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 /**
  * `DemoNotice` is a light strip immediately below the global header,
@@ -11,6 +11,13 @@ import { Component } from '@angular/core';
  * The element uses `role="status"` so screen readers announce it once
  * when the page renders without hijacking subsequent updates; the
  * visible text is the source of truth, not a redundant aria-label.
+ *
+ * `persistenceMode` drives the second, `'memory'` state
+ * `docs/spec/components.md:101-113` declares: a visibly distinct
+ * surface warning that a reload will not restore the demo snapshot.
+ * The default is `'durable'` rather than a required input so this
+ * component can land before the call site has a real value to bind —
+ * see `docs/fix/FIX-70.md`.
  */
 @Component({
   selector: 'app-demo-notice',
@@ -19,4 +26,6 @@ import { Component } from '@angular/core';
 })
 export class DemoNotice {
   protected readonly tag = 'app-demo-notice';
+
+  readonly persistenceMode = input<'durable' | 'memory'>('durable');
 }

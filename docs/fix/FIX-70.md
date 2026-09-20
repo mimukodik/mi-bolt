@@ -1,6 +1,23 @@
 # FIX-70 — Give DemoNotice its persistenceMode input and its memory-warning state
 
-Status: PLANNED — not executed.
+Status: PARTIAL — `DemoNotice` (`src/app/shared/shell/demo-notice.ts`) now takes the
+`persistenceMode` signal input (`'durable' | 'memory'`, default `'durable'`) and renders a
+visibly distinct `'memory'` surface (`.demo-notice--memory`, `--color-status-warning`
+background, `--color-text-inverse` text/badge), covered by
+`src/app/shared/shell/demo-notice.spec.ts` (both arms against rendered DOM); worktree
+commit (sha filled in by the orchestrator after cherry-pick), spanning
+`demo-notice.ts`/`.html`/`.scss` and the new spec. **FIX-10** ("Make a reload restore the
+cart") is DONE on this branch but does not expose the `SessionStorageAdapter.denied` flag
+(`src/mocks/persistence.ts:94`, still `private`, still unread outside the class — measured
+directly, not assumed) — so per this document's own item 4, the call site
+(`app-shell.html`) is left at the `'durable'` default and the `'memory'` state is unit-
+tested directly rather than driven by real state. Open: **AC03** (real-browser check) and
+**AC02** are deferred to the orchestrator's batched browser-verification pass; **AC05**
+is reported unmet — a second repository search at execution time confirmed neither
+`docs/design/prototype.html` nor `docs/spec/architecture.md` §8 carries a Hungarian
+sentence for the `'memory'` state (same Hungarian-phrase search as this document's
+Evidence section, zero hits), so the rendered `'memory'` text is a placeholder marked as
+such in a code comment in `demo-notice.html`, not final copy.
 Severity: major
 Source: Split out of FIX-50 item 6 by RULINGS-B2 (finding S4a-D1): it shares no file, no
 screen and no call site with FIX-50's other five items and carries a different

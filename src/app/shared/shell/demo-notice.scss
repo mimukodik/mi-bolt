@@ -34,6 +34,18 @@
   min-width: 0;
 }
 
+.demo-notice--memory {
+  background: var(--color-status-warning);
+  border-bottom-color: var(--color-status-warning);
+  color: var(--color-text-inverse);
+}
+
+.demo-notice--memory .demo-notice__badge {
+  background: var(--color-text-inverse);
+  color: var(--color-status-warning);
+  border-color: var(--color-text-inverse);
+}
+
 @media (min-width: 768px) {
   .demo-notice {
     padding: var(--space-2) var(--layout-gutter-desktop);
