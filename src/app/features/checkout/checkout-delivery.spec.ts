@@ -132,6 +132,24 @@ describe('FIX-56-AC05 DeliveryStep renders from its declared inputs alone', () =
 });
 
 // ---------------------------------------------------------------------------
+// FIX-35 (deferred delivery-step slice) - "Szállítás és fizetés" renamed to
+// "Átvétel és fizetés" on both headings, now that FIX-56 has landed the
+// final delivery-step.html/ts structure this slice targets.
+// ---------------------------------------------------------------------------
+describe('FIX-35 delivery-step heading copy', () => {
+  it('the page H1 and the summary H2 both read "Átvétel és fizetés", not "Szállítás és fizetés"', () => {
+    const fixture = createFixture();
+    const root = getRootElement(fixture);
+
+    expect(root.querySelector('h1')?.textContent.trim()).toBe('Átvétel és fizetés');
+    expect(root.querySelector('.summary-title')?.textContent.trim()).toBe(
+      'Átvétel és fizetés összesítése',
+    );
+    expect(root.textContent).not.toContain('Szállítás és fizetés');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // T21-AC01 - home-only address, pickup removes it, "no real pickup place"
 // ---------------------------------------------------------------------------
 describe('T21-AC01 home delivery requires address; pickup removes it and announces no real pickup place', () => {
