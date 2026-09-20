@@ -262,17 +262,14 @@ export class CartPage {
     void this.facade
       .setQuantity(item.variantId, quantity)
       .then(() => {
-        // The facade's error / conflict / cartExpired signals own the
-        // wire-level state; `statusMessage` renders conflict and
-        // expiry itself, so the banner here only reports the generic
-        // outcome once the promise resolved without throwing.
-        if (this.facade.error() === null) {
+        // `statusMessage` renders the facade's error / conflict /
+        // cartExpired signals ahead of this banner, so the handler
+        // reports success only when none of them is set and otherwise
+        // clears the in-flight text to let the signal through.
+        if (this.mutationLanded()) {
           this.transientStatus.set({ text: 'A mennyiség frissítve.', severity: 'success' });
         } else {
-          this.transientStatus.set({
-            text: 'A mennyiség frissítése nem sikerült; a kosár változatlan.',
-            severity: 'error',
-          });
+          this.transientStatus.set(null);
         }
       })
       .finally(() => {
@@ -286,16 +283,13 @@ export class CartPage {
     void this.facade
       .removeItem(variantId)
       .then(() => {
-        if (this.facade.error() === null) {
+        if (this.mutationLanded()) {
           this.transientStatus.set({
             text: 'A termék törölve a kosárból.',
             severity: 'success',
           });
         } else {
-          this.transientStatus.set({
-            text: 'A termék eltávolítása nem sikerült; a kosár változatlan.',
-            severity: 'error',
-          });
+          this.transientStatus.set(null);
         }
       })
       .finally(() => {
@@ -309,13 +303,10 @@ export class CartPage {
     void this.facade
       .clear()
       .then(() => {
-        if (this.facade.error() === null) {
+        if (this.mutationLanded()) {
           this.transientStatus.set({ text: 'A kosár kiürítve.', severity: 'success' });
         } else {
-          this.transientStatus.set({
-            text: 'A kosár ürítése nem sikerült; a kosár változatlan.',
-            severity: 'error',
-          });
+          this.transientStatus.set(null);
         }
       })
       .finally(() => {
@@ -365,5 +356,12 @@ export class CartPage {
 
   dismissStatusMessage(): void {
     this.transientStatus.set(null);
+  }
+
+  /** `true` when the facade holds no failure signal after a mutation settled. */
+  private mutationLanded(): boolean {
+    return (
+      this.facade.error() === null && this.facade.conflict() === null && !this.facade.cartExpired()
+    );
   }
 }
