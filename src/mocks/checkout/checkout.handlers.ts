@@ -149,8 +149,8 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
     }
     const outcome = requireCheckoutStore().get(sessionId);
-    if (!outcome.ok) return outcomeResponse(outcome, null);
-    return outcomeResponse(outcome, `"${String(outcome.session.version)}"`);
+    const etag = outcome.ok ? `"${String(outcome.session.version)}"` : null;
+    return outcomeResponse(outcome, etag);
   });
 
   const patchCheckout: RequestHandler = http.patch('*/api/v1/checkout', async ({ request }) => {
@@ -161,8 +161,8 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
     const ifMatch = request.headers.get('If-Match');
     const body = await readJsonBody(request);
     const outcome = requireCheckoutStore().update(sessionId, ifMatch, body);
-    if (!outcome.ok) return outcomeResponse(outcome, null);
-    return outcomeResponse(outcome, `"${String(outcome.session.version)}"`);
+    const etag = outcome.ok ? `"${String(outcome.session.version)}"` : null;
+    return outcomeResponse(outcome, etag);
   });
 
   return [getOptions, getCheckout, patchCheckout];

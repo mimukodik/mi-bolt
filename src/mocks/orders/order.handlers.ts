@@ -85,9 +85,7 @@ export const orderHandlersEntry: BusinessHandlerEntry = (
     }
     const idempotencyKey = request.headers.get('Idempotency-Key');
     if (idempotencyKey === null) {
-      return invalidRequest(options, 'Idempotency-Key must be 8 to 100 characters', {
-        received: null,
-      });
+      return invalidRequest(options, 'Missing Idempotency-Key header', { received: null });
     }
     const ifMatch = request.headers.get('If-Match');
     const body = await readJsonBody(request);
