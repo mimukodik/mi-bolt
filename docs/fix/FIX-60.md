@@ -5,7 +5,7 @@ the four `.ts`/`.html`/`.scss`/`.spec.ts` sets `components.md` names, each wired
 `catalog-page.ts`/`.html`, with pagination's numbered pages (AC01, AC04); `npm run build` and
 `npm run test` exit 0 (AC05); commit 67f802a. `CatalogToolbar`'s mobile trigger initially lost its
 `aria-expanded`/`aria-controls` in the extraction — a WCAG 4.1.2 regression flagged and then fixed
-in a same-branch follow-up (`wt/nav2` commit 3184062, not yet cherry-picked at the time of writing),
+in a same-branch follow-up (commit `f95d065`),
 which also completes AC12's disclosure duty for the `HeaderNav`/`AppHeader` drift against
 `components.md:71-84`. Open: AC06–AC10 are real-browser checks (numbered pages, the async states,
 chip removal, 390px layout) this task's author had no tool for, and AC11 (the four spec files'
