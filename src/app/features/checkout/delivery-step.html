@@ -1,19 +1,17 @@
 <section class="delivery" data-testid="delivery-step">
-  <header class="heading">
-    <nav class="breadcrumbs" aria-label="Navigáció">
-      <a routerLink="/" class="breadcrumb">Főoldal</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/kosar" class="breadcrumb">Kosár</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/adatok" class="breadcrumb">Adatok</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <span class="breadcrumb is-current" aria-current="page">Szállítás</span>
-    </nav>
-    <h1 class="title">Átvétel és fizetés</h1>
-  </header>
+  <app-checkout-step-header [crumbs]="crumbs" current="Szállítás">
+    <h1
+      class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+    >
+      Átvétel és fizetés
+    </h1>
+  </app-checkout-step-header>
 
-  <div class="layout" data-testid="delivery-layout">
-    <div class="column">
+  <div
+    class="layout flex flex-col gap-(--space-5) lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-(--space-6) lg:items-start"
+    data-testid="delivery-layout"
+  >
+    <div class="column flex flex-col gap-(--space-5) min-w-0">
       <fieldset class="options" data-testid="delivery-options">
         <legend class="legend">Szállítási mód</legend>
 

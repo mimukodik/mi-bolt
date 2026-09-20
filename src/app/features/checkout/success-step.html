@@ -1,12 +1,5 @@
 <section class="success" data-testid="success-page">
-  <header class="heading">
-    <nav class="breadcrumbs" aria-label="Navigáció">
-      <a routerLink="/" class="breadcrumb">Főoldal</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/kosar" class="breadcrumb">Kosár</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <span class="breadcrumb is-current" aria-current="page">Siker</span>
-    </nav>
+  <app-checkout-step-header [crumbs]="crumbs" current="Siker">
     @if (hasReceipt()) {
       <svg
         class="success-check"
@@ -32,7 +25,7 @@
       #successHeading
       id="success-heading"
       tabindex="-1"
-      class="title"
+      class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
       data-testid="success-heading"
     >
       @if (hasReceipt()) {
@@ -50,7 +43,7 @@
       A sikeroldal csupán a működést mutatja be — nem történt valódi fizetés, szállítás vagy
       e-mail-küldés.
     </p>
-  </header>
+  </app-checkout-step-header>
 
   @switch (loadState().kind) {
     @case ('loading') {

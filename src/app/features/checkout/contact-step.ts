@@ -46,7 +46,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { FormField, submit, type FieldTree, type ValidationError } from '@angular/forms/signals';
 
 import { Button } from '../../shared/ui/button/button';
@@ -59,6 +58,7 @@ import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import type { AsyncStatus } from '../../shared/types/async-status';
 import type { Contact } from '../../api/generated/models/contact';
 
+import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';
 
 /**
@@ -110,7 +110,7 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
 
 @Component({
   selector: 'app-contact-step',
-  imports: [RouterLink, Button, FormField, FormFieldMessage, StatusMessage],
+  imports: [Button, CheckoutStepHeader, FormField, FormFieldMessage, StatusMessage],
   templateUrl: './contact-step.html',
   styleUrl: './contact-step.scss',
 })
@@ -123,6 +123,13 @@ export class ContactStep {
   /** Reference to the form summary so we can move focus to it on
    *  invalid submission. */
   private readonly summaryRef = viewChild<ElementRef<HTMLElement>>('summary');
+
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
+   *  the previous template: Kosár, with this step (`Adatok`) as the
+   *  trailing non-link. */
+  protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Kosár', link: '/penztar/kosar' },
+  ];
 
   /** `true` after the user has tried to submit at least once. */
   readonly submitted = signal<boolean>(false);

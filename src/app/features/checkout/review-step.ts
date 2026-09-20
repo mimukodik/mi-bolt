@@ -47,6 +47,7 @@ import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block'
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 import { OrderSummary } from '../cart/order-summary';
+import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { TermsDialog } from './terms-dialog';
 
 import type { Cart } from '../../api/generated/models/cart';
@@ -66,7 +67,16 @@ interface ReviewLineDisplay {
 
 @Component({
   selector: 'app-review-step',
-  imports: [RouterLink, Button, LoadingState, PriceBlock, StatusMessage, OrderSummary, TermsDialog],
+  imports: [
+    RouterLink,
+    Button,
+    CheckoutStepHeader,
+    LoadingState,
+    PriceBlock,
+    StatusMessage,
+    OrderSummary,
+    TermsDialog,
+  ],
   templateUrl: './review-step.html',
   styleUrl: './review-step.scss',
 })
@@ -96,6 +106,16 @@ export class ReviewStep {
 
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);
+
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
+   *  the previous template: Főoldal → Kosár → Adatok → Szállítás, with
+   *  this step (`Ellenőrzés`) as the trailing non-link. */
+  protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Főoldal', link: '/' },
+    { label: 'Kosár', link: '/penztar/kosar' },
+    { label: 'Adatok', link: '/penztar/adatok' },
+    { label: 'Szállítás', link: '/penztar/szallitas' },
+  ];
 
   /** Snapshot of the cart's items, mapped into the wire shape the
    *  template needs. */

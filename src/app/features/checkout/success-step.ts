@@ -49,7 +49,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { Button } from '../../shared/ui/button/button';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
@@ -58,6 +58,7 @@ import { RouteFocusService } from '../../core/navigation/route-focus';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
+import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { OrderReceiptComponent } from './order-receipt';
 
 /** State of the hydration pipeline that lives on top of `CheckoutFacade.order()`. */
@@ -68,7 +69,7 @@ const ORDER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,80}$/;
 
 @Component({
   selector: 'app-success-page',
-  imports: [RouterLink, Button, ErrorState, LoadingState, OrderReceiptComponent],
+  imports: [Button, CheckoutStepHeader, ErrorState, LoadingState, OrderReceiptComponent],
   templateUrl: './success-step.html',
   styleUrl: './success-step.scss',
 })
@@ -118,6 +119,14 @@ export class SuccessStep {
 
   /** Reference to the H1 so the focus move lands on it. */
   private readonly headingRef = viewChild<ElementRef<HTMLElement>>('successHeading');
+
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
+   *  the previous template: Főoldal → Kosár, with this step (`Siker`) as
+   *  the trailing non-link. */
+  protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Főoldal', link: '/' },
+    { label: 'Kosár', link: '/penztar/kosar' },
+  ];
 
   /** Truthy banner copy fed to ErrorState. */
   readonly missingMessage = computed<string>(() => {

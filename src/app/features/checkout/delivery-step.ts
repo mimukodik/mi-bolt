@@ -46,9 +46,9 @@
  */
 
 import { Component, computed, input, output, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { AddressForm } from './address-form';
+import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { PaymentMethodSelector, type PaymentMethod } from './payment-method-selector';
 import type { CheckoutFieldTree } from './checkout-form.model';
 
@@ -72,7 +72,14 @@ const PICKUP_FEE: Money = { amount: 0, currency: 'HUF' };
 
 @Component({
   selector: 'app-delivery-step',
-  imports: [AddressForm, Button, PaymentMethodSelector, PriceBlock, RouterLink, StatusMessage],
+  imports: [
+    AddressForm,
+    Button,
+    CheckoutStepHeader,
+    PaymentMethodSelector,
+    PriceBlock,
+    StatusMessage,
+  ],
   templateUrl: './delivery-step.html',
   styleUrl: './delivery-step.scss',
 })
@@ -92,6 +99,15 @@ export class DeliveryStep {
 
   /** Current payment method — defaults to `demo_card`. */
   readonly paymentMethod = signal<PaymentMethod>('demo_card');
+
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
+   *  the existing template: Főoldal → Kosár → Adatok, with this step
+   *  (`Szállítás`) as the trailing non-link. */
+  protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Főoldal', link: '/' },
+    { label: 'Kosár', link: '/penztar/kosar' },
+    { label: 'Adatok', link: '/penztar/adatok' },
+  ];
 
   // ---------------------------------------------------------------------------
   // Address field accessors — bound through the deliberate `fields()`
