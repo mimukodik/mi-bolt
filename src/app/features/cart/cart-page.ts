@@ -37,8 +37,11 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
+import { isRecord } from '../../shared/utils/is-record';
 
 import type { Cart } from '../../api/generated/models/cart';
+import type { CartItem } from '../../api/generated/models/cart-item';
+import type { CartNotice } from '../../api/generated/models/cart-notice';
 import type { Money } from '../../api/generated/models/money';
 
 type ScreenState = 'loading' | 'error' | 'empty' | 'ready';
@@ -53,14 +56,37 @@ function describeCartError(facade: CartFacade): string {
   if (facade.cartExpired()) {
     return 'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.';
   }
-  if (facade.cartGone()) {
-    return 'A kosár nem található. Indíts egy új pénztárat a frissítés gombra kattintva.';
-  }
   const error = facade.error();
   if (error !== null) {
     return error.detail;
   }
   return 'A kosár betöltése sikertelen.';
+}
+
+function describeNotice(notice: CartNotice, items: readonly CartItem[]): string {
+  const name = items.find((item) => item.variantId === notice.variantId)?.productName;
+  const subject = name ?? 'Egy termék';
+  if (notice.code === 'QUANTITY_REDUCED') {
+    const from = readNumberParam(notice, 'from');
+    const to = readNumberParam(notice, 'to');
+    if (from !== null && to !== null) {
+      return `${subject}: a mennyiséget ${String(from)} → ${String(to)} darabra csökkentettük a készlet miatt.`;
+    }
+    return `${subject}: a mennyiséget a készlethez igazítottuk.`;
+  }
+  if (notice.code === 'ITEM_REMOVED') {
+    return `${subject} kikerült a kosárból, mert már nem kapható.`;
+  }
+  return `${subject}: az ár megváltozott.`;
+}
+
+function readNumberParam(notice: CartNotice, key: string): number | null {
+  const params = notice.params;
+  if (!isRecord(params)) {
+    return null;
+  }
+  const value = params[key];
+  return typeof value === 'number' ? value : null;
 }
 
 @Component({
@@ -80,7 +106,8 @@ function describeCartError(facade: CartFacade): string {
   styleUrl: './cart-page.scss',
 })
 export class CartPage {
-  private readonly facade = inject(CartFacade);
+  /** Read by the template for the pending state; mutations go through the methods below. */
+  readonly facade = inject(CartFacade);
   private readonly router = inject(Router);
 
   /** Snapshot of the cart once it has loaded. */
@@ -92,12 +119,15 @@ export class CartPage {
    *  re-fetch / ensure-cart chain is in flight. */
   readonly revalidating = signal<boolean>(false);
 
-  /** Id of the line whose mutation is currently in flight, or null.
-   *  Only that line is disabled while the facade dispatches. */
-  private readonly mutatingItemId = signal<string | null>(null);
+  /** `true` while the "Kosár ürítése" call is in flight. */
+  readonly clearing = signal<boolean>(false);
 
-  readonly pendingItemIds = computed<ReadonlySet<string>>(() => {
-    const id = this.mutatingItemId();
+  /** Variant id of the line whose mutation is currently in flight, or null.
+   *  Only that line is disabled while the facade dispatches. */
+  private readonly mutatingVariantId = signal<string | null>(null);
+
+  readonly pendingVariantIds = computed<ReadonlySet<string>>(() => {
+    const id = this.mutatingVariantId();
     return id === null ? new Set() : new Set([id]);
   });
 
@@ -111,13 +141,20 @@ export class CartPage {
     return cart.subtotal;
   });
 
+  /** One Hungarian sentence per server notice on the current cart. */
+  readonly noticeMessages = computed<readonly string[]>(() => {
+    const cart = this.cart();
+    if (cart === null) return [];
+    return cart.notices.map((notice) => describeNotice(notice, cart.items));
+  });
+
   /** Summary footnote copy shown under the total. The shipping fee
    *  is intentionally absent — see OrderSummary for the Hungarian
    *  "A következő lépésben választod ki." message. */
   readonly summaryFootnote = computed<string | null>(() => null);
 
-  /** Friendly error message — prefers the cart-expired / cart-gone
-   *  branches so the user is told why their cart vanished. */
+  /** Friendly error message — prefers the cart-expired branch
+   *  so the user is told why their cart vanished. */
   readonly errorMessage = computed<string>(() => describeCartError(this.facade));
 
   /** Cart state machine: drives the four documented branches. */
@@ -126,7 +163,7 @@ export class CartPage {
     // Local mirror is the source of truth once it has landed.
     const cart = this.cart() ?? facadeCart;
     if (cart === null) {
-      if (this.facade.error() !== null || this.facade.cartGone() || this.facade.cartExpired()) {
+      if (this.facade.error() !== null || this.facade.cartExpired()) {
         return 'error';
       }
       if (this.facade.pending() > 0) {
@@ -143,7 +180,7 @@ export class CartPage {
    * Continue button gating. The button is enabled only when:
    *   - at least one item is in the cart;
    *   - the facade is not currently dispatching a mutation;
-   *   - there is no live conflict / error / gone / expired signal;
+   *   - there is no live conflict / error / expired signal;
    *   - the page itself is not mid-`ensureCart` revalidation.
    */
   readonly canContinue = computed<boolean>(() => {
@@ -152,10 +189,10 @@ export class CartPage {
     if (cart.items.length === 0) return false;
     if (this.continuing()) return false;
     if (this.revalidating()) return false;
+    if (this.clearing()) return false;
     if (this.facade.pending() > 0) return false;
     if (this.facade.conflict() !== null) return false;
     if (this.facade.error() !== null) return false;
-    if (this.facade.cartGone()) return false;
     if (this.facade.cartExpired()) return false;
     return true;
   });
@@ -204,13 +241,13 @@ export class CartPage {
     });
   }
 
-  onQuantityChanged(item: { id: string }, quantity: number): void {
+  onQuantityChanged(item: { variantId: string }, quantity: number): void {
     this.transientStatus.set({ text: 'A mennyiség frissítése…', severity: 'info' });
-    this.mutatingItemId.set(item.id);
+    this.mutatingVariantId.set(item.variantId);
     void this.facade
-      .setQuantity(item.id, quantity)
+      .setQuantity(item.variantId, quantity)
       .then(() => {
-        // The facade's error / cartGone / cartExpired / cartExpired
+        // The facade's error / conflict / cartExpired
         // signals own the wire-level state. The banner is the
         // user-facing summary, so we only flip it when the promise
         // resolved without throwing.
@@ -224,15 +261,15 @@ export class CartPage {
         }
       })
       .finally(() => {
-        this.mutatingItemId.set(null);
+        this.mutatingVariantId.set(null);
       });
   }
 
-  onRemoveRequested(itemId: string): void {
+  onRemoveRequested(variantId: string): void {
     this.transientStatus.set({ text: 'A termék eltávolítása…', severity: 'info' });
-    this.mutatingItemId.set(itemId);
+    this.mutatingVariantId.set(variantId);
     void this.facade
-      .removeItem(itemId)
+      .removeItem(variantId)
       .then(() => {
         if (this.facade.error() === null) {
           this.transientStatus.set({
@@ -247,7 +284,27 @@ export class CartPage {
         }
       })
       .finally(() => {
-        this.mutatingItemId.set(null);
+        this.mutatingVariantId.set(null);
+      });
+  }
+
+  onClearCart(): void {
+    this.transientStatus.set({ text: 'A kosár ürítése…', severity: 'info' });
+    this.clearing.set(true);
+    void this.facade
+      .clear()
+      .then(() => {
+        if (this.facade.error() === null) {
+          this.transientStatus.set({ text: 'A kosár kiürítve.', severity: 'success' });
+        } else {
+          this.transientStatus.set({
+            text: 'A kosár ürítése nem sikerült; a kosár változatlan.',
+            severity: 'error',
+          });
+        }
+      })
+      .finally(() => {
+        this.clearing.set(false);
       });
   }
 
@@ -266,7 +323,8 @@ export class CartPage {
    * Continue handler. The flow is:
    *   1. set `continuing` so the button enters loading state;
    *   2. call `facade.ensureCart()` — the authoritative
-   *      revalidation (AC04). If a 409/410/404 happened in the
+   *      revalidation (AC04). If a 412 conflict / 410 expiry / any
+   *      other Problem on the error signal happened in the
    *      background, the facade's signals flip and the user stays
    *      on the page;
    *   3. only navigate when the local cart is still present and

@@ -18,6 +18,12 @@
     </div>
   }
 
+  @for (notice of noticeMessages(); track $index) {
+    <div class="status flex" data-testid="cart-notice">
+      <app-status-message [message]="notice" [severity]="'info'"></app-status-message>
+    </div>
+  }
+
   @switch (state()) {
     @case ('loading') {
       <div class="loading flex items-center justify-center min-h-72" data-testid="cart-loading">
@@ -50,11 +56,11 @@
       >
         <div class="lines">
           <ul class="lines-list m-0 p-0 list-none flex flex-col gap-3">
-            @for (item of items(); track item.id) {
+            @for (item of items(); track item.variantId) {
               <li>
                 <app-cart-line
                   [line]="item"
-                  [pending]="pendingItemIds().has(item.id)"
+                  [pending]="pendingVariantIds().has(item.variantId)"
                   (quantityChanged)="onQuantityChanged(item, $event)"
                   (removeRequested)="onRemoveRequested($event)"
                 ></app-cart-line>
@@ -85,6 +91,15 @@
         <div
           class="footer-actions flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center lg:flex-0 lg:flex-shrink-0"
         >
+          <app-button
+            variant="secondary"
+            label="Kosár ürítése"
+            [loadingLabel]="'Ürítés…'"
+            [loading]="clearing()"
+            [disabled]="clearing() || continuing() || facade.pending() > 0"
+            (pressed)="onClearCart()"
+            data-testid="cart-clear"
+          ></app-button>
           <app-button
             variant="secondary"
             label="Vásárlás folytatása"

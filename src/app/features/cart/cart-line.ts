@@ -80,6 +80,6 @@ export class CartLine {
   }
 
   onRemoveRequested(): void {
-    this.removeRequested.emit(this.line().id);
+    this.removeRequested.emit(this.line().variantId);
   }
 }
