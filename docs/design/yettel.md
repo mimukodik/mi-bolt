@@ -6,7 +6,7 @@ This document is the mandatory design reference for the MiBolt frontend. It
 replaces the retired `mi-bolt-design` skill; every token, type ramp, recipe
 and feature inventory it carries comes from `docs/design/yettel/` and is the
 single source of truth for the visual language the implementation takes over
-("pontos szinek, font beallitasok, lekerekites, gomb stilus, kartya stilus" — exact colours, font settings, rounding, button style, card style).
+(the user's brief, in English: exact colours, font settings, rounding, button style, card style).
 Nothing here is invented: every value is grepped from the captured CSS or
 pages, and the selector or file it came from is named beside it. A later
 brief that wants a different value either cites this document or names the
