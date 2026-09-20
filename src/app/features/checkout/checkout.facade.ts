@@ -1,857 +1,658 @@
 /**
- * T19 — checkout wizard state-machine facade.
+ * T19+ — checkout application facade on the 2.0.0 contract.
  *
- * Owns the entire parent-side state for the purchase flow:
+ * Mirrors `CartFacade` (`features/cart/cart.facade.ts`): one
+ * root-provided service owns the checkout session, the four section
+ * writes, the payment intent lifecycle, and the order submit. The
+ * shared cart/checkout version counter is owned by `CartFacade`
+ * (design §2.1, approach C): this facade reads `cart.cart().version`
+ * for `If-Match` and writes the server's answer back through
+ * `cart.acceptServerVersion` after every successful call.
  *
- *   - the Signal Forms `FieldTree` that backs contact, delivery and
- *     payment-method inputs (no FormGroup, no BehaviorSubject);
- *   - the server-side draft (`updateDraft` over `PUT /checkout/{id}`)
- *     that the wire contract expects to survive a soft refresh;
- *   - the quote (`POST /checkout/{id}/quote`) that the review step
- *     needs to render a fresh total;
- *   - the payment intent (`POST /payment-intents`) — created only
- *     when the user clicks the explicit "Fizetés indítása" button;
- *   - the order receipt (`POST /orders`) — committed only on the
- *     final explicit submit.
- *
- * Recovery semantics (T19-AC02 / AC03):
- *
- *   - `resetDraft()` wipes contact + address in memory; the cart
- *     survives because the mock persists its own snapshot across reloads (docs/spec/architecture.md:107)
- *     and `ensureCart()` always succeeds for an existing cart.
- *     This is the privacy contract the spec calls for.
- *   - Route guards never mutate this facade — they only read it.
- *   - A failed save / quote / submit keeps the form, draft, cart and
- *     payment method intact so the user can retry without re-entering
- *     data. The `error` signal carries the surface message.
- *   - Editing the contact / delivery / payment section in the form
- *     bumps `draftDirty` so the active quote is reported as
- *     invalidated on the next render (T19-AC04). The quote itself is
- *     wiped from the cache when the user triggers a real
- *     `saveSection()` so the next "Fizetés" button creates a fresh
- *     quote before committing the order.
- *
- * Guards (T19-AC05):
- *
- *   - No `CanMatch` / `CanActivate` calls `commitOrder()` or
- *     `createPaymentIntent()`. The user must click through. Guards
- *     live in `checkout.guards.ts` and only read facade signals.
+ *   - writes serialise through one private chain that binds `If-Match`
+ *     to the cart version at dispatch time (cart-mutation-queue.ts's
+ *     rule, ported here so two checkout writes cannot race);
+ *   - on 412 surfaces a `conflict` signal, refetches both the cart
+ *     and the session in the background, and waits for an explicit
+ *     `retry()`; the failed intent is NOT auto-replayed;
+ *   - on 410 raises `cartExpired` and drops the session snapshot;
+ *   - on 409 `PRICE_CHANGED` refetches, captures both totals and
+ *     arms `priceChange`; the submit CTA stays dead until
+ *     `confirmPriceChange()` runs (§8.2, "az új összeg néma elfogadása
+ *     tilos");
+ *   - idempotency keys live in `checkoutKeys`; `uncertain retains,
+ *     definite rotates` (design §3.6).
  */
 
-import {
-  DestroyRef,
-  Service,
-  computed,
-  inject,
-  signal,
-  type Signal,
-  type WritableSignal,
-} from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Service, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
+import {
+  createOrder,
+  createPaymentIntent,
+  getCheckout,
+  getCheckoutOptions,
+  getOrder,
+  getPaymentIntent,
+  updateCheckout,
+} from '../../api/generated/functions';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
+import { isRecord } from '../../shared/utils/is-record';
 
-import type { Address } from '../../api/generated/models/address';
+import type { BillingDetails } from '../../api/generated/models/billing-details';
+import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
 import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
 import type { Contact } from '../../api/generated/models/contact';
 import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
-import type { PaymentIntent } from '../../api/generated/models/payment-intent';
-import type { Quote } from '../../api/generated/models/quote';
+import type { FieldError } from '../../api/generated/models/field-error';
+import type { Money } from '../../api/generated/models/money';
 import type { OrderReceipt } from '../../api/generated/models/order-receipt';
-
-import * as functions from '../../api/generated/functions';
+import type { OrderRequest } from '../../api/generated/models/order-request';
+import type { PaymentIntent } from '../../api/generated/models/payment-intent';
+import type { PaymentSelection } from '../../api/generated/models/payment-selection';
+import type { UpdateCheckoutRequest } from '../../api/generated/models/update-checkout-request';
 
 import { CartFacade } from '../cart/cart.facade';
-import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
+import { checkoutKeys } from './checkout-keys';
 
-import {
-  PHONE_PATTERN,
-  POSTAL_CODE_PATTERN,
-  buildCheckoutForm,
-  createInitialCheckoutFormModel,
-  hydrateCheckoutFormModel,
-  type CheckoutFormAddress,
-  type CheckoutFormModel,
-  type DeliveryOptionId,
-  type PaymentMethod,
-} from './checkout-form.model';
-
-/** A single guarded step in the wizard. */
-export type CheckoutStep =
-  'cart' | 'contact' | 'delivery' | 'review' | 'submitting' | 'success' | 'error';
-
-/** Errors surfaced to the UI as a banner string. */
+/** Every failure the UI can act on, one shape. Mirrors CartError plus
+ *  the field-error list a 422 carries. */
 export interface CheckoutError {
+  /** Server ProblemCode, or the local 'UNKNOWN' / 'NO_CART' sentinels.
+   *  Typed `string` because neither sentinel is in the generated union. */
   readonly code: string;
   readonly status: number;
+  /** English developer diagnostic (openapi.yaml:1490-1493). NEVER rendered. */
   readonly detail: string;
-  readonly fieldErrors: readonly { path: string; message: string }[];
+  readonly params?: Readonly<Record<string, unknown>>;
+  readonly fieldErrors: readonly FieldError[];
 }
 
-/** Result returned by every save / quote / submit helper. */
-export type CheckoutMutationResult<T> =
+/** 412 on any checkout write; the cart's counter moved under us. */
+export interface CheckoutConflict {
+  readonly code: 'CART_VERSION_CONFLICT';
+  readonly status: 412;
+  /** Which mutation conflicted — the one retry() will resubmit. */
+  readonly intent: CheckoutIntentKind;
+  readonly serverVersion: number;
+}
+
+/** 409 PRICE_CHANGED: the shopper must confirm the new total (§8.2). */
+export interface PriceChange {
+  /** The total the shopper last saw, captured before the refetch. */
+  readonly shownTotal: Money;
+  /** The total the server recomputed after the refetch. */
+  readonly currentTotal: Money;
+  /** True until confirmPriceChange() is called. Gates the submit CTA. */
+  readonly awaitingConfirmation: true;
+}
+
+export type CheckoutIntentKind =
+  'contact' | 'billing' | 'delivery' | 'payment' | 'paymentIntent' | 'order';
+
+export type CheckoutResult<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: CheckoutError };
 
 /**
- * Strips optional keys that the mock would otherwise echo back as
- * `null`, so the wire payload mirrors `UpdateCheckoutRequest`'s
- * `merge supplied sections only` contract (T08).
+ * Internal dispatch shape. Carries the intent kind so 412 routing
+ * can record which mutation conflicted and `retry()` can replay it.
+ * Generic in `T` so `serialize<T>` can return `CheckoutResult<T>`
+ * without a cast (`as` is forbidden under the workspace lint rule).
  */
-function toContactPayload(form: CheckoutFormModel): Contact {
+interface CheckoutMutation<T = unknown> {
+  readonly kind: CheckoutIntentKind;
+  /** The unit of work; receives the bound version inside the chain. */
+  readonly run: (expectedVersion: number) => Promise<CheckoutResult<T>>;
+}
+
+function notLoadedResult<T>(): CheckoutResult<T> {
   return {
-    fullName: form.fullName.trim().normalize('NFC'),
-    email: form.email.trim().toLowerCase().normalize('NFC'),
-    phone: form.phone.replace(/\s+/g, ''),
+    ok: false,
+    error: {
+      code: 'NO_CART',
+      status: 0,
+      detail: 'The cart has not been loaded yet; ensureCart() did not succeed.',
+      fieldErrors: [],
+    },
   };
 }
 
-function toAddressPayload(address: CheckoutFormAddress): Address {
-  const line2Trimmed = address.line2.trim();
-  return {
-    countryCode: 'HU',
-    postalCode: address.postalCode,
-    city: address.city.trim().normalize('NFC'),
-    line1: address.line1.trim().normalize('NFC'),
-    ...(line2Trimmed.length > 0 ? { line2: line2Trimmed.normalize('NFC') } : {}),
-  };
-}
-
-function toDeliveryPayload(form: CheckoutFormModel): DeliverySelection {
-  if (form.deliveryOptionId === 'demo_pickup') {
-    return { optionId: 'demo_pickup' };
-  }
-  return {
-    optionId: 'home_delivery',
-    address: toAddressPayload(form.address),
-  };
-}
-
-function normalizeDeliveryOptionId(value: unknown): DeliveryOptionId {
-  return value === 'home_delivery' || value === 'demo_pickup' ? value : '';
-}
-
-function normalizePaymentMethod(value: unknown): PaymentMethod {
-  return value === 'demo_card' || value === 'demo_cod' ? value : '';
+/** Type guard for the `card` arm of `OrderRequest` — narrows so the
+ *  `paymentIntentId` field is reachable without a cast. */
+function hasPaymentIntentId(
+  body: OrderRequest,
+): body is OrderRequest & { paymentMethod: 'card'; paymentIntentId: string } {
+  return body.paymentMethod === 'card';
 }
 
 /**
- * Maps an SDK / network error to the surface shape the UI consumes.
- * The HTTP body is the canonical Problem JSON the mock emits.
- */
-function mapError(err: unknown): CheckoutError {
-  if (err instanceof HttpErrorResponse) {
-    const body = (err.error ?? {}) as {
-      code?: string;
-      detail?: string;
-      fieldErrors?: { path: string; message: string }[];
-    };
-    const code = body.code ?? 'UNKNOWN';
-    const detail = body.detail ?? err.message;
-    return {
-      code,
-      status: err.status,
-      detail,
-      fieldErrors: body.fieldErrors ?? [],
-    };
-  }
-  return {
-    code: 'SERVICE_UNAVAILABLE',
-    status: 0,
-    detail: String(err),
-    fieldErrors: [],
-  };
-}
-
-/**
- * Root-provided checkout wizard owner. The component tree under
- * `/penztar/...` resolves this facade from the injection context;
- * guards call it synchronously without subscribing to HTTP.
+ * Root-provided checkout owner. `TestBed.inject(CheckoutFacade)` returns
+ * the same instance across the four pages of the wizard and across the
+ * payment-return cold start, so the in-memory snapshot survives the
+ * navigation between them.
  */
 @Service()
 export class CheckoutFacade {
   private readonly api: Api;
-  private readonly cartFacade = inject(CartFacade);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly cart = inject(CartFacade);
 
-  /** The single writable signal that owns the form data. */
-  private readonly modelWritable: WritableSignal<CheckoutFormModel> = signal(
-    createInitialCheckoutFormModel(),
-  );
+  /** Internal writable snapshot of the authoritative checkout session. */
+  private readonly sessionWritable = signal<CheckoutSession | null>(null);
 
-  /**
-   * Signal Forms FieldTree built once off the model signal. The
-   * schema lives in `checkout-form.model.ts` and is re-evaluated on
-   * every mutation. Validity is a derived view of `modelWritable`,
-   * so the UI never reads a flag we maintain manually.
-   */
-  readonly form = buildCheckoutForm(this.modelWritable);
-
-  /** Writable signal carrying the latest server-side draft. */
-  private readonly sessionWritable: WritableSignal<CheckoutSession | null> =
-    signal<CheckoutSession | null>(null);
-
-  /** Readonly view of the server-side draft. */
+  /** Public readonly session signal. Null before `ensureSession()`. */
   readonly session: Signal<CheckoutSession | null> = this.sessionWritable.asReadonly();
 
-  /** Active quote, or null until the review step calls `createQuote()`. */
-  private readonly quoteWritable: WritableSignal<Quote | null> = signal<Quote | null>(null);
-  readonly quote: Signal<Quote | null> = this.quoteWritable.asReadonly();
+  /** Internal writable options snapshot. Null before `ensureOptions()`. */
+  private readonly optionsWritable = signal<CheckoutOptions | null>(null);
 
-  /** Payment intent created by the explicit "Fizetés indítása" click. */
-  private readonly paymentIntentWritable: WritableSignal<PaymentIntent | null> =
-    signal<PaymentIntent | null>(null);
-  readonly paymentIntent: Signal<PaymentIntent | null> = this.paymentIntentWritable.asReadonly();
+  /** Public readonly options signal. Null before `ensureOptions()`. */
+  readonly options: Signal<CheckoutOptions | null> = this.optionsWritable.asReadonly();
 
-  /** Order receipt produced by the final commit. */
-  private readonly orderWritable: WritableSignal<OrderReceipt | null> = signal<OrderReceipt | null>(
-    null,
-  );
-  readonly order: Signal<OrderReceipt | null> = this.orderWritable.asReadonly();
+  /** The server's recomputed summary. Null when no session is loaded. */
+  readonly summary: Signal<CheckoutSummary | null> = computed(() => {
+    return this.sessionWritable()?.summary ?? null;
+  });
 
-  /** True while any network mutation is in flight. */
-  private readonly busyWritable: WritableSignal<boolean> = signal(false);
-  readonly busy: Signal<boolean> = this.busyWritable.asReadonly();
+  /** The server's own answer; the client never recomputes it. */
+  readonly complete: Signal<boolean> = computed(() => {
+    return this.sessionWritable()?.complete ?? false;
+  });
 
-  /** Last non-recoverable error message; null when the flow is clean. */
-  private readonly errorWritable: WritableSignal<CheckoutError | null> =
-    signal<CheckoutError | null>(null);
+  /** Authoritative version, read from the cart facade. This is the
+   *  `If-Match` source on every write — `session().version` is never
+   *  read for the header (design §2.1). */
+  readonly version: Signal<number | null> = computed(() => {
+    return this.cart.cart()?.version ?? null;
+  });
+
+  /** Number of intents currently queued or dispatching. */
+  private readonly pendingWritable = signal(0);
+  readonly pending: Signal<number> = this.pendingWritable.asReadonly();
+
+  private readonly errorWritable = signal<CheckoutError | null>(null);
+  /** Last non-recoverable error, or null. Cleared on the next success. */
   readonly error: Signal<CheckoutError | null> = this.errorWritable.asReadonly();
 
+  private readonly conflictWritable = signal<CheckoutConflict | null>(null);
+  /** Last 412 conflict, or null. Cleared on the next success. */
+  readonly conflict: Signal<CheckoutConflict | null> = this.conflictWritable.asReadonly();
+
+  private readonly cartExpiredWritable = signal<boolean>(false);
+  /** True after the server returned 410 for the active session. */
+  readonly cartExpired: Signal<boolean> = this.cartExpiredWritable.asReadonly();
+
+  private readonly priceChangeWritable = signal<PriceChange | null>(null);
+  /** Last 409 PRICE_CHANGED; null until cleared by `confirmPriceChange()`. */
+  readonly priceChange: Signal<PriceChange | null> = this.priceChangeWritable.asReadonly();
+
+  /** Internal writable snapshot of the active payment intent. */
+  private readonly paymentIntentWritable = signal<PaymentIntent | null>(null);
+
+  /** Public readonly payment intent signal. Null until created or read. */
+  readonly paymentIntent: Signal<PaymentIntent | null> = this.paymentIntentWritable.asReadonly();
+
+  /** Internal writable snapshot of the active order receipt. */
+  private readonly orderWritable = signal<OrderReceipt | null>(null);
+
+  /** Public readonly order signal. Drives the guards. */
+  readonly order: Signal<OrderReceipt | null> = this.orderWritable.asReadonly();
+
   /**
-   * `true` once the user edits a field after a fresh load, before a
-   * new draft save. The review page surfaces this so the user
-   * understands the active quote is invalidated by their edits
-   * (T19-AC04). Saving a section flips it back to `false`.
+   * Holds the first conflicting intent so `retry()` can resubmit it
+   * with the CURRENT version. A back-to-back conflict keeps the first
+   * (`cart.facade.ts:444-451`'s rule). Cleared on the next success.
    */
-  private readonly draftDirtyWritable: WritableSignal<boolean> = signal(false);
-  readonly draftDirty: Signal<boolean> = this.draftDirtyWritable.asReadonly();
+  private lastFailedIntent: CheckoutMutation | null = null;
 
-  /** The cart id this facade is currently bound to. */
-  private readonly cartIdWritable: WritableSignal<string | null> = signal<string | null>(null);
-  readonly cartId: Signal<string | null> = this.cartIdWritable.asReadonly();
-
-  /** True once the model has been hydrated from the server. */
-  private readonly hydratedWritable: WritableSignal<boolean> = signal(false);
-  readonly hydrated: Signal<boolean> = this.hydratedWritable.asReadonly();
-
-  /** Held idempotency key for the last `saveSection()` fingerprint. */
-  private savedSectionKey: { fingerprint: string; key: string } | null = null;
-
-  /** Held idempotency key for the last `createQuote()` fingerprint. */
-  private heldQuoteKey: { fingerprint: string; key: string } | null = null;
-
-  /** Held idempotency key for the last `createPaymentIntent()` fingerprint,
-   *  kept only while the last attempt's outcome is unknown (openapi.yaml:
-   *  "ambiguous network retry retains original key"). */
-  private heldPaymentIntentKey: { fingerprint: string; key: string } | null = null;
+  /** Promise chain that serialises every dispatch. */
+  private tail: Promise<void> = Promise.resolve();
 
   constructor() {
     // The generated `Api` class relies on Angular decorator metadata
     // for constructor injection. Vitest's esbuild pipeline does not
-    // emit that metadata, so we wire it manually here exactly like
-    // `CartFacade` does.
+    // emit that metadata, so we wire it manually from the two
+    // primitives that ARE injectable: `HttpClient` and
+    // `ApiConfiguration`. The same `new Api(...)` call sees the live
+    // `HttpClient` in a real browser, supplied by
+    // `provideHttpClient(withFetch(), withInterceptors(...))`.
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
   }
 
   // -------------------------------------------------------------------------
-  // Derived views.
+  // Reads
   // -------------------------------------------------------------------------
 
   /**
-   * Current wizard step. Pure derived view — guards and templates
-   * read this and never call into the network to decide navigation.
+   * Loads `/checkout/options`. Idempotent: a loaded snapshot plus
+   * `force === false` is a no-op. The contract declares no ETag on
+   * the endpoint (`openapi.yaml:481-487`), so no `If-Match` is sent.
    */
-  readonly step: Signal<CheckoutStep> = computed<CheckoutStep>(() => {
-    if (this.busy() && this.order() === null) return 'submitting';
-    if (this.order() !== null) return 'success';
-    const session = this.session();
-    if (session === null) return 'cart';
-    if (session.contact === undefined) return 'contact';
-    if (session.delivery === undefined || session.paymentMethod === undefined) {
-      return 'delivery';
-    }
-    return 'review';
-  });
-
-  /**
-   * Earliest step the user is missing for the current session. Used
-   * by `checkout.guards.ts` when a deep-link / reload bypasses a
-   * later step.
-   */
-  readonly earliestMissingStep: Signal<CheckoutStep> = computed<CheckoutStep>(() => {
-    const cart = this.cartFacade.cart();
-    if (cart === null || cart.items.length === 0) return 'cart';
-    const session = this.session();
-    if (session === null) return 'contact';
-    if (session.contact === undefined) return 'contact';
-    if (session.delivery === undefined) return 'delivery';
-    if (session.paymentMethod === undefined) return 'delivery';
-    return 'review';
-  });
-
-  /** True when the contact section validates AND has been saved on the server. */
-  readonly contactSaved: Signal<boolean> = computed(() => this.session()?.contact !== undefined);
-
-  /** True when the delivery + paymentMethod sections are both saved. */
-  readonly deliverySaved: Signal<boolean> = computed(
-    () => this.session()?.delivery !== undefined && this.session()?.paymentMethod !== undefined,
-  );
-
-  /** True when every required section is saved and a quote exists. */
-  readonly readyToSubmit: Signal<boolean> = computed(() => {
-    return (
-      this.contactSaved() &&
-      this.deliverySaved() &&
-      this.quote() !== null &&
-      this.form().valid() &&
-      !this.busy()
-    );
-  });
-
-  // -------------------------------------------------------------------------
-  // Lifecycle / recovery.
-  // -------------------------------------------------------------------------
-
-  /**
-   * Ensures a cart exists, then loads the persisted checkout session
-   * for that cart. Returns the loaded session (or null when the cart
-   * is empty). Called by the route layout on every /penztar/* mount.
-   *
-   * Privacy: when the caller passes `clearOnLoad: true` the
-   * in-memory form is reset before hydration so a hard reload wipes
-   * any contact / address the previous tab entered. The cart
-   * survives because `CartFacade` is the source of truth for it.
-   */
-  async loadSession(
-    cartId: string | null,
-    options: { clearOnLoad: boolean },
-  ): Promise<CheckoutSession | null> {
-    if (cartId === null) {
-      this.cartIdWritable.set(null);
-      return null;
-    }
-    this.cartIdWritable.set(cartId);
-    try {
-      const session = await firstValueFrom(
-        this.api.invoke(functions.getCheckoutSession, { cartId }),
-      );
-      this.applySession(session, options);
-      return session;
-    } catch (err) {
-      // The server returning 404 / 410 simply means there is no
-      // draft yet — the wizard should start at the contact step.
-      const mapped = mapError(err);
-      if (mapped.status === 404 || mapped.status === 410) {
-        this.applySession(
-          {
-            cartId,
-            cartVersion: this.cartFacade.cart()?.version ?? 1,
-          },
-          options,
-        );
-        return this.session();
+  async ensureOptions(force = false): Promise<CheckoutResult<CheckoutOptions>> {
+    if (!force && this.optionsWritable() !== null) {
+      const existing = this.optionsWritable();
+      if (existing !== null) {
+        return { ok: true, value: existing };
       }
-      this.recordFailure(mapped);
-      return null;
     }
-  }
-
-  /**
-   * Clears every in-memory trace of the user. Called on hard reload
-   * (per the privacy contract) and explicitly by the "Mégse" button
-   * on the review step. The cart survives because `CartFacade` is
-   * the source of truth.
-   */
-  resetDraft(): void {
-    this.modelWritable.set(createInitialCheckoutFormModel());
-    this.sessionWritable.set(null);
-    this.quoteWritable.set(null);
-    this.paymentIntentWritable.set(null);
-    this.orderWritable.set(null);
-    this.errorWritable.set(null);
-    this.draftDirtyWritable.set(false);
-    this.hydratedWritable.set(false);
-  }
-
-  /**
-   * Marks the form as dirty after the user edits any field. Called
-   * from the page templates via `onFieldChanged`. The review page
-   * uses `draftDirty()` to invalidate the active quote on screen so
-   * the user understands the price is stale (T19-AC04).
-   */
-  markDraftDirty(): void {
-    if (!this.draftDirtyWritable()) {
-      this.draftDirtyWritable.set(true);
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Save helpers — every section is its own explicit PUT.
-  // -------------------------------------------------------------------------
-
-  /**
-   * Persists the contact section. Returns the updated session on
-   * success or a structured error on failure. Failure does NOT
-   * reset the form model — the user can correct and retry.
-   */
-  async saveContactSection(): Promise<CheckoutMutationResult<CheckoutSession>> {
-    const value = this.modelWritable();
-    return this.saveSection({ contact: toContactPayload(value) });
-  }
-
-  /** Persists the delivery section (option + address). */
-  async saveDeliverySection(): Promise<CheckoutMutationResult<CheckoutSession>> {
-    const value = this.modelWritable();
-    return this.saveSection({ delivery: toDeliveryPayload(value) });
-  }
-
-  /** Persists the payment method. */
-  async savePaymentMethod(): Promise<CheckoutMutationResult<CheckoutSession>> {
-    const value = this.modelWritable();
-    return this.saveSection({ paymentMethod: value.paymentMethod as 'demo_card' | 'demo_cod' });
-  }
-
-  /**
-   * Generic `PUT /checkout/{cartId}` driver. Called by the typed
-   * wrappers above. Updates the session, clears the cached quote,
-   * and clears the `draftDirty` flag on success.
-   */
-  private async saveSection(body: {
-    contact?: Contact;
-    delivery?: DeliverySelection;
-    paymentMethod?: 'demo_card' | 'demo_cod';
-  }): Promise<CheckoutMutationResult<CheckoutSession>> {
-    const cartId = this.cartIdWritable();
-    if (cartId === null) {
-      return {
-        ok: false,
-        error: {
-          code: 'NO_CART',
-          status: 0,
-          detail: 'A kosár nem áll készen.',
-          fieldErrors: [],
-        },
-      };
-    }
-    const cartVersion = this.cartFacade.cart()?.version;
-    if (cartVersion === undefined) {
-      return {
-        ok: false,
-        error: {
-          code: 'NO_CART',
-          status: 0,
-          detail: 'A kosár verziója nem elérhető.',
-          fieldErrors: [],
-        },
-      };
-    }
-    // architecture.md:117 - "A retry sends the identical
-    // body/precondition." One key per canonical request fingerprint:
-    // reuse the held key while the fingerprint is unchanged, mint a
-    // fresh one only when it differs. Built over an array (fixed
-    // element order) rather than the `body` object literal, so
-    // reordering the payload's own fields cannot silently mint a new
-    // key for an identical request.
-    const fingerprint = JSON.stringify([
-      cartId,
-      cartVersion,
-      body.contact ?? null,
-      body.delivery ?? null,
-      body.paymentMethod ?? null,
-    ]);
-    const held = this.savedSectionKey;
-    const key =
-      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
-    this.savedSectionKey = { fingerprint, key };
-    this.busyWritable.set(true);
     try {
-      const session = await firstValueFrom(
-        this.api.invoke(
-          functions.updateCheckout,
-          {
-            cartId,
-            'Idempotency-Key': key,
-            body,
-          },
-          withIfMatch(cartVersion),
-        ),
-      );
-      this.applySession(session);
-      this.quoteWritable.set(null);
-      this.draftDirtyWritable.set(false);
-      this.errorWritable.set(null);
+      const options = await firstValueFrom(this.api.invoke(getCheckoutOptions, {}));
+      this.optionsWritable.set(options);
+      return { ok: true, value: options };
+    } catch (err) {
+      const result: CheckoutResult<CheckoutOptions> = { ok: false, error: mapError(err) };
+      this.recordFailure({ kind: 'contact' }, result);
+      return result;
+    }
+  }
+
+  /**
+   * Loads `/checkout`. A stale version must not turn a reload into
+   * a 412, so no `If-Match` is sent (the 1.0.0 `fetchOrder` already
+   * reasons this way at `checkout.facade.ts:589-592`). On success
+   * the cart's version is adopted from the server's answer.
+   */
+  async ensureSession(force = false): Promise<CheckoutResult<CheckoutSession>> {
+    if (!force && this.sessionWritable() !== null) {
+      const existing = this.sessionWritable();
+      if (existing !== null) {
+        return { ok: true, value: existing };
+      }
+    }
+    try {
+      const session = await firstValueFrom(this.api.invoke(getCheckout, {}));
+      this.sessionWritable.set(session);
+      this.cart.acceptServerVersion(session.version);
+      this.clearFailureOverlay();
       return { ok: true, value: session };
     } catch (err) {
-      const mapped = mapError(err);
-      // 422 VALIDATION_ERROR leaves the form intact so the user can
-      // correct field-level errors; the banner shows the first
-      // message. Do NOT reset the model.
-      this.recordFailure(mapped);
-      return { ok: false, error: mapped };
-    } finally {
-      this.busyWritable.set(false);
+      const result: CheckoutResult<CheckoutSession> = { ok: false, error: mapError(err) };
+      this.recordFailure({ kind: 'contact' }, result);
+      return result;
     }
   }
 
   // -------------------------------------------------------------------------
-  // Quote lifecycle.
+  // Section writes — all four go through `patch()`
+  // -------------------------------------------------------------------------
+
+  async updateContact(contact: Contact): Promise<CheckoutResult<CheckoutSession>> {
+    return this.patch('contact', { contact } satisfies UpdateCheckoutRequest);
+  }
+
+  async updateBilling(billing: BillingDetails): Promise<CheckoutResult<CheckoutSession>> {
+    return this.patch('billing', { billing } satisfies UpdateCheckoutRequest);
+  }
+
+  async updateDelivery(delivery: DeliverySelection): Promise<CheckoutResult<CheckoutSession>> {
+    return this.patch('delivery', { delivery } satisfies UpdateCheckoutRequest);
+  }
+
+  async updatePayment(payment: PaymentSelection): Promise<CheckoutResult<CheckoutSession>> {
+    return this.patch('payment', { payment } satisfies UpdateCheckoutRequest);
+  }
+
+  /**
+   * Single private driver for the four section writes. Each sends
+   * only its own section (UpdateCheckoutRequest's "Only the supplied
+   * sections are written; absent sections are retained"), so no
+   * merge is needed client-side (design §3.4).
+   */
+  private async patch(
+    kind: 'contact' | 'billing' | 'delivery' | 'payment',
+    body: UpdateCheckoutRequest,
+  ): Promise<CheckoutResult<CheckoutSession>> {
+    const mutation: CheckoutMutation<CheckoutSession> = {
+      kind,
+      run: async (expectedVersion) => {
+        try {
+          const session = await firstValueFrom(
+            this.api.invoke(updateCheckout, { body }, withIfMatch(expectedVersion)),
+          );
+          return { ok: true, value: session };
+        } catch (err) {
+          return { ok: false, error: mapError(err) };
+        }
+      },
+    };
+    return this.serialize(mutation);
+  }
+
+  // -------------------------------------------------------------------------
+  // Payment intent
   // -------------------------------------------------------------------------
 
   /**
-   * Creates a fresh quote bound to the current cart version.
-   * Returns the persisted Quote on success or a structured error.
-   * The user must explicitly click "Fizetés" / "Megrendelés" — no
-   * guard ever calls this method.
+   * Creates a payment intent. Carries the Idempotency-Key derived
+   * from the cart version (design §3.6 fingerprint) and no body.
+   * On 201 the intent is stored, the id is persisted to
+   * sessionStorage, and the value returned to the caller, who then
+   * issues the full-page redirect.
    */
-  async createQuote(): Promise<CheckoutMutationResult<Quote>> {
-    const cartId = this.cartIdWritable();
-    const cartVersion = this.cartFacade.cart()?.version;
-    if (cartId === null || cartVersion === undefined) {
-      return {
-        ok: false,
-        error: {
-          code: 'NO_CART',
-          status: 0,
-          detail: 'A kosár nem áll készen.',
-          fieldErrors: [],
-        },
-      };
-    }
-    // `createCheckoutQuote` carries no request body; a quote prices
-    // the cart's own contents, not the draft, so `cartId` +
-    // `cartVersion` alone identify the canonical request
-    // (architecture.md:9 - a draft edit does not change `cartVersion`
-    // and does not change what the quote computes). Set
-    // unconditionally: a PRICE_CHANGED 409 bumps `cartVersion`
-    // server-side, so the next legitimate request already gets a new
-    // fingerprint and a new key with no manual clearing needed.
-    const fingerprint = JSON.stringify([cartId, cartVersion]);
-    const held = this.heldQuoteKey;
-    const key =
-      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
-    this.heldQuoteKey = { fingerprint, key };
-    this.busyWritable.set(true);
+  async createPaymentIntent(): Promise<CheckoutResult<PaymentIntent>> {
+    const mutation: CheckoutMutation<PaymentIntent> = {
+      kind: 'paymentIntent',
+      run: async (expectedVersion) => {
+        const key = checkoutKeys.intentKey(expectedVersion);
+        try {
+          const intent = await firstValueFrom(
+            this.api.invoke(
+              createPaymentIntent,
+              { 'Idempotency-Key': key },
+              withIfMatch(expectedVersion),
+            ),
+          );
+          checkoutKeys.setActiveIntentId(intent.id);
+          this.paymentIntentWritable.set(intent);
+          return { ok: true, value: intent };
+        } catch (err) {
+          return { ok: false, error: mapError(err) };
+        }
+      },
+    };
+    return this.serialize(mutation);
+  }
+
+  /**
+   * Reads a payment intent by id. No `If-Match`, no key. Stores the
+   * result on `paymentIntent`. A 404 is returned in the result and
+   * `CheckoutError` and is NOT recorded on `error`, the way the 1.0.0
+   * `fetchOrder` treats a 404 (`checkout.facade.ts:599-609`), so the
+   * return page can render its own recovery.
+   */
+  async readPaymentIntent(paymentIntentId: string): Promise<CheckoutResult<PaymentIntent>> {
     try {
-      const quote = await firstValueFrom(
-        this.api.invoke(
-          functions.createCheckoutQuote,
-          {
-            cartId,
-            'Idempotency-Key': key,
-          },
-          withIfMatch(cartVersion),
-        ),
-      );
-      this.quoteWritable.set(quote);
-      this.errorWritable.set(null);
-      return { ok: true, value: quote };
-    } catch (err) {
-      const mapped = mapError(err);
-      this.recordFailure(mapped);
-      return { ok: false, error: mapped };
-    } finally {
-      this.busyWritable.set(false);
-    }
-  }
-
-  /**
-   * Discards the active quote. Called by the review page when the
-   * user re-edits the contact / delivery / payment section, so the
-   * "Fizetés" button reports a stale-quote state and the user has to
-   * re-press it (T19-AC04).
-   */
-  invalidateQuote(): void {
-    this.quoteWritable.set(null);
-  }
-
-  // -------------------------------------------------------------------------
-  // Receipt hydration (T24-AC02).
-  // -------------------------------------------------------------------------
-
-  /**
-   * Fetches an order receipt by id. GET only — never POST — so a
-   * reload / deep-link / back+forward to the success URL can
-   * rehydrate the page without creating a duplicate order. The
-   * `If-Match` header is bound to the current cart version so the
-   * interceptor emits it, even though GET requests ignore it; this
-   * keeps the wire surface uniform with the rest of the facade.
-   *
-   * On success the receipt is committed to the `order` signal so
-   * the success page renders immediately. On 404 a structured
-   * `not_found` error is returned so the page can render its
-   * recovery state. Every other failure surfaces the canonical
-   * `CheckoutError` shape the rest of the facade uses.
-   */
-  async fetchOrder(orderId: string): Promise<CheckoutMutationResult<OrderReceipt>> {
-    // GET carries no `If-Match` — the receipt is keyed by orderId,
-    // not by cart version, and a stale cart version should not turn
-    // a deep-link reload into a 412.
-    try {
-      const receipt = await firstValueFrom(this.api.invoke(functions.getOrder, { orderId }));
-      this.orderWritable.set(receipt);
-      this.errorWritable.set(null);
-      return { ok: true, value: receipt };
-    } catch (err) {
-      const mapped = mapError(err);
-      if (mapped.status === 404) {
-        return {
-          ok: false,
-          error: {
-            code: 'not_found',
-            status: 404,
-            detail: mapped.detail,
-            fieldErrors: [],
-          },
-        };
-      }
-      this.recordFailure(mapped);
-      return { ok: false, error: mapped };
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Payment + order commit (explicit UI actions only).
-  // -------------------------------------------------------------------------
-
-  /**
-   * Creates a `demo_card` payment intent. Returns 400 when the
-   * current payment method is `demo_cod` (no intent needed). The
-   * review page calls this from the explicit "Fizetés indítása"
-   * button.
-   */
-  async createPaymentIntent(): Promise<CheckoutMutationResult<PaymentIntent>> {
-    const cartId = this.cartIdWritable();
-    const quote = this.quoteWritable();
-    if (cartId === null || quote === null) {
-      return {
-        ok: false,
-        error: {
-          code: 'NO_QUOTE',
-          status: 0,
-          detail: 'Az árajánlat nem áll készen.',
-          fieldErrors: [],
-        },
-      };
-    }
-    const paymentMethod = this.modelWritable().paymentMethod;
-    if (paymentMethod !== 'demo_card') {
-      return {
-        ok: false,
-        error: {
-          code: 'PAYMENT_INTENT_NOT_NEEDED',
-          status: 0,
-          detail: 'A demo_cod fizetési mód nem igényel fizetési szándékot.',
-          fieldErrors: [],
-        },
-      };
-    }
-    // openapi.yaml:628-635 - "New approved retry uses a new payment
-    // key; ambiguous network retry retains original key." Unlike
-    // saveSection()/createQuote() above, every response the mock
-    // actually sends back (succeeded, declined or pending, per the
-    // generated PaymentIntent model) is a DEFINITIVE outcome, so the
-    // held key is cleared on every response and kept ONLY across a
-    // transport failure (status === 0 - no response was received, so
-    // the outcome is genuinely ambiguous).
-    const fingerprint = JSON.stringify([cartId, quote.id]);
-    const held = this.heldPaymentIntentKey;
-    const key =
-      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
-
-    this.busyWritable.set(true);
-    try {
-      const intent = await firstValueFrom(
-        this.api.invoke(functions.createPaymentIntent, {
-          'Idempotency-Key': key,
-          body: { cartId, quoteId: quote.id },
-        }),
-      );
+      const intent = await firstValueFrom(this.api.invoke(getPaymentIntent, { paymentIntentId }));
       this.paymentIntentWritable.set(intent);
-      this.errorWritable.set(null);
-      // A response was received - succeeded, declined or pending are
-      // all definitive per openapi.yaml. The next call is a new
-      // attempt and must mint a fresh key.
-      this.heldPaymentIntentKey = null;
       return { ok: true, value: intent };
     } catch (err) {
-      const mapped = mapError(err);
-      this.recordFailure(mapped);
-      // Decline / pending / etc. leave contact + address + cart intact
-      // (AC03) — only the payment intent is left unset so the user
-      // can press the button once more or pick a different method.
-      // status === 0 is a transport failure: no response was
-      // received, so the retry must carry the identical key. Any
-      // other status is a definitive server response (a Problem
-      // body); the next attempt is a new one and gets a fresh key.
-      this.heldPaymentIntentKey = mapped.status === 0 ? { fingerprint, key } : null;
-      return { ok: false, error: mapped };
-    } finally {
-      this.busyWritable.set(false);
+      const error = mapError(err);
+      if (error.status === 404) {
+        return { ok: false, error };
+      }
+      this.errorWritable.set(error);
+      return { ok: false, error };
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Orders
+  // -------------------------------------------------------------------------
+
   /**
-   * Atomic order commit. The review page calls this from the final
-   * "Demórendelés véglegesítése" button. On success the receipt is
-   * stored and the wizard advances to the success step. On failure
-   * the form, draft and cart are preserved (AC03).
+   * Submits the order. The caller (the review step's
+   * `OrderSubmission`) builds the discriminated `OrderRequest`;
+   * the facade adds the Idempotency-Key and the precondition and
+   * owns the result mapping. A 201 stores the receipt, clears the
+   * idempotency key, drops the session and returns the value.
    */
-  async commitOrder(): Promise<CheckoutMutationResult<OrderReceipt>> {
-    const cartId = this.cartIdWritable();
-    const quote = this.quoteWritable();
-    if (cartId === null || quote === null) {
-      return {
-        ok: false,
-        error: {
-          code: 'NO_QUOTE',
-          status: 0,
-          detail: 'Az árajánlat nem áll készen.',
-          fieldErrors: [],
-        },
-      };
-    }
-    const paymentIntent = this.paymentIntentWritable();
-    const paymentMethod = this.modelWritable().paymentMethod;
-    const body = {
-      cartId,
-      quoteId: quote.id,
-      ...(paymentMethod === 'demo_card' && paymentIntent !== null
-        ? { paymentIntentId: paymentIntent.id }
-        : {}),
-      termsVersion: 'demo-1' as const,
-      acceptedTerms: true as const,
-      acknowledgedSimulation: true as const,
+  async submitOrder(body: OrderRequest): Promise<CheckoutResult<OrderReceipt>> {
+    const mutation: CheckoutMutation<OrderReceipt> = {
+      kind: 'order',
+      run: async (expectedVersion) => {
+        const termsVersion = this.optionsWritable()?.termsVersion;
+        if (termsVersion === undefined) {
+          return {
+            ok: false,
+            error: {
+              code: 'NO_OPTIONS',
+              status: 0,
+              detail: 'Checkout options have not been loaded yet.',
+              fieldErrors: [],
+            },
+          };
+        }
+        const fingerprintArgs = {
+          version: expectedVersion,
+          paymentMethod: body.paymentMethod,
+          paymentIntentId: hasPaymentIntentId(body) ? body.paymentIntentId : null,
+          termsVersion,
+          acceptedTerms: body.acceptedTerms,
+        };
+        const key = checkoutKeys.orderKey(fingerprintArgs);
+        try {
+          const receipt = await firstValueFrom(
+            this.api.invoke(
+              createOrder,
+              { 'Idempotency-Key': key, body },
+              withIfMatch(expectedVersion),
+            ),
+          );
+          checkoutKeys.clearAll();
+          this.orderWritable.set(receipt);
+          this.sessionWritable.set(null);
+          this.paymentIntentWritable.set(null);
+          this.clearFailureOverlay();
+          return { ok: true, value: receipt };
+        } catch (err) {
+          return { ok: false, error: mapError(err) };
+        }
+      },
     };
-    // architecture.md:117/:121 — "A retry sends the identical
-    // body/precondition." One key per canonical request fingerprint:
-    // reuse the held key while the fingerprint is unchanged, mint a
-    // fresh one only when it differs. Built over a key-sorted array
-    // rather than the object literal, so reordering the fields above
-    // cannot silently mint a new key for an identical request.
-    const fingerprint = JSON.stringify([
-      body.cartId,
-      body.quoteId,
-      'paymentIntentId' in body ? body.paymentIntentId : null,
-      body.termsVersion,
-      body.acceptedTerms,
-      body.acknowledgedSimulation,
-    ]);
-    const held = this.heldCommitOrderKey;
-    const idempotencyKey =
-      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
-    this.heldCommitOrderKey = { fingerprint, key: idempotencyKey };
-    const result = await this.commitOrderWithKey(idempotencyKey, body);
-    if (result.ok) {
-      // A genuinely new order must not inherit this fingerprint's key.
-      this.heldCommitOrderKey = null;
-    }
-    return result;
+    return this.serialize(mutation);
   }
 
-  /** Held idempotency key for the last `commitOrder()` fingerprint;
-   *  cleared on a terminal success (see `commitOrder()` above). */
-  private heldCommitOrderKey: { readonly fingerprint: string; readonly key: string } | null = null;
-
   /**
-   * Commit with an externally supplied idempotency key. Used by
-   * `OrderSubmission` so the persisted safe-order record's key
-   * matches the one the mock's idempotency cache actually stores
-   * (T23-AC04). The body MUST match the wire contract — no PII.
+   * Reads an order by id. No `If-Match`, no key. A 404 returns the
+   * failure and does NOT clear `order()`; the success page decides
+   * whether to render its own recovery.
    */
-  async commitOrderWithKey(
-    idempotencyKey: string,
-    body: {
-      cartId: string;
-      quoteId: string;
-      paymentIntentId?: string;
-      termsVersion: 'demo-1';
-      acceptedTerms: true;
-      acknowledgedSimulation: true;
-    },
-  ): Promise<CheckoutMutationResult<OrderReceipt>> {
-    this.busyWritable.set(true);
+  async fetchOrder(orderId: string): Promise<CheckoutResult<OrderReceipt>> {
     try {
-      const receipt = await firstValueFrom(
-        this.api.invoke(functions.createOrder, {
-          'Idempotency-Key': idempotencyKey,
-          body,
-        }),
-      );
+      const receipt = await firstValueFrom(this.api.invoke(getOrder, { orderId }));
       this.orderWritable.set(receipt);
-      this.errorWritable.set(null);
       return { ok: true, value: receipt };
     } catch (err) {
-      const mapped = mapError(err);
-      this.recordFailure(mapped);
-      return { ok: false, error: mapped };
-    } finally {
-      this.busyWritable.set(false);
+      const error = mapError(err);
+      if (error.status === 404) {
+        return { ok: false, error };
+      }
+      this.errorWritable.set(error);
+      return { ok: false, error };
     }
   }
 
   // -------------------------------------------------------------------------
-  // Private helpers — kept module-internal so the tests can exercise
-  // the public surface only.
+  // Recovery
   // -------------------------------------------------------------------------
 
   /**
-   * Replaces the in-memory session snapshot and hydrates the form
-   * model from it. The cart survives across the swap (CartFacade
-   * owns the cart); contact / address are populated only when the
-   * snapshot actually carries them.
-   *
-   * When the snapshot omits a section that the in-memory form
-   * already holds (e.g. `saveDeliverySection()` PUTs only the
-   * delivery section and the server returns a session without
-   * `paymentMethod`), the form keeps the previously typed value
-   * rather than resetting it to ''. Wiping fields that were not
-   * part of the save would force the user to retype values they
-   * already entered — and, in the case of `paymentMethod`,
-   * turn the next `savePaymentMethod()` into a 422 by sending
-   * the empty string. The merge rules live in
-   * `hydrateCheckoutFormModel`.
+   * Re-submits the most recent failed intent with the CURRENT
+   * expected version. No-op when no conflict is recorded. Never
+   * called by the facade itself; the 412 banner's button calls it.
    */
-  private applySession(
-    session: CheckoutSession,
-    options: { clearOnLoad: boolean } = { clearOnLoad: false },
-  ): void {
-    this.sessionWritable.set(session);
-    if (options.clearOnLoad) {
-      // Privacy: hard reload clears the in-memory contact + address
-      // even though the server-side draft survives. The form is
-      // wiped so the user retypes; the next saveSection replaces the
-      // server draft atomically.
-      this.modelWritable.set(createInitialCheckoutFormModel());
-    } else {
-      this.modelWritable.set(
-        hydrateCheckoutFormModel(this.modelWritable(), {
-          contact: session.contact,
-          delivery: session.delivery,
-          paymentMethod: session.paymentMethod,
-        }),
-      );
+  async retry(): Promise<void> {
+    const failed = this.lastFailedIntent;
+    if (failed === null) {
+      return;
     }
-    this.hydratedWritable.set(true);
+    this.lastFailedIntent = null;
+    await this.serialize(failed);
   }
 
-  /** Surfaces a non-recoverable error on the wizard banner. */
-  private recordFailure(error: CheckoutError): void {
+  /**
+   * Clears `priceChange`. The only way to clear it; the submit CTA
+   * stays dead until this runs (§8.2, the shopper's explicit
+   * confirmation).
+   */
+  confirmPriceChange(): void {
+    this.priceChangeWritable.set(null);
+  }
+
+  /**
+   * Drops the in-memory checkout state once an order lands. Does not
+   * touch `order` (the success page renders it) and does not call
+   * `cart.resetOrderedCart()` (the success page does that in its own
+   * effect, `success-step.ts:168-172`). Called from inside
+   * `submitOrder`'s 201 branch.
+   */
+  resetAfterOrder(): void {
+    this.sessionWritable.set(null);
+    this.paymentIntentWritable.set(null);
+    this.clearFailureOverlay();
+    checkoutKeys.clearAll();
+  }
+
+  // -------------------------------------------------------------------------
+  // Private serialiser. Mirrors the cart's semantics without its types:
+  // every checkout mutation chains onto `tail`, binds `If-Match` to
+  // `version()` INSIDE the chained callback so it sees the latest
+  // server answer, and decrements `pending` on both settlement branches.
+  // -------------------------------------------------------------------------
+
+  private serialize<T>(mutation: CheckoutMutation<T>): Promise<CheckoutResult<T>> {
+    this.pendingWritable.update((n) => n + 1);
+    const next = this.tail.then(async () => {
+      const expectedVersion = this.version();
+      if (expectedVersion === null) {
+        const result = notLoadedResult<T>();
+        this.recordFailure(mutation, result);
+        return result;
+      }
+      const result = await mutation.run(expectedVersion);
+      this.recordFailure(mutation, result);
+      return result;
+    });
+    this.tail = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    return next.finally(() => {
+      this.pendingWritable.update((n) => n - 1);
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Failure routing — one function so a 412 always lands in the conflict
+  // signal, a 410 always in cartExpired, and other Problems in `error`.
+  // -------------------------------------------------------------------------
+
+  private recordFailure(
+    mutation: CheckoutMutation | { readonly kind: CheckoutIntentKind },
+    result: CheckoutResult<unknown>,
+  ): void {
+    if (result.ok) {
+      this.conflictWritable.set(null);
+      this.cartExpiredWritable.set(false);
+      this.errorWritable.set(null);
+      this.lastFailedIntent = null;
+      return;
+    }
+    const { error } = result;
+    if (error.code === 'CART_VERSION_CONFLICT') {
+      // A back-to-back conflict must keep the FIRST failed intent so
+      // retry() replays the user's original operation, not the second
+      // one. Only the first recordFailure for a fresh conflict surface
+      // gets to overwrite `lastFailedIntent`.
+      if (this.conflictWritable() === null && 'run' in mutation) {
+        this.lastFailedIntent = mutation;
+      }
+      const conflict: CheckoutConflict = {
+        code: 'CART_VERSION_CONFLICT',
+        status: 412,
+        intent: mutation.kind,
+        serverVersion: this.version() ?? 0,
+      };
+      this.conflictWritable.set(conflict);
+      this.errorWritable.set(null);
+      this.cartExpiredWritable.set(false);
+      // Fire-and-forget so the failed intent resolves immediately and
+      // the serialiser can move on. We do NOT await either call here.
+      void this.cart.refetch();
+      void this.ensureSession(true);
+      return;
+    }
+    if (error.code === 'CART_EXPIRED') {
+      this.sessionWritable.set(null);
+      this.cartExpiredWritable.set(true);
+      this.conflictWritable.set(null);
+      this.errorWritable.set(null);
+      return;
+    }
+    if (error.code === 'PRICE_CHANGED' && mutation.kind === 'order') {
+      // §8.2 sequence: capture the shown total, rotate the order key,
+      // refetch cart and session, arm priceChange, return the failure.
+      // The refetches are fire-and-forget, like the 412 branch: the
+      // failed call resolves immediately and the serialiser moves on.
+      const shownTotal = this.summary()?.total;
+      if (shownTotal !== undefined) {
+        checkoutKeys.rotateOrderKey();
+        void Promise.all([this.cart.refetch(), this.ensureSession(true)]).then(() => {
+          const currentTotal = this.summary()?.total;
+          if (currentTotal !== undefined) {
+            this.priceChangeWritable.set({
+              shownTotal,
+              currentTotal,
+              awaitingConfirmation: true,
+            });
+          }
+        });
+      }
+      this.errorWritable.set(error);
+      this.conflictWritable.set(null);
+      this.cartExpiredWritable.set(false);
+      return;
+    }
+    // Generic failure branch: clear the stale conflict overlay so the
+    // UI does not accumulate error states. Preserve `lastFailedIntent`
+    // when a conflict is currently surfaced so the retry affordance
+    // survives a transient error.
     this.errorWritable.set(error);
+    if (this.conflictWritable() === null) {
+      this.lastFailedIntent = null;
+    }
+    this.conflictWritable.set(null);
+    this.cartExpiredWritable.set(false);
+  }
+
+  private clearFailureOverlay(): void {
+    this.errorWritable.set(null);
+    this.conflictWritable.set(null);
+    this.cartExpiredWritable.set(false);
+    this.priceChangeWritable.set(null);
+    this.lastFailedIntent = null;
   }
 }
 
-/**
- * Test-only helpers — kept module-local so the spec file can drive
- * the facade without exposing internals to the runtime. The
- * `__private*` prefix guards against accidental imports from app
- * code.
- */
-export const __privateCheckoutHelpers = {
-  PHONE_PATTERN,
-  POSTAL_CODE_PATTERN,
-  normalizeDeliveryOptionId,
-  normalizePaymentMethod,
-};
+// ---------------------------------------------------------------------------
+// Pure helpers — kept module-local so tests can exercise the mapping
+// without instantiating the facade.
+// ---------------------------------------------------------------------------
+
+function mapError(err: unknown): CheckoutError {
+  if (err instanceof HttpErrorResponse) {
+    const body: unknown = err.error;
+    let code = 'UNKNOWN';
+    let detail = err.message;
+    let params: Readonly<Record<string, unknown>> | undefined;
+    let fieldErrors: readonly FieldError[] = [];
+    if (isRecord(body)) {
+      if (typeof body['code'] === 'string') {
+        code = body['code'];
+      }
+      if (typeof body['detail'] === 'string') {
+        detail = body['detail'];
+      }
+      if (isRecord(body['params'])) {
+        params = body['params'];
+      }
+      if (Array.isArray(body['fieldErrors'])) {
+        fieldErrors = body['fieldErrors'].filter((entry): entry is FieldError => isRecord(entry));
+      }
+    }
+    if (err.status === 412 && code === 'CART_VERSION_CONFLICT') {
+      return { code: 'CART_VERSION_CONFLICT', status: 412, detail, params, fieldErrors };
+    }
+    if (err.status === 410 && code === 'CART_EXPIRED') {
+      return { code: 'CART_EXPIRED', status: 410, detail, params, fieldErrors };
+    }
+    if (err.status === 404) {
+      return { code: 'NOT_FOUND', status: 404, detail, params, fieldErrors };
+    }
+    return { code, status: err.status, detail, params, fieldErrors };
+  }
+  return { code: 'SERVICE_UNAVAILABLE', status: 0, detail: String(err), fieldErrors: [] };
+}
