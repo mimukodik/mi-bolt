@@ -12,10 +12,8 @@ docs/
 │                    elfogadás és technológiai döntések
 ├── api/             OpenAPI YAML, generátorminta, fixture-k
 ├── design/          prototípus, képernyőtervek, helyi demóképek
-├── tasks/           T00–T29, opcionális O01, függőségi gráf
-├── fix/             a javítási csomag
-└── mi-bolt/
-    └── execution/   a végrehajtás közben keletkező bizonyítékok
+└── tasks/           géppel olvasható task-, követelmény- és
+                     elfogadási leírók, függőségi gráf
 ```
 
 Ez tervezési és végrehajtási dokumentáció, **nem kész Angular alkalmazás**.

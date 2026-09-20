@@ -138,7 +138,6 @@ of this unit:
 - `src/mocks/**`
 - `src/app/shared/shell/**`
 - `src/app/features/home/hero.html`, `hero.scss`
-- `docs/fix/FIX-70.md`, `docs/fix/FIX-34.md`
 - `scripts/coder-agent/**`
 - anything under `e2e/`
 

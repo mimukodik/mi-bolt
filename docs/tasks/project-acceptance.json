@@ -16,7 +16,7 @@
   },
   {
     "id": "AC04",
-    "text": "mi-bolt-design 1.0.1 is loaded for EVERY task execution and EVERY independent verification; R01–R26 applicability and evidence are attached; missing skill is a blocker.",
+    "text": "`docs/design/yettel.md` is cited for EVERY task execution and EVERY independent verification; the earlier design-skill R01–R26 gate is retired.",
     "status": "required-not-yet-executed"
   },
   {

@@ -18,7 +18,8 @@ import { Component, input } from '@angular/core';
  * The default is `'durable'` rather than a required input so a test
  * host, or a build that never runs the mock bootstrap, can render
  * this component unbound; `AppShell` binds the real value from the
- * `PERSISTENCE_MODE` token — see `docs/fix/FIX-70.md`.
+ * `PERSISTENCE_MODE` token, set from whether the mock bootstrap's
+ * session-storage hydrate found browser storage denied.
  */
 @Component({
   selector: 'app-demo-notice',

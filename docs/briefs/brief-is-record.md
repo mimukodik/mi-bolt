@@ -118,7 +118,6 @@ of this unit:
   line 365 — **leave it**, it is not part of this unit)
 - `src/app/shared/shell/**`
 - `src/app/features/home/hero.html`, `hero.scss`
-- `docs/fix/FIX-70.md`, `docs/fix/FIX-34.md`
 - `scripts/coder-agent/**`
 - anything under `e2e/`
 

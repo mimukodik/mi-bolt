@@ -7,7 +7,7 @@ import { InjectionToken } from '@angular/core';
  * blocked site data, a security error — and fell back to an
  * in-memory cache (`'memory'`). `AppShell` reads this and forwards it
  * to `DemoNotice`, which renders a visibly distinct warning for the
- * latter (`docs/fix/FIX-70.md` AC05).
+ * latter, since denied browser storage otherwise loses the cart silently on reload.
  *
  * The value is computed once, in `main.ts`, from
  * `getPreparedPersistenceMode()` (`src/core/bootstrap-demo.ts`) after
