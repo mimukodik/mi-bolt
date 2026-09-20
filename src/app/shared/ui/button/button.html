@@ -1,17 +1,18 @@
 <button
-  class="root"
-  [attr.aria-busy]="loading() ? 'true' : null"
-  [attr.aria-disabled]="disabled() ? 'true' : null"
-  [class.is-comfortable]="size() === 'comfortable'"
+  [type]="type()"
+  class="root inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-3 text-base leading-6 whitespace-nowrap select-none"
   [class.is-primary]="variant() === 'primary'"
   [class.is-secondary]="variant() === 'secondary'"
   [class.is-secondary-on-dark]="variant() === 'secondaryOnDark'"
+  [class.is-navy]="variant() === 'navy'"
+  [class.is-comfortable]="size() === 'comfortable'"
+  [attr.aria-busy]="loading() ? 'true' : null"
+  [attr.aria-disabled]="disabled() ? 'true' : null"
   [disabled]="disabled() || loading()"
-  [type]="type()"
   (click)="onClick($event)"
 >
   @if (loading()) {
-    <span class="sr-only absolute w-px h-px overflow-hidden">Loading:</span>
+    <span class="sr-only absolute h-px w-px overflow-hidden">Loading:</span>
     <span aria-hidden="true" class="spinner inline-block" data-testid="button-spinner"></span>
     <span class="label">{{ loadingLabel() }}</span>
   } @else {

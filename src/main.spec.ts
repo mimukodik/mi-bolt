@@ -222,8 +222,9 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
 
   it('starts the mock worker in the artifact `npm run build` produces', () => {
     // `docs/spec/testing.md:128` calls that artifact the "optimized
-    // mock-only static artifact" and `docs/fix/FIX-47.md:107` records
-    // that `npm run build` is it. MSW is the only data layer in the
+    // mock-only static artifact", and `npm run build` runs
+    // `ng build --configuration production` (`angular.json`'s default
+    // configuration), so it is that artifact. MSW is the only data layer in the
     // repository, so an artifact whose flags close these gates renders
     // an error state on every data-driven screen.
     const module = environmentModuleFor('production');

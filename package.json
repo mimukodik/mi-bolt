@@ -13,8 +13,7 @@
     "api:generate": "ng-openapi-gen --config ng-openapi-gen.json",
     "api:drift": "npm run api:generate && git diff --exit-code -- src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- src/app/api/generated)\"",
     "api:sync": "node scripts/api-sync.mjs",
-    "build:e2e": "ng build --configuration e2e",
-    "fix:status": "node scripts/fix-status.mjs"
+    "build:e2e": "ng build --configuration e2e"
   },
   "private": true,
   "packageManager": "npm@11.17.0",

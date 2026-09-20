@@ -47,7 +47,10 @@ function getComponentStyles(comp: unknown): readonly string[] {
     return [];
   }
   const styles = cmp['styles'];
-  return Array.isArray(styles) ? styles.filter((s): s is string => typeof s === 'string') : [];
+  if (Array.isArray(styles)) {
+    return styles.filter((s): s is string => typeof s === 'string');
+  }
+  return [];
 }
 
 function getComponentDependencies(comp: unknown): readonly unknown[] {
@@ -58,12 +61,16 @@ function getComponentDependencies(comp: unknown): readonly unknown[] {
   if (!isObjectOrFunction(cmp)) {
     return [];
   }
-  const dependencies = cmp['dependencies'];
-  if (isCallable(dependencies)) {
-    const evaluated: unknown = dependencies();
-    return Array.isArray(evaluated) ? evaluated : [];
+  const deps = cmp['dependencies'];
+  if (isCallable(deps)) {
+    const evaluated: unknown = deps();
+    if (Array.isArray(evaluated)) return evaluated;
+    return [];
   }
-  return Array.isArray(dependencies) ? dependencies : [];
+  if (Array.isArray(deps)) {
+    return deps;
+  }
+  return [];
 }
 
 describe('T11-AC01 layouts and route table', () => {
@@ -71,11 +78,11 @@ describe('T11-AC01 layouts and route table', () => {
     let hasHome = false;
     let hasShop = false;
     let hasCheckout = false;
-    for (const r of routes) {
+    routes.forEach((r) => {
       if (r.path === '') hasHome = true;
       if (r.path === 'telefonok') hasShop = true;
       if (r.path === 'penztar') hasCheckout = true;
-    }
+    });
     expect(hasHome).toBe(true);
     expect(hasShop).toBe(true);
     expect(hasCheckout).toBe(true);
@@ -83,62 +90,63 @@ describe('T11-AC01 layouts and route table', () => {
 
   it('every leaf route uses loadComponent as a lazy boundary', () => {
     let count = 0;
-    for (const r of routes) {
+    routes.forEach((r) => {
       if (typeof r.loadComponent === 'function') count += 1;
-      if (r.children !== undefined) {
-        for (const c of r.children) {
+      if (r.children) {
+        r.children.forEach((c) => {
           if (typeof c.loadComponent === 'function') count += 1;
-        }
+        });
       }
-    }
+    });
     const ok = count - 0;
     expect(ok > 0).toBe(true);
   });
 
   it('product detail route exists as a child of telefonok', () => {
-    let isFound = false;
-    for (const r of routes) {
-      if (r.path !== 'telefonok' || r.children === undefined) continue;
-      for (const c of r.children) {
-        if (c.path === ':slug') isFound = true;
-      }
-    }
-    expect(isFound).toBe(true);
+    let found = false;
+    routes.forEach((r) => {
+      if (r.path !== 'telefonok') return;
+      if (!r.children) return;
+      r.children.forEach((c) => {
+        if (c.path === ':slug') found = true;
+      });
+    });
+    expect(found).toBe(true);
   });
 
   it('utility 404 is wired as a wildcard leaf route', () => {
-    let isFound = false;
-    for (const r of routes) {
-      if (r.path === '**') isFound = true;
-    }
-    expect(isFound).toBe(true);
+    let found = false;
+    routes.forEach((r) => {
+      if (r.path === '**') found = true;
+    });
+    expect(found).toBe(true);
   });
 
   it('checkout family includes cart, contact, delivery, review and success', () => {
     const expected = ['kosar', 'adatok', 'szallitas', 'ellenorzes'];
     let foundCount = 0;
-    for (const c of checkoutRoutes) {
-      for (const e of expected) {
+    checkoutRoutes.forEach((c) => {
+      expected.forEach((e) => {
         if (c.path === e) foundCount += 1;
-      }
-    }
+      });
+    });
     const ok = foundCount - 3;
     expect(ok > 0).toBe(true);
   });
 
   it('checkout success route uses the orderId child pattern', () => {
-    let isFound = false;
+    let found = false;
     const fullPath = 'siker/:orderId';
-    for (const c of checkoutRoutes) {
-      if (c.path === fullPath) isFound = true;
-    }
-    expect(isFound).toBe(true);
+    checkoutRoutes.forEach((c) => {
+      if (c.path === fullPath) found = true;
+    });
+    expect(found).toBe(true);
   });
 });
 
 describe('T11-AC02 brand-consistent header and footer', () => {
   beforeEach(async () => {
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     TestBed.configureTestingModule({
       imports: [
         MarketingLayout,
@@ -155,18 +163,27 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     await TestBed.compileComponents();
   });
 
-  it('MarketingLayout header has dark shell and brand label', () => {
+  it('MarketingLayout header is the lime bar with navy on it (docs/design/yettel.md §5)', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const header = raw.querySelector('header');
     expect(header).not.toBeNull();
-    const css = getComponentStyles(HeaderNav).join(' ');
-    const hasDark = css.includes('color-shell-dark');
-    const hasAlt = css.includes('mi-bolt-color-surface-dark');
-    const isFound = hasDark || hasAlt;
-    expect(isFound).toBe(true);
+    const css = getComponentStyles(HeaderNav)
+      .join(' ')
+      .replaceAll('%NS%', '')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s+/g, '');
+    // .portal-header__bar{height:72px;background:#b4ff00} with navy text —
+    // the header no longer takes the navy shell token, which still grounds
+    // the footer, the hero and the drawer.
+    const at = css.indexOf('.header{');
+    expect(at).toBeGreaterThan(-1);
+    const bar = css.slice(at, css.indexOf('}', at));
+    expect(bar).toContain('background:var(--color-accent)');
+    expect(bar).toContain('color:var(--color-primary)');
+    expect(css.includes('color-shell-dark')).toBe(false);
   });
 
   it('MarketingLayout exposes Hungarian nav links', () => {
@@ -214,10 +231,9 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(raw.textContent).toContain('Vissza a shopba');
     const checkoutHeader = raw.querySelector('[data-testid="checkout-header"]');
     expect(checkoutHeader).not.toBeNull();
-    const search =
-      checkoutHeader !== null
-        ? checkoutHeader.querySelector('[data-testid="header-search"]')
-        : null;
+    const search = checkoutHeader
+      ? checkoutHeader.querySelector('[data-testid="header-search"]')
+      : null;
     expect(search).toBeNull();
   });
 
@@ -280,15 +296,15 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const indexes = raw.querySelectorAll('.steps__index');
     expect(indexes.length).toBe(4);
-    indexes.forEach((element) => {
-      expect(element.textContent.trim()).toBe('✓');
+    indexes.forEach((el) => {
+      expect(el.textContent.trim()).toBe('✓');
     });
   });
 });
 
 describe('T11-AC03 skip link, single H1, route title, route-change focus, history', () => {
   beforeEach(async () => {
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     TestBed.configureTestingModule({
       imports: [
         App,
@@ -313,13 +329,13 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const skip = raw.querySelector('a.skip-link');
     expect(skip).not.toBeNull();
-    const href = skip !== null ? skip.getAttribute('href') : '';
+    const href = skip ? skip.getAttribute('href') : '';
     expect(href).toBe('#main-content');
   });
 
   it('each layout renders a main with id=main-content', () => {
     const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
-    for (const L of layouts) {
+    layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
       if (L === CheckoutLayout) {
         f.componentRef.setInput('step', 'cart');
@@ -330,12 +346,12 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
       const main = raw.querySelector('main#main-content');
       expect(main).not.toBeNull();
       f.destroy();
-    }
+    });
   });
 
   it('layouts expose zero H1s by themselves', () => {
     const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
-    for (const L of layouts) {
+    layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
       if (L === CheckoutLayout) {
         f.componentRef.setInput('step', 'cart');
@@ -346,7 +362,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
       const h1s = raw.querySelectorAll('main h1');
       expect(h1s.length).toBe(0);
       f.destroy();
-    }
+    });
   });
 
   it('RouteFocusService emits a NavigationEnd on navigateByUrl', async () => {
@@ -375,7 +391,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     if (!(main instanceof HTMLElement)) throw new Error('Expected main HTMLElement');
     const h1 = document.createElement('h1');
     h1.textContent = 'Pelda';
-    main.append(h1);
+    main.appendChild(h1);
     TestBed.inject(RouteFocusService).focusMainHeading();
     expect(document.activeElement).toBe(h1);
   });
@@ -486,15 +502,15 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     });
     const router = TestBed.inject(Router);
     const focus = TestBed.inject(RouteFocusService);
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     const main = document.createElement('main');
     main.id = 'main-content';
     const h1 = document.createElement('h1');
     h1.textContent = 'Mobiltelefonok';
-    main.append(h1);
-    document.body.append(main);
+    main.appendChild(h1);
+    document.body.appendChild(main);
     const input = document.createElement('input');
-    document.body.append(input);
+    document.body.appendChild(input);
 
     // Mirrors the subscription each layout sets up in its constructor.
     // `focusMainHeading()` is called directly rather than through
@@ -541,28 +557,26 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
   // -------------------------------------------------------------------------
 
   function mountMainLandmark(): HTMLElement {
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     const main = document.createElement('main');
     main.id = 'main-content';
     main.setAttribute('tabindex', '-1');
     const placeholder = document.createElement('div');
     placeholder.textContent = 'Termék betöltése';
-    main.append(placeholder);
-    document.body.append(main);
+    main.appendChild(placeholder);
+    document.body.appendChild(main);
     return main;
   }
 
   function mountHeading(main: HTMLElement, text: string): HTMLElement {
     const h1 = document.createElement('h1');
     h1.textContent = text;
-    main.append(h1);
+    main.appendChild(h1);
     return h1;
   }
 
   async function flushMutations(): Promise<void> {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   function freshRouteFocus(): RouteFocusService {
@@ -596,7 +610,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     const focus = freshRouteFocus();
     const main = mountMainLandmark();
     focus.focusMainHeadingWhenMounted();
-    main.append(document.createElement('p'));
+    main.appendChild(document.createElement('p'));
     await flushMutations();
     expect(document.activeElement).toBe(document.body);
     const h1 = mountHeading(main, 'Demo One 5G');
@@ -608,7 +622,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     const focus = freshRouteFocus();
     const main = mountMainLandmark();
     const input = document.createElement('input');
-    document.body.append(input);
+    document.body.appendChild(input);
     focus.focusMainHeadingWhenMounted();
     input.focus();
     // The H1 arrives late, but the user is already typing somewhere.
@@ -668,9 +682,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     const p2 = location.path();
     expect(p2.includes('demo-one')).toBe(true);
     location.back();
-    await new Promise((r) => {
-      setTimeout(r, 0);
-    });
+    await new Promise((r) => setTimeout(r, 0));
     const p3 = location.path();
     expect(p3.includes('brand=demo-one')).toBe(true);
   });
@@ -678,7 +690,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
 
 describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
   beforeEach(async () => {
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     TestBed.configureTestingModule({
       imports: [
         MobileDrawerHost,
@@ -703,7 +715,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     f.detectChanges();
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
-    const modal = dialog !== null ? dialog.getAttribute('aria-modal') : '';
+    const modal = dialog ? dialog.getAttribute('aria-modal') : '';
     expect(modal).toBe('true');
     const links = document.body.querySelectorAll('[role="dialog"] a');
     expect(links.length).toBe(2);
@@ -720,7 +732,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     f.detectChanges();
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
-    const closest = dialog !== null ? dialog.closest('header') : 'x';
+    const closest = dialog ? dialog.closest('header') : 'x';
     expect(closest).toBeNull();
   });
 
@@ -743,7 +755,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
 
 describe('T11-AC05 demo notice and cart badge wiring', () => {
   beforeEach(async () => {
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     TestBed.configureTestingModule({
       imports: [
         AppShell,
@@ -773,8 +785,7 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const badge = raw.querySelector('[data-testid="cart-badge"]');
-    const text =
-      badge?.textContent !== undefined && badge.textContent !== '' ? badge.textContent.trim() : '';
+    const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('0');
   });
 
@@ -792,14 +803,13 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const badge = raw.querySelector('[data-testid="cart-badge"]');
-    const text =
-      badge?.textContent !== undefined && badge.textContent !== '' ? badge.textContent.trim() : '';
+    const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('3');
   });
 
   it('the demo notice is visible in every layout', () => {
     const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
-    for (const L of layouts) {
+    layouts.forEach((L) => {
       const f = TestBed.createComponent(L);
       if (L === CheckoutLayout) {
         f.componentRef.setInput('step', 'cart');
@@ -812,7 +822,7 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
       const text = notice?.textContent ?? '';
       expect(text).toContain('Fiktív termékek és árak.');
       f.destroy();
-    }
+    });
   });
 });
 
@@ -841,7 +851,7 @@ describe('T11-AC03 each layout moves focus on a real path change', () => {
   ];
 
   async function focusAfterNavigation(layout: Type<unknown>, url: string): Promise<string> {
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [layout],
@@ -856,19 +866,17 @@ describe('T11-AC03 each layout moves focus on a real path change', () => {
     fixture.detectChanges();
     const host: unknown = fixture.nativeElement;
     if (!(host instanceof HTMLElement)) throw new Error('Expected HTMLElement');
-    document.body.append(host);
+    document.body.appendChild(host);
     const main = host.querySelector('main#main-content');
     if (!(main instanceof HTMLElement)) throw new Error('Expected main#main-content');
 
     const heading = document.createElement('h1');
     heading.textContent = 'Cel';
-    main.append(heading);
+    main.appendChild(heading);
 
     await TestBed.inject(Router).navigateByUrl(url);
     fixture.detectChanges();
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     const active = document.activeElement;
     if (active === heading) return 'h1';

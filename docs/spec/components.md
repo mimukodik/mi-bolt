@@ -1,6 +1,6 @@
 # Component ownership and communication contracts
 
-Every component execution and verification MUST use mi-bolt-design. Public inputs use input()/input.required(); intents use output(). Private local changes use signal(); derived view-models use computed(). Signal Forms fields are the deliberate parent-owned two-way binding exception. No presentation component knows the SDK or repository.
+Every component execution and verification cites `docs/design/yettel.md`, the design reference. Public inputs use input()/input.required(); intents use output(). Private local changes use signal(); derived view-models use computed(). Signal Forms fields are the deliberate parent-owned two-way binding exception. No presentation component knows the SDK or repository.
 
 ## Shared types
 

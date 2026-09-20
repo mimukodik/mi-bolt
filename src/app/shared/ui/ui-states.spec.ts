@@ -190,8 +190,9 @@ function hasStyles(value: unknown): value is ComponentWithStyles {
 
 /**
  * Cross-cutting state-contract suite. Each primitive MUST implement the
- * "Required State Contract" from the mi-bolt-design skill where its role
- * makes that state applicable. A read-only primitive is not required to
+ * default / hover / focus-visible / active / disabled / loading state
+ * contract where its role makes that state applicable. A read-only
+ * primitive is not required to
  * invent states, but every state it does implement must have an
  * observable, asserted outcome in the DOM.
  */

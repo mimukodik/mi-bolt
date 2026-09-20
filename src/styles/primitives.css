@@ -1,8 +1,37 @@
-/* mi-bolt primitives — page-level reset and shared focus ring.
-   Components own their own styling via component-scoped CSS referencing
-   the tokens in tokens.css. This file is intentionally minimal: no
-   utility framework, no design system library, only what every primitive
-   needs from the host page. */
+/* MiBolt primitives — the three yettel faces, the page-level reset and the
+   shared focus ring. Components own their own styling via component-scoped
+   CSS referencing the tokens in tokens.css and the theme in styles.css.
+   This file is intentionally minimal: only what every primitive needs from
+   the host page. */
+
+/* The three yettel faces, docs/design/yettel.md §3. The captured CSS lists
+   woff before woff2, and the files are served from public/fonts/. */
+@font-face {
+  font-family: 'portal-font-regular';
+  src:
+    url('/fonts/font-regular.woff') format('woff'),
+    url('/fonts/font-regular.woff2') format('woff2');
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'portal-font-bold';
+  src:
+    url('/fonts/font-bold.woff') format('woff'),
+    url('/fonts/font-bold.woff2') format('woff2');
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'portal-font-light';
+  src:
+    url('/fonts/font-light.woff') format('woff'),
+    url('/fonts/font-light.woff2') format('woff2');
+  font-style: normal;
+  font-display: swap;
+}
 
 *,
 *::before,
@@ -25,7 +54,7 @@ html {
      that use it — and at the default setting this resolves to the
      same 16 px. docs/spec/acceptance.md:27 (AC23) and
      docs/spec/test-scenarios.md:116 (E110) require text sizing to
-     work; mi-bolt-design R07 fixes the scale, not the root. */
+     work; the type scale is fixed in tokens.css, not on the root. */
   font-size: 100%;
   line-height: var(--line-height-body);
   color: var(--color-text-primary);
@@ -34,8 +63,11 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* docs/design/yettel.md §3: body{font-size:1rem;line-height:1.5}. */
 body {
   min-height: 100vh;
+  font-size: 1rem;
+  line-height: var(--line-height-body);
   text-rendering: optimizeLegibility;
 }
 
@@ -45,6 +77,9 @@ h3,
 h4,
 h5,
 h6 {
+  /* docs/design/yettel.md §3: headings are set in the bold face, which is a
+     family of its own rather than a weight of the regular face. */
+  font-family: var(--font-family-bold);
   font-weight: var(--weight-bold);
   line-height: var(--line-height-heading);
   margin: 0;

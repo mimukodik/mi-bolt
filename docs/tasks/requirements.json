@@ -11,7 +11,7 @@
   },
   {
     "id": "RQ02",
-    "text": "Mandatory mi-bolt-design on every execution AND verification",
+    "text": "Mandatory citation of `docs/design/yettel.md` on every execution AND verification",
     "tasks": [
       "T00",
       "T10",

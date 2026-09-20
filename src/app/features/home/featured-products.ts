@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import type { Product } from '../../api/generated/models/product';
 import type { Money } from '../../api/generated/models/money';
+import { Button } from '../../shared/ui/button/button';
 
 /**
 Status of a single featured-product slot in the home grid.
@@ -46,7 +47,7 @@ export interface FeaturedSlot {
  */
 @Component({
   selector: 'app-featured-products',
-  imports: [RouterLink],
+  imports: [RouterLink, Button],
   templateUrl: './featured-products.html',
   styleUrl: './featured-products.scss',
 })

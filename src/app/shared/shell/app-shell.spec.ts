@@ -14,6 +14,34 @@ function getNativeElement(fixture: ComponentFixture<AppShell>): HTMLElement {
   return raw;
 }
 
+// The demo notice is the first element on the page, above the header, so
+// it scrolls away while the sticky lime bar stays (app-shell.html:1-2).
+describe('AppShell renders the demo notice above the header', () => {
+  function render(variant: 'marketing' | 'checkout'): HTMLElement {
+    TestBed.configureTestingModule({
+      imports: [AppShell],
+      providers: [
+        provideRouter([]),
+        provideZonelessChangeDetection(),
+        { provide: PERSISTENCE_MODE, useValue: 'durable' },
+      ],
+    });
+    const fixture = TestBed.createComponent(AppShell);
+    fixture.componentRef.setInput('variant', variant);
+    fixture.detectChanges();
+    return getNativeElement(fixture);
+  }
+
+  for (const variant of ['marketing', 'checkout'] as const) {
+    it(`puts the notice before the header in the ${variant} variant`, () => {
+      const root = render(variant);
+      const children = Array.from(root.children).map((el) => el.tagName.toLowerCase());
+      expect(children[0]).toBe('app-demo-notice');
+      expect(children[1]).toBe('app-header-nav');
+    });
+  }
+});
+
 // FIX-70-AC05: before this test existed, `AppShell` always bound
 // `DemoNotice`'s `persistenceMode` to the `'durable'` default, so the
 // `'memory'` state could never appear regardless of what
