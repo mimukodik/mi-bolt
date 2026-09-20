@@ -163,18 +163,27 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     await TestBed.compileComponents();
   });
 
-  it('MarketingLayout header has dark shell and brand label', () => {
+  it('MarketingLayout header is the lime bar with navy on it (docs/design/yettel.md §5)', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const header = raw.querySelector('header');
     expect(header).not.toBeNull();
-    const css = getComponentStyles(HeaderNav).join(' ');
-    const hasDark = css.includes('color-shell-dark');
-    const hasAlt = css.includes('mi-bolt-color-surface-dark');
-    const found = hasDark || hasAlt;
-    expect(found).toBe(true);
+    const css = getComponentStyles(HeaderNav)
+      .join(' ')
+      .replaceAll('%NS%', '')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s+/g, '');
+    // .portal-header__bar{height:72px;background:#b4ff00} with navy text —
+    // the header no longer takes the navy shell token, which still grounds
+    // the footer, the hero and the drawer.
+    const at = css.indexOf('.header{');
+    expect(at).toBeGreaterThan(-1);
+    const bar = css.slice(at, css.indexOf('}', at));
+    expect(bar).toContain('background:var(--color-accent)');
+    expect(bar).toContain('color:var(--color-primary)');
+    expect(css.includes('color-shell-dark')).toBe(false);
   });
 
   it('MarketingLayout exposes Hungarian nav links', () => {

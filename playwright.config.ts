@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for the MiBolt design suite and the T02
+ * Playwright configuration for the MiBolt a11y, deployment and T02
  * coverage / network-isolation suites.
  *
  * `serviceWorkers: 'allow'` is the T02 contract: the MSW worker
@@ -60,14 +60,14 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'mi-bolt-design',
+      name: 'desktop-fullhd',
       use: {
         ...devices['Desktop Chrome'],
-        viewport: { width: 1440, height: 900 },
+        viewport: { width: 1920, height: 1080 },
       },
     },
     {
-      name: 'mi-bolt-narrow',
+      name: 'mobile',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 390, height: 844 },
