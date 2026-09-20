@@ -20,8 +20,8 @@ import '@angular/compiler';
  *   T18-AC04 - Continue button is disabled for empty/invalid/pending
  *              cart and navigates to /penztar/adatok only after
  *              authoritative revalidation (`facade.ensureCart`).
- *   T18-AC05 - 339 990 x 2 = 679 980 HUF subtotal; with home
- *              delivery (1 990 HUF) total = 681 970 HUF. No monthly
+ *   T18-AC05 - 89 990 x 2 = 179 980 HUF subtotal; with home
+ *              delivery (1 990 HUF) total = 181 970 HUF. No monthly
  *              fee or hidden add-on copy.
  */
 
@@ -41,11 +41,16 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import { CartDomain } from '../../../mocks/cart/cart-domain';
-import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../../../mocks/idempotency';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import { createHandlers } from '../../../mocks/create-handlers';
+import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 import { Repository } from '../../../mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
+import {
+  createDeterministicIds,
+  createFixedClock,
+  DEFAULT_SCENARIO,
+} from '../../../mocks/scenarios';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { Button } from '../../shared/ui/button/button';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -60,6 +65,7 @@ import { CartLine } from './cart-line';
 import { CartPage } from './cart-page';
 import { OrderSummary } from './order-summary';
 import type { CartItem } from '../../api/generated/models/cart-item';
+import type { CartNotice } from '../../api/generated/models/cart-notice';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
@@ -68,25 +74,29 @@ useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
 
+const VARIANT_MOTO_256 = 'motorola-edge-50-fusion--zold--256';
+const VARIANT_HONOR_128 = 'honor-x7d--fekete--128';
+const UNIT_PRICE_MOTO = 89_990;
+
 const DEMO_CART_ITEM: CartItem = {
-  id: 'cart-item-1',
-  variantId: 'demo-one-5g-graphite-256',
-  productId: 'p-01',
-  productName: 'Demo One 5G',
-  productSlug: 'demo-one-5g',
-  colorName: 'Grafit',
+  variantId: VARIANT_MOTO_256,
+  variantSlug: 'zold-256gb',
+  productId: '1',
+  productName: 'Motorola Edge 50 Fusion',
+  productSlug: 'motorola-edge-50-fusion',
+  colorName: 'Zöld',
   storageGb: 256,
   quantity: 2,
-  unitPrice: { amount: 339990, currency: 'HUF' },
-  lineTotal: { amount: 679980, currency: 'HUF' },
+  unitPrice: { amount: UNIT_PRICE_MOTO, currency: 'HUF' },
+  lineTotal: { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' },
   maxQuantity: 5,
   availability: 'in_stock',
   image: {
-    id: 'demo-one-5g-graphite-256-front',
-    src: '/assets/products/graphite-front.webp',
-    alt: 'Demo One 5G, Grafit, 256 GB',
-    width: 320,
-    height: 400,
+    id: 'fc11d7e82822d30d65344733e93c62da8248b05437216747b549121318b1c6eb',
+    src: '/api/v1/media/fc11d7e82822d30d65344733e93c62da8248b05437216747b549121318b1c6eb',
+    alt: 'Motorola Edge 50 Fusion Zöld',
+    width: 300,
+    height: 600,
   },
 };
 
@@ -267,29 +277,25 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
 }
 
 function makeEnv() {
-  const clock = createFixedClock(new Date(Date.parse('2026-09-14T10:00:00.000Z')).toISOString());
-  const ids = createDeterministicIds(7);
-  const scenario = {
-    name: 'cart-page-suite',
-    seed: 7,
-    clockOffsetMs: 0,
-    isolated: true,
-  };
-  const repository = new Repository(scenario, ids, clock);
+  const clock = createFixedClock('2026-09-20T10:00:00.000Z');
+  const ids = createDeterministicIds(1);
+  const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
   repository.loadProducts([DEMO_PRODUCT]);
-  const idempotency = new IdempotencyStore(clock);
-  new CartDomain(repository, clock, ids, idempotency);
-  return { repository, clock, ids, scenario, apiRoot: '/api/v1' };
+  return { repository, clock, ids, scenario: DEFAULT_SCENARIO, apiRoot: '/api/v1' };
 }
 
 beforeAll(async () => {
+  if (!isCatalogFixtureShape(catalogFixture)) {
+    throw new Error('[cart-page.spec] committed fixture does not match expected shape');
+  }
+  loadCatalogFixture(catalogFixture);
   await ɵresolveComponentResources(resolveWorkspaceFile);
   await TestBed.compileComponents();
 });
 
 beforeEach(async () => {
   const env = makeEnv();
-  server.use(...cartHandlersEntry(env));
+  server.use(...createHandlers(env));
   TestBed.configureTestingModule({
     imports: [CartPage, CartLine, OrderSummary],
     providers: [
@@ -326,10 +332,10 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
     expect(queryElement(root, 'app-product-image')).not.toBeNull();
 
     const nameEl = getElement(root, '[data-testid="cart-line-name"]');
-    expect(nameEl.textContent.trim()).toBe('Demo One 5G');
+    expect(nameEl.textContent.trim()).toBe('Motorola Edge 50 Fusion');
 
     const variantColor = getElement(root, '.variant-color');
-    expect(variantColor.textContent.trim()).toBe('Grafit');
+    expect(variantColor.textContent.trim()).toBe('Zöld');
 
     const variantStorage = getElement(root, '.variant-storage');
     expect(variantStorage.textContent.trim()).toBe('256 GB');
@@ -373,16 +379,16 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
 
     const root = getRootElement(fixture);
     const removeBtn = getElement(root, '[data-testid="cart-line-remove"]');
-    expect(removeBtn.getAttribute('aria-label')).toBe('Törlés: Demo One 5G');
+    expect(removeBtn.getAttribute('aria-label')).toBe('Törlés: Motorola Edge 50 Fusion');
 
     removeBtn.click();
-    expect(removedId).toBe('cart-item-1');
+    expect(removedId).toBe(VARIANT_MOTO_256);
   });
 
   it('CartPage passes each item to a CartLine, plus wires quantity + remove', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -397,7 +403,7 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
       throw new Error('Expected HTMLElement');
     }
     const nameEl = getElement(line, '[data-testid="cart-line-name"]');
-    expect(nameEl.textContent.trim()).toBe('Demo One 5G');
+    expect(nameEl.textContent.trim()).toBe('Motorola Edge 50 Fusion');
   });
 });
 
@@ -408,7 +414,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
   it('renders OrderSummary with the cart subtotal', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -421,7 +427,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 
   it('OrderSummary renders the Hungarian "shipping decided next step" message when no method is selected', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', null);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -432,12 +438,12 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 
   it('OrderSummary computes subtotal + shipping = total when a method is supplied', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', { amount: 1990, currency: 'HUF' });
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.total().amount).toBe(681970);
+    expect(fixture.componentInstance.total().amount).toBe(UNIT_PRICE_MOTO * 2 + 1990);
     expect(fixture.componentInstance.total().currency).toBe('HUF');
 
     const root = getRootElement(fixture);
@@ -448,7 +454,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 
   it('never invents a monthly fee or hidden add-on (T18-AC05)', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', null);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -515,7 +521,7 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
 
   it('CartPage renders a loading skeleton on first arrival and an ErrorState on a failure', async () => {
     server.use(
-      http.get('*/api/v1/carts/:cartId', () => {
+      http.get('*/api/v1/cart', () => {
         return HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:service-unavailable',
@@ -523,19 +529,7 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
             status: 503,
             code: 'SERVICE_UNAVAILABLE',
             detail: 'A kosár szolgáltatás átmenetileg nem elérhető.',
-            fieldErrors: [],
-          },
-          { status: 503, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-      http.post('*/api/v1/carts', () => {
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:service-unavailable',
-            title: 'Hiba',
-            status: 503,
-            code: 'SERVICE_UNAVAILABLE',
-            detail: 'A kosár szolgáltatás átmenetileg nem elérhető.',
+            traceId: 'spec-trace-503',
             fieldErrors: [],
           },
           { status: 503, headers: { 'content-type': 'application/problem+json' } },
@@ -564,7 +558,7 @@ describe('FIX-21 only the mutating line is disabled', () => {
   it('FIX-21-AC01: an idle line at quantity 2 has no aria-busy and every control is enabled', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -582,7 +576,7 @@ describe('FIX-21 only the mutating line is disabled', () => {
   it('FIX-21-AC02: clicking quantity-increment completes and updates the quantity and the line total', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -597,7 +591,7 @@ describe('FIX-21 only the mutating line is disabled', () => {
     const lineEl = getElement(root, '[data-testid="cart-line"]');
     const totalsEl = getElement(lineEl, '.totals');
     const lineTotalAmount = getElement(totalsEl, '[data-testid="price-amount"]');
-    expect(lineTotalAmount.textContent.trim()).toBe(PriceBlock.formatHuf(339_990 * 3));
+    expect(lineTotalAmount.textContent.trim()).toBe(PriceBlock.formatHuf(UNIT_PRICE_MOTO * 3));
 
     expect(lineEl.hasAttribute('aria-busy')).toBe(false);
   });
@@ -605,7 +599,7 @@ describe('FIX-21 only the mutating line is disabled', () => {
   it('FIX-21-AC03: removing the last line empties the cart and renders the empty state', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 1);
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -624,8 +618,8 @@ describe('FIX-21 only the mutating line is disabled', () => {
   it('FIX-21-AC04: during an in-flight mutation only the mutating line reports aria-busy', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
-    await cartFacade.addItem('demo-one-5g-silver-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    await cartFacade.addItem(VARIANT_HONOR_128, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -666,25 +660,27 @@ describe('FIX-21 only the mutating line is disabled', () => {
   it('a mutation that fails still re-enables the line once it settles (R24 regression guard)', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
-    // A 409 keeps the page in its "ready" state (unlike a generic error,
-    // which the state machine maps to the ErrorState screen), so this
-    // exercises exactly the failure path FIX-21's .finally() clear fixes:
-    // the line's own controls must come back even though the mutation
-    // did not succeed.
+    // A 412 lands on the facade's `conflict` signal, which the page's state
+    // machine keeps in `ready` (a generic error would switch to the ErrorState
+    // screen), so this exercises exactly the failure path FIX-21's
+    // `.finally()` clear fixes: the line's own controls must come back even
+    // though the mutation did not succeed.
     server.use(
-      http.patch('*/api/v1/carts/:cartId/items/:itemId', () => {
+      http.patch('*/api/v1/cart/items/:variantId', () => {
         return HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:cart-version-conflict',
             title: 'Ütközés',
-            status: 409,
+            status: 412,
             code: 'CART_VERSION_CONFLICT',
             detail: 'A kosár időközben megváltozott.',
+            traceId: 'spec-trace-412',
             fieldErrors: [],
+            params: { expected: 2, received: 1 },
           },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+          { status: 412, headers: { 'content-type': 'application/problem+json' } },
         );
       }),
     );
@@ -707,6 +703,171 @@ describe('FIX-21 only the mutating line is disabled', () => {
     expect(getButtonElement(root, '[data-testid="quantity-decrement"]').disabled).toBe(false);
     expect(getButtonElement(root, '[data-testid="quantity-increment"]').disabled).toBe(false);
     expect(getButtonElement(root, '[data-testid="cart-line-remove"]').disabled).toBe(false);
+    // The facade fires a background `GET /cart` after a 412 and
+    // `applySuccess` clears the conflict once it lands, so after
+    // `settleMutation` the conflict is gone and the cart is back on
+    // the server's version.
+    expect(cartFacade.conflict()).toBeNull();
+    expect(cartFacade.cart()?.version).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S2-C: server reconcile notices render one status message each.
+// ---------------------------------------------------------------------------
+describe('S2-C notices: server reconcile notices render one status message each', () => {
+  it('renders a QUANTITY_REDUCED notice with the from → to sentence', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    cartFacade._seedCart({
+      id: 'seeded-cart',
+      version: 3,
+      items: [
+        {
+          ...DEMO_CART_ITEM,
+          quantity: 3,
+          lineTotal: { amount: UNIT_PRICE_MOTO * 3, currency: 'HUF' },
+        },
+      ],
+      lineCount: 1,
+      totalQuantity: 3,
+      subtotal: { amount: UNIT_PRICE_MOTO * 3, currency: 'HUF' },
+      notices: [
+        { code: 'QUANTITY_REDUCED', variantId: VARIANT_MOTO_256, params: { from: 5, to: 3 } },
+      ],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const notices = root.querySelectorAll('[data-testid="cart-notice"]');
+    expect(notices[0].textContent.trim()).toBe(
+      'Motorola Edge 50 Fusion: a mennyiséget 5 → 3 darabra csökkentettük a készlet miatt.',
+    );
+    expect(notices.length).toBe(1);
+  });
+
+  it('renders an ITEM_REMOVED notice for a variant the cart no longer carries', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    cartFacade._seedCart({
+      id: 'seeded-cart',
+      version: 3,
+      items: [DEMO_CART_ITEM],
+      lineCount: 1,
+      totalQuantity: 2,
+      subtotal: { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' },
+      notices: [{ code: 'ITEM_REMOVED', variantId: 'no-such-variant' }],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const notices = root.querySelectorAll('[data-testid="cart-notice"]');
+    expect(notices[0].textContent.trim()).toBe(
+      'Egy termék kikerült a kosárból, mert már nem kapható.',
+    );
+    expect(notices.length).toBe(1);
+  });
+
+  it('renders a PRICE_CHANGED and a parameterless QUANTITY_REDUCED in order', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const notices: CartNotice[] = [
+      { code: 'PRICE_CHANGED', variantId: VARIANT_MOTO_256 },
+      { code: 'QUANTITY_REDUCED', variantId: VARIANT_MOTO_256 },
+    ];
+    cartFacade._seedCart({
+      id: 'seeded-cart',
+      version: 3,
+      items: [DEMO_CART_ITEM],
+      lineCount: 1,
+      totalQuantity: 2,
+      subtotal: { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' },
+      notices,
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const noticeHosts = root.querySelectorAll('[data-testid="cart-notice"]');
+    expect(noticeHosts[0].textContent.trim()).toBe('Motorola Edge 50 Fusion: az ár megváltozott.');
+    expect(noticeHosts[1].textContent.trim()).toBe(
+      'Motorola Edge 50 Fusion: a mennyiséget a készlethez igazítottuk.',
+    );
+    expect(noticeHosts.length).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/items.
+// ---------------------------------------------------------------------------
+describe('S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/items', () => {
+  it('renders the clear button first in the footer actions and disabled while nothing is loaded', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const clearHost = getElement(root, '[data-testid="cart-clear"]');
+    const clearButton = getButtonElement(root, '[data-testid="cart-clear"] button');
+    expect(clearButton.textContent.trim()).toBe('Kosár ürítése');
+    expect(clearButton.disabled).toBe(false);
+    const continueHost = getElement(root, '[data-testid="cart-continue"]');
+    expect(clearHost.compareDocumentPosition(continueHost) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('clicking it sends DELETE /cart/items with If-Match and renders the empty state', async () => {
+    const seen: { method: string; url: string; ifMatch: string | null }[] = [];
+    const listener = ({ request }: { request: Request }) => {
+      seen.push({
+        method: request.method,
+        url: request.url,
+        ifMatch: request.headers.get('If-Match'),
+      });
+    };
+    server.events.on('request:start', listener);
+    try {
+      const cartFacade = TestBed.inject(CartFacade);
+      await cartFacade.ensureCart();
+      await cartFacade.addItem(VARIANT_MOTO_256, 2);
+      const fixture = TestBed.createComponent(CartPage);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const root = getRootElement(fixture);
+      getButtonElement(root, '[data-testid="cart-clear"] button').click();
+      await settleMutation(fixture);
+
+      const clearCalls = seen.filter(
+        (r) => r.method === 'DELETE' && r.url === `${BASE_URL}/cart/items`,
+      );
+      expect(clearCalls.length).toBe(1);
+      expect(clearCalls[0]?.ifMatch).toBe('"2"');
+      expect(queryElement(root, '[data-testid="cart-line"]')).toBeNull();
+      expect(queryElement(root, 'app-empty-state')).not.toBeNull();
+      expect(cartFacade.cart()?.version).toBe(3);
+      expect(cartFacade.cart()?.items).toEqual([]);
+    } finally {
+      server.events.removeListener('request:start', listener);
+    }
   });
 });
 
@@ -724,19 +885,20 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
 
     expect(fixture.componentInstance.canContinue()).toBe(false);
 
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
     fixture.detectChanges();
     expect(fixture.componentInstance.canContinue()).toBe(true);
 
     const root = getRootElement(fixture);
     const continueBtn = getElement(root, '[data-testid="cart-continue"] button');
     expect(continueBtn.hasAttribute('disabled')).toBe(false);
+    expect(getButtonElement(root, '[data-testid="cart-clear"] button').disabled).toBe(false);
   });
 
   it('navigates only after facade.ensureCart() resolves successfully', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const router = TestBed.inject(Router);
 
@@ -758,13 +920,13 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
   it('renders the subtotal through the PriceBlock primitive (whole HUF)', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.subtotal().amount).toBe(679980);
+    expect(fixture.componentInstance.subtotal().amount).toBe(UNIT_PRICE_MOTO * 2);
     expect(fixture.componentInstance.subtotal().currency).toBe('HUF');
 
     const root = getRootElement(fixture);
@@ -776,7 +938,7 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
   it('does not display any monthly-fee or hidden-bundle copy (R25)', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -793,7 +955,7 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
   it('styles declare a desktop two-column layout (items + summary)', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -813,7 +975,7 @@ describe('FIX-35 cart page copy matches screens.md:73', () => {
   it('h1 is "A kosarad", the continue label is "Tovább az adatokhoz", and the shipping line reads the new sentence', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -837,7 +999,7 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
   it('depends on the shared UI primitives and the CartFacade + ProductFacade', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
-    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
@@ -852,7 +1014,7 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
 
   it('OrderSummary only imports PriceBlock from the shared UI surface', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', { amount: 1990, currency: 'HUF' });
     await fixture.whenStable();
     fixture.detectChanges();
