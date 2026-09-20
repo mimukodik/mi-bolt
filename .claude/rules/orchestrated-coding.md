@@ -95,6 +95,29 @@ subagent except the built-in Explore and Plan agents).
   items while the runner is still on the unit rather than only at the end
   (user, 2026-09-19: "azt is figyeled hogy azt csinálják-e amit kértél
   tőlük?" — "are you also watching whether they do what you asked of them?").
+- **A runner's finished work is verified by a spawned `coder-sonnet` agent
+  before it lands, and the cherry-pick or the branch merge waits on that
+  verdict.** The orchestrator's own measurement of the acceptance list, in the
+  bullet above, does not replace it: that read checks whether the commands the
+  brief named still print what it said they would, while this one is a second
+  agent reading the diff against the brief and asking what the brief could not
+  anticipate, above all whether a site the brief told the runner to preserve
+  now behaves differently for some input. The verifier writes nothing, commits
+  nothing, and runs no gate that would contend with the orchestrator's own run:
+  it reports, and where it wants a gate it says so and the orchestrator runs it.
+  A `blocking` finding goes back to the runner as a fix round rather than onto
+  the branch. This is neither the runner's own `code-review xhigh --fix` pass,
+  which sits inside the runner's turn and is the runner grading itself, nor one
+  of the two reviewer passes under "Review cap" below, which are about a pull
+  request. The tier is the user's and departs from the `model-routing` row for
+  adversarial verification, which would send a review to `reviewer-opus`: the
+  instruction names `coder-sonnet`, so `coder-sonnet` is what runs, and a later
+  session reading that row is not finding an inconsistency to tidy away. The
+  user's instruction, 2026-09-20: "ne felejtsd el ellenoriztetni
+  kell coder-sonnet agenttek a coder-agent munkajat" ("do not forget, the
+  coder-agent's work has to be verified with coder-sonnet agents") and "es ha jo
+  utana cherry pick vagy brancj merge a jelenlegibe" ("and if it is good, then
+  cherry-pick or branch merge into the current one").
 
 ## Review cap
 
