@@ -334,17 +334,16 @@ export class CartFacade {
   /**
    * Adopt a version the server bumped through a non-cart mutation
    * (`PATCH /checkout`, the shared session counter, openapi.yaml:16-19).
-   * The lines did not change, only the version, so nothing is refetched.
-   * Transient failure signals are cleared because the version is
-   * authoritative evidence that the request behind the bump succeeded.
+   * The lines did not change, only the version, so nothing is refetched,
+   * and no cart-side failure signal is touched: a cart error the bump
+   * did not resolve (an `OUT_OF_STOCK` rejection never bumps the
+   * version) stays on screen until the cart itself clears it
+   * (design §2.1, "four lines").
    */
   acceptServerVersion(version: number): void {
     const cart = this.cartWritable();
     if (cart === null || cart.version === version) return;
     this.cartWritable.set({ ...cart, version });
-    this.conflictWritable.set(null);
-    this.cartExpiredWritable.set(false);
-    this.errorWritable.set(null);
   }
 
   /**

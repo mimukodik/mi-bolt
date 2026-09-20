@@ -276,11 +276,26 @@ export class CheckoutFacade {
         return { ok: true, value: existing };
       }
     }
+    const result = await this.refreshSession();
+    if (result.ok) {
+      this.clearFailureOverlay();
+    }
+    return result;
+  }
+
+  /**
+   * Reads the session and adopts the server's version without touching
+   * the failure overlay. The 412 recovery needs exactly this: the
+   * conflict banner and `lastFailedIntent` have to survive the
+   * reconciling read, or `retry()` would have nothing left to replay
+   * (design §3.7 point 4, "no auto-replay"). It is the checkout
+   * counterpart of `cart.facade.ts`'s `fromRefetch` flag.
+   */
+  private async refreshSession(): Promise<CheckoutResult<CheckoutSession>> {
     try {
       const session = await firstValueFrom(this.api.invoke(getCheckout, {}));
       this.sessionWritable.set(session);
       this.cart.acceptServerVersion(session.version);
-      this.clearFailureOverlay();
       return { ok: true, value: session };
     } catch (err) {
       const result: CheckoutResult<CheckoutSession> = { ok: false, error: mapError(err) };
@@ -603,7 +618,10 @@ export class CheckoutFacade {
       this.cartExpiredWritable.set(false);
       // Fire-and-forget so the failed intent resolves immediately and
       // the serialiser can move on. We do NOT await either call here.
-      void Promise.all([this.cart.refetch(), this.ensureSession(true)]);
+      // `refreshSession`, not `ensureSession`: the reconciling read
+      // must not clear the conflict banner or `lastFailedIntent` that
+      // the two lines above have just armed.
+      void Promise.all([this.cart.refetch(), this.refreshSession()]);
       return;
     }
     if (error.code === 'CART_EXPIRED') {
@@ -644,7 +662,11 @@ export class CheckoutFacade {
       // appears even when the refetch did not.
     }
     const currentTotal = this.summary()?.total;
-    if (shownTotal !== undefined && currentTotal !== undefined && shownTotal !== currentTotal) {
+    if (
+      shownTotal !== undefined &&
+      currentTotal !== undefined &&
+      shownTotal.amount !== currentTotal.amount
+    ) {
       this.priceChangeWritable.set({ shownTotal, currentTotal, awaitingConfirmation: true });
     }
     this.errorWritable.set(error);
