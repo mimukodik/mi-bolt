@@ -1,6 +1,16 @@
 # FIX-60 — Extract the four components the spec names, and give pagination its numbered pages
 
-Status: PLANNED — not executed.
+Status: PARTIAL — `AsyncContent`, `CatalogToolbar`, `AppliedFilters` and `Pagination` now exist as
+the four `.ts`/`.html`/`.scss`/`.spec.ts` sets `components.md` names, each wired into
+`catalog-page.ts`/`.html`, with pagination's numbered pages (AC01, AC04); `npm run build` and
+`npm run test` exit 0 (AC05); commit 67f802a. `CatalogToolbar`'s mobile trigger initially lost its
+`aria-expanded`/`aria-controls` in the extraction — a WCAG 4.1.2 regression flagged and then fixed
+in a same-branch follow-up (`wt/nav2` commit 3184062, not yet cherry-picked at the time of writing),
+which also completes AC12's disclosure duty for the `HeaderNav`/`AppHeader` drift against
+`components.md:71-84`. Open: AC06–AC10 are real-browser checks (numbered pages, the async states,
+chip removal, 390px layout) this task's author had no tool for, and AC11 (the four spec files'
+content) was verified by reading the diff rather than a separate check; all are deferred to the
+batched browser-verification pass.
 Severity: major
 Source: Review round item N7, carried over from round one: `FIX-16`'s out-of-scope section (A3 findings 3 and 4) and `FIX-24`'s out-of-scope section (A3 finding 3). `docs/spec/components.md:191-200`, `:356-365`, `:371-380`, `:386-395`. Decision **D1**.
 

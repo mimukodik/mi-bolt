@@ -1,6 +1,13 @@
 # FIX-28 — Restore the mobile search and fix the tablet featured grid
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the mobile search is no longer gated behind a shop-only check, the menu trigger
+moved to the header's first child, and the featured grid's breakpoint split from one 720px query
+into 640px/1024px per spec (`header-nav.html`, `header-nav.scss`, `header-nav.ts`,
+`featured-products.scss`); `header-search.spec.ts` added as this task's unit regression (AC09);
+commit 5cac63d. `npm run build` and `npm run test` both exit 0 (AC10). Open: AC01–AC08 are
+viewport measurements and interaction checks at 320/390/640/768/1024/1440/1920 and AC11's 44×44
+target measurement, none of which a unit spec can produce; all are deferred to the orchestrator's
+batched browser-verification pass.
 Severity: major
 Source: B2 F6, B2 F7, B3 F7 ("Home 390")
 

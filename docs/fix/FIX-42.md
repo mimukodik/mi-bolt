@@ -1,6 +1,16 @@
 # FIX-42 — Make router fragment navigation work at all
 
-Status: PLANNED — not executed.
+Status: PARTIAL — `app.config.ts` now provides `withInMemoryScrolling({anchorScrolling:
+'enabled', scrollPositionRestoration: 'enabled'})`, and `id="how"` / `id="demo"` plus
+`scroll-margin-top` landed on `how-demo-works.scss` and `demo-notice.html`/`.scss`; commit
+c877499. This document's own "How to verify" names a command that cannot pass:
+`npx vitest run tests/fragment-navigation.spec.ts` runs under bare vitest, which never calls
+`TestBed.initTestEnvironment()` (that call is injected by `@angular/build`'s own test runner), so
+no TestBed spec can pass under it regardless of which directory it sits in. The regression spec
+for this task lives at `src/app/fragment-navigation.spec.ts` instead, runs via `npm run test` (the
+`ng test` builder), and passes there; `npm run build` also exits 0. Open: AC02–AC07 are real-browser
+checks (scroll position, focus order, back/forward, axe) at 1440/390 this task's author had no
+tool for and are deferred to the batched browser-verification pass.
 Severity: major
 Source: A3 (navigation sweep), B1 (header and footer link clicks), `docs/spec/screens.md:33`.
 
