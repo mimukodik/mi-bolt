@@ -74,6 +74,11 @@ export const SORT_MODES: readonly SortMode[] = [
   'name_asc',
 ];
 
+/** True when `value` is one of the published sort modes; a guard so the parser can narrow without a cast. */
+export function isSortMode(value: unknown): value is SortMode {
+  return typeof value === 'string' && SORT_MODES.some((mode) => mode === value);
+}
+
 /** Trim, NFC-normalise and lowercase a free-form string. */
 export function normalizeQuery(raw: string): string {
   return raw.trim().toLowerCase().normalize('NFC');
@@ -413,7 +418,7 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
 
   const sortRaw = params.get('sort');
   if (sortRaw !== null) {
-    if (!SORT_MODES.includes(sortRaw as SortMode)) {
+    if (!isSortMode(sortRaw)) {
       return {
         ok: false,
         error: {
@@ -423,7 +428,7 @@ export function parseCatalogFilter(params: URLSearchParams): ParseResult<Catalog
         },
       };
     }
-    filter.sort = sortRaw as SortMode;
+    filter.sort = sortRaw;
   }
 
   const pageRaw = params.get('page');

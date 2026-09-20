@@ -1,5 +1,5 @@
 /**
- * Pure object-shape predicate for the mocks layer (FIX-…, T… — see
+ * Pure object-shape predicate for the mocks layer (see
  * `src/mocks/business-route-predicates.ts`, the precedent for a small
  * mocks-local predicate module with no external imports). Each of the
  * nine call sites under `src/mocks/` previously narrowed an `unknown`

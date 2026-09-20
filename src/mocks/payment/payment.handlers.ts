@@ -242,10 +242,11 @@ export function buildPaymentHandlers(
       const payloadHash = hashPayload(parsed.value);
       const replay = idempotency.find(idemKey, payloadHash);
       if (replay) {
-        // Replay body is stored verbatim by `idempotency.record(...)` and is
-        // expected to be an object; guard it so we hand `HttpResponse.json`
-        // the narrowed record and fall back to the existing empty-object
-        // shape otherwise.
+        // The replay body is stored verbatim by `idempotency.record(...)`
+        // and is always an object today: the only call site that records
+        // one passes `serializeIntent(intent)`. The guard is what lets
+        // `HttpResponse.json` receive a narrowed record; its false branch
+        // cannot be reached with the current call sites.
         if (!isRecord(replay.body)) {
           return HttpResponse.json<Record<string, unknown>>(
             {},

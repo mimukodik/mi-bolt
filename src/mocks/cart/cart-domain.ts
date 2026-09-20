@@ -37,6 +37,11 @@ import {
   Repository,
 } from '../repository';
 import type { Clock, Ids } from '../scenarios';
+// `idempotency` only stores carts this module produced, so the guard's
+// false branch is unreachable today. It is kept so a future invariant
+// break falls through to the normal flow instead of surfacing
+// `replay.body` where a `CartSnapshot` is expected.
+import { isCartSnapshot } from './is-cart-snapshot';
 
 /** Demo-config maximum line quantity (matches OpenAPI demoConfig.maximumLineQuantity). */
 export const MAX_LINE_QUANTITY = 5;
@@ -144,7 +149,7 @@ export class CartDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) {
+    if (replay && isCartSnapshot(replay.body)) {
       // The idempotency cache outlives the cart's own 24h expiry by
       // design (the cache window and the cart window both start at
       // creation time but live in separate state). A replay that
@@ -152,7 +157,7 @@ export class CartDomain {
       // server would refuse on the very next mutation, so we surface
       // 410 CART_EXPIRED instead and let the caller start over with
       // a fresh key.
-      const replayedCart = replay.body as CartSnapshot;
+      const replayedCart = replay.body;
       if (this.isExpired(replayedCart)) {
         return err(CartDomain.cartExpired());
       }
@@ -199,7 +204,7 @@ export class CartDomain {
     });
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) return ok(replay.body as CartSnapshot);
+    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return err(CartDomain.idempotencyConflict());
     }
@@ -273,7 +278,7 @@ export class CartDomain {
     const payloadHash = hashPayload({ quantity: input.quantity });
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) return ok(replay.body as CartSnapshot);
+    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return err(CartDomain.idempotencyConflict());
     }
@@ -342,7 +347,7 @@ export class CartDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) return ok(replay.body as CartSnapshot);
+    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return err(CartDomain.idempotencyConflict());
     }
