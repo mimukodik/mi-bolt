@@ -123,15 +123,13 @@
 }
 
 .featured__loading,
-.featured__error,
 .featured__grid-error {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.featured__loading,
-.featured__error {
+.featured__loading {
   padding: var(--space-5);
   min-height: 220px;
 }
@@ -157,7 +155,6 @@
   width: 40%;
 }
 
-.featured__error,
 .featured__grid-error {
   background: var(--color-surface-section);
 }
