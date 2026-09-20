@@ -31,13 +31,18 @@ import {
   type UrlTree,
 } from '@angular/router';
 
+import type { Cart } from '../../api/generated/models/cart';
+import type { OrderReceipt } from '../../api/generated/models/order-receipt';
+
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
 
 /**
  * Builds a UrlTree pointing at the given step with a `navigationReason`
- * query param so the destination page can show a banner explaining
- * why the deep link was redirected.
+ * query param. The reason is part of the redirect helper's union so a
+ * deep-link or a reload can be told apart from a real empty-cart state;
+ * nothing in `src/app` reads the query param today, so it travels with
+ * the URL until a page chooses to consume it.
  */
 function redirectToStep(
   step: 'cart' | 'contact' | 'delivery' | 'review' | 'success',
@@ -62,30 +67,61 @@ function stepPath(step: 'cart' | 'contact' | 'delivery' | 'review'): string {
 }
 
 /**
- * Guard for `/penztar/adatok` (contact step).
- *
- * Rejects and redirects to the earliest failure mode:
- *   - an order is already in memory AND the cart is empty →
- *     /penztar/siker/{orderId} so a back-navigation after a
- *     successful commit cannot reopen the wizard (T24-AC04). When
- *     the cart has items the user is starting a fresh purchase —
- *     the new cart id differs from the ordered one — and the
- *     wizard must proceed;
- *   - the cart is empty (or has never been created) →
- *     /penztar/kosar so a deep link with no cart lands on the
- *     cart page rather than an empty form (T19-AC02).
+ * Returns the redirect UrlTree for a cart snapshot, or null when the
+ * cart is usable (has items) and the guard should keep checking the
+ * downstream sections. The order in memory takes precedence so a
+ * back-navigation after a successful commit cannot reopen the
+ * wizard (T24-AC04) — the cart at that point is null because
+ * `CartFacade.resetOrderedCart()` cleared the local snapshot. The
+ * `deep-link` reason distinguishes a fresh document load (where the
+ * cart is still hydrating over the network) from a `empty-cart`
+ * cart the server actually confirmed has no items (T19-AC02).
  */
-export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
-  const checkout = inject(CheckoutFacade);
-  const cart = inject(CartFacade);
-  const cartSnapshot = cart.cart();
-  if (cartSnapshot === null || cartSnapshot.items.length === 0) {
-    const existingOrder = checkout.order();
+function redirectForCartSnapshot(
+  cartSnapshot: Cart | null,
+  existingOrder: OrderReceipt | null,
+): UrlTree | null {
+  if (cartSnapshot === null) {
+    if (existingOrder !== null) {
+      return redirectToSuccess(existingOrder.id);
+    }
+    return redirectToStep('cart', 'deep-link');
+  }
+  if (cartSnapshot.items.length === 0) {
     if (existingOrder !== null) {
       return redirectToSuccess(existingOrder.id);
     }
     return redirectToStep('cart', 'empty-cart');
   }
+  return null;
+}
+
+/**
+ * Guard for `/penztar/adatok` (contact step).
+ *
+ * Rejects and redirects to the earliest failure mode:
+ *   - an order is already in memory AND the cart has no items
+ *     (snapshot is null after `resetOrderedCart()` cleared it, or
+ *     the cart itself is empty) → /penztar/siker/{orderId} so a
+ *     back-navigation after a successful commit cannot reopen the
+ *     wizard (T24-AC04). When the cart has items the user is
+ *     starting a fresh purchase — the new cart id differs from
+ *     the ordered one — and the wizard must proceed;
+ *   - the cart snapshot has not loaded yet → /penztar/kosar with
+ *     reason `deep-link`, because the cart is unknown and the
+ *     cart page is what hydrates it. `CartFacade.ensureCart()`
+ *     goes over the network, so on a fresh document load the
+ *     guard reads `null` while a real cart may already exist
+ *     server-side (T19-AC02).
+ *   - the cart is loaded and empty → /penztar/kosar with reason
+ *     `empty-cart`, so a deep link with no cart lands on the
+ *     cart page rather than an empty form (T19-AC02).
+ */
+export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
+  const checkout = inject(CheckoutFacade);
+  const cart = inject(CartFacade);
+  const cartResult = redirectForCartSnapshot(cart.cart(), checkout.order());
+  if (cartResult !== null) return cartResult;
   return true;
 };
 
@@ -93,9 +129,17 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
  * Guard for `/penztar/szallitas` (delivery + payment step).
  *
  * Rejects and redirects to the earliest failure mode:
- *   - the cart is empty AND an order is in memory →
- *     /penztar/siker/{orderId} (T24-AC04);
- *   - the cart is empty → /penztar/kosar (T19-AC02);
+ *   - an order is already in memory AND the cart has no items
+ *     (snapshot is null after `resetOrderedCart()` cleared it, or
+ *     the cart itself is empty) → /penztar/siker/{orderId} so a
+ *     back-navigation after a successful commit cannot resubmit
+ *     the cart (T24-AC04);
+ *   - the cart snapshot has not loaded yet → /penztar/kosar with
+ *     reason `deep-link`. `CartFacade.ensureCart()` restores the
+ *     session cart over the network, so a synchronous guard
+ *     always reads `null` on a fresh document load (T19-AC02).
+ *   - the cart is loaded and empty → /penztar/kosar with reason
+ *     `empty-cart` (T19-AC02);
  *   - the contact section has not been saved yet →
  *     /penztar/adatok so a deep link to the delivery step lands on
  *     the contact form, where the checkout facade hydrates whatever
@@ -104,14 +148,8 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
 export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
-  const cartSnapshot = cart.cart();
-  if (cartSnapshot === null || cartSnapshot.items.length === 0) {
-    const existingOrder = checkout.order();
-    if (existingOrder !== null) {
-      return redirectToSuccess(existingOrder.id);
-    }
-    return redirectToStep('cart', 'empty-cart');
-  }
+  const cartResult = redirectForCartSnapshot(cart.cart(), checkout.order());
+  if (cartResult !== null) return cartResult;
   const session = checkout.session();
   if (session?.contact === undefined) {
     return redirectToStep('contact', 'incomplete');
@@ -123,26 +161,27 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
  * Guard for `/penztar/ellenorzes` (review step).
  *
  * Rejects and redirects to the earliest missing section. Covers
- * the four failure modes the spec calls out:
- *   - no cart AND an order is in memory → /penztar/siker/{orderId}
- *     so a back-navigation after a successful commit cannot
- *     resubmit the cart (T24-AC04). When the cart has items the
- *     user is starting a fresh purchase and the wizard proceeds;
- *   - no cart at all → /penztar/kosar (empty-cart)
+ * the failure modes the spec calls out:
+ *   - an order is already in memory AND the cart has no items
+ *     (snapshot is null after `resetOrderedCart()` cleared it, or
+ *     the cart itself is empty) → /penztar/siker/{orderId} so a
+ *     back-navigation after a successful commit cannot resubmit
+ *     the cart (T24-AC04). When the cart has items the user is
+ *     starting a fresh purchase and the wizard proceeds;
+ *   - the cart snapshot has not loaded yet → /penztar/kosar with
+ *     reason `deep-link`. `CartFacade.ensureCart()` restores the
+ *     session cart over the network, so a synchronous guard
+ *     always reads `null` on a fresh document load;
+ *   - the cart is loaded and empty → /penztar/kosar with reason
+ *     `empty-cart`;
  *   - contact missing → /penztar/adatok
  *   - delivery / paymentMethod missing → /penztar/szallitas
  */
 export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
-  const cartSnapshot = cart.cart();
-  if (cartSnapshot === null || cartSnapshot.items.length === 0) {
-    const existingOrder = checkout.order();
-    if (existingOrder !== null) {
-      return redirectToSuccess(existingOrder.id);
-    }
-    return redirectToStep('cart', 'empty-cart');
-  }
+  const cartResult = redirectForCartSnapshot(cart.cart(), checkout.order());
+  if (cartResult !== null) return cartResult;
   const session = checkout.session();
   if (session?.contact === undefined) {
     return redirectToStep('contact', 'incomplete');
@@ -196,13 +235,21 @@ export const successGuard: CanActivateFn = (route): boolean | UrlTree => {
  * Factory for guard functions that need to read the URL segments
  * to decide where to send the user. Currently unused but exported
  * for tests that drive the guards directly without a Router.
+ *
+ * The cart-not-loaded case is told apart from the cart-loaded-empty
+ * case so a fresh document load reaches the cart page with a
+ * `deep-link` reason rather than a misleading `empty-cart` one;
+ * see the three `CanMatchFn` guards above for the rationale.
  */
 export function guardForSegment(step: 'cart' | 'contact' | 'delivery' | 'review' | 'success') {
   return (_segments: readonly UrlSegment[]): boolean | UrlTree => {
     const checkout = inject(CheckoutFacade);
     const cart = inject(CartFacade);
     const cartSnapshot = cart.cart();
-    if (cartSnapshot === null || cartSnapshot.items.length === 0) {
+    if (cartSnapshot === null) {
+      return redirectToStep('cart', 'deep-link');
+    }
+    if (cartSnapshot.items.length === 0) {
       return redirectToStep('cart', 'empty-cart');
     }
     if (step === 'success') {

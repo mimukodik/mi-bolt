@@ -603,6 +603,80 @@ describe('T19 deep-link to /penztar/ellenorzes with empty draft', () => {
 });
 
 // ---------------------------------------------------------------------------
+// T19 — guards tell an unknown cart apart from a known empty one.
+// A synchronous `CanMatchFn` always reads `cart.cart() === null` on
+// a fresh document load because `CartFacade.ensureCart()` restores
+// the session cart over the network (T19-AC02), so the redirect
+// reason for a deep link must be `deep-link`, not `empty-cart`.
+// ---------------------------------------------------------------------------
+
+describe('T19 guards distinguish an unknown cart from an empty one', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('deliveryGuard redirects with navigationReason=deep-link when the cart has not loaded yet', () => {
+    const cart = TestBed.inject(CartFacade);
+    // The constructor fires `void this.ensureCart()` over the network,
+    // so on a synchronous read the signal is still null. Asserting
+    // that here keeps the test honest if the constructor's behaviour
+    // ever changes.
+    expect(cart.cart()).toBeNull();
+
+    const segments = [{ path: 'penztar' }, { path: 'szallitas' }] as UrlSegment[];
+    const route = {} as Parameters<typeof deliveryGuard>[0];
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      deliveryGuard(route, segments, {} as never),
+    );
+    expect(result).toBeInstanceOf(UrlTree);
+    expect((result as UrlTree).toString()).toContain('navigationReason=deep-link');
+  });
+
+  it('deliveryGuard redirects with navigationReason=empty-cart when the cart is loaded but empty', async () => {
+    const cart = TestBed.inject(CartFacade);
+    await cart.ensureCart();
+    expect(cart.cart()).not.toBeNull();
+    expect(cart.cart()?.items.length).toBe(0);
+
+    const segments = [{ path: 'penztar' }, { path: 'szallitas' }] as UrlSegment[];
+    const route = {} as Parameters<typeof deliveryGuard>[0];
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      deliveryGuard(route, segments, {} as never),
+    );
+    expect(result).toBeInstanceOf(UrlTree);
+    expect((result as UrlTree).toString()).toContain('navigationReason=empty-cart');
+  });
+
+  it('contactGuard redirects with navigationReason=deep-link when the cart has not loaded yet', () => {
+    const cart = TestBed.inject(CartFacade);
+    expect(cart.cart()).toBeNull();
+
+    const segments = [{ path: 'penztar' }, { path: 'adatok' }] as UrlSegment[];
+    const route = {} as Parameters<typeof contactGuard>[0];
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      contactGuard(route, segments, {} as never),
+    );
+    expect(result).toBeInstanceOf(UrlTree);
+    expect((result as UrlTree).toString()).toContain('navigationReason=deep-link');
+  });
+
+  it('reviewGuard redirects with navigationReason=empty-cart when the cart is loaded but empty', async () => {
+    const cart = TestBed.inject(CartFacade);
+    await cart.ensureCart();
+    expect(cart.cart()).not.toBeNull();
+    expect(cart.cart()?.items.length).toBe(0);
+
+    const segments = [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
+    const route = {} as Parameters<typeof reviewGuard>[0];
+    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
+      reviewGuard(route, segments, {} as never),
+    );
+    expect(result).toBeInstanceOf(UrlTree);
+    expect((result as UrlTree).toString()).toContain('navigationReason=empty-cart');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // T19-AC05 — guards never call the network. The reviewer-only check
 // is structural: the guard functions import nothing from the SDK
 // and only call inject() on the two facades.
