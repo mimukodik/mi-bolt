@@ -17,7 +17,7 @@
  * a `data-testid` to appear before pressing the documented key,
  * so a missing feature surfaces as a `test.skip` with the exact
  * step name in the message rather than a hard failure. The
- * skipped-step count is asserted by this suite itself.
+ * skipped step count is attached as test evidence, not currently used as a pass/fail signal.
  *
  * Manual keyboard checks (T25-AC05) are kept separate from any
  * automated axe results — this file asserts the keyboard
