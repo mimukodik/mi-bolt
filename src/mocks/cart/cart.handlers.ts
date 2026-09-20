@@ -1,38 +1,43 @@
 /**
- * T07 — cart MSW handlers.
+ * MIM-211 — cart MSW handlers on the 2.0.0 contract.
  *
- * Five atomic operations wired through MSW: createCart, getCart,
- * addCartItem, setCartItemQuantity, removeCartItem. Each handler:
+ * Five operations wired through MSW: getCart, addCartItem,
+ * setCartItemQuantity, removeCartItem, clearCart. Each handler:
  *
- *   1. Reads the X-Demo-Session / Idempotency-Key / If-Match headers
- *      and forwards a typed input to the cart-domain.
- *   2. Maps the `CartResult` back to an `HttpResponse` — success
- *      becomes a 200/201 with the cart JSON body, failure becomes a
- *      Problem JSON with the matching status code.
+ *   1. Reads the `X-Demo-Session` (and, on writes, `If-Match`) headers
+ *      and forwards a typed input to `CartStore`.
+ *   2. Maps the `CartOutcome` back to an `HttpResponse` — success
+ *      becomes a 200 with the cart JSON body and an `ETag: "<version>"`
+ *      header, failure becomes a Problem JSON with the matching status
+ *      code.
  *   3. Never throws so the surrounding MSW worker returns the
  *      response rather than a 500 transport error.
  *
  * The handlers register themselves through the T05 dispatcher
  * registry so they appear in `createStrictHandlers(...)` for tests
- * and in `createHandlers(...)` for the browser/node workers. The
- * demo device fixture is loaded by the entry on first invocation
- * so cart operations have at least one variant to attach; T06's
- * catalog handlers will overwrite the fixture with the full 16-product
- * catalog on a later wave.
+ * and in `createHandlers(...)` for the browser/node workers.
+ *
+ * `VARIANTS` / `DEMO_PRODUCT` / `ensureFixture(repository)` are kept
+ * because the checkout, payment and order mocks and their specs
+ * still read the seeded `Repository` product. S3 migrates those.
+ *
+ * `options.persist` is not called: the browser snapshot persists the
+ * `Repository` cart, which this store no longer uses (the real
+ * backend keeps the cart server-side).
  */
 
-import { http, HttpResponse, type RequestHandler } from 'msw';
+import { http, HttpResponse, type DefaultBodyType, type RequestHandler } from 'msw';
 
 import {
   registerBusinessHandlers,
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
-import { IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
-import { type Money, type Product, Repository } from '../repository';
+import { type Product, Repository } from '../repository';
 
-import { CartDomain } from './cart-domain';
+import { CartStore } from './cart-store';
+import { catalogStore } from '../catalog/catalog.handlers';
 
 const VARIANTS: Product['variants'] = [
   {
@@ -162,6 +167,74 @@ function ensureFixture(repository: Repository): void {
   }
 }
 
+/**
+ * Resolve the loaded catalogue store; throw when no fixture was
+ * loaded. The cart handlers cannot answer a request without it.
+ */
+function requireCatalog(): NonNullable<typeof catalogStore.current> {
+  if (!catalogStore.current) {
+    throw new Error('[cart.handlers] catalog store has not been loaded');
+  }
+  return catalogStore.current;
+}
+
+const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
+
+/** Map an outcome onto the matching `HttpResponse`. */
+function outcomeResponse(outcome: ReturnType<CartStore['get']>): HttpResponse<DefaultBodyType> {
+  if (outcome.ok) {
+    return HttpResponse.json(outcome.cart, {
+      status: 200,
+      headers: { ETag: `"${String(outcome.cart.version)}"` },
+    });
+  }
+  return HttpResponse.json(outcome.problem, {
+    status: outcome.problem.status,
+    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
+  });
+}
+
+/** A problem body shaped like the catalogue's `ProblemBody`. */
+interface ProblemBody {
+  type: string;
+  title: string;
+  status: number;
+  code: string;
+  detail: string;
+  traceId: string;
+  fieldErrors: readonly { path: string; code: string }[];
+  params?: Readonly<Record<string, unknown>>;
+}
+
+/** Build a deterministic 24-char lowercase-hex trace id from the clock. */
+function traceId(options: CreateHandlersOptions): string {
+  const ms = Date.parse(options.clock.now());
+  const hex = (ms >>> 0).toString(16).padStart(8, '0');
+  return (hex + '0000000000000000').slice(0, 24);
+}
+
+/** 400 problem for a missing or malformed input. */
+function invalidRequest(
+  options: CreateHandlersOptions,
+  detail: string,
+  params: Readonly<Record<string, unknown>>,
+): HttpResponse<DefaultBodyType> {
+  const body: ProblemBody = {
+    type: 'urn:mi-bolt:problem:invalid-request',
+    title: 'Invalid request',
+    status: 400,
+    code: 'INVALID_REQUEST',
+    detail,
+    traceId: traceId(options),
+    fieldErrors: [],
+    params,
+  };
+  return HttpResponse.json(body, {
+    status: 400,
+    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
+  });
+}
+
 async function readJsonBody(request: Request): Promise<unknown> {
   try {
     return await request.clone().json();
@@ -170,214 +243,127 @@ async function readJsonBody(request: Request): Promise<unknown> {
   }
 }
 
-interface ProblemLike {
-  status: number;
-  code: string;
-  detail: string;
-  fieldErrors: { path: string; message: string }[];
-}
-
-/**
- * Builds the wire-shaped Cart JSON from the in-memory Cart. The
- * wire contract requires `itemCount` and `subtotal` derivations the
- * repository does not maintain.
- */
-function serializeCart(cart: ReturnType<Repository['createCart']>): Record<string, unknown> {
-  const itemCount = cart.items.reduce((sum, line) => sum + line.quantity, 0);
-  const subtotal: Money = {
-    amount: cart.items.reduce((sum, line) => sum + line.lineTotal.amount, 0),
-    currency: 'HUF',
-  };
-  return {
-    id: cart.id,
-    version: cart.version,
-    items: cart.items.map((line) => ({ ...line })),
-    itemCount,
-    subtotal,
-    status: cart.status,
-    expiresAt: cart.expiresAt,
-  };
-}
-
-/**
- * Maps a `Problem` into an `HttpResponse` with the correct status,
- * `application/problem+json` content type, and a stable trace id so
- * log readers can correlate failures to scenarios.
- */
-function problemResponse(
-  problem: ProblemLike,
-  traceId: string,
-): HttpResponse<Record<string, unknown>> {
-  const body = {
-    type: `urn:mi-bolt:problem:${problem.code.toLowerCase().replace(/_/g, '-')}`,
-    title: problem.detail,
-    status: problem.status,
-    code: problem.code,
-    detail: problem.detail,
-    traceId,
-    fieldErrors: problem.fieldErrors,
-  };
-  return HttpResponse.json(body, {
-    status: problem.status,
-    headers: { 'content-type': 'application/problem+json' },
-  });
-}
-
-function badRequest(detail: string, traceId: string): HttpResponse<Record<string, unknown>> {
-  return problemResponse(
-    { status: 400, code: 'VALIDATION_FAILED', detail, fieldErrors: [] },
-    traceId,
-  );
-}
-
-function readVariantId(body: unknown): { ok: true; value: string } | { ok: false; detail: string } {
-  if (!isRecord(body)) return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
-  const variantId = body['variantId'];
-  if (typeof variantId !== 'string' || variantId.length === 0) {
-    return { ok: false, detail: 'A variantId mező kötelező szöveg.' };
+/** `quantity` must be an integer in 1..10; else returns a 400 detail. */
+function readQuantity(
+  options: CreateHandlersOptions,
+  body: unknown,
+): { ok: true; value: number } | { ok: false; response: HttpResponse<DefaultBodyType> } {
+  if (!isRecord(body)) {
+    return {
+      ok: false,
+      response: invalidRequest(options, 'quantity must be an integer between 1 and 10', {}),
+    };
   }
-  return { ok: true, value: variantId };
-}
-
-function readQuantity(body: unknown): { ok: true; value: number } | { ok: false; detail: string } {
-  if (!isRecord(body)) return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
   const quantity = body['quantity'];
-  if (typeof quantity !== 'number' || !Number.isFinite(quantity) || !Number.isInteger(quantity)) {
-    return { ok: false, detail: 'A quantity mező kötelező egész szám.' };
+  if (
+    typeof quantity !== 'number' ||
+    !Number.isInteger(quantity) ||
+    quantity < 1 ||
+    quantity > 10
+  ) {
+    return {
+      ok: false,
+      response: invalidRequest(options, 'quantity must be an integer between 1 and 10', {}),
+    };
   }
   return { ok: true, value: quantity };
+}
+
+/** `variantId` must be a non-empty string; else returns a 400 detail. */
+function readVariantId(
+  options: CreateHandlersOptions,
+  body: unknown,
+): { ok: true; value: string } | { ok: false; response: HttpResponse<DefaultBodyType> } {
+  if (!isRecord(body)) {
+    return {
+      ok: false,
+      response: invalidRequest(options, 'variantId is required', {}),
+    };
+  }
+  const variantId = body['variantId'];
+  if (typeof variantId !== 'string' || variantId.length === 0) {
+    return {
+      ok: false,
+      response: invalidRequest(options, 'variantId is required', {}),
+    };
+  }
+  return { ok: true, value: variantId };
 }
 
 /**
  * Cart business handler entry — registers itself on module load.
  * Each MSW worker (browser / node) builds its handler list from this
- * entry plus the T06 catalog entry, in registry order.
+ * entry plus the catalogue entry, in registry order.
  */
 export const cartHandlersEntry: BusinessHandlerEntry = (
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] => {
-  const { repository, clock, ids, scenario, persist } = options;
+  const { repository } = options;
   ensureFixture(repository);
 
-  const idempotency = new IdempotencyStore(clock);
-  const domain = new CartDomain(repository, clock, ids, idempotency);
-  const traceId = `mock-trace-${scenario.name}`;
+  const store = new CartStore(options, (id) => requireCatalog().getVariant(id));
 
-  const createCart: RequestHandler = http.post('*/api/v1/carts', ({ request }) => {
+  const getCart: RequestHandler = http.get('*/api/v1/cart', ({ request }) => {
     const sessionId = request.headers.get('X-Demo-Session');
-    if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-    const idempotencyKey = request.headers.get('Idempotency-Key');
-    if (idempotencyKey === null) return badRequest('Hiányzó Idempotency-Key fejléc.', traceId);
-    const result = domain.createCart({ sessionId, idempotencyKey });
-    if (!result.ok) return problemResponse(result.problem, traceId);
-    persist?.(sessionId);
-    return HttpResponse.json(serializeCart(result.value), {
-      status: 201,
-      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-    });
+    if (sessionId === null) {
+      return invalidRequest(options, 'Missing X-Demo-Session header', {});
+    }
+    return outcomeResponse(store.get(sessionId));
   });
 
-  const getCart: RequestHandler = http.get('*/api/v1/carts/:cartId', ({ request, params }) => {
+  const addCartItem: RequestHandler = http.post('*/api/v1/cart/items', async ({ request }) => {
     const sessionId = request.headers.get('X-Demo-Session');
-    if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-    const result = domain.getCart({ sessionId, cartId: String(params['cartId']) });
-    if (!result.ok) return problemResponse(result.problem, traceId);
-    return HttpResponse.json(serializeCart(result.value), {
-      status: 200,
-      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-    });
+    if (sessionId === null) {
+      return invalidRequest(options, 'Missing X-Demo-Session header', {});
+    }
+    const ifMatch = request.headers.get('If-Match');
+    const body = await readJsonBody(request);
+    const variantRead = readVariantId(options, body);
+    if (!variantRead.ok) return variantRead.response;
+    const quantityRead = readQuantity(options, body);
+    if (!quantityRead.ok) return quantityRead.response;
+    return outcomeResponse(store.add(sessionId, ifMatch, variantRead.value, quantityRead.value));
   });
 
-  const addCartItem: RequestHandler = http.post(
-    '*/api/v1/carts/:cartId/items',
-    async ({ request, params }) => {
-      const sessionId = request.headers.get('X-Demo-Session');
-      if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      const idempotencyKey = request.headers.get('Idempotency-Key');
-      if (idempotencyKey === null) return badRequest('Hiányzó Idempotency-Key fejléc.', traceId);
-      const ifMatch = request.headers.get('If-Match');
-      if (ifMatch === null) return badRequest('Hiányzó If-Match fejléc.', traceId);
-      const body = await readJsonBody(request);
-      const variantRead = readVariantId(body);
-      if (!variantRead.ok) return badRequest(variantRead.detail, traceId);
-      const quantityRead = readQuantity(body);
-      if (!quantityRead.ok) return badRequest(quantityRead.detail, traceId);
-      const result = domain.addCartItem({
-        sessionId,
-        cartId: String(params['cartId']),
-        ifMatch,
-        idempotencyKey,
-        variantId: variantRead.value,
-        quantity: quantityRead.value,
-      });
-      if (!result.ok) return problemResponse(result.problem, traceId);
-      persist?.(sessionId);
-      return HttpResponse.json(serializeCart(result.value), {
-        status: 200,
-        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-      });
-    },
-  );
+  const clearCart: RequestHandler = http.delete('*/api/v1/cart/items', ({ request }) => {
+    const sessionId = request.headers.get('X-Demo-Session');
+    if (sessionId === null) {
+      return invalidRequest(options, 'Missing X-Demo-Session header', {});
+    }
+    const ifMatch = request.headers.get('If-Match');
+    return outcomeResponse(store.clear(sessionId, ifMatch));
+  });
 
   const setCartItemQuantity: RequestHandler = http.patch(
-    '*/api/v1/carts/:cartId/items/:itemId',
+    '*/api/v1/cart/items/:variantId',
     async ({ request, params }) => {
       const sessionId = request.headers.get('X-Demo-Session');
-      if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      const idempotencyKey = request.headers.get('Idempotency-Key');
-      if (idempotencyKey === null) return badRequest('Hiányzó Idempotency-Key fejléc.', traceId);
+      if (sessionId === null) {
+        return invalidRequest(options, 'Missing X-Demo-Session header', {});
+      }
       const ifMatch = request.headers.get('If-Match');
-      if (ifMatch === null) return badRequest('Hiányzó If-Match fejléc.', traceId);
       const body = await readJsonBody(request);
-      const quantityRead = readQuantity(body);
-      if (!quantityRead.ok) return badRequest(quantityRead.detail, traceId);
-      const result = domain.setCartItemQuantity({
-        sessionId,
-        cartId: String(params['cartId']),
-        itemId: String(params['itemId']),
-        ifMatch,
-        idempotencyKey,
-        quantity: quantityRead.value,
-      });
-      if (!result.ok) return problemResponse(result.problem, traceId);
-      persist?.(sessionId);
-      return HttpResponse.json(serializeCart(result.value), {
-        status: 200,
-        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-      });
+      const quantityRead = readQuantity(options, body);
+      if (!quantityRead.ok) return quantityRead.response;
+      const variantId = String(params['variantId']);
+      return outcomeResponse(store.setQuantity(sessionId, ifMatch, variantId, quantityRead.value));
     },
   );
 
   const removeCartItem: RequestHandler = http.delete(
-    '*/api/v1/carts/:cartId/items/:itemId',
+    '*/api/v1/cart/items/:variantId',
     ({ request, params }) => {
       const sessionId = request.headers.get('X-Demo-Session');
-      if (sessionId === null) return badRequest('Hiányzó X-Demo-Session fejléc.', traceId);
-      const idempotencyKey = request.headers.get('Idempotency-Key');
-      if (idempotencyKey === null) return badRequest('Hiányzó Idempotency-Key fejléc.', traceId);
+      if (sessionId === null) {
+        return invalidRequest(options, 'Missing X-Demo-Session header', {});
+      }
       const ifMatch = request.headers.get('If-Match');
-      if (ifMatch === null) return badRequest('Hiányzó If-Match fejléc.', traceId);
-      const result = domain.removeCartItem({
-        sessionId,
-        cartId: String(params['cartId']),
-        itemId: String(params['itemId']),
-        ifMatch,
-        idempotencyKey,
-      });
-      if (!result.ok) return problemResponse(result.problem, traceId);
-      persist?.(sessionId);
-      return HttpResponse.json(serializeCart(result.value), {
-        status: 200,
-        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-      });
+      const variantId = String(params['variantId']);
+      return outcomeResponse(store.remove(sessionId, ifMatch, variantId));
     },
   );
 
-  return [createCart, getCart, addCartItem, setCartItemQuantity, removeCartItem];
+  return [getCart, addCartItem, clearCart, setCartItemQuantity, removeCartItem];
 };
-
-// Re-export types and helpers so tests and downstream slices can use them.
-export const __testing = { serializeCart, problemResponse, readVariantId, readQuantity };
-export type { Money } from '../repository';
 
 registerBusinessHandlers(cartHandlersEntry);

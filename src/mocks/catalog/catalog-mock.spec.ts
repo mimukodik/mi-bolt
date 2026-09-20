@@ -637,4 +637,17 @@ describe('store bookkeeping', () => {
     }
     expect(images.size).toBe(TOTAL_IMAGES);
   });
+
+  it('getVariant resolves a known id to product and variant, and unknown ids to undefined', () => {
+    const store = catalogStore.current;
+    expect(store).not.toBeNull();
+    if (!store) return;
+    const hit = store.getVariant('motorola-edge-50-fusion--zold--256');
+    expect(hit).toBeDefined();
+    if (!hit) return;
+    expect(hit.product.slug).toBe('motorola-edge-50-fusion');
+    expect(hit.variant.storageGb).toBe(256);
+    expect(hit.variant.maxQuantity).toBe(5);
+    expect(store.getVariant('nope')).toBeUndefined();
+  });
 });

@@ -41,6 +41,16 @@ export interface ProductRanking {
 }
 
 /**
+ * `(product, variant)` lookup result. The cart store calls
+ * `CatalogStore.getVariant(id)` to resolve an AddCartItemRequest to
+ * the `Product` and `Variant` the line and item snapshots come from.
+ */
+export interface VariantLookup {
+  product: Product;
+  variant: Variant;
+}
+
+/**
  * One `(product, storage)` list entry. Carries the entry's contract
  * shape (`CatalogItem`-ready) plus the sort and filter keys the
  * filter module reuses across every sort.
@@ -245,6 +255,7 @@ export class CatalogStore {
   private readonly productsBySlug: Map<string, Product>;
   private readonly rankingBySlug: Map<string, ProductRanking>;
   private readonly entries: readonly CatalogEntry[];
+  private readonly variantsById: Map<string, VariantLookup>;
 
   constructor(
     productsBySlug: Map<string, Product>,
@@ -254,6 +265,7 @@ export class CatalogStore {
     this.productsBySlug = productsBySlug;
     this.rankingBySlug = rankingBySlug;
     this.entries = entries;
+    this.variantsById = buildVariantsById(productsBySlug);
   }
 
   /** Look up a product by slug. */
@@ -266,6 +278,11 @@ export class CatalogStore {
     return this.rankingBySlug.get(slug);
   }
 
+  /** Look up a variant by id and return the product it belongs to. */
+  getVariant(variantId: string): VariantLookup | undefined {
+    return this.variantsById.get(variantId);
+  }
+
   /** Every product, source order. */
   listProducts(): readonly Product[] {
     return [...this.productsBySlug.values()];
@@ -275,6 +292,16 @@ export class CatalogStore {
   listEntries(): readonly CatalogEntry[] {
     return this.entries;
   }
+}
+
+function buildVariantsById(productsBySlug: Map<string, Product>): Map<string, VariantLookup> {
+  const variantsById = new Map<string, VariantLookup>();
+  for (const product of productsBySlug.values()) {
+    for (const variant of product.variants) {
+      variantsById.set(variant.id, { product, variant });
+    }
+  }
+  return variantsById;
 }
 
 /** Build a `CatalogItem` from a `CatalogEntry` at filter time. */
