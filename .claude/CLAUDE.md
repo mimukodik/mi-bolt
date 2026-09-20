@@ -389,7 +389,7 @@ it here.
 Every `.md` file under `.claude/rules/` without `paths` frontmatter is loaded
 at launch with the same priority as this file and reaches every subagent
 except the built-in Explore and Plan agents, so the rules in the files listed
-below are binding even though their text lives elsewhere. None of the six
+below are binding even though their text lives elsewhere. None of the seven
 is `paths`-scoped: scoped rules only inject on a matching read, and these must
 be in context before the first write. The directory has no `CLAUDE.md` of its
 own because every `.md` there is loaded as a rule; this section is its index.
@@ -417,6 +417,13 @@ launch, which is why the SessionStart hook does not re-inject them.
   called, that the URL goes in the report and in any spawn prompt that carries
   the fact, and where the line falls between measuring this repository, which
   is unchanged, and experimenting on the framework, which is not done.
+- `orchestrated-coding.md`: when a build is orchestrated at all, who codes and
+  who merges, that `scripts/coder-agent/.env` is never read, the two-runner
+  cap and the two Monitor watches each runner gets, when a reviewer pass may
+  start and the two-pass review cap, what a brief must spell out including the
+  exact commit commands the `-p` sandbox accepts, the self-check block every
+  report answers, and that a plan task is cut into runner-sized units before
+  any brief goes out.
 - `parallel-spawns.md`: the pre-flight that runs over a batch of agents before
   it goes out, what a batch shares beyond its file lists, the check that
   something one agent is told to use exists in the form the instruction
