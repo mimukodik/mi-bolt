@@ -34,6 +34,7 @@ import { firstValueFrom } from 'rxjs';
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
+import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 import type { Cart } from '../../api/generated/models/cart';
 import type { Money } from '../../api/generated/models/money';
 import type { ProblemCode } from '../../api/generated/models/problem-code';
@@ -66,19 +67,6 @@ export interface CartError {
 }
 
 const ZERO_MONEY: Money = { amount: 0, currency: 'HUF' };
-
-/**
- * Generates a fresh opaque idempotency key in the contract range
- * `^[a-zA-Z0-9_-]{8,80}$`. Each intent gets a NEW key; the only
- * path that reuses a key is the explicit `retry()` call after a
- * recorded 409 conflict.
- */
-function freshIdempotencyKey(): string {
-  const raw = globalThis.crypto.randomUUID();
-  // randomUUID() emits 36 chars including dashes; the contract
-  // requires 8–80 chars, so it already fits.
-  return raw;
-}
 
 /**
  * Root-provided cart owner. `TestBed.inject(CartFacade)` returns the

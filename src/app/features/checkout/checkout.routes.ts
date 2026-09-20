@@ -44,6 +44,7 @@ import { updateCheckout } from '../../api/generated/fn/checkout/update-checkout'
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
+import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 
 import {
   CONTACT_DRAFT_SAVER,
@@ -52,17 +53,6 @@ import {
   type ContactSubmission,
 } from './contact-step';
 import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';
-
-/**
- * Generates an opaque idempotency key per save. Mirrors the
- * `freshIdempotencyKey()` helper used by `CartFacade` /
- * `CheckoutFacade`; each intent gets a NEW key (no retries here,
- * the contact-step surfaces a Retry button that re-issues a fresh
- * draft through the same factory).
- */
-function freshIdempotencyKey(): string {
-  return globalThis.crypto.randomUUID();
-}
 
 /**
  * Maps a 422 body to the `ContactFieldKey`-keyed shape

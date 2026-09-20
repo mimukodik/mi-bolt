@@ -65,6 +65,7 @@ import type { OrderReceipt } from '../../api/generated/models/order-receipt';
 import * as functions from '../../api/generated/functions';
 
 import { CartFacade } from '../cart/cart.facade';
+import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 
 import {
   PHONE_PATTERN,
@@ -93,23 +94,6 @@ export interface CheckoutError {
 /** Result returned by every save / quote / submit helper. */
 export type CheckoutMutationResult<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: CheckoutError };
-
-/**
- * Generates an opaque idempotency key per intent. Exported so
- * `OrderSubmission` shares this one declaration (FIX-61) instead of
- * keeping its own near-duplicate; the guarded fallback below is the
- * safer of the two prior implementations and is kept as the sole
- * body rather than the unguarded one this file used before.
- */
-export function freshIdempotencyKey(): string {
-  if (
-    typeof globalThis.crypto !== 'undefined' &&
-    typeof globalThis.crypto.randomUUID === 'function'
-  ) {
-    return globalThis.crypto.randomUUID();
-  }
-  return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 /**
  * Strips optional keys that the mock would otherwise echo back as
@@ -252,6 +236,17 @@ export class CheckoutFacade {
   /** True once the model has been hydrated from the server. */
   private readonly hydratedWritable: WritableSignal<boolean> = signal(false);
   readonly hydrated: Signal<boolean> = this.hydratedWritable.asReadonly();
+
+  /** Held idempotency key for the last `saveSection()` fingerprint. */
+  private savedSectionKey: { fingerprint: string; key: string } | null = null;
+
+  /** Held idempotency key for the last `createQuote()` fingerprint. */
+  private heldQuoteKey: { fingerprint: string; key: string } | null = null;
+
+  /** Held idempotency key for the last `createPaymentIntent()` fingerprint,
+   *  kept only while the last attempt's outcome is unknown (openapi.yaml:
+   *  "ambiguous network retry retains original key"). */
+  private heldPaymentIntentKey: { fingerprint: string; key: string } | null = null;
 
   constructor() {
     // The generated `Api` class relies on Angular decorator metadata
@@ -453,6 +448,24 @@ export class CheckoutFacade {
         },
       };
     }
+    // architecture.md:117 - "A retry sends the identical
+    // body/precondition." One key per canonical request fingerprint:
+    // reuse the held key while the fingerprint is unchanged, mint a
+    // fresh one only when it differs. Built over an array (fixed
+    // element order) rather than the `body` object literal, so
+    // reordering the payload's own fields cannot silently mint a new
+    // key for an identical request.
+    const fingerprint = JSON.stringify([
+      cartId,
+      cartVersion,
+      body.contact ?? null,
+      body.delivery ?? null,
+      body.paymentMethod ?? null,
+    ]);
+    const held = this.savedSectionKey;
+    const key =
+      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
+    this.savedSectionKey = { fingerprint, key };
     this.busyWritable.set(true);
     try {
       const session = await firstValueFrom(
@@ -460,7 +473,7 @@ export class CheckoutFacade {
           functions.updateCheckout,
           {
             cartId,
-            'Idempotency-Key': freshIdempotencyKey(),
+            'Idempotency-Key': key,
             body,
           },
           withIfMatch(cartVersion),
@@ -507,6 +520,19 @@ export class CheckoutFacade {
         },
       };
     }
+    // `createCheckoutQuote` carries no request body; a quote prices
+    // the cart's own contents, not the draft, so `cartId` +
+    // `cartVersion` alone identify the canonical request
+    // (architecture.md:9 - a draft edit does not change `cartVersion`
+    // and does not change what the quote computes). Set
+    // unconditionally: a PRICE_CHANGED 409 bumps `cartVersion`
+    // server-side, so the next legitimate request already gets a new
+    // fingerprint and a new key with no manual clearing needed.
+    const fingerprint = JSON.stringify([cartId, cartVersion]);
+    const held = this.heldQuoteKey;
+    const key =
+      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
+    this.heldQuoteKey = { fingerprint, key };
     this.busyWritable.set(true);
     try {
       const quote = await firstValueFrom(
@@ -514,7 +540,7 @@ export class CheckoutFacade {
           functions.createCheckoutQuote,
           {
             cartId,
-            'Idempotency-Key': freshIdempotencyKey(),
+            'Idempotency-Key': key,
           },
           withIfMatch(cartVersion),
         ),
@@ -622,16 +648,33 @@ export class CheckoutFacade {
         },
       };
     }
+    // openapi.yaml:628-635 - "New approved retry uses a new payment
+    // key; ambiguous network retry retains original key." Unlike
+    // saveSection()/createQuote() above, every response the mock
+    // actually sends back (succeeded, declined or pending, per the
+    // generated PaymentIntent model) is a DEFINITIVE outcome, so the
+    // held key is cleared on every response and kept ONLY across a
+    // transport failure (status === 0 - no response was received, so
+    // the outcome is genuinely ambiguous).
+    const fingerprint = JSON.stringify([cartId, quote.id]);
+    const held = this.heldPaymentIntentKey;
+    const key =
+      held !== null && held.fingerprint === fingerprint ? held.key : freshIdempotencyKey();
+
     this.busyWritable.set(true);
     try {
       const intent = await firstValueFrom(
         this.api.invoke(functions.createPaymentIntent, {
-          'Idempotency-Key': freshIdempotencyKey(),
+          'Idempotency-Key': key,
           body: { cartId, quoteId: quote.id },
         }),
       );
       this.paymentIntentWritable.set(intent);
       this.errorWritable.set(null);
+      // A response was received - succeeded, declined or pending are
+      // all definitive per openapi.yaml. The next call is a new
+      // attempt and must mint a fresh key.
+      this.heldPaymentIntentKey = null;
       return { ok: true, value: intent };
     } catch (err) {
       const mapped = mapError(err);
@@ -639,6 +682,11 @@ export class CheckoutFacade {
       // Decline / pending / etc. leave contact + address + cart intact
       // (AC03) — only the payment intent is left unset so the user
       // can press the button once more or pick a different method.
+      // status === 0 is a transport failure: no response was
+      // received, so the retry must carry the identical key. Any
+      // other status is a definitive server response (a Problem
+      // body); the next attempt is a new one and gets a fresh key.
+      this.heldPaymentIntentKey = mapped.status === 0 ? { fingerprint, key } : null;
       return { ok: false, error: mapped };
     } finally {
       this.busyWritable.set(false);

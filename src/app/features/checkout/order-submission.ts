@@ -74,8 +74,9 @@ import type { PaymentIntent } from '../../api/generated/models/payment-intent';
 
 import * as functions from '../../api/generated/functions';
 
-import { CheckoutFacade, freshIdempotencyKey } from './checkout.facade';
+import { CheckoutFacade } from './checkout.facade';
 import { CartFacade } from '../cart/cart.facade';
+import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 
 import {
   PAYMENT_POLL_INTERVAL_MS,
