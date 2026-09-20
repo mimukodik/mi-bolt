@@ -147,12 +147,12 @@ subagent except the built-in Explore and Plan agents).
   ... there are still very many fix rounds"): T3 needed four fix rounds and
   T4a three on briefs that named the rule but not the line, and the T4b
   runner compiled five times against guessed getter names.
-- **The orchestrator supplies every fact the coder cannot look up.** A coder
-  session has no web access only because every `start` and every `resume`
-  passes `--disallowedTools WebSearch WebFetch` after `--`; the runner adds
-  nothing of its own, so a call that omits those flags leaves the web tools in
-  the coder's hands. With them passed, a missing fact is not something it can
-  resolve: it reports `blocked` rather than guessing.
+- **The orchestrator supplies every fact the coder cannot look up**, which is
+  now the fallback rather than the rule: "What a runner may reach for" below
+  gives every runner the Angular CLI MCP and a web search, so `start` and
+  `resume` no longer pass `--disallowedTools WebSearch WebFetch`. A fact those
+  tools cannot settle still comes from the orchestrator, and the runner reports
+  `blocked` rather than guessing.
 - **Numbers the unit needs are in the brief before it goes out.** A
   configuration value comes from the user or from the project's own docs, and
   the brief says which. The number of a decision record the unit will write is
@@ -202,13 +202,20 @@ subagent except the built-in Explore and Plan agents).
   and exposes two tools, `web_search` and `understand_image` (measured
   2026-09-20 by a JSON-RPC `initialize` plus `tools/list` against the command
   that config names, which answered `Minimax 1.30.0`; the `tools/list` returns
-  nothing until the `notifications/initialized` message has been sent). It is
-  listed under `disabledMcpServers` for the repository's own path, and that
-  entry is keyed by project directory, so it does not reach a runner worktree,
-  whose path is different. `--allowedTools` therefore names
-  `mcp__minimax-mcp-server` and `mcp__angular-cli` alongside the Bash prefixes,
-  because in `-p` mode an MCP tool that is not allowed is denied like any
-  other. The user's instruction: "tegyuk kotelezove a netes kereses nekik ...
+  nothing until the `notifications/initialized` message has been sent). A
+  runner worktree does not escape a per-project disable, whatever its path
+  suggests: `disabledMcpServers` is keyed by project directory, and a git
+  worktree resolves to the main repository's entry rather than to one of its
+  own, so while the server was disabled for this repository `claude mcp list`
+  run inside a runner worktree printed `minimax-mcp-server: ... - Disabled for
+  this project`, and the same command from `/tmp` or from the home directory
+  printed `Connected` (measured 2026-09-20; the listing is working-directory
+  sensitive, which is what makes the pair of readings the test). The user
+  enabled the server for this project on 2026-09-20, and that same command in
+  the worktree now prints `Connected`, so nothing has to be passed to unblock
+  it. `--allowedTools` still names `mcp__minimax-mcp-server` and
+  `mcp__angular-cli` alongside the Bash prefixes, because in `-p` mode an MCP
+  tool that is not allowed is denied like any other. The user's instruction: "tegyuk kotelezove a netes kereses nekik ...
   mert regi modelek es angular 22 -t meg nem ismerik" ("let us make web search
   mandatory for them ... because they are old models and do not know Angular 22
   yet").
