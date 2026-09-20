@@ -1,13 +1,4 @@
-import {
-  Component,
-  DestroyRef,
-  computed,
-  effect,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -25,7 +16,8 @@ import { ProductFacade } from './product.facade';
 import { ProductGallery } from './product-gallery';
 import { VariantSelector } from './variant-selector';
 import { SpecificationAccordion } from './specification-accordion';
-import { AddToCart, type AddToCartSelection } from './add-to-cart';
+import { AddToCart } from './add-to-cart';
+import { MobileBuyRail } from './mobile-buy-rail';
 
 import { CartFacade } from '../cart/cart.facade';
 
@@ -34,8 +26,12 @@ import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block'
 import { QuantityControl } from '../../shared/ui/quantity-control/quantity-control';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
+
+import type { UiProblem } from '../../shared/types/ui-problem';
 
 import type { Availability } from '../../api/generated/models/availability';
+import type { Variant } from '../../api/generated/models/variant';
 
 /**
  * T16 — product detail page (S3).
@@ -82,6 +78,8 @@ import type { Availability } from '../../api/generated/models/availability';
     ErrorState,
     LoadingState,
     AddToCart,
+    MobileBuyRail,
+    StatusMessage,
     RouterLink,
   ],
   templateUrl: './product-page.html',
@@ -93,21 +91,12 @@ export class ProductPage {
    *  query parameters (T16-AC02 variant query handling). */
   readonly slug = input<string>('');
 
-  /** Emitted when the user asks to add the current selection to the
-   *  cart. T18 (CartFacade integration) wires this to the actual
-   *  mutation. Until then the page just exposes the intent. */
-  readonly addRequested = output<{ variantId: string; quantity: number }>();
-
   private readonly facade = inject(ProductFacade);
   private readonly cartFacade = inject(CartFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** UI-driven image index. The parent owns the active image through
-   *  this signal so the gallery re-renders correctly on variant
-   *  switches (the facade already resets the image signal). */
-  private readonly localImageIndex = signal<number>(0);
   private readonly currentSlug = signal<string>('');
 
   readonly vm = this.facade.vm;
@@ -149,27 +138,22 @@ export class ProductPage {
   readonly gallery = computed(() => {
     const variant = this.vm().selectedVariant;
     if (variant === null) return [];
-    return variant.images.map((i) => ({
-      src: i.src,
-      alt: i.alt,
-      width: i.width,
-      height: i.height,
-      id: i.id,
-    }));
+    return variant.images;
   });
 
-  readonly galleryIndex = computed(() => {
-    // Prefer the local mirror when it points to a valid image.
-    const list = this.gallery();
-    if (list.length === 0) return 0;
-    const local = this.localImageIndex();
-    if (local >= 0 && local < list.length) return local;
-    return Math.min(Math.max(this.vm().galleryIndex, 0), list.length - 1);
-  });
+  /** Id of the image the facade's atomic view model currently selects.
+   *  `ProductGallery` resolves its active image by this id rather
+   *  than by position (FIX-50 item 3). */
+  readonly selectedImageId = computed<string>(() => this.vm().selectedImage?.id ?? '');
+
+  readonly selectedVariant = computed(() => this.vm().selectedVariant);
+
+  /** Every variant of the loaded product, for `VariantSelector`
+   *  (FIX-50 item 4). Empty until a product has loaded. */
+  readonly variants = computed(() => this.product()?.variants ?? []);
 
   readonly selectedColorCode = computed(() => this.vm().selectedColorCode);
   readonly selectedStorageGb = computed<number | null>(() => this.vm().selectedStorageGb);
-  readonly disabledCombinations = computed(() => this.vm().disabledCombinations);
 
   readonly selectedColorName = computed<string | null>(() => {
     const code = this.selectedColorCode();
@@ -207,19 +191,28 @@ export class ProductPage {
   readonly addToCartEnabled = computed(() => this.vm().addToCart.enabled);
   readonly addToCartReason = computed<string | null>(() => this.vm().addToCart.reason);
 
-  /** Selection handed to AddToCart. Null until a variant is chosen. */
-  readonly addToCartSelection = computed<AddToCartSelection | null>(() => {
-    const v = this.vm();
-    const variant = v.selectedVariant;
-    if (variant === null) return null;
-    return {
-      variantId: variant.id,
-      quantity: v.quantity,
-      productName: v.product?.name ?? '',
-      colorName: variant.colorName,
-      storageGb: variant.storageGb,
-    };
-  });
+  /** `AddToCartControl`'s contract (components.md:450) has no
+   *  `enabled` input of its own — the only way it can be disabled is
+   *  `variant === null`. The page therefore withholds the variant
+   *  whenever `addToCart.enabled` is false (invalid deep-link query,
+   *  out of stock, quantity over max), rather than handing over a
+   *  variant the component would otherwise treat as addable. */
+  readonly addableVariant = computed<Variant | null>(() =>
+    this.addToCartEnabled() ? this.selectedVariant() : null,
+  );
+
+  /** In-flight state of the page's single cart mutation. Both the
+   *  desktop control and the mobile rail read it; neither owns one of
+   *  its own (docs/spec/architecture.md:57, components.md:409). */
+  readonly addPending = signal<boolean>(false);
+
+  /** Last cart-mutation failure, or null. Same single owner. */
+  readonly addError = signal<UiProblem | null>(null);
+
+  /** Confirmation text after a successful add. `AddToCartControl`
+   *  declares no input for its own `success` state
+   *  (components.md:450-452), so the page signals it directly. */
+  readonly addSuccessMessage = signal<string | null>(null);
 
   readonly invalidQuery = computed<string | null>(() => this.vm().invalidVariantQuery);
 
@@ -281,29 +274,12 @@ export class ProductPage {
         const params = paramMapToSearchParams(queryParamMap);
         this.facade.load(slug, params);
       });
-
-    // Reset the local image index whenever the gallery changes (variant
-    // switch).
-    effect(() => {
-      const list = this.gallery();
-      if (list.length === 0) {
-        this.localImageIndex.set(0);
-        return;
-      }
-      const current = this.localImageIndex();
-      if (current >= list.length) {
-        this.localImageIndex.set(0);
-      }
-    });
   }
 
-  onColorChange(colorCode: string): void {
-    this.facade.selectColor(colorCode);
-    this.syncVariantQuery();
-  }
-
-  onStorageChange(storageGb: number): void {
-    this.facade.selectStorage(storageGb);
+  /** Resolves the exact variant `VariantSelector` emits and mirrors it
+   *  into the URL (FIX-50 item 4; FIX-23 owns the URL round trip). */
+  onVariantSelected(variantId: string): void {
+    this.facade.selectVariant(variantId);
     this.syncVariantQuery();
   }
 
@@ -318,45 +294,100 @@ export class ProductPage {
     });
   }
 
-  onImageChange(index: number): void {
-    const list = this.gallery();
-    if (index < 0 || index >= list.length) return;
-    const image = list[index];
-    this.localImageIndex.set(index);
-    this.facade.selectImage(image.id);
+  onImageSelected(imageId: string): void {
+    this.facade.selectImage(imageId);
   }
 
-  onZoomChange(_open: boolean): void {
-    // No-op for now. The AccessibleDialog primitive handles focus,
-    // backdrop and restoration; we accept the event so consumers can
-    // gate further UI on zoom state if they need to.
+  onZoomRequested(_imageId: string): void {
+    // No-op: the gallery already opened the dialog for this image
+    // before emitting. Accepted so a future consumer can react to
+    // which image was zoomed without a page change.
   }
 
   onQuantityChanged(value: number): void {
     this.facade.setQuantity(value);
   }
 
-  onAddToCart(): void {
+  /** Performs the one cart mutation this page owns. Called by the
+   *  desktop control's `(addRequested)` and by the mobile rail's
+   *  `(addRequested)` (docs/spec/architecture.md:57, components.md:409:
+   *  "CartFacade injection only at container/add orchestrator"). */
+  async onAddRequested(intent: { variantId: string; quantity: number }): Promise<void> {
+    if (this.addPending()) return;
+    const selection = this.selectedVariant();
+    const productName = this.productName();
+    this.addPending.set(true);
+    this.addError.set(null);
+    this.addSuccessMessage.set(null);
+    try {
+      await this.cartFacade.ensureCart();
+      await this.cartFacade.addItem(intent.variantId, intent.quantity);
+      // The queue's dispatch resolves the failure signals for THIS
+      // intent synchronously before `addItem()`'s own promise
+      // settles, so reading them here reflects this call's own
+      // outcome rather than a stale, unrelated failure.
+      if (this.cartMutationFailed()) {
+        this.addError.set({
+          code: this.cartFacade.error()?.code ?? 'UNKNOWN',
+          message: 'A termék hozzáadása nem sikerült; a kosár változatlan.',
+          fieldErrors: [],
+          retryable: true,
+        });
+        return;
+      }
+      const added = this.findAddedLine(intent.variantId);
+      if (added !== null && selection !== null) {
+        this.addSuccessMessage.set(
+          this.composeAddedMessage(
+            productName,
+            selection.colorName,
+            selection.storageGb,
+            intent.quantity,
+          ),
+        );
+      }
+    } finally {
+      this.addPending.set(false);
+    }
+  }
+
+  /** The mobile rail emits `void` per components.md:478, so the page
+   *  supplies the intent from its own view model. */
+  onRailAddRequested(): void {
     const v = this.vm();
     if (v.selectedVariant === null) return;
-    this.addRequested.emit({
-      variantId: v.selectedVariant.id,
-      quantity: v.quantity,
-    });
-    // The T17 CartFacade is the single owner of the cart mutation
-    // queue (If-Match binding, idempotency, conflict replay) and the
-    // authoritative snapshot the header / cart page read. Wires the
-    // "Kosárba teszem" CTA on this page to the real backend so a
-    // click lands a POST /api/v1/carts/:id/items intent. The facade
-    // surfaces non-recoverable failures on its `error` / `conflict`
-    // / `cartGone` / `cartExpired` signals — it does not throw on
-    // HTTP errors — so a fire-and-forget `addItem()` is the right
-    // call shape here.
-    const variantId = v.selectedVariant.id;
-    const quantity = v.quantity;
-    void this.cartFacade.ensureCart().then(() => {
-      void this.cartFacade.addItem(variantId, quantity);
-    });
+    void this.onAddRequested({ variantId: v.selectedVariant.id, quantity: v.quantity });
+  }
+
+  private cartMutationFailed(): boolean {
+    return (
+      this.cartFacade.error() !== null ||
+      this.cartFacade.conflict() !== null ||
+      this.cartFacade.cartGone() ||
+      this.cartFacade.cartExpired()
+    );
+  }
+
+  /** Locates the freshly added line in the local cart snapshot. The
+   *  cart mock returns a deterministic id per variant, so the line is
+   *  the one whose `variantId` matches the user's selection. */
+  private findAddedLine(variantId: string): { variantId: string } | null {
+    const cart = this.cartFacade.cart();
+    if (cart === null) return null;
+    return cart.items.find((item) => item.variantId === variantId) ?? null;
+  }
+
+  /** Composes the Hungarian confirmation body the StatusMessage
+   *  announces: "<product>, <color>, <storage> GB – <qty> darab a
+   *  kosárban." The page never invents numbers — every value comes
+   *  from the wire-shaped selection it already holds. */
+  private composeAddedMessage(
+    productName: string,
+    colorName: string,
+    storageGb: number,
+    quantity: number,
+  ): string {
+    return `${productName}, ${colorName}, ${String(storageGb)} GB – ${String(quantity)} darab a kosárban.`;
   }
 
   onRetry(): void {

@@ -38,10 +38,10 @@
           <div class="gallery">
             <app-product-gallery
               [images]="gallery()"
-              [imageIndex]="galleryIndex()"
+              [selectedImageId]="selectedImageId()"
               [productName]="productName()"
-              (imageChange)="onImageChange($event)"
-              (zoomChange)="onZoomChange($event)"
+              (imageSelected)="onImageSelected($event)"
+              (zoomRequested)="onZoomRequested($event)"
             ></app-product-gallery>
             @if (highlights().length > 0) {
               <ul class="highlights" aria-label="A termék fő jellemzői">
@@ -91,12 +91,9 @@
             </section>
 
             <app-variant-selector
-              [product]="product()!"
-              [selectedColorCode]="selectedColorCode()"
-              [selectedStorageGb]="selectedStorageGb()"
-              [disabledCombinations]="disabledCombinations()"
-              (colorChange)="onColorChange($event)"
-              (storageChange)="onStorageChange($event)"
+              [variants]="variants()"
+              [selectedId]="selectedVariant()?.id ?? null"
+              (variantSelected)="onVariantSelected($event)"
             ></app-variant-selector>
 
             <div class="quantity">
@@ -116,8 +113,14 @@
             </div>
 
             <div class="cta-desktop">
-              @if (addToCartSelection(); as selection) {
-                <app-add-to-cart [selection]="selection" [enabled]="addToCartEnabled()" />
+              @if (selectedVariant(); as variant) {
+                <app-add-to-cart
+                  [variant]="addableVariant()"
+                  [quantity]="quantity()"
+                  [pending]="addPending()"
+                  [error]="addError()"
+                  (addRequested)="onAddRequested($event)"
+                />
               } @else {
                 <app-button
                   [variant]="'primary'"
@@ -129,6 +132,9 @@
               }
               @if (addToCartReason() !== null && !addToCartEnabled()) {
                 <p class="hint" role="status">{{ addToCartReason() }}</p>
+              }
+              @if (addSuccessMessage(); as message) {
+                <app-status-message [message]="message" [severity]="'success'"></app-status-message>
               }
               <p class="simulation-note" data-testid="product-simulation-note">
                 A rendelés kipróbálható, de nem jár valódi vásárlással.
@@ -153,25 +159,12 @@
   </article>
 
   @if (showStickyRail()) {
-    <aside class="rail" data-testid="purchase-rail" aria-label="Kosárba helyezés">
-      <div class="rail-price">
-        <app-price-block
-          [money]="devicePrice()"
-          [label]="'Készülékár'"
-          [status]="devicePriceStatus()"
-        ></app-price-block>
-      </div>
-      <div class="rail-cta">
-        <app-button
-          data-testid="purchase-cta"
-          [variant]="'primary'"
-          [size]="'comfortable'"
-          [label]="'Kosárba teszem'"
-          [loadingLabel]="'Hozzáadás…'"
-          [disabled]="!addToCartEnabled()"
-          (pressed)="onAddToCart()"
-        ></app-button>
-      </div>
-    </aside>
+    <app-mobile-buy-rail
+      [money]="devicePrice()"
+      [available]="addToCartEnabled()"
+      [pending]="addPending()"
+      [error]="addError()"
+      (addRequested)="onRailAddRequested()"
+    ></app-mobile-buy-rail>
   }
 </main>

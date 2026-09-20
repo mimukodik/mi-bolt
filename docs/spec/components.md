@@ -477,7 +477,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `money:Money|null; available:boolean; pending:boolean`.
+**Signal inputs:** `money:Money|null; available:boolean; pending:boolean; error:UiProblem|null`.
 
 **Outputs:** `addRequested:void`.
 

@@ -156,43 +156,16 @@
   min-height: 24rem;
 }
 
-.rail {
-  display: none;
-}
-
-/* T16-AC04 — mobile purchase rail.
-         The rail sticks to the bottom of the viewport with safe-area
-         padding so the primary CTA stays reachable on iOS / Android
-         notch devices. The page main adds matching padding-bottom so
-         the rail never covers keyboard focus or page content. */
+/* T16-AC04 — mobile purchase rail clearance.
+         The rail (`<app-mobile-buy-rail>`, FIX-50) sticks to the
+         bottom of the viewport with safe-area padding so the primary
+         CTA stays reachable on iOS / Android notch devices. The page
+         main adds matching padding-bottom so the rail never covers
+         keyboard focus or page content. The rail's own rules live in
+         mobile-buy-rail.scss. */
 @media (max-width: 1023px) {
   .page {
     padding-bottom: calc(env(safe-area-inset-bottom) + 8rem);
-  }
-
-  .rail {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: var(--space-3) var(--layout-gutter-mobile);
-    padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-3));
-    background: var(--color-surface-light);
-    border-top: 1px solid var(--color-border-subtle);
-    box-shadow: 0 -2px 8px rgba(23, 27, 31, 0.04);
-    z-index: 10;
-  }
-
-  .rail-price {
-    flex: 0 0 auto;
-  }
-  .rail-cta {
-    flex: 1 1 auto;
-    display: flex;
-    justify-content: flex-end;
   }
 
   /* Only one responsive primary control is focusable at a time

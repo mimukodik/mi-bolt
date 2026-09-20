@@ -54,9 +54,9 @@ function toGeneratedProduct(source: typeof DEMO_PRODUCT): Product {
  *   - T16-AC03: color and storage variant selection with label, swatch,
  *     checkmark, and aria-pressed; specification accordion with disclosure
  *     pattern (aria-expanded, aria-controls, panel role=region).
- *   - T16-AC04: mobile purchase rail carries price block + primary CTA,
- *     emits addRequested with chosen variant id and quantity, and dispatches
- *     to CartFacade.
+ *   - T16-AC04: mobile purchase rail carries price block + primary CTA
+ *     and dispatches the chosen variant id and quantity to CartFacade
+ *     through the page's own add orchestrator (FIX-50).
  *   - T16-AC05: baseline product page has no 3D surface (no canvas element,
  *     no 3D script, no fake 3D button).
  *   - States (R19): initial loading state skeleton, error state with retry.
@@ -131,17 +131,10 @@ afterEach(() => {
 
 @Component({
   imports: [ProductPage],
-  template: `
-    <app-product-page [slug]="slug()" (addRequested)="onAddRequested($event)"></app-product-page>
-  `,
+  template: ` <app-product-page [slug]="slug()"></app-product-page> `,
 })
 class ProductPageHost {
   readonly slug = signal<string>('demo-one-5g');
-  readonly addRequests: { variantId: string; quantity: number }[] = [];
-
-  onAddRequested(event: { variantId: string; quantity: number }): void {
-    this.addRequests.push(event);
-  }
 }
 
 @Component({ template: '' })
@@ -430,17 +423,17 @@ describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
     expect(railCta.textContent).toContain('Kosárba teszem');
   });
 
-  it('T16-AC04: primary CTA emits addRequested output with selected variant id and quantity', async () => {
-    const { host, root, tick } = await createHarness();
+  it('T16-AC04/FIX-50: primary rail CTA adds the selected variant and quantity to the cart', async () => {
+    const { root, tick } = await createHarness();
 
     const ctaButton = queryButton(root, '[data-testid="purchase-cta"] button');
     ctaButton.click();
     await tick();
 
-    expect(host.addRequests.length).toBe(1);
-    const firstRequest = host.addRequests[0];
-    expect(firstRequest.variantId).toBe('demo-one-5g-graphite-256');
-    expect(firstRequest.quantity).toBe(1);
+    const addReq = capturedRequests.find((r) => r.url.includes('/items'));
+    expect(addReq).toBeDefined();
+    const body: unknown = JSON.parse(addReq?.bodyText ?? '{}');
+    expect(body).toMatchObject({ variantId: 'demo-one-5g-graphite-256', quantity: 1 });
   });
 
   it('T16-AC04: primary CTA dispatches cart addition to CartFacade over real HTTP', async () => {
@@ -455,8 +448,8 @@ describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
     expect(cartPost).toBeDefined();
   });
 
-  it('T16-AC04: QuantityControl increments and updates the addRequested quantity', async () => {
-    const { fixture, host, root, tick } = await createHarness();
+  it('T16-AC04/FIX-50: QuantityControl increments and the rail CTA adds the updated quantity', async () => {
+    const { fixture, root, tick } = await createHarness();
 
     const incrementBtn = queryButton(root, '[data-testid="quantity-increment"]');
     incrementBtn.click();
@@ -472,9 +465,9 @@ describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
     ctaButton.click();
     await tick();
 
-    expect(host.addRequests.length).toBe(1);
-    const firstRequest = host.addRequests[0];
-    expect(firstRequest.quantity).toBe(2);
+    const addReq = capturedRequests.find((r) => r.url.includes('/items'));
+    const body: unknown = JSON.parse(addReq?.bodyText ?? '{}');
+    expect(body).toMatchObject({ quantity: 2 });
   });
 });
 
@@ -687,6 +680,38 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(fixture.componentInstance.selectedAvailability()).toBeNull();
     const root = getRootElement(fixture);
     expect(root.querySelector('[data-testid="product-stock"]')).toBeNull();
+  });
+});
+
+describe('FIX-16/FIX-50 desktop CTA disabled state, against the real ProductPage', () => {
+  // FIX-16's own Status line recorded this as open: the original
+  // AC09b case rendered a hand-copied markup replica rather than
+  // ProductPage. The FIX-50 reshape drops AddToCart's `enabled`
+  // input (components.md:450 declares none), so the page now
+  // withholds the variant instead; this closes both at once.
+  it('with an unresolvable ?variant=, .cta-desktop renders app-add-to-cart whose own button is disabled', async () => {
+    const { fixture, root, tick } = await createHarness();
+    const router = TestBed.inject(Router);
+
+    await router.navigate([], { queryParams: { variant: 'nonsense-variant-id' } });
+    await tick();
+    fixture.detectChanges();
+
+    const cta = queryElement(root, '.cta-desktop');
+    const addToCartEl = cta.querySelector('app-add-to-cart');
+    expect(addToCartEl).not.toBeNull();
+    const button = queryButton(cta, 'button');
+    expect(button.disabled).toBe(true);
+    expect(button.textContent.trim()).toBe('Kosárba teszem');
+  });
+
+  it('with a valid selection, .cta-desktop renders app-add-to-cart with its button enabled', async () => {
+    const { root } = await createHarness();
+
+    const cta = queryElement(root, '.cta-desktop');
+    expect(cta.querySelector('app-add-to-cart')).not.toBeNull();
+    const button = queryButton(cta, 'button');
+    expect(button.disabled).toBe(false);
   });
 });
 

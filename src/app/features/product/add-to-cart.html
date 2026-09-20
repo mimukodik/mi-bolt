@@ -4,7 +4,7 @@
     [size]="'comfortable'"
     [label]="'Kosárba teszem'"
     [loadingLabel]="'Hozzáadás…'"
-    [disabled]="!enabled() || pending()"
+    [disabled]="disabled()"
     [loading]="pending()"
     (pressed)="onAdd()"
     data-testid="add-to-cart-button"
@@ -12,11 +12,7 @@
 
   @if (statusBanner(); as banner) {
     <div class="status">
-      <app-status-message
-        [message]="banner.text"
-        [severity]="severity()"
-        (dismissed)="dismissBanner()"
-      ></app-status-message>
+      <app-status-message [message]="banner.text" [severity]="severity()"></app-status-message>
     </div>
   }
 </div>

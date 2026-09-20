@@ -6,17 +6,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ProductGallery } from './product-gallery';
-import type { ImageLike } from '../../shared/ui/product-image/product-image';
+import type { Image } from '../../api/generated/models/image';
 
 /**
- * T16 - Product gallery component (T16-AC02 / T16-AC05).
+ * T16 / FIX-50 - Product gallery component (T16-AC02 / T16-AC05).
+ *
+ * Reshaped to `docs/spec/components.md:420-428`: the component
+ * resolves its active image by id (`selectedImageId`) rather than by
+ * position, so a variant switch that swaps the image list never shows
+ * the wrong photo at a stale index.
  *
  * Real Angular TestBed behavior tests covering:
  *
  *   - T16-AC02: prev and next buttons advance and rewind active image,
  *     disabling at boundary 0 and length - 1 without wrapping.
  *   - T16-AC02: thumbnail strip renders one button per image with
- *     aria-current on the selected index; click invokes goTo(i).
+ *     aria-current on the selected id; click invokes goTo(id).
  *   - T16-AC02: visible counter format is "current / total" with polite
  *     aria-live announcements.
  *   - T16-AC02: zoom button opens AccessibleDialog with role=dialog,
@@ -29,56 +34,62 @@ import type { ImageLike } from '../../shared/ui/product-image/product-image';
  *     stable without user action).
  *   - T16-AC05: no 3D surface (no canvas element rendered, no 3D
  *     engine script, no fake 3D action button).
+ *   - FIX-50: an id that matches no image renders the image-error
+ *     note and falls back to the first image rather than substituting
+ *     a different variant's photo.
  */
 
-const sampleImages: readonly ImageLike[] = [
+const sampleImages: readonly Image[] = [
   {
+    id: 'img-front',
     src: '/assets/products/demo-one-front.webp',
     alt: 'Demo One 5G - Elolap',
     width: 800,
     height: 600,
   },
   {
+    id: 'img-back',
     src: '/assets/products/demo-one-back.webp',
     alt: 'Demo One 5G - Hatlap',
     width: 800,
     height: 600,
   },
   {
+    id: 'img-side',
     src: '/assets/products/demo-one-side.webp',
     alt: 'Demo One 5G - Oldalnezat',
     width: 800,
     height: 600,
   },
-] satisfies readonly ImageLike[];
+] satisfies readonly Image[];
 
 @Component({
   imports: [ProductGallery],
   template: `
     <app-product-gallery
       [images]="images()"
-      [imageIndex]="imageIndex()"
+      [selectedImageId]="selectedImageId()"
       [productName]="productName()"
-      (imageChange)="onImageChange($event)"
-      (zoomChange)="onZoomChange($event)"
+      (imageSelected)="onImageSelected($event)"
+      (zoomRequested)="onZoomRequested($event)"
     ></app-product-gallery>
   `,
 })
 class GalleryTestHost {
-  readonly images = signal<readonly ImageLike[]>(sampleImages);
-  readonly imageIndex = signal<number>(0);
+  readonly images = signal<readonly Image[]>(sampleImages);
+  readonly selectedImageId = signal<string>('img-front');
   readonly productName = signal<string>('Demo One 5G');
 
-  readonly emittedImageChanges: number[] = [];
-  readonly emittedZoomChanges: boolean[] = [];
+  readonly emittedImageSelected: string[] = [];
+  readonly emittedZoomRequested: string[] = [];
 
-  onImageChange(index: number): void {
-    this.emittedImageChanges.push(index);
-    this.imageIndex.set(index);
+  onImageSelected(imageId: string): void {
+    this.emittedImageSelected.push(imageId);
+    this.selectedImageId.set(imageId);
   }
 
-  onZoomChange(opened: boolean): void {
-    this.emittedZoomChanges.push(opened);
+  onZoomRequested(imageId: string): void {
+    this.emittedZoomRequested.push(imageId);
   }
 }
 
@@ -164,7 +175,7 @@ async function createHarness(): Promise<{
 }
 
 describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
-  it('T16-AC02: renders previous and next buttons that emit imageChange with updated index', async () => {
+  it('T16-AC02: renders previous and next buttons that emit imageSelected with the adjacent id', async () => {
     const { fixture, host, root } = await createHarness();
 
     const prevBtn = queryButton(root, '[data-testid="gallery-prev"]');
@@ -172,49 +183,48 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
     expect(prevBtn).not.toBeNull();
     expect(nextBtn).not.toBeNull();
 
-    // At index 0, next button advances to index 1
+    // At the first image, next button advances to the second
     nextBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges).toEqual([1]);
-    expect(host.imageIndex()).toBe(1);
+    expect(host.emittedImageSelected).toEqual(['img-back']);
+    expect(host.selectedImageId()).toBe('img-back');
 
     const activePhoto = queryImage(root, '[data-testid="image-photo"]');
     expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-back.webp');
 
-    // From index 1, prev button returns to index 0
+    // From the second image, prev button returns to the first
     prevBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges).toEqual([1, 0]);
-    expect(host.imageIndex()).toBe(0);
+    expect(host.emittedImageSelected).toEqual(['img-back', 'img-front']);
+    expect(host.selectedImageId()).toBe('img-front');
     expect(imagePath(queryImage(root, '[data-testid="image-photo"]'))).toBe(
       '/assets/products/demo-one-front.webp',
     );
   });
 
-  it('T16-AC02: disables prev button at start index 0 and does not wrap backward', async () => {
+  it('T16-AC02: disables prev button at the first image and does not wrap backward', async () => {
     const { fixture, host, root } = await createHarness();
 
     const prevBtn = queryButton(root, '[data-testid="gallery-prev"]');
     expect(prevBtn.disabled).toBe(true);
-    expect(host.imageIndex()).toBe(0);
+    expect(host.selectedImageId()).toBe('img-front');
 
-    // Clicking disabled prev does not advance or emit
     prevBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges.length).toBe(0);
-    expect(host.imageIndex()).toBe(0);
+    expect(host.emittedImageSelected.length).toBe(0);
+    expect(host.selectedImageId()).toBe('img-front');
   });
 
   it('T16-AC02: disables next button at the last image and does not wrap forward', async () => {
     const { fixture, host, root } = await createHarness();
 
-    host.imageIndex.set(2);
+    host.selectedImageId.set('img-side');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -225,8 +235,8 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges.length).toBe(0);
-    expect(host.imageIndex()).toBe(2);
+    expect(host.emittedImageSelected.length).toBe(0);
+    expect(host.selectedImageId()).toBe('img-side');
   });
 });
 
@@ -256,7 +266,7 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     });
   });
 
-  it('T16-AC02: clicking a thumbnail emits imageChange with that index and selects it', async () => {
+  it('T16-AC02: clicking a thumbnail emits imageSelected with that id and selects it', async () => {
     const { fixture, host, root } = await createHarness();
 
     const thumb2 = queryButton(root, '[data-testid="gallery-thumb-2"]');
@@ -264,8 +274,8 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges).toEqual([2]);
-    expect(host.imageIndex()).toBe(2);
+    expect(host.emittedImageSelected).toEqual(['img-side']);
+    expect(host.selectedImageId()).toBe('img-side');
 
     const thumb0 = queryButton(root, '[data-testid="gallery-thumb-0"]');
     expect(thumb0.getAttribute('aria-current')).toBe('false');
@@ -282,13 +292,13 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     expect(countEl.getAttribute('aria-live')).toBe('polite');
     expect(countEl.textContent.trim()).toBe('1 / 3');
 
-    host.imageIndex.set(1);
+    host.selectedImageId.set('img-back');
     fixture.detectChanges();
     await fixture.whenStable();
 
     expect(countEl.textContent.trim()).toBe('2 / 3');
 
-    host.imageIndex.set(2);
+    host.selectedImageId.set('img-side');
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -296,8 +306,29 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
   });
 });
 
+describe('FIX-50 product-gallery id resolution', () => {
+  it('an id that matches no image falls back to the first image and renders the image-error note', async () => {
+    const { fixture, host, root } = await createHarness();
+
+    host.selectedImageId.set('does-not-exist');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const note = queryElement(root, '[data-testid="gallery-image-error"]');
+    expect(note.getAttribute('role')).toBe('status');
+
+    const activePhoto = queryImage(root, '[data-testid="image-photo"]');
+    expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-front.webp');
+  });
+
+  it('a resolved id renders no image-error note', async () => {
+    const { root } = await createHarness();
+    expect(root.querySelector('[data-testid="gallery-image-error"]')).toBeNull();
+  });
+});
+
 describe('T16-AC02 product-gallery zoom dialog', () => {
-  it('T16-AC02: zoom button opens AccessibleDialog with role=dialog and aria-modal=true', async () => {
+  it('T16-AC02: zoom button opens AccessibleDialog with role=dialog, aria-modal=true, and emits zoomRequested with the current id', async () => {
     const { fixture, host, root } = await createHarness();
 
     const zoomBtn = queryButton(root, '[data-testid="gallery-zoom-open"]');
@@ -308,7 +339,7 @@ describe('T16-AC02 product-gallery zoom dialog', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedZoomChanges).toEqual([true]);
+    expect(host.emittedZoomRequested).toEqual(['img-front']);
 
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
@@ -316,7 +347,7 @@ describe('T16-AC02 product-gallery zoom dialog', () => {
     expect(dialog?.getAttribute('aria-label')).toBe('Nagyított kép: Demo One 5G');
   });
 
-  it('T16-AC02: dialog close button closes the zoom dialog and emits zoomChange false', async () => {
+  it('T16-AC02: dialog close button closes the zoom dialog (closing is internal — no output for it)', async () => {
     const { fixture, host, root } = await createHarness();
 
     const zoomBtn = queryButton(root, '[data-testid="gallery-zoom-open"]');
@@ -333,7 +364,7 @@ describe('T16-AC02 product-gallery zoom dialog', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedZoomChanges).toEqual([true, false]);
+    expect(host.emittedZoomRequested).toEqual(['img-front']);
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 });
@@ -344,23 +375,21 @@ describe('T16-AC02 product-gallery keyboard navigation', () => {
 
     const gallerySection = queryElement(root, '[data-testid="product-gallery"]');
 
-    // ArrowRight steps to index 1
     gallerySection.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
     );
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges).toEqual([1]);
-    expect(host.imageIndex()).toBe(1);
+    expect(host.emittedImageSelected).toEqual(['img-back']);
+    expect(host.selectedImageId()).toBe('img-back');
 
-    // ArrowLeft steps back to index 0
     gallerySection.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges).toEqual([1, 0]);
-    expect(host.imageIndex()).toBe(0);
+    expect(host.emittedImageSelected).toEqual(['img-back', 'img-front']);
+    expect(host.selectedImageId()).toBe('img-front');
   });
 
   it('T16-AC02: Home moves to first image and End moves to last image', async () => {
@@ -368,21 +397,19 @@ describe('T16-AC02 product-gallery keyboard navigation', () => {
 
     const gallerySection = queryElement(root, '[data-testid="product-gallery"]');
 
-    // End jumps to index 2
     gallerySection.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges).toEqual([2]);
-    expect(host.imageIndex()).toBe(2);
+    expect(host.emittedImageSelected).toEqual(['img-side']);
+    expect(host.selectedImageId()).toBe('img-side');
 
-    // Home jumps back to index 0
     gallerySection.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedImageChanges).toEqual([2, 0]);
-    expect(host.imageIndex()).toBe(0);
+    expect(host.emittedImageSelected).toEqual(['img-side', 'img-front']);
+    expect(host.selectedImageId()).toBe('img-front');
   });
 
   it('T16-AC02: Escape key closes the zoom dialog when open', async () => {
@@ -400,7 +427,7 @@ describe('T16-AC02 product-gallery keyboard navigation', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.emittedZoomChanges).toEqual([true, false]);
+    expect(host.emittedZoomRequested).toEqual(['img-front']);
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 });
@@ -413,7 +440,6 @@ describe('T16-AC02 product-gallery image error fallback and no autoplay', () => 
     expect(photoImg).not.toBeNull();
     expect(root.querySelector('[data-testid="image-fallback"]')).toBeNull();
 
-    // Trigger image load failure
     photoImg.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     await fixture.whenStable();
@@ -428,17 +454,16 @@ describe('T16-AC02 product-gallery image error fallback and no autoplay', () => 
   it('T16-AC02: does not autoplay or advance index automatically without user action', async () => {
     const { fixture, host } = await createHarness();
 
-    expect(host.imageIndex()).toBe(0);
+    expect(host.selectedImageId()).toBe('img-front');
 
-    // Advance artificial delay and trigger change detection
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 50);
     });
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(host.imageIndex()).toBe(0);
-    expect(host.emittedImageChanges.length).toBe(0);
+    expect(host.selectedImageId()).toBe('img-front');
+    expect(host.emittedImageSelected.length).toBe(0);
   });
 });
 

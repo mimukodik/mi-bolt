@@ -44,8 +44,13 @@
       Nagyítás
     </button>
     <p class="count" data-testid="gallery-count" aria-live="polite">
-      {{ imageIndex() + 1 }} / {{ images().length }}
+      {{ activePosition() }} / {{ images().length }}
     </p>
+    @if (idUnresolved()) {
+      <p class="image-error" role="status" data-testid="gallery-image-error">
+        A kiválasztott kép nem található; az első kép látható helyette.
+      </p>
+    }
   </div>
   <ol class="thumbs" aria-label="Galéria indexképei">
     @for (image of images(); let i = $index; track i) {
@@ -54,9 +59,9 @@
           type="button"
           class="thumb"
           [attr.data-testid]="'gallery-thumb-' + i"
-          [attr.aria-current]="i === imageIndex() ? 'true' : 'false'"
+          [attr.aria-current]="image.id === selectedImageId() ? 'true' : 'false'"
           [attr.aria-label]="'Ugrás a(z) ' + (i + 1) + '. képre'"
-          (click)="goTo(i)"
+          (click)="goTo(image.id)"
         >
           <img
             class="thumb-img"

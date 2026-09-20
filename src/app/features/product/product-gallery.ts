@@ -10,18 +10,23 @@ import {
 } from '@angular/core';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
-import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
+import { ProductImage } from '../../shared/ui/product-image/product-image';
+
+import type { Image } from '../../api/generated/models/image';
 
 /**
  * T16 — product image gallery.
  *
- * Owns the active image index inside a single variant's gallery. The
- * gallery deliberately does NOT auto-advance: there is no autoplay
- * timer, no time-based rotation, no `setInterval` and no CSS
- * animation that moves the image. The user is in full control of
- * which image is on screen, and they can reach the next / previous
- * image by clicking the buttons, clicking a thumbnail, or pressing
- * the arrow keys on the keyboard.
+ * Owns no image list of its own: it renders whichever `images()` the
+ * parent supplies and follows `selectedImageId()`, resolving the
+ * active image by id (`docs/spec/components.md:420`) rather than by
+ * position, so a variant switch that swaps the image list never shows
+ * the wrong photo at a stale index. The gallery deliberately does NOT
+ * auto-advance: there is no autoplay timer, no time-based rotation, no
+ * `setInterval` and no CSS animation that moves the image. The user is
+ * in full control of which image is on screen, and they can reach the
+ * next / previous image by clicking the buttons, clicking a
+ * thumbnail, or pressing the arrow keys on the keyboard.
  *
  * Required states:
  * - default     — the active image is on screen, the count reads
@@ -29,9 +34,11 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
  * - zoom-open   — the active image is mounted inside an
  *     AccessibleDialog with role=dialog and a CDK-managed focus trap.
  *     Escape and the dialog's close button both close it.
- * - error       — ProductImage swaps to its named fallback so a
- *     missing photo never substitutes an invented image of another
- *     device (R11).
+ * - image-error — `selectedImageId()` does not resolve inside
+ *     `images()`. Rather than silently substituting a different
+ *     variant's photo, the component falls back to the first image
+ *     for layout purposes and renders an explanatory note (R11,
+ *     `docs/spec/screens.md:61`).
  *
  * Keyboard model:
  * - ArrowRight / ArrowLeft on the gallery surface move the index.
@@ -48,30 +55,46 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
   styleUrl: './product-gallery.scss',
 })
 export class ProductGallery {
-  readonly images = input<readonly ImageLike[]>([]);
-  readonly imageIndex = input<number>(0);
+  readonly images = input<readonly Image[]>([]);
+  readonly selectedImageId = input<string>('');
   readonly productName = input<string>('');
 
-  readonly imageChange = output<number>();
-  readonly zoomChange = output<boolean>();
+  readonly imageSelected = output<string>();
+  readonly zoomRequested = output<string>();
 
   private readonly frame = viewChild<ElementRef<HTMLElement>>('gallery-main');
-
-  /** Mirror of `imageIndex()` so internal clicks do not lose state when
-   *  the parent re-emits the same value. The reactive `effect` keeps
-   *  the mirror in sync whenever the parent pushes a new index (e.g.
-   *  on a variant switch), so a stale local value cannot win the
-   *  effective-index race against the new variant's image list. */
-  private readonly localIndex = signal<number>(0);
 
   readonly zoomOpen = signal(false);
   private readonly imageFailed = signal(false);
 
-  readonly activeImage = computed<ImageLike | null>(() => {
+  /** True when `selectedImageId()` names no image in `images()`. The
+   *  active image then falls back to the first one for layout, and
+   *  the template renders the `image-error` note instead of
+   *  substituting a different photo silently. */
+  readonly idUnresolved = computed<boolean>(() => {
+    const list = this.images();
+    if (list.length === 0) return false;
+    return !list.some((img) => img.id === this.selectedImageId());
+  });
+
+  private readonly effectiveIndex = computed<number>(() => {
+    const list = this.images();
+    if (list.length === 0) return 0;
+    const idx = list.findIndex((img) => img.id === this.selectedImageId());
+    return idx >= 0 ? idx : 0;
+  });
+
+  readonly activeImage = computed<Image | null>(() => {
     const list = this.images();
     if (list.length === 0) return null;
-    const idx = this.effectiveIndex();
-    return list[Math.min(Math.max(idx, 0), list.length - 1)] ?? null;
+    return list[this.effectiveIndex()] ?? null;
+  });
+
+  /** 1-based position of the active image, for the "current / total"
+   *  counter. 0 while the gallery has no images. */
+  readonly activePosition = computed<number>(() => {
+    if (this.images().length === 0) return 0;
+    return this.effectiveIndex() + 1;
   });
 
   readonly canPrev = computed(() => this.effectiveIndex() > 0);
@@ -81,45 +104,47 @@ export class ProductGallery {
   });
 
   constructor() {
-    // Re-sync the mirror on every change to `imageIndex()`. The effect
-    // also fires once on construction, replacing the previous
-    // queueMicrotask + ngOnInit pair with a single reactive source
-    // of truth.
+    // Clear the stale image-load flag whenever the active image
+    // changes (variant switch or a new selection), so a fallback
+    // error from a previous image never lingers on the new one.
     effect(() => {
-      this.localIndex.set(this.imageIndex());
+      this.activeImage();
+      this.imageFailed.set(false);
     });
   }
 
   prev(): void {
     if (!this.canPrev()) return;
-    const next = this.effectiveIndex() - 1;
-    this.localIndex.set(next);
-    this.imageChange.emit(next);
+    const target = this.images()[this.effectiveIndex() - 1];
+    this.imageSelected.emit(target.id);
   }
 
   next(): void {
     if (!this.canNext()) return;
-    const next = this.effectiveIndex() + 1;
-    this.localIndex.set(next);
-    this.imageChange.emit(next);
+    const target = this.images()[this.effectiveIndex() + 1];
+    this.imageSelected.emit(target.id);
   }
 
-  goTo(index: number): void {
-    const list = this.images();
-    if (index < 0 || index >= list.length) return;
-    this.localIndex.set(index);
-    this.imageChange.emit(index);
+  goTo(imageId: string): void {
+    const exists = this.images().some((img) => img.id === imageId);
+    if (!exists) return;
+    this.imageSelected.emit(imageId);
   }
 
   openZoom(): void {
+    const image = this.activeImage();
+    if (image === null) return;
     this.zoomOpen.set(true);
-    this.zoomChange.emit(true);
+    this.zoomRequested.emit(image.id);
   }
 
+  /** Closing the zoom is internal: `components.md:426` lists
+   *  `zoom-open` as a state of this component and gives it no close
+   *  output, so `AccessibleDialog`'s `(closed)` wires to this
+   *  method directly rather than to a parent-owned signal. */
   closeZoom(): void {
     if (!this.zoomOpen()) return;
     this.zoomOpen.set(false);
-    this.zoomChange.emit(false);
   }
 
   /**
@@ -128,6 +153,7 @@ export class ProductGallery {
    * user can reach the gallery surface with the keyboard.
    */
   onKeydown(event: KeyboardEvent): void {
+    const list = this.images();
     if (event.key === 'ArrowRight') {
       event.preventDefault();
       this.next();
@@ -137,12 +163,12 @@ export class ProductGallery {
     } else if (event.key === 'Escape' && this.zoomOpen()) {
       event.preventDefault();
       this.closeZoom();
-    } else if (event.key === 'Home') {
+    } else if (event.key === 'Home' && list.length > 0) {
       event.preventDefault();
-      this.goTo(0);
-    } else if (event.key === 'End') {
+      this.imageSelected.emit(list[0].id);
+    } else if (event.key === 'End' && list.length > 0) {
       event.preventDefault();
-      this.goTo(this.images().length - 1);
+      this.imageSelected.emit(list[list.length - 1].id);
     }
   }
 
@@ -160,17 +186,5 @@ export class ProductGallery {
 
   onImageFailed(): void {
     this.imageFailed.set(true);
-  }
-
-  private effectiveIndex(): number {
-    const input = this.imageIndex();
-    const list = this.images();
-    if (list.length === 0) return 0;
-    const safe = Math.min(Math.max(input, 0), list.length - 1);
-    // Prefer the local mirror when it matches a valid range so the
-    // user-driven navigation stays responsive.
-    const local = this.localIndex();
-    if (local >= 0 && local < list.length) return local;
-    return safe;
   }
 }

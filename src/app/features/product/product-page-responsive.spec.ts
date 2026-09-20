@@ -84,13 +84,15 @@ describe('FIX-26 product-page-responsive: one rail, one in-flow CTA', () => {
     const ctaDesktops = root.querySelectorAll('.cta-desktop');
     expect(ctaDesktops.length).toBe(1);
 
-    // The rail is a direct child of `.page` (an `<aside>` sibling of
-    // `.card`); the in-flow CTA lives inside `.buy`, inside `.card`.
-    // Distinct parents is what lets the CSS hide one without touching
-    // the other.
+    // The rail is wrapped by `<app-mobile-buy-rail>` (FIX-50), itself
+    // a direct child of `.page`; the in-flow CTA lives inside `.buy`,
+    // inside `.card`. Distinct parents is what lets the CSS hide one
+    // without touching the other.
     const rail = rails[0];
     const ctaDesktop = ctaDesktops[0];
-    expect(rail.parentElement).toBe(root.querySelector('.page'));
+    const railHost = rail.parentElement;
+    expect(railHost?.tagName.toLowerCase()).toBe('app-mobile-buy-rail');
+    expect(railHost?.parentElement).toBe(root.querySelector('.page'));
     expect(ctaDesktop.closest('.buy')).not.toBeNull();
     expect(rail.parentElement).not.toBe(ctaDesktop.parentElement);
   });
