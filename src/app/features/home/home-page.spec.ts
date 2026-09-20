@@ -277,7 +277,7 @@ function productFixtures(): Map<string, Product> {
 // ---------------------------------------------------------------------------
 
 describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => {
-  it('hero uses the navy shell token and the brand accent token (docs/design/yettel.md §9)', async () => {
+  it('hero uses the navy shell token and the brand accent token, and its CTA is the lime pill (docs/design/yettel.md §9)', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -289,6 +289,20 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     const css = getComponentStyles(Hero).join(' ');
     expect(css.includes('color-shell-dark')).toBe(true);
     expect(css.includes('color-brand-accent')).toBe(true);
+    // The browser pass caught .hero__cta rendering navy text on a navy
+    // ground with an 8px radius. --color-brand-accent now resolves to the
+    // lime #b4ff00, so the pair below is the lime pill with navy text, and
+    // the radius is the 24px --radius-pill every yettel .btn carries (§4).
+    const normalised = css
+      .replaceAll('%NS%', '')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s+/g, '');
+    const at = normalised.indexOf('.hero__cta{');
+    expect(at).toBeGreaterThan(-1);
+    const cta = normalised.slice(at, normalised.indexOf('}', at));
+    expect(cta).toContain('background:var(--color-brand-accent)');
+    expect(cta).toContain('color:var(--color-text-primary)');
+    expect(cta).toContain('border-radius:var(--radius-pill)');
   });
 
   it('hero copy is live Hungarian text and contains no raster CTA image', async () => {

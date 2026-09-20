@@ -1,4 +1,4 @@
-/* MiBolt Button primitive — docs/design/yettel.md §5 button recipes.
+/* MiBolt Button primitive — docs/design/yettel.md §5 and §9 button recipes.
    The invariant box and type (inline-flex, 12px 24px padding, 16/24) are
    Tailwind utilities on the template; this sheet holds what utilities cannot
    express: the variant colours behind the .is-* state classes, the states,
@@ -9,9 +9,9 @@
   min-width: var(--button-height);
   border: 1px solid transparent;
   border-radius: var(--button-radius);
-  font-family: var(--font-bold);
-  color: var(--color-surface);
-  background: var(--color-primary);
+  font-family: var(--font-family-bold);
+  color: var(--color-primary);
+  background: var(--color-accent);
   transition:
     background-color var(--motion-fast) ease,
     border-color var(--motion-fast) ease,
@@ -29,7 +29,8 @@
   border-color: var(--color-primary);
 }
 
-/* secondary on dark — the primary-inverse recipe (.btn--primary-inverse) */
+/* secondary on dark — the same lime pill on a navy ground; it differs from
+   the primary only in its focus ring (see below) */
 .root.is-secondary-on-dark {
   color: var(--color-primary);
   background: var(--color-accent);
@@ -37,7 +38,7 @@
 }
 
 .root:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--color-accent-hover);
 }
 
 .root.is-secondary:hover:not(:disabled) {
@@ -58,10 +59,11 @@
   outline-offset: 2px;
 }
 
-/* The inverse button sits on a navy surface, where the navy ring is invisible;
-   lime is yettel's on-navy accent (docs/design/yettel.md §5, header). */
+/* The pill sits on a navy surface, where both the navy ring and a lime one
+   (the pill's own colour) disappear; white is the only ring that reads there
+   (docs/design/yettel.md §9). */
 .root.is-secondary-on-dark:focus-visible {
-  outline-color: var(--color-focus-dark);
+  outline-color: var(--color-text-inverse);
 }
 
 .root:disabled {

@@ -39,10 +39,11 @@
   --radius-card: 16px;
   --radius-pill: 24px;
 
-  /* Type faces — docs/design/yettel.md §3. The three yettel faces are
-     separate families rather than weights of one family, so the bold and
-     light faces are reached through font-family, not through font-weight. */
+  /* Type faces — docs/design/yettel.md §3. Only the regular face is a theme
+     variable: Tailwind's --font-* namespace generates the font-family
+     utilities, so a --font-bold here would turn `font-bold` into a
+     font-family class and take away the weight utility 16 templates use.
+     The bold and light faces are plain custom properties in
+     src/styles/tokens.css (--font-family-bold, --font-family-light). */
   --font-sans: 'portal-font-regular', sans-serif, arial;
-  --font-bold: 'portal-font-bold', sans-serif, arial;
-  --font-light: 'portal-font-light', sans-serif, arial;
 }

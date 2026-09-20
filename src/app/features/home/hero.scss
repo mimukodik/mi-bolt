@@ -82,7 +82,7 @@
   font-size: var(--type-body);
   font-weight: var(--weight-bold);
   text-decoration: none;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--color-brand-accent);
   transition: background-color var(--motion-fast) ease;
   min-width: 44px;
@@ -108,7 +108,7 @@
   font-size: var(--type-body);
   font-weight: var(--weight-medium);
   text-decoration: none;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--color-text-inverse-muted);
   min-width: 44px;
   transition:

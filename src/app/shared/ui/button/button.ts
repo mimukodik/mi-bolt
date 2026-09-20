@@ -3,11 +3,12 @@ import { Component, computed, input, output } from '@angular/core';
 /**
  * MiBolt Button primitive.
  *
- * Variants follow docs/design/yettel.md §5:
- * - `primary`   — white on navy `.btn--primary` (single prominent CTA per unit).
+ * Variants follow docs/design/yettel.md §5 and §9:
+ * - `primary`   — navy on lime `.btn--primary-inverse` (single prominent CTA
+ *   per unit); the lime pill is yettel's CTA on every captured screen.
  * - `secondary` — the outlined navy `.btn-outline-navy` on white (restrained).
- * - `secondaryOnDark` — the `.btn--primary-inverse` recipe, navy on lime, for
- *   use on the navy shell surfaces.
+ * - `secondaryOnDark` — the same lime pill for the navy shell surfaces, where
+ *   the focus ring has to be white rather than navy.
  *
  * Sizes:
  * - `standard`     — 44 px (the project minimum purchase-flow target).

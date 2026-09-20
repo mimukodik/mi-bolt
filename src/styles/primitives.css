@@ -79,7 +79,7 @@ h5,
 h6 {
   /* docs/design/yettel.md §3: headings are set in the bold face, which is a
      family of its own rather than a weight of the regular face. */
-  font-family: var(--font-bold);
+  font-family: var(--font-family-bold);
   font-weight: var(--weight-bold);
   line-height: var(--line-height-heading);
   margin: 0;

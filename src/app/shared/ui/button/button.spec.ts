@@ -38,6 +38,29 @@ function hasComponentStyles(val: unknown): val is ComponentWithStyles {
   return 'ɵcmp' in val;
 }
 
+/** Strips the compiler's custom-property namespace placeholder, the emulated
+ * encapsulation attribute selector and all whitespace, so a declaration can be
+ * asserted verbatim regardless of how the build formatted it. */
+function normaliseComponentCss(css: string): string {
+  return css
+    .replaceAll('%NS%', '')
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\s+/g, '');
+}
+
+/** The declaration block of one rule of the normalised sheet. Asserting on the
+ * block rather than on the whole sheet is what makes a colour pair belong to
+ * the variant under test: `.root` and `.root.is-secondary-on-dark` now carry
+ * the same lime fill, so a sheet-wide match proves nothing about either. */
+function ruleBody(css: string, selector: string): string {
+  const at = css.indexOf(`${selector}{`);
+  if (at === -1) {
+    throw new Error(`Expected a rule for ${selector}`);
+  }
+  const open = at + selector.length + 1;
+  return css.slice(open, css.indexOf('}', open));
+}
+
 function setup(): {
   fixture: ComponentFixture<HostComponent>;
   host: HostComponent;
@@ -145,22 +168,45 @@ describe('Button primitive', () => {
     expect(css).toContain(':focus-visible');
   });
 
-  it('wires the yettel button recipe into its stylesheet (docs/design/yettel.md §5)', () => {
+  it('wires the yettel button recipe into its stylesheet (docs/design/yettel.md §5, §9)', () => {
     if (!hasComponentStyles(Button)) {
       throw new Error('Expected Button component styles');
     }
     // The compiler stores custom-property names with a namespace placeholder
-    // (`var(--%NS%color-primary)`), so these match the bare token name, the
-    // same way home-page.spec.ts and layouts.spec.ts do.
-    const css = Button.ɵcmp.styles.join('\n');
-    // primary: white on navy #002340; secondary: the same navy as outline.
-    expect(css).toContain('color-primary');
-    // secondary-on-dark: the .btn--primary-inverse recipe, navy on lime.
-    expect(css).toContain('color-accent');
-    expect(css).toContain('color-accent-hover');
+    // (`var(--%NS%color-primary)`) and the emulated-encapsulation attribute
+    // selector; both are stripped here, and whitespace with them, so the
+    // declaration pairs below match whether or not the build minified them.
+    const css = normaliseComponentCss(Button.ɵcmp.styles.join('\n'));
+    // primary: the .btn--primary-inverse recipe, navy #002340 on lime
+    // #b4ff00 — the lime pill is yettel's CTA on every captured screen.
+    const primary = ruleBody(css, '.root');
+    expect(primary).toContain('color:var(--color-primary)');
+    expect(primary).toContain('background:var(--color-accent)');
+    // the 24px pill radius (§4) and the bold face, reached through the token
+    // that is not a Tailwind theme variable so `font-bold` keeps its weight.
+    expect(primary).toContain('border-radius:var(--button-radius)');
+    expect(primary).toContain('font-family:var(--font-family-bold)');
+    // hover: #c5ff64.
+    expect(ruleBody(css, '.root:hover:not(:disabled)')).toContain(
+      'background:var(--color-accent-hover)',
+    );
+    // secondary: the navy outline on white (.btn-outline-navy).
+    const secondary = ruleBody(css, '.root.is-secondary');
+    expect(secondary).toContain('color:var(--color-primary)');
+    expect(secondary).toContain('background:var(--color-surface)');
+    expect(secondary).toContain('border-color:var(--color-primary)');
+    // secondary-on-dark: the same lime pill, with the white ring the navy
+    // ground needs — a navy or lime ring disappears there.
+    const onDark = ruleBody(css, '.root.is-secondary-on-dark');
+    expect(onDark).toContain('color:var(--color-primary)');
+    expect(onDark).toContain('background:var(--color-accent)');
+    expect(ruleBody(css, '.root.is-secondary-on-dark:focus-visible')).toContain(
+      'outline-color:var(--color-text-inverse)',
+    );
     // disabled: #80919f on #e5e9ec.
-    expect(css).toContain('color-disabled-text');
-    expect(css).toContain('color-disabled-bg');
+    const disabled = ruleBody(css, '.root:disabled');
+    expect(disabled).toContain('color:var(--color-disabled-text)');
+    expect(disabled).toContain('background:var(--color-disabled-bg)');
     // the retired orange palette is gone from this primitive.
     expect(css).not.toContain('color-brand-accent');
   });
