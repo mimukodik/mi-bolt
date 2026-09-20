@@ -44,6 +44,10 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ng test
 ```
 
+## Continuous integration
+
+`.github/workflows/pr-check.yml` runs lint and format, unit tests with coverage (summary in the job summary, report as the `coverage-unit` artifact), the production build and the API client drift check in parallel on every pull request and push to `main`, on Blacksmith runners. The Playwright e2e job exists but is switched off in this phase.
+
 ## Running end-to-end tests
 
 For end-to-end (e2e) testing, run:
