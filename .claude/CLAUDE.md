@@ -389,7 +389,7 @@ it here.
 Every `.md` file under `.claude/rules/` without `paths` frontmatter is loaded
 at launch with the same priority as this file and reaches every subagent
 except the built-in Explore and Plan agents, so the rules in the files listed
-below are binding even though their text lives elsewhere. None of the five
+below are binding even though their text lives elsewhere. None of the six
 is `paths`-scoped: scoped rules only inject on a matching read, and these must
 be in context before the first write. The directory has no `CLAUDE.md` of its
 own because every `.md` there is loaded as a rule; this section is its index.
@@ -411,6 +411,12 @@ launch, which is why the SessionStart hook does not re-inject them.
   an agent definition and a subagent prompt may carry, the second-reader review
   every instruction file change gets, working beside a parallel session, and
   the English-only language rule.
+- `framework-facts.md`: that a fact about Angular, the CLI, the build or any
+  other tool in this stack is read from its documentation rather than
+  discovered by a probe, which tools answer such a question and how they are
+  called, that the URL goes in the report and in any spawn prompt that carries
+  the fact, and where the line falls between measuring this repository, which
+  is unchanged, and experimenting on the framework, which is not done.
 - `parallel-spawns.md`: the pre-flight that runs over a batch of agents before
   it goes out, what a batch shares beyond its file lists, the check that
   something one agent is told to use exists in the form the instruction
