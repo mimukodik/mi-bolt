@@ -53,15 +53,6 @@ function hasProvToken(entry: unknown, expectedToken: string): boolean {
   return false;
 }
 
-function hasUseValue(value: unknown): value is { useValue: string } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'useValue' in value &&
-    typeof value.useValue === 'string'
-  );
-}
-
 /**
  * Tests for T01 acceptance criteria. Each `describe` block maps to
  * one acceptance id so a failing test maps back to the spec line
@@ -154,20 +145,6 @@ describe('T01-AC04: HttpClient wired with withFetch()', () => {
       (entry) => hasProvToken(entry, 'FetchBackend') || hasProvToken(entry, 'HttpHandler'),
     );
     expect(hasFetchBackend).toBe(true);
-  });
-});
-
-describe('T01-AC04: APP_BASE_HREF provider', () => {
-  it('appConfig exposes a base-href provider', () => {
-    const base = providerManifest.baseHref;
-    expect(base).toBeDefined();
-    if (!hasUseValue(base)) {
-      throw new Error('Expected baseHref with useValue string');
-    }
-    expect(typeof base.useValue).toBe('string');
-    // Either '/' (production at /) or '/mi-bolt/' (subpath deployment);
-    // the production default satisfies the T01-AC05 deployment test.
-    expect(['/', '/mi-bolt/']).toContain(base.useValue);
   });
 });
 

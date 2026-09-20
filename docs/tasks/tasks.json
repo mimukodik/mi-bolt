@@ -90,7 +90,7 @@
       },
       {
         "id": "T01-AC05",
-        "text": "The app boots under / and /mi-bolt/ with meaningful title and a fatal startup surface; no business feature is faked directly in a component."
+        "text": "The app boots under / with meaningful title and a fatal startup surface; no business feature is faked directly in a component."
       }
     ],
     "commonAcceptanceCriteria": [
@@ -1588,7 +1588,7 @@
       },
       {
         "id": "T28-AC02",
-        "text": "Static SPA fallback works for all deep links under / and /mi-bolt/. API paths never silently fallback to index.html; MSW startup failure blocks business actions."
+        "text": "Static SPA fallback works for all deep links under /. API paths never silently fallback to index.html; MSW startup failure blocks business actions."
       },
       {
         "id": "T28-AC03",

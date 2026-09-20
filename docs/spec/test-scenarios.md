@@ -121,7 +121,7 @@ Status: specified, not implemented or executed in this planning package. Each gr
 |E116|contract|default|Exercise each generated operation|Exactly matching handlers, request shape, response status and validated schema.|
 |E117|contract|contract-invalid|Wrong headers/types/ranges/unknown fields|Documented 4xx Problem response, no unexpected mutation.|
 |E118|sdk|sdk-drift|Regenerate twice then modify a generated file|Stable output; unauthorized edit fails clean-generation diff.|
-|E119|sdk|default|Run under root and /mi-bolt/|SDK and worker resolve same scoped logical API/media paths.|
+|E119|sdk|default|Run under root|SDK and worker resolve same scoped logical API/media paths.|
 |E120|deployment|default|Load each route directly on static host|SPA route fallback works; /api/v1 never returns HTML as data.|
 |E121|deployment|worker-update|Serve newer static build and worker|Documented no-cache worker/index, immutable hashed chunks, no stale Angular PWA worker.|
 |E122|deployment|default|Open optimized demo build offline from business hosts|All business data remains MSW; no real-backend fallback.|

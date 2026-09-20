@@ -4,8 +4,8 @@
 // API call resolves against the same origin Angular itself was bootstrapped
 // from, including any base-href subpath. The OpenAPI contract pins its server
 // URL to `/api/v1`; we concatenate that with the runtime origin so local
-// dev, the `/mi-bolt/` subpath build and any other deployment reach MSW on
-// the same origin without rewriting SDK calls.
+// dev and any other deployment reach MSW on the same origin without
+// rewriting SDK calls.
 //
 // The function is the only place that reads `document`. Throwing when the
 // document is missing is deliberate: SSR, prerendering or Node-only execution

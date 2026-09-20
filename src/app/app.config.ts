@@ -5,12 +5,10 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { APP_BASE_HREF } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
-import { environment } from '../environments/environment';
 import { provideApiConfiguration } from './api/generated/api-configuration';
 import { resolveApiRoot } from './core/api/api-root';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
@@ -25,10 +23,6 @@ import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
 const _provideZoneless: EnvironmentProviders = provideZonelessChangeDetection();
 const _provideHttpWithFetch = provideHttpClient(withInterceptors([demoSessionInterceptor]));
 const _provideRouter = provideRouter(routes, withComponentInputBinding());
-const _provideBaseHref: Provider = {
-  provide: APP_BASE_HREF,
-  useValue: environment.apiBase === '/api/v1' ? '/' : '/mi-bolt/',
-};
 const _provideApi: Provider = provideApiConfiguration(resolveApiRoot());
 
 /**
@@ -42,7 +36,6 @@ export const appConfig: ApplicationConfig = {
     _provideZoneless,
     _provideHttpWithFetch,
     _provideRouter,
-    _provideBaseHref,
     _provideApi,
   ],
 };
@@ -58,6 +51,5 @@ export const providerManifest = {
   zonelessChangeDetection: _provideZoneless,
   httpClientWithFetch: _provideHttpWithFetch,
   router: _provideRouter,
-  baseHref: _provideBaseHref,
   api: _provideApi,
 } as const;

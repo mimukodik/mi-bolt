@@ -2236,7 +2236,7 @@
     "group": "sdk",
     "title": "Base href SDK paths",
     "scenario": "default",
-    "action": "Run under root and /mi-bolt/",
+    "action": "Run under root",
     "expected": "SDK and worker resolve same scoped logical API/media paths.",
     "layers": [
       "unit-or-gate",
