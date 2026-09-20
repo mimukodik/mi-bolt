@@ -110,9 +110,9 @@ https://developers.google.com/ar/develop/webxr/model-viewer
 
 Web component supporting glTF/GLB; AR exists but is explicitly excluded from this MVP.
 
-## U01 — Uploaded mi-bolt-design1.0.1
+## U01 — Retired design skill (superseded by `docs/design/yettel.md`)
 
-Separately installed `mi-bolt-design`, resolved during T00; deliberately not bundled.
+Separately installed design skill, resolved during T00; superseded by `docs/design/yettel.md`, the current design reference.
 
 User-provided normative design rules. Original raster remains unchanged and still has superseded brand text.
 

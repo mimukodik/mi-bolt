@@ -4,7 +4,7 @@ The request is interpreted as **homepage + catalogue + product + complete purcha
 
 ## Global geometry and visual contract
 
-Use the separately installed mi-bolt-design 1.0.1 unchanged at execution AND verification; it is not embedded in this docs package. The original raster still displays a superseded brand and placeholder commercial claims; preserve it only as source evidence. All live UI is **MiBolt**. Remove absent-scope services, social/account/newsletter controls and unverified offer promises. This is not a pixel-perfect reconstruction of raster text.
+Use `docs/design/yettel.md` as the design reference at execution AND verification; it is not embedded in this docs package. The original raster still displays a superseded brand and placeholder commercial claims; preserve it only as source evidence. All live UI is **MiBolt**. Remove absent-scope services, social/account/newsletter controls and unverified offer promises. This is not a pixel-perfect reconstruction of raster text.
 
 Container max1320px; gutters mobile16px, tablet24px, desktop48px minimum. Desktop 12-column alignment, gap24px, header64px. At1440px content margin60px. 4px spacing grid, mostly8px multiples. Cards8px radius, inputs/buttons6px. Body16px/1.5, support14px, metadata12px only; hero52/34px, H1 36/28px, section28/24px, card18px, price28/26px. Orange#FF6A00 with dark#171B1F button text; dark#1B2024 shell; white shopping panels, subtle#F5F6F7 sections, #A83B00 accessible orange-toned links. Product image ratio4:3 and object-fit contain.
 

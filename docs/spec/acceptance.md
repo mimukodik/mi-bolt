@@ -5,7 +5,7 @@ These are RELEASE GATES for the future Angular implementation, not results of th
 - [ ] **AC01** Latest stable Angular 22.x is resolved at execution, exact versions locked, supported peer dependencies verified; Angular 21/23/next/rc are rejected.
 - [ ] **AC02** The app is standalone, zoneless, client-rendered only; no SSR/prerender/hydration/server artifacts or Angular PWA worker.
 - [ ] **AC03** All authored interactive state uses signals; components use input()/output(), computed() for derived state and @if/@for/@switch with stable track keys. Signal Forms manages checkout.
-- [ ] **AC04** mi-bolt-design 1.0.1 is loaded for EVERY task execution and EVERY independent verification; R01–R26 applicability and evidence are attached; missing skill is a blocker.
+- [ ] **AC04** `docs/design/yettel.md` is cited for EVERY task execution and EVERY independent verification; the earlier design-skill R01–R26 gate is retired.
 - [ ] **AC05** Exactly four commerce screen families exist: Home, Catalogue, Product, Purchase. Three shells: Marketing, Shop, Checkout. Purchase includes cart/contact/delivery/review/success and their error states.
 - [ ] **AC06** Every screen and relevant state respects the provided semantic tokens, Hungarian copy, dark shell, orange primary actions, grid, typography and readable price hierarchy.
 - [ ] **AC07** All four families and wizard steps work at 320/390/768/1024/1440/1920 CSS px without page overflow; controls remain >=44px, including sticky mobile controls.

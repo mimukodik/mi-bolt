@@ -10,7 +10,7 @@
       "docs/mi-bolt/execution/toolchain-lock.json",
       "docs/mi-bolt/execution/skill-location.json"
     ],
-    "interface": "Input: delivered specification and mi-bolt-design 1.0.1. Output: immutable project constraints, stable Angular-22 lock manifest and review evidence schema.",
+    "interface": "Input: delivered specification and `docs/design/yettel.md`. Output: immutable project constraints, stable Angular-22 lock manifest and review evidence schema.",
     "deliverable": "Reproducible environment and enforceable design-review policy.",
     "acceptanceCriteria": [
       {
@@ -23,11 +23,11 @@
       },
       {
         "id": "T00-AC03",
-        "text": "Resolve and validate the separately installed mi-bolt-design skill (approved version 1.0.1); record its actual location, SHA-256 and version in docs/mi-bolt/execution/skill-location.json. Do not copy or reinstall it from this documentation package. Missing skill or missing implementation/review evidence must fail the gate."
+        "text": "Confirm `docs/design/yettel.md` is present as the design reference; the earlier separately installed design-skill resolution step is retired. Missing implementation/review evidence must fail the gate."
       },
       {
         "id": "T00-AC04",
-        "text": "AGENTS.md explicitly makes mi-bolt-design mandatory for EVERY implementation and verification, including nonvisual tasks with reasoned not-applicable R-rules."
+        "text": "AGENTS.md explicitly makes `docs/design/yettel.md` the mandatory design reference for EVERY implementation and verification, including nonvisual tasks with reasoned not-applicable exceptions."
       },
       {
         "id": "T00-AC05",
@@ -35,7 +35,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -93,7 +93,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -148,7 +148,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -204,7 +204,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -259,7 +259,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -322,7 +322,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -377,7 +377,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -430,7 +430,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -484,7 +484,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -542,7 +542,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -578,7 +578,7 @@
     "acceptanceCriteria": [
       {
         "id": "T10-AC01",
-        "text": "Import semantic tokens from mi-bolt-design; dark header/footer, orange #FF6A00 primary with #171B1F text, 8px cards and 6px controls remain normative."
+        "text": "Import semantic tokens from `docs/design/yettel.md`; dark header/footer, orange #FF6A00 primary with #171B1F text, 8px cards and 6px controls remain normative."
       },
       {
         "id": "T10-AC02",
@@ -598,7 +598,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -654,7 +654,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -709,7 +709,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -765,7 +765,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -820,7 +820,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -874,7 +874,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -930,7 +930,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -985,7 +985,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1041,7 +1041,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1096,7 +1096,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1150,7 +1150,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1204,7 +1204,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1258,7 +1258,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1313,7 +1313,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1368,7 +1368,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1405,7 +1405,7 @@
       "docs/mi-bolt/execution/design-review.md"
     ],
     "interface": "Input: every screen and relevant component state. Output: measured screenshots, axe results, keyboard/focus report and R01–R26 evidence.",
-    "deliverable": "Independent mi-bolt-design review across the complete flow.",
+    "deliverable": "Independent review against `docs/design/yettel.md` across the complete flow.",
     "acceptanceCriteria": [
       {
         "id": "T25-AC01",
@@ -1429,7 +1429,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1443,7 +1443,7 @@
     ],
     "status": "planned",
     "optional": false,
-    "titleEnglish": "Independent mi-bolt-design review across the complete flow.",
+    "titleEnglish": "Independent review against `docs/design/yettel.md` across the complete flow.",
     "wave": 14
   },
   {
@@ -1486,7 +1486,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1547,7 +1547,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1607,7 +1607,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1646,7 +1646,7 @@
       },
       {
         "id": "T29-AC02",
-        "text": "Independently reload and apply mi-bolt-design to the final build, not only earlier component screenshots."
+        "text": "Independently reload and apply `docs/design/yettel.md` to the final build, not only earlier component screenshots."
       },
       {
         "id": "T29-AC03",
@@ -1662,7 +1662,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
@@ -1727,7 +1727,7 @@
       }
     ],
     "commonAcceptanceCriteria": [
-      "Read the resolved external mi-bolt-design/SKILL.md and its task-relevant references before implementation AND independently before verification. Record skill version, R01–R26 applicability, files, viewports and evidence in the task review.",
+      "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
       "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",

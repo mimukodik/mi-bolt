@@ -6,7 +6,7 @@ Tasks: T00, T01, T28.
 
 Acceptance evidence: Toolchain lock, build artifact inspection and static deep links.
 
-## RQ02 — Mandatory mi-bolt-design on every execution AND verification
+## RQ02 — Mandatory citation of `docs/design/yettel.md` on every execution AND verification
 
 Tasks: T00, T10, T25, T29.
 

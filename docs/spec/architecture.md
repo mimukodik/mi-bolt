@@ -69,7 +69,7 @@ Read requests use switchMap to cancel obsolete HTTP and prevent late results. Ca
 ## 7. Suggested source structure
 
 ```text
-# mi-bolt-design is resolved externally; no duplicate skill folder in docs
+# docs/design/yettel.md is the design reference; no duplicate design-skill folder in docs
 docs/api/openapi.yaml                single wire contract
 docs/api/fixtures/                   deterministic synthetic data
 src/main.ts                     bootstrap entry, fatal fallback
