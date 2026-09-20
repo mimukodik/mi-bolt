@@ -18,8 +18,7 @@
  * The two URLs a freshly created intent carries come from the
  * backend, not from the 1.0.0 mock (`PaymentIntentService.java:87`,
  * `application.properties:40-42`): the redirect points at the demo
- * payment page (path pattern documented in
- * `docs/decisions/0002-payment-flow`) and the return URL carries the
+ * payment page (`/demo-fizetes/<id>`) and the return URL carries the
  * intent id in a query parameter. The 30-minute lifetime mirrors
  * `mibolt.payment.intent-lifetime=30m`.
  */
@@ -37,6 +36,10 @@ import type { OrderLine } from '../../app/api/generated/models/order-line';
 import type { Cart } from '../../app/api/generated/models/cart';
 import type { Money } from '../../app/api/generated/models/money';
 import type { StorageGb } from '../../app/api/generated/models/storage-gb';
+import type { Contact } from '../../app/api/generated/models/contact';
+import type { BillingDetails } from '../../app/api/generated/models/billing-details';
+import type { DeliverySelection } from '../../app/api/generated/models/delivery-selection';
+import type { PaymentSelection } from '../../app/api/generated/models/payment-selection';
 
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';
@@ -66,6 +69,14 @@ interface StoredIntent {
   expiresAt: string;
   redirectUrl: string;
   returnUrl: string;
+}
+
+/** A draft `checkCompleteness` has proven whole: every section present. */
+interface CompleteDraft {
+  contact: Contact;
+  billing: BillingDetails;
+  delivery: DeliverySelection;
+  payment: PaymentSelection;
 }
 
 interface StoredOrder {
@@ -488,26 +499,8 @@ export class OrderStore {
     const createdAt = this.options.clock.now();
     const summary = readResult.session.summary;
     const items: OrderLine[] = cart.items.map(toOrderLine);
-    const paymentMethod = draft.payment.method;
-    const contactEmail = draft.contact?.email;
-    const deliverySelection = draft.delivery;
-    const billingDetails = draft.billing;
-    if (
-      contactEmail === undefined ||
-      deliverySelection === undefined ||
-      billingDetails === undefined
-    ) {
-      return {
-        ok: false,
-        problem: this.problem(
-          422,
-          'CHECKOUT_INCOMPLETE',
-          'Contact, billing, delivery or payment is missing.',
-          {},
-          [{ path: '/checkout', code: 'SECTION_MISSING' }],
-        ),
-      };
-    }
+    const complete = completeness.draft;
+    const paymentMethod = complete.payment.method;
     const receipt: OrderReceipt = {
       id: orderId,
       orderNumber,
@@ -519,9 +512,9 @@ export class OrderStore {
       paymentFee: summary.paymentFee,
       total: summary.total,
       paymentMethod,
-      delivery: deliverySelection,
-      billing: billingDetails,
-      contactEmail,
+      delivery: complete.delivery,
+      billing: complete.billing,
+      contactEmail: complete.contact.email,
       notice: SIMULATION_NOTICE,
     };
     this.orders.set(orderId, { receipt, sessionId });
@@ -669,24 +662,30 @@ export class OrderStore {
   private checkCompleteness(
     cart: Cart,
     draft: {
-      contact?: { email: string } | undefined;
-      billing?: unknown;
-      delivery?: unknown;
-      payment?: { method: 'card' | 'cash_on_delivery' } | undefined;
+      contact?: Contact;
+      billing?: BillingDetails;
+      delivery?: DeliverySelection;
+      payment?: PaymentSelection;
     },
-  ): { ok: true } | { ok: false; problem: Problem } {
+  ): { ok: true; draft: CompleteDraft } | { ok: false; problem: Problem } {
     if (cart.items.length === 0) {
       return {
         ok: false,
         problem: this.problem(422, 'CHECKOUT_INCOMPLETE', 'The cart is empty.', {}, []),
       };
     }
+    const { contact, billing, delivery, payment } = draft;
     const errors: FieldError[] = [];
-    if (draft.contact === undefined) errors.push({ path: '/contact', code: 'SECTION_MISSING' });
-    if (draft.billing === undefined) errors.push({ path: '/billing', code: 'SECTION_MISSING' });
-    if (draft.delivery === undefined) errors.push({ path: '/delivery', code: 'SECTION_MISSING' });
-    if (draft.payment === undefined) errors.push({ path: '/payment', code: 'SECTION_MISSING' });
-    if (errors.length > 0) {
+    if (contact === undefined) errors.push({ path: '/contact', code: 'SECTION_MISSING' });
+    if (billing === undefined) errors.push({ path: '/billing', code: 'SECTION_MISSING' });
+    if (delivery === undefined) errors.push({ path: '/delivery', code: 'SECTION_MISSING' });
+    if (payment === undefined) errors.push({ path: '/payment', code: 'SECTION_MISSING' });
+    if (
+      contact === undefined ||
+      billing === undefined ||
+      delivery === undefined ||
+      payment === undefined
+    ) {
       return {
         ok: false,
         problem: this.problem(
@@ -698,7 +697,7 @@ export class OrderStore {
         ),
       };
     }
-    return { ok: true };
+    return { ok: true, draft: { contact, billing, delivery, payment } };
   }
 
   private problem(
