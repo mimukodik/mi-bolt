@@ -130,4 +130,4 @@ Reports Binkies3D script domains and Corbis/jQuery; Swiper and some platform cla
 
 ## Documentation-package boundary
 
-Only the derived implementation decisions in `technology-decisions.md` are required for execution. The raw operator research, original uploaded ZIPs, original design skill and historical generation logs are intentionally omitted. No claim is made that those omitted files exist under docs/mi-bolt. This document retains source identities for attribution.
+Only the derived implementation decisions in `technology-decisions.md` are required for execution. The raw operator research, original uploaded ZIPs, original design skill and historical generation logs are intentionally omitted. No claim is made that those omitted files exist under docs/. This document retains source identities for attribution.

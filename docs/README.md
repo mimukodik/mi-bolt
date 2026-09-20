@@ -2,40 +2,27 @@
 
 ## Hová kerüljön?
 
-A ZIP egyetlen felső szintű mappája a `mi-bolt/`. **Ezt másold a projekt meglévő `docs/` mappájába.** A végeredmény `docs/mi-bolt/` legyen, ne `docs/docs/...`, és ne külön alkalmazás a dokumentáció alatt.
+A dokumentáció már a projekt `docs/` mappájában van, lapos elrendezésben:
 
 ```text
-projekt/
-├── package.json                    a készülő vagy meglévő alkalmazásé
-├── src/                            az alkalmazás forrása
-└── docs/
-    └── mi-bolt/
-        ├── README.md               ez a belépő
-        ├── VEGREHAJTASI-PROMPT.hu.md
-        ├── index.html              magyar interaktív áttekintő
-        ├── spec/                   architektúra, képernyők, komponensek,
-        │                           tesztek, elfogadás és technológiai döntések
-        ├── api/                    OpenAPI YAML, generátorminta, fixture-k
-        ├── design/                 prototípus, képernyőtervek, helyi demóképek
-        └── tasks/                  T00–T29, opcionális O01, függőségi gráf
+docs/
+├── README.md        ez a belépő
+├── index.html       magyar interaktív áttekintő
+├── spec/            architektúra, képernyők, komponensek, tesztek,
+│                    elfogadás és technológiai döntések
+├── api/             OpenAPI YAML, generátorminta, fixture-k
+├── design/          prototípus, képernyőtervek, helyi demóképek
+├── tasks/           T00–T29, opcionális O01, függőségi gráf
+├── fix/             a javítási csomag
+└── mi-bolt/
+    └── execution/   a végrehajtás közben keletkező bizonyítékok
 ```
 
-A `package.json` és a `src/` itt a projekt elhelyezkedését mutatja; nem része a ZIP-nek. Ez tervezési és végrehajtási dokumentáció, **nem kész Angular alkalmazás**.
+Ez tervezési és végrehajtási dokumentáció, **nem kész Angular alkalmazás**.
 
 ## Fejlesztés indítása
 
-Add át a projekt gyökerében futó fejlesztő agentnek a [VEGREHAJTASI-PROMPT.hu.md](VEGREHAJTASI-PROMPT.hu.md) teljes tartalmát. Vagy használd ezt az indítóutasítást:
-
-```text
-Olvasd el a docs/mi-bolt/VEGREHAJTASI-PROMPT.hu.md teljes tartalmát,
-és hajtsd végre az ott leírt teljes MiBolt MVP-fejlesztést.
-Valódi subagentekkel dolgozz, minden tasknál legyen független review,
-és az előírt esetekben valódi böngészős ellenőrzés.
-A mi-bolt-design skillt a külön telepített példányból használd.
-Ne állj meg a részfeladatok után; a teljes kötelező T00–T29 sort hajtsd végre.
-```
-
-Ehhez repository-hozzáférés, parancsfuttatás, valódi subagentindítás, böngészős eszköz és a **külön telepített `mi-bolt-design` skill** szükséges. A prompt tartalmazza a felderítést, a szerepköröket, a kötelező review-/javítási ciklust, a dependency-alapú sorrendet, a tesztkapukat és a végső átadást.
+Ehhez repository-hozzáférés, parancsfuttatás, valódi subagentindítás, böngészős eszköz és a **külön telepített `mi-bolt-design` skill** szükséges. A [végrehajtási szabályok](spec/execution-rules.md) tartalmazzák a felderítést, a szerepköröket, a kötelező review-/javítási ciklust, a dependency-alapú sorrendet, a tesztkapukat és a végső átadást.
 
 **A skill nincs a ZIP-ben, és nincs a HTML-riportba sem beágyazva. A használata ettől még minden végrehajtásnál és ellenőrzésnél szigorúan kötelező.** A végrehajtó a meglévő harness-/projekt-/globális telepítést keresse meg; ne a docs alá készítsen másolatot.
 
@@ -63,7 +50,7 @@ Az OpenAPI YAML, a fixture-k, a komponens-/képernyőtervek és a taskok megmara
 
 ## Fontos végrehajtási részletek
 
-A csomag minden `docs/mi-bolt/...` hivatkozása a projekt gyökeréhez képest értendő. A forráskód és a root konfigurációk a projektbe kerülnek, nem ide. Az OpenAPI forrása a docs-ban marad; az SDK a projekt `src/app/api/generated/` mappájába generálódik. A részleteket az [API belépő](api/README.md) rögzíti.
+A csomag minden `docs/...` hivatkozása a projekt gyökeréhez képest értendő. A forráskód és a root konfigurációk a projektbe kerülnek, nem ide. Az OpenAPI forrása a docs-ban marad; az SDK a projekt `src/app/api/generated/` mappájába generálódik. A részleteket az [API belépő](api/README.md) rögzíti.
 
 A végrehajtás a `docs/mi-bolt/execution/` alatt hozza majd létre a valós munkanaplót, skill-helyet, reviewer-jelentéseket és bizonyítékokat. Üres vagy előre „PASS”-ra állított evidence nincs a csomagban. A régi látványprototípus nem helyettesíti a készülő Angular alkalmazás friss tesztjeit és böngészős ellenőrzését.
 
