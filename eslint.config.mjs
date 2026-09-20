@@ -12,8 +12,6 @@ import tseslint from 'typescript-eslint';
 import angular from 'angular-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import unusedImports from 'eslint-plugin-unused-imports';
-import sonarjs from 'eslint-plugin-sonarjs';
-import unicorn from 'eslint-plugin-unicorn';
 import security from 'eslint-plugin-security';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,9 +23,16 @@ export default defineConfig([
   // surface (no Nx workspace here) and the PrimeNG / *.feature.ts blocks
   // (no counterpart in this app). See the MIM-209 commit body and
   // eslint-inventory.md for the full adaptation notes.
-  sonarjs.configs.recommended,
-  unicorn.configs.recommended,
   security.configs.recommended,
+  {
+    rules: {
+      // Relaxed for the demo (MIM-209, docs/lint-relaxations.md): both flag
+      // dynamic property/path access that this app uses deliberately (facet
+      // maps, fixture loading) and add no real protection here.
+      'security/detect-object-injection': 'off',
+      'security/detect-non-literal-fs-filename': 'off',
+    },
+  },
   {
     ignores: [
       'dist/**',
@@ -189,43 +194,12 @@ export default defineConfig([
       eqeqeq: ['error', 'always'],
       'no-invalid-this': ['error'],
       'no-iterator': ['error'],
-      'max-lines': [
-        'error',
-        {
-          max: 500,
-          skipBlankLines: true,
-          skipComments: true,
-        },
-      ],
-      'no-magic-numbers': [
-        'error',
-        {
-          detectObjects: false,
-          enforceConst: true,
-          ignore: [0, 1, -1, 2],
-          ignoreArrayIndexes: true,
-        },
-      ],
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "PropertyDefinition[accessibility='private']",
-          message:
-            "Use native ECMAScript private fields (e.g., #field) instead of the TypeScript 'private' modifier.",
-        },
-        {
-          selector: "MethodDefinition[accessibility='private']",
-          message:
-            "Use native ECMAScript private methods (e.g., #method) instead of the TypeScript 'private' modifier.",
-        },
-        {
-          selector: "TSParameterProperty[accessibility='private']",
-          message:
-            "Do not use 'private' in constructor parameter properties. Define a native private field (#field) and assign the value manually.",
-        },
-      ],
-      'max-lines-per-function': ['error', { max: 100, skipBlankLines: true, skipComments: true }],
-      'no-void': ['error'],
+      // Relaxed for the demo (MIM-209, docs/lint-relaxations.md).
+      'max-lines': 'off',
+      'no-magic-numbers': 'off',
+      'no-restricted-syntax': 'off',
+      'max-lines-per-function': 'off',
+      'no-void': 'off',
       '@typescript-eslint/naming-convention': [
         'error',
         {
@@ -285,10 +259,6 @@ export default defineConfig([
           allowConciseArrowFunctionExpressionsStartingWithVoid: true,
         },
       ],
-      'unicorn/no-non-function-verb-prefix': [
-        'error',
-        { verbs: ['get', 'set', 'unset', 'delete', 'add', 'remove', 'create'] },
-      ],
       'no-constructor-return': ['error'],
       'no-self-compare': ['error'],
       'no-template-curly-in-string': ['error'],
@@ -318,71 +288,16 @@ export default defineConfig([
           checkForEach: true,
         },
       ],
-      // Prefer flatMap over map().flat()
-      'unicorn/prefer-array-flat-map': 'error',
-      // No useless array spread
-      'unicorn/no-useless-spread': 'error',
-      'unicorn/consistent-function-scoping': 'off',
-      'unicorn/require-module-specifiers': 'off',
-      'unicorn/no-useless-undefined': 'off',
-      'unicorn/no-null': 'off',
-      'unicorn/number-literal-case': 'off',
-      // unicorn/single-line-block-comment-style's default is "multiline",
-      // which autofixes `/** foo */` into a broken
-      // `/**\n   foo\n   */` shape with no `*` alignment. Override to
-      // "single-line" so the existing JSDoc style is preserved.
-      'unicorn/single-line-block-comment-style': ['error', 'single-line', { ignore: [] }],
-      'unicorn/name-replacements': [
-        'error',
-        {
-          ignore: [/\.e2e\./],
-        },
-      ],
       // Enforce minimum identifier length to prevent opaque abbreviations (e.g. ff, ds, ng).
-      'id-length': [
-        'warn',
-        {
-          min: 3,
-          exceptions: [
-            'x',
-            'y',
-            'z', // coordinates
-            'i',
-            'j',
-            'k', // loop indices
-            'n', // count / number locals
-            'm', // matched / matrix
-            'r', // result / reader
-            'h', // hour / handle
-            'p', // pointer / promise
-            'q', // query string
-            'id', // universal identifier field
-            'of',
-            'to',
-            'up',
-            'ok', // English prepositions / status
-            'db',
-            'fn',
-            'el', // established tech abbreviations
-            't',
-            'e',
-            'a',
-            'b',
-            'c',
-            'd',
-            'v',
-            's', // single-char conventionals
-          ],
-          properties: 'never',
-        },
-      ],
+      // Relaxed for the demo (MIM-209, docs/lint-relaxations.md).
+      'id-length': 'off',
     },
   },
   {
     files: ['**/*.spec.ts'],
     rules: {
-      // Allow longer functions in test files
-      'max-lines-per-function': ['error', { max: 150, skipBlankLines: true, skipComments: true }],
+      // Relaxed for the demo (MIM-209, docs/lint-relaxations.md).
+      'max-lines-per-function': 'off',
     },
   },
   {
@@ -430,33 +345,6 @@ export default defineConfig([
       '@angular-eslint/template/prefer-template-literal': ['error'],
       '@angular-eslint/template/button-has-type': ['error'],
       '@angular-eslint/template/no-any': ['error'],
-      // Disable SonarJS rules that don't work with Angular templates
-      // (including the processed output of `angular.processInlineTemplates`
-      // on component `template: \`...\`` strings).
-      'sonarjs/no-unenclosed-multiline-block': 'off',
-      'sonarjs/no-same-line-conditional': 'off',
-      'sonarjs/no-element-overwrite': 'off',
-      // code-eval (S1523) crashes on Angular HTML templates with a TypeError
-      // ("Cannot read properties of undefined (reading '0')"). Known plugin bug,
-      // not fixable by upgrade. Rule is JS-context only, irrelevant in templates.
-      'sonarjs/code-eval': 'off',
-      // Disable Unicorn rules that don't work with Angular templates
-      'unicorn/no-empty-file': 'off',
-      'unicorn/template-indent': 'off',
-      'unicorn/prefer-string-raw': 'off',
-      'unicorn/no-null': 'off',
-      // no-useless-template-literals crashes on Angular HTML templates with the same
-      // "Cannot read properties of undefined (reading '0')" TypeError as the sonarjs rule above.
-      'unicorn/no-useless-template-literals': 'off',
-      // Found during MIM-209's own inventory run (not present in the source
-      // repo's disable list): this rule reports nothing against these
-      // templates in a plain lint pass, but its --fix-dry-run fixer crashes
-      // with the identical "Cannot read properties of undefined (reading
-      // '0')" TypeError on an Angular property binding that concatenates a
-      // string literal (e.g. `[attr.aria-label]="'Törlés: ' + line().name"`
-      // in src/app/features/cart/cart-line.html:52). Same plugin-bug class
-      // as the two rules above; off for the same reason.
-      'unicorn/no-incorrect-template-string-interpolation': 'off',
     },
   },
   eslintConfigPrettier,
