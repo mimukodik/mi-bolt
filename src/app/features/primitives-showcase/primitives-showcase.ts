@@ -15,8 +15,8 @@ import {
 
 /**
  * Internal showcase page — only registered on the `/primitives` route.
- * The page renders one instance of every primitive so the design and
- * Playwright suites can audit them in isolation. It is not a business
+ * The page renders one instance of every primitive so it can be
+ * audited in isolation for design review. It is not a business
  * page and never renders invented commerce data.
  */
 @Component({

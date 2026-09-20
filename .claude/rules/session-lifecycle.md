@@ -11,8 +11,8 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   is no `pnpm`, no `mise`, no `apps/`, no `packages/` and no workspace filter.
   Every command is run from the repository root. The scripts that exist are
   what `package.json` defines — today `ng`, `start`, `build`, `watch`,
-  `test`, `lint`, `format`, `format:check`, `api:generate`, `api:drift`,
-  `api:sync` and `build:e2e` — and a command
+  `test`, `lint`, `format`, `format:check`, `api:generate`, `api:drift` and
+  `api:sync` — and a command
   not in that list does not exist here however familiar it looks. Read the
   list rather than recalling it; several rules in this directory once named
   scripts that had never been defined, and an agent handed one of those fails

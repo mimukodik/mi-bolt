@@ -153,7 +153,7 @@ writing a weaker assertion.
 - `src/app/features/cart/**`
 - `src/app/layouts/**` — another unit owns `checkout-layout.scss` right now
 - `src/mocks/**`, `src/app/features/catalog/**`, `src/app/features/home/**`
-- `docs/**`, `.claude/**`, `scripts/**`, `e2e/**`
+- `docs/**`, `.claude/**`, `scripts/**` (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 Your files are `src/app/features/checkout/checkout.guards.ts` and the one spec
 you add the four cases to. If the change makes another file fail to compile,

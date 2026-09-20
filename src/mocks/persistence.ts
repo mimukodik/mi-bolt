@@ -177,8 +177,8 @@ class SessionStorageAdapter {
 }
 
 /**
- * Returns the snapshot key for a scenario. Exported so the E2E
- * fixture can reference the same naming convention.
+ * Returns the snapshot key for a scenario. Exported so tests can
+ * reference the same naming convention.
  */
 export function snapshotKey(scenarioName: ScenarioName): string {
   return `${SNAPSHOT_KEY_PREFIX}${scenarioName}`;

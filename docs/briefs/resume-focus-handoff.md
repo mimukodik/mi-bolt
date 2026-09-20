@@ -59,7 +59,7 @@ Everything outside these two files, and in particular:
 - `src/app/shared/ui/async-content/**` and `src/app/shared/ui/error-state/**` — the error state's own wording is theirs
 - `src/app/features/catalog/applied-filters.*`, `pagination.*`, `filter-panel.*`, `filter-drawer.*`
 - `src/app/features/checkout/**`, `src/app/features/cart/**`, `src/mocks/**`, `src/styles/**`
-- `docs/**`, `.claude/**`, `scripts/**`, `e2e/**`
+- `docs/**`, `.claude/**`, `scripts/**` (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 **Do not add `aria-live` or a `role` to the counter.** The review named the missing live region as a separate, pre-existing defect and it is the orchestrator's to raise with the user. Adding one here would be a feature this round did not ask for.
 

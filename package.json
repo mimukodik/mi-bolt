@@ -12,8 +12,7 @@
     "format:check": "prettier --check .",
     "api:generate": "ng-openapi-gen --config ng-openapi-gen.json",
     "api:drift": "npm run api:generate && git diff --exit-code -- src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- src/app/api/generated)\"",
-    "api:sync": "node scripts/api-sync.mjs",
-    "build:e2e": "ng build --configuration e2e"
+    "api:sync": "node scripts/api-sync.mjs"
   },
   "private": true,
   "packageManager": "npm@11.17.0",
@@ -37,11 +36,8 @@
     "@angular/compiler-cli": "^22.1.0",
     "@angular/platform-browser-dynamic": "^22.1.6",
     "@apidevtools/json-schema-ref-parser": "14.2.1",
-    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.12",
-    "@vitest/browser-playwright": "^4.1.11",
     "@vitest/coverage-v8": "^4.1.0",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",

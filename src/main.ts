@@ -17,8 +17,7 @@ registerLocaleData(localeHu, 'hu-HU');
  * Boot the MSW service worker BEFORE Angular bootstraps so any
  * HTTP call made during application initialisation is already
  * intercepted. The worker is only started when `environment.demo`
- * or `environment.e2e` is true so production builds never ship a
- * mocking surface.
+ * is true so production builds never ship a mocking surface.
  *
  * The MSW module graph (`./core/bootstrap-demo` -> `./mocks/browser`
  * -> MSW handler factory) is loaded via `import()` so the production
@@ -36,7 +35,7 @@ registerLocaleData(localeHu, 'hu-HU');
  * `onUnhandledRequest: 'error'` is the T02 network-isolation
  * gate: a request that escapes the registered handlers fails the
  * surrounding test, both for the unit suite (msw/node setupServer)
- * and for the E2E suite (msw/browser setupWorker).
+ * and for the browser worker (msw/browser setupWorker).
  *
  * `startMocks()` (T05) hydrates the sessionStorage snapshot
  * BEFORE starting the worker so the very first intercepted request

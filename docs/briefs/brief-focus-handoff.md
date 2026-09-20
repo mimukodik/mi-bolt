@@ -260,7 +260,7 @@ an exact-element check with a truthiness check, and do not assert only
   the fix
 - `src/app/shared/**`, `src/styles/**`, `src/mocks/**`
 - `src/app/features/checkout/**` — another unit owns `checkout.guards.ts`
-- `src/app/layouts/**`, `docs/**`, `.claude/**`, `scripts/**`, `e2e/**`
+- `src/app/layouts/**`, `docs/**`, `.claude/**`, `scripts/**` (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 Your files are exactly four:
 `src/app/features/catalog/catalog-toolbar.html`,

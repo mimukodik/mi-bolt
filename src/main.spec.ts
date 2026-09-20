@@ -119,15 +119,14 @@ describe('T01: the unit suite does not boot the application', () => {
 });
 
 /**
- * The three flags the MSW gates read. `src/main.ts:48` returns before
+ * The two flags the MSW gates read. `src/main.ts:48` returns before
  * `startMocks()` when `production` is true, and both
  * `src/core/bootstrap-demo.ts` and `startMockWorker` in
- * `src/mocks/browser.ts` return early unless `demo` or `e2e` is true.
+ * `src/mocks/browser.ts` return early unless `demo` is true.
  */
 interface EnvironmentFlags {
   readonly production: boolean;
   readonly demo: boolean;
-  readonly e2e: boolean;
 }
 
 /**
@@ -193,7 +192,6 @@ function parseEnvironmentFlags(source: string): EnvironmentFlags {
   return {
     production: /\bproduction:\s*true\b/.test(body),
     demo: /\bdemo:\s*true\b/.test(body),
-    e2e: /\be2e:\s*true\b/.test(body),
   };
 }
 
@@ -205,10 +203,9 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
       'export const environment: Environment = {',
       '  production: false,',
       '  demo: true,',
-      '  e2e: false,',
       '};',
     ].join('\n');
-    expect(parseEnvironmentFlags(source)).toEqual({ production: false, demo: true, e2e: false });
+    expect(parseEnvironmentFlags(source)).toEqual({ production: false, demo: true });
     expect(() => parseEnvironmentFlags('export const other = 1;')).toThrow();
   });
 
@@ -216,7 +213,6 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     // The fallback in `environmentModuleFor` hides a parse failure, so
     // a configuration that has always declared one is read first.
     expect(environmentModuleFor('development')).toBe('src/environments/environment.development.ts');
-    expect(environmentModuleFor('e2e')).toBe('src/environments/environment.e2e.ts');
     expect(existsSync(join(REPO_ROOT, environmentModuleFor('development')))).toBe(true);
   });
 
@@ -230,6 +226,6 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     const module = environmentModuleFor('production');
     const flags = parseEnvironmentFlags(readFileSync(join(REPO_ROOT, module), 'utf8'));
     expect(flags.production).toBe(false);
-    expect(flags.demo || flags.e2e).toBe(true);
+    expect(flags.demo).toBe(true);
   });
 });

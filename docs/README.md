@@ -50,4 +50,4 @@ A csomag minden `docs/...` hivatkozása a projekt gyökeréhez képest értendő
 
 A végrehajtás a `docs/mi-bolt/execution/` alatt hozza majd létre a valós munkanaplót, skill-helyet, reviewer-jelentéseket és bizonyítékokat. Üres vagy előre „PASS”-ra állított evidence nincs a csomagban. A régi látványprototípus nem helyettesíti a készülő Angular alkalmazás friss tesztjeit és böngészős ellenőrzését.
 
-Az O01 3D külön jóváhagyás nélkül nem része a baseline-nak. A kötelező alkalmazásscope és a 100%-os unit-/független E2E-követelmény változatlan. A verziókat végrehajtáskor ismét ellenőrizni kell; a dokumentáció dátumozott verzióadatai nem automatikusan aktuálisak.
+Az O01 3D külön jóváhagyás nélkül nem része a baseline-nak. A kötelező alkalmazásscope és a 100%-os unit-követelmény változatlan; e2e-csomag a termékgazda 2026-09-20-i döntése óta nincs. A verziókat végrehajtáskor ismét ellenőrizni kell; a dokumentáció dátumozott verzióadatai nem automatikusan aktuálisak.

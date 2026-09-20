@@ -96,7 +96,7 @@
   },
   {
     "id": "AC20",
-    "text": "E2E: independent Chromium browser coverage reaches 100% statements, branches, functions and lines for every owned browser-runtime source, including MSW domain handlers. Unit coverage is never merged into it. Non-browser tooling has separate black-box integration coverage.",
+    "text": "E2E: there is no end-to-end suite, by the product owner's decision of 2026-09-20; verification of rendered surfaces is the real-browser pass described in docs/spec/testing.md.",
     "status": "required-not-yet-executed"
   },
   {
@@ -136,7 +136,7 @@
   },
   {
     "id": "AC28",
-    "text": "Clean-checkout generation, lint, unit coverage, E2E source/scenario coverage, contract tests, browser matrix, design audit and optimized build all pass with fresh artifacts. All task statuses and remaining limitations are truthful.",
+    "text": "Clean-checkout generation, lint, unit coverage, contract tests, browser matrix, design audit and optimized build all pass with fresh artifacts; there is no end-to-end suite, by the product owner's decision of 2026-09-20, so verification of rendered surfaces is the real-browser pass described in docs/spec/testing.md. All task statuses and remaining limitations are truthful.",
     "status": "required-not-yet-executed"
   }
 ]

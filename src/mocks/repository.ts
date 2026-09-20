@@ -5,7 +5,7 @@
  * catalogue, carts, checkout drafts, payment intents, idempotency
  * keys and committed order receipts. Each scenario owns its own
  * Repository instance (created via `new Repository(scenario, ids)`)
- * so two E2E contexts cannot leak state into each other.
+ * so two scenario instances cannot leak state into each other.
  *
  * T06 expanded the Product shape to the full variant matrix so
  * filter/sort/facet predicates can operate on every fixture field.
@@ -177,8 +177,8 @@ export class Repository {
 
   /**
    * Replaces the catalog contents with the supplied fixtures. Called
-   * by the catalog handlers (T06) so two E2E contexts cannot share
-   * product state. The repository itself stays scenario-owned.
+   * by the catalog handlers (T06) so two scenario instances cannot
+   * share product state. The repository itself stays scenario-owned.
    */
   loadProducts(fixtures: readonly Product[]): void {
     this.products.clear();

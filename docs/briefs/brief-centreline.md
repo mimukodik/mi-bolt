@@ -168,7 +168,7 @@ claiming it does.
   and it is **not** what we change; the shell's flex column is deliberate and
   every other route depends on it
 - `src/app/features/**`, `src/mocks/**`, `src/styles/**`
-- `docs/**`, `.claude/**`, `scripts/**`, `e2e/**`
+- `docs/**`, `.claude/**`, `scripts/**` (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 Your files are `src/app/layouts/checkout-layout.scss` and the layouts spec.
 If the change makes another file fail to compile, **report it rather than

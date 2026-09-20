@@ -44,7 +44,6 @@ export default defineConfig([
       'vitest.config.*',
       'vitest.*.config.*',
       'vitest.config.*.timestamp*',
-      'playwright.config.ts',
       'tsconfig*.json',
       // Not source: docs/ carries the yettel.hu reference captures
       // (docs/design/yettel/**, several MB of static HTML) which the
@@ -117,11 +116,10 @@ export default defineConfig([
       'unused-imports/no-unused-imports': 'error',
       // Type-aware rules ported from example-eslint.config.mjs. These
       // live only in this src/**/*.ts block (which has `projectService`)
-      // and are deliberately NOT added to the tests/**/*.ts + e2e/**/*.ts
-      // block below: neither tree is included by any tsconfig
-      // (tsconfig.app.json / tsconfig.spec.json both include only
-      // `src/`), so type-aware parsing would fail there (see the
-      // FIX-69 comment on that block).
+      // and are deliberately NOT added to the tests/**/*.ts block below:
+      // that tree is not included by any tsconfig (tsconfig.app.json /
+      // tsconfig.spec.json both include only `src/`), so type-aware
+      // parsing would fail there (see the FIX-69 comment on that block).
       '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/prefer-readonly': 'error',
       '@typescript-eslint/strict-boolean-expressions': [
@@ -140,27 +138,26 @@ export default defineConfig([
     },
   },
   {
-    // FIX-69 widens `lintFilePatterns` (angular.json) to include `tests/**/*.ts`
-    // and `e2e/**/*.ts`. Neither tree belongs to a TypeScript project
-    // (tsconfig.app.json and tsconfig.spec.json both include only `src/`), so
-    // this block gives ESLint the non-type-aware presets rather than the
-    // type-aware `extends` above — without a matching block at all, ESLint
-    // reports "File ignored because no matching configuration was supplied"
-    // for every file in these two trees and the widening buys nothing. FIX-46
-    // (blocked, pending FIX-39) would add a second, later block matching these
-    // same two trees plus `src/**/*.spec.ts` that carries the
-    // `no-restricted-syntax` test-policy rule; no such block exists in this
-    // file today, so MIM-209 keeps none and adds none.
-    files: ['tests/**/*.ts', 'e2e/**/*.ts'],
+    // FIX-69 widens `lintFilePatterns` (angular.json) to include `tests/**/*.ts`.
+    // That tree does not belong to a TypeScript project (tsconfig.app.json and
+    // tsconfig.spec.json both include only `src/`), so this block gives ESLint
+    // the non-type-aware presets rather than the type-aware `extends` above —
+    // without a matching block at all, ESLint reports "File ignored because no
+    // matching configuration was supplied" for every file in this tree and the
+    // widening buys nothing. FIX-46 (blocked, pending FIX-39) would add a
+    // second, later block matching this same tree plus `src/**/*.spec.ts`
+    // that carries the `no-restricted-syntax` test-policy rule; no such block
+    // exists in this file today, so MIM-209 keeps none and adds none.
+    files: ['tests/**/*.ts'],
     extends: [eslint.configs.recommended, tseslint.configs.recommended],
   },
   {
     // Non-type-aware baseline ported from example-eslint.config.mjs's broad
     // `files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']` block, scoped
-    // to this app's three TypeScript trees (there are no .tsx/.js/.jsx
+    // to this app's two TypeScript trees (there are no .tsx/.js/.jsx
     // source files here). The Nx-only `@nx/enforce-module-boundaries` rule
     // from that block is dropped entirely: this is not an Nx workspace.
-    files: ['src/**/*.ts', 'tests/**/*.ts', 'e2e/**/*.ts'],
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
     rules: {
       '@typescript-eslint/consistent-type-imports': [
         'error',

@@ -47,7 +47,7 @@ export const REPO_ROOT = resolve(__dirname, '..');
 const REQUIREMENTS_PATH = join(REPO_ROOT, 'docs/tasks/requirements.json');
 const SCENARIOS_PATH = join(REPO_ROOT, 'docs/tasks/test-scenarios.json');
 const TASKS_PATH = join(REPO_ROOT, 'docs/tasks/tasks.json');
-const SCAN_ROOTS = ['tests', 'e2e'];
+const SCAN_ROOTS = ['tests'];
 
 // Tasks whose ownership is a gate script (api:generate, toolchain,
 // contract validation) rather than a spec. Their acceptance criteria
