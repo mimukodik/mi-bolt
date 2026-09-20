@@ -30,7 +30,7 @@
 
 import { signal, type Signal, type WritableSignal } from '@angular/core';
 
-import type { Cart } from '../../api/legacy/models/cart';
+import type { Cart } from '../../api/generated/models/cart';
 
 /** Discriminator for every intent the queue can serialize. */
 export type MutationIntentKind = 'create' | 'addItem' | 'setQuantity' | 'removeItem' | 'refetch';

@@ -25,8 +25,8 @@
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn, type CanMatchFn, type UrlTree } from '@angular/router';
 
-import type { Cart } from '../../api/legacy/models/cart';
-import type { OrderReceipt } from '../../api/legacy/models/order-receipt';
+import type { Cart } from '../../api/generated/models/cart';
+import type { OrderReceipt } from '../../api/generated/models/order-receipt';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';

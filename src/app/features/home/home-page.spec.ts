@@ -45,13 +45,13 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { Api } from '../../../app/api/legacy/api';
-import { getConfig } from '../../../app/api/legacy/fn/configuration/get-config';
-import { getProduct } from '../../../app/api/legacy/fn/catalog/get-product';
-import type { DemoConfig } from '../../../app/api/legacy/models/demo-config';
-import type { Image } from '../../../app/api/legacy/models/image';
-import type { Product } from '../../../app/api/legacy/models/product';
-import type { Variant } from '../../../app/api/legacy/models/variant';
+import { Api } from '../../../app/api/generated/api';
+import { getConfig } from '../../../app/api/generated/fn/configuration/get-config';
+import { getProduct } from '../../../app/api/generated/fn/catalog/get-product';
+import type { DemoConfig } from '../../../app/api/generated/models/demo-config';
+import type { Image } from '../../../app/api/generated/models/image';
+import type { Product } from '../../../app/api/generated/models/product';
+import type { Variant } from '../../../app/api/generated/models/variant';
 
 import { Hero } from '../../../app/features/home/hero';
 import { HowDemoWorks } from '../../../app/features/home/how-demo-works';

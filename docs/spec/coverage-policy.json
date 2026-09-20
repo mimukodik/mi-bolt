@@ -19,7 +19,6 @@
     "excludeClassifications": {
       "generated": [
         "src/app/api/generated/**",
-        "src/app/api/legacy/**",
         "public/mockServiceWorker.js"
       ],
       "tests": [

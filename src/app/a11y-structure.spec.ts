@@ -24,15 +24,15 @@ import { BehaviorSubject } from 'rxjs';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../tests/msw-server';
-import { Api } from './api/legacy/api';
-import { ApiConfiguration, provideApiConfiguration } from './api/legacy/api-configuration';
+import { Api } from './api/generated/api';
+import { ApiConfiguration, provideApiConfiguration } from './api/generated/api-configuration';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
-import type { ProductPage as ProductPageDTO } from './api/legacy/models/product-page';
-import type { ProductSummary } from './api/legacy/models/product-summary';
-import type { Variant } from './api/legacy/models/variant';
+import type { ProductPage as ProductPageDTO } from './api/generated/models/product-page';
+import type { ProductSummary } from './api/generated/models/product-summary';
+import type { Variant } from './api/generated/models/variant';
 import type { Money } from './shared/ui/price-block/price-block';
-import type { CheckoutOptions } from './api/legacy/models/checkout-options';
-import type { OrderReceipt } from './api/legacy/models/order-receipt';
+import type { CheckoutOptions } from './api/generated/models/checkout-options';
+import type { OrderReceipt } from './api/generated/models/order-receipt';
 
 import { CatalogPage } from './features/catalog/catalog-page';
 import { CatalogFacade } from './features/catalog/catalog.facade';

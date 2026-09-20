@@ -44,10 +44,10 @@ import {
   tap,
 } from 'rxjs';
 
-import { Api } from '../../api/legacy/api';
-import { listProducts } from '../../api/legacy/fn/catalog/list-products';
-import type { FacetValue } from '../../api/legacy/models/facet-value';
-import type { ProductSummary } from '../../api/legacy/models/product-summary';
+import { Api } from '../../api/generated/api';
+import { listProducts } from '../../api/generated/fn/catalog/list-products';
+import type { FacetValue } from '../../api/generated/models/facet-value';
+import type { ProductSummary } from '../../api/generated/models/product-summary';
 import {
   DEFAULT_CATALOG_QUERY,
   parseCatalogQuery,

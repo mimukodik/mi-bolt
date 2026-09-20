@@ -15,9 +15,9 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
-import { Api } from '../../api/legacy/api';
-import { ApiConfiguration } from '../../api/legacy/api-configuration';
-import * as operations from '../../api/legacy/functions';
+import { Api } from '../../api/generated/api';
+import { ApiConfiguration } from '../../api/generated/api-configuration';
+import * as operations from '../../api/generated/functions';
 
 import { CheckoutFacade, type CheckoutError } from './checkout.facade';
 import { DeliveryStep } from './delivery-step';
@@ -27,7 +27,7 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { CheckoutOptions } from '../../api/legacy/models/checkout-options';
+import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
 
 type LoadState =
   | { kind: 'loading' }

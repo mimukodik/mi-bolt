@@ -66,13 +66,13 @@ import {
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-import { Api } from '../../api/legacy/api';
-import { ApiConfiguration } from '../../api/legacy/api-configuration';
+import { Api } from '../../api/generated/api';
+import { ApiConfiguration } from '../../api/generated/api-configuration';
 
-import type { OrderReceipt } from '../../api/legacy/models/order-receipt';
-import type { PaymentIntent } from '../../api/legacy/models/payment-intent';
+import type { OrderReceipt } from '../../api/generated/models/order-receipt';
+import type { PaymentIntent } from '../../api/generated/models/payment-intent';
 
-import * as functions from '../../api/legacy/functions';
+import * as functions from '../../api/generated/functions';
 
 import { CheckoutFacade } from './checkout.facade';
 import { CartFacade } from '../cart/cart.facade';

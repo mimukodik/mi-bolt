@@ -1,6 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 
-import type { SpecGroup } from '../../api/legacy/models/spec-group';
+import type { SpecGroup } from '../../api/generated/models/spec-group';
 
 /**
  * T16 — accessible specification accordion (T16-AC03).

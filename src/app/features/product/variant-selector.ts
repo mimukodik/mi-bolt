@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 
-import type { Variant } from '../../api/legacy/models/variant';
+import type { Variant } from '../../api/generated/models/variant';
 
 /**
  * T16 — color and storage variant selector (T16-AC03).

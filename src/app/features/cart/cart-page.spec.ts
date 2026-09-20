@@ -40,7 +40,7 @@ import { join as pathJoin, resolve as pathResolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/legacy/api-configuration';
+import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import { CartDomain } from '../../../mocks/cart/cart-domain';
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { IdempotencyStore } from '../../../mocks/idempotency';
@@ -59,7 +59,7 @@ import { CartFacade } from './cart.facade';
 import { CartLine } from './cart-line';
 import { CartPage } from './cart-page';
 import { OrderSummary } from './order-summary';
-import type { CartItem } from '../../api/legacy/models/cart-item';
+import type { CartItem } from '../../api/generated/models/cart-item';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker

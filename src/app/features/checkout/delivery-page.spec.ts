@@ -22,16 +22,16 @@ import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Api } from '../../api/legacy/api';
-import { provideApiConfiguration } from '../../api/legacy/api-configuration';
-import * as operations from '../../api/legacy/functions';
+import { Api } from '../../api/generated/api';
+import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import * as operations from '../../api/generated/functions';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
 import { DeliveryPage } from './delivery-page';
 
-import type { CheckoutOptions } from '../../api/legacy/models/checkout-options';
+import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
 
 const BASE_URL = 'http://localhost/api/v1';
 

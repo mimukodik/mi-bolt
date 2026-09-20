@@ -1,7 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { ProductSummary } from '../../api/legacy/models/product-summary';
+import type { ProductSummary } from '../../api/generated/models/product-summary';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';

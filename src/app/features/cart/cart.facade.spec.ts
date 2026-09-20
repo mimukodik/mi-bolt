@@ -24,9 +24,9 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { http, HttpResponse, type RequestHandler } from 'msw';
 import { server, useMswServer } from '../../../../tests/msw-server';
 
-import { provideApiConfiguration } from '../../../app/api/legacy/api-configuration';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
-import type { Cart } from '../../../app/api/legacy/models/cart';
+import type { Cart } from '../../../app/api/generated/models/cart';
 
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { CART_DURATION_MS, CartDomain } from '../../../mocks/cart/cart-domain';

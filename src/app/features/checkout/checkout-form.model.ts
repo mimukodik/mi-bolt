@@ -36,7 +36,7 @@ import {
   hidden,
 } from '@angular/forms/signals';
 import type { WritableSignal } from '@angular/core';
-import type { CheckoutSession } from '../../api/legacy/models/checkout-session';
+import type { CheckoutSession } from '../../api/generated/models/checkout-session';
 import { PHONE_INTERNATIONAL } from './contact.schema';
 
 /** Allowed delivery option ids (matches OpenAPI `optionId` enum). */

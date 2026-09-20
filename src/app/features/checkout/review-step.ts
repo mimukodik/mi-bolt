@@ -50,9 +50,9 @@ import { OrderSummary } from '../cart/order-summary';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { TermsDialog } from './terms-dialog';
 
-import type { Cart } from '../../api/legacy/models/cart';
-import type { CartItem } from '../../api/legacy/models/cart-item';
-import type { Quote } from '../../api/legacy/models/quote';
+import type { Cart } from '../../api/generated/models/cart';
+import type { CartItem } from '../../api/generated/models/cart-item';
+import type { Quote } from '../../api/generated/models/quote';
 import type { CheckoutDraft } from './checkout-form.model';
 import type { ReviewState } from './quote-state';
 

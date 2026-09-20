@@ -26,8 +26,8 @@ import { provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import type { ProductSummary } from '../../api/legacy/models/product-summary';
-import type { Variant } from '../../api/legacy/models/variant';
+import type { ProductSummary } from '../../api/generated/models/product-summary';
+import type { Variant } from '../../api/generated/models/variant';
 import type { Money } from '../../shared/ui/price-block/price-block';
 
 import { ProductCard } from './product-card';

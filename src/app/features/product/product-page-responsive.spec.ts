@@ -23,7 +23,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/legacy/api-configuration';
+import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';

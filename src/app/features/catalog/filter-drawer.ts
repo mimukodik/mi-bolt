@@ -1,7 +1,7 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
-import type { FacetValue } from '../../api/legacy/models/facet-value';
+import type { FacetValue } from '../../api/generated/models/facet-value';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { Button } from '../../shared/ui/button/button';

@@ -31,11 +31,11 @@ import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, distinctUntilChanged, map, of, Subject, switchMap, tap } from 'rxjs';
 
-import { Api } from '../../api/legacy/api';
-import { getProduct } from '../../api/legacy/fn/catalog/get-product';
-import type { Image } from '../../api/legacy/models/image';
-import type { Product } from '../../api/legacy/models/product';
-import type { Variant } from '../../api/legacy/models/variant';
+import { Api } from '../../api/generated/api';
+import { getProduct } from '../../api/generated/fn/catalog/get-product';
+import type { Image } from '../../api/generated/models/image';
+import type { Product } from '../../api/generated/models/product';
+import type { Variant } from '../../api/generated/models/variant';
 
 import {
   computeAddToCartState,

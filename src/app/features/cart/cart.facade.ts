@@ -31,12 +31,12 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Service, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { Api } from '../../api/legacy/api';
-import { ApiConfiguration } from '../../api/legacy/api-configuration';
+import { Api } from '../../api/generated/api';
+import { ApiConfiguration } from '../../api/generated/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
 import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
-import type { Cart } from '../../api/legacy/models/cart';
-import type { Money } from '../../api/legacy/models/money';
+import type { Cart } from '../../api/generated/models/cart';
+import type { Money } from '../../api/generated/models/money';
 
 import {
   CartMutationQueue,
@@ -439,7 +439,7 @@ export class CartFacade {
   private async dispatchCreate(inputs: DispatchInputs): Promise<DispatchResult> {
     try {
       const response = await firstValueFrom(
-        this.api.invoke((await import('../../api/legacy/functions')).createCart, {
+        this.api.invoke((await import('../../api/generated/functions')).createCart, {
           'Idempotency-Key': inputs.intent.idempotencyKey,
           body: { providerId: 'mi-bolt' },
         }),
@@ -470,7 +470,7 @@ export class CartFacade {
     try {
       const response = await firstValueFrom(
         this.api.invoke(
-          (await import('../../api/legacy/functions')).addCartItem,
+          (await import('../../api/generated/functions')).addCartItem,
           {
             cartId,
             'Idempotency-Key': inputs.intent.idempotencyKey,
@@ -498,7 +498,7 @@ export class CartFacade {
     try {
       const response = await firstValueFrom(
         this.api.invoke(
-          (await import('../../api/legacy/functions')).setCartItemQuantity,
+          (await import('../../api/generated/functions')).setCartItemQuantity,
           {
             cartId,
             'Idempotency-Key': inputs.intent.idempotencyKey,
@@ -527,7 +527,7 @@ export class CartFacade {
     try {
       const response = await firstValueFrom(
         this.api.invoke(
-          (await import('../../api/legacy/functions')).removeCartItem,
+          (await import('../../api/generated/functions')).removeCartItem,
           {
             cartId,
             'Idempotency-Key': inputs.intent.idempotencyKey,
@@ -546,7 +546,7 @@ export class CartFacade {
     const payload = inputs.intent.payload as { cartId: string };
     try {
       const response = await firstValueFrom(
-        this.api.invoke((await import('../../api/legacy/functions')).getCart, {
+        this.api.invoke((await import('../../api/generated/functions')).getCart, {
           cartId: payload.cartId,
         }),
       );

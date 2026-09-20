@@ -50,19 +50,19 @@ import {
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-import { Api } from '../../api/legacy/api';
-import { ApiConfiguration } from '../../api/legacy/api-configuration';
+import { Api } from '../../api/generated/api';
+import { ApiConfiguration } from '../../api/generated/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
 
-import type { Address } from '../../api/legacy/models/address';
-import type { CheckoutSession } from '../../api/legacy/models/checkout-session';
-import type { Contact } from '../../api/legacy/models/contact';
-import type { DeliverySelection } from '../../api/legacy/models/delivery-selection';
-import type { PaymentIntent } from '../../api/legacy/models/payment-intent';
-import type { Quote } from '../../api/legacy/models/quote';
-import type { OrderReceipt } from '../../api/legacy/models/order-receipt';
+import type { Address } from '../../api/generated/models/address';
+import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+import type { Contact } from '../../api/generated/models/contact';
+import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
+import type { PaymentIntent } from '../../api/generated/models/payment-intent';
+import type { Quote } from '../../api/generated/models/quote';
+import type { OrderReceipt } from '../../api/generated/models/order-receipt';
 
-import * as functions from '../../api/legacy/functions';
+import * as functions from '../../api/generated/functions';
 
 import { CartFacade } from '../cart/cart.facade';
 import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';

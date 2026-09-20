@@ -29,7 +29,7 @@ import { describe, expect, it } from 'vitest';
 import { buildCheckoutForm, createInitialCheckoutFormModel } from './checkout-form.model';
 import { DeliveryStep } from './delivery-step';
 
-import type { CheckoutOptions } from '../../api/legacy/models/checkout-options';
+import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
 
 const OPTIONS: CheckoutOptions = {
   deliveryOptions: [

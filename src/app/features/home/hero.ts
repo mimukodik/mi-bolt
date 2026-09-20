@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { Image } from '../../api/legacy/models/image';
+import type { Image } from '../../api/generated/models/image';
 
 /**
  * `Hero` — dark charcoal hero for the home page (S1).

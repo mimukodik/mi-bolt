@@ -101,7 +101,6 @@
               "**/*.test.ts",
               "**/*.d.ts",
               "src/app/api/generated/**",
-              "src/app/api/legacy/**",
               "tests/**",
               "e2e/**"
             ],
