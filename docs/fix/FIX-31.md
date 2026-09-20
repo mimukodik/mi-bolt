@@ -1,6 +1,15 @@
 # FIX-31 — Fix the secondary text that fails AA contrast on the cart page
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the `.line[aria-busy='true'] { opacity: 0.7; }` rule (`cart-line.scss:16-18`)
+is deleted, nothing added in its place; worktree commit (sha filled in by the orchestrator after
+cherry-pick), touching only `cart-line.scss`. Per this document's own instruction, the
+`e2e/a11y/axe.spec.ts` hand-off (adding the cart route once **FIX-29** lands) is **not** taken:
+`FIX-29` is still `Status: PLANNED` on this tree and `e2e/a11y/axe.spec.ts` does not exist
+(confirmed — `ls e2e/a11y/` shows only `keyboard.spec.ts`), so per this document's own text ("If
+that file does not exist yet, do not create it — FIX-29 owns it") that hand-off stays open. No unit
+spec was added, per FIX-31-AC06's own reasoning (jsdom applies no stylesheet and composites
+nothing). Open: every axe/contrast criterion (AC01–AC05, AC09) is a real-browser measurement
+deferred to the orchestrator's batched browser-verification pass.
 Severity: major
 Source: B2 F10 (diagnosis corrected below), B1 F4 (related), B3 R09
 

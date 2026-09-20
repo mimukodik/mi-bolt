@@ -13,10 +13,6 @@
   color: var(--color-text-primary);
 }
 
-.line[aria-busy='true'] {
-  opacity: 0.7;
-}
-
 .media {
   display: flex;
   align-items: flex-start;
