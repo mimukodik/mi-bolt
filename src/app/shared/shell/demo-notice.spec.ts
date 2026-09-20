@@ -46,7 +46,7 @@ describe('DemoNotice', () => {
   it('renders a distinct memory-warning surface with different text when persistenceMode is memory (FIX-70-AC03/AC04)', () => {
     const { fixture, host } = setup();
     const root = getNativeElement(fixture);
-    const durableText = root.querySelector('.demo-notice__text')?.textContent?.trim();
+    const durableText = root.querySelector('.demo-notice__text')?.textContent.trim();
 
     host.persistenceMode.set('memory');
     fixture.detectChanges();
@@ -55,7 +55,7 @@ describe('DemoNotice', () => {
     expect(notice?.classList.contains('demo-notice--memory')).toBe(true);
     const memoryText = root
       .querySelector('[data-testid="demo-notice-memory-text"]')
-      ?.textContent?.trim();
+      ?.textContent.trim();
     expect(memoryText).toBeTruthy();
     expect(memoryText).not.toBe(durableText);
   });
