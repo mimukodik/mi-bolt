@@ -24,10 +24,10 @@ is `docs/design/yettel/css/portal.css`
 the same reasoning as the catalogue images in the backend's decision record
 `docs/decisions/0005`: the workspace cannot host copyrighted material and
 the source pages and stylesheets are kept for reference, not for
-redistribution. The orchestrator will add screenshots of the captured pages
-at Full HD (1920x1080) and mobile (390x844) under
-`docs/design/yettel/screenshots/` after this document lands; the comparison
-against the Angular build sits in the browser pass in
+redistribution. Screenshots of the captured pages at Full HD (1920x1080) and
+mobile (390x844) are under `docs/design/yettel/screenshots/` (home, list,
+list-filters, device and cart at both sizes, device-gallery at Full HD only);
+the comparison against the Angular build sits in the browser pass in
 `.claude/rules/frontend-browser.md`.
 
 ## 2. Colour tokens
@@ -56,8 +56,10 @@ with `grep -oE '[^}]{0,180}\{[^}]*<token>[^}]*\}' docs/design/yettel/css/portal.
 | `--color-success` | `#5cb85c` | Success green: valid feedback, success button, success badge | 34 | `.valid-feedback{color:#5cb85c}`, `.btn-success{color:#fff;background-color:#5cb85c;border-color:#5cb85c}`, `.badge-success{color:#fff;background-color:#5cb85c}` |
 | `--color-error` | `#d9534f` | Error red: invalid feedback, danger button, error badge, invalid input ring | 35 | `.invalid-feedback{color:#d9534f}`, `.btn-danger{color:#fff;background-color:#d9534f;border-color:#d9534f}`, `.is-invalid{border-color:#d9534f}` |
 
-The CSS defines no custom properties (`var(--…)` does not appear in
-`portal.css`); every value is a literal hex. The tokens above are the
+The CSS defines no design custom properties: the only `var(--…)` in
+`portal.css` is `var(--app-height)`, a viewport-height helper used five
+times by the `.questionnaire-*` rules, and every colour, radius and size is
+a literal value. The tokens above are the
 proposed names for the Angular build: a single `:root { --color-* }` block
 maps each name to the hex on the row above, and the recipes below keep
 referring to the tokens rather than the hex.
@@ -72,18 +74,18 @@ the order the browser tries them):
 ```css
 @font-face {
   font-family: "portal-font-regular";
-  src: url("/bundles/phoenix-static/font/typo/font-regular.woff") format("woff"),
-       url("/bundles/phoenix-static/font/typo/font-regular.woff2") format("woff2");
+  src: url("/bundles/phoenix-static/font/typo/font-regular.woff?r-7.9.013") format("woff"),
+       url("/bundles/phoenix-static/font/typo/font-regular.woff2?r-7.9.013") format("woff2");
 }
 @font-face {
   font-family: "portal-font-bold";
-  src: url("/bundles/phoenix-static/font/typo/font-bold.woff") format("woff"),
-       url("/bundles/phoenix-static/font/typo/font-bold.woff2") format("woff2");
+  src: url("/bundles/phoenix-static/font/typo/font-bold.woff?r-7.9.013") format("woff"),
+       url("/bundles/phoenix-static/font/typo/font-bold.woff2?r-7.9.013") format("woff2");
 }
 @font-face {
   font-family: "portal-font-light";
-  src: url("/bundles/phoenix-static/font/typo/font-light.woff") format("woff"),
-       url("/bundles/phoenix-static/font/typo/font-light.woff2") format("woff2");
+  src: url("/bundles/phoenix-static/font/typo/font-light.woff?r-7.9.013") format("woff"),
+       url("/bundles/phoenix-static/font/typo/font-light.woff2?r-7.9.013") format("woff2");
 }
 ```
 
@@ -151,7 +153,7 @@ stylesheet):
 
 ## 4. Radii, spacing, shadows
 
-Border-radius values, measured by `grep -oE 'border-radius:[0-9]+px' docs/design/yettel/css/portal.css | sort | uniq -c | sort -rn` on 2026-09-20. The top values dominate the visual language; the rest are scattered single-purpose radii.
+Border-radius values, measured by `grep -oE 'border-radius:[0-9]+px' docs/design/yettel/css/portal.css | sort | uniq -c | sort -rn` on 2026-09-20. The `50%` row is measured with `grep -o -F 'border-radius:50%' docs/design/yettel/css/portal.css | wc -l`, which the pixel pattern does not reach. The top values dominate the visual language; the rest are scattered single-purpose radii.
 
 | Radius | Count (2026-09-20) | Use | Selectors |
 | --- | --- | --- | --- |
@@ -159,9 +161,9 @@ Border-radius values, measured by `grep -oE 'border-radius:[0-9]+px' docs/design
 | `16px` | 63 | Cards, modal content, configurator-card item, product-prices container, mobile-filter quick filter, modal alerts | `.modal-content,.overlay-modal__content{border-radius:16px;box-shadow:0 12px 12px rgba(0,0,0,0.05),0 24px 48px rgba(0,0,0,0.2)}`, `.configurator-card__item{background-color:#01385e;border-radius:16px}`, `.product-prices__container{padding:24px 16px 0;border:2px solid #f2f4f5;border-radius:16px;background-color:#fff;z-index:5}` |
 | `24px` | 17 | Pill buttons, tab switchers, badge-styled chips | `.btn,.tariff-card__btn-alternate,.tariff-table__btn-alternate,.tariff-advert__box-button,.tariff-card-box__btn-alternate,.tariff-card__btn,.tariff-details-modal__button,.tariff-table__btn,.tariff-card-box__btn,.tariff-card-box__btn--auto-width{font-family:"portal-font-bold",sans-serif,arial;font-size:16px;line-height:24px;display:inline-flex;position:relative;align-items:center;justify-content:center;padding:12px 24px;border:0;border-radius:24px;outline:none !important;cursor:pointer}`, `.portal-tab-switcher{background-color:#002340;border:solid 2px #80919f;border-radius:24px;display:inline-flex;position:relative}`, `.tariff-tab{display:inline-flex;align-items:center;justify-content:center;padding:10px 20px;border-radius:24px;cursor:pointer}` |
 | `14px` | 15 | Smaller inner radii on some spec blocks (`.specification__boxes boxes`) | `.boxes__title{background-color:#f2f4f5;color:#002340}`, `.boxes__container{border:solid 2px #f2f4f5;border-radius:8px}` — note the boxes use 8px; 14px appears on a smaller set of card-internal elements |
-| `4px` | 25 | Custom-control indicator (checkbox/radio) | `.custom-control-indicator{width:20px;height:20px;border:2px solid #e5e9ec;border-radius:4px}` |
+| `4px` | 29 | Custom-control indicator (checkbox/radio) | `.custom-control-indicator{width:20px;height:20px;border:2px solid #e5e9ec;border-radius:4px}` |
 | `3px` | 40 | Cart upsell, custom-control, fallback inputs | `.cart-upsell__product{padding:15px;border:1px solid #dddfe1;border-radius:3px;text-align:center}`, `.product-card__compare-add{width:60px;height:60px;border:2px solid #ebeced;border-radius:50%}` |
-| `50%` | 78 | Avatars, the brand-logo, progress rings, color-picker swatches | `.product-card__color-picker{width:12px;height:12px;margin-bottom:12px;border-radius:50%;box-shadow:0 0 2px rgba(0,0,0,0.4);cursor:pointer}`, `.product-card__color-picker--selected{width:24px;height:24px;border:2px solid #fff;border-radius:50%}`, `.brand-logo{fill:#002340}` |
+| `50%` | 80 | Avatars, the brand-logo, progress rings, color-picker swatches | `.product-card__color-picker{width:12px;height:12px;margin-bottom:12px;border-radius:50%;box-shadow:0 0 2px rgba(0,0,0,0.4);cursor:pointer}`, `.product-card__color-picker--selected{width:24px;height:24px;border:2px solid #fff;border-radius:50%}`, `.brand-logo{fill:#002340}` |
 
 Container max widths (grep `grep -oE '\.container-[a-z]+\{[^}]*\}' docs/design/yettel/css/portal.css`,
 plus the explicit `.header__container` and `.portal-footer` rules):
@@ -213,12 +215,15 @@ Source:
 `.btn--primary,.btn--default,.btn--green,.btn__form,.btn--logout,.btn.btn--grey,.btn--grey.tariff-card__btn-alternate,.btn--grey.tariff-table__btn-alternate,.btn--grey.tariff-advert__box-button,.btn--grey.tariff-card-box__btn-alternate,.btn--grey.tariff-card__btn,.btn--grey.tariff-details-modal__button,.btn--grey.tariff-table__btn,.btn--grey.tariff-card-box__btn,.btn--grey.tariff-card-box__btn--auto-width,.btn__icon--small,.btn--success,.btn--warning,.btn--orange,.btn--yellow,.btn--blue,.btn--green,.btn--gray{color:#fff;background:#002340}`.
 
 Hover/focus:
-`.btn--primary:focus,.btn--primary:hover{color:#fff;background-color:#01385e}` (a
-single shade darker on hover).
+`.btn--primary:focus` and `.btn--primary:hover` sit in one long selector list
+shared with the other contained buttons (`.btn--contained`, `.btn--electric`,
+`.btn--default`, `.btn--green`, `.btn__form`, `.btn--logout`, the `.tariff-*`
+buttons); the shared declaration block is
+`{color:#fff;background-color:#01385e}` (a single shade darker on hover).
 
 Disabled:
-`.btn--primary[disabled]{color:#80919f;background:#e5e9ec}` (muted text on
-the line colour).
+`.btn--primary[disabled]` shares the same long selector list; the declaration
+block is `{color:#80919f;background:#e5e9ec}` (muted text on the line colour).
 
 ### Primary-inverse button (lime on light, `.btn--primary-inverse`)
 
@@ -229,7 +234,10 @@ background:  #b4ff00
 
 Source:
 `.btn--primary-inverse,.btn--gray-inverse{color:#002340;background:#b4ff00}`.
-Hover: `.btn--primary-inverse:focus,.btn--primary-inverse:hover{color:#002340;background-color:#c5ff64}`.
+Hover: `.btn--primary-inverse:focus` and `.btn--primary-inverse:hover` share a
+rule with `.btn--contained-light`, `.btn--white`, `.btn--white-contained`,
+`.btn--white-electric` and `.btn--gray-inverse`; the declaration block is
+`{color:#002340;background-color:#c5ff64}`.
 
 ### Outlined button (`.btn-outline-navy`, `.btn-outline-lime`)
 
@@ -351,11 +359,11 @@ input[name="filter[search]"] (the search box, .info-search-box__input-group)
 
 Sources:
 `.filter-form__label{font-family:"portal-font-bold",sans-serif,arial;font-size:14px;letter-spacing:0;line-height:20px;color:#232841}`,
-`.info-search-box__input-group{min-height:48px;margin:8px 0;border:2px solid #e5e9ec;border-radius:8px;background-color:#fff}`,
+`.info-search-box__input-group{min-height:48px;margin:8px 0;border:2px solid #e5e9ec;border-radius:8px;background-color:#fff;box-shadow:none}`,
 `.product-list-controls__button{font-family:"portal-font-light",sans-serif,arial;font-size:16px;line-height:24px;display:flex;align-items:center;width:100%;padding:12px 16px;border:2px solid #e5e9ec;border-radius:8px}`.
 
 The mobile-filter modal (`.mobile-filter-modal` with
-`.mobile-filter__tariff-quick-filter{min-height:148px;background-color:#f2f4f5;border-radius:16px;padding:16px}`) is the equivalent panel on small viewports.
+`.mobile-filter__tariff-quick-filter{min-height:148px;background-color:#f2f4f5;border-radius:16px;padding:16px;margin-bottom:24px}`) is the equivalent panel on small viewports.
 
 ### Sort control and pager
 
@@ -564,8 +572,9 @@ The price block sits inside a `product-prices__container` (border-radius
 - `.product-prices-section__login-icon` and `.product-prices-section__cta`
   for the call-to-action button.
 - `.shield-configurator-card__headline` (the "Teljes ár:" line).
-- The three configurable cards `.configurator-card` for tarifa, készülék
-  ár, biztosítás, each with `.configurator-card__item` whose computed base
+- The three configurable cards `.configurator-card` for the "tarifa",
+  "készülék ár" and "biztosítás" items (tariff, device price, insurance),
+  each with `.configurator-card__item` whose computed base
   fill is `background-color:#01385e` and radius is 16px. The popular card
   uses `.configurator-card--popular .configurator-card__item{box-shadow:0 0 0 3px #b4ff00 inset}`;
   the selected (non-popular) card uses
@@ -607,52 +616,61 @@ items within `.specification__boxes`.
 ## 6. List page feature inventory
 
 What the captured yettel list page (`docs/design/yettel/pages/list-mobiltelefon.html`)
-offers, against what the MiBolt backend actually serves
-(`GET /api/v1/products` per `docs/api/openapi.yaml`: query parameters `q`,
-`brand`, `storageGb`, `minPrice`, `maxPrice`, `inStock`, `is5g`, `featured`,
-`sort` enum `{recommended, price_asc, price_desc, name_asc}` (default
-`recommended`), `page`, `pageSize` enum `{12, 24}` (default 12); the response
-includes `facets: { brands: [...], storageGb: [...] }` and no `priceRange`
-or colour facet; there is no `color[]` query parameter; the catalogue has no
-"new" flag and no `discounted` flag).
+offers, against what the MiBolt backend serves per the backend contract
+`api/openapi.yaml` in `mimukodik/mi-bolt-backend`, version 2.0.0 (the copy
+under this repository's `docs/api/openapi.yaml` is the superseded 1.0.0
+contract until `npm run api:sync` refreshes it in S1). `GET /api/v1/products`
+takes `q`, `brand` (repeatable), `storageGb` (repeatable), `color`
+(repeatable colour code), `minPrice`, `maxPrice`, `inStock`, `is5g`,
+`featured`, `sort` (`ProductSort`: `recommended` (default), `newest`,
+`oldest`, `popularity`, `price_asc`, `price_desc`, `name_asc`, `name_desc`),
+`page` and `pageSize` (12 or 24, default 12). The response is `ProductPage`
+with `items: CatalogItem[]` and `facets: Facets` (`brands`, `storageGb` and
+`colors` as `{value, label, count}` lists, `colors` with `swatchHex` too,
+`is5g` and `inStock` as counts, `priceRange {min, max}`). A `CatalogItem`
+carries `id`, `slug`, `brand`, `name`, `highlights`, `is5g`, `releasedAt`,
+`storageGb`, `variantId`, `variantSlug`, `price`, `availability`
+(`in_stock` or `out_of_stock`), `maxQuantity`, `image` and
+`colors: ColorOption[]`. The catalogue has no "new" flag and no
+`discounted` flag.
 
 | Feature | yettel | MiBolt backend | Decision | Reason |
 | --- | --- | --- | --- | --- |
-| Sort by `name_asc/desc`, `price_asc/desc`, `date_asc/desc`, `popularity`, `weight_desc` (Ajánlatunk) | Eight options in `<select id="filter_order">` | `sort` enum: `recommended` (default), `price_asc`, `price_desc`, `name_asc` (4 values) | partial — only `price_asc`, `price_desc`, `name_asc` map; the Ajánlatunk default maps to `recommended` | API returns 400 for unknown values; the missing 5 must be dropped or aliased to `recommended`. |
+| Sort by `name_asc/desc`, `price_asc/desc`, `date_asc/desc`, `popularity`, `weight_desc` (Ajánlatunk) | Eight options in `<select id="filter_order">` | `sort` (`ProductSort`): `recommended` (default), `newest`, `oldest`, `popularity`, `price_asc`, `price_desc`, `name_asc`, `name_desc` | take | Maps 1:1: "Ajánlatunk" → `recommended`, "Legújabb elöl" → `newest`, "Legrégebbi elöl" → `oldest`, "Legnépszerűbb elöl" → `popularity`, "Legolcsóbb elöl" / "Legdrágább elöl" → `price_asc` / `price_desc`, "Név szerint (A-Z)" / "(Z-A)" → `name_asc` / `name_desc`; the API returns 400 for an unknown value. |
 | Page size 20/50/100 | Native `<select id="filter_limit">` | `pageSize` 12 or 24 | take without 50/100 | The brief sets the page size to 12 or 24. |
 | Free-text search | `<input name="filter[search]">` | `q` | take | Maps 1:1. |
-| Manufacturer filter (brand) | `filter[specification][manufacturer][]` checkboxes, "Még több gyártó" reveals more | `brand[]` | take | Maps 1:1; brands are Samsung, Apple, Xiaomi, Google, Honor, Motorola, Vivo from the captured page. |
-| Storage filter | `filter[specification]` (generic spec filter, not dedicated) | `storageGb[]` | take | Backend has a dedicated field; the yettel implementation is generic. |
-| Colour filter | not present on the captured list page | not served by `GET /api/v1/products` | drop | There is no `color[]` query parameter and no colour facet in `ProductPage.facets`. |
-| Price range filter | not present as a slider on the captured list page (yettel ties it to a tariff selection) | `minPrice`, `maxPrice` | take without yettel reference | Frontend filters locally; there is no price facet in `ProductPage.facets`. |
-| In-stock filter | not present | `inStock` (boolean query param) | take without yettel reference | The list does not echo an `inStock` field; the filter narrows the catalogue, the card derives stock from `defaultVariant.availability` (`in_stock`/`out_of_stock`/`preorder`). |
+| Manufacturer filter (brand) | `filter[specification][manufacturer][]` checkboxes, "Még több gyártó" reveals more | `brand` (repeatable) | take | Maps 1:1; brands are Samsung, Apple, Xiaomi, Google, Honor, Motorola, Vivo from the captured page. |
+| Storage filter | `filter[specification]` (generic spec filter, not dedicated) | `storageGb` (repeatable) | take | Backend has a dedicated field; the yettel implementation is generic. |
+| Colour filter | not present on the captured list page | `color` (repeatable colour code) and `Facets.colors` (`ColorFacetValue`: `value`, `label`, `count`, `swatchHex`) | take without yettel reference | The backend serves the facet with swatches; the filter panel renders it as a swatch row with the §5 colour-picker recipe. |
+| Price range filter | not present as a slider on the captured list page (yettel ties it to a tariff selection) | `minPrice`, `maxPrice` and `Facets.priceRange {min, max}` | take without yettel reference | The bounds of the current result set come from `priceRange`; the frontend does not compute them locally. |
+| In-stock filter | not present | `inStock` (boolean query param) | take without yettel reference | The list does not echo an `inStock` field; the filter narrows the catalogue, the card derives stock from `CatalogItem.availability` (`in_stock` or `out_of_stock`); `Facets.inStock` is the count of in-stock items. |
 | 5G-ready filter | not present | `is5g` | take without yettel reference | Backend has the flag. |
 | Featured filter | not present | `featured` | drop from UI for now | Backend has the flag but the catalogue has no featured items in the demo; deferred. |
 | Tariff filter (`filter[tariff]`, "Tarifát választok" modal) | Yes, modal with monthly price options | not served | drop | The backend has no tariff model; the filter and the modal are dropped. |
 | Installment-only filter | `filter[flags_only_with_installment]` | not served | drop | No instalment model in the backend. |
 | Zero gross price filter | `filter[flags_only_zero_gross_price]` | not served | drop | Same. |
 | Pagination | `.pagination` with navy active state | yes, with `page` and `pageSize` | take | Maps 1:1; the visual recipe is in §5. |
-| Disjunctive facet counts | not visible in the captured markup | yes, in `ProductPage.facets.brands` and `ProductPage.facets.storageGb` | take | Frontend renders counts alongside each of the two facets only; no colour or price facet. |
-| Product card with discount badge (`.label-discount{background:#b4ff00;color:#002340}`) | Yes, lime badge | backend has no `discounted` flag and no discount signal on `Product`/`ProductSummary` | drop the badge | No data to drive it; the badge style is documented for a future flag. |
+| Disjunctive facet counts | not visible in the captured markup | yes: `Facets.brands`, `Facets.storageGb` and `Facets.colors` carry `count`; `Facets.is5g` and `Facets.inStock` are counts | take | Frontend renders the count beside every facet option and disables zero-count options. |
+| Product card with discount badge (`.label-discount{background:#b4ff00;color:#002340}`) | Yes, lime badge | backend has no `discounted` flag and no discount signal on `Product` or `CatalogItem` | drop the badge | No data to drive it; the badge style is documented for a future flag. |
 | Card-level "Új" / "Akció" badge | not present on cards | backend has no "new" flag | drop | No data to drive it. |
-| Card-level colour swatches (`.product-card__color-picker`, 12px / 24px selected) | Yes | variants[] on `Product` (each has `colorCode`, `colorName`, `swatchHex`); `ProductSummary.defaultVariant` only | take | The recipe is in §5; the list page shows the default variant's swatch, the device page shows the full `variants[]` chip list. |
+| Card-level colour swatches (`.product-card__color-picker`, 12px / 24px selected) | Yes | `CatalogItem.colors: ColorOption[]` (each `colorCode`, `colorName`, `swatchHex`, `variantId`, `variantSlug`, `price`, `availability`); `Product.variants: Variant[]` on the device page | take | The recipe is in §5; the list card renders every `colors[]` swatch, and selecting one swaps the card's image, price and link to that `variantSlug`; the device page uses the full `variants[]`. |
 
 ## 7. Device page feature inventory
 
 | Feature | yettel | MiBolt backend | Decision | Reason |
 | --- | --- | --- | --- | --- |
-| Image gallery / carousel (Swiper) | `.mobile-gallery__swiper-container` with `.product-details__image-container` and `swiper-slide` per image | one main image URL, multiple gallery images in the payload | take | The visual recipe is in §5; the frontend component will wrap Swiper with the captured class names. |
+| Image gallery / carousel (Swiper) | `.mobile-gallery__swiper-container` with `.product-details__image-container` and `swiper-slide` per image | `Variant.images: Image[]` (each `id`, `src`, `alt`, `width`, `height`; `src` is used unchanged and may be `/api/v1/media/<id>`) | take | The visual recipe is in §5; the frontend component will wrap Swiper with the captured class names. |
 | Bottom thumbnail row (60px, lime active ring) | `.thumbnail-container` + `.thumbnail-container.active{border:2px solid #b4ff00}` | gallery images served | take | Recipe is in §5. |
-| Colour variant chips (`.product-variant-item--color`) | Yes, with selected lime ring | served via product `colors[]` | take | Recipe is in §5. |
-| Storage variant chips (`.product-variant-item--main-model`) | Yes, same selected lime ring | served via product `storageGb[]` | take | Recipe is in §5. |
+| Colour variant chips (`.product-variant-item--color`) | Yes, with selected lime ring | `Product.variants[]` (`colorCode`, `colorName`, `swatchHex` per variant) | take | Recipe is in §5. |
+| Storage variant chips (`.product-variant-item--main-model`) | Yes, same selected lime ring | `Product.variants[]` (`storageGb` per variant) | take | Recipe is in §5. |
 | One-off price block | `.product-prices__container` border-radius 16px, white surface | served | take | Recipe is in §5. |
-| Instalment / "havi" block | `.shield-configurator-card__headline` with "Teljes ár:", three configurator cards (tarifa / készülék ár / biztosítás) | not served | drop | Backend has one-off prices only, no instalment or tariff model. |
+| Instalment / "havi" block | `.shield-configurator-card__headline` with "Teljes ár:", three configurator cards ("tarifa" / "készülék ár" / "biztosítás": tariff, device price, insurance) | not served | drop | Backend has one-off prices only, no instalment or tariff model. |
 | Tariff configurator card | `.configurator-card--tariff-shield` with `border:2px solid #b4ff00;background:rgba(255,255,255,0.1)` for selected | not served | drop | No tariff model in the backend. |
 | Insurance upsell (`.configurator-card__payment`, `.shield-configurator-card__body`) | Yes, with sky-blue background (`#c4dfe9`) | not served | drop | User said no services. |
-| Specification table (`.specification__boxes`, `.boxes__title`) | Yes, in `.specification__boxes` | served via product `specs` | take | Recipe is in §5; the boxes are grouped under `.specification__title` headings. |
-| Related devices (`.recommendation-item`) | Yes, with sky-blue cards and `.product-card-list` row | no related/category endpoint in `docs/api/openapi.yaml` | drop | No related-products endpoint exists; the recommendation row is deferred. |
-| Service upsell (készülék-biztosítás, kiterjesztett garancia) | Yes | not served | drop | User said no services. |
-| Stock state | not visible in the captured markup (covered by "Kosárba" button visibility) | derived from `defaultVariant.availability` on `ProductSummary` (and `variants[i].availability` on `Product`) — values `in_stock`, `out_of_stock`, `preorder` | take | The frontend derives in-stock from `availability === 'in_stock'` on the selected variant; there is no top-level `inStock` field on `Product` or `ProductSummary`. |
+| Specification table (`.specification__boxes`, `.boxes__title`) | Yes, in `.specification__boxes` | `Product.specGroups: SpecGroup[]` (`id`, `title`, `rows: SpecRow[]` with `label`, `value`) | take | Recipe is in §5; the boxes are grouped under `.specification__title` headings. |
+| Related devices (`.recommendation-item`) | Yes, with sky-blue cards and `.product-card-list` row | `GET /api/v1/products/{slug}/related` returns up to four `CatalogItem`s in relevance order, loaded separately from the product | take | The recommendation row uses the §5 card recipe and shows a placeholder until the related call returns. |
+| Service upsell ("készülék-biztosítás", "kiterjesztett garancia": device insurance, extended warranty) | Yes | not served | drop | User said no services. |
+| Stock state | not visible in the captured markup (covered by "Kosárba" button visibility) | derived from `CatalogItem.availability` on the list and `Variant.availability` on the device page, values `in_stock` and `out_of_stock` | take | The frontend derives in-stock from `availability === 'in_stock'` on the selected variant; there is no top-level `inStock` field on `Product` or `CatalogItem`. |
 | "Teljes ár:" headline | Yes, navy bold | served | take | Recipe is in §5; used as the single price line on the MiBolt device page. |
 
 ## 8. Checkout notes
@@ -662,7 +680,10 @@ The cart and checkout pages were not captured. The home page
 only surfaces in `docs/design/yettel/pages/` and they show cart interaction
 only at the level of a header cart counter (`.portal-header__cart-counter`
 with a lime-on-navy pill, see §5) and the configurator's CTA buttons. The
-checkout comparison therefore stays pending until the orchestrator adds
-the screenshots under `docs/design/yettel/screenshots/`; this section is
-filled in from those screenshots in a follow-up edit, not from the
-captured HTML.
+cart page exists as screenshots only, `docs/design/yettel/screenshots/cart-1920.png`
+and `cart-390.png` (reached without a login); the checkout itself was not
+captured, because the step after the cart submits a real order on yettel.hu.
+The MiBolt checkout keeps its current structure; the cart screenshots are the
+reference for the cart page's surfaces (line items, the sticky order button,
+the summary). On the mobile cart capture yettel's own chat bubble overlaps the
+sticky order button, which the MiBolt cart avoids.
