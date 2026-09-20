@@ -687,3 +687,69 @@ The MiBolt checkout keeps its current structure; the cart screenshots are the
 reference for the cart page's surfaces (line items, the sticky order button,
 the summary). On the mobile cart capture yettel's own chat bubble overlaps the
 sticky order button, which the MiBolt cart avoids.
+
+## 9. Token mapping
+
+The Angular build keeps the legacy token names the ~1000 existing `var(--…)`
+usages already reference, and resolves each one to a yettel theme variable.
+The theme variables are declared once, in the `@theme` block of
+`src/styles.css` (Tailwind v4: `--color-*` produces the `bg`, `text` and
+`border` utilities, `--radius-*` produces `rounded-*`, `--font-*` produces
+`font-*`); the legacy names are declared once, in `src/styles/tokens.css`.
+Every hex below is a value from §2, §3 or §4 of this document, and the
+"yettel use" column names the selector that carries it there.
+
+| Legacy token | Theme variable | Hex | Where yettel uses that colour |
+| --- | --- | --- | --- |
+| `--color-brand-accent` | `--color-primary` | `#002340` | `.btn--primary{color:#fff;background:#002340}` — the primary CTA (§5) |
+| `--color-brand-accent-hover` | `--color-primary-hover` | `#01385e` | `.btn--primary:hover{color:#fff;background-color:#01385e}` (§5) |
+| `--color-brand-accent-soft` | `--color-surface-sky` | `#c4dfe9` | `.information-box{background-color:#c4dfe9;color:#002340}` — the soft call-out tint behind selected and hovered controls (§2) |
+| `--color-brand-ink` | `--color-primary` | `#002340` | `.btn-outline-navy{color:#002340;border-color:#002340}` — the text and border that pair with the soft tint (§5) |
+| `--color-surface-light` | `--color-surface` | `#fff` | `body{background-color:#fff}` (§2) |
+| `--color-surface-section` | `--color-surface-alt` | `#f2f4f5` | `.featured{background-color:#f2f4f5}` — grey section bands (§2) |
+| `--color-shell-dark` | `--color-primary` | `#002340` | `.header__wrapper{background:#002340;color:#fff}` and `.portal-footer{background-color:#002340}` (§5, §7) |
+| `--color-shell-hero` | `--color-primary` | `#002340` | same navy; yettel carries no darker surface than `#002340` (§2) |
+| `--color-shell-line` | `--color-primary-hover` | `#01385e` | `.configurator-card__item{background-color:#01385e}` — the raised/divider tone on navy (§5) |
+| `--color-text-primary` | `--color-text` | `#002340` | `.product-card__price{color:#002340}` — navy is the text colour on light surfaces (§2) |
+| `--color-text-secondary` | `--color-text-muted` | `#80919f` | `.text-muted{color:#80919f !important}` (§2) |
+| `--color-text-inverse` | `--color-surface` | `#fff` | `.btn--primary{color:#fff}`; §2 gives the inverse text as `#ffffff`, the same value as the default surface, so it resolves to the one white the theme declares |
+| `--color-text-inverse-muted` | `--color-line` | `#e5e9ec` | yettel names no muted text for dark surfaces; `#e5e9ec` (`.product-variant-item{box-shadow:0 0 0 1px #e5e9ec inset}`, §2) is its lightest neutral and reads at 13.4:1 on `#002340` |
+| `--color-border-subtle` | `--color-line` | `#e5e9ec` | `.solid-input-group{box-shadow:0 0 0 2px #e5e9ec inset}` (§2) |
+| `--color-border-control` | `--color-text-muted` | `#80919f` | `.portal-tab-switcher{background-color:#002340;border:solid 2px #80919f}` — yettel's own control border (§4); it is 3.2:1 on white, where `--color-line-strong` `#dddfe1`, the other candidate, is 1.3:1 and so below the 3:1 WCAG 1.4.11 minimum a control border needs |
+| `--color-status-success` | `--color-success` | `#5cb85c` | `.valid-feedback{color:#5cb85c}` (§2) |
+| `--color-status-error` | `--color-error` | `#d9534f` | `.invalid-feedback{color:#d9534f}` (§2) |
+| `--color-status-warning` | `--color-primary` | `#002340` | yettel's warning is `.alert-warning{background-color:#ffd500;color:#332b00}`, a dark-on-yellow pair, while both consumers here set white text on the token; navy keeps those two banners legible until a warning surface is designed |
+| `--color-status-info` | `--color-surface-sky` | `#c4dfe9` | `.alert{display:flex;background-color:#c4dfe9;border-radius:0 0 16px 16px}` (§2) |
+| `--color-focus-light` | `--color-primary` | `#002340` | yettel sets `outline:none !important` on `.btn` and carries no focus recipe; navy is the brand colour and is 16.3:1 on white |
+| `--color-focus-dark` | `--color-accent` | `#b4ff00` | `.portal-header-menu__link{color:#b4ff00}` and `.thumbnail-container.active{border:2px solid #b4ff00}` — lime is the on-navy accent (§5) |
+| `--radius-card` | `--radius-card` | `16px` | cards, modal content, `.product-prices__container` (§4); the legacy name and the theme name are the same name and the sheet declares it once |
+| `--radius-control` | `--radius-input` | `8px` | `.solid-input-group{border-radius:8px}` — the 165-use dominant radius (§4) |
+| `--radius-badge` | `--radius-input` | `8px` | same 8px; the token also carries skeleton blocks and focus rings, which a 24px pill would distort (§4) |
+| `--button-radius` | `--radius-pill` | `24px` | `.btn{…border-radius:24px}` (§4, §5) |
+| `--font-family-base` | `--font-sans` | `"portal-font-regular", sans-serif, arial` | `body{font-family:"portal-font-regular",sans-serif,arial}` (§3) |
+
+Three things this table does not do, each for a measured reason.
+
+- **The header stays navy in this pass.** The live consumer header is lime
+  with navy text (`docs/design/yettel/screenshots/home-1920.png`), but one
+  token, `--color-shell-dark`, feeds the header, the footer and the hero, and
+  §7 fixes the footer at `#002340` with white text. Turning the token lime
+  would need per-surface text colours inside `header-nav.scss`, which is the
+  header restyle's own work. Navy on white text is what §5's
+  `.header__wrapper` and §7's `.portal-footer` both give, so it is correct
+  where it lands, and the header restyle flips the header to lime with navy
+  text when it owns that sheet.
+- **The three weights stay numbers** (`--weight-regular: 400`,
+  `--weight-medium: 500`, `--weight-bold: 700`). yettel expresses weight as a
+  separate face rather than as a weight of one family — §3's three
+  `@font-face` blocks are three families, all at the normal weight — so the
+  bold and light faces are reached through `font-family: var(--font-bold)`
+  and `var(--font-light)`, which is what the heading reset in
+  `src/styles/primitives.css` and the button sheet do.
+- **`--font-bold` and `--font-light` are theme variables, not utilities.**
+  Tailwind's own theme declares `--font-weight-bold: 700` and
+  `--font-weight-light: 300`, which generate the `font-bold` and `font-light`
+  classes, so those two class names are ambiguous here and no template uses
+  them; the faces are applied as `var(--font-bold)` and `var(--font-light)`
+  in CSS, which is unambiguous. `--font-sans` has no such clash and
+  `font-sans` works normally.

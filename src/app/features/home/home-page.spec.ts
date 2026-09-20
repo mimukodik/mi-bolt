@@ -277,7 +277,7 @@ function productFixtures(): Map<string, Product> {
 // ---------------------------------------------------------------------------
 
 describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => {
-  it('hero uses the dark shell token (R02) and the orange accent token (R03)', async () => {
+  it('hero uses the navy shell token and the brand accent token (docs/design/yettel.md §9)', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -287,9 +287,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     f.componentRef.setInput('subtitle', 'Egyszerűen.');
     f.detectChanges();
     const css = getComponentStyles(Hero).join(' ');
-    const hasDark = css.includes('color-shell-dark');
-    const hasAlt = css.includes('mi-bolt-color-surface-dark');
-    expect(hasDark || hasAlt).toBe(true);
+    expect(css.includes('color-shell-dark')).toBe(true);
     expect(css.includes('color-brand-accent')).toBe(true);
   });
 

@@ -144,4 +144,24 @@ describe('Button primitive', () => {
     const css = Button.ɵcmp.styles.join('\n');
     expect(css).toContain(':focus-visible');
   });
+
+  it('wires the yettel button recipe into its stylesheet (docs/design/yettel.md §5)', () => {
+    if (!hasComponentStyles(Button)) {
+      throw new Error('Expected Button component styles');
+    }
+    // The compiler stores custom-property names with a namespace placeholder
+    // (`var(--%NS%color-primary)`), so these match the bare token name, the
+    // same way home-page.spec.ts and layouts.spec.ts do.
+    const css = Button.ɵcmp.styles.join('\n');
+    // primary: white on navy #002340; secondary: the same navy as outline.
+    expect(css).toContain('color-primary');
+    // secondary-on-dark: the .btn--primary-inverse recipe, navy on lime.
+    expect(css).toContain('color-accent');
+    expect(css).toContain('color-accent-hover');
+    // disabled: #80919f on #e5e9ec.
+    expect(css).toContain('color-disabled-text');
+    expect(css).toContain('color-disabled-bg');
+    // the retired orange palette is gone from this primitive.
+    expect(css).not.toContain('color-brand-accent');
+  });
 });

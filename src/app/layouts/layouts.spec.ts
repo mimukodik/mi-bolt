@@ -163,7 +163,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     await TestBed.compileComponents();
   });
 
-  it('MarketingLayout header has dark shell and brand label', () => {
+  it('MarketingLayout header has the navy shell token and brand label', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
@@ -171,10 +171,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     const header = raw.querySelector('header');
     expect(header).not.toBeNull();
     const css = getComponentStyles(HeaderNav).join(' ');
-    const hasDark = css.includes('color-shell-dark');
-    const hasAlt = css.includes('mi-bolt-color-surface-dark');
-    const found = hasDark || hasAlt;
-    expect(found).toBe(true);
+    expect(css.includes('color-shell-dark')).toBe(true);
   });
 
   it('MarketingLayout exposes Hungarian nav links', () => {
