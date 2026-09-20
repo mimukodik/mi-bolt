@@ -4,25 +4,27 @@
     data-testid="checkout-header"
     role="banner"
   >
-    <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
+    <div
+      class="header__inner flex items-center gap-4 mx-auto w-full min-h-16 px-4 py-2 lg:gap-6 lg:px-12"
+    >
       <a
         routerLink="/"
-        class="brand inline-flex items-center gap-2 no-underline min-h-10"
+        class="brand inline-flex items-center gap-2 no-underline min-h-11"
         aria-label="MiBolt kezdőlap"
       >
         <span
-          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
+          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
           aria-hidden="true"
           >M</span
         >
-        <span class="brand__word font-bold tracking-wide">MiBolt</span>
+        <span class="brand__word tracking-wide">MiBolt</span>
       </a>
-      <span class="header__label uppercase tracking-wider" aria-label="Demó pénztár"
+      <span class="header__label uppercase tracking-wider text-sm" aria-label="Demó pénztár"
         >Demó pénztár</span
       >
       <a
         routerLink="/telefonok"
-        class="header__back inline-flex items-center no-underline min-h-10 rounded"
+        class="header__back inline-flex items-center no-underline rounded-pill text-base leading-6 whitespace-nowrap shrink-0"
         data-testid="back-to-shop"
         >Vissza a shopba</a
       >
@@ -34,11 +36,13 @@
     data-testid="main-header"
     role="banner"
   >
-    <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
+    <div
+      class="header__inner flex items-center gap-4 mx-auto w-full min-h-16 px-4 py-2 lg:gap-6 lg:px-12"
+    >
       <button
         #menuTrigger
         type="button"
-        class="menu-trigger inline-flex items-center justify-center w-10 h-10 rounded border border-transparent bg-transparent cursor-pointer text-xl lg:hidden"
+        class="menu-trigger inline-flex items-center justify-center w-11 h-11 rounded-input border-0 bg-transparent cursor-pointer text-xl lg:hidden"
         [attr.aria-expanded]="drawerOpen()"
         aria-controls="mobile-drawer"
         aria-label="Menü megnyitása"
@@ -49,20 +53,20 @@
       </button>
       <a
         routerLink="/"
-        class="brand inline-flex items-center gap-2 no-underline min-h-10"
+        class="brand inline-flex items-center gap-2 no-underline min-h-11"
         aria-label="MiBolt kezdőlap"
       >
         <span
-          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
+          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded-input"
           aria-hidden="true"
           >M</span
         >
-        <span class="brand__word font-bold tracking-wide">MiBolt</span>
+        <span class="brand__word tracking-wide">MiBolt</span>
       </a>
       <nav class="header__nav hidden gap-4 flex-1 justify-center lg:flex" aria-label="Fő navigáció">
         @for (link of navLinks(); track link.label) {
           <a
-            class="inline-flex items-center no-underline min-h-10 rounded"
+            class="relative inline-flex items-center no-underline min-h-11 px-3"
             [routerLink]="link.routerLink"
             [fragment]="link.fragment"
             routerLinkActive="is-active"
@@ -73,12 +77,12 @@
       </nav>
       <div class="header__actions flex items-center gap-2 ml-auto">
         <label
-          class="header__search hidden items-center rounded min-h-10 px-3 lg:flex"
+          class="header__search hidden items-center rounded-input h-12 px-4 lg:flex"
           data-testid="header-search"
         >
           <span class="sr-only">Keresés a telefonok között</span>
           <input
-            class="bg-transparent border-0 outline-none min-w-50 font-inherit h-10"
+            class="bg-transparent border-0 outline-none min-w-50 h-12"
             type="search"
             name="q"
             placeholder="Keresés…"
@@ -92,7 +96,7 @@
         </label>
         <a
           routerLink="/penztar/kosar"
-          class="cart relative inline-flex items-center gap-2 no-underline min-h-10 px-3 rounded"
+          class="cart relative inline-flex items-center gap-2 no-underline min-h-11 px-3 rounded-input"
           [attr.aria-label]="cartLabel()"
           data-testid="cart-link"
         >
@@ -104,10 +108,10 @@
               />
             </svg>
           </span>
-          <span class="cart__label hidden lg:inline">Kosár</span>
+          <span class="cart__label hidden text-base lg:inline">Kosár</span>
           @if (cartFacade.itemCount() > 0) {
             <span
-              class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold"
+              class="cart__badge inline-flex items-center justify-center w-4 h-4 rounded-full"
               data-testid="cart-badge"
               aria-hidden="true"
             >
@@ -115,7 +119,7 @@
             </span>
           } @else {
             <span
-              class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold"
+              class="cart__badge inline-flex items-center justify-center w-4 h-4 rounded-full"
               data-testid="cart-badge"
               aria-hidden="true"
               >0</span
@@ -125,14 +129,14 @@
       </div>
     </div>
     <div
-      class="mobile-search block px-4 pb-3 pt-2 border-t"
+      class="mobile-search block px-4 pb-3 pt-2 lg:hidden"
       data-testid="mobile-search"
       role="search"
     >
       <label class="mobile-search__field block">
         <span class="sr-only">Keresés a telefonok között</span>
         <input
-          class="w-full min-h-10 px-3 bg-transparent border border-transparent rounded font-inherit"
+          class="w-full h-12 px-4 border-0 rounded-input"
           type="search"
           name="q-mobile"
           placeholder="Keresés a telefonok között…"

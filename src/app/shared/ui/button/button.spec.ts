@@ -18,7 +18,7 @@ import { Button } from './button';
   `,
 })
 class HostComponent {
-  readonly variant = signal<'primary' | 'secondary' | 'secondaryOnDark'>('primary');
+  readonly variant = signal<'primary' | 'secondary' | 'secondaryOnDark' | 'navy'>('primary');
   readonly size = signal<'standard' | 'comfortable'>('standard');
   readonly label = signal('Kosárba teszem');
   readonly loadingLabel = signal('Hozzáadás…');
@@ -38,11 +38,13 @@ function hasComponentStyles(val: unknown): val is ComponentWithStyles {
   return 'ɵcmp' in val;
 }
 
-/** Strips the compiler's custom-property namespace placeholder, the emulated
- * encapsulation attribute selector and all whitespace, so a declaration can be
- * asserted verbatim regardless of how the build formatted it. */
+/** Strips comments, the compiler's custom-property namespace placeholder, the
+ * emulated encapsulation attribute selector and all whitespace, so a
+ * declaration can be asserted verbatim regardless of how the build formatted
+ * it. */
 function normaliseComponentCss(css: string): string {
   return css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
     .replaceAll('%NS%', '')
     .replace(/\[[^\]]*\]/g, '')
     .replace(/\s+/g, '');
@@ -50,15 +52,29 @@ function normaliseComponentCss(css: string): string {
 
 /** The declaration block of one rule of the normalised sheet. Asserting on the
  * block rather than on the whole sheet is what makes a colour pair belong to
- * the variant under test: `.root` and `.root.is-secondary-on-dark` now carry
- * the same lime fill, so a sheet-wide match proves nothing about either. */
+ * the variant under test: the outlined variants share one box rule, so a
+ * sheet-wide match proves nothing about either. The selector has to sit at a
+ * rule boundary, or `.root.is-secondary-on-dark` would match inside the
+ * grouped selector `.root.is-secondary,.root.is-secondary-on-dark`. The
+ * boundary includes `;` because Sass prepends `@charset "UTF-8";`. */
 function ruleBody(css: string, selector: string): string {
-  const at = css.indexOf(`${selector}{`);
-  if (at === -1) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`(?:^|[{};])${escaped}\\{`).exec(css);
+  if (match === null) {
     throw new Error(`Expected a rule for ${selector}`);
   }
-  const open = at + selector.length + 1;
+  const open = match.index + match[0].length;
   return css.slice(open, css.indexOf('}', open));
+}
+
+/** The declarations of one rule, as whole `prop:value` strings. A substring
+ * match is not enough for a colour: `color:var(--color-accent)` also matches
+ * inside `border-color:var(--color-accent)`, so dropping the `color` line
+ * leaves such an assertion green. */
+function declarations(css: string, selector: string): string[] {
+  return ruleBody(css, selector)
+    .split(';')
+    .filter((d) => d.length > 0);
 }
 
 function setup(): {
@@ -160,6 +176,15 @@ describe('Button primitive', () => {
     expect(btn?.classList.contains('is-primary')).toBe(false);
   });
 
+  it('applies the filled-navy variant when configured', () => {
+    const { fixture, host, root } = setup();
+    host.variant.set('navy');
+    fixture.detectChanges();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.classList.contains('is-navy')).toBe(true);
+    expect(btn?.classList.contains('is-primary')).toBe(false);
+  });
+
   it('declares the focus-visible state in its stylesheet (R20)', () => {
     if (!hasComponentStyles(Button)) {
       throw new Error('Expected Button component styles');
@@ -179,32 +204,51 @@ describe('Button primitive', () => {
     const css = normaliseComponentCss(Button.ɵcmp.styles.join('\n'));
     // primary: the .btn--primary-inverse recipe, navy #002340 on lime
     // #b4ff00 — the lime pill is yettel's CTA on every captured screen.
-    const primary = ruleBody(css, '.root');
+    const primary = declarations(css, '.root');
     expect(primary).toContain('color:var(--color-primary)');
     expect(primary).toContain('background:var(--color-accent)');
-    // the 24px pill radius (§4) and the bold face, reached through the token
-    // that is not a Tailwind theme variable so `font-bold` keeps its weight.
+    // the 24px pill radius (§4), the 48px box (12 + 24 + 12) and the bold
+    // face, reached through the token that is not a Tailwind theme variable
+    // so `font-bold` keeps its weight. A filled .btn carries `border:0`.
     expect(primary).toContain('border-radius:var(--button-radius)');
+    expect(primary).toContain('min-height:var(--button-height)');
+    expect(primary).toContain('border:0');
     expect(primary).toContain('font-family:var(--font-family-bold)');
     // hover: #c5ff64.
-    expect(ruleBody(css, '.root:hover:not(:disabled)')).toContain(
+    expect(declarations(css, '.root:hover:not(:disabled)')).toContain(
       'background:var(--color-accent-hover)',
     );
+    // the two outlined variants take the hairline out of the padding, so
+    // their box is the same 48px as the filled ones.
+    const outlined = declarations(css, '.root.is-secondary,.root.is-secondary-on-dark');
+    expect(outlined).toContain('border:1pxsolid');
+    expect(outlined).toContain('padding:11px23px');
     // secondary: the navy outline on white (.btn-outline-navy).
-    const secondary = ruleBody(css, '.root.is-secondary');
+    const secondary = declarations(css, '.root.is-secondary');
     expect(secondary).toContain('color:var(--color-primary)');
     expect(secondary).toContain('background:var(--color-surface)');
     expect(secondary).toContain('border-color:var(--color-primary)');
-    // secondary-on-dark: the same lime pill, with the white ring the navy
-    // ground needs — a navy or lime ring disappears there.
-    const onDark = ruleBody(css, '.root.is-secondary-on-dark');
-    expect(onDark).toContain('color:var(--color-primary)');
-    expect(onDark).toContain('background:var(--color-accent)');
-    expect(ruleBody(css, '.root.is-secondary-on-dark:focus-visible')).toContain(
+    // secondary-on-dark: .btn-outline-lime — lime text and hairline on a
+    // transparent fill, with the white ring the navy ground needs.
+    const onDark = declarations(css, '.root.is-secondary-on-dark');
+    expect(onDark).toContain('color:var(--color-accent)');
+    expect(onDark).toContain('background:transparent');
+    expect(onDark).toContain('border-color:var(--color-accent)');
+    expect(declarations(css, '.root.is-secondary-on-dark:hover:not(:disabled)')).toContain(
+      'background:var(--color-accent)',
+    );
+    expect(declarations(css, '.root.is-secondary-on-dark:focus-visible')).toContain(
       'outline-color:var(--color-text-inverse)',
     );
+    // navy: the filled .btn--primary, white on #002340, hover #01385e.
+    const navy = declarations(css, '.root.is-navy');
+    expect(navy).toContain('color:var(--color-text-inverse)');
+    expect(navy).toContain('background:var(--color-primary)');
+    expect(declarations(css, '.root.is-navy:hover:not(:disabled)')).toContain(
+      'background:var(--color-primary-hover)',
+    );
     // disabled: #80919f on #e5e9ec.
-    const disabled = ruleBody(css, '.root:disabled');
+    const disabled = declarations(css, '.root:disabled');
     expect(disabled).toContain('color:var(--color-disabled-text)');
     expect(disabled).toContain('background:var(--color-disabled-bg)');
     // the retired orange palette is gone from this primitive.

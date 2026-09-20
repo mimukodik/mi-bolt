@@ -729,13 +729,13 @@ tokens to navy.
 | `--color-text-inverse` | `--color-surface` | `#fff` | the footer and the quick-links band on `home-1920.png`; §2 gives the inverse text as `#ffffff`, the same value as the default surface, so it resolves to the one white the theme declares |
 | `--color-text-inverse-muted` | `--color-line` | `#e5e9ec` | yettel names no muted text for dark surfaces; `#e5e9ec` (`.product-variant-item{box-shadow:0 0 0 1px #e5e9ec inset}`, §2) is its lightest neutral and reads at 13.4:1 on `#002340` |
 | `--color-border-subtle` | `--color-line` | `#e5e9ec` | `.solid-input-group{box-shadow:0 0 0 2px #e5e9ec inset}` (§2) |
-| `--color-border-control` | `--color-text-muted` | `#80919f` | `.portal-tab-switcher{background-color:#002340;border:solid 2px #80919f}` — yettel's own control border (§4) |
+| `--color-border-control` | `--color-text-muted` | `#80919f` | `.portal-tab-switcher{background-color:#002340;border:solid 2px #80919f}` — yettel's own control border (§4); it is 3.2:1 on white, where `--color-line-strong` `#dddfe1`, the other candidate, is 1.3:1 and so below the 3:1 WCAG 1.4.11 minimum a control border needs |
 | `--color-status-success` | `--color-success` | `#5cb85c` | `.valid-feedback{color:#5cb85c}` (§2) |
 | `--color-status-error` | `--color-error` | `#d9534f` | `.invalid-feedback{color:#d9534f}` (§2) |
 | `--color-status-warning` | `--color-primary` | `#002340` | yettel's warning is `.alert-warning{background-color:#ffd500;color:#332b00}`, a dark-on-yellow pair, while both consumers here set white text on the token; navy keeps those two banners legible until a warning surface is designed |
 | `--color-status-info` | `--color-surface-sky` | `#c4dfe9` | `.alert{display:flex;background-color:#c4dfe9;border-radius:0 0 16px 16px}` (§2) |
 | `--color-focus-light` | `--color-primary` | `#002340` | yettel sets `outline:none !important` on `.btn` and carries no focus recipe; navy is the brand ink and is 16.3:1 on white, where lime would be 1.35:1 |
-| `--color-focus-dark` | `--color-accent` | `#b4ff00` | `.portal-header-menu__link{color:#b4ff00}` and `.thumbnail-container.active{border:2px solid #b4ff00}` — lime is what reads on navy (§5). The one exception is the button's own on-dark pill, which is lime already; its ring is `--color-text-inverse` instead |
+| `--color-focus-dark` | `--color-accent` | `#b4ff00` | `.portal-header-menu__link{color:#b4ff00}` and `.thumbnail-container.active{border:2px solid #b4ff00}` — lime is what reads on navy (§5). The exceptions are the controls that are themselves lime on a navy ground — `is-secondary-on-dark`, the footer CTA and the two hero CTAs — whose ring is `--color-text-inverse`, and the lime header bar, where a lime ring is invisible and `--color-focus-light` is used |
 | `--radius-card` | `--radius-card` | `16px` | cards, modal content, `.product-prices__container` (§4); the legacy name and the theme name are the same name and the sheet declares it once |
 | `--radius-control` | `--radius-input` | `8px` | `.solid-input-group{border-radius:8px}` — the 165-use dominant radius (§4) |
 | `--radius-badge` | `--radius-input` | `8px` | same 8px; the token also carries skeleton blocks and focus rings, which a 24px pill would distort (§4) |
@@ -769,18 +769,26 @@ navy ground is white. Three rules cover every consumer in the build:
 
 Three further things this table does not do, each for a measured reason.
 
-- **The header stays navy in this pass.** The live consumer header is lime
-  with navy text (`docs/design/yettel/screenshots/home-1920.png`), but one
-  token, `--color-shell-dark`, feeds the header, the footer and the hero, and
-  §7 fixes the footer at `#002340` with white text. Turning the token lime
-  would need per-surface text colours inside `header-nav.scss`, which is the
-  header restyle's own work. Navy with white text is what §7's
-  `.portal-footer` gives and what `home-1920.png` shows for the footer and the
-  quick-links band, so it is correct where it lands; the header restyle flips
-  the header to lime with navy text when it owns that sheet. What the accent
-  remap already fixed there is the lime detailing the navy header carries in
-  the capture: the brand mark, the cart badge, the active-link underline and
-  the checkout back-link outline were navy-on-navy before and are lime now.
+- **The header is lime, with navy on it, and the token is not what carries
+  it.** `home-1920.png` renders a lime `#b4ff00` bar with a navy wordmark,
+  navy menu links, a white search box, navy icons and one navy pill
+  ("Belépés") with white text, and `.portal-header__bar{height:72px;
+  background:#b4ff00}` (§5) is the rule behind it. `--color-shell-dark` feeds
+  the header, the footer and the hero at once, and §7 fixes the footer at
+  `#002340` with white text, so the header does not take its ground from that
+  token any more: `header-nav.scss` sets `background: var(--color-accent)` and
+  `color: var(--color-primary)` on `.header` itself and resolves every other
+  colour per surface in that same sheet — navy brand word on a navy mark with
+  a lime letter, navy menu links whose hover/active underline is a 3px
+  `currentColor` bar with an `8px 8px 0 0` radius (`.portal-header-menu__link`,
+  §5), a white `--color-surface` search box at 48px and an 8px radius
+  (`.search-box__group`, §5), a 16px navy cart counter with white 10/16 text
+  (`.portal-header__cart-counter`, §5), and the checkout back link as
+  `.btn-outline-navy`. Focus rings on that bar are `--color-focus-light`
+  (navy): `--color-focus-dark` is lime and lime on lime is invisible, which is
+  why that token no longer appears in the sheet. `--color-shell-dark` stays
+  navy and still grounds the footer and the hero, which is what §7's
+  `.portal-footer` and the capture's footer and quick-links band show.
 - **The three weights stay numbers** (`--weight-regular: 400`,
   `--weight-medium: 500`, `--weight-bold: 700`). yettel expresses weight as a
   separate face rather than as a weight of one family — §3's three
@@ -803,17 +811,31 @@ Three further things this table does not do, each for a measured reason.
 
 ### Button variants after the remap
 
+Every variant shares one box, which is `.btn` itself (§4, §5):
+`portal-font-bold`, `font-size:16px`, `line-height:24px`, `display:inline-flex`
+centred both ways, `padding:12px 24px`, `border:0`, `border-radius:24px`, so
+the pill is 12 + 24 + 12 = 48px tall. The two outlined variants carry a 1px
+hairline and take that pixel back out of each padding edge
+(`padding:11px 23px`), so their box is the same 48px.
+
 | Variant | Class | Recipe | yettel source |
 | --- | --- | --- | --- |
 | primary | `is-primary` | navy `#002340` on lime `#b4ff00`, hover `#c5ff64`, 24px pill | `.btn--primary-inverse` (§5) |
+| navy | `is-navy` | white on navy `#002340`, hover `#01385e` | `.btn--primary` (§5); the "Belépés" pill on the lime bar in `home-1920.png` |
 | secondary | `is-secondary` | navy text and border on white, hover tint `#c4dfe9` | `.btn-outline-navy` (§5) |
-| secondary on dark | `is-secondary-on-dark` | the same lime pill, for a navy ground | `home-1920.png`'s navy footer ("Feliratkozom") and `device-1920.png`'s navy configurator card ("Kosárba rakom", "Visszahívást kérek") |
+| secondary on dark | `is-secondary-on-dark` | lime text and 1px lime border on a transparent fill, hover lime fill with navy text | `.btn-outline-lime` (§5), for the navy grounds in `home-1920.png`'s footer and `device-1920.png`'s configurator card |
 | disabled (all) | `:disabled` | `#80919f` on `#e5e9ec` | `.btn--primary[disabled]` (§5) |
 
-`is-secondary-on-dark` keeps the lime fill rather than becoming the
-white-on-navy `.btn--primary`: a navy pill on a navy ground is invisible, and
-both captures show yettel putting the ordinary lime pill on its navy
-surfaces. The one thing the variant still changes is the focus ring, which is
-navy `--color-focus-light` on the light-ground variants and white
-`--color-text-inverse` here, because neither navy nor lime reads against a
-navy ground with a lime pill on it.
+`is-secondary-on-dark` is the outlined lime button rather than a second copy
+of the lime pill: the first version of this table gave it the same fill as
+`is-primary`, which made the two byte-identical and left the surface with no
+restrained action at all, and `.btn-outline-lime{color:#b4ff00;
+border-color:#b4ff00}` is what yettel itself puts beside a filled pill on a
+navy ground. A navy pill is not the alternative — `.btn--primary` on navy is
+invisible, which is why `is-navy` is for the lime bar and the light surfaces
+rather than for the dark ones. The focus ring is navy `--color-focus-light`
+on the light-ground variants and white `--color-text-inverse` on
+`is-secondary-on-dark`, because neither navy nor lime reads against a navy
+ground carrying lime. The same exception applies to the two hero CTAs, which
+are a lime pill and a lime outline on the navy hero and take the white ring
+too.

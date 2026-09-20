@@ -7,7 +7,7 @@
 .root {
   min-height: var(--button-height);
   min-width: var(--button-height);
-  border: 1px solid transparent;
+  border: 0;
   border-radius: var(--button-radius);
   font-family: var(--font-family-bold);
   color: var(--color-primary);
@@ -22,6 +22,14 @@
   min-height: var(--button-height-comfortable);
 }
 
+/* The two outlined variants carry a 1px border, so each padding edge loses
+   the same pixel and the box stays the 48px .btn box (§5). */
+.root.is-secondary,
+.root.is-secondary-on-dark {
+  border: 1px solid;
+  padding: 11px 23px;
+}
+
 /* secondary — the outlined navy button (.btn-outline-navy) */
 .root.is-secondary {
   color: var(--color-primary);
@@ -29,12 +37,18 @@
   border-color: var(--color-primary);
 }
 
-/* secondary on dark — the same lime pill on a navy ground; it differs from
-   the primary only in its focus ring (see below) */
+/* secondary on dark — .btn-outline-lime, yettel's outlined button for a navy
+   ground: lime text and hairline on a transparent fill */
 .root.is-secondary-on-dark {
-  color: var(--color-primary);
-  background: var(--color-accent);
+  color: var(--color-accent);
+  background: transparent;
   border-color: var(--color-accent);
+}
+
+/* navy — the filled .btn--primary, white on #002340 */
+.root.is-navy {
+  color: var(--color-text-inverse);
+  background: var(--color-primary);
 }
 
 .root:hover:not(:disabled) {
@@ -46,8 +60,12 @@
 }
 
 .root.is-secondary-on-dark:hover:not(:disabled) {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
+  color: var(--color-primary);
+  background: var(--color-accent);
+}
+
+.root.is-navy:hover:not(:disabled) {
+  background: var(--color-primary-hover);
 }
 
 .root:active:not(:disabled) {

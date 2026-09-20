@@ -55,6 +55,9 @@
   /* size */
   --size-control: 44px;
   --size-control-comfortable: 48px;
+  /* Desktop height of the header bar — .portal-header__bar{height:72px}
+     (docs/design/yettel.md §5 "Header"). */
+  --size-header: 72px;
   --size-icon: 20px;
   --size-icon-large: 24px;
 
@@ -66,6 +69,10 @@
   --font-family-bold: 'portal-font-bold', sans-serif, arial;
   --font-family-light: 'portal-font-light', sans-serif, arial;
   --type-body: 16px;
+  /* Header menu link — .portal-header-menu__link{font-size:20px;line-height:28px}
+     (docs/design/yettel.md §5 "Header"). */
+  --type-nav: 20px;
+  --leading-nav: 28px;
   --type-card-title: 18px;
   --type-section-title: 28px;
   --type-section-title-mobile: 24px;
@@ -96,7 +103,9 @@
 
   /* button specifics */
   --button-radius: var(--radius-pill);
-  --button-height: var(--size-control);
+  /* The yettel .btn box is 12px + 24px line-height + 12px = 48px
+     (docs/design/yettel.md §5 "Primary button"). */
+  --button-height: var(--size-control-comfortable);
   --button-height-comfortable: var(--size-control-comfortable);
 }
 

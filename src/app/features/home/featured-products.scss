@@ -89,8 +89,7 @@
 }
 
 .featured__media:focus-visible,
-.featured__details:focus-visible,
-.featured__retry:focus-visible {
+.featured__details:focus-visible {
   outline: 3px solid var(--color-focus-light);
   outline-offset: 2px;
 }
@@ -148,21 +147,25 @@
   color: var(--color-text-secondary);
 }
 
+/* .btn-outline-navy — the yettel .btn box (portal-font-bold 16/24,
+   12px 24px, 24px pill; docs/design/yettel.md §5) with 1px off each
+   padding edge for the hairline, so the box stays 48px. */
 .featured__details {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--size-control);
-  padding: 0 var(--space-5);
+  min-height: var(--size-control-comfortable);
+  min-width: var(--size-control-comfortable);
+  padding: 11px 23px;
   background: transparent;
   color: var(--color-brand-ink);
+  font-family: var(--font-family-bold);
   font-size: var(--type-body);
-  font-weight: var(--weight-medium);
+  line-height: 24px;
   text-decoration: none;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--color-brand-ink);
   align-self: flex-start;
-  min-width: 44px;
   margin-top: var(--space-2);
 }
 
@@ -224,19 +227,6 @@
   font-size: var(--type-helper);
   margin: 0;
   color: var(--color-text-secondary);
-}
-
-.featured__retry {
-  align-self: flex-start;
-  min-height: var(--size-control);
-  padding: 0 var(--space-5);
-  background: var(--color-brand-accent);
-  color: var(--color-text-primary);
-  font-weight: var(--weight-bold);
-  font-size: var(--type-body);
-  border: 1px solid var(--color-brand-accent);
-  border-radius: var(--radius-control);
-  cursor: pointer;
 }
 
 @media (min-width: 640px) {
