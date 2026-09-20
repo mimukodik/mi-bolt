@@ -1,9 +1,9 @@
 // @ts-check
-// Renamed from eslint.config.js (CommonJS) to eslint.config.mjs because
-// eslint-plugin-unicorn ships ESM-only ("type": "module", no `require`
-// export condition) and cannot be `require()`'d. ESLint 10's flat-config
-// loader resolves `eslint.config.mjs` automatically; no other tooling
-// change is needed (MIM-209).
+// Renamed from eslint.config.js (CommonJS) to eslint.config.mjs when the
+// baseline still loaded eslint-plugin-unicorn, which ships ESM-only. That
+// plugin was dropped for the demo (see docs/lint-relaxations.md); the .mjs
+// name stays because ESLint 10's flat-config loader resolves it
+// automatically and no other tooling change is needed (MIM-209).
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import eslint from '@eslint/js';
