@@ -111,14 +111,23 @@ function orderProblem(
 
 function isPaymentIntent(value: unknown): value is PaymentIntent {
   if (!isRecord(value)) return false;
+  const amount = value['amount'];
   return (
     typeof value['id'] === 'string' &&
     typeof value['createdAt'] === 'string' &&
     typeof value['expiresAt'] === 'string' &&
     typeof value['redirectUrl'] === 'string' &&
     typeof value['returnUrl'] === 'string' &&
-    typeof value['status'] === 'string'
+    typeof value['status'] === 'string' &&
+    isRecord(amount) &&
+    typeof amount['amount'] === 'number' &&
+    typeof amount['currency'] === 'string'
   );
+}
+
+function isMoney(value: unknown): value is Money {
+  if (!isRecord(value)) return false;
+  return typeof value['amount'] === 'number' && typeof value['currency'] === 'string';
 }
 
 function isOrderReceipt(value: unknown): value is OrderReceipt {
@@ -126,7 +135,18 @@ function isOrderReceipt(value: unknown): value is OrderReceipt {
   return (
     typeof value['id'] === 'string' &&
     typeof value['orderNumber'] === 'string' &&
-    value['status'] === 'confirmed'
+    value['status'] === 'confirmed' &&
+    typeof value['createdAt'] === 'string' &&
+    typeof value['contactEmail'] === 'string' &&
+    typeof value['notice'] === 'string' &&
+    Array.isArray(value['items']) &&
+    isRecord(value['billing']) &&
+    isRecord(value['delivery']) &&
+    isMoney(value['subtotal']) &&
+    isMoney(value['shippingFee']) &&
+    isMoney(value['paymentFee']) &&
+    isMoney(value['total']) &&
+    typeof value['paymentMethod'] === 'string'
   );
 }
 
