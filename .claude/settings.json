@@ -14,7 +14,9 @@
       "Bash(git reset --:*)",
       "Bash(git reset -- .)"
     ],
-    "deny": []
+    "deny": [
+      "Read(scripts/coder-agent/.env)"
+    ]
   },
   "hooks": {
     "SessionStart": [
@@ -53,7 +55,7 @@
   "env": {
     "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
   },
-  "feedbackDrafts": false,
+  "feedbackDrafts": "off",
   "outputStyle": "Concise",
   "enabledMcpjsonServers": [
     "chrome-devtools",

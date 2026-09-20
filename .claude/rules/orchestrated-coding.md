@@ -178,6 +178,68 @@ subagent except the built-in Explore and Plan agents).
   runs is a `git -C <repo>` one, and an awkward message sends it to a quoted
   heredoc and `commit -F`, so it meets those same refusals.
 
+## What a runner may reach for
+
+- **The Angular CLI MCP is mandatory for every runner, and so is a web search
+  before it guesses.** A runner's model is older than this stack: Angular 22,
+  TypeScript 6 and ESLint 10 all post-date its training, so a fact it recalls
+  about them is a guess wearing a fact's clothes. The brief says, in as many
+  words, that any question about how Angular, the CLI or the builder behaves is
+  answered with `mcp__angular-cli__search_documentation` (`version: 22`,
+  `includeTopContent: true` for the page text, keywords rather than a sentence)
+  or `mcp__angular-cli__get_best_practices`, and that the URL goes in the
+  report beside the claim. `.claude/rules/framework-facts.md` owns the rule
+  itself and the ban on discovering documented behaviour by building a probe;
+  this bullet is what puts it in a runner's hands. The user set it after a
+  spawned agent measured `<ng-content>` behaviour with a probe component:
+  "nagyon uj angular verzioval foglalkozzunk amit nem ismertek, tippelgetes
+  helyett weben le van irva minden!" ("we are working with a very new Angular
+  version that you do not know, instead of guessing everything is written down
+  on the web!").
+- **Web search reaches a runner through `minimax-mcp-server`, and the start
+  command turns it on.** That server is configured at user scope, in the
+  user-level Claude config file rather than in this repository's `.mcp.json`,
+  and exposes two tools, `web_search` and `understand_image` (measured
+  2026-09-20 by a JSON-RPC `initialize` plus `tools/list` against the command
+  that config names, which answered `Minimax 1.30.0`; the `tools/list` returns
+  nothing until the `notifications/initialized` message has been sent). It is
+  listed under `disabledMcpServers` for the repository's own path, and that
+  entry is keyed by project directory, so it does not reach a runner worktree,
+  whose path is different. `--allowedTools` therefore names
+  `mcp__minimax-mcp-server` and `mcp__angular-cli` alongside the Bash prefixes,
+  because in `-p` mode an MCP tool that is not allowed is denied like any
+  other. The user's instruction: "tegyuk kotelezove a netes kereses nekik ...
+  mert regi modelek es angular 22 -t meg nem ismerik" ("let us make web search
+  mandatory for them ... because they are old models and do not know Angular 22
+  yet").
+- **A runner that still cannot settle a fact reports `blocked` and says what it
+  would have searched for.** It never guesses and never invents an output. The
+  orchestrator then measures the fact and sends it in the next `resume`, which
+  is what "The orchestrator supplies every fact the coder cannot look up" under
+  "Briefs" above has always meant; the search tools narrow how often that is
+  needed rather than removing the fallback.
+- **The runner gets `/tmp` as a second writable directory**, passed as
+  `--add-dir /tmp`. Without it the sandbox blocks a redirect there — measured
+  2026-09-20: `npm run test > /tmp/test-output.txt 2>&1` came back "Output
+  redirection to '/tmp/test-output.txt' was blocked. For security, Claude Code
+  may only write to files in the allowed working directories for this session".
+  The user asked for it directly: "adjal ezentul a `/tmp` -hez is irasi jogot a
+  coder-agent -eknek" ("from now on give the coder-agents write access to
+  `/tmp` as well").
+- **The brief lists the command shapes the sandbox accepts, up front, because
+  each refusal costs a whole tool call.** Measured 2026-09-20 across two
+  runners: a pipe (`find ... | xargs grep`), an output redirection, a
+  multi-operator chain (`a | b; c`) and `git checkout --` were each refused,
+  four wasted calls between them. `$(...)`, heredocs and `find` go the same
+  way. So the brief says plainly: run a bare command and read the tool result,
+  which already carries both the output and the exit code; use the native
+  `Grep` and `Read` tools for anything a pipe would have done. `git checkout`,
+  `git restore`, `git reset`, `git stash` and `git clean` are refused by the
+  sandbox and forbidden by `.claude/rules/session-lifecycle.md` in any case, so
+  a runner that has edited a file outside its list leaves it edited and says
+  so: staging by explicit pathspec already keeps it out of the commit, and the
+  worktree it dies in is the orchestrator's to remove.
+
 ## The self-check block
 
 Every brief carries this block and every report answers it: the T2 reviews
