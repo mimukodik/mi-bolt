@@ -13,14 +13,20 @@ on; everything after them is context you will need but not immediately.
 
 ## 1. Read this first: one commit is finished and deliberately not landed
 
-`run/deeplink-wait` carries commit **`e172c9a`** ("let a checkout deep-link wait
-for the cart instead of bouncing"). It is verified, it is **not** cherry-picked,
-and its worktree is still on disk at
-`/Users/eggp/projects/puffancs/worktrees-mi-bolt/run/deeplink-wait`. The runner
-session `deeplink-wait` shows `done` in `coder-agent.sh list`.
+Branch **`run/deeplink-wait`** carries commit **`e172c9a`** ("let a checkout
+deep-link wait for the cart instead of bouncing"). Both it and
+`feat/mi-bolt-mvp-implementation` are pushed, so `git fetch origin` is all it
+takes to get them. The commit is verified and is **not** cherry-picked.
 
-It is held back because the verification found **one blocking finding**, and the
-user has already decided what to do about it.
+Everything about the machine it was produced on is gone: the runner's worktree,
+its `coder-agent.sh` session record and its scratchpad do not travel. Treat
+`run/deeplink-wait` as an ordinary branch you fetch, and run the fix round below
+with a **fresh** runner rather than trying to resume anything. The brief that
+produced the commit is preserved at `docs/briefs/brief-deeplink-wait.md`, and
+`docs/briefs/README.md` explains the shape.
+
+The commit is held back because the verification found **one blocking finding**,
+and the user has already decided what to do about it.
 
 ### The finding
 
@@ -74,17 +80,15 @@ the branch today; the deep-link fix lands independently of it.
 
 ### What to do
 
-1. Resume the runner with a fix-round brief:
-   `coder-agent.sh resume deeplink-wait --prompt-file <brief>` plus the same
-   `-- --permission-mode acceptEdits --add-dir /tmp --allowedTools …` tail every
-   other runner got (copy it from
-   `scripts/coder-agent/sessions/deeplink-wait/claude.args`). The brief says:
-   restore the nesting, keep the `router` parameter, keep everything else in
-   `e172c9a` exactly as it is, add nothing, and commit as a **second** commit on
-   the branch rather than amending.
+1. `git fetch origin`, then start a **new** runner whose worktree checks out the
+   existing `run/deeplink-wait` branch (`coder-agent.sh start --worktree <name>
+   --branch run/deeplink-wait` — an existing branch is checked out rather than
+   created). The brief says: restore the nesting, keep the `router` parameter,
+   keep everything else in `e172c9a` exactly as it is, add nothing, and commit
+   as a **second** commit on the branch rather than amending.
 2. Verify the fix round with a fresh `coder-sonnet` (mandatory, see §6).
-3. Cherry-pick both commits, then `coder-agent.sh rm deeplink-wait --worktree`
-   and `git branch -D run/deeplink-wait` **in the same turn**.
+3. Cherry-pick both commits onto `feat/mi-bolt-mvp-implementation`, then remove
+   the worktree and delete the branch **in the same turn**.
 4. Run the four gates yourself and read the exit codes. A subagent's green
    report is not a run.
 
@@ -175,17 +179,19 @@ content area.
 
 - Branch **`feat/mi-bolt-mvp-implementation`**, cut from `main`. HEAD
   **`7b9a01e`**. Working tree clean.
-- **18 commits ahead of `origin/feat/mi-bolt-mvp-implementation`** — nothing has
-  been pushed this session. Pushing is the orchestrator's own command and only
-  under the `task-execute-workflow` entry that owns it, or on the user's direct
-  instruction. Do not push on your own judgment.
+- Pushed to `origin` at the user's direct instruction, so the work could be
+  continued on another machine. Nothing is waiting locally. Pushing stays the
+  orchestrator's own command, only under the `task-execute-workflow` entry that
+  owns it or on the user's direct instruction — do not push on your own
+  judgment, and no spawned agent ever pushes.
 - Gates at `7b9a01e`, run by the orchestrator, not taken from any report:
   `npm run test` exit 0 at **67 test files / 986 tests**; `npm run lint` exit 0
   (27 pre-existing warnings, all in `src/app/api/generated/**`); `npm run build`
   exit 0; `npm run format:check` exit 0. Coverage sits around 85.9% statements,
   80.7% branches, 86.6% functions, 88.8% lines against a floor of 80/75/80/80.
-- One worktree left on disk, deliberately: `run/deeplink-wait` (see §1). No
-  other worktree, no stray branch, no background process.
+- Two branches on `origin`: `feat/mi-bolt-mvp-implementation` and
+  `run/deeplink-wait` (§1). Nothing else is left anywhere — no worktree to
+  inherit, no background process, no runner to resume.
 - `docs/fix/` holds 77 fix docs: **40 DONE, 28 PARTIAL, 4 PLANNED, 2 BLOCKED**.
 
 ### Commits this session
@@ -372,37 +378,33 @@ is the subset this session kept tripping over or had to establish.
 
 ## 8. Where the working files are
 
-The session scratchpad
-(`/private/tmp/claude-501/-Users-eggp-projects-puffancs-mi-bolt/<session-id>/scratchpad/`)
-holds every brief written this session — `brief-centreline.md`,
-`brief-guard-reason.md`, `brief-focus-handoff.md`, `resume-focus-handoff.md`,
-`brief-deeplink-wait.md`, `brief-plain-img.md` and others — plus `watch-scope.sh`
-and the gate logs. **It dies with the session.** If a brief's shape is worth
-keeping, copy it somewhere durable before that happens; the ones above are the
-best examples of the spoon-fed style the user asked for ("figyelj oda az erős
-promptolásra inkább legyen szájbarágós").
+**Every brief written this session is committed at `docs/briefs/`**, with a
+`README.md` there explaining the shape and listing which unit each one drove.
+They were written in a session scratchpad that does not survive the session, and
+the user asked for them to be kept; they are the worked examples of the
+spoon-fed style the user asked for ("figyelj oda az erős promptolásra inkább
+legyen szájbarágós"). `docs/briefs/brief-deeplink-wait.md` is the one the
+pending work in §1 was built on.
 
-The runner state store is committed-adjacent and survives:
-`scripts/coder-agent/sessions/<name>/` holds each runner's `claude.args`,
-`meta` and per-turn results. `coder-agent.sh result <name> --turn N` prints a
-runner's report; that is how to read `deeplink-wait`'s without re-running it.
+`docs/briefs/watch-runner-scope.sh` is the monitor script each runner was
+supervised with, alongside `coder-agent.sh watch-status`. Its README entry
+records the two things in it that were learned the hard way: scan only lines
+containing `"toolUseResult"`, because the transcript also holds everything the
+runner *read* — including the rule file that contains the literal string
+`BUILD FAILED` — and start from the transcript's current end, or every re-arm
+replays failures already reported.
 
-**`coder-agent.sh rm` deletes that store** — its last statement is
-`rm -rf "$d"` over the session directory, so the runner's report and the exact
-`--allowedTools` tail in `claude.args` go with it. It does **not** delete the
-git branch. So before removing a session whose work is not finished, copy
-whatever is still wanted out of `scripts/coder-agent/sessions/<name>/` first.
+`scripts/coder-agent/sessions/<name>/` holds a runner's `claude.args`, `meta`
+and per-turn results, and `coder-agent.sh result <name> --turn N` prints its
+report. **That store is local to the machine the runner ran on, and
+`coder-agent.sh rm` deletes it** — its last statement is `rm -rf` over the
+session directory, so a runner's report and its exact `--allowedTools` tail go
+with it. It does not delete the git branch. Nothing from this session's store
+travels; what survives is the branches, the commits, and this directory.
 
-On `deeplink-wait` specifically: the worktree stays, by the user's decision on
-2026-09-20, because `coder-agent.sh resume deeplink-wait` runs in that directory
-and resuming is the cheapest route to the fix round in §1. The directory itself
-holds nothing unique — it is clean, with no uncommitted and no untracked files,
-and `e172c9a` lives in the main repository's object store — so removing it would
-lose no code. What it would cost is the resume, which would then mean a fresh
-runner started against the existing `run/deeplink-wait` branch.
-
-Nothing in `e172c9a` can be taken over without coding, either. The async-guard
-change and the reordering §1 rejects sit in the same file and the same function
-region; `checkout-state.spec.ts`'s rewritten cases only pass with the new
-guards; and `success-page.spec.ts` is meaningless without them. There is no
-file-level or commit-level slice that delivers value without the defect.
+Nothing in `e172c9a` can be taken over piecemeal, either. The async-guard change
+and the reordering §1 rejects sit in the same file and the same function region;
+`checkout-state.spec.ts`'s rewritten cases only pass with the new guards; and
+`success-page.spec.ts` is meaningless without them. There is no file-level or
+commit-level slice that delivers value without the defect, which is why §1 is a
+fix round rather than a partial cherry-pick.
