@@ -88,11 +88,12 @@ function makeMockCart(cartId: string): Cart {
   return {
     id: cartId,
     version: 1,
-    status: 'active',
     items: [],
-    itemCount: 0,
+    lineCount: 0,
+    totalQuantity: 0,
     subtotal: { amount: 0, currency: 'HUF' },
     expiresAt: '2026-12-31T23:59:59.000Z',
+    notices: [],
   } satisfies Cart;
 }
 
@@ -183,16 +184,20 @@ beforeEach(() => {
       );
     }),
 
-    http.post(`${BASE_URL}/carts`, async ({ request }) => {
-      const bodyText = await request.text();
-      capturedRequests.push({ method: 'POST', url: request.url, bodyText });
-      return HttpResponse.json(makeMockCart('cart-test-page-1'), { status: 201 });
+    http.get(`${BASE_URL}/cart`, () => {
+      return HttpResponse.json(makeMockCart('cart-test-page-1'), {
+        status: 200,
+        headers: { ETag: '"1"' },
+      });
     }),
 
-    http.post(`${BASE_URL}/carts/:cartId/items`, async ({ request }) => {
+    http.post(`${BASE_URL}/cart/items`, async ({ request }) => {
       const bodyText = await request.text();
       capturedRequests.push({ method: 'POST', url: request.url, bodyText });
-      return HttpResponse.json(makeMockCart('cart-test-page-1'), { status: 200 });
+      return HttpResponse.json(makeMockCart('cart-test-page-1'), {
+        status: 200,
+        headers: { ETag: '"2"' },
+      });
     }),
   );
 });
@@ -517,7 +522,7 @@ describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
     await tick();
 
     expect(capturedRequests.length).toBeGreaterThanOrEqual(1);
-    const cartPost = capturedRequests.find((r) => r.url.includes('/carts'));
+    const cartPost = capturedRequests.find((r) => r.url.includes('/cart/items'));
     expect(cartPost).toBeDefined();
   });
 
