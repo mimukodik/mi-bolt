@@ -109,7 +109,21 @@ subagent except the built-in Explore and Plan agents).
   the branch. This is neither the runner's own `code-review xhigh --fix` pass,
   which sits inside the runner's turn and is the runner grading itself, nor one
   of the two reviewer passes under "Review cap" below, which are about a pull
-  request. The tier is the user's and departs from the `model-routing` row for
+  request. **The cherry-pick and the worktree's removal are one step, not
+  two.** The moment the commit is on the branch, the worktree and its branch
+  go: `coder-agent.sh rm <name> --worktree` and then `git branch -D <branch>`,
+  in the same turn as the cherry-pick rather than at the end of the session.
+  What settles that a runner is finished with is `git cherry <this branch>
+  <runner branch>`, where a leading `-` on every line means an equivalent of
+  each commit is already on the branch; a `+` means it is not and the worktree
+  stays. Leaving them costs nothing visible and so accumulates: five worktrees
+  and six branches sat on disk before the user asked, for the second time in
+  one session, "worktree -ket megint nem kezeled ott vannak hagyva mint egy
+  szemet! commitokat atvetted?" ("you are not handling the worktrees again,
+  they are left lying there like rubbish! did you take the commits over?"),
+  and then "miert kell erte szolnom?" ("why do I have to tell you to do it?").
+  The answer is that it was not attached to a step; now it is. The tier is the
+  user's and departs from the `model-routing` row for
   adversarial verification, which would send a review to `reviewer-opus`: the
   instruction names `coder-sonnet`, so `coder-sonnet` is what runs, and a later
   session reading that row is not finding an inconsistency to tidy away. The
