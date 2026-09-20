@@ -43,7 +43,7 @@ for (let i = 0; i < args.length; i++) {
   process.exit(2);
 }
 
-const metadataPath = `repos/${OWNER}/${REPO}/contents/${REMOTE_PATH}?ref=${ref}`;
+const metadataPath = `repos/${OWNER}/${REPO}/contents/${REMOTE_PATH}?ref=${encodeURIComponent(ref)}`;
 
 let metadata;
 try {
@@ -52,10 +52,22 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   process.stderr.write(`api-sync: gh api failed: ${message}\n`);
-  process.exit(1);
+  process.exit(
+    typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      typeof error.status === 'number'
+      ? error.status
+      : 1,
+  );
 }
 
-if (typeof metadata.sha !== 'string' || typeof metadata.size !== 'number') {
+if (
+  typeof metadata !== 'object' ||
+  metadata === null ||
+  typeof metadata.sha !== 'string' ||
+  typeof metadata.size !== 'number'
+) {
   process.stderr.write('api-sync: unexpected body\n');
   process.exit(1);
 }
@@ -77,7 +89,14 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   process.stderr.write(`api-sync: gh api failed: ${message}\n`);
-  process.exit(1);
+  process.exit(
+    typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      typeof error.status === 'number'
+      ? error.status
+      : 1,
+  );
 }
 
 if (!body.startsWith('openapi:')) {
@@ -88,5 +107,18 @@ if (!body.startsWith('openapi:')) {
 writeFileSync(LOCAL_PATH, body);
 process.stdout.write(`api-sync: wrote ${LOCAL_PATH}\n`);
 
-execFileSync('npm', ['run', 'api:generate'], { stdio: 'inherit' });
+try {
+  execFileSync('npm', ['run', 'api:generate'], { stdio: 'inherit' });
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`api-sync: npm run api:generate failed: ${message}\n`);
+  process.exit(
+    typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      typeof error.status === 'number'
+      ? error.status
+      : 1,
+  );
+}
 process.stdout.write('api-sync: regenerated src/app/api/generated\n');
