@@ -200,6 +200,18 @@ subagent except the built-in Explore and Plan agents).
   never invokes the `git-commit` skill either: every git command that skill
   runs is a `git -C <repo>` one, and an awkward message sends it to a quoted
   heredoc and `commit -F`, so it meets those same refusals.
+- **A spawned agent that invokes the `git-commit` skill from a worktree names
+  the repository explicitly**, passing the worktree's own absolute path as the
+  skill's `repo:` argument. Without it the skill resolves a different checkout:
+  measured 2026-09-20, an agent working in a scratchpad worktree invoked it
+  bare and the skill reported the orchestrator's main checkout's modified
+  files, `.claude/rules/orchestrated-coding.md` and `.claude/settings.json`,
+  neither of which existed in that agent's tree. It refused to commit, because
+  the files it had been asked to stage were not there, so nothing landed in the
+  wrong tree; a run whose paths happened to exist in both would not have
+  refused. This binds the agents this session spawns rather than the `-p`
+  runners, which never invoke that skill at all, for the reason the bullet
+  above gives.
 
 ## What a runner may reach for
 
