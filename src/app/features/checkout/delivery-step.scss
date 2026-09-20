@@ -274,8 +274,11 @@
     padding: var(--space-6);
   }
 
+  /* Row items cannot shrink (button.scss white-space: nowrap), so the
+     row must be allowed to wrap. */
   .actions {
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: space-between;
   }
 }

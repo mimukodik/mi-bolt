@@ -216,8 +216,11 @@
 
 /* Checkout header variant --------------------------------------------- */
 
+/* Row items cannot shrink (button.scss white-space: nowrap), so the
+   row must be allowed to wrap. */
 .header--checkout .header__inner {
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .header__label {

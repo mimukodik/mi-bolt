@@ -178,8 +178,11 @@
   color: var(--color-text-secondary);
 }
 
+/* Row items cannot shrink (button.scss white-space: nowrap), so the
+   row must be allowed to wrap. */
 .footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-3);
   padding-top: var(--space-4);
