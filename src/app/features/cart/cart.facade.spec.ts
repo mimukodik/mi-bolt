@@ -468,14 +468,30 @@ describe('FIX-10: CartFacade acquires its cart on construction', () => {
     configureTestBed();
   });
 
-  it('lands a failing boot fetch on the error signal without throwing', () => {
-    server.use(http.get('*/api/v1/cart', () => new HttpResponse(null, { status: 500 })));
+  it('lands a failing boot fetch on the error signal without throwing', async () => {
+    server.use(
+      http.get('*/api/v1/cart', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:service-unavailable',
+            title: 'Service unavailable',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'down',
+            traceId: 't',
+            fieldErrors: [],
+          },
+          { status: 503 },
+        ),
+      ),
+    );
 
     configureTestBed();
     const facade = TestBed.inject(CartFacade);
+    await settled(facade);
 
     expect(facade.cart()).toBeNull();
-    expect(facade.error()?.status).toBe(500);
+    expect(facade.error()?.status).toBe(503);
   });
 });
 
