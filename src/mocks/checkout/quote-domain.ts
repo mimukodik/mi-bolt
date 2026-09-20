@@ -29,6 +29,7 @@
  */
 
 import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
+import { isRecord } from '../is-record';
 import type { Cart, CartLine, Money } from '../repository';
 import { Repository } from '../repository';
 import type { Clock, Ids } from '../scenarios';
@@ -142,8 +143,8 @@ export const HeaderRules = {
 // ---------------------------------------------------------------------------
 
 function readField(value: unknown, key: string): unknown {
-  if (!value || typeof value !== 'object') return undefined;
-  return (value as Record<string, unknown>)[key];
+  if (!isRecord(value)) return undefined;
+  return value[key];
 }
 
 /** Returns the normalized HU address from an untrusted record, or null when invalid. */
@@ -155,39 +156,38 @@ function validateAddress(value: unknown):
     }
   | { ok: false; errors: FieldError[] } {
   const errors: FieldError[] = [];
-  if (!value || typeof value !== 'object') {
+  if (!isRecord(value)) {
     return { ok: false, errors: [{ path: '/delivery/address', message: 'A cím szükséges.' }] };
   }
-  const record = value as Record<string, unknown>;
-  const countryCode = normalizeAddressCountryCode(record['countryCode']);
+  const countryCode = normalizeAddressCountryCode(value['countryCode']);
   if (countryCode === null) {
     errors.push({
       path: '/delivery/address/countryCode',
       message: 'Csak HU cím támogatott.',
     });
   }
-  const postalCode = normalizeAddressPostalCode(record['postalCode']);
+  const postalCode = normalizeAddressPostalCode(value['postalCode']);
   if (postalCode === null) {
     errors.push({
       path: '/delivery/address/postalCode',
       message: 'Az irányítószám formátuma 1-9 kezdetű négyjegyű szám.',
     });
   }
-  const city = normalizeAddressCity(record['city']);
+  const city = normalizeAddressCity(value['city']);
   if (city === null) {
     errors.push({
       path: '/delivery/address/city',
       message: 'A település 2 és 80 karakter közé eshet.',
     });
   }
-  const line1 = normalizeAddressLine1(record['line1']);
+  const line1 = normalizeAddressLine1(value['line1']);
   if (line1 === null) {
     errors.push({
       path: '/delivery/address/line1',
       message: 'A cím első sora 3 és 120 karakter közé eshet.',
     });
   }
-  const line2Raw = normalizeAddressLine2(record['line2']);
+  const line2Raw = normalizeAddressLine2(value['line2']);
   let line2: string | undefined;
   if (line2Raw === null) {
     errors.push({
@@ -219,25 +219,24 @@ function validateContact(value: unknown):
     }
   | { ok: false; errors: FieldError[] } {
   const errors: FieldError[] = [];
-  if (!value || typeof value !== 'object') {
+  if (!isRecord(value)) {
     return { ok: false, errors: [{ path: '/contact', message: 'A kapcsolat szükséges.' }] };
   }
-  const record = value as Record<string, unknown>;
-  const fullName = normalizeContactFullName(record['fullName']);
+  const fullName = normalizeContactFullName(value['fullName']);
   if (fullName === null) {
     errors.push({
       path: '/contact/fullName',
       message: 'A név 2 és 100 karakter közé eshet.',
     });
   }
-  const email = normalizeContactEmail(record['email']);
+  const email = normalizeContactEmail(value['email']);
   if (email === null) {
     errors.push({
       path: '/contact/email',
       message: 'Érvénytelen e-mail cím.',
     });
   }
-  const phone = normalizeContactPhone(record['phone']);
+  const phone = normalizeContactPhone(value['phone']);
   if (phone === null) {
     errors.push({
       path: '/contact/phone',
@@ -263,22 +262,21 @@ function validateDelivery(value: unknown):
       value: NormalizedDelivery;
     }
   | { ok: false; errors: FieldError[] } {
-  if (!value || typeof value !== 'object') {
+  if (!isRecord(value)) {
     return {
       ok: false,
       errors: [{ path: '/delivery', message: 'A szállítási mód szükséges.' }],
     };
   }
-  const record = value as Record<string, unknown>;
-  const optionId = record['optionId'];
+  const optionId = value['optionId'];
   if (optionId !== 'home_delivery' && optionId !== 'demo_pickup') {
     return {
       ok: false,
       errors: [{ path: '/delivery/optionId', message: 'Ismeretlen szállítási mód.' }],
     };
   }
-  const hasAddressKey = Object.prototype.hasOwnProperty.call(record, 'address');
-  const addressRaw = record['address'];
+  const hasAddressKey = Object.prototype.hasOwnProperty.call(value, 'address');
+  const addressRaw = value['address'];
   if (optionId === 'home_delivery') {
     if (addressRaw === undefined || addressRaw === null) {
       return {

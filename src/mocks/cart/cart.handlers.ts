@@ -29,6 +29,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { IdempotencyStore } from '../idempotency';
+import { isRecord } from '../is-record';
 import { type Money, type Product, Repository } from '../repository';
 
 import { CartDomain } from './cart-domain';
@@ -230,10 +231,8 @@ function badRequest(detail: string, traceId: string): HttpResponse<Record<string
 }
 
 function readVariantId(body: unknown): { ok: true; value: string } | { ok: false; detail: string } {
-  if (!body || typeof body !== 'object')
-    return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
-  const record = body as Record<string, unknown>;
-  const variantId = record['variantId'];
+  if (!isRecord(body)) return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
+  const variantId = body['variantId'];
   if (typeof variantId !== 'string' || variantId.length === 0) {
     return { ok: false, detail: 'A variantId mező kötelező szöveg.' };
   }
@@ -241,10 +240,8 @@ function readVariantId(body: unknown): { ok: true; value: string } | { ok: false
 }
 
 function readQuantity(body: unknown): { ok: true; value: number } | { ok: false; detail: string } {
-  if (!body || typeof body !== 'object')
-    return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
-  const record = body as Record<string, unknown>;
-  const quantity = record['quantity'];
+  if (!isRecord(body)) return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
+  const quantity = body['quantity'];
   if (typeof quantity !== 'number' || !Number.isFinite(quantity) || !Number.isInteger(quantity)) {
     return { ok: false, detail: 'A quantity mező kötelező egész szám.' };
   }

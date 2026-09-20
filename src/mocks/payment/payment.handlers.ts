@@ -28,6 +28,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { IdempotencyStore, deriveIdempotencyKey, hashPayload } from '../idempotency';
+import { isRecord } from '../is-record';
 import { type Money } from '../repository';
 
 import {
@@ -187,12 +188,11 @@ function validateIdempotencyKey(
 function readBody(
   body: unknown,
 ): { ok: true; value: { cartId: string; quoteId: string } } | { ok: false; detail: string } {
-  if (!body || typeof body !== 'object') {
+  if (!isRecord(body)) {
     return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
   }
-  const record = body as Record<string, unknown>;
-  const cartId = record['cartId'];
-  const quoteId = record['quoteId'];
+  const cartId = body['cartId'];
+  const quoteId = body['quoteId'];
   if (typeof cartId !== 'string' || cartId.length === 0) {
     return { ok: false, detail: 'A cartId mező kötelező szöveg.' };
   }
@@ -242,7 +242,20 @@ export function buildPaymentHandlers(
       const payloadHash = hashPayload(parsed.value);
       const replay = idempotency.find(idemKey, payloadHash);
       if (replay) {
-        return HttpResponse.json(replay.body as Record<string, unknown>, {
+        // Replay body is stored verbatim by `idempotency.record(...)` and is
+        // expected to be an object; guard it so we hand `HttpResponse.json`
+        // the narrowed record and fall back to the existing empty-object
+        // shape otherwise.
+        if (!isRecord(replay.body)) {
+          return HttpResponse.json<Record<string, unknown>>(
+            {},
+            {
+              status: replay.status,
+              headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+            },
+          );
+        }
+        return HttpResponse.json(replay.body, {
           status: replay.status,
           headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
         });

@@ -17,6 +17,7 @@
  * without each slice re-implementing canonicalization.
  */
 
+import { isRecord } from './is-record';
 import type { Clock } from './scenarios';
 
 /** OpenAPI Idempotency-Key window — 24 hours from first success. */
@@ -66,12 +67,17 @@ function canonicalize(value: unknown): string {
     return `[${value.map(canonicalize).join(',')}]`;
   }
   if (typeof value === 'object') {
-    const obj = value as Record<string, unknown>;
-    const keys = Object.keys(obj).sort();
+    // `typeof value === 'object'` alone narrows to `{}`; the guard keeps
+    // the index access below sound for TypeScript without bringing the
+    // `null`/array cases back, since both are already filtered above.
+    if (!isRecord(value)) {
+      return 'null';
+    }
+    const keys = Object.keys(value).sort();
     const parts: string[] = [];
     for (const key of keys) {
-      if (obj[key] === undefined) continue;
-      parts.push(`${JSON.stringify(key)}:${canonicalize(obj[key])}`);
+      if (value[key] === undefined) continue;
+      parts.push(`${JSON.stringify(key)}:${canonicalize(value[key])}`);
     }
     return `{${parts.join(',')}}`;
   }
