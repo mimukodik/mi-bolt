@@ -143,7 +143,7 @@ describe('AccessibleDialog primitive', () => {
     fixture.detectChanges();
     const close = document.body.querySelector<HTMLButtonElement>('[data-testid="dialog-close"]');
     expect(close).not.toBeNull();
-    if (!close) {
+    if (close === null) {
       throw new Error('Expected close button');
     }
     close.click();

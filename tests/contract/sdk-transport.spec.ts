@@ -28,6 +28,8 @@ import { http, HttpResponse } from 'msw';
 import { server, useMswServer } from '../msw-server';
 
 import { Api } from '../../src/app/api/generated/api';
+import type { Cart } from '../../src/app/api/generated/models/cart';
+import type { Product } from '../../src/app/api/generated/models/product';
 import {
   ApiConfiguration as ApiConfig,
   provideApiConfiguration as provideApiConfig,
@@ -236,7 +238,7 @@ const MINIMAL_ORDER = {
   deliveryOptionId: 'home_delivery',
   notice: 'demo',
 };
-function MINIMAL_CART(version: number) {
+function MINIMAL_CART(version: number): Cart {
   return {
     id: 'cart-demo-001',
     version,
@@ -247,7 +249,7 @@ function MINIMAL_CART(version: number) {
     expiresAt: '2026-09-15T10:00:00Z',
   };
 }
-function MINIMAL_PRODUCT(slug: string) {
+function MINIMAL_PRODUCT(slug: string): Product {
   return {
     id: 'p-01',
     slug,

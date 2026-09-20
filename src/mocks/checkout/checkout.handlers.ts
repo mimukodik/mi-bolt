@@ -228,7 +228,7 @@ export function buildCheckoutHandlers(options: CreateHandlersOptions): readonly 
       });
       if (!result.ok) return problemResponse(result.problem, traceId);
       const cart = repository.getCart(result.value.cartId);
-      const cartVersionOut = cart ? cart.version : result.value.cartVersion;
+      const cartVersionOut = cart !== undefined ? cart.version : result.value.cartVersion;
       return HttpResponse.json(serializeSession(result.value, cartVersionOut), {
         status: 200,
         headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
@@ -291,10 +291,11 @@ function serializeSession(
     cartId: snapshot.cartId,
     cartVersion,
   };
-  if (snapshot.draft.contact) out['contact'] = snapshot.draft.contact;
-  if (snapshot.draft.delivery) out['delivery'] = snapshot.draft.delivery;
-  if (snapshot.draft.paymentMethod) out['paymentMethod'] = snapshot.draft.paymentMethod;
-  if (snapshot.quote) out['quote'] = serializeQuote(snapshot.quote);
+  if (snapshot.draft.contact !== undefined) out['contact'] = snapshot.draft.contact;
+  if (snapshot.draft.delivery !== undefined) out['delivery'] = snapshot.draft.delivery;
+  if (snapshot.draft.paymentMethod !== undefined)
+    out['paymentMethod'] = snapshot.draft.paymentMethod;
+  if (snapshot.quote !== undefined) out['quote'] = serializeQuote(snapshot.quote);
   return out;
 }
 

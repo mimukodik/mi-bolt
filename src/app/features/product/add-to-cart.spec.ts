@@ -18,6 +18,7 @@ import { resolve as pathResolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { Button } from '../../shared/ui/button/button';
+import { isRecord } from '../../../mocks/is-record';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import type { UiProblem } from '../../shared/types/ui-problem';
 import { AddToCart } from './add-to-cart';
@@ -43,14 +44,13 @@ function registerComponentMetadata(
   if (typeof componentClass !== 'function') return;
   const raw: unknown = Reflect.get(componentClass, 'propDecorators');
   const propertyDecorators: Record<string, unknown[]> = {};
-  if (typeof raw === 'object' && raw !== null) {
+  if (isRecord(raw)) {
     for (const [key, value] of Object.entries(raw)) {
       if (!Array.isArray(value)) {
         continue;
       }
 
-      const array: unknown[] = [...value];
-      propertyDecorators[key] = array;
+      propertyDecorators[key] = value;
     }
   }
   for (const name of config.inputs ?? []) {

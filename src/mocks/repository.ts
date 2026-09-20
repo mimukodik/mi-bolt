@@ -137,6 +137,7 @@ export interface OrderReceipt {
   notice?: string;
 }
 
+import type { PersistedCart, PersistedReceipt } from './persistence';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 
 /**
@@ -242,7 +243,7 @@ export class Repository {
    */
   ensureCart(sessionId: string): Cart {
     const existing = this.cartsBySession.get(sessionId);
-    if (existing) {
+    if (existing !== undefined) {
       const cart = this.carts.get(existing);
       if (cart?.status === 'active' && !this.isCartExpired(cart)) return cart;
     }
@@ -341,14 +342,14 @@ export class Repository {
    * Lines whose `variantId` is unknown are silently dropped so a
    * fixture removal between sessions never crashes the rehydrate.
    */
-  loadPersistedCart(persisted: import('./persistence').PersistedCart, sessionId: string): void {
+  loadPersistedCart(persisted: PersistedCart, sessionId: string): void {
     const items: CartLine[] = [];
     for (const line of persisted.items) {
       const lookup = this.variantsById.get(line.variantId);
-      if (!lookup) continue;
+      if (lookup === undefined) continue;
       const variant = lookup.variant;
       const firstImage = variant.images.at(0);
-      if (!firstImage) continue;
+      if (firstImage === undefined) continue;
       items.push({
         id: line.id,
         productId: lookup.product.id,
@@ -402,10 +403,7 @@ export class Repository {
   /**
   Restores persisted order receipts from snapshot across reload.
   */
-  loadPersistedOrders(
-    receipts: readonly import('./persistence').PersistedReceipt[],
-    sessionId: string,
-  ): void {
+  loadPersistedOrders(receipts: readonly PersistedReceipt[], sessionId: string): void {
     for (const r of receipts) {
       const items = r.items.map((it) => {
         const lookup = this.variantsById.get(it.variantId);

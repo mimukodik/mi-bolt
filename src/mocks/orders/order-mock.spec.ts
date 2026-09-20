@@ -22,7 +22,7 @@ import '../../mocks/orders/order.handlers';
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CartDomain } from '../../mocks/cart/cart-domain';
 import { deriveIdempotencyKey, hashPayload, IdempotencyStore } from '../../mocks/idempotency';
-import { Repository as Repo } from '../../mocks/repository';
+import { type Cart, Repository as Repo } from '../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -113,7 +113,7 @@ function makeEnvironment(
   };
 }
 
-function completeContact() {
+function completeContact(): { fullName: string; email: string; phone: string } {
   return {
     fullName: 'Teszt Elek',
     email: 'teszt@example.test',
@@ -141,7 +141,7 @@ async function seedCart(
   sessionId: string = SESSION_A,
   variantId: string = VARIANT_G256,
   quantity = 1,
-) {
+): Promise<Cart> {
   await Promise.resolve();
   const created = environment.cartDomain.createCart({
     sessionId,
@@ -265,7 +265,7 @@ describe('T09-AC02 deterministic card scenarios', () => {
     const ready = await readyCheckout(environment, 'demo_card');
     const intent = environment.paymentIntents.findById(ready.paymentIntentId ?? '', 'default');
     expect(intent).toBeDefined();
-    if (!intent) return;
+    if (intent === undefined) return;
     expect(intent.status).toBe('succeeded');
     expect(intent.cartId).toBe(ready.cartId);
     expect(intent.quoteId).toBe(ready.quoteId);
@@ -653,7 +653,7 @@ describe('T09-AC05 privacy-minimized receipt reload', () => {
     if (!result.ok) return;
     const persisted = environment.repository.getOrder(result.value.id);
     expect(persisted).toBeDefined();
-    if (!persisted) return;
+    if (persisted === undefined) return;
     const keys = Object.keys(persisted);
     expect(keys).toEqual(
       expect.arrayContaining(['id', 'orderNumber', 'sessionId', 'createdAt', 'total']),
@@ -1293,7 +1293,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     };
   }
 
-  async function createOrder(
+  function createOrder(
     cartId: string,
     quoteId: string,
     idempotencyKey: string,
@@ -1306,13 +1306,13 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     });
   }
 
-  async function getOrder(orderId: string): Promise<Response> {
+  function getOrder(orderId: string): Promise<Response> {
     return fetch(url(`/orders/${orderId}`), {
       headers: { 'X-Demo-Session': SESSION_A },
     });
   }
 
-  async function getPaymentIntent(id: string): Promise<Response> {
+  function getPaymentIntent(id: string): Promise<Response> {
     return fetch(url(`/payment-intents/${id}`), {
       headers: { 'X-Demo-Session': SESSION_A },
     });

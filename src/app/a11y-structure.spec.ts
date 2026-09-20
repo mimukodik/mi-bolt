@@ -295,7 +295,7 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const meta = root.querySelector('[data-testid="receipt-meta"]');
-    if (!meta) throw new Error('Expected receipt-meta section');
+    if (meta === null) throw new Error('Expected receipt-meta section');
     const pairs = [...meta.querySelectorAll('dt, dd')];
     expect(pairs.length).toBeGreaterThan(0);
     expect(pairs.every((n) => n.closest('dl') !== null)).toBe(true);
@@ -434,7 +434,9 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     fixture.detectChanges();
 
     for (let index = 0; index < 20 && facade.vm().status !== 'success'; index += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
       fixture.detectChanges();
     }
     return fixture;

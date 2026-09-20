@@ -121,7 +121,7 @@ function configureTestBed(): void {
   });
 }
 
-async function seedCartWithItem(): Promise<string> {
+function seedCartWithItem(): Promise<string> {
   return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
     const cart = TestBed.inject(CartFacade);
     await cart.ensureCart();

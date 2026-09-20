@@ -81,7 +81,7 @@ export class VariantSelector {
     const code = this.selectedColorCode();
     if (code === null) return '—';
     const match = this.colorOptions().find((c) => c.colorCode === code);
-    return match ? match.colorName : code;
+    return match !== undefined ? match.colorName : code;
   });
 
   readonly selectedStorageLabel = computed<string>(() => {
@@ -91,7 +91,7 @@ export class VariantSelector {
 
   private lookupColorName(colorCode: string): string {
     const match = this.colorOptions().find((c) => c.colorCode === colorCode);
-    return match ? match.colorName : colorCode;
+    return match !== undefined ? match.colorName : colorCode;
   }
 
   /** Every (color, storage) pair with no matching variant, and the
@@ -147,7 +147,7 @@ export class VariantSelector {
     if (this.disabled() || this.isColorDisabled(colorCode)) return;
     const storage = this.selectedStorageGb();
     const match = this.variants().find((v) => v.colorCode === colorCode && v.storageGb === storage);
-    if (match) this.variantSelected.emit(match.id);
+    if (match !== undefined) this.variantSelected.emit(match.id);
   }
 
   /** Resolves the exact (currentColor, storage) pair and emits its
@@ -156,7 +156,7 @@ export class VariantSelector {
     if (this.disabled() || this.isStorageDisabled(storageGb)) return;
     const color = this.selectedColorCode();
     const match = this.variants().find((v) => v.colorCode === color && v.storageGb === storageGb);
-    if (match) this.variantSelected.emit(match.id);
+    if (match !== undefined) this.variantSelected.emit(match.id);
   }
 
   isColorDisabled(colorCode: string): boolean {

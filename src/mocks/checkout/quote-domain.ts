@@ -503,7 +503,7 @@ export class QuoteDomain {
    */
   getActiveQuote(cartId: string, currentCartVersion: number): QuoteSnapshot | null {
     const record = this.quotes.get(cartId);
-    if (!record) return null;
+    if (record === undefined) return null;
     if (record.quote.cartVersion !== currentCartVersion) {
       this.quotes.delete(cartId);
       return null;
@@ -547,7 +547,7 @@ export class QuoteDomain {
     const payloadHash = hashPayload(input.body);
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) {
+    if (replay !== null) {
       // The replay body is stored verbatim by `this.idempotency.record(...)`
       // below with the exact `snapshot` this method builds, so the guard's
       // false branch cannot be reached with the current call sites (mirrors
@@ -686,7 +686,7 @@ export class QuoteDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) {
+    if (replay !== null) {
       // The replay body is stored verbatim by `this.idempotency.record(...)`
       // below with the exact `result` this method builds, so the guard's
       // false branch cannot be reached with the current call sites (mirrors
@@ -729,19 +729,19 @@ export class QuoteDomain {
     const draft = this.drafts.get(input.cartId)?.draft ?? {};
     const delivery = draft.delivery;
     const draftErrors: FieldError[] = [];
-    if (!draft.contact) {
+    if (draft.contact === undefined) {
       draftErrors.push({ path: '/contact', message: 'A kapcsolat kitöltése kötelező.' });
     }
-    if (!delivery) {
+    if (delivery === undefined) {
       draftErrors.push({ path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' });
     }
-    if (!draft.paymentMethod) {
+    if (draft.paymentMethod === undefined) {
       draftErrors.push({
         path: '/paymentMethod',
         message: 'A fizetési mód kiválasztása kötelező.',
       });
     }
-    if (draftErrors.length > 0 || !delivery) {
+    if (draftErrors.length > 0 || delivery === undefined) {
       return error(checkoutIncomplete('A fizetési adatok hiányosak.', draftErrors));
     }
 
@@ -756,7 +756,7 @@ export class QuoteDomain {
     let subtotal = 0;
     const updatedItems: CartLine[] = cart.items.map((line, index) => {
       const lookup = this.repository.getVariant(line.variantId);
-      if (!lookup) {
+      if (lookup === undefined) {
         outOfStockLines.push(line.id);
         return line;
       }
@@ -784,7 +784,7 @@ export class QuoteDomain {
       // the cart even though the call still surfaces 409 OUT_OF_STOCK.
       const atomicItems: CartLine[] = updatedItems.map((line, index) => {
         const mismatch = mismatchedLines.find((m) => m.lineIndex === index);
-        if (!mismatch) {
+        if (mismatch === undefined) {
           return line;
         }
         const lineTotal: Money = {

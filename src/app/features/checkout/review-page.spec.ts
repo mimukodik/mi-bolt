@@ -16,6 +16,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -120,7 +121,7 @@ function pinCartSessionAndQuote(): void {
   vi.spyOn(checkoutFacade, 'createQuote').mockResolvedValue({ ok: true, value: QUOTE });
 }
 
-async function createReadyReviewPage() {
+async function createReadyReviewPage(): Promise<ComponentFixture<ReviewPage>> {
   pinCartSessionAndQuote();
   const fixture = TestBed.createComponent(ReviewPage);
   await fixture.whenStable();

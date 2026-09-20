@@ -161,7 +161,7 @@ export class ProductPage {
     const product = this.product();
     if (product === null) return null;
     const match = product.variants.find((v) => v.colorCode === code);
-    return match ? match.colorName : code;
+    return match !== undefined ? match.colorName : code;
   });
 
   readonly selectedStorageLabel = computed<string | null>(() => {
@@ -171,7 +171,7 @@ export class ProductPage {
 
   readonly devicePrice = computed<Money | null>(() => {
     const variant = this.vm().selectedVariant;
-    return variant ? variant.price : null;
+    return variant !== null ? variant.price : null;
   });
 
   readonly devicePriceStatus = computed<'idle' | 'loading' | 'success' | 'empty' | 'error'>(() => {

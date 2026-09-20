@@ -209,7 +209,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const f = TestBed.createComponent(ButtonHost);
       f.detectChanges();
       const button = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (!button) {
+      if (button === null) {
         throw new Error('Expected button');
       }
       expect(button.disabled).toBe(false);
@@ -222,7 +222,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.loading.set(true);
       f.detectChanges();
       const lb = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (!lb) {
+      if (lb === null) {
         throw new Error('Expected button');
       }
       expect(lb.getAttribute('aria-busy')).toBe('true');
@@ -278,7 +278,7 @@ describe('MiBolt primitives: Required State Contract', () => {
         '[data-testid="image-photo"]',
       );
       expect(photo).not.toBeNull();
-      if (!photo) {
+      if (photo === null) {
         throw new Error('Expected photo');
       }
       photo.dispatchEvent(new Event('error'));
@@ -300,7 +300,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.pending.set(true);
       f.detectChanges();
       const button = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (!button) {
+      if (button === null) {
         throw new Error('Expected button');
       }
       expect(button.disabled).toBe(true);
@@ -364,7 +364,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const dec = getNativeElement(f).querySelector<HTMLButtonElement>(
         '[data-testid="quantity-decrement"]',
       );
-      if (!dec) {
+      if (dec === null) {
         throw new Error('Expected decrement button');
       }
       expect(dec.disabled).toBe(true);
@@ -375,7 +375,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const input = getNativeElement(f).querySelector<HTMLInputElement>(
         '[data-testid="quantity-input"]',
       );
-      if (!input) {
+      if (input === null) {
         throw new Error('Expected quantity input');
       }
       input.value = '99';

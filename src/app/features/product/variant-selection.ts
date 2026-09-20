@@ -136,7 +136,7 @@ export function selectInitialVariant(
 ): InitialVariantSelection {
   if (variantQuery !== null && variantQuery.length > 0) {
     const match = product.variants.find((v) => v.id === variantQuery);
-    return match
+    return match !== undefined
       ? { variant: match, invalidQuery: null }
       : { variant: product.defaultVariant, invalidQuery: variantQuery };
   }
@@ -214,9 +214,9 @@ export function selectVariantByPair(
   const match = product.variants.find(
     (v) => v.colorCode === colorCode && v.storageGb === storageGb,
   );
-  if (match) return { variant: match, pairAvailable: true };
+  if (match !== undefined) return { variant: match, pairAvailable: true };
   const fallback = product.variants.find((v) => v.id === currentVariantId);
-  return { variant: fallback ? fallback : product.defaultVariant, pairAvailable: false };
+  return { variant: fallback ?? product.defaultVariant, pairAvailable: false };
 }
 
 // ---------------------------------------------------------------------------

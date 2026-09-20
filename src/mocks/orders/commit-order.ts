@@ -112,7 +112,7 @@ export class PaymentIntentStore {
    */
   findById(id: string, scenarioName: string): PaymentIntentRecord | undefined {
     const record = this.intents.get(id);
-    return record ? this.applyPendingResolution(record, scenarioName) : undefined;
+    return record !== undefined ? this.applyPendingResolution(record, scenarioName) : undefined;
   }
 
   /**
@@ -397,7 +397,7 @@ export class OrderDomain {
 
     // 3. Replay BEFORE cart status / expiry / stock checks
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay) {
+    if (replay !== null) {
       // The replay body is stored verbatim by `this.idempotency.record(...)`
       // below with the exact `receipt` this method builds, so the guard's
       // false branch cannot be reached with the current call sites (mirrors
@@ -450,7 +450,7 @@ export class OrderDomain {
 
     // 7. Quote lookup — must be unexpired, must reference this cart/version
     const quote = this.quoteDomain.getActiveQuote(input.cartId, cart.version);
-    if (!quote) {
+    if (quote === null) {
       return error(quoteExpired());
     }
     if (quote.id !== input.quoteId) {
@@ -462,11 +462,11 @@ export class OrderDomain {
 
     // 8. demo_card requires succeeded matching intent; demo_cod forbids one
     if (method === 'demo_card') {
-      if (!input.paymentIntentId) {
+      if (input.paymentIntentId === null || input.paymentIntentId === undefined) {
         return error(paymentRequired());
       }
       const intent = this.paymentIntents.findById(input.paymentIntentId, this.scenarioName);
-      if (!intent) {
+      if (intent === undefined) {
         return error(notFound('A fizetési szándék nem található.'));
       }
       if (intent.status === 'pending') {
@@ -497,7 +497,7 @@ export class OrderDomain {
     }
 
     // 9. Delivery option must be set
-    if (!draft.delivery) {
+    if (draft.delivery === undefined) {
       return error(
         checkoutIncomplete('A szállítási mód hiányzik.', [
           { path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' },
@@ -547,7 +547,7 @@ export class OrderDomain {
 
     // Clear volatile draft + payment intent
     this.quoteDomain.clearDraft(input.cartId);
-    if (input.paymentIntentId) {
+    if (input.paymentIntentId !== null && input.paymentIntentId !== undefined) {
       this.paymentIntents.clear(input.paymentIntentId);
     }
 
@@ -564,7 +564,7 @@ export class OrderDomain {
     const session = validateSession(input.sessionId);
     if (!session.ok) return session;
     const stored = this.repository.getOrder(input.orderId);
-    if (!stored) return error(notFound('A rendelés nem található.'));
+    if (stored === undefined) return error(notFound('A rendelés nem található.'));
     // `Repository`'s own `OrderReceipt` type leaves every field but
     // id/orderNumber/sessionId/createdAt/total optional; `saveOrder` above
     // is this domain's only writer and always fills them in
@@ -829,7 +829,7 @@ export function getSharedStores(
   idempotencyForQuotes: IdempotencyStore,
 ): SharedStores {
   const existing = sharedStoresByRepo.get(repo);
-  if (existing) return existing;
+  if (existing !== undefined) return existing;
   const created: SharedStores = {
     paymentIntents: new PaymentIntentStore(clock),
     quoteDomain: new QuoteDomain(repo, clock, ids, idempotencyForQuotes),

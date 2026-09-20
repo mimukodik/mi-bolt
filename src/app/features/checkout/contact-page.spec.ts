@@ -11,6 +11,7 @@
 
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,7 +24,7 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   throw new Error('Expected HTMLElement');
 }
 
-function createContactPage(saver: ContactDraftSaver) {
+function createContactPage(saver: ContactDraftSaver): ComponentFixture<ContactPage> {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),

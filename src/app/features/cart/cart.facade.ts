@@ -283,9 +283,7 @@ export class CartFacade {
       retry: false,
       payload: { itemId, quantity },
     };
-    const result = await this.queue.enqueue(intent, async (inputs) =>
-      this.dispatchSetQuantity(inputs),
-    );
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatchSetQuantity(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
@@ -305,9 +303,7 @@ export class CartFacade {
       retry: false,
       payload: { itemId },
     };
-    const result = await this.queue.enqueue(intent, async (inputs) =>
-      this.dispatchRemoveItem(inputs),
-    );
+    const result = await this.queue.enqueue(intent, (inputs) => this.dispatchRemoveItem(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
       this.applySuccess(result.cart);
@@ -696,7 +692,7 @@ export class CartFacade {
     this.cartGoneWritable.set(false);
     this.cartExpiredWritable.set(false);
     this.errorWritable.set(null);
-    if (!options.fromRefetch) {
+    if (options.fromRefetch !== true) {
       this.lastFailedIntent = null;
     }
   }

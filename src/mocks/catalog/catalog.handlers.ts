@@ -230,7 +230,7 @@ export function buildCatalogHandlers(options: CreateHandlersOptions): readonly R
   const getProduct = http.get(`*/api/v1/products/:slug`, ({ params }) => {
     const slug = String(params['slug']);
     const product = options.repository.getProductBySlug(slug);
-    return product
+    return product !== undefined
       ? HttpResponse.json(product)
       : notFoundProblem(options, `Ismeretlen termék: ${slug}.`, 'NOT_FOUND');
   });

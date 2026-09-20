@@ -38,7 +38,13 @@ function quoteEtag(version: number): string {
   return `"${String(version)}"`;
 }
 
-function makeEnvironment(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')) {
+function makeEnvironment(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')): {
+  clock: ReturnType<typeof createFixedClock>;
+  ids: ReturnType<typeof createDeterministicIds>;
+  repository: Repo;
+  idempotency: IdempotencyStore;
+  domain: CartDomain;
+} {
   const clock = createFixedClock(new Date(initialClockMs).toISOString());
   const ids = createDeterministicIds(7);
   const scenario = {

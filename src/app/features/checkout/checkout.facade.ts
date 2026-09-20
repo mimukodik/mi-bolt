@@ -430,7 +430,7 @@ export class CheckoutFacade {
    * success or a structured error on failure. Failure does NOT
    * reset the form model — the user can correct and retry.
    */
-  async saveContactSection(): Promise<CheckoutMutationResult<CheckoutSession>> {
+  saveContactSection(): Promise<CheckoutMutationResult<CheckoutSession>> {
     const value = this.modelWritable();
     return this.saveSection({ contact: toContactPayload(value) });
   }
@@ -438,7 +438,7 @@ export class CheckoutFacade {
   /**
   Persists the delivery section (option + address).
   */
-  async saveDeliverySection(): Promise<CheckoutMutationResult<CheckoutSession>> {
+  saveDeliverySection(): Promise<CheckoutMutationResult<CheckoutSession>> {
     const value = this.modelWritable();
     return this.saveSection({ delivery: toDeliveryPayload(value) });
   }
@@ -446,7 +446,7 @@ export class CheckoutFacade {
   /**
   Persists the payment method.
   */
-  async savePaymentMethod(): Promise<CheckoutMutationResult<CheckoutSession>> {
+  savePaymentMethod(): Promise<CheckoutMutationResult<CheckoutSession>> {
     const value = this.modelWritable();
     return this.saveSection({ paymentMethod: value.paymentMethod as 'demo_card' | 'demo_cod' });
   }

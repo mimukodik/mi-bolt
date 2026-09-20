@@ -179,7 +179,7 @@ describe('findMatchingVariant', () => {
     const b = product('p-B', 'b', 'BrandX', 'B', true, [variant('b-1', 100_000, 256)]);
     const matchB = matchProduct(b, EMPTY_FILTER, new Set());
     const matchA = matchProduct(a, EMPTY_FILTER, new Set());
-    if (!matchA || !matchB) {
+    if (matchA === null || matchB === null) {
       throw new Error('expected matches');
     }
     const sorted = sortMatches([matchB, matchA], 'price_asc').map((m) => m.product.id);

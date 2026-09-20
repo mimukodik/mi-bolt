@@ -49,7 +49,7 @@ export function buildSnapshot(repo: Repo, sessionId: string, nowMs: number): Moc
   const cartObject = repo.findCartBySession(sessionId);
 
   let cart: PersistedCart | undefined = undefined;
-  if (cartObject) {
+  if (cartObject !== undefined) {
     cart = {
       id: cartObject.id,
       version: cartObject.version,

@@ -22,6 +22,7 @@
 
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 
@@ -107,7 +108,7 @@ interface ReviewStepInputs {
   readonly state: ReviewState;
 }
 
-function createReviewStep(overrides: Partial<ReviewStepInputs> = {}) {
+function createReviewStep(overrides: Partial<ReviewStepInputs> = {}): ComponentFixture<ReviewStep> {
   TestBed.configureTestingModule({ providers: TEST_PROVIDERS });
   const fixture = TestBed.createComponent(ReviewStep);
   // `quote` legitimately overrides to `null`, so a plain `??` default would

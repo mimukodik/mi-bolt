@@ -338,7 +338,9 @@ async function setupHarness(queryParameters: Params = {}): Promise<Harness> {
 
   const tick = async (): Promise<void> => {
     for (let index = 0; index < 8; index += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
     fixture.detectChanges();
   };
@@ -374,11 +376,11 @@ async function setupHarness(queryParameters: Params = {}): Promise<Harness> {
     facade,
     captured,
     respond: (page) => {
-      if (!responder) throw new Error('no responder');
+      if (responder === null) throw new Error('no responder');
       responder(page);
     },
     reject: (status) => {
-      if (!rejecter) throw new Error('no rejecter');
+      if (rejecter === null) throw new Error('no rejecter');
       rejecter(status);
     },
     tick,
@@ -536,9 +538,13 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     harness.captured.length = 0;
 
     harness.facade.setSearch('demo');
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await new Promise<void>((r) => {
+      setTimeout(r, 50);
+    });
     expect(harness.captured.length).toBe(0);
-    await new Promise<void>((r) => setTimeout(r, 320));
+    await new Promise<void>((r) => {
+      setTimeout(r, 320);
+    });
     expect(harness.captured.length).toBe(1);
     expect(harness.captured[0]?.params.get('q')).toBe('demo');
     harness.respond(successPage([], 0));

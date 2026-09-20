@@ -155,7 +155,7 @@ export class CartDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) {
+    if (replay !== null && isCartSnapshot(replay.body)) {
       // The idempotency cache outlives the cart's own 24h expiry by
       // design (the cache window and the cart window both start at
       // creation time but live in separate state). A replay that
@@ -208,7 +208,7 @@ export class CartDomain {
     });
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
+    if (replay !== null && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return error(CartDomain.idempotencyConflict());
     }
@@ -223,7 +223,7 @@ export class CartDomain {
     if (cart.status !== 'active') {
       return error(CartDomain.notFound());
     }
-    if (!lookup) {
+    if (lookup === undefined) {
       return error(CartDomain.notFound());
     }
     if (cart.version !== ifMatch.value) {
@@ -247,16 +247,17 @@ export class CartDomain {
     }
 
     const snapshot = CartDomain.buildVariantSnapshot(lookup.product, lookup.variant);
-    const items = existing
-      ? cart.items.map((line) =>
-          line.variantId === input.variantId
-            ? CartDomain.bumpLine(line, mergedQuantity, lookup.variant.price)
-            : line,
-        )
-      : [
-          ...cart.items,
-          CartDomain.makeLine(this.ids.uuid(), snapshot, mergedQuantity, lookup.variant.price),
-        ];
+    const items =
+      existing !== undefined
+        ? cart.items.map((line) =>
+            line.variantId === input.variantId
+              ? CartDomain.bumpLine(line, mergedQuantity, lookup.variant.price)
+              : line,
+          )
+        : [
+            ...cart.items,
+            CartDomain.makeLine(this.ids.uuid(), snapshot, mergedQuantity, lookup.variant.price),
+          ];
 
     const updated: Cart = {
       ...cart,
@@ -284,7 +285,7 @@ export class CartDomain {
     const payloadHash = hashPayload({ quantity: input.quantity });
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
+    if (replay !== null && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return error(CartDomain.idempotencyConflict());
     }
@@ -303,11 +304,11 @@ export class CartDomain {
       return error(CartDomain.versionConflict());
     }
     const line = cart.items.find((entry) => entry.id === input.itemId);
-    if (!line) {
+    if (line === undefined) {
       return error(CartDomain.notFound());
     }
     const lookup = this.repository.getVariant(line.variantId);
-    if (!lookup) {
+    if (lookup === undefined) {
       return error(CartDomain.notFound());
     }
     const quantityCheck = this.validateQuantity(input.quantity, lookup.variant);
@@ -355,7 +356,7 @@ export class CartDomain {
     const payloadHash = hashPayload({});
 
     const replay = this.idempotency.find(idemKey, payloadHash);
-    if (replay && isCartSnapshot(replay.body)) return ok(replay.body);
+    if (replay !== null && isCartSnapshot(replay.body)) return ok(replay.body);
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
       return error(CartDomain.idempotencyConflict());
     }

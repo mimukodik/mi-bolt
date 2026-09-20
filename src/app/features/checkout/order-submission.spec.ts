@@ -126,7 +126,7 @@ function configureTestBed(): void {
   });
 }
 
-async function seedCartWithItem(): Promise<string> {
+function seedCartWithItem(): Promise<string> {
   return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
     const cart = TestBed.inject(CartFacade);
     await cart.ensureCart();
@@ -205,7 +205,9 @@ function makeFakeClock(): FakeClock {
  */
 async function flushAsync(iterations = 5): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
   }
 }
 
@@ -341,9 +343,9 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
     const currentCartId = checkout.cartId();
-    if (!currentCartId) throw new Error('Expected cartId');
+    if (currentCartId === null) throw new Error('Expected cartId');
     const currentQuote = checkout.quote();
-    if (!currentQuote) throw new Error('Expected quote');
+    if (currentQuote === null) throw new Error('Expected quote');
 
     let pollCount = 0;
     server.use(
@@ -389,9 +391,9 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
     await fillContactDeliveryPayment(checkout, 'demo_card');
 
     const currentCartId = checkout.cartId();
-    if (!currentCartId) throw new Error('Expected cartId');
+    if (currentCartId === null) throw new Error('Expected cartId');
     const currentQuote = checkout.quote();
-    if (!currentQuote) throw new Error('Expected quote');
+    if (currentQuote === null) throw new Error('Expected quote');
 
     server.use(
       http.get('*/api/v1/payment-intents/:intentId', () =>
@@ -520,7 +522,8 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
     const second = submission.submitOrder();
     await Promise.resolve();
 
-    if (!resolverHolder.resolve) throw new Error('Expected resolveOrder to be defined');
+    if (resolverHolder.resolve === undefined)
+      throw new Error('Expected resolveOrder to be defined');
     resolverHolder.resolve({
       id: 'order-only-one',
       orderNumber: 'DEMO-000001',

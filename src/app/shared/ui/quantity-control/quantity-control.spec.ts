@@ -89,7 +89,7 @@ describe('QuantityControl primitive', () => {
     const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="quantity-increment"]',
     );
-    if (!inc) {
+    if (inc === null) {
       throw new Error('Expected increment button');
     }
     inc.click();
@@ -101,7 +101,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (!input) {
+    if (input === null) {
       throw new Error('Expected quantity input');
     }
     input.value = '99';
@@ -119,7 +119,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (!input) {
+    if (input === null) {
       throw new Error('Expected quantity input');
     }
     input.value = '0';
@@ -138,7 +138,7 @@ describe('QuantityControl primitive', () => {
     const dec = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="quantity-decrement"]',
     );
-    if (!dec) {
+    if (dec === null) {
       throw new Error('Expected decrement button');
     }
     expect(dec.disabled).toBe(true);
@@ -151,7 +151,7 @@ describe('QuantityControl primitive', () => {
     const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="quantity-increment"]',
     );
-    if (!inc) {
+    if (inc === null) {
       throw new Error('Expected increment button');
     }
     expect(inc.disabled).toBe(true);
@@ -170,7 +170,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (!dec || !inc || !input) {
+    if (dec === null || inc === null || input === null) {
       throw new Error('Expected controls to exist');
     }
     expect(dec.disabled).toBe(true);
@@ -187,7 +187,7 @@ describe('QuantityControl primitive', () => {
     const input = root.querySelector('[data-testid="quantity-input"]');
     const inc = root.querySelector('[data-testid="quantity-increment"]');
     const message = root.querySelector('[data-testid="quantity-message"]');
-    if (!dec || !input || !inc) {
+    if (dec === null || input === null || inc === null) {
       throw new Error('Expected the three step controls to exist');
     }
     const row = dec.parentElement;
@@ -204,7 +204,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (!input) {
+    if (input === null) {
       throw new Error('Expected quantity input');
     }
     input.value = '3';

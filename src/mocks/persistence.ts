@@ -123,7 +123,7 @@ class SessionStorageAdapter {
   constructor(private readonly storage: StorageLike | null) {}
 
   read(key: string): string | null {
-    if (this.storage && !this.denied) {
+    if (this.storage !== null && !this.denied) {
       try {
         return this.storage.getItem(key);
       } catch {
@@ -134,7 +134,7 @@ class SessionStorageAdapter {
   }
 
   write(key: string, value: string): { ok: boolean } {
-    if (this.storage && !this.denied) {
+    if (this.storage !== null && !this.denied) {
       try {
         this.storage.setItem(key, value);
         return { ok: true };
@@ -150,7 +150,7 @@ class SessionStorageAdapter {
   }
 
   remove(key: string): void {
-    if (this.storage && !this.denied) {
+    if (this.storage !== null && !this.denied) {
       try {
         this.storage.removeItem(key);
       } catch {

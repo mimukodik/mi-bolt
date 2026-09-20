@@ -56,7 +56,7 @@ describe('EmptyState primitive', () => {
   it('emits actionRequested when the action button is clicked', () => {
     const { fixture, host } = setup();
     const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (!button) {
+    if (button === null) {
       throw new Error('Expected button');
     }
     button.click();

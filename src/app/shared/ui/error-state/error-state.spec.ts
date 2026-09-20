@@ -70,7 +70,7 @@ describe('ErrorState primitive', () => {
   it('emits retryRequested when the retry button is clicked', () => {
     const { fixture, host } = setup();
     const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (!button) {
+    if (button === null) {
       throw new Error('Expected button');
     }
     button.click();
@@ -82,7 +82,7 @@ describe('ErrorState primitive', () => {
     host.pending.set(true);
     fixture.detectChanges();
     const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (!button) {
+    if (button === null) {
       throw new Error('Expected button');
     }
     expect(button.disabled).toBe(true);

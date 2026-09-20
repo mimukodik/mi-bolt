@@ -238,7 +238,7 @@ export function buildPaymentHandlers(
       const idemKey = deriveIdempotencyKey('POST', '/payment-intents', session.value, idem.value);
       const payloadHash = hashPayload(parsed.value);
       const replay = idempotency.find(idemKey, payloadHash);
-      if (replay) {
+      if (replay !== null) {
         // The replay body is stored verbatim by `idempotency.record(...)`
         // and is always an object today: the only call site that records
         // one passes `serializeIntent(intent)`. The guard is what lets
@@ -332,7 +332,7 @@ export function buildPaymentHandlers(
       if (!session.ok) return session.response;
       const id = String(params['paymentIntentId']);
       const intent = paymentIntents.findById(id, scenario.name);
-      if (!intent) {
+      if (intent === undefined) {
         return problemResponse(
           {
             status: 404,

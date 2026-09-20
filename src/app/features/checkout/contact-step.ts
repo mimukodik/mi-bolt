@@ -215,7 +215,7 @@ export class ContactStep {
   // ---- Actions ------------------------------------------------------
 
   async onSubmit(event?: Event): Promise<void> {
-    if (event && typeof event.preventDefault === 'function') {
+    if (event !== undefined && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
     if (this.saveState() === 'loading') return;

@@ -12,8 +12,8 @@ fits, the rest we switch off; keep only what is very important").
 
 | Rule | Before | After | Removed | Reason |
 | --- | ---: | ---: | ---: | --- |
-| `unicorn/*` | ≈330 | 0 | ≈330 | Style-only: naming, member order, ternary style. |
-| `sonarjs/*` | ≈150 | 0 | ≈150 | Style-only: assertion style, complexity score. |
+| `unicorn/*` | ≈330 | 0 | ≈330 | Style-only: naming, member order, ternary style. Plugin removed from `package.json` because no rule is enabled. |
+| `sonarjs/*` | ≈150 | 0 | ≈150 | Style-only: assertion style, complexity score. Plugin removed from `package.json` because no rule is enabled. |
 | `no-magic-numbers` | 924 | 0 | 924 | Flags every literal; biggest single rule. |
 | `no-restricted-syntax` | 264 | 0 | 264 | Forbade `private`; needs a repo rewrite. |
 | `id-length` (warn) | 272 | 0 | 272 | Flags short but conventional identifiers. |
@@ -33,6 +33,12 @@ contributors: `name-replacements` 48, `consistent-class-member-order` 43,
 `consistent-boolean-name` 16, `prefer-scoped-selector` 16. Largest
 `sonarjs/*` contributors: `prefer-specific-assertions` 125,
 `cognitive-complexity` 20.
+
+`eslint-plugin-unicorn` and `eslint-plugin-sonarjs` were dropped from
+`package.json` because `eslint.config.mjs` never imports them — every rule
+each plugin offers is turned off, so the dependency is unused. The relax
+table above still records the rule-count delta the plugins would have
+contributed, for the inventory audit trail.
 
 ## What stays
 

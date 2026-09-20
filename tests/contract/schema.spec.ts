@@ -158,7 +158,9 @@ describe('T03-AC02 Money invariant', () => {
     function findMoney(node: unknown, path: string[]): void {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) {
-        node.forEach((child, index) => findMoney(child, [...path, String(index)]));
+        node.forEach((child, index) => {
+          findMoney(child, [...path, String(index)]);
+        });
         return;
       }
       const record = node as Record<string, unknown>;

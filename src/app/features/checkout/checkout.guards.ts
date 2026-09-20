@@ -117,7 +117,7 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
   const checkout = inject(CheckoutFacade);
   const cart = inject(CartFacade);
   const cartResult = redirectForCartSnapshot(cart.cart(), checkout.order());
-  return cartResult === null ? true : cartResult;
+  return cartResult ?? true;
 };
 
 /**

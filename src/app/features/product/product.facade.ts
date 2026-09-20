@@ -244,7 +244,7 @@ export class ProductFacade {
     const product = this.productSignal();
     if (product === null) return;
     const variant = product.variants.find((v) => v.id === variantId);
-    if (!variant) return;
+    if (variant === undefined) return;
     this.selectedColorCodeSignal.set(variant.colorCode);
     this.selectedStorageGbSignal.set(variant.storageGb);
     this.galleryImageIdSignal.set(null);

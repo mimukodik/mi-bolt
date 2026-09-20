@@ -58,7 +58,7 @@ describe('CatalogToolbar', () => {
     const select = getNativeElement(fixture).querySelector<HTMLSelectElement>(
       '[data-testid="catalog-sort"]',
     );
-    if (!select) throw new Error('Expected select');
+    if (select === null) throw new Error('Expected select');
     select.value = 'price_asc';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
@@ -70,7 +70,7 @@ describe('CatalogToolbar', () => {
     const select = getNativeElement(fixture).querySelector<HTMLSelectElement>(
       '[data-testid="catalog-page-size"]',
     );
-    if (!select) throw new Error('Expected select');
+    if (select === null) throw new Error('Expected select');
     select.value = '24';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();

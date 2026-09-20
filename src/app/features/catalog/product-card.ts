@@ -56,7 +56,7 @@ export class ProductCard {
     const first = this.variant().images[0];
     return {
       src: first.src,
-      alt: first.alt || `${this.product().name} illusztráció`,
+      alt: first.alt !== '' ? first.alt : `${this.product().name} illusztráció`,
       width: first.width,
       height: first.height,
     };

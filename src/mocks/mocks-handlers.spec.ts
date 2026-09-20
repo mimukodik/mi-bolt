@@ -25,6 +25,7 @@ import {
   resolveScenario,
 } from '../mocks/scenarios';
 import { buildSnapshot } from './snapshot';
+import type { PersistedReceipt } from './persistence';
 import { DEMO_PRODUCT } from './cart/cart.handlers';
 import { server, useMswServer } from '../../tests/msw-server';
 
@@ -549,7 +550,8 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
     });
 
     const built = buildSnapshot(repo, 'sess-payment', Date.now());
-    const byId = (id: string) => built.receipts.find((r) => r.id === id);
+    const byId = (id: string): PersistedReceipt | undefined =>
+      built.receipts.find((r) => r.id === id);
 
     expect(byId('order-cod-1')?.paymentMethod).toBe('demo_cod');
     expect(byId('order-other-1')?.paymentMethod).toBe('demo_card');

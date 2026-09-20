@@ -125,7 +125,8 @@ function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
 
 function arrayShallowEqual<T>(a: readonly T[] | undefined, b: readonly T[] | undefined): boolean {
   if (a === b) return true;
-  if (a === undefined || b === undefined || a.length !== b.length) return false;
+  if (a === undefined || b === undefined) return a === b;
+  if (a.length !== b.length) return false;
   for (const [index, element] of a.entries()) {
     if (element !== b[index]) return false;
   }

@@ -195,7 +195,8 @@ export class SuccessStep {
     }
     this.loadState.set({
       kind: 'error',
-      detail: result.error.detail || 'A rendelés visszatöltése sikertelen.',
+      detail:
+        result.error.detail !== '' ? result.error.detail : 'A rendelés visszatöltése sikertelen.',
     });
   }
 
@@ -262,18 +263,5 @@ export class SuccessStep {
       .finally(() => {
         this.startingNewCart.set(false);
       });
-  }
-
-  // -------------------------------------------------------------------------
-  // Test seams — exposed only so spec files can drive the page
-  // without standing up the full component tree.
-  // -------------------------------------------------------------------------
-
-  #_testForceState(next: LoadState): void {
-    this.loadState.set(next);
-  }
-
-  #_testOrderId(): string | null {
-    return this.orderId();
   }
 }

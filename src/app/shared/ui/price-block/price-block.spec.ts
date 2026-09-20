@@ -37,7 +37,7 @@ describe('PriceBlock primitive', () => {
       '[data-testid="price-amount"]',
     );
     expect(amount).not.toBeNull();
-    if (!amount) {
+    if (amount === null) {
       throw new Error('Expected price-amount element');
     }
     expect(amount.textContent.trim()).toBe('339 990');
@@ -53,7 +53,7 @@ describe('PriceBlock primitive', () => {
     const { fixture } = setup();
     const label = getNativeElement(fixture).querySelector<HTMLElement>('.label');
     expect(label).not.toBeNull();
-    if (!label) {
+    if (label === null) {
       throw new Error('Expected label element');
     }
     expect(label.textContent.trim()).toBe('Készülékár, egyszeri díj');

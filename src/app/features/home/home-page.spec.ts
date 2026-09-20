@@ -186,7 +186,7 @@ class StubApi {
 
   resolveProduct(slug: string, product: Product): void {
     const stream = this.productBySlug.get(slug);
-    if (!stream) {
+    if (stream === undefined) {
       throw new Error(`StubApi: no in-flight request for ${slug}`);
     }
     stream.next(product);
@@ -195,7 +195,7 @@ class StubApi {
 
   rejectProduct(slug: string, error: unknown): void {
     const stream = this.productBySlug.get(slug);
-    if (!stream) {
+    if (stream === undefined) {
       throw new Error(`StubApi: no in-flight request for ${slug}`);
     }
     stream.error(error);
@@ -311,7 +311,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(ctaLink).not.toBeNull();
     const ctaText = (ctaLink?.textContent ?? '').trim();
     expect(ctaText.length).toBeGreaterThan(2);
-    const ctaImage = ctaLink ? ctaLink.querySelector('img') : null;
+    const ctaImage = ctaLink !== null ? ctaLink.querySelector('img') : null;
     expect(ctaImage).toBeNull();
   });
 
@@ -386,7 +386,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const cta = raw.querySelector('a[data-testid="hero-cta"]');
     expect(cta).not.toBeNull();
-    expect(cta ? cta.getAttribute('href') : '').toBe('/telefonok');
+    expect(cta !== null ? cta.getAttribute('href') : '').toBe('/telefonok');
   });
 
   it('category shortcuts render the three spec categories with valid 5G / inStock filters', async () => {
@@ -550,15 +550,19 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     // Wait for getConfig microtask to fire and loadOneFeatured to issue
     // the four getProduct calls.
     for (let index = 0; index < 30; index += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
     const fixtures = productFixtures();
     for (const slug of FEATURED_SLUGS) {
       const product = fixtures.get(slug);
-      if (product) api.resolveProduct(slug, product);
+      if (product !== undefined) api.resolveProduct(slug, product);
     }
     for (let index = 0; index < 10; index += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
 
     // The orchestrator must have called getConfig exactly once.
@@ -573,7 +577,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     for (const slot of slots) {
       expect(slot.status).toBe('success');
       expect(slot.product).not.toBeNull();
-      expect(slot.product ? slot.product.slug : '').not.toBe('');
+      expect(slot.product !== null ? slot.product.slug : '').not.toBe('');
     }
   });
 
@@ -615,13 +619,17 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     fixture.detectChanges();
     // Wait for getConfig and per-slug getProduct to be issued.
     for (let index = 0; index < 30; index += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
     for (const slug of FEATURED_SLUGS) {
       api.rejectProduct(slug, new Error('network down'));
     }
     for (let index = 0; index < 10; index += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
     fixture.detectChanges();
     const instance = fixture.componentInstance;

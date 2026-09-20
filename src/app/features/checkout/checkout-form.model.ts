@@ -165,7 +165,7 @@ export function hydrateCheckoutFormModel(
   if (snapshot.paymentMethod !== undefined && snapshot.paymentMethod !== null) {
     next.paymentMethod = snapshot.paymentMethod;
   }
-  if (snapshot.contact) {
+  if (snapshot.contact !== undefined) {
     // Sub-fields inside a present `contact` follow the same
     // "preserve base on absence" rule the delivery / paymentMethod
     // branches apply. A PUT that round-trips only one field (e.g.

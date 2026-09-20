@@ -33,10 +33,11 @@
  * `listen()` single.
  */
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import type { setupServer as SetupServerFn } from 'msw/node';
 
 const isNodeProcess = typeof process !== 'undefined' && Boolean(process.versions?.node);
 
-let server!: ReturnType<typeof import('msw/node').setupServer>;
+let server!: ReturnType<typeof SetupServerFn>;
 
 if (isNodeProcess) {
   // Dynamic import keeps `msw/node` (and the @mswjs/interceptors

@@ -100,7 +100,7 @@ describe('FormFieldMessage primitive', () => {
       '[data-testid="form-field-message"]',
     );
     expect(message).not.toBeNull();
-    if (!message) {
+    if (message === null) {
       throw new Error('Expected form-field-message');
     }
     expect(message.textContent.trim()).toBe('Formátum: nev@példa.hu');

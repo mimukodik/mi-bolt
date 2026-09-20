@@ -425,7 +425,7 @@ export class OrderSubmission {
   // reference them; private to keep them off the public surface).
   // -------------------------------------------------------------------------
 
-  private readonly createPaymentIntent = async (body: {
+  private readonly createPaymentIntent = (body: {
     cartId: string;
     quoteId: string;
   }): Promise<PaymentIntent> =>
@@ -436,13 +436,10 @@ export class OrderSubmission {
       }),
     );
 
-  private readonly getPaymentIntent = async (paymentIntentId: string): Promise<PaymentIntent> =>
+  private readonly getPaymentIntent = (paymentIntentId: string): Promise<PaymentIntent> =>
     firstValueFrom(this.api.invoke(functions.getPaymentIntent, { paymentIntentId }));
 
-  private readonly createOrder = async (
-    key: string,
-    body: NormalizedOrderBody,
-  ): Promise<OrderReceipt> =>
+  private readonly createOrder = (key: string, body: NormalizedOrderBody): Promise<OrderReceipt> =>
     firstValueFrom(
       this.api.invoke(functions.createOrder, {
         'Idempotency-Key': key,
@@ -450,19 +447,23 @@ export class OrderSubmission {
       }),
     );
 
-  private readonly getOrder = async (orderId: string): Promise<OrderReceipt> =>
+  private readonly getOrder = (orderId: string): Promise<OrderReceipt> =>
     firstValueFrom(this.api.invoke(functions.getOrder, { orderId }));
 
   // -------------------------------------------------------------------------
   // Submission driver.
   // -------------------------------------------------------------------------
 
-  private async runSubmit(): Promise<SubmitOutcome> {
+  private runSubmit(): Promise<SubmitOutcome> {
     const paymentMethod = this.checkout.form().value().paymentMethod;
     const cartId = this.checkout.cartId();
     const quote = this.checkout.quote();
     if (cartId === null || quote === null) {
-      return { kind: 'unknown', safeKey: '', reason: 'Hiányzó kosár vagy árajánlat.' };
+      return Promise.resolve({
+        kind: 'unknown',
+        safeKey: '',
+        reason: 'Hiányzó kosár vagy árajánlat.',
+      });
     }
 
     return paymentMethod === 'demo_cod'
@@ -709,7 +710,7 @@ export class OrderSubmission {
         resolve();
       }, PAYMENT_POLL_INTERVAL_MS);
       this.pollHandle = handle;
-      const onAbort = () => {
+      const onAbort = (): void => {
         this.clock.clearTimeoutFn(handle);
         this.pollHandle = null;
         resolve();

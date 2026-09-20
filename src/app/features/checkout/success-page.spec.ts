@@ -523,7 +523,7 @@ beforeEach(() => {
   configureTestBed();
 });
 
-async function seedCartWithItem(): Promise<string> {
+function seedCartWithItem(): Promise<string> {
   return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
     const facade = TestBed.inject(CartFacade);
     await facade.ensureCart();
@@ -534,7 +534,7 @@ async function seedCartWithItem(): Promise<string> {
   });
 }
 
-async function commitHappyPath(): Promise<string> {
+function commitHappyPath(): Promise<string> {
   return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
     const cart = TestBed.inject(CartFacade);
     const checkout = TestBed.inject(CheckoutFacade);

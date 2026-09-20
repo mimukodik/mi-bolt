@@ -16,6 +16,7 @@
  */
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
+import type { Problem } from './checkout/quote-domain';
 
 import type { Repository as Repo } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
@@ -83,7 +84,9 @@ export function createHandlers(options: CreateHandlersOptions): RequestHandler[]
   return [...createDispatcherShell(options), ...createStrictHandlers(options)];
 }
 
-function notFoundBody(options: CreateHandlersOptions) {
+function notFoundBody(
+  options: CreateHandlersOptions,
+): Problem & { type: string; title: string; traceId: string } {
   return {
     type: 'urn:mi-bolt:problem:not-found',
     title: 'A kért végpont nem található',

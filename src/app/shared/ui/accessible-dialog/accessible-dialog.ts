@@ -88,9 +88,9 @@ export class AccessibleDialog {
   constructor() {
     effect(() => {
       const isOpen = this.opened();
-      if (isOpen && !this.ref) {
+      if (isOpen && this.ref === null) {
         this.openInternal();
-      } else if (!isOpen && this.ref) {
+      } else if (!isOpen && this.ref !== null) {
         this.closeInternal();
       }
     });
@@ -132,7 +132,7 @@ export class AccessibleDialog {
   }
 
   private closeInternal(): void {
-    if (!this.ref) return;
+    if (this.ref === null) return;
     const reference = this.ref;
     // Setting ref = null first so the effect does not loop on the next
     // tick when the parent observes `closed` and sets `opened` back to false.

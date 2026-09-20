@@ -195,10 +195,10 @@ export function buildBrowserHandlers(
   snapshot: MockSnapshot | null = null,
 ): ReturnType<typeof createHandlers> {
   const options = resolveBrowserHandlerOptions();
-  if (snapshot?.cart) {
+  if (snapshot?.cart !== undefined) {
     options.repository.loadPersistedCart(snapshot.cart, snapshot.simulatedSessionId);
   }
-  if (snapshot?.receipts) {
+  if (snapshot?.receipts !== undefined) {
     options.repository.loadPersistedOrders(snapshot.receipts, snapshot.simulatedSessionId);
   }
   // The E2E configuration preserves the T02 network-isolation gate:

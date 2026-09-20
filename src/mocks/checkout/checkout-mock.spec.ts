@@ -15,7 +15,7 @@ import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CartDomain } from '../../mocks/cart/cart-domain';
 import { deriveIdempotencyKey, hashPayload, IdempotencyStore } from '../../mocks/idempotency';
 import type { Product, Variant } from '../../mocks/repository';
-import { Repository as Repo } from '../../mocks/repository';
+import { type Cart, Repository as Repo } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
 import { CHECKOUT_OPTIONS } from '../../mocks/checkout/checkout.handlers';
 import { QUOTE_TTL_MS, QuoteDomain } from '../../mocks/checkout/quote-domain';
@@ -68,7 +68,7 @@ function makeEnvironment(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')
 
 function asProductFixture(environment: Environment): Product {
   const product = environment.repository.getProductById(DEMO_PRODUCT.id);
-  if (!product) throw new Error('demo product missing');
+  if (product === undefined) throw new Error('demo product missing');
   return product;
 }
 
@@ -77,7 +77,7 @@ async function seedCart(
   sessionId = SESSION_A,
   variantId = VARIANT_G256,
   quantity = 1,
-) {
+): Promise<Cart> {
   await Promise.resolve();
   const created = environment.cartDomain.createCart({
     sessionId,
@@ -96,11 +96,16 @@ async function seedCart(
   return added.value;
 }
 
-function completeValidContact() {
+function completeValidContact(): { fullName: string; email: string; phone: string } {
   return { fullName: '  Teszt Elek  ', email: ' Teszt@Example.test ', phone: ' +36201234567 ' };
 }
 
-function completeValidDelivery(optionId: 'home_delivery' | 'demo_pickup' = 'home_delivery') {
+function completeValidDelivery(optionId: 'home_delivery' | 'demo_pickup' = 'home_delivery'):
+  | {
+      optionId: 'home_delivery';
+      address: { countryCode: string; postalCode: string; city: string; line1: string };
+    }
+  | { optionId: 'demo_pickup' } {
   if (optionId === 'home_delivery') {
     return {
       optionId,

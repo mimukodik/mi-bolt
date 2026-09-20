@@ -45,6 +45,7 @@ import { provideApiConfiguration as provideApiConfig } from '../../api/generated
 import { CartDomain } from '../../../mocks/cart/cart-domain';
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { IdempotencyStore } from '../../../mocks/idempotency';
+import { isRecord } from '../../../mocks/is-record';
 import { Repository as Repo } from '../../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
@@ -102,14 +103,13 @@ function registerComponentMetadata(
   if (typeof componentClass !== 'function') return;
   const raw: unknown = Reflect.get(componentClass, 'propDecorators');
   const propertyDecorators: Record<string, unknown[]> = {};
-  if (typeof raw === 'object' && raw !== null) {
+  if (isRecord(raw)) {
     for (const [key, value] of Object.entries(raw)) {
       if (!Array.isArray(value)) {
         continue;
       }
 
-      const array: unknown[] = [...value];
-      propertyDecorators[key] = array;
+      propertyDecorators[key] = value;
     }
   }
   if (config.inputs !== undefined) {
@@ -268,7 +268,13 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
   return content;
 }
 
-function makeEnvironment() {
+function makeEnvironment(): {
+  repository: Repo;
+  clock: ReturnType<typeof createFixedClock>;
+  ids: ReturnType<typeof createDeterministicIds>;
+  scenario: { name: string; seed: number; clockOffsetMs: number; isolated: boolean };
+  apiRoot: string;
+} {
   const clock = createFixedClock(new Date(Date.parse('2026-09-14T10:00:00.000Z')).toISOString());
   const ids = createDeterministicIds(7);
   const scenario = {

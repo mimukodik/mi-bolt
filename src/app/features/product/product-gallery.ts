@@ -167,9 +167,9 @@ export class ProductGallery {
    */
   onDocumentKeydown(event: KeyboardEvent): void {
     const frame = this.frame()?.nativeElement;
-    if (!frame) return;
+    if (frame === undefined) return;
     const target = event.target instanceof Node ? event.target : null;
-    if (!target || !frame.contains(target)) return;
+    if (target === null || !frame.contains(target)) return;
     this.onKeydown(event);
   }
 

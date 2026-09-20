@@ -66,7 +66,7 @@ describe('AccessibleDialog focus restoration (FIX-30)', () => {
     const triggerA = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="trigger-a"]',
     );
-    if (!triggerA) throw new Error('Expected trigger A');
+    if (triggerA === null) throw new Error('Expected trigger A');
     triggerA.focus();
     expect(document.activeElement).toBe(triggerA);
 
@@ -89,7 +89,7 @@ describe('AccessibleDialog focus restoration (FIX-30)', () => {
     const triggerB = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="trigger-b"]',
     );
-    if (!triggerA || !triggerB) throw new Error('Expected both triggers');
+    if (triggerA === null || triggerB === null) throw new Error('Expected both triggers');
     host.restoreTarget.set(triggerB);
     triggerA.focus();
 

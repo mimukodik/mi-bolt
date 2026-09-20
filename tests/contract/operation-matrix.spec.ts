@@ -143,7 +143,7 @@ describe('T26-AC01 operation inventory parity', () => {
 // ---------------------------------------------------------------------------
 
 describe('T26-AC02 request/response + Problem-code contract', () => {
-  it('every documented success response validates against its schema', async () => {
+  it('every documented success response validates against its schema', () => {
     for (const op of operationsById.values()) {
       const validator = compileResponseValidator(op.operationId, op.successStatus);
       if (!validator) continue;
@@ -274,7 +274,7 @@ describe('T26-AC03 business-error code coverage', () => {
     expect(body.code).toBe('VALIDATION_FAILED');
   });
 
-  it('quantity overflow (above 5) is refused by the schema', async () => {
+  it('quantity overflow (above 5) is refused by the schema', () => {
     const op = operationsById.get('addCartItem');
     if (!op) throw new Error('addCartItem descriptor missing');
     const validator = compileRequestValidator('addCartItem');
@@ -815,7 +815,7 @@ function expectProblemShape(body: Record<string, unknown>): void {
   expect(Array.isArray(body['fieldErrors'])).toBe(true);
 }
 
-async function rawFetch(
+function rawFetch(
   method: string,
   url: string,
   headers: Record<string, string>,
@@ -870,7 +870,7 @@ function safeParse(text: string): unknown {
 // we rely on below when the test file is re-exported. Each import is
 // referenced from at least one path so a noUnusedLocals check stays
 // green; the explicit references below keep that link explicit.
-export type _UsedImports =
+export type UsedImports =
   | typeof HttpClient
   | typeof HttpContext
   | typeof firstValueFrom

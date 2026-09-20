@@ -146,7 +146,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (detachCapture) detachCapture();
+  if (detachCapture !== null) detachCapture();
   detachCapture = null;
   server.resetHandlers();
   captures.length = 0;
@@ -365,7 +365,7 @@ describe('T17-AC04: 409 conflict surfaces a recovery signal and defers replay', 
     // The refetch is fire-and-forget; wait for the queue to drain
     // so the GET request lands before the assertion runs.
     const queue = getQueue(facade);
-    if (!queue) throw new Error('Expected CartMutationQueue');
+    if (queue === null) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
 
     // The facade must have refetched the cart via GET after the 409.
@@ -439,7 +439,7 @@ describe('T17-AC04: 409 conflict surfaces a recovery signal and defers replay', 
     // Fire a second intent that will 409.
     await facade.addItem(VARIANT_G512, 1).catch(() => undefined);
     const queue = getQueue(facade);
-    if (!queue) throw new Error('Expected CartMutationQueue');
+    if (queue === null) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
     // After the conflict + refetch, the version reflects the server,
     // but the line quantities that the facade displays match the
@@ -549,7 +549,7 @@ describe('FIX-10: CartFacade acquires its cart on construction', () => {
     expect(facade.pending()).toBeGreaterThan(0);
 
     const queue = getQueue(facade);
-    if (!queue) throw new Error('Expected CartMutationQueue');
+    if (queue === null) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
 
     expect(facade.cart()?.id).toBe('cart-boot-restore-1');
@@ -577,7 +577,7 @@ describe('FIX-10: CartFacade acquires its cart on construction', () => {
     // Construction must not throw even though the boot restore fails.
     const facade = TestBed.inject(CartFacade);
     const queue = getQueue(facade);
-    if (!queue) throw new Error('Expected CartMutationQueue');
+    if (queue === null) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
 
     expect(facade.cart()).toBeNull();
@@ -613,7 +613,7 @@ describe('T24-AC03: in-flight mutation results are dropped after resetOrderedCar
     // the `applySuccess(...)` path is exercised AFTER the reset.
     const inFlight = facade.addItem(VARIANT_G256, 1);
     const ordered = currentEnvironment.repository.getCart(cartIdBefore ?? '');
-    if (ordered) {
+    if (ordered !== undefined) {
       currentEnvironment.repository.updateCart({ ...ordered, status: 'ordered' });
     }
     facade.resetOrderedCart();
@@ -770,7 +770,7 @@ describe('mapError: HttpErrorResponse body narrowing', () => {
 
     const facade = TestBed.inject(CartFacade);
     const queue = getQueue(facade);
-    if (!queue) throw new Error('Expected CartMutationQueue');
+    if (queue === null) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
 
     expect(facade.error()).not.toBeNull();
@@ -783,7 +783,7 @@ describe('mapError: HttpErrorResponse body narrowing', () => {
 
     const facade = TestBed.inject(CartFacade);
     const queue = getQueue(facade);
-    if (!queue) throw new Error('Expected CartMutationQueue');
+    if (queue === null) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
 
     expect(facade.error()).not.toBeNull();
@@ -795,7 +795,7 @@ describe('mapError: HttpErrorResponse body narrowing', () => {
 
     const facade = TestBed.inject(CartFacade);
     const queue = getQueue(facade);
-    if (!queue) throw new Error('Expected CartMutationQueue');
+    if (queue === null) throw new Error('Expected CartMutationQueue');
     await settleQueue(queue);
 
     expect(facade.error()).not.toBeNull();

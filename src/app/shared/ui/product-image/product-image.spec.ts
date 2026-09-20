@@ -119,7 +119,7 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (!photo) {
+    if (photo === null) {
       throw new Error('Expected image photo');
     }
     photo.dispatchEvent(new Event('error'));
@@ -136,7 +136,7 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (!photo) {
+    if (photo === null) {
       throw new Error('Expected image photo');
     }
     photo.dispatchEvent(new Event('error'));
@@ -150,14 +150,14 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (!photo) {
+    if (photo === null) {
       throw new Error('Expected image photo');
     }
     photo.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     const mark1 = getNativeElement(fixture).querySelector<HTMLElement>('.fallback-mark');
     expect(mark1).not.toBeNull();
-    if (!mark1) {
+    if (mark1 === null) {
       throw new Error('Expected fallback mark');
     }
     expect(mark1.textContent.trim()).toBe('D');
@@ -165,7 +165,7 @@ describe('ProductImage primitive', () => {
     fixture.detectChanges();
     const mark2 = getNativeElement(fixture).querySelector<HTMLElement>('.fallback-mark');
     expect(mark2).not.toBeNull();
-    if (!mark2) {
+    if (mark2 === null) {
       throw new Error('Expected fallback mark');
     }
     expect(mark2.textContent.trim()).toBe('A');
@@ -176,7 +176,7 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (!photo) {
+    if (photo === null) {
       throw new Error('Expected image photo');
     }
     expect(photo.getAttribute('src')).toBe(
