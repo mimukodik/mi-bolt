@@ -2,10 +2,22 @@
   display: block;
 }
 
+/* .portal-footer{max-width:1920px;margin:0 auto;border-top:0;
+   background-color:#002340} (docs/design/yettel.md §5 "Footer"), with white
+   text on the navy ground (§9 "Text colour is decided per surface"). The box
+   and the spacing are Tailwind utilities on footer-nav.html; this sheet holds
+   the colours, the container caps and the .btn-outline-lime recipe. */
 .footer {
+  max-width: 1920px;
+  margin: 0 auto;
   background: var(--color-shell-dark);
   color: var(--color-text-inverse);
-  padding: var(--space-6) var(--layout-gutter-mobile);
+}
+
+/* The compact footer keeps the gutter and halves the vertical rhythm. */
+.footer--compact {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
 }
 
 .footer__inner {
@@ -13,14 +25,7 @@
   margin: 0 auto;
 }
 
-.footer__brand {
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.02em;
-}
-
 .footer__legal {
-  flex: 1 1 240px;
-  min-width: 0;
   color: var(--color-text-inverse-muted);
   font-size: var(--type-helper);
 }
@@ -29,11 +34,6 @@
    (portal-font-bold 16/24, 12px 24px, 24px pill; docs/design/yettel.md §5),
    with 1px off each padding edge for the hairline so it stays 48px. */
 .footer__cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--size-control-comfortable);
-  min-width: var(--size-control-comfortable);
   padding: 11px 23px;
   background: transparent;
   color: var(--color-brand-accent);
@@ -42,7 +42,6 @@
   line-height: 24px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-brand-accent);
-  cursor: pointer;
   transition:
     background-color var(--motion-fast) ease,
     color var(--motion-fast) ease;
@@ -57,20 +56,6 @@
 .footer__cta:focus-visible {
   outline: 3px solid var(--color-text-inverse);
   outline-offset: 2px;
-}
-
-.footer--compact {
-  padding: var(--space-4) var(--layout-gutter-mobile);
-}
-
-@media (min-width: 640px) {
-  .footer {
-    padding: var(--space-7) var(--layout-gutter-desktop);
-  }
-
-  .footer--compact {
-    padding: var(--space-4) var(--layout-gutter-desktop);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

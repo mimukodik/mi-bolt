@@ -1,24 +1,46 @@
-<section aria-labelledby="hero-heading" class="hero" data-testid="hero-section">
-  <div class="hero__inner">
-    <p class="hero__eyebrow" data-testid="hero-eyebrow">MiBolt · Mobiltelefonok</p>
-    <h1 class="hero__title" data-testid="hero-heading" id="hero-heading">
-      {{ title() }}
-      <span class="hero__title-accent">{{ subtitle() }}</span>
-    </h1>
-    <p class="hero__message" data-testid="hero-message">
-      Találd meg a hozzád illő készüléket, válaszd ki a kedvenced, és próbáld ki a rendelést demó
-      módban.
-    </p>
-    <div class="hero__cta-row" data-testid="hero-cta-row">
-      <a class="hero__cta" data-testid="hero-cta" routerLink="/telefonok">Megnézem a telefonokat</a>
-      <a class="hero__cta-secondary" data-testid="hero-cta-secondary" fragment="how" routerLink="/"
-        >Hogyan működik?</a
-      >
+<section
+  aria-labelledby="hero-heading"
+  class="hero px-4 py-12 sm:px-6 lg:px-12 lg:py-16"
+  data-testid="hero-section"
+>
+  <div
+    class="hero__inner flex flex-col gap-6 min-[720px]:grid min-[720px]:grid-cols-2 min-[720px]:items-start"
+  >
+    <div class="hero__copy flex flex-col gap-6">
+      <p class="hero__eyebrow m-0 font-bold tracking-[0.08em] uppercase" data-testid="hero-eyebrow">
+        MiBolt · Mobiltelefonok
+      </p>
+      <h1 class="hero__title m-0 font-bold" data-testid="hero-heading" id="hero-heading">
+        {{ title() }}
+        <span class="hero__title-accent block">{{ subtitle() }}</span>
+      </h1>
+      <p class="hero__message m-0 max-w-[56ch]" data-testid="hero-message">
+        Találd meg a hozzád illő készüléket, válaszd ki a kedvenced, és próbáld ki a rendelést demó
+        módban.
+      </p>
+      <div class="hero__cta-row flex flex-wrap gap-3" data-testid="hero-cta-row">
+        <a
+          class="hero__cta inline-flex min-h-12 min-w-12 items-center justify-center no-underline"
+          data-testid="hero-cta"
+          routerLink="/telefonok"
+          >Megnézem a telefonokat</a
+        >
+        <a
+          class="hero__cta-secondary inline-flex min-h-12 min-w-12 items-center justify-center no-underline"
+          data-testid="hero-cta-secondary"
+          fragment="how"
+          routerLink="/"
+          >Hogyan működik?</a
+        >
+      </div>
     </div>
-    <div class="hero__illustration" data-testid="hero-illustration">
+    <div
+      class="hero__illustration flex flex-col items-center gap-2 min-[720px]:self-center"
+      data-testid="hero-illustration"
+    >
       <svg
         aria-hidden="true"
-        class="hero__art"
+        class="hero__art block h-auto w-full max-w-[320px]"
         focusable="false"
         height="240"
         viewBox="0 0 320 240"
@@ -26,27 +48,88 @@
       >
         <defs>
           <linearGradient id="hero-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="#FF6A00" stop-opacity="0.18" />
-            <stop offset="100%" stop-color="#FF6A00" stop-opacity="0" />
+            <stop offset="0%" stop-color="var(--color-brand-accent-hover)" stop-opacity="0.18" />
+            <stop offset="100%" stop-color="var(--color-brand-accent-hover)" stop-opacity="0" />
           </linearGradient>
         </defs>
         <rect fill="url(#hero-grad)" height="240" width="320" x="0" y="0" />
-        <rect fill="#FF6A00" height="160" opacity="0.95" rx="14" width="80" x="120" y="40" />
-        <rect fill="#1B2024" height="112" opacity="0.85" rx="6" width="56" x="132" y="56" />
-        <circle cx="160" cy="184" fill="#1B2024" opacity="0.7" r="4" />
-        <rect fill="#FF6A00" height="14" opacity="0.55" rx="4" width="56" x="40" y="60" />
-        <rect fill="#FF6A00" height="10" opacity="0.35" rx="4" width="40" x="40" y="82" />
-        <rect fill="#FF6A00" height="12" opacity="0.55" rx="4" width="48" x="232" y="120" />
-        <rect fill="#FF6A00" height="10" opacity="0.35" rx="4" width="32" x="232" y="140" />
+        <rect
+          fill="var(--color-brand-accent)"
+          height="160"
+          opacity="0.95"
+          rx="14"
+          width="80"
+          x="120"
+          y="40"
+        />
+        <rect
+          fill="var(--color-brand-ink)"
+          height="112"
+          opacity="0.85"
+          rx="6"
+          width="56"
+          x="132"
+          y="56"
+        />
+        <circle cx="160" cy="184" fill="var(--color-brand-ink)" opacity="0.7" r="4" />
+        <rect
+          fill="var(--color-brand-accent)"
+          height="14"
+          opacity="0.55"
+          rx="4"
+          width="56"
+          x="40"
+          y="60"
+        />
+        <rect
+          fill="var(--color-brand-accent)"
+          height="10"
+          opacity="0.35"
+          rx="4"
+          width="40"
+          x="40"
+          y="82"
+        />
+        <rect
+          fill="var(--color-brand-accent)"
+          height="12"
+          opacity="0.55"
+          rx="4"
+          width="48"
+          x="232"
+          y="120"
+        />
+        <rect
+          fill="var(--color-brand-accent)"
+          height="10"
+          opacity="0.35"
+          rx="4"
+          width="32"
+          x="232"
+          y="140"
+        />
       </svg>
-      <p class="hero__illustration-caption">Illusztráció · nem valódi termékajánlat</p>
+      <p class="hero__illustration-caption m-0 text-center">
+        Illusztráció · nem valódi termékajánlat
+      </p>
     </div>
   </div>
 </section>
-<section aria-label="Kategóriák" class="hero-shortcuts" data-testid="hero-shortcuts">
-  <div class="hero-shortcuts__inner">
-    <a class="hero-shortcuts__card" data-testid="shortcut-all" routerLink="/telefonok">
-      <span aria-hidden="true" class="hero-shortcuts__icon">
+<section
+  aria-label="Kategóriák"
+  class="hero-shortcuts px-4 py-5 sm:px-6 lg:px-12 lg:py-6"
+  data-testid="hero-shortcuts"
+>
+  <div class="hero-shortcuts__inner flex flex-col min-[720px]:flex-row">
+    <a
+      class="hero-shortcuts__card flex min-h-11 items-center gap-3 py-4 no-underline min-[720px]:flex-1 min-[720px]:px-6 min-[720px]:py-0 min-[720px]:first:pl-0"
+      data-testid="shortcut-all"
+      routerLink="/telefonok"
+    >
+      <span
+        aria-hidden="true"
+        class="hero-shortcuts__icon inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-input"
+      >
         <svg focusable="false" height="20" viewBox="0 0 24 24" width="20">
           <rect
             fill="none"
@@ -61,30 +144,37 @@
           <line stroke="currentColor" stroke-width="1.6" x1="10" x2="14" y1="18" y2="18" />
         </svg>
       </span>
-      <span class="hero-shortcuts__text">
-        <span class="hero-shortcuts__title">Összes telefon</span>
+      <span class="hero-shortcuts__text flex flex-1 flex-col gap-0.5">
+        <span class="hero-shortcuts__title font-bold">Összes telefon</span>
         <span class="hero-shortcuts__subtitle">Válassz a készülékek közül</span>
       </span>
     </a>
     <a
-      class="hero-shortcuts__card"
+      class="hero-shortcuts__card flex min-h-11 items-center gap-3 py-4 no-underline min-[720px]:flex-1 min-[720px]:px-6 min-[720px]:py-0 min-[720px]:first:pl-0"
       data-testid="shortcut-5g"
       routerLink="/telefonok"
       [queryParams]="{ is5g: true }"
     >
-      <span aria-hidden="true" class="hero-shortcuts__icon hero-shortcuts__icon--text">5G</span>
-      <span class="hero-shortcuts__text">
-        <span class="hero-shortcuts__title">5G készülékek</span>
+      <span
+        aria-hidden="true"
+        class="hero-shortcuts__icon hero-shortcuts__icon--text inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-input font-bold"
+        >5G</span
+      >
+      <span class="hero-shortcuts__text flex flex-1 flex-col gap-0.5">
+        <span class="hero-shortcuts__title font-bold">5G készülékek</span>
         <span class="hero-shortcuts__subtitle">Fedezd fel a demó kínálatot</span>
       </span>
     </a>
     <a
-      class="hero-shortcuts__card"
+      class="hero-shortcuts__card flex min-h-11 items-center gap-3 py-4 no-underline min-[720px]:flex-1 min-[720px]:px-6 min-[720px]:py-0 min-[720px]:first:pl-0"
       data-testid="shortcut-instock"
       routerLink="/telefonok"
       [queryParams]="{ inStock: true }"
     >
-      <span aria-hidden="true" class="hero-shortcuts__icon">
+      <span
+        aria-hidden="true"
+        class="hero-shortcuts__icon inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-input"
+      >
         <svg focusable="false" height="20" viewBox="0 0 24 24" width="20">
           <rect
             fill="none"
@@ -98,8 +188,8 @@
           />
         </svg>
       </span>
-      <span class="hero-shortcuts__text">
-        <span class="hero-shortcuts__title">Raktáron</span>
+      <span class="hero-shortcuts__text flex flex-1 flex-col gap-0.5">
+        <span class="hero-shortcuts__title font-bold">Raktáron</span>
         <span class="hero-shortcuts__subtitle">Elérhető a demó készletben</span>
       </span>
     </a>

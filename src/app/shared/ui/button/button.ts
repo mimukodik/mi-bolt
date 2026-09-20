@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 /**
  * MiBolt Button primitive.
@@ -11,10 +11,6 @@ import { Component, computed, input, output } from '@angular/core';
  *   surfaces, where the focus ring has to be white rather than navy.
  * - `navy` — the filled navy `.btn--primary`, white on `#002340`; the
  *   "Belépés" pill on the lime bar in home-1920.png.
- *
- * Sizes:
- * - `standard`     — 44 px (the project minimum purchase-flow target).
- * - `comfortable`  — 48 px.
  *
  * State contracts (where applicable):
  * - default, hover, focus-visible, active, disabled, loading.
@@ -32,7 +28,6 @@ import { Component, computed, input, output } from '@angular/core';
 })
 export class Button {
   readonly variant = input<'primary' | 'secondary' | 'secondaryOnDark' | 'navy'>('primary');
-  readonly size = input<'standard' | 'comfortable'>('standard');
   readonly label = input.required<string>();
   readonly loadingLabel = input<string>('Betöltés…');
   readonly disabled = input(false);
@@ -40,10 +35,6 @@ export class Button {
   readonly type = input<'button' | 'submit' | 'reset'>('button');
 
   readonly pressed = output<MouseEvent>();
-
-  readonly minTargetHeight = computed(() =>
-    this.size() === 'comfortable' ? 'var(--size-control-comfortable)' : 'var(--size-control)',
-  );
 
   onClick(event: MouseEvent): void {
     if (this.disabled() || this.loading()) {

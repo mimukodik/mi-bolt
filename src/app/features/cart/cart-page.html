@@ -36,7 +36,7 @@
     }
     @case ('empty') {
       <app-empty-state
-        actionLabel="Telefonokat nézek →"
+        actionLabel="Telefonokat nézek"
         actionVariant="primary"
         message="Nézd meg a demókészülékeket, és válaszd ki a kedvenced."
         title="A kosarad még üres."
@@ -83,7 +83,6 @@
         >
           <app-button
             label="Vásárlás folytatása"
-            size="comfortable"
             variant="secondary"
             (pressed)="onContinueShopping()"
           />
@@ -91,7 +90,6 @@
             data-testid="cart-continue"
             label="Tovább az adatokhoz"
             loadingLabel="Ellenőrzés…"
-            size="comfortable"
             variant="primary"
             [disabled]="!canContinue()"
             [loading]="continuing()"

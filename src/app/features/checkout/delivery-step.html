@@ -125,7 +125,6 @@
         <app-button
           data-testid="delivery-retry"
           label="Újrapróbálom"
-          size="comfortable"
           variant="secondary"
           (pressed)="onRetry()"
         />
@@ -135,7 +134,6 @@
         <app-button
           data-testid="delivery-confirm"
           loadingLabel="Mentés…"
-          size="comfortable"
           variant="primary"
           [disabled]="!canConfirm()"
           [label]="confirmLabel()"
