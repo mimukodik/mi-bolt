@@ -1,13 +1,23 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
+import { ALLOWED_STORAGE_GB, isStorageBucket } from './catalog-query';
 import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
+import type { FacetValue } from '../../api/generated/models/facet-value';
 import type { Facets } from '../../api/generated/models/facets';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
+
+/** What one storage chip needs to render: the size, its label and
+ *  the facet count (null when no `Facets` has loaded yet). */
+interface StorageBucket {
+  readonly gb: 128 | 256 | 512;
+  readonly label: string;
+  readonly count: number | null;
+}
 
 /**
  * T13 — mobile filter drawer (FilterDrawer).
@@ -69,8 +79,39 @@ export class FilterDrawer {
   private readonly draftMin = signal<string>('');
   private readonly draftMax = signal<string>('');
 
-  /** Storage buckets exposed by the documented storage enum. */
-  readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => [128, 256, 512]);
+  /** Storage buckets exposed by the documented storage enum, paired with
+   *  the facet count so the chip can show "128 GB (3)". Falls back to
+   *  the documented enum with `null` counts when no `Facets` is loaded. */
+  readonly storageFacets = computed<readonly StorageBucket[]>(() => {
+    const facets = this.facets();
+    if (facets === null) {
+      return ALLOWED_STORAGE_GB.map((gb) => ({ gb, label: `${String(gb)} GB`, count: null }));
+    }
+    const out: StorageBucket[] = [];
+    for (const entry of facets.storageGb) {
+      const bucket = toStorageBucket(entry);
+      if (bucket !== null) out.push(bucket);
+    }
+    return out;
+  });
+
+  /** Stock facet count, or null when the latest response carries none. */
+  readonly inStockCount = computed<number | null>(() => this.facets()?.inStock ?? null);
+
+  /** 5G facet count, or null when the latest response carries none. */
+  readonly fiveGCount = computed<number | null>(() => this.facets()?.is5g ?? null);
+
+  /** Placeholder hint for the min-price input: the lower bound. */
+  readonly priceMinHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.min.amount);
+  });
+
+  /** Placeholder hint for the max-price input: the upper bound. */
+  readonly priceMaxHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.max.amount);
+  });
 
   /** Brand facets, falling back to an empty list when none are present. */
   readonly brandFacets = computed(() => this.facets()?.brands ?? []);
@@ -227,4 +268,14 @@ export class FilterDrawer {
     if (!/^-?\d+$/.test(trimmed)) return null;
     return Number(trimmed);
   }
+}
+
+/** Narrow a `FacetValue` from `Facets.storageGb` into a `StorageBucket`,
+ *  returning null when the contract publishes a value the documented
+ *  enum does not recognise. */
+function toStorageBucket(entry: FacetValue): StorageBucket | null {
+  const raw = Number(entry.value);
+  if (!Number.isInteger(raw)) return null;
+  if (!isStorageBucket(raw)) return null;
+  return { gb: raw, label: entry.label, count: entry.count };
 }
