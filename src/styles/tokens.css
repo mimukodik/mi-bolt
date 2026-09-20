@@ -107,7 +107,6 @@
   /* The yettel .btn box is 12px + 24px line-height + 12px = 48px
      (docs/design/yettel.md §5 "Primary button"). */
   --button-height: var(--size-control-comfortable);
-  --button-height-comfortable: var(--size-control-comfortable);
 }
 
 @media (prefers-reduced-motion: reduce) {

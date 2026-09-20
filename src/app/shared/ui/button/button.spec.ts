@@ -7,7 +7,6 @@ import { Button } from './button';
   template: `
     <app-button
       [variant]="variant()"
-      [size]="size()"
       [label]="label()"
       [loadingLabel]="loadingLabel()"
       [disabled]="disabled()"
@@ -19,7 +18,6 @@ import { Button } from './button';
 })
 class HostComponent {
   readonly variant = signal<'primary' | 'secondary' | 'secondaryOnDark' | 'navy'>('primary');
-  readonly size = signal<'standard' | 'comfortable'>('standard');
   readonly label = signal('Kosárba teszem');
   readonly loadingLabel = signal('Hozzáadás…');
   readonly disabled = signal(false);
@@ -122,14 +120,6 @@ describe('Button primitive', () => {
     // The size token is wired in button.css as min-height: var(--button-height).
     // jsdom has no layout but the class-based guarantee of the standard
     // height is what makes the button reachable for assistive tech.
-  });
-
-  it('uses the comfortable class when size=comfortable is requested', () => {
-    const { fixture, host, root } = setup();
-    host.size.set('comfortable');
-    fixture.detectChanges();
-    const btn = root.querySelector<HTMLButtonElement>('button');
-    expect(btn?.classList.contains('is-comfortable')).toBe(true);
   });
 
   it('emits a pressed event on click', () => {

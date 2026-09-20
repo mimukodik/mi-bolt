@@ -124,7 +124,6 @@
         ></app-status-message>
         <app-button
           variant="secondary"
-          size="comfortable"
           label="Újrapróbálom"
           (pressed)="onRetry()"
           data-testid="delivery-retry"
@@ -134,7 +133,6 @@
       <div class="actions">
         <app-button
           variant="primary"
-          size="comfortable"
           [label]="confirmLabel()"
           [loadingLabel]="'Mentés…'"
           [loading]="saveState() === 'loading'"
