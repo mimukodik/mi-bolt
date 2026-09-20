@@ -1,0 +1,44 @@
+<div class="toolbar flex flex-wrap items-center justify-between gap-3">
+  <div class="result-count" data-testid="result-count">
+    {{ resultCountLabel() }}
+  </div>
+  <div class="toolbar__controls flex items-center gap-3 flex-wrap">
+    <button
+      type="button"
+      class="trigger hidden lg:inline-flex items-center min-h-10 px-4 rounded font-medium cursor-pointer"
+      data-testid="filter-trigger"
+      #filterTrigger
+      (click)="openFilters.emit()"
+    >
+      Szűrők{{ appliedCount() > 0 ? ' (' + appliedCount() + ')' : '' }}
+    </button>
+    <label class="sort inline-flex items-center gap-2">
+      <span class="sort__label">Rendezés</span>
+      <select
+        class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
+        data-testid="catalog-sort"
+        [disabled]="status() === 'loading'"
+        (change)="onSortChange($event)"
+      >
+        @for (mode of sortModes; track mode) {
+          <option [value]="mode" [selected]="mode === sort()">
+            {{ sortLabel(mode) }}
+          </option>
+        }
+      </select>
+    </label>
+    <label class="page-size inline-flex items-center gap-2">
+      <span class="sort__label">Oldalméret</span>
+      <select
+        class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
+        data-testid="catalog-page-size"
+        [value]="pageSize()"
+        [disabled]="status() === 'loading'"
+        (change)="onPageSizeChange($event)"
+      >
+        <option value="12">12 / oldal</option>
+        <option value="24">24 / oldal</option>
+      </select>
+    </label>
+  </div>
+</div>

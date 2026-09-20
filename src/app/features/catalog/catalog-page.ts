@@ -13,8 +13,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CatalogFacade } from './catalog.facade';
 import {
+  ALLOWED_STORAGE_GB,
+  buildChips,
   CATALOG_QUERY_KEYS,
-  SORT_MODES,
   serializeCatalogQuery,
   type CatalogQuery,
   type Sort,
@@ -22,18 +23,32 @@ import {
 import { FilterPanel } from './filter-panel';
 import { FilterDrawer } from './filter-drawer';
 import { ProductCard } from './product-card';
+import { CatalogToolbar } from './catalog-toolbar';
+import { AppliedFilters } from './applied-filters';
+import { Pagination } from './pagination';
 
-import { EmptyState } from '../../shared/ui/empty-state/empty-state';
-import { ErrorState } from '../../shared/ui/error-state/error-state';
-import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { AsyncContent } from '../../shared/ui/async-content/async-content';
+import { Button } from '../../shared/ui/button/button';
+import type { AsyncStatus } from '../../shared/types/async-status';
+import type { UiProblem } from '../../shared/types/ui-problem';
+import type { FilterIdentity } from '../../shared/types/filter-identity';
+
+/** Type guard for a chip's numeric value against the documented storage
+ *  buckets — avoids an `as 128 | 256 | 512` assertion. */
+function isStorageBucket(value: number): value is 128 | 256 | 512 {
+  return (ALLOWED_STORAGE_GB as readonly number[]).includes(value);
+}
 
 /**
  * T13 — Catalogue list page (S2).
  *
  * Responsibilities:
  *
- *   - Compose the filter panel / drawer, toolbar, applied chip row,
- *     product grid and pagination around the `CatalogFacade` vm.
+ *   - Compose the toolbar, applied-filter chips, async grid content and
+ *     pagination — `FIX-60` extracted the four into
+ *     `CatalogToolbar`, `AppliedFilters`, `AsyncContent` and
+ *     `Pagination` — around the filter panel / drawer and the
+ *     `CatalogFacade` vm.
  *   - Bind every write to the URL via `Router.navigate({ queryParams,
  *     queryParamsHandling: 'merge' })`. The facade is the canonical
  *     state owner; the URL is its mirror.
@@ -60,9 +75,11 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
     FilterPanel,
     FilterDrawer,
     ProductCard,
-    EmptyState,
-    ErrorState,
-    LoadingState,
+    CatalogToolbar,
+    AppliedFilters,
+    AsyncContent,
+    Pagination,
+    Button,
   ],
   templateUrl: './catalog-page.html',
   styleUrl: './catalog-page.scss',
@@ -75,42 +92,63 @@ export class CatalogPage {
   protected readonly facade = inject(CatalogFacade);
 
   /** Trigger button the catalog page opens the filter drawer with — passed
-   *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3). */
-  protected readonly filterTrigger =
-    viewChild<ElementRef<HTMLButtonElement>>('filterDrawerTrigger');
-
-  /** The `x / y` indicator between the two pagination buttons — the
-   *  focus target a boundary click hands focus to. See
-   *  `handOffPaginationFocus()` for why it, and not a button. */
-  private readonly pageIndicator = viewChild<ElementRef<HTMLSpanElement>>('pageIndicator');
+   *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3).
+   *  The button itself now lives in `CatalogToolbar`'s template, which
+   *  exposes it through `filterTriggerEl()` rather than through the
+   *  declared input/output surface `components.md:371` names. */
+  private readonly toolbar = viewChild(CatalogToolbar);
+  protected readonly filterTrigger = computed<HTMLElement | null>(
+    () => this.toolbar()?.filterTriggerEl() ?? null,
+  );
 
   /** Local UI flags that do NOT live in the URL. */
   readonly drawerOpened = signal<boolean>(false);
 
-  /** True while a request is in flight AFTER the first response arrived. */
-  readonly isRefreshing = computed<boolean>(() => this.facade.vm().status === 'refreshing');
-
-  /**
-   * True while the filter, sort, page-size and pagination controls are
-   * inert — the first load only, before there is anything to filter.
+  /** True while the filter, sort, page-size and pagination controls are
+   *  inert — the first load only, before there is anything to filter.
    *
-   * It is deliberately NOT `isRefreshing()`. Every control in this page
-   * puts the facade into `refreshing` the instant it is touched, so
-   * binding `disabled` to that status disables the very control the
-   * user is operating: the browser then runs the unfocusing steps on
-   * it, focus falls to `<body>`, and every keystroke after the first
-   * one is dropped on the floor. Typing `150000` into the min-price box
-   * left `1` in it.
-   *
-   * What the disabled state was there for — "a slow network can't
-   * accumulate stale draft clicks" (see `FilterPanel`) — is already
-   * guaranteed one layer down and does not need the DOM: `CatalogFacade`
-   * sets `querySignal` synchronously before each request, so a second
-   * intent composes onto the first rather than onto stale state, and
-   * its `switchMap` unsubscribes the superseded request so a slow
-   * answer can never overwrite a newer one.
-   */
+   *  It is deliberately NOT bound to `refreshing`. Every control in
+   *  this page puts the facade into `refreshing` the instant it is
+   *  touched, so binding `disabled` to that status disables the very
+   *  control the user is operating: the browser then runs the
+   *  unfocusing steps on it, focus falls to `<body>`, and every
+   *  keystroke after the first one is dropped on the floor (FIX-25).
+   *  What the disabled state was there for — "a slow network can't
+   *  accumulate stale draft clicks" — is already guaranteed one layer
+   *  down and does not need the DOM: `CatalogFacade` sets `querySignal`
+   *  synchronously before each request, so a second intent composes
+   *  onto the first rather than onto stale state. */
   readonly controlsDisabled = computed<boolean>(() => this.facade.vm().status === 'loading');
+
+  /** `AsyncContent`'s `status`, mapped from `CatalogStatus` at the call
+   *  site — `'refreshing'` becomes `'loading'`, distinguished from a
+   *  first load by `hasPrevious()`. */
+  readonly asyncStatus = computed<AsyncStatus>(() => {
+    const status = this.facade.vm().status;
+    return status === 'refreshing' ? 'loading' : status;
+  });
+
+  /** True while a request is in flight that has previous usable data to
+   *  keep showing (`AsyncContent`'s "previous usable data can remain
+   *  under explicit refresh warning"). */
+  readonly hasPrevious = computed<boolean>(() => this.facade.vm().status === 'refreshing');
+
+  /** `AsyncContent`'s `problem` — the facade only ever surfaces a plain
+   *  message string, so it is adapted into the documented `UiProblem`
+   *  shape at the call site, the same way `asyncStatus` adapts the
+   *  status. */
+  readonly problem = computed<UiProblem | null>(() => {
+    const message = this.facade.vm().error;
+    if (message === null) return null;
+    return { code: 'catalog-error', message, fieldErrors: [], retryable: true };
+  });
+
+  /** `CatalogToolbar`'s `status` — the toolbar only needs the
+   *  loading/not-loading distinction `controlsDisabled` already makes;
+   *  every non-loading status maps onto `'success'`. */
+  readonly toolbarStatus = computed<AsyncStatus>(() =>
+    this.controlsDisabled() ? 'loading' : 'success',
+  );
 
   /** Snapshot of the current sort option (defaults to 'recommended'). */
   readonly currentSort = computed<Sort>(() => this.facade.query().sort ?? 'recommended');
@@ -121,38 +159,14 @@ export class CatalogPage {
   /** Snapshot of the current page (1-based). */
   readonly currentPage = computed<number>(() => this.facade.query().page);
 
-  /** Total page count, derived from total + pageSize. */
-  readonly totalPages = computed<number>(() => {
-    const total = this.facade.vm().total;
-    const size = this.currentPageSize();
-    if (total <= 0) return 1;
-    return Math.max(1, Math.ceil(total / size));
-  });
-
   readonly shouldShowPagination = computed<boolean>(
     () => this.facade.vm().total > this.currentPageSize(),
   );
 
-  /** Live, human-readable chip set derived from the canonical query. */
-  readonly appliedQuery = computed<{
-    readonly appliedChips: readonly AppliedChip[];
-  }>(() => ({ appliedChips: buildChips(this.facade.query()) }));
-
-  /** Number of currently applied filters (drives the drawer trigger label). */
-  readonly appliedChipCount = computed<number>(() => this.appliedQuery().appliedChips.length);
-
-  /** Sort modes exposed by the documented enum. */
-  readonly sortModes: readonly Sort[] = SORT_MODES;
-
-  readonly resultCountLabel = computed<string>(() => {
-    const vm = this.facade.vm();
-    if (vm.status === 'loading') return 'Keresés a katalógusban…';
-    if (vm.status === 'refreshing') {
-      return `Találatok: ${String(vm.total)} (frissítés alatt)`;
-    }
-    if (vm.total === 0) return 'Nincs találat.';
-    return `Találatok: ${String(vm.total)}`;
-  });
+  /** `CatalogToolbar`'s `appliedCount` — the mobile filter trigger's
+   *  selected-count cue, derived the same way `AppliedFilters` derives
+   *  its own chip row. */
+  readonly appliedChipCount = computed<number>(() => buildChips(this.facade.query()).length);
 
   constructor() {
     // Mirror the URL query into the facade on every navigation. The
@@ -201,34 +215,31 @@ export class CatalogPage {
     this.facade.setFilters(next);
   }
 
-  onSortChanged(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value as Sort;
+  onSortChanged(value: Sort): void {
     this.facade.setSort(value);
   }
 
-  onPageSizeChanged(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
-    if (value === 12 || value === 24) {
-      this.facade.setPageSize(value);
-    }
+  onPageSizeChanged(value: 12 | 24): void {
+    this.facade.setPageSize(value);
   }
 
   onPageChanged(page: number): void {
     if (page < 1) return;
-    this.handOffPaginationFocus(page);
     this.facade.setPage(page);
   }
 
-  onChipRemoved(kind: AppliedChip['kind'], value: string | number | undefined): void {
-    switch (kind) {
+  onChipRemoved(identity: FilterIdentity): void {
+    switch (identity.name) {
       case 'q':
         this.facade.setSearch('');
         break;
-      case 'brand':
-        if (typeof value === 'string') this.facade.toggleBrand(value);
+      case 'brands':
+        if (typeof identity.value === 'string') this.facade.toggleBrand(identity.value);
         break;
-      case 'storage':
-        if (typeof value === 'number') this.facade.toggleStorage(value as 128 | 256 | 512);
+      case 'storageGb':
+        if (typeof identity.value === 'number' && isStorageBucket(identity.value)) {
+          this.facade.toggleStorage(identity.value);
+        }
         break;
       case 'inStock':
         this.facade.setInStock(undefined);
@@ -268,71 +279,6 @@ export class CatalogPage {
   // Helpers
   // -------------------------------------------------------------------------
 
-  sortLabel(mode: Sort): string {
-    switch (mode) {
-      case 'recommended':
-        return 'Ajánlott sorrend';
-      case 'price_asc':
-        return 'Ár szerint növekvő';
-      case 'price_desc':
-        return 'Ár szerint csökkenő';
-      case 'name_asc':
-        return 'Név szerint';
-    }
-  }
-
-  /**
-   * Hand focus to the page indicator when the requested page is a
-   * boundary — that is, when the pagination button the click was made
-   * on is about to disable itself.
-   *
-   * This is the FIX-25 symptom with a different cause, and the cause
-   * is why the cure is different too. Those controls were disabled by
-   * an in-flight request, which was simply wrong and was deleted.
-   * A pagination button at a boundary is disabled because page 1 has
-   * no previous page and the last page has no next one, which is
-   * correct, is the `disabled` the design skill's component table
-   * asks for ("Native disabled behavior"), and stays. What was wrong
-   * is only where focus went afterwards: a browser answers a focused
-   * element that stops being a focusable area by handing focus back
-   * to the viewport, so a keyboard user who paginated to the last
-   * page was dropped on `<body>` and had to tab from the top of the
-   * document again (WCAG 2.4.3 Focus Order, 2.4.7 Focus Visible).
-   * The same skill requires both halves — "Native disabled behavior"
-   * and "active focus must not be lost" — and only the second was
-   * being broken.
-   *
-   * The move runs here, before `setPage`, rather than after the
-   * re-render: focus leaves the button before Angular writes
-   * `disabled` to it, so the browser never runs its unfocusing steps
-   * at all and focus is not lost for even one frame.
-   *
-   * The target is the `x / y` indicator rather than the sibling
-   * button for two reasons. It is the one part of the widget that no
-   * page can disable — in the "last page, pressing Előző" direction
-   * the sibling is still disabled at the instant of the click, and
-   * `focus()` on a disabled button does nothing — and activating it
-   * cannot undo the navigation the user just made, which repeatedly
-   * pressing Enter on a sibling button would. It reads out the state
-   * the click produced ("Oldal: 2 / 2", `aria-current="page"`), and
-   * it already carries the `.page:focus-visible` ring, so the focus
-   * stays visible without a new style.
-   *
-   * Nothing is taken from the user here. `onPageChanged` is reachable
-   * only from those two buttons, so the focus this moves is the focus
-   * the click itself put on the button that is about to die — the
-   * unclaimed state `RouteFocusService.focusIsUnclaimed()` describes,
-   * one moment before the browser produces it. A page change that
-   * reaches no boundary returns without touching focus, which is what
-   * keeps this off the WCAG 3.2.2 (On Input) side of the line.
-   */
-  private handOffPaginationFocus(target: number): void {
-    // The template disables `pagination-prev` at page 1 and
-    // `pagination-next` at the last page; between them both stay live.
-    if (target > 1 && target < this.totalPages()) return;
-    this.pageIndicator()?.nativeElement.focus();
-  }
-
   /**
    * Toggle the host's data-layout-mode based on the viewport width so
    * the CSS media queries can hide whichever filter mount is unused.
@@ -355,58 +301,6 @@ export class CatalogPage {
       mql.removeEventListener('change', apply);
     });
   }
-}
-
-interface AppliedChip {
-  readonly id: string;
-  readonly kind:
-    'q' | 'brand' | 'storage' | 'inStock' | 'is5g' | 'minPrice' | 'maxPrice' | 'featured';
-  readonly label: string;
-  readonly value?: string | number;
-}
-
-function buildChips(q: CatalogQuery): readonly AppliedChip[] {
-  const chips: AppliedChip[] = [];
-  if (q.q !== undefined && q.q.length > 0) {
-    chips.push({ id: 'q', kind: 'q', label: `Keresés: „${q.q}”` });
-  }
-  for (const brand of q.brands ?? []) {
-    chips.push({ id: `brand:${brand}`, kind: 'brand', label: brand, value: brand });
-  }
-  for (const bucket of q.storageGb ?? []) {
-    chips.push({
-      id: `storage:${String(bucket)}`,
-      kind: 'storage',
-      label: `${String(bucket)} GB`,
-      value: bucket,
-    });
-  }
-  if (q.minPrice !== undefined) {
-    chips.push({
-      id: 'minPrice',
-      kind: 'minPrice',
-      label: `Min. ár: ${q.minPrice.toLocaleString('hu-HU')} Ft`,
-      value: q.minPrice,
-    });
-  }
-  if (q.maxPrice !== undefined) {
-    chips.push({
-      id: 'maxPrice',
-      kind: 'maxPrice',
-      label: `Max. ár: ${q.maxPrice.toLocaleString('hu-HU')} Ft`,
-      value: q.maxPrice,
-    });
-  }
-  if (q.inStock === true) {
-    chips.push({ id: 'inStock', kind: 'inStock', label: 'Csak raktáron' });
-  }
-  if (q.is5g === true) {
-    chips.push({ id: 'is5g', kind: 'is5g', label: 'Csak 5G' });
-  }
-  if (q.featured === true) {
-    chips.push({ id: 'featured', kind: 'featured', label: 'Kiemelt termékek' });
-  }
-  return chips;
 }
 
 /**

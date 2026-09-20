@@ -22,179 +22,48 @@
     </aside>
 
     <div class="results flex flex-col gap-5 min-w-0">
-      <div class="toolbar flex flex-wrap items-center justify-between gap-3">
-        <div class="result-count" data-testid="result-count">
-          {{ resultCountLabel() }}
-        </div>
-        <div class="toolbar__controls flex items-center gap-3 flex-wrap">
-          <button
-            type="button"
-            class="trigger hidden lg:inline-flex items-center min-h-10 px-4 rounded font-medium cursor-pointer"
-            data-testid="filter-trigger"
-            #filterDrawerTrigger
-            (click)="openDrawer()"
-            [attr.aria-expanded]="drawerOpened() ? 'true' : 'false'"
-            [attr.aria-controls]="'filter-drawer'"
-          >
-            Szűrők{{ appliedChipCount() > 0 ? ' (' + appliedChipCount() + ')' : '' }}
-          </button>
-          <label class="sort inline-flex items-center gap-2">
-            <span class="sort__label">Rendezés</span>
-            <select
-              class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
-              data-testid="catalog-sort"
-              [disabled]="controlsDisabled()"
-              (change)="onSortChanged($event)"
-            >
-              @for (mode of sortModes; track mode) {
-                <option [value]="mode" [selected]="mode === currentSort()">
-                  {{ sortLabel(mode) }}
-                </option>
-              }
-            </select>
-          </label>
-          <label class="page-size inline-flex items-center gap-2">
-            <span class="sort__label">Oldalméret</span>
-            <select
-              class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
-              data-testid="catalog-page-size"
-              [value]="currentPageSize()"
-              [disabled]="controlsDisabled()"
-              (change)="onPageSizeChanged($event)"
-            >
-              <option value="12">12 / oldal</option>
-              <option value="24">24 / oldal</option>
-            </select>
-          </label>
-        </div>
-      </div>
+      <app-catalog-toolbar
+        [total]="facade.vm().total"
+        [sort]="currentSort()"
+        [pageSize]="currentPageSize()"
+        [status]="toolbarStatus()"
+        [appliedCount]="appliedChipCount()"
+        (sortChanged)="onSortChanged($event)"
+        (pageSizeChanged)="onPageSizeChanged($event)"
+        (openFilters)="openDrawer()"
+      ></app-catalog-toolbar>
 
-      @if (appliedQuery().appliedChips.length > 0) {
-        <div class="chips flex flex-wrap gap-2 items-center" data-testid="applied-filters">
-          @for (chip of appliedQuery().appliedChips; track chip.id) {
-            <span
-              class="chip inline-flex items-center gap-2 px-2 rounded-full leading-snug"
-              [attr.data-testid]="'applied-chip'"
-            >
-              <span class="chip__label">{{ chip.label }}</span>
-              <button
-                type="button"
-                class="chip__remove bg-transparent border-0 cursor-pointer px-1 min-h-10 leading-none"
-                [attr.aria-label]="'Szűrő eltávolítása: ' + chip.label"
-                [attr.data-testid]="'applied-chip-remove-' + chip.kind"
-                (click)="onChipRemoved(chip.kind, chip.value)"
-              >
-                ×
-              </button>
-            </span>
-          }
-          <button
-            type="button"
-            class="chip-clear bg-transparent border-0 font-inherit cursor-pointer px-2 py-1 min-h-10"
-            data-testid="applied-filters-clear"
-            (click)="onClearAll()"
-          >
-            Összes szűrő törlése
-          </button>
-        </div>
-      }
+      <app-applied-filters
+        [query]="facade.query()"
+        (filterRemoved)="onChipRemoved($event)"
+        (cleared)="onClearAll()"
+      ></app-applied-filters>
 
-      <div
-        class="grid gap-5"
-        [class.grid--refreshing]="isRefreshing() && facade.vm().items.length > 0"
-        data-testid="catalog-grid"
+      <app-async-content
+        [status]="asyncStatus()"
+        [problem]="problem()"
+        [hasPrevious]="hasPrevious()"
+        (retryRequested)="onRetry()"
       >
-        @switch (facade.vm().status) {
-          @case ('loading') {
-            <div
-              class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60"
-              data-testid="catalog-loading"
-            >
-              <app-loading-state variant="card" label="Katalógus betöltése"></app-loading-state>
-            </div>
-          }
-          @case ('refreshing') {
-            @if (facade.vm().items.length > 0) {
-              @for (item of facade.vm().items; track item.id) {
-                <app-product-card [product]="item"></app-product-card>
-              }
-            } @else {
-              <div
-                class="state state--loading col-span-full flex items-center justify-center p-6 rounded min-h-60"
-              >
-                <app-loading-state variant="card" label="Katalógus frissítése"></app-loading-state>
-              </div>
-            }
-          }
-          @case ('empty') {
-            <div
-              class="state state--empty col-span-full flex items-center justify-center p-6 rounded min-h-60"
-              data-testid="catalog-empty"
-            >
-              <app-empty-state
-                title="Nincs a szűrőknek megfelelő készülék."
-                message="Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket."
-                actionLabel="Szűrők törlése"
-                actionVariant="primary"
-                (actionRequested)="onClearAll()"
-              ></app-empty-state>
-            </div>
-          }
-          @case ('error') {
-            <div
-              class="state state--error col-span-full flex items-center justify-center p-6 rounded min-h-60"
-              data-testid="catalog-error"
-            >
-              <app-error-state
-                title="Nem sikerült betölteni a katalógust."
-                [message]="facade.vm().error ?? 'Ismeretlen hiba a katalógus lekérdezése közben.'"
-                [pending]="isRefreshing()"
-                [preserving]="true"
-                (retryRequested)="onRetry()"
-              ></app-error-state>
-            </div>
-          }
-          @default {
-            @for (item of facade.vm().items; track item.id) {
-              <app-product-card [product]="item"></app-product-card>
-            }
-          }
+        @for (item of facade.vm().items; track item.id) {
+          <app-product-card [product]="item"></app-product-card>
         }
-      </div>
+        <app-button
+          data-async-empty-action
+          variant="primary"
+          label="Szűrők törlése"
+          (pressed)="onClearAll()"
+        ></app-button>
+      </app-async-content>
 
       @if (shouldShowPagination()) {
-        <nav
-          class="pagination flex items-center justify-center gap-3 pt-4"
-          data-testid="catalog-pagination"
-          aria-label="Lapozás"
-        >
-          <button
-            type="button"
-            class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
-            data-testid="pagination-prev"
-            [disabled]="currentPage() <= 1 || controlsDisabled()"
-            (click)="onPageChanged(currentPage() - 1)"
-          >
-            Előző
-          </button>
-          <span
-            class="page page--current font-bold cursor-default"
-            data-testid="pagination-current"
-            #pageIndicator
-            tabindex="-1"
-            aria-current="page"
-            ><span class="sr-only">Oldal: </span>{{ currentPage() }} / {{ totalPages() }}</span
-          >
-          <button
-            type="button"
-            class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
-            data-testid="pagination-next"
-            [disabled]="currentPage() >= totalPages() || controlsDisabled()"
-            (click)="onPageChanged(currentPage() + 1)"
-          >
-            Következő
-          </button>
-        </nav>
+        <app-pagination
+          [page]="currentPage()"
+          [pageSize]="currentPageSize()"
+          [total]="facade.vm().total"
+          [disabled]="controlsDisabled()"
+          (pageChanged)="onPageChanged($event)"
+        ></app-pagination>
       }
     </div>
   </div>
@@ -205,7 +74,7 @@
     [facets]="facade.vm().facets"
     [opened]="drawerOpened()"
     [disabled]="controlsDisabled()"
-    [restoreEl]="filterTrigger()?.nativeElement ?? null"
+    [restoreEl]="filterTrigger()"
     (filtersChanged)="onFiltersChanged($event)"
     (closed)="closeDrawer()"
   ></app-filter-drawer>

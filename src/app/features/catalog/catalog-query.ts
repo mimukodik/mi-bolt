@@ -18,6 +18,8 @@
  * a stray storage value never breaks the page.
  */
 
+import type { FilterIdentity } from '../../shared/types/filter-identity';
+
 /** Documented sort modes. Mirrors `listProducts.sort` in openapi.yaml. */
 export type Sort = 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
 
@@ -61,6 +63,22 @@ export interface CatalogQuery {
   readonly sort?: Sort;
   readonly page: number;
   readonly pageSize: 12 | 24;
+}
+
+/**
+ * `docs/spec/components.md:7`'s `CatalogFilters` — the subset of
+ * `CatalogQuery` that is a filter rather than sort/pagination/search
+ * state. `FilterIdentity` (`src/app/shared/types/filter-identity.ts`)
+ * is keyed by `keyof CatalogFilters`, so this type exists to give that
+ * `keyof` expression something to resolve against.
+ */
+export interface CatalogFilters {
+  readonly brands: readonly string[];
+  readonly storageGb: readonly (128 | 256 | 512)[];
+  readonly minPrice?: number;
+  readonly maxPrice?: number;
+  readonly inStock: boolean;
+  readonly is5g: boolean;
 }
 
 /** A `CatalogQuery` with no filters applied — the documented defaults. */
@@ -262,4 +280,65 @@ export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
   if (query.pageSize !== DEFAULT_PAGE_SIZE) params.set('pageSize', String(query.pageSize));
 
   return params;
+}
+
+/** One removable chip in `AppliedFilters`' chip row. `name` is a
+ *  `FilterIdentity['name']` value, so a chip can be re-emitted verbatim
+ *  as the `filterRemoved` output's payload. */
+export interface AppliedChip {
+  readonly id: string;
+  readonly name: FilterIdentity['name'];
+  readonly label: string;
+  readonly value?: string | number;
+}
+
+/**
+ * Derive the removable chip row from a `CatalogQuery`. Moved here from
+ * `CatalogPage` by `FIX-60`, the same move and the same reason `FIX-24`
+ * gives for the symbol it relocates: a query-derived helper belongs in
+ * the codec's own module, and a module-private symbol cannot be
+ * imported by a test.
+ */
+export function buildChips(q: CatalogQuery): readonly AppliedChip[] {
+  const chips: AppliedChip[] = [];
+  if (q.q !== undefined && q.q.length > 0) {
+    chips.push({ id: 'q', name: 'q', label: `Keresés: „${q.q}”` });
+  }
+  for (const brand of q.brands ?? []) {
+    chips.push({ id: `brand:${brand}`, name: 'brands', label: brand, value: brand });
+  }
+  for (const bucket of q.storageGb ?? []) {
+    chips.push({
+      id: `storage:${String(bucket)}`,
+      name: 'storageGb',
+      label: `${String(bucket)} GB`,
+      value: bucket,
+    });
+  }
+  if (q.minPrice !== undefined) {
+    chips.push({
+      id: 'minPrice',
+      name: 'minPrice',
+      label: `Min. ár: ${q.minPrice.toLocaleString('hu-HU')} Ft`,
+      value: q.minPrice,
+    });
+  }
+  if (q.maxPrice !== undefined) {
+    chips.push({
+      id: 'maxPrice',
+      name: 'maxPrice',
+      label: `Max. ár: ${q.maxPrice.toLocaleString('hu-HU')} Ft`,
+      value: q.maxPrice,
+    });
+  }
+  if (q.inStock === true) {
+    chips.push({ id: 'inStock', name: 'inStock', label: 'Csak raktáron' });
+  }
+  if (q.is5g === true) {
+    chips.push({ id: 'is5g', name: 'is5g', label: 'Csak 5G' });
+  }
+  if (q.featured === true) {
+    chips.push({ id: 'featured', name: 'featured', label: 'Kiemelt termékek' });
+  }
+  return chips;
 }

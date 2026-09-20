@@ -37,6 +37,7 @@ import { ApiConfiguration, provideApiConfiguration } from '../../api/generated/a
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CatalogFacade } from './catalog.facade';
 import { CatalogPage } from './catalog-page';
+import { AsyncContent } from '../../shared/ui/async-content/async-content';
 import type { Variant } from '../../api/generated/models/variant';
 import type { ProductPage as ProductPageDTO } from '../../api/generated/models/product-page';
 import type { ProductSummary } from '../../api/generated/models/product-summary';
@@ -410,7 +411,9 @@ function successPage(
 
 describe('T13-AC01 catalog layout breakpoints', () => {
   it('>=1280px desktop renders a sidebar + 3-column grid (CSS data-layout=desktop-3col)', () => {
-    const css = getComponentStyles(CatalogPage).join('\n');
+    // FIX-60 moved the grid rules out of CatalogPage into AsyncContent,
+    // which now owns the `[data-testid="catalog-grid"]` element.
+    const css = getComponentStyles(AsyncContent).join('\n');
     expect(css).toMatch(/min-width:\s*1280px/);
     // Three columns: grid-template-columns repeat(3, ...) inside the desktop media block.
     const desktopBlock = /@media[^{]*min-width:\s*1280px[^}]*\{[^}]*\}/s.exec(css);
@@ -445,7 +448,8 @@ describe('T13-AC01 catalog layout breakpoints', () => {
   });
 
   it('640-1023 px renders a drawer + 2-column grid', () => {
-    const css = getComponentStyles(CatalogPage).join('\n');
+    // Same move as the 1280px case above.
+    const css = getComponentStyles(AsyncContent).join('\n');
     expect(css).toMatch(/min-width:\s*640px[^{]*\{[^}]*repeat\(2/s);
   });
 

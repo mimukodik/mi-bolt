@@ -1,0 +1,34 @@
+<div class="grid" [class.grid--refreshing]="isRefreshing()" data-testid="catalog-grid">
+  @if (status() === 'empty') {
+    <div class="state state--empty" data-testid="catalog-empty">
+      <app-empty-state
+        title="Nincs a szűrőknek megfelelő készülék."
+        message="Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket."
+      ></app-empty-state>
+      <ng-content select="[data-async-empty-action]"></ng-content>
+    </div>
+  } @else if (status() === 'error') {
+    <div class="state state--error" data-testid="catalog-error">
+      <app-error-state
+        title="Nem sikerült betölteni a katalógust."
+        [message]="errorMessage()"
+        [preserving]="hasPrevious()"
+        (retryRequested)="retryRequested.emit()"
+      ></app-error-state>
+    </div>
+  } @else if (status() === 'loading' && !hasPrevious()) {
+    <div class="state state--loading" data-testid="catalog-loading">
+      <app-loading-state variant="card" label="Katalógus betöltése"></app-loading-state>
+    </div>
+  } @else {
+    <!-- success, or loading with hasPrevious (refreshing): the caller's
+         projected content stays on screen. A single unconditional
+         `<ng-content>` is deliberate — Angular only ever fills one of
+         several same-selector `<ng-content>` outlets when more than one
+         is present in a template, so the two cases share this one. -->
+    @if (isRefreshing()) {
+      <span class="sr-only" role="status">Frissítés folyamatban…</span>
+    }
+    <ng-content></ng-content>
+  }
+</div>
