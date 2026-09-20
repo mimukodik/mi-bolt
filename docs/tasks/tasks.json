@@ -116,8 +116,7 @@
     ],
     "area": "Quality",
     "files": [
-      "tests/setup-msw.ts",
-      "playwright.config.ts"
+      "tests/setup-msw.ts"
     ],
     "interface": "Output: unit and E2E coverage collectors; assertExactCoverage(manifest,report); deterministic ScenarioDescriptor; closed-world network policy.",
     "deliverable": "Prove the hard quality gates before building features.",
@@ -570,8 +569,7 @@
     "files": [
       "src/styles/tokens.css",
       "src/app/shared/ui/",
-      "src/app/shared/ui/ui-states.spec.ts",
-      "e2e/design/primitives.spec.ts"
+      "src/app/shared/ui/ui-states.spec.ts"
     ],
     "interface": "Inputs/outputs specified in docs/mi-bolt/spec/components.md; no shared component knows the SDK or mock repository.",
     "deliverable": "Accessible MiBolt primitives based on the supplied skill.",
@@ -1285,8 +1283,7 @@
     "area": "State",
     "files": [
       "src/app/features/checkout/order-submission.ts",
-      "src/app/features/checkout/payment-progress.ts",
-      "e2e/checkout/submit.spec.ts"
+      "src/app/features/checkout/payment-progress.ts"
     ],
     "interface": "submitOrder(): starts payment only for demo_card, then createOrder; retryUnknownOutcome() reuses persisted safe order key and body references.",
     "deliverable": "User-driven submission with no duplicate orders.",
@@ -1340,8 +1337,7 @@
     "area": "UI",
     "files": [
       "src/app/features/checkout/success-step.ts",
-      "src/app/features/checkout/order-receipt.ts",
-      "e2e/checkout/receipt.spec.ts"
+      "src/app/features/checkout/order-receipt.ts"
     ],
     "interface": "Success route /penztar/siker/:orderId reads getOrder; receipt rendered only from API response.",
     "deliverable": "Truthful final confirmation and a clean next shopping session.",
@@ -1399,9 +1395,7 @@
     ],
     "area": "Quality",
     "files": [
-      "e2e/design/viewport-matrix.spec.ts",
-      "e2e/design/state-matrix.spec.ts",
-      "e2e/a11y/keyboard.spec.ts"
+      "retired 2026-09-20: the e2e design/state/a11y suite this task's deliverable named was removed"
     ],
     "interface": "Input: every screen and relevant component state. Output: measured screenshots, axe results, keyboard/focus report and R01–R26 evidence.",
     "deliverable": "Independent review against `docs/design/yettel.md` across the complete flow.",
@@ -1511,7 +1505,6 @@
     ],
     "area": "Quality",
     "files": [
-      "e2e/",
       "tests/",
       "docs/mi-bolt/spec/coverage-policy.json",
       "scripts/check-traceability.mjs",
@@ -1574,7 +1567,6 @@
     "files": [
       "scripts/serve-static.mjs",
       "docs/mi-bolt/execution/deployment.md",
-      "e2e/deployment/deep-links.spec.ts",
       "scripts/check-budgets.mjs"
     ],
     "interface": "Output: optimized demo-only static dist, route fallback, MSW cache policy and no external runtime dependency.",
@@ -1694,8 +1686,7 @@
       "docs/mi-bolt/execution/decisions/3d.md",
       "src/app/features/product/product-3d-viewer.ts",
       "src/app/features/product/model-viewer-adapter.ts",
-      "public/assets/models/",
-      "e2e/product/3d.spec.ts"
+      "public/assets/models/"
     ],
     "interface": "Input: approved scope and licensed local .glb + poster. Output: deferred <model-viewer> adapter with non-3D fallback.",
     "deliverable": "A self-hosted 3D proof for ONE fictional/authorized device, not Binkies SaaS cloning.",

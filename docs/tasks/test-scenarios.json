@@ -7,8 +7,7 @@
     "action": "Resolve exact versions and run toolchain gate",
     "expected": "Latest stable major 22 accepted; next/rc/other-major and unsupported peers rejected.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -27,8 +26,7 @@
     "action": "Build and open root page",
     "expected": "No SSR/prerender/hydration/zone.js runtime; Angular standalone screen renders.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -47,8 +45,7 @@
     "action": "Remove skill evidence in a controlled gate test",
     "expected": "Execution/review gate fails; missing skill cannot be replaced by a text claim.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -67,8 +64,7 @@
     "action": "Leave a lazy runtime file unloaded",
     "expected": "File manifest contributes zeros; absent report entry cannot improve percent.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -85,8 +81,7 @@
     "action": "Perform app navigation then full reload",
     "expected": "Both source segments and bootstrap are represented once in merged file map.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -103,8 +98,7 @@
     "action": "Feed empty/missing/NaN report",
     "expected": "Gate fails closed; no 100% default on missing data.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -121,8 +115,7 @@
     "action": "Cause an unknown API request via failure scenario",
     "expected": "MSW refuses it and test fails; static host receives no business request.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -140,8 +133,7 @@
     "action": "Cause a controlled unexpected fetch",
     "expected": "MSW/CSP/network sandbox blocks and records failure.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -159,8 +151,7 @@
     "action": "Run complete purchase with SDK",
     "expected": "All business requests match exactly one MSW handler, not page.route fulfill.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -178,8 +169,7 @@
     "action": "Open two contexts and create different carts",
     "expected": "No fixture override, cart, receipt or key leaks across contexts.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -197,8 +187,7 @@
     "action": "Change quantity then reload",
     "expected": "Line ID/variant/quantity/total restore from non-PII snapshot.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -215,8 +204,7 @@
     "action": "Open app with invalid JSON/schema",
     "expected": "Explain reset, preserve safe browsing, no uncaught exception.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -233,8 +221,7 @@
     "action": "Open app with old snapshot version",
     "expected": "Discard incompatible data under explicit version policy; no false order.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -251,8 +238,7 @@
     "action": "Block storage access then shop",
     "expected": "Memory-only shopping works; reload limitation is announced.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -269,8 +255,7 @@
     "action": "Enter contact/address then reload",
     "expected": "Contact/address absent from storage; redirect to data step with cart retained.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -287,8 +272,7 @@
     "action": "Load demo when MSW cannot start",
     "expected": "Fatal startup UI and retry; business APIs never fall through.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -305,8 +289,7 @@
     "action": "Click main hero CTA",
     "expected": "Catalogue opens with meaningful title/focus.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -323,8 +306,7 @@
     "action": "Use 5G then stock shortcut",
     "expected": "Expected query and matching results appear.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -341,8 +323,7 @@
     "action": "Open each of four featured products",
     "expected": "Correct slug/default variant; no missing/empty target.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -359,8 +340,7 @@
     "action": "Fail catalogue load then Retry",
     "expected": "Useful hero persists; prices not fabricated; retry renders products.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -377,8 +357,7 @@
     "action": "Open catalogue",
     "expected": "16 total products; page 1 shows 12, page 2 shows 4.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -397,8 +376,7 @@
     "action": "Search with spaces and mixed case",
     "expected": "Trimmed NFC/case-insensitive query; URL/count/results agree.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -417,8 +395,7 @@
     "action": "Use recommended,price_asc,price_desc,name_asc",
     "expected": "Stable expected ordering and tie-breaks; page resets.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -437,8 +414,7 @@
     "action": "Choose two brands plus 256 GB and stock",
     "expected": "OR within brand; AND with other facets; each match uses one variant.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -457,8 +433,7 @@
     "action": "Choose storage/price/stock that match only separate variants",
     "expected": "Product excluded; independent-variant matching cannot pass.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -477,8 +452,7 @@
     "action": "Use min/max and exact equal boundary",
     "expected": "Inclusive matching; invalid min>max blocked with error.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -497,8 +471,7 @@
     "action": "Toggle one brand while other filters active",
     "expected": "Own facet omitted when counting; product counts not variant counts.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -517,8 +490,7 @@
     "action": "Apply a zero-match query",
     "expected": "Dedicated empty state, active filters and Reset; not a network error.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -537,8 +509,7 @@
     "action": "Load failing query then Retry",
     "expected": "Error preserves filters; retry recovers, never false zero price.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -557,8 +528,7 @@
     "action": "Switch 12→24 and page navigation",
     "expected": "Correct items, count and canonical URL; page resets appropriately.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -577,8 +547,7 @@
     "action": "Open ?page=999 then load",
     "expected": "Empty response canonicalized to last valid page with one refetch.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -597,8 +566,7 @@
     "action": "Remove one selected chip then Reset",
     "expected": "Only that filter removed; Reset restores query defaults.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -617,8 +585,7 @@
     "action": "Open filter drawer, change, Cancel; repeat Apply",
     "expected": "Cancel leaves URL/results unchanged; Apply commits once.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -637,8 +604,7 @@
     "action": "Navigate with repeated filters then back/forward",
     "expected": "Selections, sort, page and list restore correctly.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -657,8 +623,7 @@
     "action": "Open unknown/invalid query params",
     "expected": "UI canonicalizes safely; direct API malformed params return 400.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -677,8 +642,7 @@
     "action": "Type first query then change before response",
     "expected": "New results survive delayed old response; no double subscription.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -697,8 +661,7 @@
     "action": "Switch between product routes rapidly",
     "expected": "Old product cannot overwrite current slug or title.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -717,8 +680,7 @@
     "action": "Request quantity then another valid action",
     "expected": "Dispatch uses fresh returned version; no lost update.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -737,8 +699,7 @@
     "action": "Mutate outdated version",
     "expected": "409 triggers refetch, preserves intent for explicit correction; no blind replay.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -757,8 +718,7 @@
     "action": "Open valid slug/variant URL",
     "expected": "Exact variant has matching price/image/storage/stock.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -776,8 +736,7 @@
     "action": "Open nonexistent slug",
     "expected": "Dedicated not-found with catalogue return; no fake product.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -795,8 +754,7 @@
     "action": "Fail then Retry",
     "expected": "Recover same slug; selection not replaced with unrelated device.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -814,8 +772,7 @@
     "action": "Select each available pair",
     "expected": "Exactly one variant selected, accessible selected state and coherent display.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -833,8 +790,7 @@
     "action": "Select unavailable pair",
     "expected": "Disabled reason; no silent substitution; Add unavailable.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -852,8 +808,7 @@
     "action": "Open ?variant=missing",
     "expected": "Explain invalid variant; require valid selection before Add.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -871,8 +826,7 @@
     "action": "Try decrement below1/increment beyond available",
     "expected": "Controls/validation prevent invalid request; no hidden clamp.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -890,8 +844,7 @@
     "action": "Use prev/next/thumbnails",
     "expected": "Correct image/count/alt; stable frame and complete device.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -908,8 +861,7 @@
     "action": "Open zoom, tab, Escape",
     "expected": "Focus trapped, background excluded and trigger restored.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -926,8 +878,7 @@
     "action": "Fail selected product image",
     "expected": "Neutral fallback and product name; other functions still work.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -944,8 +895,7 @@
     "action": "Open/close each spec group by keyboard",
     "expected": "Correct expanded state and associated content; no fake specification data.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -962,8 +912,7 @@
     "action": "Choose One graphite256 qty1 and add",
     "expected": "Cart created then item mutation through SDK/MSW; badge=1 subtotal339990.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -982,8 +931,7 @@
     "action": "Add same variant once more",
     "expected": "One line qty2, subtotal679980; version increments once.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1002,8 +950,7 @@
     "action": "Add silver or different capacity",
     "expected": "Separate variant line; totals sum exact unit prices.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1022,8 +969,7 @@
     "action": "Set qty2 then qty1",
     "expected": "Full authoritative totals/badge agree; no rounding drift.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1042,8 +988,7 @@
     "action": "Remove one line",
     "expected": "Only selected line removed; other selection retained.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1062,8 +1007,7 @@
     "action": "Remove last line",
     "expected": "Empty-state CTA to catalogue; checkout blocked.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1082,8 +1026,7 @@
     "action": "Attempt mutation then Retry",
     "expected": "Prior cart retained; error recovery does not duplicate item.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1102,8 +1045,7 @@
     "action": "Restore expired cart",
     "expected": "Explicit expiry and new-cart path; no silent order on expired state.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1122,8 +1064,7 @@
     "action": "Add chosen variant after stock changed",
     "expected": "409 OUT_OF_STOCK; selection shown, no misleading success.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1142,8 +1083,7 @@
     "action": "Repeat same logical write and key",
     "expected": "Same response, one domain mutation and one version increment.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1162,8 +1102,7 @@
     "action": "Reuse key with different normalized body",
     "expected": "409 IDEMPOTENCY_CONFLICT; prior result unchanged.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1182,8 +1121,7 @@
     "action": "Double-click final confirmation",
     "expected": "Exactly one order request in flight and one receipt.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1202,8 +1140,7 @@
     "action": "Commit silently then Retry same request",
     "expected": "Same DEMO number, same total, stock decremented once.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1222,8 +1159,7 @@
     "action": "Reload before receipt then recover",
     "expected": "Replay/lookup receipt without contact persistence or second order.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1242,8 +1178,7 @@
     "action": "Go review→contact→delivery",
     "expected": "Entered values survive SPA navigation; changing draft invalidates quote.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1261,8 +1196,7 @@
     "action": "Directly open review URL",
     "expected": "Redirect to earliest incomplete step, not broken summary.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1280,8 +1214,7 @@
     "action": "Save contact then Retry",
     "expected": "Typed values retained; no advance on failure.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1299,8 +1232,7 @@
     "action": "Start new shopping after completed receipt",
     "expected": "New cart/order intent; completed cart cannot be reused.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1318,8 +1250,7 @@
     "action": "Open contact/delivery/review with no cart",
     "expected": "Cart empty screen with explanation.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1336,8 +1267,7 @@
     "action": "Browser Back into old review",
     "expected": "Existing receipt or new-shopping choice; no automatic submit.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1354,8 +1284,7 @@
     "action": "Open /siker/missing",
     "expected": "404 recovery; not a success layout with invented ID.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1372,8 +1301,7 @@
     "action": "Enter Teszt Elek,teszt@example.test,+36201234567",
     "expected": "Normalized Contact sent; next step opens only after success.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1390,8 +1318,7 @@
     "action": "Submit empty fields",
     "expected": "Required messages and focus order; no draft API request.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1408,8 +1335,7 @@
     "action": "Use too-short/too-long name,invalid email,wrong phone",
     "expected": "Each relevant boundary has distinct assertion; no request until valid.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1426,8 +1352,7 @@
     "action": "Submit schema-valid contact rejected by mock rule",
     "expected": "Map /email field error; retain all values; successful correction works.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1444,8 +1369,7 @@
     "action": "Choose home with valid HU address",
     "expected": "Shipping1990; complete address saved.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1462,8 +1386,7 @@
     "action": "Choose virtual pickup",
     "expected": "Shipping0, address omitted, no real location claim.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1480,8 +1403,7 @@
     "action": "Submit invalid postcode/city/line1",
     "expected": "Accessible field errors; no invalid draft saved.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1498,8 +1420,7 @@
     "action": "Fail choices load then Retry",
     "expected": "No fabricated choice or zero shipping; retry recovers.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1516,8 +1437,7 @@
     "action": "Change home to pickup and return review",
     "expected": "Fresh quote total differs by1990; old payment invalidated.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1534,8 +1454,7 @@
     "action": "Create quote for One x1 home delivery",
     "expected": "339990 +1990 =341980 HUF; qty2=681970 HUF.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1553,8 +1472,7 @@
     "action": "Advance mock clock to expiry then submit",
     "expected": "QUOTE_EXPIRED, explicit refresh/review required.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1572,8 +1490,7 @@
     "action": "Change fixture price before quote/order",
     "expected": "409 PRICE_CHANGED with new cart version; user explicitly re-reviews.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1591,8 +1508,7 @@
     "action": "Confirm after stock changes",
     "expected": "No order committed; return to cart correction without wiping contact.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1610,8 +1526,7 @@
     "action": "Change cart after quote",
     "expected": "Old quote cannot authorize order; new total required.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1629,8 +1544,7 @@
     "action": "Open review",
     "expected": "Correct product variant, contact, method, shipping, subtotal and total.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1647,8 +1561,7 @@
     "action": "Try final action without one/both checks",
     "expected": "Submission disabled/explained; no API order request.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1665,8 +1578,7 @@
     "action": "Open terms with keyboard and close",
     "expected": "Accessible modal; explicitly demo terms, no real subscription.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1683,8 +1595,7 @@
     "action": "Use contact and delivery edit links",
     "expected": "Correct earlier step, retained fields, invalidated previous quote.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1701,8 +1612,7 @@
     "action": "Choose demo_cod and confirm",
     "expected": "No payment-intent call; order successfully simulated.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1721,8 +1631,7 @@
     "action": "Choose demo_card and confirm",
     "expected": "Succeeded matching intent then one order; no card fields or real network.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1741,8 +1650,7 @@
     "action": "Confirm then retry new intent",
     "expected": "Remain on review; fields/cart retained; new key for new payment attempt.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1761,8 +1669,7 @@
     "action": "Poll deterministic pending intent",
     "expected": "At most ten GET polls; stop on success and create one order.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1781,8 +1688,7 @@
     "action": "Keep pending for ten polls",
     "expected": "Stop and explain unknown outcome, no false receipt or automatic new payment.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1801,8 +1707,7 @@
     "action": "Retry original payment key",
     "expected": "Intent not duplicated; correct existing state recovered.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1821,8 +1726,7 @@
     "action": "Submit mismatching intent scenario",
     "expected": "Backend rejects; no order despite client-selected success.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1841,8 +1745,7 @@
     "action": "Submit invalid order via contract test",
     "expected": "422/400 as declared; UI cannot bypass acceptedTerms or simulation flag.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1860,8 +1763,7 @@
     "action": "Force commit conflict with low stock",
     "expected": "One winner or complete rollback, no partial receipt/stock mutation.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1879,8 +1781,7 @@
     "action": "Fail before commit then Retry",
     "expected": "One eventual order; exact request/key reused for uncertain transport failure.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1898,8 +1799,7 @@
     "action": "Open valid success route",
     "expected": "DEMO number and explicit no real order/payment/email notice.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1916,8 +1816,7 @@
     "action": "Reload success route",
     "expected": "GET existing receipt; no POST, same totals, no PII.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1934,8 +1833,7 @@
     "action": "Fail GET then Retry",
     "expected": "Existing receipt restored; no new transaction.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1952,8 +1850,7 @@
     "action": "Inspect header and start new cart",
     "expected": "Badge reflects empty/new cart, not committed items.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1970,8 +1867,7 @@
     "action": "Navigate each route with keyboard",
     "expected": "One H1, route title, skip-to-main and visible focus.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -1988,8 +1884,7 @@
     "action": "Open/close mobile menu and select category",
     "expected": "Focus restoration and meaningful link destination.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2006,8 +1901,7 @@
     "action": "Open unmatched application path",
     "expected": "Utility 404 with working home/catalogue recovery.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2024,8 +1918,7 @@
     "action": "Complete purchase without mouse",
     "expected": "No traps outside dialogs; all buttons/selectors/form fields operable.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2044,8 +1937,7 @@
     "action": "Exercise filter,menu,zoom,terms",
     "expected": "Initial focus, trap, background exclusion, Escape and return focus.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2064,8 +1956,7 @@
     "action": "Use reduced-motion +200% text sizing",
     "expected": "No nonessential motion/clipping; purchase controls remain reachable.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2084,8 +1975,7 @@
     "action": "Measure visible purchasing controls",
     "expected": ">=44x44 target, accessible name, non-color-only selection.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2104,8 +1994,7 @@
     "action": "Trigger form/server/add failures",
     "expected": "Assert meaningful live feedback and focus; critical result persists after toast.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2124,8 +2013,7 @@
     "action": "Render all four screen families +wizard steps at six widths",
     "expected": "No horizontal page overflow; grid/rails/controls follow screen contract.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2142,8 +2030,7 @@
     "action": "Tab/scroll around product and review on390px",
     "expected": "No content or focused field obscured; safe-area bottom reserved.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2160,8 +2047,7 @@
     "action": "Validate every example/product/options",
     "expected": "No dangling refs, invalid fixture or duplicate operationId.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2180,8 +2066,7 @@
     "action": "Exercise each generated operation",
     "expected": "Exactly matching handlers, request shape, response status and validated schema.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2200,8 +2085,7 @@
     "action": "Wrong headers/types/ranges/unknown fields",
     "expected": "Documented 4xx Problem response, no unexpected mutation.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2220,8 +2104,7 @@
     "action": "Regenerate twice then modify a generated file",
     "expected": "Stable output; unauthorized edit fails clean-generation diff.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2239,8 +2122,7 @@
     "action": "Run under root",
     "expected": "SDK and worker resolve same scoped logical API/media paths.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2258,8 +2140,7 @@
     "action": "Load each route directly on static host",
     "expected": "SPA route fallback works; /api/v1 never returns HTML as data.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2276,8 +2157,7 @@
     "action": "Serve newer static build and worker",
     "expected": "Documented no-cache worker/index, immutable hashed chunks, no stale Angular PWA worker.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2294,8 +2174,7 @@
     "action": "Open optimized demo build offline from business hosts",
     "expected": "All business data remains MSW; no real-backend fallback.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2312,8 +2191,7 @@
     "action": "Measure optimized build and profile",
     "expected": "Initial/lazy/assets/CLS budgets enforced with recorded conditions.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2330,8 +2208,7 @@
     "action": "Load product and inspect network/chunks",
     "expected": "No model-viewer or GLB unless separately approved O01.",
     "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
+      "unit-or-gate"
     ],
     "optional": false,
     "status": "specified-not-run",
@@ -2348,8 +2225,7 @@
     "action": "Activate 3D control on licensed local device",
     "expected": "Model+decoders local; camera works; no AR/telemetry/autoload.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": true,
     "status": "specified-not-run",
@@ -2366,8 +2242,7 @@
     "action": "Fail model or WebGL",
     "expected": "Static gallery remains usable with explanatory message.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": true,
     "status": "specified-not-run",
@@ -2384,8 +2259,7 @@
     "action": "Operate camera controls and change variant",
     "expected": "Controls named; model/poster stays variant-consistent; wrapper branches covered.",
     "layers": [
-      "unit",
-      "e2e"
+      "unit"
     ],
     "optional": true,
     "status": "specified-not-run",
