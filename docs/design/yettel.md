@@ -619,7 +619,7 @@ What the captured yettel list page (`docs/design/yettel/pages/list-mobiltelefon.
 offers, against what the MiBolt backend serves per the backend contract
 `api/openapi.yaml` in `mimukodik/mi-bolt-backend`, version 2.0.0 (the copy
 under this repository's `docs/api/openapi.yaml` is the superseded 1.0.0
-contract until `npm run api:sync` refreshes it in S1). `GET /api/v1/products`
+contract until `npm run api:sync` refreshes it in the data-layer slice that follows S0). `GET /api/v1/products`
 takes `q`, `brand` (repeatable), `storageGb` (repeatable), `color`
 (repeatable colour code), `minPrice`, `maxPrice`, `inStock`, `is5g`,
 `featured`, `sort` (`ProductSort`: `recommended` (default), `newest`,
