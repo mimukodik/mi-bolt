@@ -73,22 +73,25 @@
     <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="drawer-group-storage">
       <legend class="legend uppercase tracking-wider">Tárhely</legend>
       <div class="chips flex flex-wrap gap-2">
-        @for (bucket of storageBuckets(); track bucket) {
+        @for (bucket of storageFacets(); track bucket.gb) {
           <button
             type="button"
             class="chip inline-flex items-center gap-2 min-h-10 px-3 rounded font-inherit cursor-pointer"
-            [class.is-selected]="isStorageSelected(bucket)"
-            [attr.data-testid]="'drawer-storage-' + bucket"
-            [attr.aria-pressed]="isStorageSelected(bucket) ? 'true' : 'false'"
+            [class.is-selected]="isStorageSelected(bucket.gb)"
+            [attr.data-testid]="'drawer-storage-' + bucket.gb"
+            [attr.aria-pressed]="isStorageSelected(bucket.gb) ? 'true' : 'false'"
             [disabled]="disabled()"
-            (click)="toggleStorage(bucket)"
+            (click)="toggleStorage(bucket.gb)"
           >
             <span
               class="check inline-flex items-center justify-center w-5 font-bold"
               aria-hidden="true"
-              >{{ isStorageSelected(bucket) ? '✓' : '' }}</span
+              >{{ isStorageSelected(bucket.gb) ? '✓' : '' }}</span
             >
-            <span>{{ bucket }} GB</span>
+            <span>{{ bucket.label }}</span>
+            @if (bucket.count !== null) {
+              <span class="option__count" aria-label="találatok száma">{{ bucket.count }}</span>
+            }
           </button>
         }
       </div>
@@ -108,6 +111,7 @@
             data-testid="drawer-min-price"
             [value]="minDraft()"
             (input)="onMinInput($event)"
+            [attr.placeholder]="priceMinHint()"
             [disabled]="disabled()"
           />
         </label>
@@ -122,6 +126,7 @@
             data-testid="drawer-max-price"
             [value]="maxDraft()"
             (input)="onMaxInput($event)"
+            [attr.placeholder]="priceMaxHint()"
             [disabled]="disabled()"
           />
         </label>
@@ -154,6 +159,9 @@
           >{{ isInStockSelected() ? '✓' : '' }}</span
         >
         <span>Csak raktáron</span>
+        @if (inStockCount() !== null) {
+          <span class="option__count" aria-label="találatok száma">{{ inStockCount() }}</span>
+        }
       </button>
       <button
         type="button"
@@ -170,6 +178,9 @@
           >{{ isFiveGSelected() ? '✓' : '' }}</span
         >
         <span>Csak 5G</span>
+        @if (fiveGCount() !== null) {
+          <span class="option__count" aria-label="találatok száma">{{ fiveGCount() }}</span>
+        }
       </button>
     </fieldset>
 

@@ -35,6 +35,8 @@ import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import type { Facets } from '../../api/generated/models/facets';
+
 import { DEFAULT_CATALOG_QUERY, type CatalogQuery } from './catalog-query';
 import { FilterPanel } from './filter-panel';
 
@@ -84,10 +86,15 @@ function fireInput(el: HTMLInputElement, value: string): void {
 
 @Component({
   imports: [FilterPanel],
-  template: `<app-filter-panel [value]="query()" (filtersChanged)="onFiltersChanged($event)" />`,
+  template: `<app-filter-panel
+    [value]="query()"
+    [facets]="facets()"
+    (filtersChanged)="onFiltersChanged($event)"
+  />`,
 })
 class HostComponent {
   readonly query = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
+  readonly facets = signal<Facets | null>(null);
 
   onFiltersChanged(next: CatalogQuery): void {
     this.query.set(next);
@@ -417,5 +424,97 @@ describe('FilterPanel — hasActiveFilters() and resetAll() cover featured', () 
 
     expect(min.value).toBe('');
     expect(root.querySelector('[data-testid="filter-price-error"]')).toBeNull();
+  });
+});
+
+/**
+ * Storage / stock / 5G / price facets wiring.
+ *
+ * Each facet field renders from `Facets` exactly the way the contract
+ * publishes it: storage chips show the `FacetValue.label` and an
+ * `option__count` span with the count when the facet is present, the
+ * stock and 5G toggles add an `option__count` span next to the label,
+ * and the price inputs carry the price range as a placeholder hint.
+ * When `Facets` is null (the very first load), every count span and
+ * placeholder is suppressed so the controls stay present without
+ * displaying a number that has no value.
+ */
+describe('FilterPanel — facets wire-up', () => {
+  it('storage chips show the facet label and an option__count when facets are loaded', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+
+    // With no facets: three chips, no count spans.
+    const before = root.querySelectorAll('[data-testid="filter-storage-128"]');
+    expect(before.length).toBe(1);
+    expect(before[0].querySelector('.option__count')).toBeNull();
+
+    host.facets.set({
+      brands: [],
+      colors: [],
+      storageGb: [
+        { value: '128', label: '128 GB', count: 3 },
+        { value: '256', label: '256 GB', count: 5 },
+        { value: '512', label: '512 GB', count: 1 },
+      ],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+
+    const mid = queryElement(root, '[data-testid="filter-storage-256"]');
+    expect(mid.textContent).toContain('256 GB');
+    const midCount = mid.querySelector('.option__count');
+    expect(midCount?.textContent.trim()).toBe('5');
+  });
+
+  it('stock and 5G toggles show their facet count when facets are loaded', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [],
+      colors: [],
+      storageGb: [],
+      inStock: 7,
+      is5g: 9,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+
+    const inStock = queryElement(root, '[data-testid="filter-inStock"]');
+    const inStockCount = inStock.querySelector('.option__count');
+    expect(inStockCount?.textContent.trim()).toBe('7');
+
+    const is5g = queryElement(root, '[data-testid="filter-is5g"]');
+    const is5gCount = is5g.querySelector('.option__count');
+    expect(is5gCount?.textContent.trim()).toBe('9');
+  });
+
+  it('price inputs carry the price range as a placeholder when facets are loaded', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+
+    // With no facets: no placeholder attribute.
+    expect(min.getAttribute('placeholder')).toBeNull();
+    expect(max.getAttribute('placeholder')).toBeNull();
+
+    host.facets.set({
+      brands: [],
+      colors: [],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: {
+        min: { amount: 69990, currency: 'HUF' },
+        max: { amount: 699990, currency: 'HUF' },
+      },
+    });
+    fixture.detectChanges();
+
+    expect(min.getAttribute('placeholder')).toBe('69990');
+    expect(max.getAttribute('placeholder')).toBe('699990');
   });
 });

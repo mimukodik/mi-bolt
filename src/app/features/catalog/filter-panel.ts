@@ -1,13 +1,23 @@
 import { Component, computed, input, linkedSignal, output } from '@angular/core';
 
 import type { CatalogQuery, Sort } from './catalog-query';
-import { ALLOWED_STORAGE_GB, SORT_MODES } from './catalog-query';
+import { ALLOWED_STORAGE_GB, SORT_MODES, isStorageBucket } from './catalog-query';
 import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
+import type { FacetValue } from '../../api/generated/models/facet-value';
 import type { Facets } from '../../api/generated/models/facets';
 
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
+
+/** What one storage chip needs to render: the size, its label and
+ *  the facet count (null when no `Facets` has loaded yet, so the
+ *  chip still appears in the empty state without a number). */
+interface StorageBucket {
+  readonly gb: 128 | 256 | 512;
+  readonly label: string;
+  readonly count: number | null;
+}
 
 /**
  * What a draft mirrors from the applied query: the one field it shows,
@@ -109,8 +119,41 @@ export class FilterPanel {
   /** Emits the next complete CatalogQuery when the user changes a control. */
   readonly filtersChanged = output<CatalogQuery>();
 
-  /** Storage buckets exposed by the documented storage enum. */
-  readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => ALLOWED_STORAGE_GB);
+  /** Storage buckets exposed by the documented storage enum, paired with
+   *  the facet count so the chip can show "128 GB (3)". Falls back to
+   *  the documented enum with `null` counts when no `Facets` is loaded
+   *  yet, so the chips are present on the empty first load. */
+  readonly storageFacets = computed<readonly StorageBucket[]>(() => {
+    const facets = this.facets();
+    if (facets === null) {
+      return ALLOWED_STORAGE_GB.map((gb) => ({ gb, label: `${String(gb)} GB`, count: null }));
+    }
+    const out: StorageBucket[] = [];
+    for (const entry of facets.storageGb) {
+      const bucket = toStorageBucket(entry);
+      if (bucket !== null) out.push(bucket);
+    }
+    return out;
+  });
+
+  /** Stock facet count, or null when the latest response carries none. */
+  readonly inStockCount = computed<number | null>(() => this.facets()?.inStock ?? null);
+
+  /** 5G facet count, or null when the latest response carries none. */
+  readonly fiveGCount = computed<number | null>(() => this.facets()?.is5g ?? null);
+
+  /** Placeholder hint for the min-price input: the lower bound of the
+   *  active result set, so the user can see the floor before they type. */
+  readonly priceMinHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.min.amount);
+  });
+
+  /** Placeholder hint for the max-price input: the upper bound. */
+  readonly priceMaxHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.max.amount);
+  });
 
   /** Brand facets, falling back to an empty list when none are present. */
   readonly brandFacets = computed(() => this.facets()?.brands ?? []);
@@ -294,6 +337,17 @@ export class FilterPanel {
     if (!/^-?\d+$/.test(trimmed)) return null;
     return Number(trimmed);
   }
+}
+
+/** Narrow a `FacetValue` from `Facets.storageGb` into a `StorageBucket`,
+ *  returning null when the contract publishes a value the documented
+ *  enum does not recognise (forward compatibility: a new size that
+ *  this build does not render would otherwise be silently skipped). */
+function toStorageBucket(entry: FacetValue): StorageBucket | null {
+  const raw = Number(entry.value);
+  if (!Number.isInteger(raw)) return null;
+  if (!isStorageBucket(raw)) return null;
+  return { gb: raw, label: entry.label, count: entry.count };
 }
 
 // Keep `Sort` and `SORT_MODES` imports live so future sort controls can

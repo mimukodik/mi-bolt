@@ -319,11 +319,18 @@ describe('GET /products filters', () => {
   beforeEach(installHandlers);
 
   it('matches q case-insensitively after NFC normalise; diacritic matters', async () => {
+    // q=kijelző (with ő) matches 35 entries; q=kijelzo (no diacritic)
+    // matches zero because the fixture's search text carries the
+    // diacritic and search uses NFC-lowercase containment. Both come
+    // from the same fixture the spec is loaded with.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st}))}); const k=[p.brand,p.name,...p.highlights,p.description].join(' ').toLowerCase().normalize('NFC'); console.log(e.filter(x=>k.includes('kijelző'.toLowerCase().normalize('NFC'))).length);"
     const ok = await loadJson('/api/v1/products?q=kijelz%C5%91');
     const none = await loadJson('/api/v1/products?q=kijelzo');
     const okItems = readItems(ok);
     const noneItems = readItems(none);
-    expect(okItems.length).toBeGreaterThan(0);
+    expect(readNumber(ok, 'total')).toBe(35);
+    expect(okItems.length).toBe(12);
+    expect(readNumber(none, 'total')).toBe(0);
     expect(noneItems.length).toBe(0);
   });
 
@@ -354,9 +361,13 @@ describe('GET /products filters', () => {
   });
 
   it('price bounds are inclusive', async () => {
+    // Exactly one entry has price.amount = 89990 (motorola-edge-50-fusion
+    // @ 256, zold). The filter is inclusive on both ends so the count is 1.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st,v:p.variants.find(x=>x.storageGb===st)}))}); console.log(e.filter(x=>x.v.price.amount===89990).length);"
     const body = await loadJson('/api/v1/products?minPrice=89990&maxPrice=89990');
-    expect(readNumber(body, 'total')).toBeGreaterThan(0);
+    expect(readNumber(body, 'total')).toBe(1);
     const items = readItems(body);
+    expect(items.length).toBe(1);
     for (const item of items) {
       const price = item['price'];
       expectRecord(price);
@@ -365,8 +376,10 @@ describe('GET /products filters', () => {
   });
 
   it('inStock=true keeps only entries with an in-stock variant', async () => {
+    // Exactly 52 entries carry an in_stock variant in the fixture.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st}))}); console.log(e.filter(x=>p.variants.some(v=>v.storageGb===st && v.availability==='in_stock')).length);"
     const body = await loadJson('/api/v1/products?inStock=true');
-    expect(readNumber(body, 'total')).toBeGreaterThan(0);
+    expect(readNumber(body, 'total')).toBe(52);
     const items = readItems(body);
     for (const item of items) {
       expect(readString(item, 'availability')).toBe('in_stock');
@@ -374,8 +387,10 @@ describe('GET /products filters', () => {
   });
 
   it('is5g=true keeps only 5G products', async () => {
+    // Exactly 54 entries are 5G-capable in the fixture (one product is not).
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st}))}); console.log(e.filter(x=>p.is5g).length);"
     const body = await loadJson('/api/v1/products?is5g=true');
-    expect(readNumber(body, 'total')).toBeGreaterThan(0);
+    expect(readNumber(body, 'total')).toBe(54);
     const items = readItems(body);
     for (const item of items) {
       expectBoolean(item['is5g']);
@@ -383,7 +398,11 @@ describe('GET /products filters', () => {
     }
   });
 
-  it('featured=true caps the list to 4 entries', async () => {
+  it('featured=true caps the list to 4 entries and bounds every facet count', async () => {
+    // The featured list is the first 4 (product, storage) entries by
+    // recommended order (rank asc, id asc, storage asc), and every
+    // facet count is computed on the same sorted, featured-capped list.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const r=f.ranking.find(x=>x.slug===p.slug); const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({slug:p.slug,brand:p.brand,storage:st,is5g:p.is5g,featured:r.featured,ranking:r,av:p.variants.find(x=>x.storageGb===st).availability,price:p.variants.find(x=>x.storageGb===st).price.amount}))}); const F=e.filter(x=>x.featured).sort((a,b)=>{if(a.ranking.rank!==b.ranking.rank)return a.ranking.rank-b.ranking.rank; const iA=Number(a.slug.match(/\\d+/)[0]); const iB=Number(b.slug.match(/\\d+/)[0]); if(iA!==iB)return iA-iB; return a.storage-b.storage}).slice(0,4); const bc={}; F.forEach(x=>{bc[x.brand.toLowerCase().normalize('NFC')]=(bc[x.brand.toLowerCase().normalize('NFC')]||0)+1}); const sc={}; F.forEach(x=>{sc[x.storage]=(sc[x.storage]||0)+1}); console.log({brands:bc,storage:sc,is5g:F.filter(x=>x.is5g).length,inStock:F.filter(x=>x.av==='in_stock').length,priceRange:[Math.min(...F.map(x=>x.price)),Math.max(...F.map(x=>x.price))]});"
     const body = await loadJson('/api/v1/products?featured=true');
     expect(readNumber(body, 'total')).toBe(4);
     const items = readItems(body);
@@ -391,12 +410,34 @@ describe('GET /products filters', () => {
     expect(items.map((i) => readString(i, 'slug'))).toEqual(FEATURED_FIRST_FOUR);
     const facets = body['facets'];
     expectRecord(facets);
+    expect(facets['brands']).toEqual([
+      { value: 'apple', label: 'apple', count: 2 },
+      { value: 'honor', label: 'honor', count: 1 },
+      { value: 'motorola', label: 'motorola', count: 1 },
+    ]);
+    expect(facets['storageGb']).toEqual([
+      { value: '128', label: '128 GB', count: 1 },
+      { value: '256', label: '256 GB', count: 2 },
+      { value: '512', label: '512 GB', count: 1 },
+    ]);
+    expect(readNumber(facets, 'is5g')).toBe(3);
+    expect(readNumber(facets, 'inStock')).toBe(4);
+    const priceRange = facets['priceRange'];
+    expectRecord(priceRange);
+    const priceMin = priceRange['min'];
+    const priceMax = priceRange['max'];
+    expectRecord(priceMin);
+    expectRecord(priceMax);
+    expect(readNumber(priceMin, 'amount')).toBe(69990);
+    expect(readNumber(priceMax, 'amount')).toBe(699990);
+    // Sum of brand counts equals the total: 4 entries, 4 brand hits.
     const brands = facets['brands'];
     expectArray(brands);
-    for (const brand of brands) {
-      expectRecord(brand);
-      expect(readNumber(brand, 'count')).toBeLessThanOrEqual(4);
-    }
+    const sum = brands.reduce<number>((acc, b) => {
+      expectRecord(b);
+      return acc + readNumber(b, 'count');
+    }, 0);
+    expect(sum).toBe(4);
   });
 });
 
@@ -528,10 +569,13 @@ describe('GET /products/:slug/related', () => {
   beforeEach(installHandlers);
 
   it('returns up to 4 same-brand items, subject excluded, min storage', async () => {
+    // apple-iphone-18-pro-max has 10 same-brand candidates (apple-*),
+    // ranked by rank asc / id asc, capped at 4. The returned length is
+    // therefore exactly 4, with the subject excluded.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const c=f.products.filter(p=>p.slug!=='apple-iphone-18-pro-max' && p.brand==='Apple').sort((a,b)=>{const ra=f.ranking.find(x=>x.slug===a.slug).rank; const rb=f.ranking.find(x=>x.slug===b.slug).rank; if(ra!==rb)return ra-rb; return Number(a.id)-Number(b.id)}); console.log(Math.min(c.length,4));"
     const body = await loadJson('/api/v1/products/apple-iphone-18-pro-max/related');
     expectArray(body);
-    expect(body.length).toBeLessThanOrEqual(4);
-    expect(body.length).toBeGreaterThan(0);
+    expect(body.length).toBe(4);
     for (const item of body) {
       expectRecord(item);
       expect(readString(item, 'slug')).not.toBe('apple-iphone-18-pro-max');
@@ -607,7 +651,7 @@ describe('GET /media/:imageId', () => {
     // Override the media handler registered by installHandlers with one
     // that uses the stub loader; the rest of the catalog handlers stay
     // in place from the beforeEach.
-    server.resetHandlers(...buildCatalogHandlers(options), buildMediaHandler(stub));
+    server.resetHandlers(...buildCatalogHandlers(options), buildMediaHandler(options, stub));
     const res = await fetch(`http://localhost/api/v1/media/${imageId}`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/png');
