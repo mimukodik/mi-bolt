@@ -248,7 +248,10 @@ function pickMinimumEntry(store: CatalogStore, slug: string) {
 }
 
 /** Build the `getMedia` handler. The loader is injected so the spec can stub it. */
-export function buildMediaHandler(loader: MediaLoader = defaultMediaLoader): RequestHandler {
+export function buildMediaHandler(
+  options: CreateHandlersOptions,
+  loader: MediaLoader = defaultMediaLoader,
+): RequestHandler {
   return http.get('*/api/v1/media/:imageId', async ({ params }) => {
     const imageId = String(params['imageId']);
     const bytes = await loader(imageId);
@@ -259,7 +262,7 @@ export function buildMediaHandler(loader: MediaLoader = defaultMediaLoader): Req
         status: 404,
         code: 'NOT_FOUND',
         detail: `image not found: ${imageId}`,
-        traceId: 'mock0000000000000000000000',
+        traceId: traceId(options),
         fieldErrors: [],
         params: { imageId },
       };
@@ -310,7 +313,7 @@ export function buildCatalogHandlers(options: CreateHandlersOptions): readonly R
     listProductsHandler(options),
     getProductHandler(options),
     listRelatedProductsHandler(options),
-    buildMediaHandler(),
+    buildMediaHandler(options),
   ];
 }
 
