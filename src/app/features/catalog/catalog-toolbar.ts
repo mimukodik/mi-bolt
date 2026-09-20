@@ -1,13 +1,7 @@
 import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
 
-import { SORT_MODES, type Sort } from './catalog-query';
+import { isSort, SORT_MODES, type Sort } from './catalog-query';
 import type { AsyncStatus } from '../../shared/types/async-status';
-
-/** Type guard for a `<select>`'s raw string value against the
- *  documented sort modes — avoids an `as Sort` assertion. */
-function isSortMode(value: string): value is Sort {
-  return (SORT_MODES as readonly string[]).includes(value);
-}
 
 /**
  * `CatalogToolbar` — `docs/spec/components.md:371`.
@@ -90,7 +84,7 @@ export class CatalogToolbar {
   onSortChange(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLSelectElement)) return;
-    if (isSortMode(target.value)) {
+    if (isSort(target.value)) {
       this.sortChanged.emit(target.value);
     }
   }

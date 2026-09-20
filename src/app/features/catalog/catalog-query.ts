@@ -36,6 +36,18 @@ export const ALLOWED_PAGE_SIZES: readonly (12 | 24)[] = [12, 24];
 /** Documented storage sizes in GB. Mirrors `listProducts.storageGb`. */
 export const ALLOWED_STORAGE_GB: readonly (128 | 256 | 512)[] = [128, 256, 512];
 
+/** Guard rather than cast: a parsed `sort` value is `unknown` until the
+ *  literal-union membership is proven against `SORT_MODES`. */
+export function isSort(value: unknown): value is Sort {
+  return SORT_MODES.some((mode) => mode === value);
+}
+
+/** Guard rather than cast: a parsed storage size is a plain `number` until
+ *  the literal-union membership is proven against `ALLOWED_STORAGE_GB`. */
+export function isStorageBucket(value: number): value is 128 | 256 | 512 {
+  return ALLOWED_STORAGE_GB.some((gb) => gb === value);
+}
+
 /** Default page size used when the URL omits `pageSize`. */
 export const DEFAULT_PAGE_SIZE: 12 | 24 = 12;
 
@@ -161,11 +173,10 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     for (const raw of storageRaw) {
       const num = parseInteger(raw);
       if (num === null) continue;
-      if (!ALLOWED_STORAGE_GB.includes(num as 128 | 256 | 512)) continue;
-      const bucket = num as 128 | 256 | 512;
-      if (seen.has(bucket)) continue;
-      seen.add(bucket);
-      parsed.push(bucket);
+      if (!isStorageBucket(num)) continue;
+      if (seen.has(num)) continue;
+      seen.add(num);
+      parsed.push(num);
     }
     if (parsed.length > 0) query.storageGb = parsed;
   }
@@ -202,8 +213,8 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
   const sortRaw = params.get('sort');
   if (sortRaw !== null) {
     const trimmed = sortRaw.trim();
-    if ((SORT_MODES as readonly string[]).includes(trimmed)) {
-      query.sort = trimmed as Sort;
+    if (isSort(trimmed)) {
+      query.sort = trimmed;
     }
   }
 

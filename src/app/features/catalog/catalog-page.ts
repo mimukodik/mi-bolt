@@ -13,9 +13,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CatalogFacade } from './catalog.facade';
 import {
-  ALLOWED_STORAGE_GB,
   buildChips,
   CATALOG_QUERY_KEYS,
+  isStorageBucket,
   serializeCatalogQuery,
   type CatalogQuery,
   type Sort,
@@ -32,12 +32,6 @@ import { Button } from '../../shared/ui/button/button';
 import type { AsyncStatus } from '../../shared/types/async-status';
 import type { UiProblem } from '../../shared/types/ui-problem';
 import type { FilterIdentity } from '../../shared/types/filter-identity';
-
-/** Type guard for a chip's numeric value against the documented storage
- *  buckets — avoids an `as 128 | 256 | 512` assertion. */
-function isStorageBucket(value: number): value is 128 | 256 | 512 {
-  return (ALLOWED_STORAGE_GB as readonly number[]).includes(value);
-}
 
 /**
  * T13 — Catalogue list page (S2).
