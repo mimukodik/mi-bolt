@@ -31,7 +31,6 @@
 import { signal, type Signal, type WritableSignal } from '@angular/core';
 
 import type { Cart } from '../../api/generated/models/cart';
-import type { ProblemCode } from '../../api/generated/models/problem-code';
 
 /** Discriminator for every intent the queue can serialize. */
 export type MutationIntentKind = 'create' | 'addItem' | 'setQuantity' | 'removeItem' | 'refetch';
@@ -93,7 +92,10 @@ export type FailedDispatch =
     }
   | {
       readonly ok: false;
-      readonly code: ProblemCode;
+      /** Server-reported code or the local `'UNKNOWN'` sentinel; `'UNKNOWN'`
+       *  is not a member of the generated `ProblemCode` union, so the
+       *  field is typed as `string` rather than casting. */
+      readonly code: string;
       readonly status: number;
       readonly detail: string;
     };
@@ -154,7 +156,7 @@ export class CartMutationQueue {
         code: 'SERVICE_UNAVAILABLE',
         status: 0,
         detail: 'queue destroyed',
-      } as DispatchResult);
+      } satisfies DispatchResult);
     }
     const clearGeneration = this.clearGeneration;
     this.pendingWritable.update((n) => n + 1);

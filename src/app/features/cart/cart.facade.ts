@@ -37,7 +37,6 @@ import { withIfMatch } from '../../core/api/demo-session.interceptor';
 import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 import type { Cart } from '../../api/generated/models/cart';
 import type { Money } from '../../api/generated/models/money';
-import type { ProblemCode } from '../../api/generated/models/problem-code';
 
 import {
   CartMutationQueue,
@@ -61,7 +60,10 @@ export interface CartConflict {
 
 /** Generic error payload surfaced to the UI for non-recoverable failures. */
 export interface CartError {
-  readonly code: ProblemCode;
+  /** Server-reported code or the local `'UNKNOWN'` sentinel; `'UNKNOWN'`
+   *  is not a member of the generated `ProblemCode` union, so the field is
+   *  typed as `string` rather than casting. */
+  readonly code: string;
   readonly status: number;
   readonly detail: string;
 }
@@ -676,9 +678,17 @@ export class CartFacade {
 
 function mapError(err: unknown): DispatchResult {
   if (err instanceof HttpErrorResponse) {
-    const body = err.error as { code?: ProblemCode; detail?: string } | null;
-    const code = body?.code ?? ('UNKNOWN' as ProblemCode);
-    const detail = body?.detail ?? err.message;
+    const body: unknown = err.error;
+    let code = 'UNKNOWN';
+    let detail = err.message;
+    if (typeof body === 'object' && body !== null) {
+      if ('code' in body && typeof body.code === 'string') {
+        code = body.code;
+      }
+      if ('detail' in body && typeof body.detail === 'string') {
+        detail = body.detail;
+      }
+    }
     if (err.status === 409 && code === 'CART_VERSION_CONFLICT') {
       return { ok: false, code: 'CART_VERSION_CONFLICT', status: 409, detail };
     }

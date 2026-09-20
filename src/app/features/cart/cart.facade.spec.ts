@@ -749,3 +749,58 @@ describe('CartMutationQueue: serialized dispatch + pending count', () => {
     expect(order).toEqual(['a', 'b']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// mapError narrows the HttpErrorResponse body with typeof and the in
+// operator rather than asserting it. Three exact-value cases pin each
+// branch of the narrowing: a coded body is passed through verbatim, a
+// null body substitutes the `'UNKNOWN'` sentinel, and a string body
+// (which the old `as` cast silently mishandled via `body?.code` on a
+// non-object) does the same.
+// ---------------------------------------------------------------------------
+describe('mapError: HttpErrorResponse body narrowing', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('passes a coded body through verbatim: code and detail land exactly', async () => {
+    server.use(
+      http.post(`${BASE_URL}/carts`, () =>
+        HttpResponse.json({ code: 'OUT_OF_STOCK', detail: 'nincs raktáron' }, { status: 409 }),
+      ),
+    );
+
+    const facade = TestBed.inject(CartFacade);
+    const queue = getQueue(facade);
+    if (!queue) throw new Error('Expected CartMutationQueue');
+    await settleQueue(queue);
+
+    expect(facade.error()).not.toBeNull();
+    expect(facade.error()?.code).toBe('OUT_OF_STOCK');
+    expect(facade.error()?.detail).toBe('nincs raktáron');
+  });
+
+  it('substitutes UNKNOWN when the body is null', async () => {
+    server.use(http.post(`${BASE_URL}/carts`, () => HttpResponse.json(null, { status: 500 })));
+
+    const facade = TestBed.inject(CartFacade);
+    const queue = getQueue(facade);
+    if (!queue) throw new Error('Expected CartMutationQueue');
+    await settleQueue(queue);
+
+    expect(facade.error()).not.toBeNull();
+    expect(facade.error()?.code).toBe('UNKNOWN');
+  });
+
+  it('substitutes UNKNOWN when the body is a non-object string', async () => {
+    server.use(http.post(`${BASE_URL}/carts`, () => HttpResponse.json('boom', { status: 500 })));
+
+    const facade = TestBed.inject(CartFacade);
+    const queue = getQueue(facade);
+    if (!queue) throw new Error('Expected CartMutationQueue');
+    await settleQueue(queue);
+
+    expect(facade.error()).not.toBeNull();
+    expect(facade.error()?.code).toBe('UNKNOWN');
+  });
+});
