@@ -205,6 +205,15 @@ export class CatalogPage {
     // Drive the host data-layout-mode from the current viewport so
     // the CSS can flip between sidebar and drawer.
     this.applyLayoutMode();
+
+    // Reflect the drawer's open state onto the toolbar trigger's
+    // aria-expanded (WCAG 4.1.2 — a disclosure control must say
+    // whether what it discloses is open), through the same
+    // non-input/output channel `filterTrigger` above reads in the
+    // other direction.
+    effect(() => {
+      this.toolbar()?.drawerExpanded.set(this.drawerOpened());
+    });
   }
 
   // -------------------------------------------------------------------------

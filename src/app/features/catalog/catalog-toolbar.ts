@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, input, output, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
 
 import { SORT_MODES, type Sort } from './catalog-query';
 import type { AsyncStatus } from '../../shared/types/async-status';
@@ -62,6 +62,17 @@ export class CatalogToolbar {
   readonly filterTriggerEl = computed<HTMLButtonElement | null>(
     () => this.filterTriggerRef()?.nativeElement ?? null,
   );
+
+  /** Whether the drawer this trigger opens is currently open, pushed in
+   *  by `CatalogPage` and reflected onto the trigger's
+   *  `aria-expanded`/`aria-controls` (WCAG 4.1.2: a disclosure control
+   *  must say what it discloses and whether it is open). A plain
+   *  writable signal, not a declared input, for the same reason
+   *  `filterTriggerEl()` above is a plain public property: it is
+   *  neither an input nor an output, so `components.md:371`'s declared
+   *  surface and FIX-60-AC02's one-addition limit (`appliedCount`) are
+   *  both unaffected. */
+  readonly drawerExpanded = signal(false);
 
   sortLabel(mode: Sort): string {
     switch (mode) {

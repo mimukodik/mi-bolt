@@ -38,6 +38,12 @@ function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   return raw;
 }
 
+function getToolbar(fixture: ComponentFixture<HostComponent>): CatalogToolbar {
+  const instance: unknown = fixture.debugElement.children[0]?.componentInstance;
+  if (!(instance instanceof CatalogToolbar)) throw new Error('Expected CatalogToolbar');
+  return instance;
+}
+
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
@@ -98,5 +104,23 @@ describe('CatalogToolbar', () => {
     );
     const text = trigger?.textContent ?? '';
     expect(text.includes('(')).toBe(false);
+  });
+
+  it('the mobile trigger carries aria-expanded and aria-controls, reflecting drawerExpanded()', () => {
+    // WCAG 4.1.2: a control that discloses a panel must say what it
+    // discloses and whether it is open. `drawerExpanded` is the
+    // non-input channel `CatalogPage` pushes the drawer's real open
+    // state through (see `catalog-toolbar.ts`'s comment on it).
+    const { fixture } = setup();
+    const toolbar = getToolbar(fixture);
+    const trigger = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="filter-trigger"]',
+    );
+    expect(trigger?.getAttribute('aria-controls')).toBe('filter-drawer');
+    expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+
+    toolbar.drawerExpanded.set(true);
+    fixture.detectChanges();
+    expect(trigger?.getAttribute('aria-expanded')).toBe('true');
   });
 });
