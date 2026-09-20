@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 
 import { AppliedFilters } from './applied-filters';
-import type { CatalogQuery } from './catalog-query';
+import { buildChips, type CatalogQuery } from './catalog-query';
 import type { FilterIdentity } from '../../shared/types/filter-identity';
 
 const NO_FILTERS: CatalogQuery = { page: 1, pageSize: 12 };
@@ -24,7 +24,7 @@ const ALL_FILTERS: CatalogQuery = {
   imports: [AppliedFilters],
   template: `
     <app-applied-filters
-      [query]="query()"
+      [chips]="chips()"
       (filterRemoved)="lastRemoved.set($event)"
       (cleared)="clearedCount.set(clearedCount() + 1)"
     ></app-applied-filters>
@@ -32,6 +32,9 @@ const ALL_FILTERS: CatalogQuery = {
 })
 class HostComponent {
   readonly query = signal<CatalogQuery>(NO_FILTERS);
+  /** The page builds the chip row and passes it down; `AppliedFilters`
+   *  is presentational and takes chips, never a query. */
+  readonly chips = computed(() => buildChips(this.query()));
   readonly lastRemoved = signal<FilterIdentity | null>(null);
   readonly clearedCount = signal(0);
 }
