@@ -54,8 +54,8 @@ prompts") covers the same failure for claims about this branch's history.
 ## Measuring this repository is a different thing, and is unchanged
 
 Everything the gates and the shell already do stays required: running
-`npm run test`, `npm run lint`, `npm run build` and `npm run fix:status` and
-reading the exit codes; grepping the tree; reading `angular.json`,
+`npm run test`, `npm run lint` and `npm run build` and reading the exit
+codes; grepping the tree; reading `angular.json`,
 `package.json` and `eslint.config.js`; `git log -S` to find when a line
 arrived. Reading the installed source under `node_modules/` to settle what a
 version actually ships is also measurement, not a probe.
