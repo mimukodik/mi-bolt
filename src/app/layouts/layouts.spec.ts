@@ -241,6 +241,30 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(text).toContain('Ellenőrzés');
   });
 
+  // -------------------------------------------------------------------------
+  // CENTRE-2: `<main class="layout-main">` inside CheckoutLayout must carry
+  // `width: 100%` so the element behaves as a stretched flex item inside
+  // `<app-app-shell>` instead of being sized shrink-to-fit against the
+  // available cross-axis space (AppShell is `display: flex; flex-direction:
+  // column`, its `<ng-content>` is `display: contents`, and `margin: 0 auto`
+  // on the cross axis suppresses the default stretch). Without this
+  // declaration the cart and contact steps render 129px / 137.66px in from
+  // each side at 1280px while every other route sits on the site
+  // centreline. jsdom does not lay out, so the assertion checks that the
+  // declaration reached the element rather than that some pixel width was
+  // produced — which is the invariant worth pinning.
+  // -------------------------------------------------------------------------
+  it('CheckoutLayout main.layout-main carries width: 100% (CENTRE-2)', () => {
+    const f = TestBed.createComponent(CheckoutLayout);
+    f.componentRef.setInput('step', 'cart');
+    f.detectChanges();
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const main = raw.querySelector('main.layout-main');
+    if (!(main instanceof HTMLElement)) throw new Error('Expected main.layout-main');
+    expect(getComputedStyle(main).width).toBe('100%');
+  });
+
   it('FIX-35: on the contact step the first indicator is complete (✓) and the second shows 2', () => {
     const f = TestBed.createComponent(CheckoutLayout);
     f.componentRef.setInput('step', 'contact');
