@@ -242,10 +242,6 @@ export class SuccessStep {
     void this.router.navigate(['/penztar/kosar']);
   }
 
-  onBackToHome(): void {
-    void this.router.navigate(['/']);
-  }
-
   onStartNewShopping(): void {
     if (this.startingNewCart()) return;
     this.startingNewCart.set(true);

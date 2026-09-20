@@ -27,7 +27,10 @@ export interface Money {
  * - `empty`    — the body shows a short "—" with no invented figure.
  *
  * The component never substitutes 0 or any placeholder digit for an unknown
- * value: a missing/invalid amount does not become `0 Ft`.
+ * value: a missing/invalid amount does not become `0 Ft`. A value that is
+ * known to be zero (a real, quoted zero-HUF fee) is not "unknown" and does
+ * render as `0 Ft`; only `null`, a non-HUF currency, a non-finite amount, a
+ * non-integer amount or a negative amount are treated as unknown/invalid.
  */
 @Component({
   selector: 'app-price-block',
@@ -46,7 +49,7 @@ export class PriceBlock {
     if (currency !== 'HUF') return null;
     if (!Number.isFinite(m.amount)) return null;
     if (!Number.isInteger(m.amount)) return null;
-    if (m.amount <= 0) return null;
+    if (m.amount < 0) return null;
     return PriceBlock.formatHuf(m.amount);
   });
 

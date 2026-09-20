@@ -11,11 +11,24 @@
           [class.is-current]="item.key === step()"
           [attr.aria-current]="item.key === step() ? 'step' : null"
         >
-          <span
-            class="steps__index inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
-            >{{ $index + 1 }}</span
-          >
-          <span class="steps__label whitespace-nowrap">{{ item.label }}</span>
+          @if (isStepComplete($index)) {
+            <span
+              class="steps__index inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
+              aria-hidden="true"
+              >✓</span
+            >
+          } @else {
+            <span
+              class="steps__index inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
+              >{{ $index + 1 }}</span
+            >
+          }
+          <span class="steps__label whitespace-nowrap"
+            >{{ item.label }}
+            @if (isStepComplete($index)) {
+              <span class="sr-only absolute w-px h-px overflow-hidden"> Kész</span>
+            }
+          </span>
         </li>
       }
     </ol>

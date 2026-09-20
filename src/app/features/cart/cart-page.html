@@ -5,7 +5,7 @@
       <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
       <span class="breadcrumb is-current font-medium" aria-current="page">Kosár</span>
     </nav>
-    <h1 class="title m-0 font-bold">Kosár</h1>
+    <h1 class="title m-0 font-bold">A kosarad</h1>
   </header>
 
   @if (statusMessage(); as message) {
@@ -36,9 +36,9 @@
     }
     @case ('empty') {
       <app-empty-state
-        [title]="'A kosarad üres'"
-        [message]="'Vegyél fel termékeket a kínálatból, és itt folytathatod a vásárlást.'"
-        [actionLabel]="'Vásárlás folytatása'"
+        [title]="'A kosarad még üres.'"
+        [message]="'Nézd meg a demókészülékeket, és válaszd ki a kedvenced.'"
+        [actionLabel]="'Telefonokat nézek →'"
         [actionVariant]="'primary'"
         (actionRequested)="onContinueShopping()"
       ></app-empty-state>
@@ -80,7 +80,7 @@
             [label]="'Részösszeg'"
             [status]="'success'"
           ></app-price-block>
-          <p class="footer-hint m-0">A szállítási díj a pénztárban kerül kiszámításra.</p>
+          <p class="footer-hint m-0">A következő lépésben választod ki.</p>
         </div>
         <div
           class="footer-actions flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center lg:flex-0 lg:flex-shrink-0"
@@ -94,7 +94,7 @@
           <app-button
             variant="primary"
             size="comfortable"
-            label="Tovább a pénztárhoz"
+            label="Tovább az adatokhoz"
             [loadingLabel]="'Ellenőrzés…'"
             [loading]="continuing()"
             [disabled]="!canContinue()"

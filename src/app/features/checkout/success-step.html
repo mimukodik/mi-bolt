@@ -7,6 +7,27 @@
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
       <span class="breadcrumb is-current" aria-current="page">Siker</span>
     </nav>
+    @if (hasReceipt()) {
+      <svg
+        class="success-check"
+        viewBox="0 0 48 48"
+        width="48"
+        height="48"
+        focusable="false"
+        aria-hidden="true"
+        data-testid="success-check"
+      >
+        <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="3" />
+        <path
+          d="M14 24.5 L20.5 31 L34 16.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    }
     <h1
       #successHeading
       id="success-heading"
@@ -15,7 +36,7 @@
       data-testid="success-heading"
     >
       @if (hasReceipt()) {
-        A demórendelésed elkészült
+        Elkészült a demórendelésed.
       } @else if (loadState().kind === 'missing') {
         A rendelés nem található
       } @else if (loadState().kind === 'error') {
@@ -75,19 +96,12 @@
               <app-button
                 variant="primary"
                 size="comfortable"
-                label="Új vásárlás indítása"
+                label="Vissza a telefonokhoz →"
                 [loadingLabel]="'Új kosár létrehozása…'"
                 [loading]="startingNewCart()"
                 [disabled]="startingNewCart()"
                 (pressed)="onStartNewShopping()"
                 data-testid="success-new-shopping"
-              ></app-button>
-              <app-button
-                variant="secondary"
-                size="comfortable"
-                label="Vissza a főoldalra"
-                (pressed)="onBackToHome()"
-                data-testid="success-home"
               ></app-button>
             </div>
             <p class="actions__hint">

@@ -419,7 +419,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
     expect(orderSummary).not.toBeNull();
   });
 
-  it('OrderSummary renders the Hungarian "shipping calculated at checkout" message when no method is selected', async () => {
+  it('OrderSummary renders the Hungarian "shipping decided next step" message when no method is selected', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
     fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', null);
@@ -427,7 +427,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    expect(root.textContent).toContain('A szállítási díj a pénztárban kerül kiszámításra');
+    expect(root.textContent).toContain('A következő lépésben választod ki.');
   });
 
   it('OrderSummary computes subtotal + shipping = total when a method is supplied', async () => {
@@ -509,8 +509,8 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
     const root = getRootElement(fixture);
     const emptyState = queryElement(root, 'app-empty-state');
     expect(emptyState).not.toBeNull();
-    expect(emptyState?.textContent).toContain('A kosarad üres');
-    expect(emptyState?.textContent).toContain('Vásárlás folytatása');
+    expect(emptyState?.textContent).toContain('A kosarad még üres.');
+    expect(emptyState?.textContent).toContain('Telefonokat nézek');
   });
 
   it('CartPage renders a loading skeleton on first arrival and an ErrorState on a failure', async () => {
@@ -618,7 +618,7 @@ describe('FIX-21 only the mutating line is disabled', () => {
     expect(queryElement(root, '[data-testid="cart-line"]')).toBeNull();
     const emptyState = queryElement(root, 'app-empty-state');
     expect(emptyState).not.toBeNull();
-    expect(emptyState?.textContent).toContain('A kosarad üres');
+    expect(emptyState?.textContent).toContain('A kosarad még üres.');
   });
 
   it('FIX-21-AC04: during an in-flight mutation only the mutating line reports aria-busy', async () => {
@@ -803,6 +803,30 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
     const layout = getElement(root, '[data-testid="cart-layout"]');
     expect(layout.classList.contains('layout')).toBe(true);
     expect(layout.classList.contains('lg:grid')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX-35: the cart page's copy must match the strings screens.md:73 fixes.
+// ---------------------------------------------------------------------------
+describe('FIX-35 cart page copy matches screens.md:73', () => {
+  it('h1 is "A kosarad", the continue label is "Tovább az adatokhoz", and the shipping line reads the new sentence', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem('demo-one-5g-graphite-256', 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const h1 = getElement(root, 'h1');
+    expect(h1.textContent.trim()).toBe('A kosarad');
+
+    const continueBtn = getElement(root, '[data-testid="cart-continue"] button');
+    expect(continueBtn.textContent.trim()).toBe('Tovább az adatokhoz');
+
+    expect(root.textContent).toContain('A következő lépésben választod ki.');
   });
 });
 

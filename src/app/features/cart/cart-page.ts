@@ -113,7 +113,7 @@ export class CartPage {
 
   /** Summary footnote copy shown under the total. The shipping fee
    *  is intentionally absent — see OrderSummary for the Hungarian
-   *  "A szállítási díj a pénztárban kerül kiszámításra" message. */
+   *  "A következő lépésben választod ki." message. */
   readonly summaryFootnote = computed<string | null>(() => null);
 
   /** Friendly error message — prefers the cart-expired / cart-gone

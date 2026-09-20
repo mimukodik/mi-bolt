@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, input } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterOutlet } from '@angular/router';
 
@@ -48,6 +48,23 @@ export class CheckoutLayout {
     { key: 'delivery', label: 'Szállítás' },
     { key: 'review', label: 'Ellenőrzés' },
   ];
+
+  /**
+   * Index of the active step inside `steps`. `'success'` is not one
+   * of the four entries, so `findIndex` yields `-1` for it — treated
+   * as "every step is behind us" by `isStepComplete` below, which is
+   * what the success page's step indicator shows (FIX-35).
+   */
+  private readonly currentIndex = computed<number>(() =>
+    this.steps.findIndex((item) => item.key === this.step()),
+  );
+
+  /** True when the step at `index` is behind the active one. */
+  isStepComplete(index: number): boolean {
+    const current = this.currentIndex();
+    if (current === -1) return true;
+    return index < current;
+  }
 
   constructor() {
     this.routeFocus

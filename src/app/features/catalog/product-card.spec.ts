@@ -272,4 +272,16 @@ describe('T13-AC04 ProductCard', () => {
     const first = list[0];
     expect(first.textContent).toContain('6,7″ kijelző');
   });
+
+  it('FIX-35: carries a DEMÓTERMÉK tag and never renders the brand name', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeSummary({ id: 'p-04', slug: 'demo-lite-5g', name: 'Demo Lite 5G', brand: 'MiBolt Demo' }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const tag = queryElement(root, '[data-testid="product-card-tag"]');
+    expect(tag.textContent.trim()).toBe('DEMÓTERMÉK');
+    expect(root.textContent).not.toContain('MiBolt Demo');
+  });
 });

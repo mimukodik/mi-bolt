@@ -10,7 +10,7 @@
  *
  *   - shipping unknown (the default on the cart page): the
  *     component shows the subtotal and the explicit Hungarian
- *     message "A szállítási díj a pénztárban kerül kiszámításra"
+ *     message "A következő lépésben választod ki."
  *     instead of a final shipping figure. The total is rendered as
  *     "—" with no invented amount (R14 / R19).
  *   - shipping known: the component adds the shipping leg and

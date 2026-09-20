@@ -240,6 +240,33 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(text).toContain('Szállítás');
     expect(text).toContain('Ellenőrzés');
   });
+
+  it('FIX-35: on the contact step the first indicator is complete (✓) and the second shows 2', () => {
+    const f = TestBed.createComponent(CheckoutLayout);
+    f.componentRef.setInput('step', 'contact');
+    f.detectChanges();
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const items = raw.querySelectorAll('.steps__item');
+    expect(items.length).toBe(4);
+    const firstIndex = items[0].querySelector('.steps__index');
+    expect(firstIndex?.textContent.trim()).toBe('✓');
+    const secondIndex = items[1].querySelector('.steps__index');
+    expect(secondIndex?.textContent.trim()).toBe('2');
+  });
+
+  it('FIX-35: on the success step every indicator is complete (✓)', () => {
+    const f = TestBed.createComponent(CheckoutLayout);
+    f.componentRef.setInput('step', 'success');
+    f.detectChanges();
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const indexes = raw.querySelectorAll('.steps__index');
+    expect(indexes.length).toBe(4);
+    indexes.forEach((el) => {
+      expect(el.textContent.trim()).toBe('✓');
+    });
+  });
 });
 
 describe('T11-AC03 skip link, single H1, route title, route-change focus, history', () => {

@@ -45,6 +45,11 @@
   margin: 0 var(--space-1);
 }
 
+.success-check {
+  display: block;
+  color: var(--color-status-success);
+}
+
 .title {
   margin: 0;
   font-size: var(--type-page-title-mobile);

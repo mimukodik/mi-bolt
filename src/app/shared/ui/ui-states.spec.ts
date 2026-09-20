@@ -256,7 +256,7 @@ describe('MiBolt primitives: Required State Contract', () => {
   });
 
   describe('PriceBlock', () => {
-    it('covers loading, ready, error; refuses to invent zero on unknown', () => {
+    it('covers loading, ready, error; renders a known zero but refuses to invent one for a negative amount', () => {
       TestBed.configureTestingModule({ imports: [PriceHost] });
       const f = TestBed.createComponent(PriceHost);
       f.componentInstance.status.set('success');
@@ -271,8 +271,15 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.detectChanges();
       expect(getNativeElement(f).querySelector('[data-testid="price-error"]')).not.toBeNull();
 
+      // FIX-35: a real, known zero (e.g. a free pickup option) is a fact,
+      // not a missing value, and renders as an amount rather than a dash.
       f.componentInstance.money.set({ amount: 0, currency: 'HUF' });
       f.componentInstance.status.set('success');
+      f.detectChanges();
+      expect(getNativeElement(f).querySelector('[data-testid="price-amount"]')).not.toBeNull();
+
+      // An amount that cannot be a real price still refuses to invent one.
+      f.componentInstance.money.set({ amount: -1, currency: 'HUF' });
       f.detectChanges();
       expect(getNativeElement(f).querySelector('[data-testid="price-amount"]')).toBeNull();
     });

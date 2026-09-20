@@ -95,9 +95,23 @@ describe('PriceBlock primitive', () => {
     expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
 
-  it('does not show 0 Ft when the amount is zero or invalid', () => {
+  it('renders a known zero as 0 Ft (FIX-35: a free option is a fact, not a missing value)', () => {
     const { fixture, host } = setup();
     host.money.set({ amount: 0, currency: 'HUF' });
+    host.status.set('success');
+    fixture.detectChanges();
+    const amount = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="price-amount"]',
+    );
+    expect(amount).not.toBeNull();
+    expect(amount?.textContent.trim()).toBe('0');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.textContent).toContain('Ft');
+  });
+
+  it('does not show a negative amount as a real price', () => {
+    const { fixture, host } = setup();
+    host.money.set({ amount: -1, currency: 'HUF' });
     host.status.set('success');
     fixture.detectChanges();
     expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();

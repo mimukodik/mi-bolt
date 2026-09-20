@@ -420,18 +420,32 @@ describe('T22-AC01 review entry creates a fresh quote and shows the order summar
     expect(editContact.getAttribute('routerLink') ?? editContact.getAttribute('href')).toContain(
       '/penztar/adatok',
     );
-    expect(editContact.textContent.trim()).toBe('Szerkesztés');
+    expect(editContact.textContent.trim()).toBe('Módosítás');
 
     const editDelivery = getElement(root, '[data-testid="review-edit-delivery"]');
     expect(editDelivery.getAttribute('routerLink') ?? editDelivery.getAttribute('href')).toContain(
       '/penztar/szallitas',
     );
-    expect(editDelivery.textContent.trim()).toBe('Szerkesztés');
+    expect(editDelivery.textContent.trim()).toBe('Módosítás');
 
     const quoteController = TestBed.inject(QuoteController);
     expect(quoteController.ready()).toBe(true);
     fixture.componentInstance.onEditContact();
     expect(quoteController.ready()).toBe(false);
+  });
+
+  it('FIX-35: h1 is "Minden rendben?"', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    const checkoutFacade = TestBed.inject(CheckoutFacade);
+    await seedCartAndSession(cartFacade, checkoutFacade);
+
+    const fixture = TestBed.createComponent(ReviewStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const h1 = getElement(root, 'h1');
+    expect(h1.textContent.trim()).toBe('Minden rendben?');
   });
 
   it('back link returns to the delivery step and preserves in-memory fields', async () => {

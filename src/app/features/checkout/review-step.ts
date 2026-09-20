@@ -51,7 +51,7 @@
  *   submitting         → covered by the `loading` branch.
  *
  * Edit affordances (T22-AC01): the contact and delivery sections
- * each carry a `Szerkesztés` link that navigates back to the
+ * each carry a `Módosítás` link that navigates back to the
  * matching step. The in-memory form survives the round trip, so the
  * user does not have to re-type anything.
  *

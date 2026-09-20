@@ -224,7 +224,7 @@ export const checkoutRoutes: Routes = [
         path: '',
         canMatch: [deliveryGuard],
         loadComponent: () => import('./delivery-page').then((m) => m.DeliveryPage),
-        title: 'MiBolt — Szállítás és fizetés',
+        title: 'MiBolt — Átvétel és fizetés',
       },
     ],
   },

@@ -482,6 +482,20 @@ describe('T21-AC03 visible shipping fee per option; no tariff / installments / i
     }
   });
 
+  it('FIX-35: the pickup option renders an explicit 0 Ft, not a dash (a known zero is a fact)', async () => {
+    const fixture = TestBed.createComponent(DeliveryStep);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const pickupRadio = getInputElement(root, 'input[value="demo_pickup"]');
+    const pickupOption = pickupRadio.closest('[data-testid="delivery-option"]');
+    if (!(pickupOption instanceof HTMLElement)) throw new Error('Expected the pickup option row');
+    const priceAmount = getElement(pickupOption, '[data-testid="price-amount"]');
+    expect(priceAmount.textContent.trim()).toBe('0');
+    expect(pickupOption.querySelector('[data-testid="price-empty"]')).toBeNull();
+  });
+
   it('does not mention tariff, installment, insurance, monthly fee, hidden add-on or card fields', async () => {
     const fixture = TestBed.createComponent(DeliveryStep);
     await fixture.whenStable();

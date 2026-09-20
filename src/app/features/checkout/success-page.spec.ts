@@ -689,3 +689,67 @@ describe('T24 runtime: success step wire-level behaviour', () => {
     expect((result as UrlTree).toString()).toContain('/penztar/kosar');
   });
 });
+
+// ---------------------------------------------------------------------------
+// FIX-35 — the success page's copy must match the strings screens.md:91
+// fixes: one H1 and exactly one navigation CTA.
+// ---------------------------------------------------------------------------
+describe('FIX-35 success page copy matches screens.md:91', () => {
+  it('h1 is "Elkészült a demórendelésed." and exactly one nav action, "Vissza a telefonokhoz →", points at /telefonok', async () => {
+    const orderId = await commitHappyPath();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
+        provideApiConfiguration(BASE_URL),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ orderId })),
+            snapshot: { paramMap: convertToParamMap({ orderId }) },
+          },
+        },
+      ],
+      teardown: { destroyAfterEach: true },
+    });
+    // Re-seed the same order into this fresh injector's CheckoutFacade
+    // via a GET, mirroring a reload — commitHappyPath's facade instance
+    // was destroyed by resetTestingModule above.
+    server.use(
+      http.get('*/api/v1/orders/:orderId', () => {
+        return HttpResponse.json({
+          id: orderId,
+          orderNumber: 'DEMO-2026-0002',
+          createdAt: '2026-09-15T09:00:00.000Z',
+          status: 'demo_confirmed',
+          isSimulation: true,
+          items: [],
+          subtotal: { amount: 339_990, currency: 'HUF' },
+          shipping: { amount: 0, currency: 'HUF' },
+          total: { amount: 339_990, currency: 'HUF' },
+          paymentMethod: 'demo_cod',
+          deliveryOptionId: 'demo_pickup',
+          notice: 'A demórendelés elkészült. Nem történt valódi fizetés.',
+        });
+      }),
+    );
+
+    const fixture = TestBed.createComponent(SuccessStep);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const h1 = root.querySelector('h1');
+    expect(h1?.textContent.trim()).toBe('Elkészült a demórendelésed.');
+
+    const actions = root.querySelector('[data-testid="success-actions"]');
+    expect(actions).not.toBeNull();
+    const buttons = actions?.querySelectorAll('button') ?? [];
+    expect(buttons.length).toBe(1);
+    expect(buttons[0]?.textContent?.trim()).toBe('Vissza a telefonokhoz →');
+  });
+});
