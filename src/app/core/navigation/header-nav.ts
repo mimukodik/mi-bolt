@@ -18,9 +18,9 @@ import { MobileDrawer } from './mobile-drawer';
  * Variant of the global header rendered by `AppShell`.
  *
  * - `marketing` and `shop` use the full navigation: brand left, primary
- *   links (Mobiltelefonok, A demóról) center, search + cart right. The
- *   `shop` variant additionally exposes a full-width mobile search bar
- *   below the header at narrow widths.
+ *   links (Mobiltelefonok, A demóról) center, search + cart right. Both
+ *   variants additionally expose a full-width mobile search bar below
+ *   the header at narrow widths.
  * - `checkout` uses the compact dark header required by the purchase
  *   flow (R02 variant): no search, "Demó pénztár" label and a single
  *   "Vissza a shopba" link. Mobile drawer is disabled.

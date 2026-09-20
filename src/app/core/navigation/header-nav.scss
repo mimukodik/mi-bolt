@@ -1,8 +1,8 @@
 /* MiBolt HeaderNav primitive.
    Brand-consistent dark shell (color-shell-dark) with orange accents
    (color-brand-accent) and 64 px header height on desktop. The mobile
-   search bar is a separate full-width strip rendered only by the shop
-   variant; it appears at <= 640 px. */
+   search bar is a separate full-width strip rendered by both the
+   marketing and shop variants; it appears at <= 640 px. */
 
 :host {
   display: block;

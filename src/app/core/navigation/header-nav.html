@@ -35,6 +35,18 @@
     role="banner"
   >
     <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
+      <button
+        #menuTrigger
+        type="button"
+        class="menu-trigger inline-flex items-center justify-center w-10 h-10 rounded border border-transparent bg-transparent cursor-pointer text-xl lg:hidden"
+        [attr.aria-expanded]="drawerOpen()"
+        aria-controls="mobile-drawer"
+        aria-label="Menü megnyitása"
+        data-testid="menu-trigger"
+        (click)="toggleDrawer()"
+      >
+        ☰
+      </button>
       <a
         routerLink="/"
         class="brand inline-flex items-center gap-2 no-underline min-h-10"
@@ -110,43 +122,29 @@
             >
           }
         </a>
-        <button
-          #menuTrigger
-          type="button"
-          class="menu-trigger inline-flex items-center justify-center w-10 h-10 rounded border border-transparent bg-transparent cursor-pointer text-xl lg:hidden"
-          [attr.aria-expanded]="drawerOpen()"
-          aria-controls="mobile-drawer"
-          aria-label="Menü megnyitása"
-          data-testid="menu-trigger"
-          (click)="toggleDrawer()"
-        >
-          ☰
-        </button>
       </div>
     </div>
-    @if (variant() === 'shop') {
-      <div
-        class="mobile-search block px-4 pb-3 pt-2 border-t"
-        data-testid="mobile-search"
-        role="search"
-      >
-        <label class="mobile-search__field block">
-          <span class="sr-only">Keresés a telefonok között</span>
-          <input
-            class="w-full min-h-10 px-3 bg-transparent border border-transparent rounded font-inherit"
-            type="search"
-            name="q-mobile"
-            placeholder="Keresés a telefonok között…"
-            autocomplete="off"
-            inputmode="search"
-            data-testid="mobile-search-input"
-            [value]="searchDraft()"
-            (input)="onSearchDraftInput($event)"
-            (keydown.enter)="commitSearch()"
-          />
-        </label>
-      </div>
-    }
+    <div
+      class="mobile-search block px-4 pb-3 pt-2 border-t"
+      data-testid="mobile-search"
+      role="search"
+    >
+      <label class="mobile-search__field block">
+        <span class="sr-only">Keresés a telefonok között</span>
+        <input
+          class="w-full min-h-10 px-3 bg-transparent border border-transparent rounded font-inherit"
+          type="search"
+          name="q-mobile"
+          placeholder="Keresés a telefonok között…"
+          autocomplete="off"
+          inputmode="search"
+          data-testid="mobile-search-input"
+          [value]="searchDraft()"
+          (input)="onSearchDraftInput($event)"
+          (keydown.enter)="commitSearch()"
+        />
+      </label>
+    </div>
   </header>
   <app-mobile-drawer
     id="mobile-drawer"
