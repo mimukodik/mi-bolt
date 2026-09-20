@@ -1,6 +1,6 @@
 # FIX-38 — Create skill-location.json and delete the unwired verification script
 
-Status: PLANNED — not executed.
+Status: DONE — 414c316. Created docs/mi-bolt/execution/skill-location.json (hash matched .claude/skills/mi-bolt-design/SHA256SUMS.txt) and deleted scripts/verify-skill-evidence.mjs and its .spec.mjs companion, plus their two packet references.
 Severity: blocker
 Source: A7 F1 (RQ02 unmet, T00-AC03 unreached), A7's broken-link list, B3's provenance
 section, decision **D17**

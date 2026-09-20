@@ -1,6 +1,6 @@
 # FIX-36b — Correct the 31 task packets' `docs/mi-bolt/…` path citations
 
-Status: PLANNED — not executed.
+Status: DONE — 5c6c0bc, landed after FIX-36 (c8c411f) per both tasks' own "Where this sits in the stream" sections. Tree-wide `docs/mi-bolt/` residue reached 0 once FIX-47 (974e9d2) also landed.
 Severity: major
 Source: A7 F7; binding decisions **D2** and **D9**
 

@@ -1,6 +1,6 @@
 # FIX-47 — Prune the npm scripts to the standard commands of the stack
 
-Status: PLANNED — not executed.
+Status: DONE — 974e9d2. Pruned package.json to the eleven survivors plus build:e2e, and rewrote docs/spec/testing.md section 7 (and its docs/index.html mirror). Open/deviation: package.json keeps a twelfth key, fix:status, which post-dates this task's D17 analysis and is the orchestrating session's own ledger-gate infrastructure — kept deliberately rather than deleted; see the commit body. FIX-47-AC11's real-browser check of the replaced docs/index.html block was not run (no Agent tool available).
 Severity: major
 Source: **D17** and **D19** (`docs/fix/README.md` section 6) — user decisions to prune the npm scripts
 and commands declared in `docs/spec/testing.md` down to the standard commands of the stack, and to

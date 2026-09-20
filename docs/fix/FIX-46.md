@@ -1,6 +1,6 @@
 # FIX-46 — Move the test-policy check into ESLint and delete the bespoke gate
 
-Status: PLANNED — not executed.
+Status: BLOCKED — not executed. FIX-46-AC00 requires FIX-39 to have landed (`scripts/check-traceability.mjs` absent, zero `test.skip(` calls in `tests`/`e2e`/`src`). Measured on this run's final commit: the file still exists and 13 `test.skip(` calls remain. FIX-39 is out of scope for this session, so per the orchestrating instructions this task stops here and is reported BLOCKED with these counts rather than forced.
 Severity: blocker
 Source: A5 (test-suite sweep), A7 (governance sweep); superseded by decision **D17** (the
 plan was over-engineered: standard scripts, no bespoke gates) and its narrowing answer

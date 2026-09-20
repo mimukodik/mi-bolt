@@ -1,6 +1,6 @@
 # FIX-72 — Close the reachable unreached acceptance criteria with real assertions
 
-Status: PLANNED — not executed.
+Status: BLOCKED — not executed. This task's own "How to verify" step 1 requires FIX-39 to have landed first (`test -f scripts/check-traceability.mjs` must fail; the thirteen `test.skip(` sites must be gone). Measured on this run's final commit: `scripts/check-traceability.mjs` still exists and all thirteen `test.skip(` sites are still present. FIX-39 is out of scope for this session (e2e is out of scope per the user's own instruction), so this task was not started, per its own instruction to "stop and report rather than starting on a worklist FIX-39 has not yet produced."
 Severity: major
 Source: Split out of FIX-39 item 3 by RULINGS-B2 (finding S7b-15): a judgment pass over
 roughly 24 criteria in seven packets is not the same logical change as deleting the

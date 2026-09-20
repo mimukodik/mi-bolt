@@ -1,6 +1,6 @@
 # FIX-57 — Create the `design-review.md` the running test suites already point at
 
-Status: PLANNED — not executed.
+Status: DONE — be534f3. Created docs/mi-bolt/execution/design-review.md with all eleven required sections. Found two real defects while measuring (keyboard.spec.ts's getByTestId('app-marketing-layout') targets a component selector, not a data-testid, so the whole keyboard flow test skips at its first step; state-matrix.spec.ts's built:false rows are stale). Open: FIX-57-AC04, AC06 and AC07 (the 48-cell overflow table, the six manual checks, the live axe run) need a real browser session and were recorded "not measured" — no Agent tool was available in the executing session to spawn real-browser-sonnet.
 Severity: major
 Source: Review round item N6 (orchestrator-measured), `docs/tasks/T25.md:22`, `e2e/a11y/keyboard.spec.ts:19-21`, `e2e/design/state-matrix.spec.ts:28`, `e2e/design/viewport-matrix.spec.ts:98-100` and `:116-119`. Named as unowned and explicitly forbidden in `FIX-53`'s out-of-scope section; this task is its owner.
 

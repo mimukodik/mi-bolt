@@ -1,6 +1,6 @@
 # FIX-36 — Correct docs/README.md, the asset manifest and the dead prompt references
 
-Status: PLANNED — not executed.
+Status: DONE — c8c411f. Corrected docs/README.md, docs/index.html, docs/design/asset-manifest.json and six other spec/api files; deleted every VEGREHAJTASI-PROMPT.hu.md reference. Open: FIX-36-AC08's real-browser check of docs/index.html was not run (no Agent tool in the executing session to spawn real-browser-sonnet).
 Severity: major
 Source: A7 F7, A7 F8, A7 F9; binding decisions **D2** and **D3**
 

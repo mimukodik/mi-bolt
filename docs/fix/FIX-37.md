@@ -1,6 +1,6 @@
 # FIX-37 — Rewrite AGENTS.md
 
-Status: PLANNED — not executed.
+Status: DONE — b400b5c, 5791a90 (prettier formatting fixup). Rewrote AGENTS.md as a short, MiBolt-specific file carrying the design-skill mandate and pointers to the files that own the rest. Open: FIX-37-AC06's second-reader read-back was not performed by a fresh instructions-opus instance — the executing session had no Agent tool to spawn one; it performed its own re-read instead, which is named as a gap rather than presented as satisfying the criterion.
 Severity: blocker
 Source: A7 F3 (RQ02 unmet, T00-AC04 unreached); binding decision **D4**
 
