@@ -12,11 +12,10 @@
 // implementer (or reviewer) can replay on its own.
 
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
 
 import '@angular/compiler';
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 
 import { server } from '../msw-server';
@@ -77,12 +76,8 @@ import {
 } from '../../src/app/core/api/demo-session.interceptor';
 
 const BASE_URL = 'http://localhost/api/v1';
-const BASE_URL_PATH = '/api/v1';
 const API_ROOT = '/api/v1';
 
-type HandlerRoute = { method: string; path: string };
-
-let rawSpec: OpenApiSpec;
 let dereferencedSpec: OpenApiSpec;
 let operationsById: Map<string, OperationDescriptor>;
 let problemMatrix: Map<string, Set<string>>;
@@ -92,7 +87,6 @@ beforeAll(async () => {
     teardown: { destroyAfterEach: true },
   });
   const loaded = await loadOpenApiSpec();
-  rawSpec = loaded.raw;
   dereferencedSpec = loaded.dereferenced;
   operationsById = new Map(collectOperations(dereferencedSpec).map((op) => [op.operationId, op]));
   problemMatrix = buildProblemCodeMatrix(dereferencedSpec);
@@ -767,7 +761,7 @@ function buildDriftedFixture(op: OperationDescriptor): unknown {
 }
 
 function extractProblemCodes(op: OperationDescriptor): string[] {
-  const pathItem = dereferencedSpec.paths?.[op.path] as Record<string, any> | undefined;
+  const pathItem = dereferencedSpec.paths?.[op.path];
   const opSpec = pathItem ? pathItem[op.method] : undefined;
   if (!opSpec) return [];
   const codes = new Set<string>();
@@ -851,29 +845,6 @@ async function invokeResolver(
   } finally {
     tempServer.close();
   }
-}
-
-function matchPath(pattern: string, path: string): boolean {
-  // MSW handlers carry a leading `*` wildcard for the origin (e.g.
-  // `*` + `/api/v1/config`). We strip the origin segment so the regex
-  // operates on the path portion only, then substitute MSW's colon
-  // path-param syntax with a `[^/]+` placeholder.
-  const [, pathPart = ''] = pattern.match(/^\*?([^?]*)/) ?? [];
-  const escaped = pathPart.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp('^' + escaped.replace(/:[A-Za-z0-9_]+/g, '[^/]+') + '$');
-  return regex.test(path);
-}
-
-function extractPathParams(pattern: string, path: string): Record<string, string> {
-  const params: Record<string, string> = {};
-  const patternParts = pattern.split('/');
-  const pathParts = path.split('/');
-  for (let i = 0; i < patternParts.length; i++) {
-    const p = patternParts[i];
-    const v = pathParts[i];
-    if (p && p.startsWith(':')) params[p.slice(1)] = v ?? '';
-  }
-  return params;
 }
 
 function safeParse(text: string): unknown {

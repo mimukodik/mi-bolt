@@ -37,7 +37,7 @@ const BASE_URL = process.env['MI_BOLT_E2E_BASE_URL'] ?? 'http://127.0.0.1:4200';
 const NO_CACHE_TOKENS = ['no-cache', 'no-store', 'must-revalidate'];
 
 test.describe('T28 deep-link routing + SW cache policy', () => {
-  test('static host serves the SPA shell on /', async ({ page, request }) => {
+  test('static host serves the SPA shell on /', async ({ page }) => {
     // Resolve via the page object so the test fails fast when the
     // Playwright `webServer` is not running.
     const response = await page.goto('/');
