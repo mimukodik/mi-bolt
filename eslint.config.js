@@ -7,7 +7,7 @@ const eslintConfigPrettier = require('eslint-config-prettier/flat');
 
 module.exports = defineConfig([
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'projects/**/*.ts'],
     extends: [
       eslint.configs.recommended,
       tseslint.configs.strictTypeChecked,
@@ -26,7 +26,7 @@ module.exports = defineConfig([
         'error',
         {
           type: 'attribute',
-          prefix: 'app',
+          prefix: ['app', 'pay'],
           style: 'camelCase',
         },
       ],
@@ -34,7 +34,7 @@ module.exports = defineConfig([
         'error',
         {
           type: 'element',
-          prefix: 'app',
+          prefix: ['app', 'pay'],
           style: 'kebab-case',
         },
       ],
