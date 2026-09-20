@@ -46,8 +46,8 @@ import {
 
 import { Api } from '../../api/generated/api';
 import { listProducts } from '../../api/generated/fn/catalog/list-products';
-import type { FacetValue } from '../../api/generated/models/facet-value';
-import type { ProductSummary } from '../../api/generated/models/product-summary';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { Facets } from '../../api/generated/models/facets';
 import {
   DEFAULT_CATALOG_QUERY,
   parseCatalogQuery,
@@ -64,33 +64,24 @@ export type CatalogStatus = 'loading' | 'refreshing' | 'success' | 'empty' | 'er
 export interface CatalogVm {
   readonly status: CatalogStatus;
   readonly query: CatalogQuery;
-  readonly items: readonly ProductSummary[];
+  readonly items: readonly CatalogItem[];
   readonly total: number;
   readonly page: number;
   readonly pageSize: 12 | 24;
-  /** Brand and storage facet buckets kept separate so the UI can
-   *  render them under their own headings without inferring the kind
-   *  from each value. `null` until the first successful response. */
-  readonly facets: {
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  } | null;
+  /** The full `Facets` from the latest successful response, or `null`
+   *  until the first response lands. The page renders every facet the
+   *  contract exposes from this object directly. */
+  readonly facets: Facets | null;
   readonly error: string | null;
 }
 
 /** Coarse shape of the catalogue response — only what the VM exposes. */
 interface CatalogResult {
-  readonly items: readonly ProductSummary[];
+  readonly items: readonly CatalogItem[];
   readonly total: number;
   readonly page: number;
   readonly pageSize: 12 | 24;
-  /** Brand and storage facet counts live in separate buckets so the UI
-   *  can render them under their own headings without guessing which
-   *  bucket a flattened `FacetValue` came from. */
-  readonly facets: {
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  };
+  readonly facets: Facets;
 }
 
 /**
@@ -103,6 +94,7 @@ function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
   if (a.q !== b.q) return false;
   if (!arrayShallowEqual(a.brands, b.brands)) return false;
   if (!arrayShallowEqual(a.storageGb, b.storageGb)) return false;
+  if (!arrayShallowEqual(a.colors, b.colors)) return false;
   if (a.minPrice !== b.minPrice) return false;
   if (a.maxPrice !== b.maxPrice) return false;
   if (a.inStock !== b.inStock) return false;
@@ -133,6 +125,9 @@ function toSdkParams(q: CatalogQuery): Parameters<typeof listProducts>[2] {
   }
   if (q.storageGb !== undefined && q.storageGb.length > 0) {
     params.storageGb = q.storageGb.slice();
+  }
+  if (q.colors !== undefined && q.colors.length > 0) {
+    params.color = q.colors.slice();
   }
   if (q.minPrice !== undefined) params.minPrice = q.minPrice;
   if (q.maxPrice !== undefined) params.maxPrice = q.maxPrice;
@@ -241,10 +236,7 @@ export class CatalogFacade {
             total: event.page.total,
             page: event.page.page,
             pageSize: event.page.pageSize,
-            facets: {
-              brands: event.page.facets.brands,
-              storageGb: event.page.facets.storageGb,
-            },
+            facets: event.page.facets,
           });
         } else {
           this.errorSignal.set(event.error);
@@ -324,6 +316,16 @@ export class CatalogFacade {
     const present = current.includes(storageGb);
     const next = present ? current.filter((s) => s !== storageGb) : [...current, storageGb];
     this.setFilters({ storageGb: next.length > 0 ? next : undefined });
+  }
+
+  /** Add or remove a colour code from the active filter set. */
+  toggleColor(colorCode: string): void {
+    const trimmed = colorCode.trim();
+    if (trimmed.length === 0) return;
+    const current = this.querySignal().colors ?? [];
+    const present = current.includes(trimmed);
+    const next = present ? current.filter((c) => c !== trimmed) : [...current, trimmed];
+    this.setFilters({ colors: next.length > 0 ? next : undefined });
   }
 
   /** Replace the inclusive price range; `undefined` clears the bound. */

@@ -27,8 +27,8 @@ import { server, useMswServer } from '../../tests/msw-server';
 import { Api } from './api/generated/api';
 import { ApiConfiguration, provideApiConfiguration } from './api/generated/api-configuration';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
+import type { CatalogItem } from './api/generated/models/catalog-item';
 import type { ProductPage as ProductPageDTO } from './api/generated/models/product-page';
-import type { ProductSummary } from './api/generated/models/product-summary';
 import type { Variant } from './api/generated/models/variant';
 import type { Money } from './shared/ui/price-block/price-block';
 import type { CheckoutOptions } from './api/generated/models/checkout-options';
@@ -124,9 +124,10 @@ describe('FIX-29 fact 2 — ProductCard image is decorative', () => {
     return { id, src, alt, width: 320, height: 400 };
   }
 
-  function makeSummary(): ProductSummary {
+  function makeItem(): CatalogItem {
     const variant: Variant = {
       id: 'p-01-256-graphite',
+      slug: 'demo-one-5g-graphite-256',
       colorCode: 'graphite',
       colorName: 'Grafit',
       swatchHex: '#343B43',
@@ -142,15 +143,33 @@ describe('FIX-29 fact 2 — ProductCard image is decorative', () => {
         ),
       ],
     };
+    const price = money(339_990);
     return {
       id: 'p-01',
       slug: 'demo-one-5g',
       brand: 'MiBolt Demo',
       name: 'Demo One 5G',
       highlights: ['6,7" kijelző'],
-      defaultVariant: variant,
       is5g: true,
-      isDemo: true,
+      releasedAt: '2026-01-01',
+      storageGb: 256,
+      variantId: variant.id,
+      variantSlug: variant.slug,
+      price,
+      availability: variant.availability,
+      maxQuantity: variant.maxQuantity,
+      image: variant.images[0],
+      colors: [
+        {
+          colorCode: variant.colorCode,
+          colorName: variant.colorName,
+          swatchHex: variant.swatchHex,
+          variantId: variant.id,
+          variantSlug: variant.slug,
+          price,
+          availability: variant.availability,
+        },
+      ],
     };
   }
 
@@ -159,7 +178,7 @@ describe('FIX-29 fact 2 — ProductCard image is decorative', () => {
     template: `<app-product-card [product]="product()" />`,
   })
   class HostComponent {
-    readonly product = signal<ProductSummary>(makeSummary());
+    readonly product = signal<CatalogItem>(makeItem());
   }
 
   afterEach(() => {
@@ -360,6 +379,27 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
   });
 
   async function renderWithOneResult(): Promise<ComponentFixture<CatalogPage>> {
+    const price = money(339990);
+    const variant: Variant = {
+      id: 'p-01-256',
+      slug: 'demo-one-5g-graphite-256',
+      colorCode: 'graphite',
+      colorName: 'Grafit',
+      swatchHex: '#343B43',
+      storageGb: 256,
+      price,
+      availability: 'in_stock',
+      maxQuantity: 5,
+      images: [
+        {
+          id: 'p-01-front',
+          src: '/assets/products/graphite-front.webp',
+          alt: 'Demo One 5G front',
+          width: 320,
+          height: 400,
+        },
+      ],
+    };
     const page: ProductPageDTO = {
       items: [
         {
@@ -368,34 +408,38 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
           brand: 'MiBolt Demo',
           name: 'Demo One 5G',
           highlights: ['6,7" kijelző'],
-          defaultVariant: {
-            id: 'p-01-256',
-            colorCode: 'graphite',
-            colorName: 'Grafit',
-            swatchHex: '#343B43',
-            storageGb: 256,
-            price: money(339990),
-            availability: 'in_stock',
-            maxQuantity: 5,
-            images: [
-              {
-                id: 'p-01-front',
-                src: '/assets/products/graphite-front.webp',
-                alt: 'Demo One 5G front',
-                width: 320,
-                height: 400,
-              },
-            ],
-          },
           is5g: true,
-          isDemo: true,
+          releasedAt: '2026-01-01',
+          storageGb: 256,
+          variantId: variant.id,
+          variantSlug: variant.slug,
+          price,
+          availability: variant.availability,
+          maxQuantity: variant.maxQuantity,
+          image: variant.images[0],
+          colors: [
+            {
+              colorCode: variant.colorCode,
+              colorName: variant.colorName,
+              swatchHex: variant.swatchHex,
+              variantId: variant.id,
+              variantSlug: variant.slug,
+              price,
+              availability: variant.availability,
+            },
+          ],
         },
       ],
       total: 1,
       page: 1,
       pageSize: 12,
+      totalPages: 1,
       facets: {
         brands: [{ value: 'MiBolt Demo', label: 'MiBolt Demo', count: 1 }],
+        colors: [{ value: 'graphite', label: 'Grafit', count: 1, swatchHex: '#343B43' }],
+        inStock: 1,
+        is5g: 1,
+        priceRange: { min: price, max: price },
         storageGb: [{ value: '256', label: '256 GB', count: 1 }],
       },
     };

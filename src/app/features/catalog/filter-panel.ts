@@ -2,7 +2,8 @@ import { Component, computed, input, linkedSignal, output } from '@angular/core'
 
 import type { CatalogQuery, Sort } from './catalog-query';
 import { ALLOWED_STORAGE_GB, SORT_MODES } from './catalog-query';
-import type { FacetValue } from '../../api/generated/models/facet-value';
+import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
+import type { Facets } from '../../api/generated/models/facets';
 
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
@@ -99,11 +100,8 @@ export class FilterPanel {
   /** The current query reflected by the controls. */
   readonly value = input.required<CatalogQuery>();
 
-  /** Facet buckets from the latest successful response, if any. */
-  readonly facets = input<{
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  } | null>(null);
+  /** Full `Facets` from the latest successful response, if any. */
+  readonly facets = input<Facets | null>(null);
 
   /** True when the panel should be inert (loading or error refresh). */
   readonly disabled = input<boolean>(false);
@@ -115,7 +113,10 @@ export class FilterPanel {
   readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => ALLOWED_STORAGE_GB);
 
   /** Brand facets, falling back to an empty list when none are present. */
-  readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
+  readonly brandFacets = computed(() => this.facets()?.brands ?? []);
+
+  /** Colour facets, falling back to an empty list when none are present. */
+  readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
 
   // Local drafts for the controls that need an "in progress" copy. Each
   // is a linkedSignal sourced from its applied field plus the "any
@@ -150,6 +151,7 @@ export class FilterPanel {
     if (q.q !== undefined && q.q.length > 0) return true;
     if ((q.brands?.length ?? 0) > 0) return true;
     if ((q.storageGb?.length ?? 0) > 0) return true;
+    if ((q.colors?.length ?? 0) > 0) return true;
     if (q.minPrice !== undefined) return true;
     if (q.maxPrice !== undefined) return true;
     if (q.inStock !== undefined) return true;
@@ -216,6 +218,16 @@ export class FilterPanel {
     this.emit({ storageGb: next.length > 0 ? next : undefined });
   }
 
+  toggleColor(code: string): void {
+    const trimmed = code.trim();
+    if (trimmed.length === 0) return;
+    const current = this.value().colors ?? [];
+    const next = current.includes(trimmed)
+      ? current.filter((c) => c !== trimmed)
+      : [...current, trimmed];
+    this.emit({ colors: next.length > 0 ? next : undefined });
+  }
+
   toggleInStock(): void {
     const current = this.value().inStock;
     this.emit({ inStock: current === true ? undefined : true });
@@ -236,6 +248,7 @@ export class FilterPanel {
       q: undefined,
       brands: undefined,
       storageGb: undefined,
+      colors: undefined,
       minPrice: undefined,
       maxPrice: undefined,
       inStock: undefined,
@@ -254,6 +267,10 @@ export class FilterPanel {
 
   isStorageSelected(bucket: 128 | 256 | 512): boolean {
     return (this.value().storageGb ?? []).includes(bucket);
+  }
+
+  isColorSelected(code: string): boolean {
+    return (this.value().colors ?? []).includes(code);
   }
 
   isInStockSelected(): boolean {

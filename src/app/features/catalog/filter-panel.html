@@ -58,6 +58,38 @@
     </ul>
   </fieldset>
 
+  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-color">
+    <legend class="legend uppercase tracking-wider">Szín</legend>
+    <ul class="options flex flex-col gap-2 m-0 p-0 list-none" role="list">
+      @for (color of colorFacets(); track color.value) {
+        <li>
+          <button
+            type="button"
+            class="option inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
+            [class.is-selected]="isColorSelected(color.value)"
+            [attr.data-testid]="'filter-color-' + color.value"
+            [attr.aria-pressed]="isColorSelected(color.value) ? 'true' : 'false'"
+            [disabled]="disabled() || color.count === 0"
+            (click)="toggleColor(color.value)"
+          >
+            <span
+              class="check inline-flex items-center justify-center w-5 font-bold"
+              aria-hidden="true"
+              >{{ isColorSelected(color.value) ? '✓' : '' }}</span
+            >
+            <span
+              class="inline-block w-4 h-4 rounded-full border border-current"
+              aria-hidden="true"
+              [style.background-color]="color.swatchHex"
+            ></span>
+            <span class="option__label flex-1">{{ color.label }}</span>
+            <span class="option__count" aria-label="találatok száma">{{ color.count }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </fieldset>
+
   <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-storage">
     <legend class="legend uppercase tracking-wider">Tárhely</legend>
     <ul class="options options--row flex flex-wrap gap-2 m-0 p-0 list-none" role="list">

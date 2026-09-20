@@ -91,12 +91,20 @@ export class CatalogToolbar {
     switch (mode) {
       case 'recommended':
         return 'Ajánlott sorrend';
+      case 'newest':
+        return 'Legújabb elöl';
+      case 'oldest':
+        return 'Legrégebbi elöl';
+      case 'popularity':
+        return 'Népszerűség szerint';
       case 'price_asc':
         return 'Ár szerint növekvő';
       case 'price_desc':
         return 'Ár szerint csökkenő';
       case 'name_asc':
-        return 'Név szerint';
+        return 'Név szerint (A–Z)';
+      case 'name_desc':
+        return 'Név szerint (Z–A)';
     }
   }
 

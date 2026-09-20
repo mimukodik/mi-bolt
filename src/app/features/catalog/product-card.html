@@ -24,9 +24,9 @@
       >
     </h3>
     <p class="variant m-0 inline-flex gap-2 items-center">
-      <span class="variant__color">{{ variant().colorName }}</span>
+      <span class="variant__color">{{ colorName() }}</span>
       <span class="variant__sep" aria-hidden="true">·</span>
-      <span class="variant__storage">{{ variant().storageGb }} GB</span>
+      <span class="variant__storage">{{ product().storageGb }} GB</span>
     </p>
     @if (visibleHighlights().length > 0) {
       <ul class="highlights m-0 pl-4 flex flex-col gap-1" data-testid="product-card-highlights">
@@ -50,7 +50,7 @@
       data-testid="product-card-cta"
       [routerLink]="detailsLink()"
       [attr.aria-label]="product().name + ' részleteinek megnyitása'"
-      >Részletek →</a
+      >Részletek</a
     >
   </div>
 </article>

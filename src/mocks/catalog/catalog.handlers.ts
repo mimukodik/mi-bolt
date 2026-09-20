@@ -11,15 +11,9 @@
  * The handlers live on top of `catalogStore` (this file's module
  * local). The store is loaded by `src/mocks/browser.ts` from
  * `docs/api/fixtures/catalog.json`; the spec loads its own copy.
- *
- * The existing `getConfig` handler (`GET /api/v1/config`) stays in
- * place because a later unit removes `/config` along with its
- * consumer; until then it is part of the public surface the page
- * reads. The contract drops the schema for it, so the handler keeps
- * its hand-rolled body verbatim.
  */
 
-import { bypass, http, HttpResponse, type RequestHandler } from 'msw';
+import { http, HttpResponse, type RequestHandler } from 'msw';
 
 import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
 import { isRecord as isPlainRecord } from '../is-record';
@@ -41,22 +35,6 @@ import {
   toCatalogItems,
 } from './catalog-filter';
 import { buildFacets } from './catalog-facets';
-
-/**
- * Mirror of `docs/api/fixtures/config.json` — kept here so the
- * `/config` handler has no filesystem dependency. The contract drops
- * the schema in 2.0.0; the shape stays the same until a later unit
- * removes the endpoint entirely.
- */
-export const DEMO_CONFIG = {
-  providerId: 'mi-bolt',
-  displayName: 'MiBolt',
-  currency: 'HUF',
-  isDemo: true,
-  termsVersion: 'demo-1',
-  featuredSlugs: ['demo-one-5g', 'demo-air-5g', 'demo-pro-5g', 'demo-lite-5g'],
-  maximumLineQuantity: 5,
-} as const;
 
 const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
 
@@ -314,7 +292,7 @@ async function defaultMediaLoader(imageId: string): Promise<ArrayBuffer | undefi
   if (origin.length === 0) return undefined;
   const url = `${origin}/media/${imageId}.png`;
   const request = new Request(url, { method: 'GET' });
-  const response = await fetch(request, { bypass: bypass } as RequestInit);
+  const response = await fetch(request);
   if (!response.ok) return undefined;
   return response.arrayBuffer();
 }
@@ -328,12 +306,7 @@ function readOrigin(scope: Record<string, unknown>): string {
 
 /** Public handler factory. Hands the four handlers back to the registry. */
 export function buildCatalogHandlers(options: CreateHandlersOptions): readonly RequestHandler[] {
-  // `getConfig` is unchanged from the 1.0.0 handler; the contract drops
-  // the schema in 2.0.0 but the endpoint stays until a later unit removes
-  // it together with its consumer.
-  const getConfig = http.get('*/api/v1/config', () => HttpResponse.json(DEMO_CONFIG));
   return [
-    getConfig,
     listProductsHandler(options),
     getProductHandler(options),
     listRelatedProductsHandler(options),

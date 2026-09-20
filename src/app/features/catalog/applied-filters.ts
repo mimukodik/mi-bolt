@@ -1,6 +1,6 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
-import { buildChips, type CatalogQuery } from './catalog-query';
+import type { AppliedChip } from './catalog-query';
 import type { FilterIdentity } from '../../shared/types/filter-identity';
 
 /** `FilterIdentity.name`'s two array-valued members carry a
@@ -9,17 +9,19 @@ import type { FilterIdentity } from '../../shared/types/filter-identity';
 function chipTestId(name: FilterIdentity['name']): string {
   if (name === 'brands') return 'brand';
   if (name === 'storageGb') return 'storage';
+  if (name === 'colors') return 'color';
   return name;
 }
 
 /**
  * `AppliedFilters` — `docs/spec/components.md:356`.
  *
- * Named removable chips plus clear-all, derived from the canonical
- * `CatalogQuery`. Renders all eight chip kinds `buildChips` produces —
- * the six `CatalogFilters` keys, `q` and `featured` — after decision
- * **D16** widened `FilterIdentity` to name the last two. Extracted out
- * of `CatalogPage` by `FIX-60`.
+ * Named removable chips plus clear-all, rendered from the chip array
+ * the page passes in. The chips come pre-built (with the page's
+ * facet-aware label overrides applied, e.g. a `colors` chip whose
+ * `label` is the human colour name rather than the URL code), so this
+ * component is purely presentational and never calls `buildChips`
+ * itself. Extracted out of `CatalogPage` by `FIX-60`.
  */
 @Component({
   selector: 'app-applied-filters',
@@ -27,12 +29,10 @@ function chipTestId(name: FilterIdentity['name']): string {
   styleUrl: './applied-filters.scss',
 })
 export class AppliedFilters {
-  readonly query = input.required<CatalogQuery>();
+  readonly chips = input.required<readonly AppliedChip[]>();
 
   readonly filterRemoved = output<FilterIdentity>();
   readonly cleared = output();
-
-  protected readonly chips = computed(() => buildChips(this.query()));
 
   protected testId(name: FilterIdentity['name']): string {
     return chipTestId(name);

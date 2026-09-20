@@ -1,7 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { ProductSummary } from '../../api/generated/models/product-summary';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
@@ -11,18 +11,20 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
  *
  * The card is purely presentational:
  *
- *   - receives one `ProductSummary` as a signal input;
+ *   - receives one `CatalogItem` as a signal input (the 2.0.0 list
+ *     payload; carries price, variant id, image and colour options
+ *     for one `(product, storage)` pair);
  *   - reserves the 4:3 media frame so neighbouring cards never jump
  *     (R11 — devices keep their optical size, no cropping);
  *   - shows up to two highlights so the eye lands on the most
  *     decision-supporting facts first;
- *   - renders the matching variant's color + storage label so the
- *     price, image and configuration name belong to the same product;
+ *   - renders the matched colour + storage label so the price, image
+ *     and configuration name belong to the same product;
  *   - shows the whole-HUF one-time price through `PriceBlock` and the
  *     "Egyszeri készülékár" one-time label so the user never confuses
  *     it with a monthly fee (R13);
  *   - asks for navigation through `RouterLink`, not a manual click
- *     handler. The variant id rides along in the query string so the
+ *     handler. The variant id rides along in the route matrix so the
  *     product page lands on the exact same configuration (R17);
  *   - uses an outlined CTA per the catalogue rule: one filled
  *     primary per page section, never per card (R08).
@@ -37,22 +39,29 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
   styleUrl: './product-card.scss',
 })
 export class ProductCard {
-  readonly product = input.required<ProductSummary>();
+  readonly product = input.required<CatalogItem>();
 
-  /** Matching variant exposed through the summary's `defaultVariant`. */
-  readonly variant = computed(() => this.product().defaultVariant);
+  /** Money payload for the PriceBlock — read straight off the item. */
+  readonly price = computed(() => this.product().price);
 
-  /** Money payload for the PriceBlock — converted from the variant. */
-  readonly price = computed(() => this.variant().price);
+  /** The colour option whose variantId matches the displayed entry, or
+   *  `null` when none does (defensive — the 2.0.0 contract says the
+   *  displayed variant is always present in `colors`). The template
+   *  uses `colorName()` and not `variant().colorName`, because there
+   *  is no separate `variant` field any more. */
+  readonly colorName = computed<string>(
+    () =>
+      this.product().colors.find((c) => c.variantId === this.product().variantId)?.colorName ?? '',
+  );
 
-  /** First image of the variant's gallery. */
+  /** First image of the item's gallery. */
   readonly image = computed<ImageLike>(() => {
-    const first = this.variant().images[0];
+    const item = this.product();
     return {
-      src: first.src,
-      alt: first.alt || `${this.product().name} illusztráció`,
-      width: first.width,
-      height: first.height,
+      src: item.image.src,
+      alt: item.image.alt || `${item.name} illusztráció`,
+      width: item.image.width,
+      height: item.image.height,
     };
   });
 
@@ -63,15 +72,13 @@ export class ProductCard {
 
   /** Router link to the product page, including the matching variant id. */
   readonly detailsLink = computed(() => {
-    const slug = this.product().slug;
-    const variantId = this.variant().id;
-    return ['/telefonok', slug, { variant: variantId }];
+    const item = this.product();
+    return ['/telefonok', item.slug, { variant: item.variantId }];
   });
 
   /** Concatenated accessible name for the image link. */
   readonly ariaLabel = computed(() => {
-    const p = this.product();
-    const v = this.variant();
-    return `${p.name}, ${v.colorName}, ${String(v.storageGb)} GB - részletek megnyitása`;
+    const item = this.product();
+    return `${item.name}, ${this.colorName()}, ${String(item.storageGb)} GB - részletek megnyitása`;
   });
 }

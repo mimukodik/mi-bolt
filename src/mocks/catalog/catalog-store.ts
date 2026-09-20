@@ -81,12 +81,12 @@ export const ALLOWED_STORAGES: readonly StorageGb[] = [128, 256, 512];
 
 /** Validates and narrows a string into a `ProductSort`. */
 export function isProductSort(value: string): value is ProductSort {
-  return (PRODUCT_SORTS as readonly string[]).includes(value);
+  return PRODUCT_SORTS.some((s) => s === value);
 }
 
 /** Validates and narrows a number into a `StorageGb`. */
 export function isStorageGb(value: number): value is StorageGb {
-  return (ALLOWED_STORAGES as readonly number[]).includes(value);
+  return ALLOWED_STORAGES.some((s) => s === value);
 }
 
 /** Cast a numeric storage into the `StorageGb` union once `isStorageGb` passes. */

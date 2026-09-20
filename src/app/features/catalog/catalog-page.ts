@@ -17,6 +17,7 @@ import {
   CATALOG_QUERY_KEYS,
   isStorageBucket,
   serializeCatalogQuery,
+  type AppliedChip,
   type CatalogQuery,
   type Sort,
 } from './catalog-query';
@@ -164,10 +165,33 @@ export class CatalogPage {
     () => this.facade.vm().total > this.currentPageSize(),
   );
 
+  /** Removable chip row the `AppliedFilters` component renders.
+   *  `buildChips` is codec-owned and stays colour-name-agnostic (the
+   *  URL only carries the colour code); this wrapper swaps a `colors`
+   *  chip's label for the matching facet label when the live facets
+   *  have one, and falls back to the code otherwise. The query itself
+   *  never carries the colour name. */
+  readonly appliedChips = computed<readonly AppliedChip[]>(() => {
+    const base = buildChips(this.facade.query());
+    const facets = this.facade.vm().facets;
+    if (facets === null) return base;
+    const colorLabels = new Map<string, string>();
+    for (const facet of facets.colors) {
+      colorLabels.set(facet.value, facet.label);
+    }
+    if (colorLabels.size === 0) return base;
+    return base.map((chip) => {
+      if (chip.name !== 'colors' || typeof chip.value !== 'string') return chip;
+      const humanLabel = colorLabels.get(chip.value);
+      if (humanLabel === undefined) return chip;
+      return { ...chip, label: humanLabel };
+    });
+  });
+
   /** `CatalogToolbar`'s `appliedCount` — the mobile filter trigger's
    *  selected-count cue, derived the same way `AppliedFilters` derives
    *  its own chip row. */
-  readonly appliedChipCount = computed<number>(() => buildChips(this.facade.query()).length);
+  readonly appliedChipCount = computed<number>(() => this.appliedChips().length);
 
   constructor() {
     // Mirror the URL query into the facade on every navigation. The
@@ -251,6 +275,9 @@ export class CatalogPage {
         if (typeof identity.value === 'number' && isStorageBucket(identity.value)) {
           this.facade.toggleStorage(identity.value);
         }
+        break;
+      case 'colors':
+        if (typeof identity.value === 'string') this.facade.toggleColor(identity.value);
         break;
       case 'inStock':
         this.facade.setInStock(undefined);

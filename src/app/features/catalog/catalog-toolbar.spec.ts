@@ -123,4 +123,28 @@ describe('CatalogToolbar', () => {
     fixture.detectChanges();
     expect(trigger?.getAttribute('aria-expanded')).toBe('true');
   });
+
+  it('renders eight sort options in SORT_MODES order (MIM-210)', () => {
+    const { fixture } = setup();
+    const options = getNativeElement(fixture).querySelectorAll<HTMLOptionElement>(
+      '[data-testid="catalog-sort"] option',
+    );
+    const values = Array.from(options).map((o) => o.value);
+    expect(values).toEqual([
+      'recommended',
+      'newest',
+      'oldest',
+      'popularity',
+      'price_asc',
+      'price_desc',
+      'name_asc',
+      'name_desc',
+    ]);
+    const labels = Array.from(options).map((o) => o.textContent.trim());
+    expect(labels[0]).toBe('Ajánlott sorrend');
+    expect(labels[2]).toBe('Legrégebbi elöl');
+    expect(labels[3]).toBe('Népszerűség szerint');
+    expect(labels[6]).toBe('Név szerint (A–Z)');
+    expect(labels[7]).toBe('Név szerint (Z–A)');
+  });
 });

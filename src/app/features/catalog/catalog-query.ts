@@ -18,16 +18,23 @@
  * a stray storage value never breaks the page.
  */
 
+import type { ProductSort } from '../../api/generated/models/product-sort';
 import type { FilterIdentity } from '../../shared/types/filter-identity';
 
-/** Documented sort modes. Mirrors `listProducts.sort` in openapi.yaml. */
-export type Sort = 'recommended' | 'price_asc' | 'price_desc' | 'name_asc';
+/** Documented sort modes. Re-exported from the generated `ProductSort`
+ *  union (the 2.0.0 contract) so the codec, the toolbar and the facade
+ *  share a single literal-union source. */
+export type Sort = ProductSort;
 
 export const SORT_MODES = [
   'recommended',
+  'newest',
+  'oldest',
+  'popularity',
   'price_asc',
   'price_desc',
   'name_asc',
+  'name_desc',
 ] as const satisfies readonly Sort[];
 
 /** Documented page sizes. Mirrors `listProducts.pageSize`. */
@@ -67,6 +74,7 @@ export interface CatalogQuery {
   readonly q?: string;
   readonly brands?: readonly string[];
   readonly storageGb?: readonly (128 | 256 | 512)[];
+  readonly colors?: readonly string[];
   readonly minPrice?: number;
   readonly maxPrice?: number;
   readonly inStock?: boolean;
@@ -87,6 +95,7 @@ export interface CatalogQuery {
 export interface CatalogFilters {
   readonly brands: readonly string[];
   readonly storageGb: readonly (128 | 256 | 512)[];
+  readonly colors: readonly string[];
   readonly minPrice?: number;
   readonly maxPrice?: number;
   readonly inStock: boolean;
@@ -144,6 +153,7 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
     q?: string;
     brands?: readonly string[];
     storageGb?: readonly (128 | 256 | 512)[];
+    colors?: readonly string[];
     minPrice?: number;
     maxPrice?: number;
     inStock?: boolean;
@@ -179,6 +189,12 @@ export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
       parsed.push(num);
     }
     if (parsed.length > 0) query.storageGb = parsed;
+  }
+
+  const colorsRaw = params.getAll('color');
+  if (colorsRaw.length > 0) {
+    const deduped = dedupePreserveOrder(colorsRaw);
+    if (deduped.length > 0) query.colors = deduped;
   }
 
   const minPriceRaw = params.get('minPrice');
@@ -238,6 +254,7 @@ export const CATALOG_QUERY_KEYS = [
   'q',
   'brand',
   'storageGb',
+  'color',
   'minPrice',
   'maxPrice',
   'inStock',
@@ -252,8 +269,9 @@ export const CATALOG_QUERY_KEYS = [
  * Serialise a `CatalogQuery` to a canonical `URLSearchParams`. Default
  * values (`page=1`, `pageSize=12`, absent `sort`, absent `q`) are
  * omitted so the URL never carries noise. Empty `brands` /
- * `storageGb` arrays are dropped entirely; within each remaining
- * array duplicates collapse to the first-seen entry in input order.
+ * `storageGb` / `colors` arrays are dropped entirely; within each
+ * remaining array duplicates collapse to the first-seen entry in
+ * input order.
  */
 export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
   const params = new URLSearchParams();
@@ -276,6 +294,11 @@ export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
       ordered.push(bucket);
     }
     for (const bucket of ordered) params.append('storageGb', String(bucket));
+  }
+
+  if (query.colors !== undefined && query.colors.length > 0) {
+    const deduped = dedupePreserveOrder(query.colors);
+    for (const code of deduped) params.append('color', code);
   }
 
   if (query.minPrice !== undefined) params.set('minPrice', String(query.minPrice));
@@ -309,6 +332,11 @@ export interface AppliedChip {
  * gives for the symbol it relocates: a query-derived helper belongs in
  * the codec's own module, and a module-private symbol cannot be
  * imported by a test.
+ *
+ * `CatalogPage` wraps this with a `vm().facets`-aware override that
+ * swaps the code label for the facet's human label when the chip is a
+ * colour; the codec itself stays colour-name-agnostic because the
+ * query carries only the code.
  */
 export function buildChips(q: CatalogQuery): readonly AppliedChip[] {
   const chips: AppliedChip[] = [];
@@ -325,6 +353,9 @@ export function buildChips(q: CatalogQuery): readonly AppliedChip[] {
       label: `${String(bucket)} GB`,
       value: bucket,
     });
+  }
+  for (const code of q.colors ?? []) {
+    chips.push({ id: `color:${code}`, name: 'colors', label: code, value: code });
   }
   if (q.minPrice !== undefined) {
     chips.push({
