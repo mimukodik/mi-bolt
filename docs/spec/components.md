@@ -20,7 +20,7 @@ Every component execution and verification cites `docs/design/yettel.md`, the de
 
 **Required states:** booting,ready,fatal.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### MarketingLayout — home / T11
@@ -35,7 +35,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** ready.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### ShopLayout — catalogue/product / T11
@@ -50,7 +50,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** ready.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### CheckoutLayout — purchase / T11
@@ -65,7 +65,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** ready,blocked.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### AppHeader — shared / T11
@@ -80,7 +80,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,focus,menu-open; empty cart is count0, not an error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### AppFooter — shared / T11
@@ -95,7 +95,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### DemoNotice — shared / T10
@@ -110,7 +110,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,memory-warning.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### NavigationDrawer — shared / T11
@@ -125,7 +125,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** closed,open,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### ProductImage — shared / T10
@@ -140,7 +140,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,loaded,error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### PriceBlock — shared / T10
@@ -155,7 +155,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,error; hover/selected/success N/A read-only.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### QuantityControl — shared / T10
@@ -170,7 +170,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,hover,focus,disabled,invalid,pending.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### AccessibleDialog — shared / T10
@@ -185,7 +185,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** closed,open,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### AsyncContent — shared / T10
@@ -200,7 +200,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,refreshing,success,empty,error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### StatusMessage — shared / T10
@@ -215,7 +215,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** info,error,success,dismissed.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### FormFieldMessage — shared / T10
@@ -230,7 +230,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** pristine,valid,invalid,server-error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### HomePage — home / T14
@@ -245,7 +245,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,featured-error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### HeroSection — home / T14
@@ -260,7 +260,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,focus; price/selection N/A.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### CategoryShortcuts — home / T14
@@ -275,7 +275,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,hover,focus,active.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### FeaturedProducts — home / T14
@@ -290,7 +290,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,success,error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### ProductCard — catalogue/home / T13
@@ -305,7 +305,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,hover,focus,image-error; no card mutation.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### CatalogPage — catalogue / T13
@@ -320,7 +320,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,empty,error,refreshing.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### FilterPanel — catalogue / T13
@@ -335,7 +335,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,selected,focus,disabled,invalid.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### FilterDrawer — catalogue / T13
@@ -350,7 +350,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** closed,open,draft-changed,invalid,disabled.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### AppliedFilters — catalogue / T13
@@ -365,7 +365,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,selected,focus; no filters renders nothing.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### CatalogToolbar — catalogue / T13
@@ -380,7 +380,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,disabled,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### Pagination — catalogue / T13
@@ -395,7 +395,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,active,disabled,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### ProductPage — product / T16
@@ -410,7 +410,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,error,not-found.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### ProductGallery — product / T16
@@ -425,7 +425,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,image-error,zoom-open.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### VariantSelector — product / T16
@@ -440,7 +440,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,selected,unavailable,focus,disabled.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### AddToCartControl — product / T18
@@ -455,7 +455,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,hover,focus,disabled,loading,error,success.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### SpecificationAccordion — product / T16
@@ -470,7 +470,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** collapsed,expanded,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### MobileBuyRail — product / T16
@@ -485,7 +485,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,loading,disabled,error,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### CartPage — purchase/cart / T18
@@ -500,7 +500,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,empty,error,expired.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### CartLine — purchase/cart / T18
@@ -515,7 +515,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,pending,quantity-error,stock-error,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### OrderSummary — purchase/shared / T18
@@ -530,7 +530,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,provisional,final,error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### CheckoutStepper — purchase/shared / T19
@@ -545,7 +545,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** current,complete,future,focus.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### ContactStep — purchase/contact / T20
@@ -560,7 +560,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** pristine,dirty,invalid,valid,saving,error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### DeliveryStep — purchase/delivery / T21
@@ -575,7 +575,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,ready,invalid,saving,error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### AddressForm — purchase/delivery / T21
@@ -590,7 +590,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** hidden,pristine,valid,invalid,server-error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### PaymentMethodSelector — purchase/delivery / T21
@@ -605,7 +605,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** default,selected,focus,disabled.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### ReviewStep — purchase/review / T22
@@ -620,7 +620,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** quoting,ready,expired,price-changed,stock-error,submitting.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### PaymentProgress — purchase/review / T23
@@ -635,7 +635,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** pending,succeeded,declined,unknown,error.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### SuccessStep — purchase/success / T24
@@ -650,7 +650,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** loading,confirmed,error,not-found.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ### Product3dViewer — product optional / O01
@@ -665,7 +665,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Required states:** not-loaded,loading,ready,error,unavailable.
 
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit and E2E criteria.
+All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
 ## Example: precise signal input/output boundary

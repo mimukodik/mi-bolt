@@ -193,7 +193,7 @@ unit:
 - `src/app/features/catalog/**`
 - `src/app/features/checkout/**` and `src/app/features/product/**` — the three
   sites listed above are evidence, not scope; do not edit them
-- `docs/**`, `.claude/**`, `scripts/**`, `e2e/**`
+- `docs/**`, `.claude/**`, `scripts/**` (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 Your files are exactly: `src/app/features/cart/cart-mutation-queue.ts`,
 `src/app/features/cart/cart.facade.ts`, `src/app/features/cart/cart.facade.spec.ts`.

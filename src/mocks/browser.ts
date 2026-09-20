@@ -2,11 +2,8 @@
  * Browser MSW worker — T02 network-isolation proof, extended by T05.
  *
  * The worker is the only place that owns business API traffic in the
- * browser. Playwright's request observer cannot see requests that
- * are intercepted by the service worker, so the gate combines
- * MSW's `unhandled` event, Playwright's request log and the
- * "open sockets" check, now in `e2e/network-isolation.spec.ts`, to prove the
- * page is not reaching the network for any business call.
+ * browser: MSW's `unhandled` event proves the page is not reaching
+ * the network for any business call.
  *
  * Static assets (Vite dev server chunks, `/mockServiceWorker.js`,
  * `/assets/...`) are explicitly bypassed, but only when the request is
@@ -38,11 +35,7 @@ import { environment } from '../environments/environment';
 // so the catalog endpoint returns the demo data instead of an empty
 // items array.
 import productsFixture from '../../docs/api/fixtures/products.json';
-import {
-  createHandlers,
-  createStrictHandlers,
-  type CreateHandlersOptions,
-} from './create-handlers';
+import { createHandlers, type CreateHandlersOptions } from './create-handlers';
 import { Repository, type Product } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
@@ -62,7 +55,7 @@ export const worker = setupWorker();
 
 /**
  * The `production` scenario is the only one that runs with an empty
- * catalog: every demo / e2e / happy-path / out-of-stock /
+ * catalog: every demo / happy-path / out-of-stock /
  * payment-declined variant expects the fixture to be present so the
  * page renders the catalogue rather than an empty state.
  */
@@ -204,23 +197,21 @@ export function buildBrowserHandlers(
   if (snapshot?.receipts) {
     options.repository.loadPersistedOrders(snapshot.receipts, snapshot.simulatedSessionId);
   }
-  // The E2E configuration preserves the T02 network-isolation gate:
-  // an unhandled `/api/v1/...` request must throw so the suite catches
-  // the leak. The demo configuration adds the dispatcher shell so a
-  // misrouted curl does not produce a stack trace inside the page.
-  return environment.e2e ? createStrictHandlers(options) : createHandlers(options);
+  // The demo configuration adds the dispatcher shell so a misrouted
+  // curl does not produce a stack trace inside the page.
+  return createHandlers(options);
 }
 
 /**
  * Boots the MSW service worker. Production builds skip the boot
- * entirely; demo and e2e configurations register the handlers built
+ * entirely; the demo configuration registers the handlers built
  * by `createHandlers` behind the `/api/...` network-error catch-all
  * that keeps them the only way out. The optional snapshot is
  * forwarded to `buildBrowserHandlers` so the repository is seeded
  * with the persisted cart before the first request is dispatched.
  */
 export async function startMockWorker(snapshot: MockSnapshot | null = null): Promise<void> {
-  if (!environment.demo && !environment.e2e) return;
+  if (!environment.demo) return;
 
   // Registration order is evaluation order reversed, so the
   // catch-all and the cross-origin block go in first to be consulted

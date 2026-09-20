@@ -224,7 +224,7 @@ unit:
 - `docs/**`
 - `.claude/**`
 - `scripts/**`
-- anything under `e2e/`
+- (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 ## Step 7 — gates
 

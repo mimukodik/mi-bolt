@@ -21,7 +21,7 @@ import { startMockWorker } from '../mocks/browser';
 import { createBrowserPersistence } from '../mocks/persistence';
 import { createRealClock, parseScenarioFromLocation } from '../mocks/scenarios';
 
-/** Tracks the last prepared scenario for diagnostics and E2E hooks. */
+/** Tracks the last prepared scenario for diagnostics. */
 let preparedScenario: string | null = null;
 
 /**
@@ -51,7 +51,7 @@ export async function startMocks(): Promise<void> {
     // dropped from the production chunk.
     throw new Error('MSW bootstrap called in production');
   }
-  if (!environment.demo && !environment.e2e) {
+  if (!environment.demo) {
     preparedScenario = 'production';
     return;
   }

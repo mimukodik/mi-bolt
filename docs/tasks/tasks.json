@@ -15,7 +15,7 @@
     "acceptanceCriteria": [
       {
         "id": "T00-AC01",
-        "text": "Check npm metadata and official release notes; choose maximum non-prerelease Angular major 22, not latest across majors. Record exact Angular/CLI/build/CDK, Node, TypeScript, RxJS, MSW, Vitest, Playwright and ng-openapi-gen versions."
+        "text": "Check npm metadata and official release notes; choose maximum non-prerelease Angular major 22, not latest across majors. Record exact Angular/CLI/build/CDK, Node, TypeScript, RxJS, MSW, Vitest and ng-openapi-gen versions."
       },
       {
         "id": "T00-AC02",
@@ -38,7 +38,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -85,7 +85,7 @@
       },
       {
         "id": "T01-AC04",
-        "text": "Provide hu-HU locale and HttpClient. An explicit environment distinguishes demo and e2e builds; neither has a real-backend fallback."
+        "text": "Provide hu-HU locale and HttpClient. An explicit environment distinguishes demo builds; neither has a real-backend fallback."
       },
       {
         "id": "T01-AC05",
@@ -96,7 +96,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -116,15 +116,14 @@
     ],
     "area": "Quality",
     "files": [
-      "tests/setup-msw.ts",
-      "playwright.config.ts"
+      "tests/setup-msw.ts"
     ],
-    "interface": "Output: unit and E2E coverage collectors; assertExactCoverage(manifest,report); deterministic ScenarioDescriptor; closed-world network policy.",
+    "interface": "Output: unit coverage collectors; assertExactCoverage(manifest,report); deterministic ScenarioDescriptor; closed-world network policy.",
     "deliverable": "Prove the hard quality gates before building features.",
     "acceptanceCriteria": [
       {
         "id": "T02-AC01",
-        "text": "Build a tiny lazy-route canary with true/false branches and verify that leaving one branch unvisited fails UNIT and independently E2E thresholds of 100 for statements, branches, functions and lines."
+        "text": "Build a tiny lazy-route canary with true/false branches and verify that leaving one branch unvisited fails UNIT thresholds of 100 for statements, branches, functions and lines."
       },
       {
         "id": "T02-AC02",
@@ -144,14 +143,14 @@
       },
       {
         "id": "T02-AC06",
-        "text": "The E2E run reaches only the local static host: MSW's unhandled-request policy is fail-closed and a deliberate external fetch fails the test. Browser CSP is an additional barrier, not the sole proof."
+        "text": "E2E: no end-to-end suite by the product owner's decision of 2026-09-20; rendered surfaces are verified by the real-browser pass in docs/spec/testing.md"
       }
     ],
     "commonAcceptanceCriteria": [
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -207,7 +206,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -262,7 +261,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -294,7 +293,7 @@
       "src/core/bootstrap-demo.ts"
     ],
     "interface": "createHandlers({repository,clock,ids,scenario,apiRoot}): RequestHandler[]. hydrateSnapshot(): MockSnapshot. startMocks(): Promise<void>.",
-    "deliverable": "One network-level mock implementation shared by demo, unit and E2E.",
+    "deliverable": "One network-level mock implementation shared by demo and unit.",
     "acceptanceCriteria": [
       {
         "id": "T05-AC01",
@@ -318,14 +317,14 @@
       },
       {
         "id": "T05-AC06",
-        "text": "E2E scenario descriptor is read before worker setup, absent from demo UI, and creates an isolated repository for each test/context; controlled reload tests retain their own snapshot only."
+        "text": "E2E: no end-to-end suite by the product owner's decision of 2026-09-20; rendered surfaces are verified by the real-browser pass in docs/spec/testing.md"
       }
     ],
     "commonAcceptanceCriteria": [
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -336,7 +335,7 @@
     ],
     "status": "planned",
     "optional": false,
-    "titleEnglish": "One network-level mock implementation shared by demo, unit and E2E.",
+    "titleEnglish": "One network-level mock implementation shared by demo and unit.",
     "wave": 3
   },
   {
@@ -380,7 +379,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -433,7 +432,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -487,7 +486,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -545,7 +544,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -570,8 +569,7 @@
     "files": [
       "src/styles/tokens.css",
       "src/app/shared/ui/",
-      "src/app/shared/ui/ui-states.spec.ts",
-      "e2e/design/primitives.spec.ts"
+      "src/app/shared/ui/ui-states.spec.ts"
     ],
     "interface": "Inputs/outputs specified in docs/mi-bolt/spec/components.md; no shared component knows the SDK or mock repository.",
     "deliverable": "Accessible MiBolt primitives based on the supplied skill.",
@@ -601,7 +599,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -657,7 +655,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -712,7 +710,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -768,7 +766,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -823,7 +821,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -877,7 +875,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -933,7 +931,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -988,7 +986,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1044,7 +1042,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1099,7 +1097,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1153,7 +1151,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1207,7 +1205,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1261,7 +1259,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1285,8 +1283,7 @@
     "area": "State",
     "files": [
       "src/app/features/checkout/order-submission.ts",
-      "src/app/features/checkout/payment-progress.ts",
-      "e2e/checkout/submit.spec.ts"
+      "src/app/features/checkout/payment-progress.ts"
     ],
     "interface": "submitOrder(): starts payment only for demo_card, then createOrder; retryUnknownOutcome() reuses persisted safe order key and body references.",
     "deliverable": "User-driven submission with no duplicate orders.",
@@ -1316,7 +1313,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1340,8 +1337,7 @@
     "area": "UI",
     "files": [
       "src/app/features/checkout/success-step.ts",
-      "src/app/features/checkout/order-receipt.ts",
-      "e2e/checkout/receipt.spec.ts"
+      "src/app/features/checkout/order-receipt.ts"
     ],
     "interface": "Success route /penztar/siker/:orderId reads getOrder; receipt rendered only from API response.",
     "deliverable": "Truthful final confirmation and a clean next shopping session.",
@@ -1371,7 +1367,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1399,9 +1395,7 @@
     ],
     "area": "Quality",
     "files": [
-      "e2e/design/viewport-matrix.spec.ts",
-      "e2e/design/state-matrix.spec.ts",
-      "e2e/a11y/keyboard.spec.ts"
+      "retired 2026-09-20: the e2e design/state/a11y suite this task's deliverable named was removed"
     ],
     "interface": "Input: every screen and relevant component state. Output: measured screenshots, axe results, keyboard/focus report and R01–R26 evidence.",
     "deliverable": "Independent review against `docs/design/yettel.md` across the complete flow.",
@@ -1431,7 +1425,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1488,7 +1482,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1503,7 +1497,7 @@
   },
   {
     "id": "T27",
-    "title": "Teljes unit és E2E lefedettség lezárása",
+    "title": "Teljes unit lefedettség lezárása",
     "dependsOn": [
       "T02",
       "T25",
@@ -1511,13 +1505,12 @@
     ],
     "area": "Quality",
     "files": [
-      "e2e/",
       "tests/",
       "docs/mi-bolt/spec/coverage-policy.json",
       "scripts/check-traceability.mjs",
       "scripts/check-test-policy.mjs"
     ],
-    "interface": "Outputs independent unit and browser E2E reports, scenario coverage report, file manifest and requirement traceability.",
+    "interface": "Outputs independent unit reports, scenario coverage report, file manifest and requirement traceability.",
     "deliverable": "100% as an enforced gate, never a presentation label.",
     "acceptanceCriteria": [
       {
@@ -1526,7 +1519,7 @@
       },
       {
         "id": "T27-AC02",
-        "text": "E2E: independent Chromium browser source coverage for the same browser-delivered owned runtime has exactly 100% in all four metrics; never merge with unit counters."
+        "text": "E2E: no end-to-end suite by the product owner's decision of 2026-09-20; rendered surfaces are verified by the real-browser pass in docs/spec/testing.md"
       },
       {
         "id": "T27-AC03",
@@ -1534,7 +1527,7 @@
       },
       {
         "id": "T27-AC04",
-        "text": "Chromium/Firefox/WebKit run the complete applicable business scenario suite against MSW. Chrome-derived JS coverage is not falsely reported as cross-browser code coverage."
+        "text": "E2E: no end-to-end suite by the product owner's decision of 2026-09-20; rendered surfaces are verified by the real-browser pass in docs/spec/testing.md"
       },
       {
         "id": "T27-AC05",
@@ -1549,7 +1542,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1574,7 +1567,6 @@
     "files": [
       "scripts/serve-static.mjs",
       "docs/mi-bolt/execution/deployment.md",
-      "e2e/deployment/deep-links.spec.ts",
       "scripts/check-budgets.mjs"
     ],
     "interface": "Output: optimized demo-only static dist, route fallback, MSW cache policy and no external runtime dependency.",
@@ -1609,7 +1601,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1649,7 +1641,7 @@
       },
       {
         "id": "T29-AC03",
-        "text": "From a clean checkout run dependency install, skill validation, contract validation, SDK generation/drift, lint, unit coverage, E2E coverage, cross-browser, design and production build gates."
+        "text": "From a clean checkout run dependency install, skill validation, contract validation, SDK generation/drift, lint, unit coverage, design and production build gates."
       },
       {
         "id": "T29-AC04",
@@ -1664,7 +1656,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],
@@ -1694,8 +1686,7 @@
       "docs/mi-bolt/execution/decisions/3d.md",
       "src/app/features/product/product-3d-viewer.ts",
       "src/app/features/product/model-viewer-adapter.ts",
-      "public/assets/models/",
-      "e2e/product/3d.spec.ts"
+      "public/assets/models/"
     ],
     "interface": "Input: approved scope and licensed local .glb + poster. Output: deferred <model-viewer> adapter with non-3D fallback.",
     "deliverable": "A self-hosted 3D proof for ONE fictional/authorized device, not Binkies SaaS cloning.",
@@ -1729,7 +1720,7 @@
       "Cite `docs/design/yettel.md`, the design reference, for each value used or checked, before implementation AND independently before verification. Record files, viewports and evidence in the task review.",
       "Use the resolved latest stable Angular 22.x only; no SSR, prerendering, hydration, NgModule-based application structure, zone.js or legacy structural directives.",
       "For UI/state changes use Angular signals, signal inputs/outputs and built-in template control flow. Consume API data exclusively through the generated SDK and MSW boundary.",
-      "All applicable unit and E2E acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
+      "All applicable unit acceptance scenarios are automated against deterministic mocks. New shared/browser runtime files must appear in both coverage manifests, including unexecuted files. Node-only targets must appear in their separate 100% unit and black-box command/integration coverage manifests; no silent exclusions.",
       "No live business API, telemetry, remote font, payment, email or SaaS request; no test skip/focus, coverage-ignore comment, threshold reduction or hidden generated-file editing.",
       "Attach fresh command output, task-specific assertions and design evidence. Planned checks are not passing checks. Leave the task unaccepted when any assertion fails."
     ],

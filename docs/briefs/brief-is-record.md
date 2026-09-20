@@ -119,7 +119,7 @@ of this unit:
 - `src/app/shared/shell/**`
 - `src/app/features/home/hero.html`, `hero.scss`
 - `scripts/coder-agent/**`
-- anything under `e2e/`
+- (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 ## Step 5 — gates
 

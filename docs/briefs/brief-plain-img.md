@@ -176,7 +176,7 @@ you found.
 - `src/app/features/cart/**` except the one comment in Step 3
 - `src/app/features/catalog/**`, `src/app/features/checkout/**`
 - `src/app/layouts/**` — another unit owns the checkout centreline
-- `docs/**`, `.claude/**`, `scripts/**`, `e2e/**`
+- `docs/**`, `.claude/**`, `scripts/**` (there is no end-to-end suite in this project by decision, 2026-09-20)
 
 If the change makes another file fail to compile, **report it rather than
 editing that file**. A code review proposing a fix outside your files is
