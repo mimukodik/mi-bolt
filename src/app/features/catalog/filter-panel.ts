@@ -6,6 +6,7 @@ import type { FacetValue } from '../../api/generated/models/facet-value';
 
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
+import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 /**
  * What a draft mirrors from the applied query: the one field it shows,
@@ -173,7 +174,8 @@ export class FilterPanel {
   // ---------------------------------------------------------------------------
 
   onSearchInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+    if (!isHTMLInputElement(event.target)) return;
+    const value = event.target.value;
     this.searchDraft.set(value);
     // Deliberately NOT gated on priceError(): `emit` composes the next
     // query from the APPLIED value, so a rejected price range cannot
@@ -183,7 +185,8 @@ export class FilterPanel {
   }
 
   onMinInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+    if (!isHTMLInputElement(event.target)) return;
+    const value = event.target.value;
     this.minDraft.set(value);
     if (this.priceError() !== null) return;
     const parsed = this.parsePrice(value);
@@ -191,7 +194,8 @@ export class FilterPanel {
   }
 
   onMaxInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+    if (!isHTMLInputElement(event.target)) return;
+    const value = event.target.value;
     this.maxDraft.set(value);
     if (this.priceError() !== null) return;
     const parsed = this.parsePrice(value);

@@ -45,6 +45,7 @@ import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import { isHTMLInputElement } from '../../shared/utils/event-target';
 import { OrderSummary } from '../cart/order-summary';
 import { TermsDialog } from './terms-dialog';
 
@@ -285,7 +286,8 @@ export class ReviewStep {
   }
 
   onAcceptedTermsChange(event: Event): void {
-    this.acceptedTerms.set((event.target as HTMLInputElement).checked);
+    if (!isHTMLInputElement(event.target)) return;
+    this.acceptedTerms.set(event.target.checked);
   }
 
   onAcceptedTermsBlur(): void {
@@ -293,7 +295,8 @@ export class ReviewStep {
   }
 
   onAcknowledgedSimulationChange(event: Event): void {
-    this.acknowledgedSimulation.set((event.target as HTMLInputElement).checked);
+    if (!isHTMLInputElement(event.target)) return;
+    this.acknowledgedSimulation.set(event.target.checked);
   }
 
   onAcknowledgedSimulationBlur(): void {

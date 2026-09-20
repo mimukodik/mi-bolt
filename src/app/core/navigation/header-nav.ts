@@ -13,6 +13,7 @@ import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/r
 
 import { CartCountFacade } from './cart-count-facade';
 import { MobileDrawer } from './mobile-drawer';
+import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 /**
  * Variant of the global header rendered by `AppShell`.
@@ -108,9 +109,8 @@ export class HeaderNav {
 
   /** Capture the typed search value into the draft signal. */
   onSearchDraftInput(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    if (target === null) return;
-    this.searchDraft.set(target.value);
+    if (!isHTMLInputElement(event.target)) return;
+    this.searchDraft.set(event.target.value);
   }
 
   /** Submit the search draft to the catalog route. Empty drafts are

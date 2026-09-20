@@ -6,6 +6,7 @@ import type { FacetValue } from '../../api/generated/models/facet-value';
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
+import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 /**
  * T13 — mobile filter drawer (FilterDrawer).
@@ -143,11 +144,13 @@ export class FilterDrawer {
   }
 
   onMinInput(event: Event): void {
-    this.draftMin.set((event.target as HTMLInputElement).value);
+    if (!isHTMLInputElement(event.target)) return;
+    this.draftMin.set(event.target.value);
   }
 
   onMaxInput(event: Event): void {
-    this.draftMax.set((event.target as HTMLInputElement).value);
+    if (!isHTMLInputElement(event.target)) return;
+    this.draftMax.set(event.target.value);
   }
 
   applyDraft(): void {

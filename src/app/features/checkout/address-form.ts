@@ -34,6 +34,7 @@ import {
   FormFieldMessage,
   type FieldError,
 } from '../../shared/ui/form-field-message/form-field-message';
+import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 interface AddressLike {
   readonly city: string;
@@ -225,26 +226,26 @@ export class AddressForm {
   }
 
   onPostalInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.postalCode.set(input.value);
+    if (!isHTMLInputElement(event.target)) return;
+    this.postalCode.set(event.target.value);
     this.propagate();
   }
 
   onCityInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.city.set(input.value);
+    if (!isHTMLInputElement(event.target)) return;
+    this.city.set(event.target.value);
     this.propagate();
   }
 
   onLine1Input(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.line1.set(input.value);
+    if (!isHTMLInputElement(event.target)) return;
+    this.line1.set(event.target.value);
     this.propagate();
   }
 
   onLine2Input(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.line2.set(input.value);
+    if (!isHTMLInputElement(event.target)) return;
+    this.line2.set(event.target.value);
     this.propagate();
   }
 
