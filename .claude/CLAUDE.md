@@ -442,10 +442,6 @@ launch, which is why the SessionStart hook does not re-inject them.
   wording and formatting rules, the two comments finished work needs,
   attachments and sub-issues.
 
-## Design skill mandate
+## Design authority
 
-The `mi-bolt-design` skill is mandatory for every implementation and every verification step in this workspace, including nonvisual work such as build, API and test-infrastructure tasks. The skill is installed separately and is not part of this repository's documentation; the resolved path, approved version and SHA-256 are recorded in `docs/mi-bolt/execution/skill-location.json`, which is the only source of truth for those values.
-
-The skill's `## 26 Verifiable Rules` table (R01–R26) is the audit checklist for every implementation. Each task records the applicability and outcome of every relevant R-rule in its review file under `docs/mi-bolt/execution/tasks/Txx.md`. A nonvisual task may mark individual visual R-rules N/A, but each N/A carries a one-sentence reason in the same file; silent omission is not a reason.
-
-Do not copy, embed, paraphrase or rebuild the skill in this repository. The installed copy is the only authority.
+`docs/design/yettel.md` is the design reference for every rendered surface: colour tokens, typography, radii, the button, card, filter, header and gallery recipes with the yettel.hu selectors they came from, and the feature inventories against the backend contract. Every implementation and every review of a rendered surface cites it for each value used or checked, and a value it does not carry is measured on `docs/design/yettel/css/portal.css` and added there first. The `mi-bolt-design` skill, its R01–R26 audit table and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20 (user, in English: "retire it, the yettel document"); nothing cites them any more.
