@@ -36,8 +36,12 @@ import {
 import { isRecord } from '../is-record';
 import { type Product, Repository } from '../repository';
 
-import { buildTraceId, CartStore, type ProblemBody } from './cart-store';
+import type { Problem } from '../../app/api/generated/models/problem';
+import { buildTraceId, CartStore } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
+
+/** Cross-handler reference to the cart store; consumed by the checkout and order mocks. */
+export const cartStore: { current: CartStore | null } = { current: null };
 
 const VARIANTS: Product['variants'] = [
   {
@@ -198,9 +202,9 @@ function outcomeResponse(outcome: ReturnType<CartStore['get']>): HttpResponse<De
 function invalidRequest(
   options: CreateHandlersOptions,
   detail: string,
-  params: Readonly<Record<string, unknown>>,
+  params: Record<string, unknown>,
 ): HttpResponse<DefaultBodyType> {
-  const body: ProblemBody = {
+  const body: Problem = {
     type: 'urn:mi-bolt:problem:invalid-request',
     title: 'Invalid request',
     status: 400,
@@ -283,6 +287,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   ensureFixture(repository);
 
   const store = new CartStore(options, (id) => requireCatalog().getVariant(id));
+  cartStore.current = store;
 
   const getCart: RequestHandler = http.get('*/api/v1/cart', ({ request }) => {
     const sessionId = request.headers.get('X-Demo-Session');
