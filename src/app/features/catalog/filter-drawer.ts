@@ -1,7 +1,8 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
-import type { FacetValue } from '../../api/generated/models/facet-value';
+import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
+import type { Facets } from '../../api/generated/models/facets';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { Button } from '../../shared/ui/button/button';
@@ -40,11 +41,9 @@ export class FilterDrawer {
   /** Applied filters (the source of truth). */
   readonly applied = input.required<CatalogQuery>();
 
-  /** Live facets. */
-  readonly facets = input<{
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  } | null>(null);
+  /** Live facets — full `Facets` object so the colour group can read
+   *  `colors` straight off the generated model. */
+  readonly facets = input<Facets | null>(null);
 
   /** Whether the drawer is mounted. */
   readonly opened = input<boolean>(false);
@@ -64,6 +63,7 @@ export class FilterDrawer {
 
   private readonly draftBrands = signal<readonly string[]>([]);
   private readonly draftStorage = signal<readonly (128 | 256 | 512)[]>([]);
+  private readonly draftColors = signal<readonly string[]>([]);
   private readonly draftInStock = signal<boolean>(false);
   private readonly draftFiveG = signal<boolean>(false);
   private readonly draftMin = signal<string>('');
@@ -73,7 +73,10 @@ export class FilterDrawer {
   readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => [128, 256, 512]);
 
   /** Brand facets, falling back to an empty list when none are present. */
-  readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
+  readonly brandFacets = computed(() => this.facets()?.brands ?? []);
+
+  /** Colour facets, falling back to an empty list when none are present. */
+  readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
 
   /** Element that should regain focus when the dialog closes. The parent
    *  passes its own trigger button through this input so WCAG focus
@@ -110,6 +113,7 @@ export class FilterDrawer {
       const a = this.applied();
       this.draftBrands.set([...(a.brands ?? [])]);
       this.draftStorage.set([...(a.storageGb ?? [])]);
+      this.draftColors.set([...(a.colors ?? [])]);
       this.draftInStock.set(a.inStock === true);
       this.draftFiveG.set(a.is5g === true);
       this.draftMin.set(a.minPrice === undefined ? '' : String(a.minPrice));
@@ -133,6 +137,16 @@ export class FilterDrawer {
       ? current.filter((b) => b !== bucket)
       : [...current, bucket];
     this.draftStorage.set(next);
+  }
+
+  toggleColor(code: string): void {
+    const trimmed = code.trim();
+    if (trimmed.length === 0) return;
+    const current = this.draftColors();
+    const next = current.includes(trimmed)
+      ? current.filter((c) => c !== trimmed)
+      : [...current, trimmed];
+    this.draftColors.set(next);
   }
 
   toggleInStock(): void {
@@ -161,6 +175,7 @@ export class FilterDrawer {
       ...this.applied(),
       brands: this.draftBrands().length > 0 ? this.draftBrands() : undefined,
       storageGb: this.draftStorage().length > 0 ? this.draftStorage() : undefined,
+      colors: this.draftColors().length > 0 ? this.draftColors() : undefined,
       inStock: this.draftInStock() ? true : undefined,
       is5g: this.draftFiveG() ? true : undefined,
       minPrice: min ?? undefined,
@@ -192,6 +207,10 @@ export class FilterDrawer {
 
   isStorageSelected(bucket: 128 | 256 | 512): boolean {
     return this.draftStorage().includes(bucket);
+  }
+
+  isColorSelected(code: string): boolean {
+    return this.draftColors().includes(code);
   }
 
   isInStockSelected(): boolean {

@@ -32,9 +32,6 @@ const CONTRACT_PARAMETERS = [
   'pageSize',
 ] as const;
 
-type _ContractParameter = (typeof CONTRACT_PARAMETERS)[number];
-void 0 as unknown as _ContractParameter;
-
 /** Result of parsing the request's `URLSearchParams`. */
 export type ParseListProductsResult =
   { ok: true; filter: CatalogFilter } | { ok: false; error: FilterError };
@@ -42,10 +39,7 @@ export type ParseListProductsResult =
 /** Discriminated union of every parse-time failure. */
 export type FilterError =
   | { kind: 'unknown-parameter'; parameter: string }
-  | { kind: 'invalid-integer'; parameter: string }
-  | { kind: 'invalid-boolean'; parameter: string }
   | { kind: 'invalid-storage'; parameter: string }
-  | { kind: 'invalid-sort'; parameter: string }
   | { kind: 'invalid-value'; parameter: string; detail: string };
 
 /** Filter shape the handler passes to the pure predicates. */
@@ -107,7 +101,7 @@ export function parseListProductsParams(params: URLSearchParams): ParseListProdu
   };
 
   for (const key of params.keys()) {
-    if (!(CONTRACT_PARAMETERS as readonly string[]).includes(key)) {
+    if (!CONTRACT_PARAMETERS.some((k) => k === key)) {
       return {
         ok: false,
         error: {
@@ -275,12 +269,15 @@ function nameKey(entry: CatalogEntry): string {
   return entry.nameKey;
 }
 
-/** True when the variant-level color filter accepts this entry. */
+/**
+ * True when the variant-level color filter accepts this entry. The entry
+ * passes if any color option at this storage matches the requested code:
+ * `entry.colors` is built from `colorOrder` filtered by variants at this
+ * storage, so the displayed variant's option is included whenever its
+ * colorCode is in `colorOrder` (which it is for every variant).
+ */
 function passesColorFilter(entry: CatalogEntry, colors: readonly string[]): boolean {
   if (colors.length === 0) return true;
-  // The displayed variant must pass the color filter.
-  if (colors.includes(entry.variant.colorCode)) return true;
-  // And the entry must have at least one matching color option.
   return entry.colors.some((c) => colors.includes(c.colorCode));
 }
 

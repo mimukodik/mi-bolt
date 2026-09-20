@@ -35,7 +35,7 @@
       ></app-catalog-toolbar>
 
       <app-applied-filters
-        [query]="facade.query()"
+        [chips]="appliedChips()"
         (filterRemoved)="onChipRemoved($event)"
         (cleared)="onClearAll()"
       ></app-applied-filters>

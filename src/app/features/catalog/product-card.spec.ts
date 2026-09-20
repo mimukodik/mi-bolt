@@ -1,7 +1,7 @@
 /**
  * T13: ProductCard atomic view-model (AC04).
  *
- * The card is purely presentational. It receives one ProductSummary and
+ * The card is purely presentational. It receives one CatalogItem and
  * renders the catalog atomic view: image (4:3, no crop), product name,
  * up to two highlights, the matching variant's color/storage label,
  * the whole-HUF one-time price and an outlined "Részletek" link that
@@ -26,8 +26,8 @@ import { provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import type { ProductSummary } from '../../api/generated/models/product-summary';
-import type { Variant } from '../../api/generated/models/variant';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { ColorOption } from '../../api/generated/models/color-option';
 import type { Money } from '../../shared/ui/price-block/price-block';
 
 import { ProductCard } from './product-card';
@@ -92,11 +92,7 @@ function money(amount: number): Money {
   return { amount, currency: 'HUF' };
 }
 
-function makeImage(id: string, src: string, alt: string): Variant['images'][number] {
-  return { id, src, alt, width: 320, height: 400 };
-}
-
-function makeSummary(opts: {
+function makeItem(opts: {
   readonly id: string;
   readonly slug: string;
   readonly brand?: string;
@@ -108,26 +104,21 @@ function makeSummary(opts: {
   readonly availability?: 'in_stock' | 'out_of_stock';
   readonly imageSrc?: string;
   readonly is5g?: boolean;
-}): ProductSummary {
+}): CatalogItem {
   const colorCode = opts.colorName ? opts.colorName.toLowerCase() : 'graphite';
   const imageId = `${opts.id}-front`;
   const storageVal = opts.storageGb ?? 256;
-  const variant: Variant = {
-    id: `${opts.id}-${String(storageVal)}-${colorCode}`,
+  const variantId = `${opts.id}-${String(storageVal)}-${colorCode}`;
+  const variantSlug = `${opts.slug}-${colorCode}-${String(storageVal)}`;
+  const price = money(opts.price ?? 339_990);
+  const displayedColor: ColorOption = {
     colorCode,
     colorName: opts.colorName ?? 'Grafit',
     swatchHex: '#343B43',
-    storageGb: storageVal,
-    price: money(opts.price ?? 339_990),
+    variantId,
+    variantSlug,
+    price,
     availability: opts.availability ?? 'in_stock',
-    maxQuantity: 5,
-    images: [
-      makeImage(
-        imageId,
-        opts.imageSrc ?? `/assets/products/${colorCode}-front.webp`,
-        `${opts.name}, ${opts.colorName ?? 'Grafit'}, ${String(storageVal)} GB`,
-      ),
-    ],
   };
   return {
     id: opts.id,
@@ -135,9 +126,22 @@ function makeSummary(opts: {
     brand: opts.brand ?? 'MiBolt Demo',
     name: opts.name,
     highlights: opts.highlights ? [...opts.highlights] : ['6,7″ kijelző', '50 MP kamera'],
-    defaultVariant: variant,
     is5g: opts.is5g ?? true,
-    isDemo: true,
+    releasedAt: '2026-01-01',
+    storageGb: storageVal,
+    variantId,
+    variantSlug,
+    price,
+    availability: opts.availability ?? 'in_stock',
+    maxQuantity: 5,
+    image: {
+      id: imageId,
+      src: opts.imageSrc ?? `/assets/products/${colorCode}-front.webp`,
+      alt: `${opts.name}, ${opts.colorName ?? 'Grafit'}, ${String(storageVal)} GB`,
+      width: 320,
+      height: 400,
+    },
+    colors: [displayedColor],
   };
 }
 
@@ -146,8 +150,8 @@ function makeSummary(opts: {
   template: `<app-product-card [product]="product()" />`,
 })
 class HostComponent {
-  readonly product = signal<ProductSummary>(
-    makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G' }),
+  readonly product = signal<CatalogItem>(
+    makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G' }),
   );
 }
 
@@ -204,7 +208,7 @@ describe('T13-AC04 ProductCard', () => {
   it('renders the whole-HUF one-time price and the explicit one-time label', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339990 }),
+      makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339990 }),
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
@@ -218,7 +222,7 @@ describe('T13-AC04 ProductCard', () => {
   it('renders the matching variant color label and storage bucket together', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({
+      makeItem({
         id: 'p-02',
         slug: 'demo-air-5g',
         name: 'Demo Air 5G',
@@ -241,11 +245,40 @@ describe('T13-AC04 ProductCard', () => {
     expect(css).toContain('border'); // outlined look: border on the CTA
   });
 
-  it('navigates to the product detail route with the default variant id', () => {
-    const { fixture } = setup();
+  it('navigates to the product detail route with the matching variant id', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-01',
+        slug: 'demo-one-5g',
+        name: 'Demo One 5G',
+        colorName: 'Grafit',
+        storageGb: 256,
+      }),
+    );
+    fixture.detectChanges();
     const link = queryAnchor(getRootElement(fixture), '[data-testid="product-card-cta"]');
-    expect(link.getAttribute('href')).toContain('/telefonok/demo-one-5g');
-    expect(link.getAttribute('href')).toContain('variant=');
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toContain('/telefonok/demo-one-5g');
+    expect(href).toContain('variant=p-01-256-graphite');
+  });
+
+  it("the details link carries the item's variantId as the variant matrix parameter (MIM-210)", () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-07',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Arany',
+        storageGb: 512,
+      }),
+    );
+    fixture.detectChanges();
+    const item = host.product();
+    const link = queryAnchor(getRootElement(fixture), '[data-testid="product-card-cta"]');
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toContain(`variant=${item.variantId}`);
   });
 
   it('falls back to the named image-fallback when the photo errors (no invented device)', () => {
@@ -262,7 +295,7 @@ describe('T13-AC04 ProductCard', () => {
   it('limits the rendered highlights to at most two', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({
+      makeItem({
         id: 'p-03',
         slug: 'demo-pro-5g',
         name: 'Demo Pro 5G',
@@ -281,7 +314,7 @@ describe('T13-AC04 ProductCard', () => {
   it('FIX-35: carries a DEMÓTERMÉK tag and never renders the brand name', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({ id: 'p-04', slug: 'demo-lite-5g', name: 'Demo Lite 5G', brand: 'MiBolt Demo' }),
+      makeItem({ id: 'p-04', slug: 'demo-lite-5g', name: 'Demo Lite 5G', brand: 'MiBolt Demo' }),
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);

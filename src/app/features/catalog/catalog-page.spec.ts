@@ -40,7 +40,7 @@ import { CatalogPage } from './catalog-page';
 import { AsyncContent } from '../../shared/ui/async-content/async-content';
 import type { Variant } from '../../api/generated/models/variant';
 import type { ProductPage as ProductPageDTO } from '../../api/generated/models/product-page';
-import type { ProductSummary } from '../../api/generated/models/product-summary';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Money } from '../../shared/ui/price-block/price-block';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
@@ -131,6 +131,7 @@ function buildVariant(
   const colorCode = colorName.toLowerCase();
   return {
     id,
+    slug: `${productId}-${colorCode}-${String(storageGb)}`,
     colorCode,
     colorName,
     swatchHex: '#343B43',
@@ -144,24 +145,42 @@ function buildVariant(
   };
 }
 
-function buildSummary(
+function buildItem(
   id: string,
   brand: string,
   name: string,
   price: number,
   is5g: boolean,
   storageGb: 128 | 256 | 512,
-): ProductSummary {
+): CatalogItem {
   const variant = buildVariant(`${id}-${String(storageGb)}`, id, 'Grafit', storageGb, price);
+  const productSlug = id;
   return {
     id,
-    slug: id,
+    slug: productSlug,
     brand,
     name,
     highlights: ['6,7" kijelző'],
-    defaultVariant: variant,
     is5g,
-    isDemo: true,
+    releasedAt: '2026-01-01',
+    storageGb,
+    variantId: variant.id,
+    variantSlug: variant.slug,
+    price: variant.price,
+    availability: variant.availability,
+    maxQuantity: variant.maxQuantity,
+    image: variant.images[0],
+    colors: [
+      {
+        colorCode: variant.colorCode,
+        colorName: variant.colorName,
+        swatchHex: variant.swatchHex,
+        variantId: variant.id,
+        variantSlug: variant.slug,
+        price: variant.price,
+        availability: variant.availability,
+      },
+    ],
   };
 }
 
@@ -382,7 +401,7 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
 }
 
 function successPage(
-  items: readonly ProductSummary[],
+  items: readonly CatalogItem[],
   total: number,
   page = 1,
   pageSize: 12 | 24 = 12,
@@ -392,11 +411,19 @@ function successPage(
     total,
     page,
     pageSize,
+    totalPages: Math.ceil(total / pageSize),
     facets: {
       brands: [
         { value: 'MiBolt Demo', label: 'MiBolt Demo', count: items.length },
         { value: 'Sample', label: 'Sample', count: 0 },
       ],
+      colors: [{ value: 'graphite', label: 'Grafit', count: items.length, swatchHex: '#343B43' }],
+      inStock: items.length,
+      is5g: items.length,
+      priceRange: {
+        min: { amount: 100000, currency: 'HUF' },
+        max: { amount: 500000, currency: 'HUF' },
+      },
       storageGb: [
         { value: '128', label: '128 GB', count: 1 },
         { value: '256', label: '256 GB', count: 1 },
@@ -434,8 +461,8 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     // `[data-testid="catalog-grid"]` container.
     const harness = await setupHarness();
     const items = [
-      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
-      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
+      buildItem('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
     ];
     harness.respond(successPage(items, 2));
     await harness.waitForStatus('success');
@@ -461,7 +488,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     // alongside every result still rendering inside the shared
     // `[data-testid="catalog-grid"]` container.
     const harness = await setupHarness();
-    const items = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
+    const items = [buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
     harness.respond(successPage(items, 1));
     await harness.waitForStatus('success');
     const root = getRootElement(harness.fixture);
@@ -513,7 +540,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     expect(harness.facade.vm().status).toBe('loading');
     expect(harness.facade.vm().items).toEqual([]);
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     expect(harness.facade.vm().items.length).toBe(1);
@@ -556,7 +583,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     // must carry at least one MiBolt Demo item for the button under
     // test to be enabled.
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     harness.captured.length = 0;
@@ -630,7 +657,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
   it('renders one removable applied chip per active filter', async () => {
     const harness = await setupHarness({ brand: 'MiBolt Demo', inStock: 'true' });
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     const root = getRootElement(harness.fixture);
@@ -705,8 +732,8 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
   it('renders the live result count from the backend total', async () => {
     const harness = await setupHarness();
     const items = [
-      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
-      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
+      buildItem('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
     ];
     harness.respond(successPage(items, 16));
     await harness.waitForStatus('success');
@@ -744,7 +771,7 @@ describe('T13-AC03 mobile filter drawer', () => {
     // response must carry a MiBolt Demo item for the draft toggle below
     // to be enabled.
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     harness.captured.length = 0;
@@ -789,7 +816,7 @@ describe('T13-AC03 mobile filter drawer', () => {
   it('Cancel discards the draft: the URL stays as the prior state', async () => {
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     harness.captured.length = 0;
@@ -867,8 +894,8 @@ describe('T13-AC05 distinct visual states', () => {
   it('default state renders the result grid with one or more product cards', async () => {
     const harness = await setupHarness();
     const items = [
-      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
-      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
+      buildItem('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
     ];
     harness.respond(successPage(items, 2));
     await harness.waitForStatus('success');
@@ -932,7 +959,7 @@ describe('T13-AC05 distinct visual states', () => {
 
   it('missing-image state falls back to the named ProductImage fallback (no invented device)', async () => {
     const harness = await setupHarness();
-    const items = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
+    const items = [buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
     harness.respond(successPage(items, 1));
     await harness.waitForStatus('success');
     const photo = queryImage(getRootElement(harness.fixture), '[data-testid="image-photo"]');
@@ -1051,7 +1078,7 @@ describe('FIX-24-AC01 clearing the filters clears the URL', () => {
 describe('FIX-24-AC03 clearing the filters restores the unfiltered result count', () => {
   it('the result count returns to the unfiltered count after applied-filters-clear is clicked', async () => {
     const harness = await setupHarness();
-    const unfilteredItems = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
+    const unfilteredItems = [buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
     harness.respond(successPage(unfilteredItems, 16));
     await harness.waitForStatus('success');
     const root = getRootElement(harness.fixture);
@@ -1149,7 +1176,7 @@ describe('FIX-25 a filter keystroke does not disable the box being typed into', 
    */
   it('leaves the min-price box enabled and focused while its own request is in flight', async () => {
     const harness = await setupHarness();
-    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    harness.respond(successPage([buildItem('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
     await harness.waitForStatus('success');
 
     const min = queryInput(getRootElement(harness.fixture), '[data-testid="filter-min-price"]');
@@ -1174,7 +1201,7 @@ describe('FIX-25 a filter keystroke does not disable the box being typed into', 
 
   it('keeps every character of 150000 typed one at a time', async () => {
     const harness = await setupHarness();
-    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    harness.respond(successPage([buildItem('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
     await harness.waitForStatus('success');
 
     const root = getRootElement(harness.fixture);
@@ -1218,7 +1245,7 @@ describe('FIX-25 a filter keystroke does not disable the box being typed into', 
     expect(queryButton(root, '[data-testid="filter-inStock"]').disabled).toBe(true);
     expect(querySelect(root, '[data-testid="catalog-sort"]').disabled).toBe(true);
 
-    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    harness.respond(successPage([buildItem('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
     await harness.waitForStatus('success');
     const settled = getRootElement(harness.fixture);
     expect(queryInput(settled, '[data-testid="filter-min-price"]').disabled).toBe(false);
@@ -1231,7 +1258,7 @@ describe('FIX-25 a filter keystroke does not disable the box being typed into', 
     // disabled button the user has just clicked is blurred by the same
     // focus fixup rule, which stranded keyboard users mid-panel.
     const harness = await setupHarness();
-    harness.respond(successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
+    harness.respond(successPage([buildItem('p-01', 'MiBolt Demo', 'Demo', 1000, true, 256)], 1));
     await harness.waitForStatus('success');
 
     const brand = queryButton(
@@ -1287,7 +1314,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
   it('clicking Következő onto the last page moves focus to the page indicator', async () => {
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
     );
     await harness.waitForStatus('success');
 
@@ -1311,7 +1338,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 
     await harness.tick();
     harness.respond(
-      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+      successPage([buildItem('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
     );
     await harness.waitForStatus('success');
     harness.cleanup();
@@ -1320,7 +1347,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
   it('clicking Előző onto the first page moves focus to the page indicator', async () => {
     const harness = await setupHarness({ page: '2' });
     harness.respond(
-      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+      successPage([buildItem('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
     );
     await harness.waitForStatus('success');
 
@@ -1342,7 +1369,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 
     await harness.tick();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
     );
     await harness.waitForStatus('success');
     harness.cleanup();
@@ -1355,7 +1382,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
     // `RouteFocusService` refuses to make.
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 30),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 30),
     );
     await harness.waitForStatus('success');
 
@@ -1372,7 +1399,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 
     await harness.tick();
     harness.respond(
-      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 30, 2),
+      successPage([buildItem('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 30, 2),
     );
     await harness.waitForStatus('success');
     harness.cleanup();
@@ -1384,7 +1411,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
     // the user is in keeps it.
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 5),
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 5),
     );
     await harness.waitForStatus('success');
 

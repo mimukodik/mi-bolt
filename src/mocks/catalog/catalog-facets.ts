@@ -140,8 +140,12 @@ function buildPriceRange(items: readonly CatalogEntry[]): PriceRange {
 /**
  * Build the whole `Facets` bundle for the supplied filter. The
  * `priceRange` is computed on the post-cap list (featured=true caps at
- * 4); every count is capped at 4 when `featured=true` so the card
- * stays consistent with the visible entries.
+ * 4); the `is5g` and `inStock` counts are explicitly capped at 4 when
+ * `featured=true` so they match the visible card count. The brand,
+ * storageGb and color counts are implicitly bounded by the same cap
+ * (each count is `matched[product/option].length`, and `matched` is
+ * itself post-cap), so individual facet values stay <= 4 without an
+ * extra slice.
  */
 export function buildFacets(entries: readonly CatalogEntry[], filter: CatalogFilter): Facets {
   const sorted = filterSort(entries, filter);
