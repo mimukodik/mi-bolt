@@ -38,6 +38,7 @@ import { environment } from '../environments/environment';
 // so the catalog endpoint returns the demo data instead of an empty
 // items array.
 import productsFixture from '../../docs/api/fixtures/products.json';
+import catalogFixture from '../../docs/api/fixtures/catalog.json';
 import {
   createHandlers,
   createStrictHandlers,
@@ -48,6 +49,7 @@ import { createRealClock, createRealIds, parseScenarioFromLocation } from './sce
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
 import { isSameOriginNonBusiness } from './business-route-predicates';
+import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
 
 // Force-load the slice handler modules so their module-level
 // registerBusinessHandlers(...) calls populate the create-handlers
@@ -68,7 +70,7 @@ export const worker = setupWorker();
  */
 const PRODUCTION_SCENARIO_NAME = 'production';
 
-function loadCatalogFixture(repository: Repository, scenarioName: string): void {
+function loadCatalogProducts(repository: Repository, scenarioName: string): void {
   if (scenarioName === PRODUCTION_SCENARIO_NAME) {
     repository.loadProducts([]);
     return;
@@ -86,7 +88,10 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
   const repository = new Repository(scenario, ids, clock);
-  loadCatalogFixture(repository, scenario.name);
+  loadCatalogProducts(repository, scenario.name);
+  if (isCatalogFixtureShape(catalogFixture)) {
+    loadCatalogFixture(catalogFixture);
+  }
   const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
   return {
     repository,

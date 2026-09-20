@@ -1,0 +1,453 @@
+/**
+ * MIM-210 — query parsing, filtering, sorting and paging for the
+ * catalogue mock.
+ *
+ * The filter module is pure: it takes a query-string parameter map
+ * (already pre-validated against the contract's parameter names by the
+ * handler) plus the store's `CatalogEntry[]` and a sort key, and
+ * returns the entries that pass every filter, sorted in the chosen
+ * order. Paging is a slice on the sorted list.
+ *
+ * The handlers wrap these primitives and translate results into MSW
+ * responses (the 400 list lives in `catalog.handlers.ts`).
+ */
+
+import type { CatalogItem, ProductSort, StorageGb } from '../../app/api/generated/models';
+import { ALLOWED_STORAGES, PRODUCT_SORTS, type CatalogEntry, toCatalogItem } from './catalog-store';
+import { isProductSort, isStorageGb } from './catalog-store';
+
+/** Names of every contract-published query parameter on `GET /products`. */
+const CONTRACT_PARAMETERS = [
+  'q',
+  'brand',
+  'storageGb',
+  'color',
+  'minPrice',
+  'maxPrice',
+  'inStock',
+  'is5g',
+  'featured',
+  'sort',
+  'page',
+  'pageSize',
+] as const;
+
+type _ContractParameter = (typeof CONTRACT_PARAMETERS)[number];
+void 0 as unknown as _ContractParameter;
+
+/** Result of parsing the request's `URLSearchParams`. */
+export type ParseListProductsResult =
+  { ok: true; filter: CatalogFilter } | { ok: false; error: FilterError };
+
+/** Discriminated union of every parse-time failure. */
+export type FilterError =
+  | { kind: 'unknown-parameter'; parameter: string }
+  | { kind: 'invalid-integer'; parameter: string }
+  | { kind: 'invalid-boolean'; parameter: string }
+  | { kind: 'invalid-storage'; parameter: string }
+  | { kind: 'invalid-sort'; parameter: string }
+  | { kind: 'invalid-value'; parameter: string; detail: string };
+
+/** Filter shape the handler passes to the pure predicates. */
+export interface CatalogFilter {
+  q?: string;
+  brands: readonly string[];
+  storageGb: readonly StorageGb[];
+  colors: readonly string[];
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  is5g?: boolean;
+  featured?: boolean;
+  sort: ProductSort;
+  page: number;
+  pageSize: 12 | 24;
+}
+
+function invalidStorage(parameter: string): FilterError {
+  return { kind: 'invalid-storage', parameter };
+}
+function invalidValue(parameter: string, detail: string): FilterError {
+  return { kind: 'invalid-value', parameter, detail };
+}
+
+/** Parse an integer parameter that must be `>= min`. */
+function parseBoundedInt(
+  raw: string,
+  parameter: string,
+  min: number,
+  minLabel: string,
+): number | FilterError {
+  if (raw.length === 0 || !/^-?\d+$/.test(raw)) {
+    return invalidValue(parameter, `${parameter} is invalid`);
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    return invalidValue(parameter, `${parameter} is invalid`);
+  }
+  if (n < min) {
+    return invalidValue(parameter, `${parameter} ${minLabel}`);
+  }
+  return n;
+}
+
+/**
+ * Parse a query-string parameter map. The contract's known parameter
+ * names go first; an unknown name is rejected before any value-level
+ * check. The handler turns each `FilterError` into a `Problem`.
+ */
+export function parseListProductsParams(params: URLSearchParams): ParseListProductsResult {
+  const filter: CatalogFilter = {
+    brands: [],
+    storageGb: [],
+    colors: [],
+    sort: 'recommended',
+    page: 1,
+    pageSize: 12,
+  };
+
+  for (const key of params.keys()) {
+    if (!(CONTRACT_PARAMETERS as readonly string[]).includes(key)) {
+      return {
+        ok: false,
+        error: {
+          kind: 'invalid-value',
+          parameter: key,
+          detail: `Unknown query parameter "${key}"`,
+        },
+      };
+    }
+  }
+
+  const q = params.get('q');
+  if (q !== null) {
+    if (q.length > 100) {
+      return { ok: false, error: invalidValue('q', 'q is too long') };
+    }
+    filter.q = q;
+  }
+
+  const brands = params.getAll('brand');
+  if (brands.length > 0) {
+    for (const b of brands) {
+      if (b.trim().length === 0) {
+        return { ok: false, error: invalidValue('brand', 'brand must not be empty') };
+      }
+    }
+    filter.brands = brands;
+  }
+
+  const storages = params.getAll('storageGb');
+  if (storages.length > 0) {
+    const out: StorageGb[] = [];
+    for (const raw of storages) {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || !isStorageGb(n)) {
+        return { ok: false, error: invalidStorage('storageGb') };
+      }
+      out.push(n);
+    }
+    filter.storageGb = out;
+  }
+
+  const colors = params.getAll('color');
+  if (colors.length > 0) {
+    for (const c of colors) {
+      if (c.trim().length === 0) {
+        return { ok: false, error: invalidValue('color', 'color must not be empty') };
+      }
+    }
+    filter.colors = colors;
+  }
+
+  const minPriceRaw = params.get('minPrice');
+  if (minPriceRaw !== null) {
+    const parsed = parseBoundedInt(minPriceRaw, 'minPrice', 0, 'must not be negative');
+    if (typeof parsed !== 'number') {
+      return { ok: false, error: parsed };
+    }
+    filter.minPrice = parsed;
+  }
+  const maxPriceRaw = params.get('maxPrice');
+  if (maxPriceRaw !== null) {
+    const parsed = parseBoundedInt(maxPriceRaw, 'maxPrice', 0, 'must not be negative');
+    if (typeof parsed !== 'number') {
+      return { ok: false, error: parsed };
+    }
+    filter.maxPrice = parsed;
+  }
+  if (filter.minPrice !== undefined && filter.maxPrice !== undefined) {
+    if (filter.minPrice > filter.maxPrice) {
+      return {
+        ok: false,
+        error: {
+          kind: 'invalid-value',
+          parameter: 'minPrice',
+          detail: 'minPrice must not exceed maxPrice',
+        },
+      };
+    }
+  }
+
+  const inStockRaw = params.get('inStock');
+  if (inStockRaw !== null) {
+    if (inStockRaw !== 'true' && inStockRaw !== 'false') {
+      return {
+        ok: false,
+        error: { kind: 'invalid-value', parameter: 'inStock', detail: 'inStock is invalid' },
+      };
+    }
+    filter.inStock = inStockRaw === 'true';
+  }
+
+  const is5gRaw = params.get('is5g');
+  if (is5gRaw !== null) {
+    if (is5gRaw !== 'true' && is5gRaw !== 'false') {
+      return {
+        ok: false,
+        error: { kind: 'invalid-value', parameter: 'is5g', detail: 'is5g is invalid' },
+      };
+    }
+    filter.is5g = is5gRaw === 'true';
+  }
+
+  const featuredRaw = params.get('featured');
+  if (featuredRaw !== null) {
+    if (featuredRaw !== 'true' && featuredRaw !== 'false') {
+      return {
+        ok: false,
+        error: { kind: 'invalid-value', parameter: 'featured', detail: 'featured is invalid' },
+      };
+    }
+    filter.featured = featuredRaw === 'true';
+  }
+
+  const sortRaw = params.get('sort');
+  if (sortRaw !== null) {
+    if (!isProductSort(sortRaw)) {
+      return {
+        ok: false,
+        error: { kind: 'invalid-value', parameter: 'sort', detail: 'sort is invalid' },
+      };
+    }
+    filter.sort = sortRaw;
+  }
+
+  const pageRaw = params.get('page');
+  if (pageRaw !== null) {
+    const parsed = parseBoundedInt(pageRaw, 'page', 1, 'must be at least 1');
+    if (typeof parsed !== 'number') {
+      return { ok: false, error: parsed };
+    }
+    filter.page = parsed;
+  }
+
+  const pageSizeRaw = params.get('pageSize');
+  if (pageSizeRaw !== null) {
+    if (pageSizeRaw !== '12' && pageSizeRaw !== '24') {
+      return {
+        ok: false,
+        error: {
+          kind: 'invalid-value',
+          parameter: 'pageSize',
+          detail: 'pageSize must be 12 or 24',
+        },
+      };
+    }
+    filter.pageSize = pageSizeRaw === '12' ? 12 : 24;
+  }
+
+  return { ok: true, filter };
+}
+
+/** Lowercase, NFC-normalised "brand name". */
+function searchKey(entry: CatalogEntry): string {
+  return entry.searchKey;
+}
+
+/** Position of `q` inside `searchKey`, or `Infinity` when absent. */
+function qPosition(entry: CatalogEntry, q: string): number {
+  return entry.searchKey.indexOf(q);
+}
+
+/** Case-insensitive "brand name" comparison key for name sorts. */
+function nameKey(entry: CatalogEntry): string {
+  return entry.nameKey;
+}
+
+/** True when the variant-level color filter accepts this entry. */
+function passesColorFilter(entry: CatalogEntry, colors: readonly string[]): boolean {
+  if (colors.length === 0) return true;
+  // The displayed variant must pass the color filter.
+  if (colors.includes(entry.variant.colorCode)) return true;
+  // And the entry must have at least one matching color option.
+  return entry.colors.some((c) => colors.includes(c.colorCode));
+}
+
+/** True when every variant-level filter accepts this entry. */
+function passesVariantFilters(entry: CatalogEntry, filter: CatalogFilter): boolean {
+  if (filter.colors.length > 0 && !passesColorFilter(entry, filter.colors)) return false;
+  const amount = entry.variant.price.amount;
+  if (filter.minPrice !== undefined && amount < filter.minPrice) return false;
+  if (filter.maxPrice !== undefined && amount > filter.maxPrice) return false;
+  if (filter.inStock !== undefined) {
+    const isIn = entry.variant.availability === 'in_stock';
+    if (filter.inStock !== isIn) return false;
+  }
+  return true;
+}
+
+/** True when the product-level filters accept this entry. */
+function passesProductFilters(entry: CatalogEntry, filter: CatalogFilter): boolean {
+  if (filter.q !== undefined && filter.q.trim().length > 0) {
+    const q = filter.q.trim().toLowerCase().normalize('NFC');
+    if (!searchKey(entry).includes(q)) return false;
+  }
+  if (filter.brands.length > 0) {
+    const wanted = filter.brands.map((b) => b.toLowerCase().normalize('NFC').trim());
+    if (!wanted.includes(entry.brandKey)) return false;
+  }
+  if (filter.is5g !== undefined && entry.product.is5g !== filter.is5g) return false;
+  if (filter.featured !== undefined && entry.ranking.featured !== filter.featured) {
+    return false;
+  }
+  if (filter.storageGb.length > 0 && !filter.storageGb.includes(entry.storageGb)) {
+    return false;
+  }
+  return true;
+}
+
+/** Apply every filter. Returns the entries that pass. */
+export function applyFilters(
+  entries: readonly CatalogEntry[],
+  filter: CatalogFilter,
+): CatalogEntry[] {
+  return entries.filter((e) => passesProductFilters(e, filter) && passesVariantFilters(e, filter));
+}
+
+/** Numeric id used as the final tie-break on non-name sorts. */
+function entryId(entry: CatalogEntry): number {
+  const n = Number(entry.product.id);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Sort `entries` per the contract's sort modes. */
+export function sortEntries(
+  entries: readonly CatalogEntry[],
+  mode: ProductSort,
+  q: string | undefined,
+): CatalogEntry[] {
+  const copy = entries.slice();
+  const recommendedCmp = (a: CatalogEntry, b: CatalogEntry): number => {
+    if (q !== undefined && q.trim().length > 0) {
+      const qn = q.trim().toLowerCase().normalize('NFC');
+      const pa = qPosition(a, qn);
+      const pb = qPosition(b, qn);
+      if (pa !== pb) return pa - pb;
+    }
+    if (a.ranking.rank !== b.ranking.rank) return a.ranking.rank - b.ranking.rank;
+    const idCmp = entryId(a) - entryId(b);
+    if (idCmp !== 0) return idCmp;
+    return a.storageGb - b.storageGb;
+  };
+  const numericTieBreak = (a: CatalogEntry, b: CatalogEntry): number => {
+    const idCmp = entryId(a) - entryId(b);
+    if (idCmp !== 0) return idCmp;
+    return a.storageGb - b.storageGb;
+  };
+
+  switch (mode) {
+    case 'recommended':
+      copy.sort(recommendedCmp);
+      break;
+    case 'newest':
+      copy.sort((a, b) => {
+        const cmp = b.releasedAt.localeCompare(a.releasedAt);
+        if (cmp !== 0) return cmp;
+        return numericTieBreak(a, b);
+      });
+      break;
+    case 'oldest':
+      copy.sort((a, b) => {
+        const cmp = a.releasedAt.localeCompare(b.releasedAt);
+        if (cmp !== 0) return cmp;
+        return numericTieBreak(a, b);
+      });
+      break;
+    case 'popularity':
+      copy.sort((a, b) => {
+        const cmp = b.ranking.popularityScore - a.ranking.popularityScore;
+        if (cmp !== 0) return cmp;
+        return numericTieBreak(a, b);
+      });
+      break;
+    case 'price_asc':
+      copy.sort((a, b) => {
+        const cmp = a.variant.price.amount - b.variant.price.amount;
+        if (cmp !== 0) return cmp;
+        return numericTieBreak(a, b);
+      });
+      break;
+    case 'price_desc':
+      copy.sort((a, b) => {
+        const cmp = b.variant.price.amount - a.variant.price.amount;
+        if (cmp !== 0) return cmp;
+        return numericTieBreak(a, b);
+      });
+      break;
+    case 'name_asc':
+      copy.sort((a, b) => {
+        const cmp = nameKey(a).localeCompare(nameKey(b), 'hu');
+        if (cmp !== 0) return cmp;
+        return a.storageGb - b.storageGb;
+      });
+      break;
+    case 'name_desc':
+      copy.sort((a, b) => {
+        const cmp = nameKey(b).localeCompare(nameKey(a), 'hu');
+        if (cmp !== 0) return cmp;
+        return a.storageGb - b.storageGb;
+      });
+      break;
+    default: {
+      // Exhaustiveness check: every `ProductSort` has a case above.
+      const _exhaustive: never = mode;
+      throw new Error(`[catalog-filter] unhandled ProductSort: ${String(_exhaustive)}`);
+    }
+  }
+  return copy;
+}
+
+/** Apply filter, sort and cap featured. Returns entries + total count. */
+export function filterSort(
+  entries: readonly CatalogEntry[],
+  filter: CatalogFilter,
+): { items: readonly CatalogEntry[]; total: number } {
+  const filtered = applyFilters(entries, filter);
+  const sorted = sortEntries(filtered, filter.sort, filter.q);
+  let items = sorted;
+  if (filter.featured === true) {
+    items = items.slice(0, 4);
+  }
+  return { items, total: items.length };
+}
+
+/** Page a sorted list. */
+export function paginate<T>(
+  items: readonly T[],
+  page: number,
+  pageSize: 12 | 24,
+): { items: T[]; total: number; totalPages: number } {
+  const total = items.length;
+  const totalPages = Math.ceil(total / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const slice = items.slice(startIndex, startIndex + pageSize);
+  return { items: slice, total, totalPages };
+}
+
+/** Map a list of entries to `CatalogItem`s. */
+export function toCatalogItems(entries: readonly CatalogEntry[]): CatalogItem[] {
+  return entries.map(toCatalogItem);
+}
+
+export { ALLOWED_STORAGES, PRODUCT_SORTS };

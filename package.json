@@ -14,7 +14,9 @@
     "api:drift": "npm run api:generate && git diff --exit-code -- src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- src/app/api/generated)\"",
     "api:sync": "node scripts/api-sync.mjs",
     "build:e2e": "ng build --configuration e2e",
-    "fix:status": "node scripts/fix-status.mjs"
+    "fix:status": "node scripts/fix-status.mjs",
+    "fixtures:catalog": "node scripts/build-catalog-fixture.mjs",
+    "fixtures:catalog:check": "node scripts/build-catalog-fixture.mjs --check"
   },
   "private": true,
   "packageManager": "npm@11.17.0",
