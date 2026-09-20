@@ -11,9 +11,22 @@
  * The store never touches HTTP. The handler layer maps outcomes to
  * `HttpResponse` with `ETag` on success and
  * `application/problem+json` on failure.
+ *
+ * MIM-212 adds two store methods — `touch` and `resetForOrder` — for
+ * the checkout store. Both reuse the existing reconcile and version
+ * machinery so the cart and the checkout draft always read and bump
+ * the same counter (`docs/api/openapi.yaml:16-19`). The Problem body
+ * moves to the generated `Problem` type, and the Problem `type` URI
+ * follows the contract's own examples via `problemType`.
  */
 
-import type { Cart, CartItem, CartNotice } from '../../app/api/generated/models';
+import type {
+  Cart,
+  CartItem,
+  CartNotice,
+  Problem,
+  ProblemCode,
+} from '../../app/api/generated/models';
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { VariantLookup } from '../catalog/catalog-store';
 
@@ -34,26 +47,7 @@ interface StoredCart {
   lines: StoredLine[];
 }
 
-export type ProblemCode =
-  | 'INVALID_REQUEST'
-  | 'NOT_FOUND'
-  | 'CART_VERSION_CONFLICT'
-  | 'OUT_OF_STOCK'
-  | 'QUANTITY_LIMIT'
-  | 'CART_EXPIRED';
-
-export interface ProblemBody {
-  type: string;
-  title: string;
-  status: number;
-  code: ProblemCode;
-  detail: string;
-  traceId: string;
-  fieldErrors: readonly { path: string; code: string }[];
-  params?: Readonly<Record<string, unknown>>;
-}
-
-export type CartOutcome = { ok: true; cart: Cart } | { ok: false; problem: ProblemBody };
+export type CartOutcome = { ok: true; cart: Cart } | { ok: false; problem: Problem };
 
 /** Look up a variant by id from whatever catalogue the caller mounted. */
 export type VariantLookupFn = (variantId: string) => VariantLookup | undefined;
@@ -84,6 +78,18 @@ let traceIdCounter = 0;
 export function buildTraceId(_options: CreateHandlersOptions): string {
   traceIdCounter = (traceIdCounter + 1) >>> 0;
   return traceIdCounter.toString(16).padStart(24, '0');
+}
+
+/**
+ * The Problem `type` URI the contract's own examples give for a code
+ * (`docs/api/openapi.yaml:1060`, and the kebab-case rule for the
+ * others). `CART_VERSION_CONFLICT` is the one exception the contract
+ * fixes by example; every other code follows the cart's own
+ * derivation.
+ */
+export function problemType(code: ProblemCode): string {
+  if (code === 'CART_VERSION_CONFLICT') return 'urn:mi-bolt:problem:version-conflict';
+  return `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`;
 }
 
 /**
@@ -191,6 +197,24 @@ export class CartStore {
     }
     cart.cart.lines = [];
     return this.bumpAndView(sessionId);
+  }
+
+  /**
+   * Bump the cart's version for the checkout store. Runs the same
+   * expiry check as a write, then bumps through `view(_, true)`.
+   */
+  touch(sessionId: string): CartOutcome {
+    const cart = this.ensureFreshCart(sessionId);
+    if (!cart.ok) return cart;
+    return this.view(sessionId, true);
+  }
+
+  /**
+   * Discard the session's cart so the next `GET /cart` creates a
+   * fresh version-1 entry.
+   */
+  resetForOrder(sessionId: string): void {
+    this.carts.delete(sessionId);
   }
 
   // ---------------------------------------------------------------------------
@@ -351,10 +375,10 @@ export class CartStore {
     status: number,
     code: ProblemCode,
     detail: string,
-    params: Readonly<Record<string, unknown>>,
+    params: Record<string, unknown>,
   ): Extract<CartOutcome, { ok: false }> {
-    const body: ProblemBody = {
-      type: `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`,
+    const body: Problem = {
+      type: problemType(code),
       title: titleForStatus(status),
       status,
       code,
