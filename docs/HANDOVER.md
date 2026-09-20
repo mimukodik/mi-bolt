@@ -178,7 +178,8 @@ content area.
 ## 3. Where the repository stands
 
 - Branch **`feat/mi-bolt-mvp-implementation`**, cut from `main`. HEAD
-  **`7b9a01e`**. Working tree clean.
+  **`fd06a1a`**. Working tree clean. The last commit that touched product code
+  is `7b9a01e`; the three after it are this document and `docs/briefs/`.
 - Pushed to `origin` at the user's direct instruction, so the work could be
   continued on another machine. Nothing is waiting locally. Pushing stays the
   orchestrator's own command, only under the `task-execute-workflow` entry that
@@ -212,6 +213,7 @@ content area.
 | `22d2ee2` | dead `guardForSegment` deleted |
 | `06f4623` | focus hand-off to the results counter |
 | `7b9a01e` | the counter stops calling a failed load an empty result |
+| `b9cc20b` `5aa1346` `fd06a1a` | this document, and `docs/briefs/` — docs only |
 
 ---
 
