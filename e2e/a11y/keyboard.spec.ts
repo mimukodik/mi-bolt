@@ -17,8 +17,7 @@
  * a `data-testid` to appear before pressing the documented key,
  * so a missing feature surfaces as a `test.skip` with the exact
  * step name in the message rather than a hard failure. The
- * skipped-step count is recorded as evidence in
- * `docs/mi-bolt/execution/design-review.md`.
+ * skipped-step count is asserted by this suite itself.
  *
  * Manual keyboard checks (T25-AC05) are kept separate from any
  * automated axe results — this file asserts the keyboard
