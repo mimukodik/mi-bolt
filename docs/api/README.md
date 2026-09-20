@@ -7,6 +7,7 @@ Az egyetlen normatív wire-szerződés az [openapi.yaml](openapi.yaml). A fájl 
 - Szerződés: `docs/api/openapi.yaml` (a projekt gyökeréből). Ezt validáld, és ebből generálj. Ne hozz létre második, kézzel karbantartott `api/openapi.yaml` példányt a projekt gyökerében.
 - Generátorminta: [ng-openapi-gen.json](ng-openapi-gen.json). A T04 másolja a projekt gyökerébe `ng-openapi-gen.json` néven. A `$schema`, az `input` és az `output` útvonalakat a **projekt gyökeréből** kell értelmezni.
 - SDK-kimenet: `src/app/api/generated/`. Kézzel nem módosítható.
+- Frozen 1.0.0 SDK: `src/app/api/legacy/`, a byte-identical copy of the previous `generated/` tree that every consumer under `src/app/` imports today; each MIM-210–212 unit moves its feature to `generated/` (the 2.0.0 tree, unused by consumers yet), and `legacy/` is deleted with the last consumer. Never edited by hand either.
 - Mock-adatok: `docs/api/fixtures/`. A MSW-implementáció innen vezesse le a determinisztikus fixture-készletét; a dokumentáció HTML-jeit és képernyőképeit ne másolja a runtime buildbe. A buildhez szükséges előállított fixture-másolatot drift-ellenőrzés védje, ne legyen második kézzel szerkesztett adatforrás.
 
 A generátorkonfiguráció átvétele és a függőség telepítése után a projekt gyökeréből futtatandó parancs:
