@@ -232,7 +232,7 @@ export class CheckoutFacade {
    * the endpoint (`openapi.yaml:481-487`), so no `If-Match` is sent.
    */
   async ensureOptions(force = false): Promise<CheckoutResult<CheckoutOptions>> {
-    if (!force && this.optionsWritable() !== null) {
+    if (!force) {
       const existing = this.optionsWritable();
       if (existing !== null) {
         return { ok: true, value: existing };
@@ -256,7 +256,7 @@ export class CheckoutFacade {
    * the cart's version is adopted from the server's answer.
    */
   async ensureSession(force = false): Promise<CheckoutResult<CheckoutSession>> {
-    if (!force && this.sessionWritable() !== null) {
+    if (!force) {
       const existing = this.sessionWritable();
       if (existing !== null) {
         return { ok: true, value: existing };
@@ -349,7 +349,18 @@ export class CheckoutFacade {
           this.paymentIntentWritable.set(intent);
           return { ok: true, value: intent };
         } catch (err) {
-          return { ok: false, error: mapError(err) };
+          // Definite outcomes (412, 410, 422, 409) must rotate the key
+          // so the next attempt mints a fresh one; otherwise the
+          // server replays the same answer. Uncertain outcomes
+          // (status 0, a transport failure) retain — the next attempt
+          // carries the same fingerprint and replays the original
+          // request, which is the design's `uncertain retains, definite
+          // rotates` rule.
+          const error = mapError(err);
+          if (error.status !== 0) {
+            checkoutKeys.rotateIntentKey();
+          }
+          return { ok: false, error };
         }
       },
     };
@@ -482,20 +493,6 @@ export class CheckoutFacade {
     this.priceChangeWritable.set(null);
   }
 
-  /**
-   * Drops the in-memory checkout state once an order lands. Does not
-   * touch `order` (the success page renders it) and does not call
-   * `cart.resetOrderedCart()` (the success page does that in its own
-   * effect, `success-step.ts:168-172`). Called from inside
-   * `submitOrder`'s 201 branch.
-   */
-  resetAfterOrder(): void {
-    this.sessionWritable.set(null);
-    this.paymentIntentWritable.set(null);
-    this.clearFailureOverlay();
-    checkoutKeys.clearAll();
-  }
-
   // -------------------------------------------------------------------------
   // Private serialiser. Mirrors the cart's semantics without its types:
   // every checkout mutation chains onto `tail`, binds `If-Match` to
@@ -578,19 +575,17 @@ export class CheckoutFacade {
       // The refetches are fire-and-forget, like the 412 branch: the
       // failed call resolves immediately and the serialiser moves on.
       const shownTotal = this.summary()?.total;
-      if (shownTotal !== undefined) {
-        checkoutKeys.rotateOrderKey();
-        void Promise.all([this.cart.refetch(), this.ensureSession(true)]).then(() => {
-          const currentTotal = this.summary()?.total;
-          if (currentTotal !== undefined) {
-            this.priceChangeWritable.set({
-              shownTotal,
-              currentTotal,
-              awaitingConfirmation: true,
-            });
-          }
-        });
-      }
+      checkoutKeys.rotateOrderKey();
+      void Promise.all([this.cart.refetch(), this.ensureSession(true)]).then(() => {
+        const currentTotal = this.summary()?.total;
+        if (shownTotal !== undefined && currentTotal !== undefined) {
+          this.priceChangeWritable.set({
+            shownTotal,
+            currentTotal,
+            awaitingConfirmation: true,
+          });
+        }
+      });
       this.errorWritable.set(error);
       this.conflictWritable.set(null);
       this.cartExpiredWritable.set(false);
@@ -640,7 +635,7 @@ function mapError(err: unknown): CheckoutError {
         params = body['params'];
       }
       if (Array.isArray(body['fieldErrors'])) {
-        fieldErrors = body['fieldErrors'].filter((entry): entry is FieldError => isRecord(entry));
+        fieldErrors = body['fieldErrors'].filter(isFieldError);
       }
     }
     if (err.status === 412 && code === 'CART_VERSION_CONFLICT') {
@@ -655,4 +650,12 @@ function mapError(err: unknown): CheckoutError {
     return { code, status: err.status, detail, params, fieldErrors };
   }
   return { code: 'SERVICE_UNAVAILABLE', status: 0, detail: String(err), fieldErrors: [] };
+}
+
+/** Narrows an `unknown` body entry into the generated `FieldError`
+ *  shape. `isRecord` alone is too lax — a record missing `code` or
+ *  `path` would otherwise pass and surface as `undefined` on the UI. */
+function isFieldError(value: unknown): value is FieldError {
+  if (!isRecord(value)) return false;
+  return typeof value['code'] === 'string' && typeof value['path'] === 'string';
 }

@@ -155,9 +155,13 @@ export const checkoutKeys = {
    */
   activeIntentId(): string | null {
     const storage = readableStorage();
-    const raw = storage?.getItem(INTENT_ID_STORAGE) ?? null;
-    if (raw === null) return null;
-    return raw;
+    if (storage === null) return null;
+    try {
+      return storage.getItem(INTENT_ID_STORAGE);
+    } catch {
+      // Storage read denied — the page proceeds without a cold-start id.
+      return null;
+    }
   },
 
   /** Persists the active payment intent id for the cold return. */
