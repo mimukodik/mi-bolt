@@ -27,15 +27,15 @@ permission to invent its content.
 
 ## Where the rest of the rules live
 
-| Subject | Owner |
-|---|---|
-| TypeScript, Angular, component, state, template and service conventions | the root `CLAUDE.md` |
-| The execution contract and the non-negotiable engineering boundaries | `docs/spec/execution-rules.md` |
-| Architecture, screens, components, testing, acceptance | `docs/spec/` |
-| The wire contract | `docs/api/openapi.yaml` |
-| Task packets and the dependency graph | `docs/tasks/` |
-| The repair package for the defects found in the audit | `docs/fix/` |
-| Visual references and the clickable prototype | `docs/design/` |
+| Subject                                                                 | Owner                          |
+| ----------------------------------------------------------------------- | ------------------------------ |
+| TypeScript, Angular, component, state, template and service conventions | the root `CLAUDE.md`           |
+| The execution contract and the non-negotiable engineering boundaries    | `docs/spec/execution-rules.md` |
+| Architecture, screens, components, testing, acceptance                  | `docs/spec/`                   |
+| The wire contract                                                       | `docs/api/openapi.yaml`        |
+| Task packets and the dependency graph                                   | `docs/tasks/`                  |
+| The repair package for the defects found in the audit                   | `docs/fix/`                    |
+| Visual references and the clickable prototype                           | `docs/design/`                 |
 
 Do not restate what any of those say. The root `CLAUDE.md` is in the same
 directory as this file, so a pointer to it resolves for any agent, Claude or
