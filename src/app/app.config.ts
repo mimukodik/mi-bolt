@@ -14,7 +14,7 @@ import { resolveApiRoot } from './core/api/api-root';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
 
 /**
- * Local production / development / e2e build providers. Each binding is
+ * Local production / development build providers. Each binding is
  * kept as a named top-level constant so the call site is auditable
  * in tests and remains a single source of truth: removing the constant
  * deletes the call as well, and downstream tasks can extend the list by

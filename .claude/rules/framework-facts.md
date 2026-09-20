@@ -11,8 +11,9 @@ every subagent except the built-in Explore and Plan agents). Referenced from
 **A question about how the framework behaves is answered from the
 documentation, not from a probe.** No scratch component, no throwaway app, no
 experiment built to see what happens. Before writing anything that depends on
-how Angular, the Angular CLI, the `@angular/build` builders, Vitest, MSW or
-Playwright behave, read it.
+how Angular, the Angular CLI, the `@angular/build` builders, Vitest or MSW
+behave, read it. There is no end-to-end suite in this project by decision
+(2026-09-20), so Playwright is not part of this list.
 
 The reason is the version. This workspace runs Angular 22, TypeScript 6 and
 ESLint 10, all newer than the model's training data, and that gap is an

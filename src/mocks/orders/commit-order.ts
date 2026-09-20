@@ -65,7 +65,8 @@ export interface PaymentIntentRecord {
 /**
  * `payment-pending-resolves` flips from `pending` to `succeeded`
  * once at least this many ms have elapsed since intent creation.
- * 1 second matches the E2E spec: a 1 s poll interval eventually
+ * 1 second matches `PAYMENT_POLL_INTERVAL_MS` in
+ * `payment-progress.ts`, so the client's poll interval eventually
  * sees a non-pending status.
  */
 const PENDING_RESOLVE_MS = 1000;

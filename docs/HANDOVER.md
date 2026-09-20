@@ -266,7 +266,6 @@ Each of these is settled. Do not re-ask; execute.
 These were in the task list before this session and were never reached. Each
 needs its own `AskUserQuestion`, not a line in a report.
 
-- **#39** — what the Playwright suite measures against: two builds contradict.
 - **#40** — the design suite writes tracked screenshots on every run.
 - **#41** — the design-skill mandate points at a directory that does not exist.
 - **#62** — the design viewport suite writes blank screenshots

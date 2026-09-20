@@ -11,7 +11,6 @@
 //   tests/**/*.spec.ts       (Vitest specs)
 //   tests/**/*.test.ts
 //   tests/contract/**/*.spec.ts
-//   e2e/**/*.spec.ts         (Playwright specs)
 //
 // Exits 0 with `test-policy:OK` and a per-pattern count when nothing
 // trips, exits 1 with a structured finding list otherwise. The exit
@@ -30,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = resolve(__dirname, '..');
 
-const SCAN_ROOTS = ['tests', 'e2e'];
+const SCAN_ROOTS = ['tests'];
 
 const SCAN_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
 
@@ -135,7 +134,7 @@ function parseArgs(argv) {
 function help() {
   process.stdout.write(`Usage: check-test-policy.mjs [--strict]
 
-Scans tests/ and e2e/ for Vitest / Playwright focus, skip, todo,
+Scans tests/ for Vitest focus, skip, todo,
 quarantine and coverage-ignore directives that would let failing
 requirements pass the suite silently. Exits 0 on a clean scan, 1 on
 any finding. --strict also rejects coverage-ignore pragma comments.
