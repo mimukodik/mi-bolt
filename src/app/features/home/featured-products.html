@@ -65,20 +65,14 @@
               >
                 <span class="featured__tag">DEMÓTERMÉK</span>
                 <div class="featured__image block aspect-[4/5] overflow-hidden">
-                  @if (firstImageSrc(item); as src) {
-                    <img
-                      class="block h-full w-full object-contain"
-                      [src]="src"
-                      [alt]="firstImageAlt(item)"
-                      decoding="async"
-                      loading="lazy"
-                      data-testid="image-photo"
-                    />
-                  } @else {
-                    <span class="featured__image-fallback" aria-hidden="true">
-                      {{ initialFor(item.name) }}
-                    </span>
-                  }
+                  <img
+                    class="block h-full w-full object-contain"
+                    [src]="item.image.src"
+                    [alt]="firstImageAlt(item)"
+                    decoding="async"
+                    loading="lazy"
+                    data-testid="image-photo"
+                  />
                 </div>
               </a>
               <div class="featured__body flex flex-col gap-2 p-5">

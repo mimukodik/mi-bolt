@@ -72,22 +72,10 @@ export class FeaturedProducts {
   /** Items for the success branch. */
   readonly items = computed(() => this.state().items);
 
-  /** Returns the image src for the item, or null if absent. */
-  firstImageSrc(item: CatalogItem): string | null {
-    const src = item.image.src;
-    return src.length > 0 ? src : null;
-  }
-
   /** Returns the image alt text for the item, falling back to the name. */
   firstImageAlt(item: CatalogItem): string {
     const alt = item.image.alt;
     return alt.length > 0 ? alt : item.name;
-  }
-
-  initialFor(name: string): string {
-    const trimmed = name.trim();
-    if (trimmed.length === 0) return '·';
-    return trimmed.charAt(0).toUpperCase();
   }
 
   /** Hungarian integer HUF formatter. Non-breaking space thousands separator. */
