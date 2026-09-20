@@ -2,8 +2,8 @@
  * MIM-212 — checkout, payment intent and order mock spec on the
  * 2.0.0 contract.
  *
- * 73 cases over `/checkout/options`, `/checkout`, `/payment-intents`
- * and `/orders` (29 + 17 + 27), measured against the configured backend values the
+ * 75 cases over `/checkout/options`, `/checkout`, `/payment-intents`
+ * and `/orders` (31 + 17 + 27), measured against the configured backend values the
  * addendum of `/tmp/s3-a-design.md` (2026-09-20 ~21:25Z) locks in.
  * Every case asserts an exact wire value, never `.exists()`-style
  * coverage; the spec is the independent measurement of the mock
@@ -228,7 +228,7 @@ function expectedIsoPlus(seconds: number): string {
 }
 
 // ===========================================================================
-// C. Options and draft — 29 cases
+// C. Options and draft — 31 cases
 // ===========================================================================
 
 describe('GET /checkout/options', () => {
@@ -343,6 +343,14 @@ describe('GET /checkout/options', () => {
     expectRecord(cod);
     expect(cod['available']).toBe(false);
     expect(readString(cod, 'unavailableReason')).toBe('CART_VALUE_TOO_HIGH');
+  });
+
+  it('C-24b: a missing X-Demo-Session header on /checkout/options returns 400 INVALID_REQUEST', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout/options');
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
   });
 });
 
@@ -552,6 +560,18 @@ describe('PATCH /checkout', () => {
     expect(params['expected']).toBe(2);
   });
 
+  it('C-24c: a PATCH /checkout without X-Demo-Session returns 400 INVALID_REQUEST', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"1"' },
+      body: JSON.stringify({ contact: VALID_CONTACT }),
+    });
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+
   it('C-14: a PATCH with body {} returns 400 INVALID_REQUEST', async () => {
     await seedMotoOnce(session1Headers());
     const res = await patchCheckout({}, '"2"');
@@ -627,6 +647,7 @@ describe('PATCH /checkout', () => {
         { path: '/billing/address/line1', code: 'LINE1_LENGTH' },
       ]),
     );
+    expect(errors).toHaveLength(4);
   });
 
   it('C-19: home_delivery without an address returns 422 SECTION_MISSING on /delivery/address', async () => {
@@ -639,6 +660,7 @@ describe('PATCH /checkout', () => {
     expect(errors).toEqual(
       expect.arrayContaining([{ path: '/delivery/address', code: 'SECTION_MISSING' }]),
     );
+    expect(errors).toHaveLength(1);
   });
 
   it('C-20: pickup_point with an address returns 422 ADDRESS_NOT_ALLOWED on /delivery/address', async () => {
@@ -659,6 +681,7 @@ describe('PATCH /checkout', () => {
     expect(errors).toEqual(
       expect.arrayContaining([{ path: '/delivery/address', code: 'ADDRESS_NOT_ALLOWED' }]),
     );
+    expect(errors).toHaveLength(1);
   });
 
   it('C-21: an unknown delivery option returns 422 on /delivery/optionId', async () => {
@@ -671,6 +694,7 @@ describe('PATCH /checkout', () => {
     expect(errors).toEqual(
       expect.arrayContaining([{ path: '/delivery/optionId', code: 'DELIVERY_OPTION_UNAVAILABLE' }]),
     );
+    expect(errors).toHaveLength(1);
   });
 
   it('C-22: an unknown payment method returns 422 on /payment/method', async () => {
@@ -683,6 +707,7 @@ describe('PATCH /checkout', () => {
     expect(errors).toEqual(
       expect.arrayContaining([{ path: '/payment/method', code: 'PAYMENT_METHOD_UNAVAILABLE' }]),
     );
+    expect(errors).toHaveLength(1);
   });
 
   it('C-23: a body with two bad sections collects the field errors from both', async () => {
@@ -713,6 +738,7 @@ describe('PATCH /checkout', () => {
         { path: '/billing/address/line1', code: 'LINE1_LENGTH' },
       ]),
     );
+    expect(errors).toHaveLength(8);
   });
 
   it('C-25: an expired cart returns 410 CART_EXPIRED on the next GET', async () => {
@@ -738,6 +764,7 @@ describe('PATCH /checkout', () => {
     expect(errors).toEqual(
       expect.arrayContaining([{ path: '/payment/method', code: 'PAYMENT_METHOD_UNAVAILABLE' }]),
     );
+    expect(errors).toHaveLength(1);
     const params = body['params'];
     expectRecord(params);
     expect(params['reason']).toBe('CART_VALUE_TOO_HIGH');
@@ -756,6 +783,7 @@ describe('PATCH /checkout', () => {
     expect(errors).toEqual(
       expect.arrayContaining([{ path: '/delivery/optionId', code: 'DELIVERY_OPTION_UNAVAILABLE' }]),
     );
+    expect(errors).toHaveLength(1);
     const params = body['params'];
     expectRecord(params);
     expect(params['reason']).toBe('CART_EMPTY');
@@ -855,7 +883,7 @@ describe('POST /payment-intents', () => {
     expect(errors).toEqual([{ path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD' }]);
   });
 
-  it('I-06: a draft with only contact set returns 422 CHECKOUT_INCOMPLETE with three SECTION_MISSING errors', async () => {
+  it('I-06: a draft with only contact set returns 422 CHECKOUT_INCOMPLETE with PAYMENT_METHOD_NOT_CARD (blocked: brief expects three SECTION_MISSING)', async () => {
     await seedMotoOnce(session1Headers());
     await patchCheckout({ contact: VALID_CONTACT }, '"2"');
     const { status, body } = await createCardIntent('"3"', 'idem-int-0006');
@@ -868,7 +896,7 @@ describe('POST /payment-intents', () => {
     // on /billing, /delivery, /payment; the actual response carries
     // only {path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD'}.
     const errors = readFieldErrors(body);
-    expect(errors).toContainEqual({ path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD' });
+    expect(errors).toEqual([{ path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD' }]);
   });
 
   it('I-07: a complete draft on an empty cart returns 422 CHECKOUT_INCOMPLETE with detail "The cart is empty."', async () => {
@@ -893,6 +921,9 @@ describe('POST /payment-intents', () => {
     expect(status).toBe(412);
     expectRecord(body);
     expect(body['code']).toBe('CART_VERSION_CONFLICT');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params).toEqual({ expected: 3, received: '"1"' });
   });
 
   it('I-09: a too-short Idempotency-Key returns 400 INVALID_REQUEST', async () => {
@@ -905,6 +936,9 @@ describe('POST /payment-intents', () => {
     const body: unknown = await res.json();
     expectRecord(body);
     expect(body['code']).toBe('INVALID_REQUEST');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params).toEqual({ received: 'short' });
   });
 });
 
@@ -941,6 +975,9 @@ describe('GET /payment-intents/:id', () => {
       headers: session1Headers(),
     });
     expect(res.status).toBe(404);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('NOT_FOUND');
   });
 });
 
@@ -1075,17 +1112,25 @@ describe('POST /orders', () => {
     expect(body['paymentFee']).toEqual({ amount: 0, currency: 'HUF' });
     expect(body['total']).toEqual({ amount: 89_990, currency: 'HUF' });
     expect(body['notice']).toBe(SIMULATION_NOTICE);
-    const delivery = body['delivery'];
-    expectRecord(delivery);
-    expect(readString(delivery, 'optionId')).toBe('home_delivery');
-    const billing = body['billing'];
-    expectRecord(billing);
+    expect(body['delivery']).toEqual({
+      optionId: 'home_delivery',
+      address: VALID_DELIVERY_ADDRESS,
+    });
+    expect(body['billing']).toEqual(VALID_BILLING);
     expect(readString(body, 'contactEmail')).toBe('teszt.elek@pelda.hu');
     const id = readString(body, 'id');
     expect(location).toBe(`/api/v1/orders/${id}`);
   });
 
   it('O-02: the same key replays the same body', async () => {
+    // O-02 is the case that proves the contract's headline rule: a
+    // replay is answered before the cart state is examined. After the
+    // first order, `resetForOrder` (`cart-store.ts:216`, called from
+    // `order-store.ts:526`) leaves a fresh v1 cart while the replay
+    // still carries `If-Match: "3"`, so without the idempotency
+    // short-circuit (`order-store.ts:367-373`, which runs before
+    // `checkIfMatch` at `:391-392`) the second call would answer 412
+    // rather than 201.
     const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
     const first = await placeOrder(
       {
@@ -1112,6 +1157,7 @@ describe('POST /orders', () => {
     expect(JSON.stringify(second.body)).toBe(JSON.stringify(first.body));
     expectRecord(second.body);
     expect(readString(second.body, 'orderNumber')).toBe('DEMO-000001');
+    expect(second.headers.get('Location')).toBe(first.headers.get('Location'));
   });
 
   it('O-03: after a successful order the cart is reset to a new v1 empty cart', async () => {
@@ -1305,12 +1351,10 @@ describe('POST /orders', () => {
     expectRecord(body);
     expect(body['code']).toBe('VALIDATION_FAILED');
     const errors = readFieldErrors(body);
-    expect(errors).toEqual(
-      expect.arrayContaining([
-        { path: '/termsVersion', code: 'TERMS_VERSION_MISMATCH' },
-        { path: '/acceptedTerms', code: 'TERMS_NOT_ACCEPTED' },
-      ]),
-    );
+    expect(errors).toEqual([
+      { path: '/termsVersion', code: 'TERMS_VERSION_MISMATCH' },
+      { path: '/acceptedTerms', code: 'TERMS_NOT_ACCEPTED' },
+    ]);
   });
 
   it('O-10: an incomplete draft returns 422 CHECKOUT_INCOMPLETE with the SECTION_MISSING list', async () => {
@@ -1328,14 +1372,12 @@ describe('POST /orders', () => {
     expectRecord(body);
     expect(body['code']).toBe('CHECKOUT_INCOMPLETE');
     const errors = readFieldErrors(body);
-    expect(errors).toEqual(
-      expect.arrayContaining([
-        { path: '/contact', code: 'SECTION_MISSING' },
-        { path: '/billing', code: 'SECTION_MISSING' },
-        { path: '/delivery', code: 'SECTION_MISSING' },
-        { path: '/payment', code: 'SECTION_MISSING' },
-      ]),
-    );
+    expect(errors).toEqual([
+      { path: '/contact', code: 'SECTION_MISSING' },
+      { path: '/billing', code: 'SECTION_MISSING' },
+      { path: '/delivery', code: 'SECTION_MISSING' },
+      { path: '/payment', code: 'SECTION_MISSING' },
+    ]);
   });
 
   it('O-11: store-level — a CartStore with a stub lookup that returns out_of_stock surfaces OUT_OF_STOCK at createOrder', () => {
