@@ -3,6 +3,7 @@ import { Component, inject, input } from '@angular/core';
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
 import { FooterNav } from '../../core/navigation/footer-nav';
 import { CartCountFacade } from '../../core/navigation/cart-count-facade';
+import { DemoNotice } from './demo-notice';
 
 /**
  * `AppShell` is the shared chrome (header + footer) rendered around
@@ -20,7 +21,7 @@ import { CartCountFacade } from '../../core/navigation/cart-count-facade';
  */
 @Component({
   selector: 'app-app-shell',
-  imports: [HeaderNav, FooterNav],
+  imports: [HeaderNav, FooterNav, DemoNotice],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
 })

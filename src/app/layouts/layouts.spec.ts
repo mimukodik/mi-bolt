@@ -190,17 +190,16 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(has2).toBe(true);
   });
 
-  it('MarketingLayout renders the standard footer with link groups', () => {
+  it('MarketingLayout renders the single-bar footer with the demo-explainer CTA', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const footer = raw.querySelector('footer');
     expect(footer).not.toBeNull();
-    const links = footer ? footer.querySelectorAll('a') : [];
-    const len = links.length;
-    const ok = len - 2;
-    expect(ok > 0).toBe(true);
+    const text = footer?.textContent ?? '';
+    expect(text).toContain('Hogyan működik a demó?');
+    expect(text).not.toContain('demo@mibolt.hu');
   });
 
   it('ShopLayout exposes a full-width mobile search at narrow widths', () => {
@@ -686,7 +685,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
   });
 });
 
-describe('T11-AC05 cart badge wiring', () => {
+describe('T11-AC05 demo notice and cart badge wiring', () => {
   beforeEach(async () => {
     document.body.innerHTML = '';
     TestBed.configureTestingModule({
@@ -738,6 +737,21 @@ describe('T11-AC05 cart badge wiring', () => {
     const badge = raw.querySelector('[data-testid="cart-badge"]');
     const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('3');
+  });
+
+  it('the demo notice is visible in every layout', () => {
+    const layouts: readonly Type<unknown>[] = [MarketingLayout, ShopLayout, CheckoutLayout];
+    layouts.forEach((L) => {
+      const f = TestBed.createComponent(L);
+      f.detectChanges();
+      const raw: unknown = f.nativeElement;
+      if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+      const notice = raw.querySelector('[data-testid="demo-notice"]');
+      expect(notice).not.toBeNull();
+      const text = notice?.textContent ?? '';
+      expect(text).toContain('Fiktív termékek és árak.');
+      f.destroy();
+    });
   });
 });
 
