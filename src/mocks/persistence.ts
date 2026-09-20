@@ -135,6 +135,11 @@ class SessionStorageAdapter {
     this.memory.delete(key);
   }
 
+  /** Whether storage access has failed and the adapter is using the in-memory fallback. */
+  isDenied(): boolean {
+    return this.denied;
+  }
+
   private announceDenied(): void {
     if (this.warned) return;
     this.warned = true;
@@ -241,6 +246,16 @@ export class Persistence {
   /** Returns the last hydrated snapshot, useful for handler factories. */
   peekLast(): MockSnapshot | null {
     return this.lastSnapshot;
+  }
+
+  /**
+   * Whether the underlying storage has been denied (private browsing,
+   * blocked site data, a security error) and the adapter has fallen back
+   * to an in-memory cache for the rest of this session. `DemoNotice`'s
+   * `'memory'` state (FIX-70-AC05) reads this.
+   */
+  isDenied(): boolean {
+    return this.adapter.isDenied();
   }
 }
 

@@ -7,16 +7,8 @@
 >
   <span class="demo-notice__badge" aria-hidden="true">DEMÓ</span>
   @if (persistenceMode() === 'memory') {
-    <!--
-      PLACEHOLDER copy — no source Hungarian sentence exists for this
-      state yet (checked docs/design/prototype.html and
-      docs/spec/architecture.md §8, see docs/fix/FIX-70.md Evidence).
-      Do not treat this as final; it must be replaced with a sourced
-      sentence before this state ships.
-    -->
     <span class="demo-notice__text" data-testid="demo-notice-memory-text">
-      Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés. A böngésző nem
-      tudja tárolni az adatokat: újratöltés után a demó nem áll vissza.
+      A böngésződ nem engedi a mentést, ezért az oldal frissítésekor a kosarad tartalma elveszik.
     </span>
   } @else {
     <span class="demo-notice__text">

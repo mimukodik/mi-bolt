@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
 import { FooterNav } from '../../core/navigation/footer-nav';
 import { CartCountFacade } from '../../core/navigation/cart-count-facade';
+import { PERSISTENCE_MODE } from '../../core/persistence-mode';
 import { DemoNotice } from './demo-notice';
 
 /**
@@ -36,6 +37,9 @@ export class AppShell {
   private readonly cart = inject(CartCountFacade);
 
   private readonly router = inject(Router);
+
+  /** Drives `DemoNotice`'s `'memory'` state (FIX-70-AC05) — see `PERSISTENCE_MODE`. */
+  readonly persistenceMode = inject(PERSISTENCE_MODE);
 
   /** Whether the footer renders in its compact form. The checkout layout is
    *  the only caller that sets this; every other shell uses the default. */

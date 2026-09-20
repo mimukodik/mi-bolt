@@ -26,10 +26,10 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
 }
 
 // FIX-70: DemoNotice gains a `persistenceMode` input and a second,
-// visibly distinct 'memory' state. FIX-10 (the cart-restore task) has
-// not exposed a real persistence-mode value, so the call site still
-// binds the 'durable' default; this spec drives the 'memory' arm
-// directly to cover the branch, per docs/fix/FIX-70.md item 4.
+// visibly distinct 'memory' state. `AppShell` now binds the real
+// value from the `PERSISTENCE_MODE` token (see app-shell.spec.ts),
+// so this spec drives `DemoNotice` directly, in isolation, to cover
+// both arms of the branch against rendered DOM.
 describe('DemoNotice', () => {
   it('renders the default surface with no memory warning when persistenceMode is durable (FIX-70-AC04)', () => {
     const { fixture } = setup();

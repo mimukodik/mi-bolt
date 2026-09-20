@@ -148,6 +148,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     persistence.save(SCENARIO_KEY, snapshot);
     expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
+    expect(persistence.isDenied()).toBe(false);
   });
 
   it('rejects malformed JSON and clears the corrupted entry', () => {
@@ -209,6 +210,10 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
       expect(warn).toHaveBeenCalledTimes(1);
       // Hydrate returns the in-memory copy.
       expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
+      // FIX-70-AC05: `isDenied()` is what lets `AppShell` drive
+      // `DemoNotice`'s 'memory' state — before it existed this call
+      // failed to compile (no such method on `Persistence`).
+      expect(persistence.isDenied()).toBe(true);
     } finally {
       (globalThis as { sessionStorage?: Storage | null }).sessionStorage = original;
       warn.mockRestore();

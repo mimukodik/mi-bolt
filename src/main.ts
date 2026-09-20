@@ -5,6 +5,7 @@ import localeHu from '@angular/common/locales/hu';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { environment } from './environments/environment';
+import { PERSISTENCE_MODE } from './app/core/persistence-mode';
 
 // Register Hungarian locale data before bootstrap so the DatePipe,
 // CurrencyPipe and friends format Hungarian numbers, dates and
@@ -49,7 +50,7 @@ const start = async (): Promise<void> => {
     bootstrapApplication(App, appConfig).catch(showFatal);
     return;
   }
-  const { startMocks } = await import('./core/bootstrap-demo');
+  const { startMocks, getPreparedPersistenceMode } = await import('./core/bootstrap-demo');
   try {
     await startMocks();
   } catch (err: unknown) {
@@ -60,7 +61,13 @@ const start = async (): Promise<void> => {
     showFatal(err);
     return;
   }
-  bootstrapApplication(App, appConfig).catch(showFatal);
+  bootstrapApplication(App, {
+    ...appConfig,
+    providers: [
+      ...appConfig.providers,
+      { provide: PERSISTENCE_MODE, useValue: getPreparedPersistenceMode() },
+    ],
+  }).catch(showFatal);
 };
 
 void start();

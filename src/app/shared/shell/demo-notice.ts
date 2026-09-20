@@ -15,9 +15,10 @@ import { Component, input } from '@angular/core';
  * `persistenceMode` drives the second, `'memory'` state
  * `docs/spec/components.md:101-113` declares: a visibly distinct
  * surface warning that a reload will not restore the demo snapshot.
- * The default is `'durable'` rather than a required input so this
- * component can land before the call site has a real value to bind —
- * see `docs/fix/FIX-70.md`.
+ * The default is `'durable'` rather than a required input so a test
+ * host, or a build that never runs the mock bootstrap, can render
+ * this component unbound; `AppShell` binds the real value from the
+ * `PERSISTENCE_MODE` token — see `docs/fix/FIX-70.md`.
  */
 @Component({
   selector: 'app-demo-notice',

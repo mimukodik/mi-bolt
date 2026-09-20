@@ -25,6 +25,15 @@ import { createRealClock, parseScenarioFromLocation } from '../mocks/scenarios';
 let preparedScenario: string | null = null;
 
 /**
+ * Tracks whether the most recent `startMocks()` hydrate found
+ * `sessionStorage` denied. `main.ts` reads this once, after
+ * `startMocks()` resolves, and supplies it to Angular's DI as the
+ * `PERSISTENCE_MODE` token so `AppShell` can drive `DemoNotice`'s
+ * `'memory'` state (FIX-70-AC05).
+ */
+let preparedPersistenceMode: 'durable' | 'memory' = 'durable';
+
+/**
  * Prepares the demo: hydrates the persistence snapshot and starts the
  * MSW worker. Throws when either step fails; production builds
  * short-circuit and return without starting anything. The active
@@ -58,6 +67,7 @@ export async function startMocks(): Promise<void> {
   // cart is silently lost across reloads even though the snapshot
   // survived.
   const snapshot = persistence.hydrate(scenario.name);
+  preparedPersistenceMode = persistence.isDenied() ? 'memory' : 'durable';
   await startMockWorker(snapshot);
   preparedScenario = scenario.name;
 }
@@ -65,6 +75,11 @@ export async function startMocks(): Promise<void> {
 /** Returns the scenario name resolved by the most recent `startMocks` call. */
 export function getPreparedScenario(): string | null {
   return preparedScenario;
+}
+
+/** Returns the persistence mode determined by the most recent `startMocks` call. */
+export function getPreparedPersistenceMode(): 'durable' | 'memory' {
+  return preparedPersistenceMode;
 }
 
 /** Test-only escape hatch that clears the cached scenario name. */
