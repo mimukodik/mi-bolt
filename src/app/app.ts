@@ -1,12 +1,18 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
+/**
+ * `App` is the standalone root component that hosts the router
+ * outlet. The class is intentionally thin: every behaviour is
+ * colocated with the route or feature it serves, and providers are
+ * wired in `appConfig`.
+ */
 @Component({
-  imports: [RouterOutlet],
   selector: 'app-root',
-  styleUrl: './app.css',
+  imports: [RouterOutlet],
   templateUrl: './app.html',
+  styleUrl: './app.scss',
 })
 export class App {
-  protected readonly title = signal('mi-bolt');
+  protected readonly tag = 'app-root';
 }

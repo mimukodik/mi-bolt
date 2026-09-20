@@ -310,3 +310,11 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+playwright-report/
+test-results/
+coverage/
+.angular/
+dist/
+node_modules/
+.visual-screenshots/
+e2e/checkout-f8-screenshots/

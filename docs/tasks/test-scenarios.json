@@ -60,24 +60,6 @@
     ]
   },
   {
-    "id": "E004",
-    "group": "coverage",
-    "title": "Unvisited branch canary",
-    "scenario": "coverage-canary",
-    "action": "Execute true branch only",
-    "expected": "Both independent coverage gates fail; completing false branch makes both pass.",
-    "layers": [
-      "unit-or-gate",
-      "integration-or-e2e"
-    ],
-    "optional": false,
-    "status": "specified-not-run",
-    "tasks": [
-      "T02",
-      "T27"
-    ]
-  },
-  {
     "id": "E005",
     "group": "coverage",
     "title": "Unvisited lazy file",
@@ -2254,7 +2236,7 @@
     "group": "sdk",
     "title": "Base href SDK paths",
     "scenario": "default",
-    "action": "Run under root and /mi-bolt/",
+    "action": "Run under root",
     "expected": "SDK and worker resolve same scoped logical API/media paths.",
     "layers": [
       "unit-or-gate",

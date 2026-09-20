@@ -1,0 +1,33 @@
+<div class="root inline-flex flex-col items-start gap-1" [attr.data-status]="status()">
+  <span class="label">{{ label() }}</span>
+  @switch (status()) {
+    @case ('loading') {
+      <span class="skeleton inline-block" aria-hidden="true" data-testid="price-skeleton"></span>
+      <span class="sr-only absolute w-px h-px overflow-hidden">Ár betöltése…</span>
+    }
+    @case ('success') {
+      @if (amountText()) {
+        <span class="row inline-flex items-baseline">
+          <span class="amount font-bold leading-tight tabular-nums" data-testid="price-amount">{{
+            amountText()
+          }}</span>
+          <span class="currency ml-1" aria-hidden="true">Ft</span>
+        </span>
+      } @else {
+        <span class="amount amount--error font-medium" data-testid="price-empty">—</span>
+        <span class="sr-only absolute w-px h-px overflow-hidden">Az ár nem áll rendelkezésre.</span>
+      }
+    }
+    @case ('error') {
+      <span class="amount amount--error font-medium" data-testid="price-error">—</span>
+      <span class="sr-only absolute w-px h-px overflow-hidden">Az ár betöltése sikertelen.</span>
+    }
+    @case ('empty') {
+      <span class="amount amount--error font-medium" data-testid="price-empty">—</span>
+      <span class="sr-only absolute w-px h-px overflow-hidden">Nincs megjeleníthető ár.</span>
+    }
+    @default {
+      <span class="amount amount--placeholder font-medium" data-testid="price-idle">—</span>
+    }
+  }
+</div>

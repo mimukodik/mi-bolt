@@ -70,8 +70,8 @@ Read requests use switchMap to cancel obsolete HTTP and prevent late results. Ca
 
 ```text
 # mi-bolt-design is resolved externally; no duplicate skill folder in docs
-docs/mi-bolt/api/openapi.yaml                single wire contract
-docs/mi-bolt/api/fixtures/                   deterministic synthetic data
+docs/api/openapi.yaml                single wire contract
+docs/api/fixtures/                   deterministic synthetic data
 src/main.ts                     bootstrap entry, fatal fallback
 src/core/bootstrap-demo.ts      await mock hydrate/start, then Angular
 src/styles/tokens.css           copied/generated semantic tokens
@@ -154,6 +154,6 @@ Budget targets (project decisions, not current measurements): initial JS 300 KiB
 
 ## 18. Supplied local device art and asset URL boundary
 
-The plan supplies original fictional front/back artwork in `docs/mi-bolt/design/assets/products`, with `docs/mi-bolt/design/asset-manifest.json` provenance. Copy the WebP files to `public/assets/products/` in T10. These files do not claim real-device fidelity or contain functional UI text. All fixture media references resolve to an included image; matching casing color and view are explicit.
+The plan supplies original fictional front/back artwork in `docs/design/assets/products`, with `docs/design/asset-manifest.json` provenance. Copy the WebP files to `public/assets/products/` in T10. These files do not claim real-device fidelity or contain functional UI text. All fixture media references resolve to an included image; matching casing color and view are explicit.
 
-ProductImage uses `resolveAssetUrl(path: string, documentBaseUri: string): string` from `src/app/shared/media/resolve-asset-url.ts`. Only a normalized logical `/assets/` path with no `..`, encoded traversal, protocol-relative or absolute-URL input is accepted. Strip the leading slash and resolve against `document.baseURI`; reject any resulting URL outside the configured same-origin base assets prefix. Test `/` and `/mi-bolt/` deployments and malformed paths. No untrusted remote image fetch is allowed.
+ProductImage uses `resolveAssetUrl(path: string, documentBaseUri: string): string` from `src/app/shared/media/resolve-asset-url.ts`. Only a normalized logical `/assets/` path with no `..`, encoded traversal, protocol-relative or absolute-URL input is accepted. Strip the leading slash and resolve against `document.baseURI`; reject any resulting URL outside the configured same-origin base assets prefix. Test the `/` deployment and malformed paths. No untrusted remote image fetch is allowed.

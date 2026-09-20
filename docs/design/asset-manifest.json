@@ -1,6 +1,6 @@
 [
   {
-    "path": "docs/mi-bolt/design/assets/products/graphite-front.webp",
+    "path": "docs/design/assets/products/graphite-front.webp",
     "source": "Original unbranded geometric vector illustration created for this design plan",
     "view": "front",
     "color": "graphite",
@@ -11,7 +11,7 @@
     ]
   },
   {
-    "path": "docs/mi-bolt/design/assets/products/graphite-back.webp",
+    "path": "docs/design/assets/products/graphite-back.webp",
     "source": "Original unbranded geometric vector illustration created for this design plan",
     "view": "back",
     "color": "graphite",
@@ -22,7 +22,7 @@
     ]
   },
   {
-    "path": "docs/mi-bolt/design/assets/products/silver-front.webp",
+    "path": "docs/design/assets/products/silver-front.webp",
     "source": "Original unbranded geometric vector illustration created for this design plan",
     "view": "front",
     "color": "silver",
@@ -33,8 +33,52 @@
     ]
   },
   {
-    "path": "docs/mi-bolt/design/assets/products/silver-back.webp",
+    "path": "docs/design/assets/products/silver-back.webp",
     "source": "Original unbranded geometric vector illustration created for this design plan",
+    "view": "back",
+    "color": "silver",
+    "commercialClaim": "None: fictional demo illustration, not a verified real device",
+    "dimensions": [
+      320,
+      400
+    ]
+  },
+  {
+    "path": "docs/design/assets/products/graphite-front.svg",
+    "source": "Editable vector source of the original unbranded geometric illustration created for this design plan",
+    "view": "front",
+    "color": "graphite",
+    "commercialClaim": "None: fictional demo illustration, not a verified real device",
+    "dimensions": [
+      320,
+      400
+    ]
+  },
+  {
+    "path": "docs/design/assets/products/graphite-back.svg",
+    "source": "Editable vector source of the original unbranded geometric illustration created for this design plan",
+    "view": "back",
+    "color": "graphite",
+    "commercialClaim": "None: fictional demo illustration, not a verified real device",
+    "dimensions": [
+      320,
+      400
+    ]
+  },
+  {
+    "path": "docs/design/assets/products/silver-front.svg",
+    "source": "Editable vector source of the original unbranded geometric illustration created for this design plan",
+    "view": "front",
+    "color": "silver",
+    "commercialClaim": "None: fictional demo illustration, not a verified real device",
+    "dimensions": [
+      320,
+      400
+    ]
+  },
+  {
+    "path": "docs/design/assets/products/silver-back.svg",
+    "source": "Editable vector source of the original unbranded geometric illustration created for this design plan",
     "view": "back",
     "color": "silver",
     "commercialClaim": "None: fictional demo illustration, not a verified real device",

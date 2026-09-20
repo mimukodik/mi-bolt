@@ -1,0 +1,40 @@
+<div
+  class="root relative block w-full rounded overflow-hidden"
+  [style.aspect-ratio]="aspectRatio()"
+  [attr.data-status]="status()"
+  [attr.role]="decorative() ? null : 'img'"
+  [attr.aria-label]="decorative() ? null : image().alt"
+>
+  @switch (status()) {
+    @case ('loading') {
+      <span
+        class="skeleton absolute inset-0"
+        aria-hidden="true"
+        data-testid="image-skeleton"
+      ></span>
+    }
+    @case ('loaded') {
+      <img
+        class="photo object-contain"
+        [src]="resolvedSrc()"
+        [alt]="decorative() ? '' : image().alt"
+        decoding="async"
+        loading="lazy"
+        data-testid="image-photo"
+        (error)="onError()"
+      />
+    }
+    @case ('error') {
+      <div
+        class="fallback absolute inset-0 flex items-center justify-center"
+        aria-hidden="true"
+        data-testid="image-fallback"
+      >
+        <span class="fallback-mark font-bold tracking-wider">{{ initial() }}</span>
+      </div>
+    }
+  }
+  @if (!decorative()) {
+    <span class="sr-only absolute w-px h-px overflow-hidden">{{ image().alt }}</span>
+  }
+</div>

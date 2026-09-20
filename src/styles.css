@@ -1,3 +1,6 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global stylesheet.
+   Design tokens and primitive-level resets are loaded via angular.json.
+   Tailwind remains available as a utility escape hatch but is not used
+   by any primitive. */
 
 @import 'tailwindcss';

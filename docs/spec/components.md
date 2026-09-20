@@ -4,7 +4,7 @@ Every component execution and verification MUST use mi-bolt-design. Public input
 
 ## Shared types
 
-`CatalogFilters = {brands: readonly string[]; storageGb: readonly (128|256|512)[]; minPrice?:number; maxPrice?:number; inStock:boolean; is5g:boolean}`. `CatalogQuery = CatalogFilters & {q:string; sort:Sort; page:number; pageSize:12|24}`. `Sort = recommended | price_asc | price_desc | name_asc`. `Facets` is the ProductPage.facets schema. `FilterIdentity = {name: keyof CatalogFilters; value?:string|number}`. `CheckoutStep = cart | contact | delivery | review | success`. `AsyncStatus = idle | loading | success | empty | error`. `UiProblem = {code:string; message:string; fieldErrors:FieldError[]; retryable:boolean}`. `CheckoutDraft` composes optional Contact, DeliverySelection and paymentMethod. `ReviewState = quoting | ready | expired | price-changed | stock-error | submitting | error`. `PaymentStatus = idle | pending | succeeded | declined | unknown | error`. `CategoryShortcut = {label:string; query:Partial<CatalogQuery>}`. `LicensedLocalModel = {src:string; licenseReference:string; variantId:string}`. `ViewerError = load | decode | unsupported`. `FieldTree<T>` is Angular Signal Forms typed field-tree API, not a handwritten replacement. Wire types Money,Cart,Variant,Quote,Image,FieldError are generated from OpenAPI.
+`CatalogFilters = {brands: readonly string[]; storageGb: readonly (128|256|512)[]; minPrice?:number; maxPrice?:number; inStock:boolean; is5g:boolean}`. `CatalogQuery = CatalogFilters & {q:string; sort:Sort; page:number; pageSize:12|24; featured?:boolean}`. `Sort = recommended | price_asc | price_desc | name_asc`. `Facets` is the ProductPage.facets schema. `FilterIdentity = {name: keyof CatalogFilters | 'q' | 'featured'; value?:string|number}`. `CheckoutStep = cart | contact | delivery | review | success`. `AsyncStatus = idle | loading | success | empty | error`. `UiProblem = {code:string; message:string; fieldErrors:FieldError[]; retryable:boolean}`. `CheckoutDraft` composes optional Contact, DeliverySelection and paymentMethod. `ReviewState = quoting | ready | expired | price-changed | stock-error | submitting | error`. `PaymentStatus = idle | pending | succeeded | declined | unknown | error`. `CategoryShortcut = {label:string; query:Partial<CatalogQuery>}`. `LicensedLocalModel = {src:string; licenseReference:string; variantId:string}`. `ViewerError = load | decode | unsupported`. `FieldTree<T>` is Angular Signal Forms typed field-tree API, not a handwritten replacement. Wire types Money,Cart,Variant,Quote,Image,FieldError are generated from OpenAPI.
 
 ## Component catalogue
 
@@ -477,7 +477,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `money:Money|null; available:boolean; pending:boolean`.
+**Signal inputs:** `money:Money|null; available:boolean; pending:boolean; error:UiProblem|null`.
 
 **Outputs:** `addRequested:void`.
 

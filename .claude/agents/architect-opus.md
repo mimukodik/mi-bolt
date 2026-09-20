@@ -7,7 +7,7 @@ description: >-
   surface too large for one reading goes to `architect-opus-xhigh` instead.
 model: opus
 effort: high
-tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch, Agent(researcher-sonnet, scout-haiku)
+tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch, Agent(researcher-sonnet, scout-haiku), mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the design tier: Claude Opus 5 at high effort. You produce a plan, not

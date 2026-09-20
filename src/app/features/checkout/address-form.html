@@ -1,0 +1,103 @@
+<fieldset class="address m-0 p-5 rounded" data-testid="address-form">
+  <legend class="legend px-2 font-bold">Szállítási cím</legend>
+
+  <div class="grid mt-3 grid-cols-1 gap-4">
+    <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-postalCode">
+      <span class="label">Irányítószám</span>
+      <input
+        type="text"
+        inputmode="numeric"
+        autocomplete="postal-code"
+        class="input w-full min-h-10 px-3 rounded font-inherit"
+        [attr.aria-invalid]="postalErrors().length > 0 ? 'true' : 'false'"
+        [attr.aria-describedby]="postalDescribedBy()"
+        [value]="postalCode()"
+        (input)="onPostalInput($event)"
+        (blur)="markTouched('postalCode')"
+        data-testid="address-input-postalCode"
+      />
+      <app-form-field-message
+        fieldId="address-postalCode"
+        [errors]="postalErrors()"
+        [touched]="touchedPostal()"
+        [submitted]="submitted()"
+        [helpText]="'Négyjegyű, 1-es vagy 9-es kezdettel.'"
+      ></app-form-field-message>
+    </label>
+
+    <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-city">
+      <span class="label">Város</span>
+      <input
+        type="text"
+        autocomplete="address-level2"
+        class="input w-full min-h-10 px-3 rounded font-inherit"
+        [attr.aria-invalid]="cityErrors().length > 0 ? 'true' : 'false'"
+        [attr.aria-describedby]="cityDescribedBy()"
+        [value]="city()"
+        (input)="onCityInput($event)"
+        (blur)="markTouched('city')"
+        data-testid="address-input-city"
+      />
+      <app-form-field-message
+        fieldId="address-city"
+        [errors]="cityErrors()"
+        [touched]="touchedCity()"
+        [submitted]="submitted()"
+      ></app-form-field-message>
+    </label>
+
+    <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-line1">
+      <span class="label">Cím (utca, házszám)</span>
+      <input
+        type="text"
+        autocomplete="address-line1"
+        class="input w-full min-h-10 px-3 rounded font-inherit"
+        [attr.aria-invalid]="line1Errors().length > 0 ? 'true' : 'false'"
+        [attr.aria-describedby]="line1DescribedBy()"
+        [value]="line1()"
+        (input)="onLine1Input($event)"
+        (blur)="markTouched('line1')"
+        data-testid="address-input-line1"
+      />
+      <app-form-field-message
+        fieldId="address-line1"
+        [errors]="line1Errors()"
+        [touched]="touchedLine1()"
+        [submitted]="submitted()"
+      ></app-form-field-message>
+    </label>
+
+    <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-line2">
+      <span class="label">Emelet, ajtó (opcionális)</span>
+      <input
+        type="text"
+        autocomplete="address-line2"
+        class="input w-full min-h-10 px-3 rounded font-inherit"
+        [attr.aria-invalid]="line2Errors().length > 0 ? 'true' : 'false'"
+        [attr.aria-describedby]="line2DescribedBy()"
+        [value]="line2()"
+        (input)="onLine2Input($event)"
+        (blur)="markTouched('line2')"
+        data-testid="address-input-line2"
+      />
+      <app-form-field-message
+        fieldId="address-line2"
+        [errors]="line2Errors()"
+        [touched]="touchedLine2()"
+        [submitted]="submitted()"
+        [helpText]="'Legfeljebb 120 karakter.'"
+      ></app-form-field-message>
+    </label>
+
+    <div class="field flex flex-col gap-2 min-w-0" data-testid="address-field-country">
+      <span class="label">Ország</span>
+      <p
+        class="country m-0 inline-flex items-baseline gap-2 min-h-10 px-3 rounded"
+        aria-readonly="true"
+      >
+        <span class="country-code font-bold">{{ countryCode() }}</span>
+        <span class="country-label">{{ countryLabel() }}</span>
+      </p>
+    </div>
+  </div>
+</fieldset>

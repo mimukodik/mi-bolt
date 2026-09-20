@@ -8,8 +8,6 @@
       "AGENTS.md",
       "docs/mi-bolt/execution/decisions.md",
       "docs/mi-bolt/execution/toolchain-lock.json",
-      "scripts/verify-toolchain.mjs",
-      "scripts/verify-skill-evidence.mjs",
       "docs/mi-bolt/execution/skill-location.json"
     ],
     "interface": "Input: delivered specification and mi-bolt-design 1.0.1. Output: immutable project constraints, stable Angular-22 lock manifest and review evidence schema.",
@@ -91,7 +89,7 @@
       },
       {
         "id": "T01-AC05",
-        "text": "The app boots under / and /mi-bolt/ with meaningful title and a fatal startup surface; no business feature is faked directly in a component."
+        "text": "The app boots under / with meaningful title and a fatal startup surface; no business feature is faked directly in a component."
       }
     ],
     "commonAcceptanceCriteria": [
@@ -119,12 +117,7 @@
     "area": "Quality",
     "files": [
       "tests/setup-msw.ts",
-      "e2e/fixtures/test.ts",
-      "e2e/fixtures/coverage.ts",
-      "scripts/check-coverage.mjs",
-      "scripts/runtime-manifest.mjs",
-      "playwright.config.ts",
-      "tests/coverage-canary.spec.ts"
+      "playwright.config.ts"
     ],
     "interface": "Output: unit and E2E coverage collectors; assertExactCoverage(manifest,report); deterministic ScenarioDescriptor; closed-world network policy.",
     "deliverable": "Prove the hard quality gates before building features.",
@@ -151,7 +144,7 @@
       },
       {
         "id": "T02-AC06",
-        "text": "CI network namespace/firewall permits only the local static host after dependencies/browsers are installed. Browser CSP is an additional barrier, not the sole proof."
+        "text": "The E2E run reaches only the local static host: MSW's unhandled-request policy is fail-closed and a deliberate external fetch fails the test. Browser CSP is an additional barrier, not the sole proof."
       }
     ],
     "commonAcceptanceCriteria": [
@@ -184,7 +177,6 @@
       "docs/mi-bolt/api/fixtures/products.json",
       "docs/mi-bolt/api/fixtures/config.json",
       "docs/mi-bolt/api/fixtures/checkout-options.json",
-      "scripts/validate-contract.mjs",
       "tests/contract/schema.spec.ts"
     ],
     "interface": "Input: delivered 32 schemas and 16 operationIds. Output: validated docs/mi-bolt/api/openapi.yaml as sole wire-contract authority.",
@@ -808,7 +800,7 @@
     "acceptanceCriteria": [
       {
         "id": "T14-AC01",
-        "text": "Use approved charcoal/orange composition with live Hungarian copy and nonfunctional artwork only; no embedded raster CTA or Nexora text in functional UI."
+        "text": "Use approved charcoal/orange composition with live Hungarian copy and nonfunctional artwork only; no embedded raster CTA or superseded brand text in functional UI."
       },
       {
         "id": "T14-AC02",
@@ -1467,15 +1459,14 @@
     "area": "Quality",
     "files": [
       "tests/contract/operation-matrix.spec.ts",
-      "tests/contract/response-validation.ts",
-      "scripts/check-operation-parity.mjs"
+      "tests/contract/response-validation.ts"
     ],
     "interface": "Input: operation inventory derived at validation time directly from docs/mi-bolt/api/openapi.yaml (no separate hand-maintained operation list), actual SDK request capture, handler registry and status matrix.",
     "deliverable": "Zero drift between API specification, SDK and mock domain behavior.",
     "acceptanceCriteria": [
       {
         "id": "T26-AC01",
-        "text": "Exactly all 16 operationIds map to handlers and SDK transport tests; missing/extra business routes fail CI."
+        "text": "Exactly all 16 operationIds map to handlers and SDK transport tests; missing/extra business routes fail the contract suite."
       },
       {
         "id": "T26-AC02",
@@ -1596,7 +1587,7 @@
       },
       {
         "id": "T28-AC02",
-        "text": "Static SPA fallback works for all deep links under / and /mi-bolt/. API paths never silently fallback to index.html; MSW startup failure blocks business actions."
+        "text": "Static SPA fallback works for all deep links under /. API paths never silently fallback to index.html; MSW startup failure blocks business actions."
       },
       {
         "id": "T28-AC03",

@@ -1,0 +1,26 @@
+<app-accessible-dialog
+  [opened]="opened()"
+  [label]="label()"
+  (closed)="onClosed()"
+  data-testid="review-terms-dialog"
+>
+  <div class="body flex flex-col gap-3 leading-relaxed" data-testid="terms-body">
+    <p class="m-0">
+      Ez a pénztár <strong>demó folyamat</strong>: a leadott rendelés nem valós, nem küldünk sem
+      e-mailt, sem csomagot, és a fizetés sem valós pénzmozgás.
+    </p>
+    <p class="m-0">
+      A megadott nevet, e-mail címet, telefonszámot és szállítási adatot kizárólag a böngésző
+      memóriájában tároljuk, a szerveroldali demó munkamenet idejére. A pénztár oldal frissítésekor
+      ezek az adatok törlődnek.
+    </p>
+    <p class="m-0">
+      A jelölőnégyzet elfogadása nem minősül valós jogi nyilatkozatnak — kizárólag azt jelzi, hogy a
+      demó folyamatot tudomásul vetted.
+    </p>
+    <p class="muted m-0">
+      A demó feltételek verziója:
+      <code>demo-1</code>
+    </p>
+  </div>
+</app-accessible-dialog>

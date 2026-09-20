@@ -1,0 +1,158 @@
+<section class="contact flex flex-col gap-6" data-testid="contact-page">
+  <header class="heading flex flex-col gap-3">
+    <nav class="breadcrumbs flex flex-wrap gap-2" aria-label="Navigáció">
+      <a routerLink="/penztar/kosar" class="breadcrumb no-underline">Kosár</a>
+      <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
+      <span class="breadcrumb is-current font-medium" aria-current="page">Adatok</span>
+    </nav>
+    <h1 class="title m-0 font-bold">Kapcsolattartási adatok</h1>
+    <p
+      class="demo-notice m-0 p-3 px-4 rounded text-sm leading-relaxed"
+      data-testid="contact-demo-notice"
+      role="note"
+    >
+      <strong class="font-bold mr-1">Demó pénztár.</strong>
+      Kérlek, ne használj valós személyes adatokat — ez egy működési bemutató, nem küldünk valódi
+      rendelést vagy e-mailt.
+    </p>
+  </header>
+
+  @if (saveState() === 'error') {
+    <div class="save-error block" data-testid="contact-save-error">
+      <app-status-message
+        [message]="saveErrorMessage"
+        severity="error"
+        [persistent]="true"
+      ></app-status-message>
+    </div>
+  }
+
+  <form
+    class="form flex flex-col gap-5 max-w-xl lg:max-w-3xl"
+    novalidate
+    (submit)="onSubmit($event)"
+    data-testid="contact-form"
+  >
+    <p class="form-hint m-0" id="contact-form-hint">
+      A csillaggal jelölt mezők kitöltése kötelező.
+    </p>
+
+    <label class="field flex flex-col gap-2" [attr.data-state]="fullNameFieldState()">
+      <span class="field__label font-medium">
+        Teljes név <span aria-hidden="true" class="required-mark ml-1">*</span>
+      </span>
+      <input
+        id="contact-fullname-input"
+        type="text"
+        autocomplete="name"
+        inputmode="text"
+        class="min-h-10 p-2 px-3 font-inherit rounded"
+        placeholder="Teszt Elek"
+        [formField]="contactFields().fullName"
+        [attr.aria-invalid]="fullNameInvalid() ? 'true' : null"
+        aria-describedby="contact-fullname-message"
+        data-testid="contact-fullname-input"
+      />
+      <app-form-field-message
+        [fieldId]="'contact-fullname'"
+        [errors]="fullNameErrors()"
+        [touched]="fullNameTouched()"
+        [submitted]="submitted()"
+        [helpText]="'A számlán is ez a név fog megjelenni.'"
+      ></app-form-field-message>
+    </label>
+
+    <label class="field flex flex-col gap-2" [attr.data-state]="emailFieldState()">
+      <span class="field__label font-medium">
+        E-mail cím <span aria-hidden="true" class="required-mark ml-1">*</span>
+      </span>
+      <input
+        id="contact-email-input"
+        type="email"
+        autocomplete="email"
+        inputmode="email"
+        class="min-h-10 p-2 px-3 font-inherit rounded"
+        placeholder="teszt@example.test"
+        [formField]="contactFields().email"
+        [attr.aria-invalid]="emailInvalid() ? 'true' : null"
+        aria-describedby="contact-email-message"
+        data-testid="contact-email-input"
+      />
+      <app-form-field-message
+        [fieldId]="'contact-email'"
+        [errors]="emailErrors()"
+        [touched]="emailTouched()"
+        [submitted]="submitted()"
+        [helpText]="'Ide küldjük a demó visszaigazolást.'"
+      ></app-form-field-message>
+    </label>
+
+    <label class="field flex flex-col gap-2" [attr.data-state]="phoneFieldState()">
+      <span class="field__label font-medium">
+        Telefonszám <span aria-hidden="true" class="required-mark ml-1">*</span>
+      </span>
+      <input
+        id="contact-phone-input"
+        type="tel"
+        autocomplete="tel"
+        inputmode="tel"
+        class="min-h-10 p-2 px-3 font-inherit rounded"
+        placeholder="+36201234567"
+        [formField]="contactFields().phone"
+        [attr.aria-invalid]="phoneInvalid() ? 'true' : null"
+        aria-describedby="contact-phone-message"
+        data-testid="contact-phone-input"
+      />
+      <app-form-field-message
+        [fieldId]="'contact-phone'"
+        [errors]="phoneErrors()"
+        [touched]="phoneTouched()"
+        [submitted]="submitted()"
+        [helpText]="'Formátum: +36 30 123 4567 vagy +36-1-234-5678.'"
+      ></app-form-field-message>
+    </label>
+
+    @if (submitted() && invalidFields().length > 0) {
+      <div
+        class="form-summary p-4 rounded"
+        tabindex="-1"
+        #summary
+        role="alert"
+        aria-labelledby="contact-summary-title"
+        data-testid="contact-summary"
+      >
+        <p class="form-summary__title m-0 mb-2 font-bold" id="contact-summary-title">
+          Kérlek, javítsd a következő mezőket a folytatás előtt:
+        </p>
+        <ul class="form-summary__list m-0 pl-5 flex flex-col gap-1">
+          @for (item of invalidFields(); track item.field) {
+            <li>
+              <a
+                [href]="'#contact-' + item.field + '-input'"
+                (click)="focusField(item.field, $event)"
+                [attr.data-pointer]="item.pointer ?? null"
+              >
+                {{ item.label }}: {{ item.message }}
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div
+      class="form-actions flex flex-col-reverse gap-3 lg:flex-row lg:justify-between lg:items-center"
+    >
+      <app-button
+        variant="primary"
+        size="comfortable"
+        label="Tovább a szállításhoz"
+        loadingLabel="Mentés…"
+        [loading]="saveState() === 'loading'"
+        [disabled]="!canSubmit()"
+        (pressed)="onSubmit()"
+        data-testid="contact-submit"
+      ></app-button>
+    </div>
+  </form>
+</section>

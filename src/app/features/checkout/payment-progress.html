@@ -1,0 +1,61 @@
+@if (status() !== 'idle') {
+  <section
+    class="payment-progress flex flex-col gap-2 p-4 rounded"
+    role="status"
+    aria-live="polite"
+    [attr.data-state]="status()"
+    data-testid="payment-progress"
+  >
+    <h2>{{ heading() }}</h2>
+    @if (status() === 'pending') {
+      <p>{{ attemptLabel() }}</p>
+      <progress
+        max="{{ maxAttempts() }}"
+        [value]="pollCount()"
+        aria-label="Fizetési szándék ellenőrzése"
+      ></progress>
+    } @else if (status() === 'declined') {
+      <p>A szimulált fizetés elutasítva.</p>
+      <p>A fizetési módot módosíthatod, vagy újra próbálkozhatsz.</p>
+      <div class="progress-actions flex gap-3">
+        <app-button
+          variant="secondary"
+          size="comfortable"
+          label="Fizetési mód módosítása"
+          (pressed)="onChangeMethod()"
+          data-testid="payment-progress-change-method"
+        ></app-button>
+        <app-button
+          variant="primary"
+          size="comfortable"
+          label="Újrapróbálom"
+          (pressed)="onRetry()"
+          data-testid="payment-progress-retry"
+        ></app-button>
+      </div>
+    } @else if (status() === 'unknown') {
+      <p>Nem kaptunk egyértelmű választ a fizetési szándékról.</p>
+      <p>Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.</p>
+      <div class="progress-actions flex gap-3">
+        <app-button
+          variant="secondary"
+          size="comfortable"
+          label="Fizetési mód módosítása"
+          (pressed)="onChangeMethod()"
+          data-testid="payment-progress-change-method"
+        ></app-button>
+        <app-button
+          variant="primary"
+          size="comfortable"
+          label="Újrapróbálom"
+          (pressed)="onRetry()"
+          data-testid="payment-progress-retry"
+        ></app-button>
+      </div>
+    } @else if (status() === 'succeeded') {
+      <p>A fizetés sikeres.</p>
+    } @else if (status() === 'error') {
+      <p>A rendelés leadása nem sikerült.</p>
+    }
+  </section>
+}

@@ -114,7 +114,7 @@ Web component supporting glTF/GLB; AR exists but is explicitly excluded from thi
 
 Separately installed `mi-bolt-design`, resolved during T00; deliberately not bundled.
 
-User-provided normative design rules. Original raster remains unchanged and still has old Nexora text.
+User-provided normative design rules. Original raster remains unchanged and still has superseded brand text.
 
 ## U02 — Uploaded Telekom reverse engineering report
 
@@ -130,4 +130,4 @@ Reports Binkies3D script domains and Corbis/jQuery; Swiper and some platform cla
 
 ## Documentation-package boundary
 
-Only the derived implementation decisions in `technology-decisions.md` are required for execution. The raw operator research, original uploaded ZIPs, original design skill and historical generation logs are intentionally omitted. No claim is made that those omitted files exist under docs/mi-bolt. This document retains source identities for attribution.
+Only the derived implementation decisions in `technology-decisions.md` are required for execution. The raw operator research, original uploaded ZIPs, original design skill and historical generation logs are intentionally omitted. No claim is made that those omitted files exist under docs/. This document retains source identities for attribution.

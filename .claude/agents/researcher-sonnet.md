@@ -6,7 +6,7 @@ description: >-
   when the answer has to be found and cited rather than invented.
 model: sonnet
 effort: high
-tools: WebSearch, WebFetch, Read, Grep, Glob, Bash, Monitor
+tools: WebSearch, WebFetch, Read, Grep, Glob, Bash, Monitor, mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the research tier: Claude Sonnet 5 at high effort.

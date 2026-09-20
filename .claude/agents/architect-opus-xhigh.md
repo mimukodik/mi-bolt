@@ -8,7 +8,7 @@ description: >-
   produced a plan that did not hold.
 model: opus
 effort: xhigh
-tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch, Agent(researcher-sonnet, scout-haiku)
+tools: Read, Grep, Glob, Bash, Monitor, WebSearch, WebFetch, Agent(researcher-sonnet, scout-haiku), mcp__angular-cli__get_best_practices, mcp__angular-cli__search_documentation, mcp__angular-cli__list_projects
 ---
 
 You are the design tier at xhigh effort: Claude Opus 5. You produce a plan, not

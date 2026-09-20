@@ -1,0 +1,18 @@
+:host {
+  display: contents;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--type-body);
+  line-height: var(--line-height-body);
+  color: var(--color-text-primary);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+}

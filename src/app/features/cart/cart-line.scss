@@ -1,0 +1,131 @@
+:host {
+  display: block;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface-light);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  color: var(--color-text-primary);
+}
+
+.media {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.name {
+  margin: 0;
+  font-size: var(--type-card-title);
+  font-weight: var(--weight-bold);
+  line-height: var(--line-height-heading);
+}
+
+.variant {
+  margin: 0;
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+}
+
+.variant-sep {
+  margin: 0 var(--space-2);
+}
+
+.prices {
+  display: flex;
+  align-items: center;
+}
+
+.quantity-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.qty-label {
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+}
+
+.totals {
+  display: none;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-control);
+  height: var(--size-control);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-control);
+  background: var(--color-surface-light);
+  color: var(--color-brand-ink);
+  border-radius: var(--radius-control);
+  font-family: inherit;
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+
+.remove:hover:not(:disabled) {
+  background: var(--color-brand-accent-soft);
+  border-color: var(--color-brand-ink);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--color-focus-light);
+  outline-offset: 2px;
+}
+
+.remove:disabled {
+  background: var(--color-surface-section);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-subtle);
+  cursor: not-allowed;
+}
+
+@media (min-width: 640px) {
+  .line {
+    grid-template-columns: 128px minmax(0, 1fr) auto;
+    gap: var(--space-5);
+    padding: var(--space-5);
+  }
+
+  .totals {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-width: 180px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    transition: none;
+  }
+}

@@ -4,7 +4,7 @@ The request is interpreted as **homepage + catalogue + product + complete purcha
 
 ## Global geometry and visual contract
 
-Use the separately installed mi-bolt-design 1.0.1 unchanged at execution AND verification; it is not embedded in this docs package. The original raster still displays the earlier Nexora brand and placeholder commercial claims; preserve it only as source evidence. All live UI is **MiBolt**. Remove absent-scope services, social/account/newsletter controls and unverified offer promises. This is not a pixel-perfect reconstruction of raster text.
+Use the separately installed mi-bolt-design 1.0.1 unchanged at execution AND verification; it is not embedded in this docs package. The original raster still displays a superseded brand and placeholder commercial claims; preserve it only as source evidence. All live UI is **MiBolt**. Remove absent-scope services, social/account/newsletter controls and unverified offer promises. This is not a pixel-perfect reconstruction of raster text.
 
 Container max1320px; gutters mobile16px, tablet24px, desktop48px minimum. Desktop 12-column alignment, gap24px, header64px. At1440px content margin60px. 4px spacing grid, mostly8px multiples. Cards8px radius, inputs/buttons6px. Body16px/1.5, support14px, metadata12px only; hero52/34px, H1 36/28px, section28/24px, card18px, price28/26px. Orange#FF6A00 with dark#171B1F button text; dark#1B2024 shell; white shopping panels, subtle#F5F6F7 sections, #A83B00 accessible orange-toned links. Product image ratio4:3 and object-fit contain.
 
@@ -50,7 +50,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 **Mobile filter drawer:** header title+named44px close; scrollable fields; footer “Mégse” and “Szűrők alkalmazása”. Copy of applied state remains transient until Apply. Escape/backdrop behaves as cancel; applied URL unchanged. Initial focus=drawer heading, return=filter trigger. Filter counts computed by API, not stale CSS labels.
 
-**States:** initial loading; current data refreshing with small progress; empty with current filters+Reset;503/network failure with Retry and retained query; invalid price; image error; out-of-range page canonicalization; back/forward restoration. Loading/error/no-results are not the same component message. Complete rows are listed in docs/mi-bolt/tasks/test-scenarios.json.
+**States:** initial loading; current data refreshing with small progress; empty with current filters+Reset;503/network failure with Retry and retained query; invalid price; image error; out-of-range page canonicalization; back/forward restoration. Loading/error/no-results are not the same component message. Complete rows are listed in docs/tasks/test-scenarios.json.
 
 ## S3 — Product details
 

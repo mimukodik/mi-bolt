@@ -1,0 +1,82 @@
+<section class="catalog" data-layout-mode="sidebar">
+  <header class="heading flex flex-col gap-2">
+    <nav class="breadcrumbs flex gap-2 items-center" aria-label="Navigáció">
+      <a routerLink="/" class="breadcrumb no-underline">Főoldal</a>
+      <span aria-hidden="true" class="breadcrumb__sep">/</span>
+      <span class="breadcrumb is-current" aria-current="page">Mobiltelefonok</span>
+    </nav>
+    <h1 class="title m-0">Mobiltelefonok</h1>
+    <p class="lede m-0 max-w-prose">
+      A teljes demó katalógus 16 készülékkel — szűrj, rendezz, lapozz a kanonikus URL-en keresztül.
+    </p>
+  </header>
+
+  <div class="layout gap-6">
+    <aside class="sidebar hidden lg:block" data-testid="filter-sidebar">
+      <app-filter-panel
+        [value]="facade.query()"
+        [facets]="facade.vm().facets"
+        [disabled]="controlsDisabled()"
+        (filtersChanged)="onFiltersChanged($event)"
+      ></app-filter-panel>
+    </aside>
+
+    <div class="results flex flex-col gap-5 min-w-0">
+      <h2 class="sr-only absolute w-px h-px overflow-hidden">Találatok</h2>
+      <app-catalog-toolbar
+        [total]="facade.vm().total"
+        [sort]="currentSort()"
+        [pageSize]="currentPageSize()"
+        [status]="toolbarStatus()"
+        [appliedCount]="appliedChipCount()"
+        (sortChanged)="onSortChanged($event)"
+        (pageSizeChanged)="onPageSizeChanged($event)"
+        (openFilters)="openDrawer()"
+      ></app-catalog-toolbar>
+
+      <app-applied-filters
+        [query]="facade.query()"
+        (filterRemoved)="onChipRemoved($event)"
+        (cleared)="onClearAll()"
+      ></app-applied-filters>
+
+      <app-async-content
+        [status]="asyncStatus()"
+        [problem]="problem()"
+        [hasPrevious]="hasPrevious()"
+        (retryRequested)="onRetry()"
+      >
+        @for (item of facade.vm().items; track item.id) {
+          <app-product-card [product]="item"></app-product-card>
+        }
+        <app-button
+          data-async-empty-action
+          variant="primary"
+          label="Szűrők törlése"
+          (pressed)="onClearAll()"
+        ></app-button>
+      </app-async-content>
+
+      @if (shouldShowPagination()) {
+        <app-pagination
+          [page]="currentPage()"
+          [pageSize]="currentPageSize()"
+          [total]="facade.vm().total"
+          [disabled]="controlsDisabled()"
+          (pageChanged)="onPageChanged($event)"
+        ></app-pagination>
+      }
+    </div>
+  </div>
+
+  <app-filter-drawer
+    id="filter-drawer"
+    [applied]="facade.query()"
+    [facets]="facade.vm().facets"
+    [opened]="drawerOpened()"
+    [disabled]="controlsDisabled()"
+    [restoreEl]="filterTrigger()"
+    (filtersChanged)="onFiltersChanged($event)"
+    (closed)="closeDrawer()"
+  ></app-filter-drawer>
+</section>

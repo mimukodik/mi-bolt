@@ -2,7 +2,7 @@
 
 A **T00–T29** feladatok kötelezőek. Az **O01** csak külön jóváhagyott 3D-bővítés: alapértelmezésben nem kell megvalósítani, és nem blokkolja az alap MVP-t.
 
-A végrehajtási rend: [magyar végrehajtási prompt](../VEGREHAJTASI-PROMPT.hu.md). Minden feladathoz külön megvalósító subagent, független specifikáció-review, független kód-/tesztreview és szükség szerint valódi böngészős ellenőrzés tartozik. A design skill mindegyik szerepkörnél és minden javítás utáni újraellenőrzésnél kötelező.
+A végrehajtási rendet a [végrehajtási szabályok](../spec/execution-rules.md) rögzítik. Minden feladathoz külön megvalósító subagent, független specifikáció-review, független kód-/tesztreview és szükség szerint valódi böngészős ellenőrzés tartozik. A design skill mindegyik szerepkörnél és minden javítás utáni újraellenőrzésnél kötelező.
 
 A géppel olvasható [tasks.json](tasks.json) és a feladatlapok ugyanazokat az azonosítókat, függőségeket és elfogadási feltételeket tartalmazzák. A [requirements.json](requirements.json), a [project-acceptance.json](project-acceptance.json) és a [test-scenarios.json](test-scenarios.json) az automatikus megfelelőség-ellenőrzés bemenetei; nem korábbi tesztfutás eredményei.
 

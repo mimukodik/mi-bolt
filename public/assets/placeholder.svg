@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Semleges helyőrző">
+  <rect width="800" height="600" fill="#F5F6F7"/>
+  <rect x="280" y="200" width="240" height="200" rx="24" fill="#DDE1E5"/>
+  <text x="400" y="320" font-family="system-ui, sans-serif" font-size="36" font-weight="700" fill="#737B84" text-anchor="middle">Nincs kép</text>
+</svg>

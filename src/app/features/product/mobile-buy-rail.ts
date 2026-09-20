@@ -1,0 +1,45 @@
+import { Component, computed, input, output } from '@angular/core';
+
+import { Button } from '../../shared/ui/button/button';
+import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import type { UiProblem } from '../../shared/types/ui-problem';
+
+/**
+ * T16 — narrow-viewport-only sticky purchase rail
+ * (`docs/spec/components.md:476-488`).
+ *
+ * Extracted from the inline markup `product-page.html` used to carry:
+ * a plain button with no `[loading]` binding and no error surface of
+ * its own. This component shares the page's single cart-mutation
+ * state (`pending`, `error`) rather than owning one
+ * (`docs/spec/architecture.md:57` — "do not maintain two
+ * independently writable totals"); the page is the one place that
+ * calls `CartFacade` (`components.md:409`).
+ *
+ * Required states: default, loading (`pending`), disabled
+ * (`!available`), error, and focus (native button semantics).
+ */
+@Component({
+  selector: 'app-mobile-buy-rail',
+  imports: [Button, PriceBlock, StatusMessage],
+  templateUrl: './mobile-buy-rail.html',
+  styleUrl: './mobile-buy-rail.scss',
+})
+export class MobileBuyRail {
+  readonly money = input<Money | null>(null);
+  readonly available = input<boolean>(false);
+  readonly pending = input<boolean>(false);
+  readonly error = input<UiProblem | null>(null);
+
+  readonly addRequested = output();
+
+  readonly priceStatus = computed<'idle' | 'success'>(() =>
+    this.money() === null ? 'idle' : 'success',
+  );
+
+  onPress(): void {
+    if (!this.available() || this.pending()) return;
+    this.addRequested.emit();
+  }
+}

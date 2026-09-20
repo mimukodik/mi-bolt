@@ -1,0 +1,95 @@
+<section
+  class="root"
+  aria-roledescription="gallery"
+  data-testid="product-gallery"
+  tabindex="-1"
+  (keydown)="onKeydown($event)"
+>
+  <div class="frame" data-testid="gallery-main" tabindex="0" aria-label="Termékképek">
+    <button
+      type="button"
+      class="step step--prev"
+      data-testid="gallery-prev"
+      aria-label="Előző kép"
+      [disabled]="!canPrev()"
+      (click)="prev()"
+    >
+      ‹
+    </button>
+    @if (activeImage(); as img) {
+      <app-product-image
+        [image]="img"
+        [productName]="productName()"
+        aspectRatio="4 / 3"
+        (loadFailed)="onImageFailed()"
+      ></app-product-image>
+    }
+    <button
+      type="button"
+      class="step step--next"
+      data-testid="gallery-next"
+      aria-label="Következő kép"
+      [disabled]="!canNext()"
+      (click)="next()"
+    >
+      ›
+    </button>
+    <button
+      type="button"
+      class="zoom"
+      data-testid="gallery-zoom-open"
+      aria-label="Kép nagyítása"
+      (click)="openZoom()"
+    >
+      Nagyítás
+    </button>
+    <p class="count" data-testid="gallery-count" aria-live="polite">
+      {{ activePosition() }} / {{ images().length }}
+    </p>
+    @if (idUnresolved()) {
+      <p class="image-error" role="status" data-testid="gallery-image-error">
+        A kiválasztott kép nem található; az első kép látható helyette.
+      </p>
+    }
+  </div>
+  <ol class="thumbs" aria-label="Galéria indexképei">
+    @for (image of images(); let i = $index; track i) {
+      <li>
+        <button
+          type="button"
+          class="thumb"
+          [attr.data-testid]="'gallery-thumb-' + i"
+          [attr.aria-current]="image.id === selectedImageId() ? 'true' : 'false'"
+          [attr.aria-label]="'Ugrás a(z) ' + (i + 1) + '. képre'"
+          (click)="goTo(image.id)"
+        >
+          <img
+            class="thumb-img"
+            [src]="image.src"
+            alt=""
+            aria-hidden="true"
+            [attr.width]="image.width ?? null"
+            [attr.height]="image.height ?? null"
+            decoding="async"
+            loading="lazy"
+          />
+          <span class="thumb-check" aria-hidden="true">✓</span>
+        </button>
+      </li>
+    }
+  </ol>
+</section>
+<app-accessible-dialog
+  [opened]="zoomOpen()"
+  [label]="'Nagyított kép: ' + productName()"
+  (closed)="closeZoom()"
+>
+  @if (activeImage(); as img) {
+    <app-product-image
+      [image]="img"
+      [productName]="productName()"
+      aspectRatio="4 / 3"
+      (loadFailed)="onImageFailed()"
+    ></app-product-image>
+  }
+</app-accessible-dialog>

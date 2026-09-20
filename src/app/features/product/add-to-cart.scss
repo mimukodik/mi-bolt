@@ -1,0 +1,22 @@
+/* add-to-cart.scss — extracted from inline styles.
+   Tailwind v4 utility classes live alongside the scoped selectors below. */
+
+:host {
+  display: block;
+}
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.status {
+  display: flex;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

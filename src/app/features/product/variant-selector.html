@@ -1,0 +1,66 @@
+@if (colorOptions().length > 0) {
+  <fieldset class="group" data-testid="variant-color-group">
+    <legend class="legend">
+      Szín: <strong>{{ selectedColorName() }}</strong>
+    </legend>
+    <div class="options">
+      @for (option of colorOptions(); track option.colorCode) {
+        <button
+          type="button"
+          class="option"
+          [class.is-selected]="option.colorCode === selectedColorCode()"
+          [attr.data-testid]="'variant-color-' + option.colorCode"
+          [attr.aria-pressed]="option.colorCode === selectedColorCode() ? 'true' : 'false'"
+          [attr.aria-label]="
+            ariaLabelForColor(option.colorName, option.colorCode === selectedColorCode())
+          "
+          [attr.aria-describedby]="colorDisabledReasonId(option.colorCode)"
+          [disabled]="isColorDisabled(option.colorCode)"
+          (click)="selectColor(option.colorCode)"
+        >
+          <span
+            class="swatch"
+            aria-hidden="true"
+            [style.background-color]="option.swatchHex"
+          ></span>
+          <span class="label">{{ option.colorName }}</span>
+          <span class="check" aria-hidden="true">✓</span>
+        </button>
+      }
+    </div>
+    @for (reason of colorDisabledReasons(); track reason.id) {
+      <p class="reason" [id]="reason.id">{{ reason.text }}</p>
+    }
+  </fieldset>
+}
+
+@if (storageOptions().length > 0) {
+  <fieldset class="group" data-testid="variant-storage-group">
+    <legend class="legend">
+      Tárhely: <strong>{{ selectedStorageLabel() }}</strong>
+    </legend>
+    <div class="options">
+      @for (option of storageOptions(); track option.storageGb) {
+        <button
+          type="button"
+          class="option option--storage"
+          [class.is-selected]="option.storageGb === selectedStorageGb()"
+          [attr.data-testid]="'variant-storage-' + option.storageGb"
+          [attr.aria-pressed]="option.storageGb === selectedStorageGb() ? 'true' : 'false'"
+          [attr.aria-label]="
+            ariaLabelForStorage(option.storageGb, option.storageGb === selectedStorageGb())
+          "
+          [attr.aria-describedby]="storageDisabledReasonId(option.storageGb)"
+          [disabled]="isStorageDisabled(option.storageGb)"
+          (click)="selectStorage(option.storageGb)"
+        >
+          <span class="label">{{ option.storageGb }} GB</span>
+          <span class="check" aria-hidden="true">✓</span>
+        </button>
+      }
+    </div>
+    @for (reason of storageDisabledReasons(); track reason.id) {
+      <p class="reason" [id]="reason.id">{{ reason.text }}</p>
+    }
+  </fieldset>
+}

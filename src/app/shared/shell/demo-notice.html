@@ -1,0 +1,18 @@
+<aside
+  id="demo"
+  class="demo-notice"
+  [class.demo-notice--memory]="persistenceMode() === 'memory'"
+  role="status"
+  data-testid="demo-notice"
+>
+  <span class="demo-notice__badge" aria-hidden="true">DEMÓ</span>
+  @if (persistenceMode() === 'memory') {
+    <span class="demo-notice__text" data-testid="demo-notice-memory-text">
+      A böngésződ nem engedi a mentést, ezért az oldal frissítésekor a kosarad tartalma elveszik.
+    </span>
+  } @else {
+    <span class="demo-notice__text">
+      Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés.
+    </span>
+  }
+</aside>

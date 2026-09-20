@@ -1,0 +1,101 @@
+<section class="featured" data-testid="featured-section" aria-labelledby="featured-heading">
+  <div class="featured__inner">
+    <header class="featured__header">
+      <h2 id="featured-heading" class="featured__title">Készülékek, amiket érdemes megnézni</h2>
+      <a routerLink="/telefonok" class="featured__all-link" data-testid="featured-all-link"
+        >Minden telefon →</a
+      >
+    </header>
+    @if (allErrored()) {
+      <div class="featured__grid-error" data-testid="error-state" role="status" aria-live="polite">
+        <p class="featured__error-title">A kiemelt termékek nem tölthetők be</p>
+        <p class="featured__error-message">{{ errorMessage() }}</p>
+        <button
+          type="button"
+          class="featured__retry"
+          data-testid="retry-button"
+          (click)="retryRequested.emit()"
+        >
+          Újrapróbálom
+        </button>
+      </div>
+    } @else {
+      <ul class="featured__grid" data-testid="featured-grid" role="list">
+        @for (slot of slots(); track slot.slug) {
+          <li class="featured__card" [attr.data-testid]="'featured-card-' + slot.slug">
+            @switch (slot.status) {
+              @case ('success') {
+                @if (slot.product) {
+                  <a
+                    class="featured__media"
+                    [routerLink]="['/telefonok', slot.product.slug]"
+                    [attr.aria-label]="slot.product.name + ' — részletek'"
+                  >
+                    <span class="featured__tag">DEMÓTERMÉK</span>
+                    <div class="featured__image">
+                      @if (firstImageSrc(slot.product); as src) {
+                        <img
+                          [src]="src"
+                          [alt]="firstImageAlt(slot.product)"
+                          decoding="async"
+                          loading="lazy"
+                          data-testid="image-photo"
+                        />
+                      } @else {
+                        <span class="featured__image-fallback" aria-hidden="true">
+                          {{ initialFor(slot.product.name) }}
+                        </span>
+                      }
+                    </div>
+                  </a>
+                  <div class="featured__body">
+                    <p class="featured__brand">{{ slot.product.brand }}</p>
+                    <h3 class="featured__name">{{ slot.product.name }}</h3>
+                    <p class="featured__price" data-testid="price-amount">
+                      <span class="featured__price-amount">{{
+                        formatPrice(slot.product.defaultVariant.price)
+                      }}</span>
+                      <span class="featured__price-currency" aria-hidden="true">Ft</span>
+                    </p>
+                    <a
+                      class="featured__details"
+                      [routerLink]="['/telefonok', slot.product.slug]"
+                      [attr.data-testid]="'featured-details-' + slot.product.slug"
+                      >Részletek</a
+                    >
+                  </div>
+                }
+              }
+              @case ('error') {
+                <div class="featured__error" data-testid="featured-error">
+                  <p class="featured__error-title">Nem tölthető be</p>
+                  <p class="featured__error-message">
+                    {{ slot.error || 'A termék ideiglenesen nem elérhető.' }}
+                  </p>
+                </div>
+              }
+              @default {
+                <div class="featured__loading" data-testid="featured-loading">
+                  <span
+                    class="featured__skeleton featured__skeleton--image"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="featured__skeleton featured__skeleton--title"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="featured__skeleton featured__skeleton--price"
+                    aria-hidden="true"
+                    data-testid="price-skeleton"
+                  ></span>
+                  <span class="sr-only">Termék betöltése…</span>
+                </div>
+              }
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>
