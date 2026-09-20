@@ -149,7 +149,7 @@ describe('POST /cart/items', () => {
     expect(Array.isArray(items)).toBe(true);
     if (!Array.isArray(items)) throw new Error('items not an array');
     expect(items).toHaveLength(1);
-    const item: Record<string, unknown> = items[0] as Record<string, unknown>;
+    const item: unknown = items[0];
     expectRecord(item);
     expect(item['productSlug']).toBe('motorola-edge-50-fusion');
     expect(item['variantSlug']).toBe('zold-256gb');
@@ -185,7 +185,9 @@ describe('POST /cart/items', () => {
     expect(Array.isArray(items)).toBe(true);
     if (!Array.isArray(items)) throw new Error('items not an array');
     expect(items).toHaveLength(1);
-    expect(readNumber(items[0] as Record<string, unknown>, 'quantity')).toBe(5);
+    const merged: unknown = items[0];
+    expectRecord(merged);
+    expect(readNumber(merged, 'quantity')).toBe(5);
 
     const over = await fetch('http://localhost/api/v1/cart/items', {
       method: 'POST',
@@ -320,7 +322,9 @@ describe('PATCH /cart/items/:variantId', () => {
     expect(Array.isArray(items)).toBe(true);
     if (!Array.isArray(items)) throw new Error('items not an array');
     expect(items).toHaveLength(1);
-    expect(readNumber(items[0] as Record<string, unknown>, 'quantity')).toBe(1);
+    const line: unknown = items[0];
+    expectRecord(line);
+    expect(readNumber(line, 'quantity')).toBe(1);
     expect(readNumber(okBody, 'totalQuantity')).toBe(1);
     expect(readNumber(okBody, 'version')).toBe(3);
 
@@ -502,20 +506,19 @@ describe('reconcile', () => {
   }
 
   it('emits QUANTITY_REDUCED with from/to when reconcile clamps to a lower maxQuantity', () => {
-    let calls = 0;
-    const lookup: VariantLookupFn = (id) => {
-      if (id !== VARIANT_IPHONE_BURGUNDI) return undefined;
-      calls += 1;
-      if (calls === 1) return lookupForVariant(id, 4);
-      return lookupForVariant(id, 2);
-    };
+    let cap = 4;
+    const lookup: VariantLookupFn = (id) =>
+      id === VARIANT_IPHONE_BURGUNDI ? lookupForVariant(id, cap) : undefined;
     const store = new CartStore(options, lookup);
     const added = store.add(SESSION_1, '"1"', VARIANT_IPHONE_BURGUNDI, 4);
     if (!added.ok) throw new Error('add failed');
-    expect(readNumber(added.cart as unknown as Record<string, unknown>, 'version')).toBe(2);
+    expect(added.cart.version).toBe(2);
+    expect(added.cart.notices).toEqual([]);
 
+    cap = 2;
     const result = store.get(SESSION_1);
     if (!result.ok) throw new Error('get failed');
+    expect(result.cart.version).toBe(3);
     expect(result.cart.items).toHaveLength(1);
     expect(result.cart.items[0]?.quantity).toBe(2);
     expect(result.cart.notices).toEqual([
@@ -528,19 +531,18 @@ describe('reconcile', () => {
   });
 
   it('emits ITEM_REMOVED when reconcile cannot resolve the variant id', () => {
-    let calls = 0;
-    const lookup: VariantLookupFn = (id) => {
-      if (id !== VARIANT_IPHONE_BURGUNDI) return undefined;
-      calls += 1;
-      if (calls === 1) return lookupForVariant(id, 4);
-      return undefined;
-    };
+    let known = true;
+    const lookup: VariantLookupFn = (id) =>
+      known && id === VARIANT_IPHONE_BURGUNDI ? lookupForVariant(id, 4) : undefined;
     const store = new CartStore(options, lookup);
     const added = store.add(SESSION_1, '"1"', VARIANT_IPHONE_BURGUNDI, 4);
     if (!added.ok) throw new Error('add failed');
+    expect(added.cart.version).toBe(2);
 
+    known = false;
     const result = store.get(SESSION_1);
     if (!result.ok) throw new Error('get failed');
+    expect(result.cart.version).toBe(3);
     expect(result.cart.items).toEqual([]);
     expect(result.cart.notices).toEqual([
       { code: 'ITEM_REMOVED', variantId: VARIANT_IPHONE_BURGUNDI },
