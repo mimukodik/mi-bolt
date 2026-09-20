@@ -18,6 +18,7 @@ import { VariantSelector } from './variant-selector';
 import { SpecificationAccordion } from './specification-accordion';
 import { AddToCart } from './add-to-cart';
 import { MobileBuyRail } from './mobile-buy-rail';
+import { ProductCard } from '../catalog/product-card';
 
 import { CartFacade } from '../cart/cart.facade';
 
@@ -31,6 +32,7 @@ import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import type { UiProblem } from '../../shared/types/ui-problem';
 
 import type { Availability } from '../../api/generated/models/availability';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Variant } from '../../api/generated/models/variant';
 
 /**
@@ -80,6 +82,7 @@ import type { Variant } from '../../api/generated/models/variant';
     AddToCart,
     MobileBuyRail,
     StatusMessage,
+    ProductCard,
     RouterLink,
   ],
   templateUrl: './product-page.html',
@@ -215,6 +218,8 @@ export class ProductPage {
   readonly addSuccessMessage = signal<string | null>(null);
 
   readonly invalidQuery = computed<string | null>(() => this.vm().invalidVariantQuery);
+
+  readonly related = computed<readonly CatalogItem[]>(() => this.vm().related);
 
   readonly errorMessage = computed<string>(() => this.vm().error ?? 'Ismeretlen hiba.');
 

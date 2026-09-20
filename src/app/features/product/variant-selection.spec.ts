@@ -45,6 +45,7 @@ import { ProductFacade } from '../../../app/features/product/product.facade';
 import {
   computeAddToCartState,
   computeDisabledCombinations,
+  defaultVariantOf,
   parseVariantQuery,
   selectImageFromGallery,
   selectInitialVariant,
@@ -90,6 +91,7 @@ function makeVariant(
 ): Variant {
   return {
     id,
+    slug: `${id}-variant`,
     colorCode,
     colorName,
     swatchHex: '#343B43',
@@ -109,7 +111,7 @@ function makeProduct(): Product {
     name: 'Demo One 5G',
     highlights: ['6,7" kijelző'],
     is5g: true,
-    isDemo: true,
+    releasedAt: '2026-01-01',
     description: 'demo',
     specGroups: [],
     variants: [
@@ -118,7 +120,6 @@ function makeProduct(): Product {
       makeVariant('demo-one-5g-silver-256', 'silver', 'Ezüst', 256, 344_990),
       makeVariant('demo-one-5g-silver-128', 'silver', 'Ezüst', 128, 299_990),
     ],
-    defaultVariant: makeVariant('demo-one-5g-graphite-256', 'graphite', 'Grafit', 256, 339_990),
   };
 }
 
@@ -129,9 +130,12 @@ function makeProduct(): Product {
 describe('T15 selectInitialVariant (AC01)', () => {
   const product = makeProduct();
 
-  it('returns the product default when no variant query is provided', () => {
+  it('falls back to variants[0] when no variant query is provided', () => {
+    const product = makeProduct();
     const result = selectInitialVariant(product, null);
-    expect(result.variant.id).toBe('demo-one-5g-graphite-256');
+    const first = product.variants[0];
+    expect(first).toBeDefined();
+    expect(result.variant.id).toBe(first.id);
     expect(result.invalidQuery).toBeNull();
   });
 
@@ -143,14 +147,31 @@ describe('T15 selectInitialVariant (AC01)', () => {
 
   it('falls back to the default and surfaces the invalid id when the query is unknown', () => {
     const result = selectInitialVariant(product, 'demo-one-5g-does-not-exist');
-    expect(result.variant.id).toBe('demo-one-5g-graphite-256');
+    expect(result.variant.id).toBe(product.variants[0].id);
     expect(result.invalidQuery).toBe('demo-one-5g-does-not-exist');
   });
 
   it('treats an empty string the same as a missing query', () => {
     const result = selectInitialVariant(product, '');
-    expect(result.variant.id).toBe('demo-one-5g-graphite-256');
+    const first = product.variants[0];
+    expect(first).toBeDefined();
+    expect(result.variant.id).toBe(first.id);
     expect(result.invalidQuery).toBeNull();
+  });
+});
+
+describe('defaultVariantOf', () => {
+  it('returns variants[0] when the product has at least one variant', () => {
+    const product = makeProduct();
+    const result = defaultVariantOf(product);
+    const first = product.variants[0];
+    expect(first).toBeDefined();
+    expect(result.id).toBe(first.id);
+  });
+
+  it('throws on an empty variants list so the facade surfaces the error state', () => {
+    const product: Product = { ...makeProduct(), variants: [] };
+    expect(() => defaultVariantOf(product)).toThrow(/no variants/i);
   });
 });
 
@@ -418,17 +439,6 @@ beforeEach(() => {
   delayedHandlers.length = 0;
 
   server.use(
-    http.get(`${BASE_URL}/config`, () => {
-      return HttpResponse.json({
-        providerId: 'mi-bolt',
-        displayName: 'MiBolt',
-        currency: 'HUF',
-        isDemo: true,
-        termsVersion: 'demo-1',
-        featuredSlugs: [],
-        maximumLineQuantity: 5,
-      });
-    }),
     http.get(`${BASE_URL}/products/:slug`, ({ params, request }) => {
       const slug = String(params['slug']);
       captures.push({ method: request.method, url: request.url, slug });
@@ -473,7 +483,10 @@ function payloadForSlug(slug: string): Product | null {
       id: 'p-02',
       slug: 'demo-pro-5g',
       name: 'Demo Pro 5G',
-      defaultVariant: makeVariant('demo-pro-5g-graphite-256', 'graphite', 'Grafit', 256, 499_990),
+      variants: [
+        makeVariant('demo-pro-5g-graphite-256', 'graphite', 'Grafit', 256, 499_990),
+        ...makeProduct().variants.slice(1),
+      ],
     };
   }
   return null;
@@ -590,7 +603,6 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     const firstVariant = product.variants[0];
     // Give the variant two distinct images so the gallery reset is observable.
     firstVariant.images = [makeImage('g-front'), makeImage('g-side')];
-    product.defaultVariant = firstVariant;
     server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
@@ -663,7 +675,6 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     const product = makeProduct();
     const firstVariant = product.variants[0];
     firstVariant.images = [makeImage('img-1'), makeImage('img-2'), makeImage('img-3')];
-    product.defaultVariant = firstVariant;
     server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
@@ -709,9 +720,9 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
 
   it('out-of-stock selection disables add-to-cart (AC04)', async () => {
     const product = makeProduct();
-    const firstVariant = product.variants[0];
-    product.variants[1].availability = 'out_of_stock';
-    product.defaultVariant = firstVariant;
+    const secondVariant = product.variants[1];
+    expect(secondVariant).toBeDefined();
+    secondVariant.availability = 'out_of_stock';
     server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();

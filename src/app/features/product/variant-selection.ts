@@ -101,14 +101,34 @@ export interface AddToCartState {
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns the variant the page falls back to when no explicit
+ * selection is available. The 2.0.0 contract no longer carries a
+ * dedicated `defaultVariant` field, so the first entry of
+ * `product.variants` is the natural fallback — the catalog orders
+ * variants by `id` ascending, which keeps the choice stable across
+ * requests for the same product.
+ *
+ * The contract guarantees at least one variant per product. An empty
+ * `variants` list is treated as a programmer error: it would mean
+ * the backend served a malformed payload, and the facade's
+ * `catchError` converts the resulting `Error` into the error state.
+ */
+export function defaultVariantOf(product: Product): Variant {
+  if (product.variants.length === 0) {
+    throw new Error('Product has no variants');
+  }
+  return product.variants[0];
+}
+
+/**
  * Picks the variant the page should display when the route first
  * lands. The rules:
  *
- *   - missing `variantQuery` → product's `defaultVariant`, no
+ *   - missing `variantQuery` → `defaultVariantOf(product)`, no
  *     invalid flag.
  *   - present and matching an existing `Variant.id` → that variant,
  *     no invalid flag.
- *   - present and matching nothing → product's `defaultVariant`,
+ *   - present and matching nothing → `defaultVariantOf(product)`,
  *     the raw query preserved as `invalidQuery` so the page can
  *     require the user to confirm before add-to-cart.
  */
@@ -119,9 +139,9 @@ export function selectInitialVariant(
   if (variantQuery !== null && variantQuery.length > 0) {
     const match = product.variants.find((v) => v.id === variantQuery);
     if (match) return { variant: match, invalidQuery: null };
-    return { variant: product.defaultVariant, invalidQuery: variantQuery };
+    return { variant: defaultVariantOf(product), invalidQuery: variantQuery };
   }
-  return { variant: product.defaultVariant, invalidQuery: null };
+  return { variant: defaultVariantOf(product), invalidQuery: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +218,7 @@ export function selectVariantByPair(
   if (match) return { variant: match, pairAvailable: true };
   const fallback = product.variants.find((v) => v.id === currentVariantId);
   if (fallback) return { variant: fallback, pairAvailable: false };
-  return { variant: product.defaultVariant, pairAvailable: false };
+  return { variant: defaultVariantOf(product), pairAvailable: false };
 }
 
 // ---------------------------------------------------------------------------

@@ -29,10 +29,22 @@
 
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { catchError, distinctUntilChanged, map, of, Subject, switchMap, tap } from 'rxjs';
+import {
+  catchError,
+  distinctUntilChanged,
+  map,
+  of,
+  Subject,
+  Subscription,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 
 import { Api } from '../../api/generated/api';
 import { getProduct } from '../../api/generated/fn/catalog/get-product';
+import { listRelatedProducts } from '../../api/generated/fn/catalog/list-related-products';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Image } from '../../api/generated/models/image';
 import type { Product } from '../../api/generated/models/product';
 import type { Variant } from '../../api/generated/models/variant';
@@ -40,6 +52,7 @@ import type { Variant } from '../../api/generated/models/variant';
 import {
   computeAddToCartState,
   computeDisabledCombinations,
+  defaultVariantOf,
   parseVariantQuery,
   selectImageFromGallery,
   selectInitialVariant,
@@ -76,6 +89,11 @@ export interface ProductVm {
   readonly error: string | null;
   readonly variantQuery: string | null;
   readonly slug: string | null;
+  /** Up to four related catalog entries for the same brand / storage
+   *  family. Empty until the related request settles; the strip is
+   *  never an error state on its own — a failed request renders no
+   *  section rather than blocking the product. */
+  readonly related: readonly CatalogItem[];
 }
 
 /** Extract a human-readable message from an SDK error. */
@@ -117,6 +135,15 @@ export class ProductFacade {
   private readonly invalidQuerySignal = signal<string | null>(null);
   private readonly variantQuerySignal = signal<string | null>(null);
   private readonly slugSignal = signal<string | null>(null);
+  /** Related catalog items for the loaded product. Empty until the
+   *  related request settles; reset to `[]` on every route change so
+   *  the strip never lingers over the next product. */
+  private readonly relatedSignal = signal<readonly CatalogItem[]>([]);
+  /** In-flight related request. The product stream must not cancel
+   *  this — `switchMap` would drop the related list when a fast route
+   *  change arrives, so the related call subscribes separately and is
+   *  torn down on the next route change. */
+  private relatedSub: Subscription | null = null;
   /** Monotonic counter so rapid retry clicks survive distinctUntilChanged. */
   private retryNonceCounter = 0;
 
@@ -144,6 +171,15 @@ export class ProductFacade {
           this.selectedStorageGbSignal.set(null);
           this.galleryImageIdSignal.set(null);
           this.invalidQuerySignal.set(null);
+          // Tear down any in-flight related request so a slow response
+          // for the previous slug cannot land after the new product is
+          // already on screen. The next related request, if any, is
+          // kicked off in `onProductLoaded` below.
+          if (this.relatedSub !== null) {
+            this.relatedSub.unsubscribe();
+            this.relatedSub = null;
+          }
+          this.relatedSignal.set([]);
           // Only reset the quantity when navigating to a NEW product
           // (slug change). A variant-only query change within the
           // same product must preserve the user's typed quantity
@@ -177,6 +213,10 @@ export class ProductFacade {
 
     this.destroyRef.onDestroy(() => {
       routeSub.unsubscribe();
+      if (this.relatedSub !== null) {
+        this.relatedSub.unsubscribe();
+        this.relatedSub = null;
+      }
       this.routeChange$.complete();
     });
   }
@@ -240,13 +280,14 @@ export class ProductFacade {
   selectColor(colorCode: string): void {
     const product = this.productSignal();
     if (product === null) return;
-    const fallbackColor = this.selectedColorCodeSignal() ?? product.defaultVariant.colorCode;
-    const fallbackStorage = this.selectedStorageGbSignal() ?? product.defaultVariant.storageGb;
+    const fallback = defaultVariantOf(product);
+    const fallbackColor = this.selectedColorCodeSignal() ?? fallback.colorCode;
+    const fallbackStorage = this.selectedStorageGbSignal() ?? fallback.storageGb;
     const lookup = selectVariantByPair(
       product,
       colorCode,
       fallbackStorage,
-      this.currentVariant(product)?.id ?? product.defaultVariant.id,
+      this.currentVariant(product)?.id ?? fallback.id,
     );
     this.applyLookup(lookup, fallbackColor);
   }
@@ -259,12 +300,13 @@ export class ProductFacade {
   selectStorage(storageGb: number): void {
     const product = this.productSignal();
     if (product === null) return;
-    const fallbackColor = this.selectedColorCodeSignal() ?? product.defaultVariant.colorCode;
+    const fallback = defaultVariantOf(product);
+    const fallbackColor = this.selectedColorCodeSignal() ?? fallback.colorCode;
     const lookup = selectVariantByPair(
       product,
       fallbackColor,
       storageGb,
-      this.currentVariant(product)?.id ?? product.defaultVariant.id,
+      this.currentVariant(product)?.id ?? fallback.id,
     );
     this.applyLookup(lookup, fallbackColor);
   }
@@ -309,13 +351,41 @@ export class ProductFacade {
 
   private onProductLoaded(product: Product): void {
     const variantQuery = this.variantQuerySignal();
-    const initial: InitialVariantSelection = selectInitialVariant(product, variantQuery);
+    // `selectInitialVariant` calls `defaultVariantOf`, which throws on
+    // an empty `variants` list. The contract guarantees at least one
+    // variant, but a malformed backend payload must not crash the
+    // facade — surface the error state instead, the same way a failed
+    // `getProduct` does.
+    let initial: InitialVariantSelection;
+    try {
+      initial = selectInitialVariant(product, variantQuery);
+    } catch (err) {
+      this.statusSignal.set('error');
+      this.errorSignal.set(describeError(err));
+      return;
+    }
     this.productSignal.set(product);
     this.statusSignal.set('success');
     this.selectedColorCodeSignal.set(initial.variant.colorCode);
     this.selectedStorageGbSignal.set(initial.variant.storageGb);
     this.galleryImageIdSignal.set(null);
     this.invalidQuerySignal.set(initial.invalidQuery);
+    // Fire the related list request on its own subscription so a
+    // `switchMap` on the product stream cannot drop it. A failure
+    // (including a 404 for an unknown slug the related endpoint
+    // disagrees on) leaves the strip empty; the product itself is
+    // already in the success state and stays there.
+    this.relatedSub = this.api
+      .invoke(listRelatedProducts, { slug: product.slug })
+      .pipe(take(1))
+      .subscribe({
+        next: (items) => {
+          this.relatedSignal.set(items);
+        },
+        error: () => {
+          this.relatedSignal.set([]);
+        },
+      });
   }
 
   private applyLookup(
@@ -335,11 +405,11 @@ export class ProductFacade {
     if (product === null) return null;
     const colorCode = this.selectedColorCodeSignal();
     const storageGb = this.selectedStorageGbSignal();
-    if (colorCode === null || storageGb === null) return product.defaultVariant;
+    if (colorCode === null || storageGb === null) return defaultVariantOf(product);
     const match = product.variants.find(
       (v) => v.colorCode === colorCode && v.storageGb === storageGb,
     );
-    return match ?? product.defaultVariant;
+    return match ?? defaultVariantOf(product);
   }
 
   private buildVm(): ProductVm {
@@ -374,6 +444,7 @@ export class ProductFacade {
         error,
         variantQuery,
         slug,
+        related: [],
       };
     }
 
@@ -404,6 +475,7 @@ export class ProductFacade {
       error,
       variantQuery,
       slug,
+      related: this.relatedSignal(),
     };
   }
 }
