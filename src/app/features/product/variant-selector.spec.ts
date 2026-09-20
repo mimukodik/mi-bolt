@@ -20,6 +20,7 @@ import type { Variant } from '../../api/generated/models/variant';
 const variants: readonly Variant[] = [
   {
     id: 'v-graphite-256',
+    slug: 'v-graphite-256-variant',
     colorCode: 'graphite',
     colorName: 'Grafit',
     swatchHex: '#343B43',
@@ -31,6 +32,7 @@ const variants: readonly Variant[] = [
   },
   {
     id: 'v-graphite-512',
+    slug: 'v-graphite-512-variant',
     colorCode: 'graphite',
     colorName: 'Grafit',
     swatchHex: '#343B43',
@@ -42,6 +44,7 @@ const variants: readonly Variant[] = [
   },
   {
     id: 'v-silver-256',
+    slug: 'v-silver-256-variant',
     colorCode: 'silver',
     colorName: 'Ezüst',
     swatchHex: '#C6C9CB',

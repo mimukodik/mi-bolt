@@ -25,6 +25,7 @@ import type { Variant } from '../../api/generated/models/variant';
 
 const sampleVariant: Variant = {
   id: 'demo-one-5g-graphite-256',
+  slug: 'demo-one-5g-graphite-256-variant',
   colorCode: 'graphite',
   colorName: 'Grafit',
   swatchHex: '#343B43',

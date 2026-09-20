@@ -148,6 +148,22 @@
           <app-specification-accordion [groups]="specGroups()"></app-specification-accordion>
         </section>
 
+        @if (related().length > 0) {
+          <section class="mt-10" aria-labelledby="related-heading" data-testid="related-products">
+            <h2 id="related-heading" class="m-0 mb-4 text-xl leading-7 font-bold">
+              Hasonló készülékek
+            </h2>
+            <ul
+              class="m-0 p-0 list-none grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+              role="list"
+            >
+              @for (item of related(); track item.id) {
+                <li><app-product-card [product]="item" /></li>
+              }
+            </ul>
+          </section>
+        }
+
         @if (invalidQuery() !== null) {
           <p class="hint hint--error" role="status">
             A linkben megadott változat nem található: {{ invalidQuery() }}. Válassz a fenti

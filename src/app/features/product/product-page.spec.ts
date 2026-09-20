@@ -31,13 +31,18 @@ import type { Variant } from '../../api/generated/models/variant';
 function toGeneratedProduct(source: typeof DEMO_PRODUCT): Product {
   const toVariant = (v: (typeof source.variants)[number]): Variant => ({
     ...v,
+    slug: `${v.id}-variant`,
     images: [...v.images],
   });
+  // Drop the legacy fields the mock fixture still carries but the
+  // 2.0.0 Product type no longer accepts, and supply the `releasedAt`
+  // field ProductBase requires but the mock fixture omits.
+  const { isDemo: _isDemo, defaultVariant: _defaultVariant, ...rest } = source;
   return {
-    ...source,
+    ...rest,
+    releasedAt: '2026-01-01',
     highlights: [...source.highlights],
     variants: source.variants.map(toVariant),
-    defaultVariant: toVariant(source.defaultVariant),
     specGroups: source.specGroups.map((g) => ({ ...g, rows: [...g.rows] })),
   };
 }
@@ -107,6 +112,74 @@ beforeEach(() => {
           detail: `Product not found`,
         },
         { status: 404 },
+      );
+    }),
+
+    http.get(`${BASE_URL}/products/:slug/related`, () => {
+      return HttpResponse.json(
+        [
+          {
+            id: 'r-01',
+            slug: 'demo-related-1',
+            brand: 'MiBolt Demo',
+            name: 'Demo Related One',
+            highlights: ['Hasonló ajánlat'],
+            is5g: true,
+            releasedAt: '2026-01-01',
+            storageGb: 128,
+            variantId: 'demo-related-1-graphite-128',
+            variantSlug: 'demo-related-1-graphite-128',
+            price: { amount: 199_990, currency: 'HUF' },
+            availability: 'in_stock',
+            maxQuantity: 5,
+            image: {
+              id: 'demo-related-1-graphite-128-front',
+              src: '/assets/products/silver-front.webp',
+              alt: 'Demo Related One',
+              width: 320,
+              height: 400,
+            },
+            colors: [
+              {
+                colorCode: 'graphite',
+                colorName: 'Grafit',
+                swatchHex: '#343B43',
+                variantId: 'demo-related-1-graphite-128',
+              },
+            ],
+          },
+          {
+            id: 'r-02',
+            slug: 'demo-related-2',
+            brand: 'MiBolt Demo',
+            name: 'Demo Related Two',
+            highlights: ['Másik hasonló ajánlat'],
+            is5g: true,
+            releasedAt: '2026-01-01',
+            storageGb: 256,
+            variantId: 'demo-related-2-graphite-256',
+            variantSlug: 'demo-related-2-graphite-256',
+            price: { amount: 249_990, currency: 'HUF' },
+            availability: 'in_stock',
+            maxQuantity: 5,
+            image: {
+              id: 'demo-related-2-graphite-256-front',
+              src: '/assets/products/graphite-front.webp',
+              alt: 'Demo Related Two',
+              width: 320,
+              height: 400,
+            },
+            colors: [
+              {
+                colorCode: 'graphite',
+                colorName: 'Grafit',
+                swatchHex: '#343B43',
+                variantId: 'demo-related-2-graphite-256',
+              },
+            ],
+          },
+        ],
+        { status: 200 },
       );
     }),
 
@@ -651,6 +724,7 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
       error: null,
       variantQuery: null,
       slug: DEMO_PRODUCT.slug,
+      related: [],
     });
     const facadeStub: Pick<ProductFacade, 'vm'> = { vm };
     const cartFacadeStub = {
@@ -828,5 +902,92 @@ describe('T16 product-page shared-primitive dependency wiring', () => {
     expect(root.querySelector('app-product-gallery')).not.toBeNull();
     expect(root.querySelector('app-variant-selector')).not.toBeNull();
     expect(root.querySelector('app-specification-accordion')).not.toBeNull();
+  });
+});
+
+describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () => {
+  it('renders a related-products section with one card per item from listRelatedProducts', async () => {
+    const { root } = await createHarness();
+
+    const section = queryElement(root, '[data-testid="related-products"]');
+    expect(section).not.toBeNull();
+    const heading = queryElement(section, '#related-heading');
+    expect(heading.textContent.trim()).toBe('Hasonló készülékek');
+
+    const items = section.querySelectorAll('li app-product-card');
+    expect(items.length).toBe(2);
+  });
+
+  it('renders no related section when the related list is empty', async () => {
+    server.use(
+      http.get(`${BASE_URL}/products/:slug/related`, () => HttpResponse.json([], { status: 200 })),
+    );
+
+    const { root } = await createHarness();
+    expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
+  });
+
+  it('a failed related call leaves the product in success state with no related section', async () => {
+    server.use(
+      http.get(`${BASE_URL}/products/:slug/related`, () =>
+        HttpResponse.json(
+          {
+            type: 'https://example.com/server-error',
+            title: 'Szolgáltatás nem elérhető',
+            status: 503,
+            detail: 'Service unavailable',
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+
+    const { facade, root } = await createHarness();
+
+    expect(facade.vm().status).toBe('success');
+    expect(facade.vm().related).toEqual([]);
+    expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
+  });
+
+  it('navigating to another slug clears the related list before the new one arrives', async () => {
+    // The first product's related response is delayed so it cannot
+    // beat the route change.
+    const resolvers: { current?: () => void } = {};
+    server.use(
+      http.get(`${BASE_URL}/products/:slug/related`, ({ params }) => {
+        const slug = String(params['slug']);
+        if (slug === 'demo-one-5g') {
+          return new Promise<Response>((resolve) => {
+            resolvers.current = (): void => {
+              resolve(HttpResponse.json([]));
+            };
+          });
+        }
+        return HttpResponse.json([], { status: 200 });
+      }),
+    );
+
+    const { fixture, facade, root, tick } = await createHarness();
+
+    expect(facade.vm().related).toEqual([]);
+    expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
+
+    // Navigate to a second product; the route change must reset the
+    // related signal synchronously, before the in-flight first response
+    // lands.
+    fixture.componentInstance.slug.set('demo-pro-5g');
+    fixture.detectChanges();
+    await tick();
+
+    expect(facade.vm().slug).toBe('demo-pro-5g');
+    expect(facade.vm().related).toEqual([]);
+
+    // Now resolve the dangling first request — the facade must not let
+    // it repopulate the list for the new product.
+    resolvers.current?.();
+    await new Promise<void>((r) => setTimeout(r, 30));
+
+    expect(facade.vm().slug).toBe('demo-pro-5g');
+    expect(facade.vm().related).toEqual([]);
   });
 });
