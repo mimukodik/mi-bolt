@@ -18,11 +18,19 @@
  */
 
 import { provideZonelessChangeDetection, Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
+
+function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected fixture.nativeElement to be HTMLElement');
+  }
+  return raw;
+}
 
 const CRUMBS: readonly CheckoutCrumb[] = [
   { label: 'Főoldal', link: '/' },
@@ -56,7 +64,7 @@ class HostForCheckoutStepHeader {
 describe('CheckoutStepHeader breadcrumbs', () => {
   it('renders one anchor per crumb with the routerLink href', () => {
     const fixture = createHeader();
-    const root = fixture.nativeElement as HTMLElement;
+    const root = getRootElement(fixture);
 
     const anchors = root.querySelectorAll<HTMLAnchorElement>('nav.breadcrumbs a');
     expect(anchors.length).toBe(2);
@@ -66,7 +74,7 @@ describe('CheckoutStepHeader breadcrumbs', () => {
 
   it('marks the current crumb with aria-current="page" and no link', () => {
     const fixture = createHeader();
-    const root = fixture.nativeElement as HTMLElement;
+    const root = getRootElement(fixture);
 
     const current = root.querySelector('[aria-current="page"]');
     expect(current).not.toBeNull();
@@ -82,7 +90,7 @@ describe('CheckoutStepHeader breadcrumbs', () => {
     });
     const fixture = TestBed.createComponent(HostForCheckoutStepHeader);
     fixture.detectChanges();
-    const root = fixture.nativeElement as HTMLElement;
+    const root = getRootElement(fixture);
 
     const nav = root.querySelector('nav.breadcrumbs');
     const heading = root.querySelector<HTMLElement>('header.heading > h1.title');
