@@ -10,7 +10,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createHandlers } from '../mocks/create-handlers';
-import { Repository } from '../mocks/repository';
+import { Repository as Repo } from '../mocks/repository';
 import {
   createBrowserPersistence,
   snapshotKey,
@@ -64,7 +64,7 @@ function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
 describe('T05-AC02 handler factory', () => {
   it('returns a RequestHandler[] with the dispatcher shell and exposes the same factory for browser and node', () => {
     const options = {
-      repository: new Repository(
+      repository: new Repo(
         DEFAULT_SCENARIO,
         createDeterministicIds(1),
         createFixedClock('2026-09-14T10:00:00.000Z'),
@@ -103,7 +103,7 @@ describe('T05-AC02 clock + ids injection', () => {
     expect(ids.uuid()).toBe('e2e-16-0001');
     expect(ids.uuid()).toBe('e2e-16-0002');
     expect(ids.uuid()).toBe('e2e-16-0003');
-    for (let i = 0; i < 5; i++) {
+    for (let index = 0; index < 5; index++) {
       expect(ids.uuid()).toMatch(/^[a-zA-Z0-9_-]{8,80}$/);
     }
   });
@@ -184,7 +184,9 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
 
   it('storage-denied mode keeps state in memory and warns once', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
-      /* suppress expected warning */
+      /*
+      suppress expected warning
+      */
     });
     const original = rawStorage();
     const denial: Storage = {
@@ -244,12 +246,12 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
 
 describe('T05-AC06 scenario isolation', () => {
   it('two scenarios keep independent repositories and snapshot storage', () => {
-    const repoA = new Repository(
+    const repoA = new Repo(
       { ...DEFAULT_SCENARIO, name: 'isolated-A' },
       createDeterministicIds(1),
       createFixedClock('2026-09-14T10:00:00.000Z'),
     );
-    const repoB = new Repository(
+    const repoB = new Repo(
       { ...DEFAULT_SCENARIO, name: 'isolated-B' },
       createDeterministicIds(2),
       createFixedClock('2026-09-14T10:00:00.000Z'),
@@ -336,10 +338,10 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
     const persistSpy = vi.fn();
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
     const handlers = createHandlers({
-      repository,
+      repository: repo,
       clock,
       ids,
       scenario: DEFAULT_SCENARIO,
@@ -374,7 +376,6 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
     persistSpy.mockClear();
 
     const getRes = await fetch(`http://localhost/api/v1/carts/${cartId}`, {
-      method: 'GET',
       headers: {
         'X-Demo-Session': sessionId,
       },
@@ -386,8 +387,8 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
   it('round-trips buildSnapshot through persistence save and hydrate matching line ids, variant ids, and quantities', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
 
     const persistedCart: PersistedCart = {
       id: 'cart-roundtrip-1',
@@ -395,10 +396,10 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 2 }],
       lastUpdatedAt: '2026-09-14T10:00:00.000Z',
     };
-    repository.loadPersistedCart(persistedCart, 'sess-12345');
+    repo.loadPersistedCart(persistedCart, 'sess-12345');
 
     const nowMs = Date.parse('2026-09-14T10:00:00.000Z');
-    const built = buildSnapshot(repository, 'sess-12345', nowMs);
+    const built = buildSnapshot(repo, 'sess-12345', nowMs);
 
     const scenarioName = 'snapshot-roundtrip';
     const persistence = createBrowserPersistence({
@@ -408,7 +409,7 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
     const hydrated = persistence.hydrate(scenarioName);
 
     expect(hydrated).not.toBeNull();
-    const repoCart = repository.findCartBySession('sess-12345');
+    const repoCart = repo.findCartBySession('sess-12345');
     expect(repoCart).toBeDefined();
     expect(hydrated?.cart?.items).toEqual(
       repoCart?.items.map((it) => ({
@@ -422,11 +423,11 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
   it('buildSnapshot contains only allowlisted keys', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.ensureCart('sess-12345');
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
+    repo.ensureCart('sess-12345');
 
-    const built = buildSnapshot(repository, 'sess-12345', Date.now());
+    const built = buildSnapshot(repo, 'sess-12345', Date.now());
     expect(Object.keys(built).sort()).toEqual([
       'cart',
       'expiresAt',
@@ -441,8 +442,8 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
   it('reconnects existing persisted cart on ensureCart and findCartBySession (FIX-10-AC08)', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
 
     const persistedCart: PersistedCart = {
       id: 'cart-persisted-x',
@@ -450,18 +451,18 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
       lastUpdatedAt: '2026-09-14T10:00:00.000Z',
     };
-    repository.loadPersistedCart(persistedCart, 'sess-x');
+    repo.loadPersistedCart(persistedCart, 'sess-x');
 
-    expect(repository.ensureCart('sess-x').id).toBe(persistedCart.id);
-    expect(repository.findCartBySession('sess-x')?.id).toBe(persistedCart.id);
+    expect(repo.ensureCart('sess-x').id).toBe(persistedCart.id);
+    expect(repo.findCartBySession('sess-x')?.id).toBe(persistedCart.id);
   });
 
   it('buildSnapshot round-trips a well-formed receipt item unchanged', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
+    repo.saveOrder({
       id: 'order-wellformed-1',
       orderNumber: 'DEMO-000001',
       sessionId: 'sess-wellformed',
@@ -472,20 +473,20 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
         {
           variantId: 'demo-one-5g-graphite-256',
           quantity: 2,
-          unitPrice: { amount: 5_000, currency: 'HUF' },
+          unitPrice: { amount: 5000, currency: 'HUF' },
           lineTotal: { amount: 10_000, currency: 'HUF' },
         },
       ],
     });
 
-    const built = buildSnapshot(repository, 'sess-wellformed', Date.now());
+    const built = buildSnapshot(repo, 'sess-wellformed', Date.now());
 
     expect(built.receipts).toHaveLength(1);
     expect(built.receipts[0].items).toEqual([
       {
         variantId: 'demo-one-5g-graphite-256',
         quantity: 2,
-        unitPrice: { amount: 5_000, currency: 'HUF' },
+        unitPrice: { amount: 5000, currency: 'HUF' },
         lineTotal: { amount: 10_000, currency: 'HUF' },
       },
     ]);
@@ -494,9 +495,9 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
   it('buildSnapshot degrades a malformed receipt item instead of dropping it', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
+    repo.saveOrder({
       id: 'order-malformed-1',
       orderNumber: 'DEMO-000002',
       sessionId: 'sess-malformed',
@@ -505,7 +506,7 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       items: [{ variantId: 42, quantity: 'two', unitPrice: null, lineTotal: 'not-money' }],
     });
 
-    const built = buildSnapshot(repository, 'sess-malformed', Date.now());
+    const built = buildSnapshot(repo, 'sess-malformed', Date.now());
 
     expect(built.receipts).toHaveLength(1);
     expect(built.receipts[0].items).toEqual([
@@ -521,9 +522,9 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
   it('buildSnapshot maps paymentMethod to demo_cod only when the receipt says so', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
+    repo.saveOrder({
       id: 'order-cod-1',
       orderNumber: 'DEMO-000003',
       sessionId: 'sess-payment',
@@ -531,7 +532,7 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       total: { amount: 0, currency: 'HUF' },
       paymentMethod: 'demo_cod',
     });
-    repository.saveOrder({
+    repo.saveOrder({
       id: 'order-other-1',
       orderNumber: 'DEMO-000004',
       sessionId: 'sess-payment',
@@ -539,7 +540,7 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       total: { amount: 0, currency: 'HUF' },
       paymentMethod: 'something-else',
     });
-    repository.saveOrder({
+    repo.saveOrder({
       id: 'order-absent-1',
       orderNumber: 'DEMO-000005',
       sessionId: 'sess-payment',
@@ -547,7 +548,7 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       total: { amount: 0, currency: 'HUF' },
     });
 
-    const built = buildSnapshot(repository, 'sess-payment', Date.now());
+    const built = buildSnapshot(repo, 'sess-payment', Date.now());
     const byId = (id: string) => built.receipts.find((r) => r.id === id);
 
     expect(byId('order-cod-1')?.paymentMethod).toBe('demo_cod');
@@ -558,9 +559,9 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
   it('buildSnapshot produces an empty items array when the order has no items', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
+    repo.saveOrder({
       id: 'order-noitems-1',
       orderNumber: 'DEMO-000006',
       sessionId: 'sess-noitems',
@@ -568,7 +569,7 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       total: { amount: 0, currency: 'HUF' },
     });
 
-    const built = buildSnapshot(repository, 'sess-noitems', Date.now());
+    const built = buildSnapshot(repo, 'sess-noitems', Date.now());
 
     expect(built.receipts).toHaveLength(1);
     expect(built.receipts[0].items).toEqual([]);
@@ -579,8 +580,8 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
   it('still returns an unexpired restored cart (no regression on FIX-10-AC08)', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
 
     const persistedCart: PersistedCart = {
       id: 'cart-unexpired-x',
@@ -588,19 +589,19 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
       items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
       lastUpdatedAt: '2026-09-14T10:00:00.000Z',
     };
-    repository.loadPersistedCart(persistedCart, 'sess-unexpired');
+    repo.loadPersistedCart(persistedCart, 'sess-unexpired');
     // loadPersistedCart sets expiresAt to lastUpdatedAt + 24h; the clock has
     // not advanced, so the cart is still well within its window.
     clock.advanceMs(23 * 60 * 60 * 1000);
 
-    expect(repository.ensureCart('sess-unexpired').id).toBe(persistedCart.id);
+    expect(repo.ensureCart('sess-unexpired').id).toBe(persistedCart.id);
   });
 
   it('mints a fresh, empty cart when the restored cart has already expired', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
 
     const persistedCart: PersistedCart = {
       id: 'cart-expired-x',
@@ -608,24 +609,24 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
       items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
       lastUpdatedAt: '2026-09-14T10:00:00.000Z',
     };
-    repository.loadPersistedCart(persistedCart, 'sess-expired');
+    repo.loadPersistedCart(persistedCart, 'sess-expired');
     // loadPersistedCart's expiresAt is lastUpdatedAt + 24h; a six-day-old
     // snapshot (well inside persistence's 7-day MAX_AGE_MS) still carries a
     // cart that is long past that 24h mark.
     clock.advanceMs(6 * 24 * 60 * 60 * 1000);
 
-    const fresh = repository.ensureCart('sess-expired');
+    const fresh = repo.ensureCart('sess-expired');
 
     expect(fresh.id).not.toBe(persistedCart.id);
     expect(fresh.items).toEqual([]);
-    expect(repository.findCartBySession('sess-expired')?.id).toBe(fresh.id);
+    expect(repo.findCartBySession('sess-expired')?.id).toBe(fresh.id);
   });
 
   it('treats an unparseable expiresAt as not expired (matches CartDomain.isExpired)', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
 
     // Built directly through createCart/updateCart rather than
     // loadPersistedCart: loadPersistedCart derives expiresAt from
@@ -633,22 +634,22 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
     // an unparseable input rather than producing an unparseable
     // expiresAt string. This isolates the guard on `cart.expiresAt`
     // itself, per "Do not change loadPersistedCart's expiry arithmetic".
-    const created = repository.createCart('sess-bad-date');
-    repository.updateCart({ ...created, expiresAt: 'not-a-real-date' });
+    const created = repo.createCart('sess-bad-date');
+    repo.updateCart({ ...created, expiresAt: 'not-a-real-date' });
 
-    expect(repository.ensureCart('sess-bad-date').id).toBe(created.id);
+    expect(repo.ensureCart('sess-bad-date').id).toBe(created.id);
   });
 
   it('still mints a fresh cart when the existing cart is not active (pre-existing arm)', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(DEFAULT_SCENARIO, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
 
-    const created = repository.createCart('sess-ordered');
-    repository.updateCart({ ...created, status: 'ordered' });
+    const created = repo.createCart('sess-ordered');
+    repo.updateCart({ ...created, status: 'ordered' });
 
-    const fresh = repository.ensureCart('sess-ordered');
+    const fresh = repo.ensureCart('sess-ordered');
 
     expect(fresh.id).not.toBe(created.id);
     expect(fresh.status).toBe('active');

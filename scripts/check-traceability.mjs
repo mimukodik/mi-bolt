@@ -86,28 +86,32 @@ function readJson(path, label) {
 }
 
 function isSpecPath(file) {
-  if (!/\.spec\.[mc]?[jt]sx?$/i.test(file)) return false;
-  if (file.includes(`${sep}node_modules${sep}`)) return false;
-  return true;
+  return /\.spec\.[mc]?[jt]sx?$/i.test(file) && !file.includes(`${sep}node_modules${sep}`);
 }
 
-function walk(dir, acc) {
-  if (!existsSync(dir)) return acc;
+function walk(dir, accumulator) {
+  if (!existsSync(dir)) return accumulator;
   for (const entry of readdirSync(dir)) {
     const child = join(dir, entry);
     const st = statSync(child);
-    if (st.isDirectory()) walk(child, acc);
-    else if (st.isFile() && isSpecPath(child)) acc.push(child);
+    if (st.isDirectory()) walk(child, accumulator);
+    else if (st.isFile() && isSpecPath(child)) accumulator.push(child);
   }
-  return acc;
+  return accumulator;
 }
 
 function collectReferences() {
-  /** @type {Map<string, Set<string>>} */
+  /**
+  @type {Map<string, Set<string>>}
+  */
   const acToFiles = new Map();
-  /** @type {Map<string, Set<string>>} */
+  /**
+  @type {Map<string, Set<string>>}
+  */
   const taskToFiles = new Map();
-  /** @type {Map<string, Set<string>>} */
+  /**
+  @type {Map<string, Set<string>>}
+  */
   const scenarioToFiles = new Map();
 
   const acRegex = /\b(T\d{2}-AC\d{2})\b/g;
@@ -119,17 +123,17 @@ function collectReferences() {
     const files = [];
     walk(join(REPO_ROOT, root), files);
     for (const file of files) {
-      const src = readFileSync(file, 'utf8');
+      const source = readFileSync(file, 'utf8');
       const relFile = file.slice(REPO_ROOT.length + 1);
-      for (const m of src.matchAll(acRegex)) {
+      for (const m of source.matchAll(acRegex)) {
         if (!acToFiles.has(m[1])) acToFiles.set(m[1], new Set());
         acToFiles.get(m[1]).add(relFile);
       }
-      for (const m of src.matchAll(taskRegex)) {
+      for (const m of source.matchAll(taskRegex)) {
         if (!taskToFiles.has(m[1])) taskToFiles.set(m[1], new Set());
         taskToFiles.get(m[1]).add(relFile);
       }
-      for (const m of src.matchAll(scenarioRegex)) {
+      for (const m of source.matchAll(scenarioRegex)) {
         const id = `E${m[1]}`;
         if (!scenarioToFiles.has(id)) scenarioToFiles.set(id, new Set());
         scenarioToFiles.get(id).add(relFile);
@@ -137,7 +141,7 @@ function collectReferences() {
       // Tidy describe-path context: when a file lists ACs only inside a
       // string literal, it still counts, so the regex pass above is
       // authoritative. describeRegex reserved for future drill-down.
-      describeRegex.lastIndex = src.length;
+      describeRegex.lastIndex = source.length;
       void describeRegex;
     }
   }
@@ -145,7 +149,9 @@ function collectReferences() {
 }
 
 function checkRequirements(reqs, taskToFiles) {
-  /** @type {{ id: string, reason: string }[]} */
+  /**
+  @type {{ id: string, reason: string }[]}
+  */
   const unreached = [];
   for (const r of reqs) {
     const reachedFiles = new Set();
@@ -167,7 +173,9 @@ function checkRequirements(reqs, taskToFiles) {
 }
 
 function checkTasks(tasks, acToFiles) {
-  /** @type {{ id: string, missing: string[] }[]} */
+  /**
+  @type {{ id: string, missing: string[] }[]}
+  */
   const unreached = [];
   for (const t of tasks) {
     const missing = [];
@@ -181,21 +189,23 @@ function checkTasks(tasks, acToFiles) {
 }
 
 function checkScenarios(scenarios, scenarioToFiles, taskToFiles) {
-  /** @type {{ id: string, reason: string }[]} */
+  /**
+  @type {{ id: string, reason: string }[]}
+  */
   const unreached = [];
   for (const s of scenarios) {
     if (scenarioToFiles.has(s.id)) continue;
     // A scenario is considered reached when at least one of its
     // owning tasks has a spec file that pins it, even if the literal
     // E0xx identifier is in a doc-only comment.
-    let reached = false;
+    let isReached = false;
     for (const taskId of s.tasks ?? []) {
       if (taskToFiles.has(taskId)) {
-        reached = true;
+        isReached = true;
         break;
       }
     }
-    if (reached) continue;
+    if (isReached) continue;
     unreached.push({
       id: s.id,
       reason: `scenario ${s.id} (${s.title ?? ''}, scenario=${s.scenario ?? ''}) has no spec file that references it`,
@@ -205,8 +215,9 @@ function checkScenarios(scenarios, scenarioToFiles, taskToFiles) {
 }
 
 function renderTable(rows) {
-  if (rows.length === 0) return '  (none)\n';
-  return rows.map((r) => `  - ${r.id}: ${r.reason}`).join('\n') + '\n';
+  return rows.length === 0
+    ? '  (none)\n'
+    : rows.map((r) => `  - ${r.id}: ${r.reason}`).join('\n') + '\n';
 }
 
 function main() {
@@ -222,15 +233,18 @@ function main() {
   ).length;
 
   const reachedAcCount = tasks.reduce(
-    (acc, t) =>
-      acc +
+    (accumulator, t) =>
+      accumulator +
       (GATE_OWNED_TASKS.has(t.id)
         ? (t.acceptanceCriteria ?? []).length
         : (t.acceptanceCriteria ?? []).filter((ac) => acToFiles.has(ac.id)).length),
     0,
   );
 
-  const totalAcCount = tasks.reduce((acc, t) => acc + (t.acceptanceCriteria ?? []).length, 0);
+  const totalAcCount = tasks.reduce(
+    (accumulator, t) => accumulator + (t.acceptanceCriteria ?? []).length,
+    0,
+  );
 
   const reachedScenarioCount = scenarios.filter(
     (s) => scenarioToFiles.has(s.id) || (s.tasks ?? []).some((t) => taskToFiles.has(t)),
@@ -261,9 +275,9 @@ function main() {
   };
 
   process.stdout.write(`check-traceability summary:\n`);
-  for (const [key, val] of Object.entries(summary)) {
+  for (const [key, value] of Object.entries(summary)) {
     process.stdout.write(
-      `  ${key}: reached=${val.reached}/${val.total} (unreached=${val.unreached})\n`,
+      `  ${key}: reached=${value.reached}/${value.total} (unreached=${value.unreached})\n`,
     );
   }
   if (verbose || totalIssues > 0) {

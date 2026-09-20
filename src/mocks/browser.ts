@@ -43,7 +43,7 @@ import {
   createStrictHandlers,
   type CreateHandlersOptions,
 } from './create-handlers';
-import { Repository, type Product } from './repository';
+import { Repository as Repo, type Product } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
@@ -68,12 +68,12 @@ export const worker = setupWorker();
  */
 const PRODUCTION_SCENARIO_NAME = 'production';
 
-function loadCatalogFixture(repository: Repository, scenarioName: string): void {
+function loadCatalogFixture(repo: Repo, scenarioName: string): void {
   if (scenarioName === PRODUCTION_SCENARIO_NAME) {
-    repository.loadProducts([]);
+    repo.loadProducts([]);
     return;
   }
-  repository.loadProducts(productsFixture as readonly Product[]);
+  repo.loadProducts(productsFixture as readonly Product[]);
 }
 
 /**
@@ -85,20 +85,17 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const scenario = parseScenarioFromLocation();
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
-  const repository = new Repository(scenario, ids, clock);
-  loadCatalogFixture(repository, scenario.name);
+  const repo = new Repo(scenario, ids, clock);
+  loadCatalogFixture(repo, scenario.name);
   const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
   return {
-    repository,
+    repository: repo,
     clock,
     ids,
     scenario,
     apiRoot: '/api/v1',
     persist: (sessionId: string) => {
-      persistence.save(
-        scenario.name,
-        buildSnapshot(repository, sessionId, Date.parse(clock.now())),
-      );
+      persistence.save(scenario.name, buildSnapshot(repo, sessionId, Date.parse(clock.now())));
     },
   };
 }

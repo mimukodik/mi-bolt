@@ -53,7 +53,7 @@ interface DereferencedSpec {
 
 let spec: OpenApiSpec;
 let dereferenced: DereferencedSpec;
-let products: Array<Record<string, unknown>>;
+let products: Record<string, unknown>[];
 let ajv: Ajv;
 
 beforeAll(async () => {
@@ -63,7 +63,7 @@ beforeAll(async () => {
   ]);
   spec = yaml.load(specRaw) as OpenApiSpec;
   dereferenced = (await $RefParser.dereference(SPEC_PATH)) as DereferencedSpec;
-  products = JSON.parse(productsRaw) as Array<Record<string, unknown>>;
+  products = JSON.parse(productsRaw) as Record<string, unknown>[];
   ajv = new Ajv({ allErrors: true, strict: false });
   addFormats(ajv);
 });
@@ -123,11 +123,11 @@ describe('T03-AC01 operationIds', () => {
       const examples = (schema as { examples?: unknown[] }).examples;
       if (!Array.isArray(examples)) continue;
       const validate = exampleAjv.compile(schema as Record<string, unknown>);
-      examples.forEach((example, i) => {
+      examples.forEach((example, index) => {
         checked += 1;
         expect(
           validate(example),
-          `${name}.examples[${i}] failed its own schema: ${JSON.stringify(validate.errors)}`,
+          `${name}.examples[${index}] failed its own schema: ${JSON.stringify(validate.errors)}`,
         ).toBe(true);
       });
     }
@@ -143,7 +143,7 @@ describe('T03-AC02 Money invariant', () => {
     };
     expect(money.properties.amount.type).toBe('integer');
     expect(money.properties.amount.minimum).toBe(0);
-    expect(money.properties.amount.maximum).toBe(100000000);
+    expect(money.properties.amount.maximum).toBe(100_000_000);
     expect(money.required).toContain('amount');
   });
 
@@ -158,7 +158,7 @@ describe('T03-AC02 Money invariant', () => {
     function findMoney(node: unknown, path: string[]): void {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) {
-        node.forEach((child, i) => findMoney(child, [...path, String(i)]));
+        node.forEach((child, index) => findMoney(child, [...path, String(index)]));
         return;
       }
       const record = node as Record<string, unknown>;
@@ -200,8 +200,12 @@ describe('T03-AC02 status codes & repeated query arrays', () => {
     ]);
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
-        if (!op || typeof op !== 'object') continue;
-        if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue;
+        if (
+          !op ||
+          typeof op !== 'object' ||
+          !['get', 'post', 'put', 'patch', 'delete'].includes(method)
+        )
+          continue;
         for (const status of Object.keys(op.responses ?? {})) {
           if (status === 'default') continue;
           expect(known.has(status), `${method.toUpperCase()} ${pathKey} returns ${status}`).toBe(
@@ -215,17 +219,21 @@ describe('T03-AC02 status codes & repeated query arrays', () => {
   it('every repeated query-array parameter uses style=form, explode=true', () => {
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
-        if (!op || typeof op !== 'object') continue;
-        if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue;
-        const params = (op.parameters ?? []) as Array<{
+        if (
+          !op ||
+          typeof op !== 'object' ||
+          !['get', 'post', 'put', 'patch', 'delete'].includes(method)
+        )
+          continue;
+        const parameters = (op.parameters ?? []) as {
           $ref?: string;
           in?: string;
           name?: string;
           style?: string;
           explode?: boolean;
           schema?: { type?: string };
-        }>;
-        for (const p of params) {
+        }[];
+        for (const p of parameters) {
           if (p.$ref) continue; // resolved via dereferenced.parameters
           if (p.in !== 'query') continue;
           if (p.schema?.type !== 'array') continue;
@@ -270,20 +278,19 @@ describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
     const mutatingMethods = new Set(['post', 'put', 'patch', 'delete']);
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
-        if (!op || typeof op !== 'object') continue;
-        if (!mutatingMethods.has(method)) continue;
+        if (!op || typeof op !== 'object' || !mutatingMethods.has(method)) continue;
         // Skip POST /carts (no cart yet) and POST /orders (atomic commit uses
         // idempotency, not If-Match) and POST /payment-intents (no cart yet).
         const isCartless =
           (method === 'post' && (pathKey === '/carts' || pathKey === '/payment-intents')) ||
           (method === 'post' && pathKey === '/orders');
         if (isCartless) continue;
-        const params = (op.parameters ?? []) as Array<{
+        const parameters = (op.parameters ?? []) as {
           $ref?: string;
           name?: string;
           in?: string;
-        }>;
-        const hasIfMatch = params.some(
+        }[];
+        const hasIfMatch = parameters.some(
           (p) => p.$ref?.endsWith('/IfMatch') || (p.in === 'header' && p.name === 'If-Match'),
         );
         expect(
@@ -315,14 +322,13 @@ describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
     const mutatingMethods = new Set(['post', 'put', 'patch', 'delete']);
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
-        if (!op || typeof op !== 'object') continue;
-        if (!mutatingMethods.has(method)) continue;
-        const params = (op.parameters ?? []) as Array<{
+        if (!op || typeof op !== 'object' || !mutatingMethods.has(method)) continue;
+        const parameters = (op.parameters ?? []) as {
           $ref?: string;
           name?: string;
           in?: string;
-        }>;
-        const hasIdempotency = params.some(
+        }[];
+        const hasIdempotency = parameters.some(
           (p) =>
             p.$ref?.endsWith('/IdempotencyKey') ||
             (p.in === 'header' && p.name === 'Idempotency-Key'),
@@ -361,7 +367,7 @@ describe('T03-AC03 fixture shape', () => {
 
   it('at least one out-of-stock combination exists', () => {
     const oos = products
-      .flatMap((p) => (p as { variants?: Array<{ availability?: string }> }).variants ?? [])
+      .flatMap((p) => (p as { variants?: { availability?: string }[] }).variants ?? [])
       .filter((v) => v.availability === 'out_of_stock');
     expect(oos.length).toBeGreaterThan(0);
   });
@@ -370,8 +376,7 @@ describe('T03-AC03 fixture shape', () => {
     const low = products
       .flatMap(
         (p) =>
-          (p as { variants?: Array<{ availability?: string; maxQuantity?: number }> }).variants ??
-          [],
+          (p as { variants?: { availability?: string; maxQuantity?: number }[] }).variants ?? [],
       )
       .filter(
         (v) =>

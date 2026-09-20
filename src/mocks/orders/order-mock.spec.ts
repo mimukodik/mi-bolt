@@ -22,7 +22,7 @@ import '../../mocks/orders/order.handlers';
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CartDomain } from '../../mocks/cart/cart-domain';
 import { deriveIdempotencyKey, hashPayload, IdempotencyStore } from '../../mocks/idempotency';
-import { Repository } from '../../mocks/repository';
+import { Repository as Repo } from '../../mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -30,12 +30,12 @@ import {
   type Ids,
   type ScenarioDescriptor,
 } from '../../mocks/scenarios';
-import { QuoteDomain, type DeliveryOptionId } from '../../mocks/checkout/quote-domain';
+import type { QuoteDomain } from '../../mocks/checkout/quote-domain';
+import { type DeliveryOptionId } from '../../mocks/checkout/quote-domain';
+import type { PaymentIntentStore, StockTracker } from '../../mocks/orders/commit-order';
 import {
   OrderDomain,
-  PaymentIntentStore,
   QUOTE_TTL_MS,
-  StockTracker,
   getSharedStores,
   type OrderReceipt,
 } from '../../mocks/orders/commit-order';
@@ -53,10 +53,10 @@ const VARIANT_G256 = 'demo-one-5g-graphite-256';
 const VARIANT_G512 = 'demo-one-5g-graphite-512';
 const IDEMPOTENCY_KEY_BASE = 'idem-key-12345678';
 
-interface Env {
+interface Environment {
   clock: Clock;
   ids: Ids;
-  repository: Repository;
+  repository: Repo;
   idempotency: IdempotencyStore;
   cartDomain: CartDomain;
   quoteDomain: QuoteDomain;
@@ -66,10 +66,10 @@ interface Env {
   scenario: ScenarioDescriptor;
 }
 
-function makeEnv(
+function makeEnvironment(
   scenarioName = 'default',
   initialClockMs = Date.parse('2026-09-14T10:00:00.000Z'),
-): Env {
+): Environment {
   const clock = createFixedClock(new Date(initialClockMs).toISOString());
   const ids = createDeterministicIds(7);
   const scenario: ScenarioDescriptor = {
@@ -78,19 +78,19 @@ function makeEnv(
     clockOffsetMs: 0,
     isolated: true,
   };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
+  const repo = new Repo(scenario, ids, clock);
+  repo.loadProducts([DEMO_PRODUCT]);
   const idempotency = new IdempotencyStore(clock);
   // The shared stores are returned by the same factory the wire
   // handlers use so env.* state matches what the handlers observe
   // (payment intents, quote draft, stock state).
-  const shared = getSharedStores(repository, clock, ids, idempotency);
-  const cartDomain = new CartDomain(repository, clock, ids, idempotency);
+  const shared = getSharedStores(repo, clock, ids, idempotency);
+  const cartDomain = new CartDomain(repo, clock, ids, idempotency);
   const paymentIntents = shared.paymentIntents;
   const quoteDomain = shared.quoteDomain;
   const stocks = shared.stocks;
   const orderDomain = new OrderDomain(
-    repository,
+    repo,
     clock,
     ids,
     idempotency,
@@ -102,7 +102,7 @@ function makeEnv(
   return {
     clock,
     ids,
-    repository,
+    repository: repo,
     idempotency,
     cartDomain,
     quoteDomain,
@@ -137,18 +137,18 @@ function homeDelivery(): {
 }
 
 async function seedCart(
-  env: Env,
+  environment: Environment,
   sessionId: string = SESSION_A,
   variantId: string = VARIANT_G256,
   quantity = 1,
 ) {
   await Promise.resolve();
-  const created = env.cartDomain.createCart({
+  const created = environment.cartDomain.createCart({
     sessionId,
     idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-seed-${sessionId}-${variantId}-${String(quantity)}`,
   });
   if (!created.ok) throw new Error('createCart failed');
-  const added = env.cartDomain.addCartItem({
+  const added = environment.cartDomain.addCartItem({
     sessionId,
     cartId: created.value.id,
     ifMatch: `"${String(created.value.version)}"`,
@@ -169,7 +169,7 @@ interface ReadyCheckout {
 }
 
 async function readyCheckout(
-  env: Env,
+  environment: Environment,
   paymentMethod: 'demo_card' | 'demo_cod',
   options: {
     sessionId?: string;
@@ -183,9 +183,9 @@ async function readyCheckout(
   const quantity = options.quantity ?? 1;
   const deliveryOptionId = options.deliveryOptionId ?? 'home_delivery';
 
-  const cart = await seedCart(env, sessionId, variantId, quantity);
+  const cart = await seedCart(environment, sessionId, variantId, quantity);
 
-  const draft = env.quoteDomain.updateDraft({
+  const draft = environment.quoteDomain.updateDraft({
     sessionId,
     cartId: cart.id,
     cartVersion: cart.version,
@@ -198,7 +198,7 @@ async function readyCheckout(
   });
   if (!draft.ok) throw new Error(`updateDraft failed: ${draft.problem.detail}`);
 
-  const quote = env.quoteDomain.createQuote({
+  const quote = environment.quoteDomain.createQuote({
     sessionId,
     cartId: cart.id,
     cartVersion: draft.value.cartVersion,
@@ -208,8 +208,8 @@ async function readyCheckout(
 
   let paymentIntentId: string | undefined;
   if (paymentMethod === 'demo_card') {
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: cart.id,
       cartVersion: cart.version,
       quoteId: quote.value.quote.id,
@@ -236,12 +236,12 @@ describe('T09-AC01 only demo_card and demo_cod are accepted', () => {
   });
 
   it('never accepts card-number-like or CVV-like fields in the order request body', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
     // The domain-level createOrder ignores any unknown fields in the body;
     // we verify that by smuggling card-like fields in and ensuring the
     // commit succeeds and the receipt does NOT carry them.
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-card-fields`,
       cartId: ready.cartId,
@@ -261,9 +261,9 @@ describe('T09-AC01 only demo_card and demo_cod are accepted', () => {
 
 describe('T09-AC02 deterministic card scenarios', () => {
   it('creates a succeeded intent by default and matches cart/quote/amount/session', async () => {
-    const env = makeEnv('default');
-    const ready = await readyCheckout(env, 'demo_card');
-    const intent = env.paymentIntents.findById(ready.paymentIntentId ?? '', 'default');
+    const environment = makeEnvironment('default');
+    const ready = await readyCheckout(environment, 'demo_card');
+    const intent = environment.paymentIntents.findById(ready.paymentIntentId ?? '', 'default');
     expect(intent).toBeDefined();
     if (!intent) return;
     expect(intent.status).toBe('succeeded');
@@ -276,9 +276,9 @@ describe('T09-AC02 deterministic card scenarios', () => {
   });
 
   it('produces a declined intent when the scenario is payment-declined', () => {
-    const env = makeEnv('payment-declined');
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const environment = makeEnvironment('payment-declined');
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: 'cart-x',
       cartVersion: 1,
       quoteId: 'quote-x',
@@ -288,13 +288,15 @@ describe('T09-AC02 deterministic card scenarios', () => {
       isSimulation: true,
     });
     expect(intent.status).toBe('declined');
-    expect(env.paymentIntents.findById(intent.id, 'payment-declined')?.status).toBe('declined');
+    expect(environment.paymentIntents.findById(intent.id, 'payment-declined')?.status).toBe(
+      'declined',
+    );
   });
 
   it('produces a pending intent for payment-pending-resolves and resolves to succeeded after the polling window', () => {
-    const env = makeEnv('payment-pending-resolves');
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const environment = makeEnvironment('payment-pending-resolves');
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: 'cart-x',
       cartVersion: 1,
       quoteId: 'quote-x',
@@ -303,19 +305,19 @@ describe('T09-AC02 deterministic card scenarios', () => {
       status: 'pending',
       isSimulation: true,
     });
-    expect(env.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe(
+    expect(environment.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe(
       'pending',
     );
-    env.clock.advanceMs(1100);
-    expect(env.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe(
+    environment.clock.advanceMs(1100);
+    expect(environment.paymentIntents.findById(intent.id, 'payment-pending-resolves')?.status).toBe(
       'succeeded',
     );
   });
 
   it('keeps a pending intent pending forever under the payment-pending-timeout scenario', () => {
-    const env = makeEnv('payment-pending-timeout');
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const environment = makeEnvironment('payment-pending-timeout');
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: 'cart-x',
       cartVersion: 1,
       quoteId: 'quote-x',
@@ -324,16 +326,16 @@ describe('T09-AC02 deterministic card scenarios', () => {
       status: 'pending',
       isSimulation: true,
     });
-    env.clock.advanceMs(60_000);
-    expect(env.paymentIntents.findById(intent.id, 'payment-pending-timeout')?.status).toBe(
+    environment.clock.advanceMs(60_000);
+    expect(environment.paymentIntents.findById(intent.id, 'payment-pending-timeout')?.status).toBe(
       'pending',
     );
   });
 
   it('forbids paymentIntentId on the order request when paymentMethod is demo_cod', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-cod-with-intent`,
       cartId: ready.cartId,
@@ -353,11 +355,11 @@ describe('T09-AC02 deterministic card scenarios', () => {
 
 describe('T09-AC03 atomic order commit, stock decrement, receipt, idempotency record, ordered cart', () => {
   it('commits a demo_cod order, decrements simulated stock once and marks the cart ordered', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const stockBefore = env.stocks.get(VARIANT_G256);
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const stockBefore = environment.stocks.get(VARIANT_G256);
     expect(stockBefore).toBe(5);
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-cod-commit`,
       cartId: ready.cartId,
@@ -370,19 +372,19 @@ describe('T09-AC03 atomic order commit, stock decrement, receipt, idempotency re
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     // Stock decremented exactly once by the line quantity.
-    expect(env.stocks.get(VARIANT_G256)).toBe(4);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(4);
     // Cart marked ordered.
-    expect(env.repository.getCart(ready.cartId)?.status).toBe('ordered');
+    expect(environment.repository.getCart(ready.cartId)?.status).toBe('ordered');
     // Receipt persisted.
-    const persisted = env.repository.getOrder(result.value.id);
+    const persisted = environment.repository.getOrder(result.value.id);
     expect(persisted).toBeDefined();
     expect(persisted?.orderNumber).toBe(result.value.orderNumber);
   });
 
   it('commits a demo_card order only when the matching intent succeeded and matches amount/version/session', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_card');
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_card');
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-card-commit`,
       cartId: ready.cartId,
@@ -394,17 +396,17 @@ describe('T09-AC03 atomic order commit, stock decrement, receipt, idempotency re
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(env.stocks.get(VARIANT_G256)).toBe(4);
-    expect(env.repository.getCart(ready.cartId)?.status).toBe('ordered');
+    expect(environment.stocks.get(VARIANT_G256)).toBe(4);
+    expect(environment.repository.getCart(ready.cartId)?.status).toBe('ordered');
     expect(result.value.paymentMethod).toBe('demo_card');
     expect(result.value.total).toEqual({ amount: 341_980, currency: 'HUF' });
   });
 
   it('records an idempotency replay entry alongside the receipt', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
     const idemKey = `${IDEMPOTENCY_KEY_BASE}-idem-record`;
-    const first = env.orderDomain.createOrder({
+    const first = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: idemKey,
       cartId: ready.cartId,
@@ -416,11 +418,11 @@ describe('T09-AC03 atomic order commit, stock decrement, receipt, idempotency re
     });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    expect(env.idempotency.size()).toBeGreaterThan(0);
+    expect(environment.idempotency.size()).toBeGreaterThan(0);
     // The cart has been marked ordered; a fresh createOrder (different key)
     // should now fail with NOT_FOUND because the cart is no longer active.
     const replayKey = `${IDEMPOTENCY_KEY_BASE}-idem-record-after`;
-    const after = env.orderDomain.createOrder({
+    const after = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: replayKey,
       cartId: ready.cartId,
@@ -436,11 +438,11 @@ describe('T09-AC03 atomic order commit, stock decrement, receipt, idempotency re
   });
 
   it('clears the volatile draft after a successful commit', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const before = env.quoteDomain.getSession(ready.cartId, ready.cartVersion);
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const before = environment.quoteDomain.getSession(ready.cartId, ready.cartVersion);
     expect(before.draft.contact).toBeDefined();
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-clear-draft`,
       cartId: ready.cartId,
@@ -452,15 +454,15 @@ describe('T09-AC03 atomic order commit, stock decrement, receipt, idempotency re
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const after = env.quoteDomain.getSession(ready.cartId, ready.cartVersion);
+    const after = environment.quoteDomain.getSession(ready.cartId, ready.cartVersion);
     expect(after.draft).toEqual({});
   });
 });
 
 describe('T09-AC04 idempotent replay + key/body conflict', () => {
   it('returns the SAME order without decrementing stock a second time on exact key + body retry', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
     const idemKey = `${IDEMPOTENCY_KEY_BASE}-exact-retry`;
     const body = {
       sessionId: SESSION_A,
@@ -472,31 +474,31 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
       acceptedTerms: true,
       acknowledgedSimulation: true,
     };
-    const first = env.orderDomain.createOrder(body);
+    const first = environment.orderDomain.createOrder(body);
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    expect(env.stocks.get(VARIANT_G256)).toBe(4);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(4);
     // Exact retry: same key, same body, same headers. The cart is now
     // ordered, but the idempotency replay short-circuits BEFORE the
     // cart-status check so the original receipt is returned.
-    const second = env.orderDomain.createOrder(body);
+    const second = environment.orderDomain.createOrder(body);
     expect(second.ok).toBe(true);
     if (!second.ok) return;
     expect(second.value.id).toBe(first.value.id);
     expect(second.value.orderNumber).toBe(first.value.orderNumber);
     // Stock NOT decremented a second time.
-    expect(env.stocks.get(VARIANT_G256)).toBe(4);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(4);
   });
 
   it('returns 409 IDEMPOTENCY_CONFLICT when the same key is reused with a different body', async () => {
-    const env = makeEnv();
-    const ready1 = await readyCheckout(env, 'demo_cod', { variantId: VARIANT_G256 });
-    const ready2 = await readyCheckout(env, 'demo_cod', {
+    const environment = makeEnvironment();
+    const ready1 = await readyCheckout(environment, 'demo_cod', { variantId: VARIANT_G256 });
+    const ready2 = await readyCheckout(environment, 'demo_cod', {
       variantId: VARIANT_G512,
       sessionId: SESSION_B,
     });
     const idemKey = `${IDEMPOTENCY_KEY_BASE}-conflict`;
-    const first = env.orderDomain.createOrder({
+    const first = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: idemKey,
       cartId: ready1.cartId,
@@ -509,7 +511,7 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
     expect(first.ok).toBe(true);
     if (!first.ok) return;
     // Different body (different cartId) with the same idempotency key.
-    const conflict = env.orderDomain.createOrder({
+    const conflict = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: idemKey,
       cartId: ready2.cartId,
@@ -524,13 +526,13 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
     expect(conflict.problem.status).toBe(409);
     expect(conflict.problem.code).toBe('IDEMPOTENCY_CONFLICT');
     // ready2's cart stays active - the conflict rejects without state change.
-    expect(env.repository.getCart(ready2.cartId)?.status).toBe('active');
+    expect(environment.repository.getCart(ready2.cartId)?.status).toBe('active');
   });
 
   it('validates consent terms, acceptedTerms and acknowledgedSimulation before any state change', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const badTerms = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const badTerms = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-bad-terms`,
       cartId: ready.cartId,
@@ -545,9 +547,9 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
     expect(badTerms.problem.status).toBe(400);
     expect(badTerms.problem.fieldErrors[0]?.path).toBe('/termsVersion');
     // Stock unchanged.
-    expect(env.stocks.get(VARIANT_G256)).toBe(5);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(5);
 
-    const noConsent = env.orderDomain.createOrder({
+    const noConsent = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-no-consent`,
       cartId: ready.cartId,
@@ -561,7 +563,7 @@ describe('T09-AC04 idempotent replay + key/body conflict', () => {
     if (noConsent.ok) return;
     expect(noConsent.problem.fieldErrors[0]?.path).toBe('/acceptedTerms');
 
-    const noAck = env.orderDomain.createOrder({
+    const noAck = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-no-ack`,
       cartId: ready.cartId,
@@ -583,8 +585,8 @@ describe('OrderDomain OrderReceipt guard (isOrderReceipt reject arm)', () => {
     // the replay path: the idempotency cache is seeded directly with a body
     // that is not a valid OrderReceipt, at the exact key/hash `createOrder`
     // will look up, so the replay branch runs against corrupted state.
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
     const idempotencyKey = `${IDEMPOTENCY_KEY_BASE}-corrupt-replay`;
     const orderInput = {
       sessionId: SESSION_A,
@@ -605,8 +607,13 @@ describe('OrderDomain OrderReceipt guard (isOrderReceipt reject arm)', () => {
       acceptedTerms: orderInput.acceptedTerms,
       acknowledgedSimulation: orderInput.acknowledgedSimulation,
     });
-    env.idempotency.record(idemKey, payloadHash, { status: 201, body: { not: 'a-receipt' } });
-    expect(() => env.orderDomain.createOrder(orderInput)).toThrow(/not a valid OrderReceipt/);
+    environment.idempotency.record(idemKey, payloadHash, {
+      status: 201,
+      body: { not: 'a-receipt' },
+    });
+    expect(() => environment.orderDomain.createOrder(orderInput)).toThrow(
+      /not a valid OrderReceipt/,
+    );
   });
 
   it('throws when a stored order does not match the OrderReceipt contract', () => {
@@ -614,25 +621,25 @@ describe('OrderDomain OrderReceipt guard (isOrderReceipt reject arm)', () => {
     // accepts its own (looser) OrderReceipt type, so a record saved without
     // the domain's required fields is a legitimate value to store but not a
     // legitimate one to read back as a full receipt.
-    const env = makeEnv();
-    env.repository.saveOrder({
+    const environment = makeEnvironment();
+    environment.repository.saveOrder({
       id: 'order-corrupt-1',
       orderNumber: 'DEMO-000999',
       sessionId: SESSION_A,
-      createdAt: env.clock.now(),
+      createdAt: environment.clock.now(),
       total: { amount: 1000, currency: 'HUF' },
     });
     expect(() =>
-      env.orderDomain.getOrder({ sessionId: SESSION_A, orderId: 'order-corrupt-1' }),
+      environment.orderDomain.getOrder({ sessionId: SESSION_A, orderId: 'order-corrupt-1' }),
     ).toThrow(/not a valid OrderReceipt/);
   });
 });
 
 describe('T09-AC05 privacy-minimized receipt reload', () => {
   it('persists only orderId, totals, items, simulated method and createdAt', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-persist-receipt`,
       cartId: ready.cartId,
@@ -644,7 +651,7 @@ describe('T09-AC05 privacy-minimized receipt reload', () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const persisted = env.repository.getOrder(result.value.id);
+    const persisted = environment.repository.getOrder(result.value.id);
     expect(persisted).toBeDefined();
     if (!persisted) return;
     const keys = Object.keys(persisted);
@@ -669,9 +676,9 @@ describe('T09-AC05 privacy-minimized receipt reload', () => {
   });
 
   it('exposes the same receipt via getOrder without contact/address fields', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const commit = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const commit = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-get-order`,
       cartId: ready.cartId,
@@ -683,7 +690,10 @@ describe('T09-AC05 privacy-minimized receipt reload', () => {
     });
     expect(commit.ok).toBe(true);
     if (!commit.ok) return;
-    const read = env.orderDomain.getOrder({ sessionId: SESSION_A, orderId: commit.value.id });
+    const read = environment.orderDomain.getOrder({
+      sessionId: SESSION_A,
+      orderId: commit.value.id,
+    });
     expect(read.ok).toBe(true);
     if (!read.ok) return;
     expect(read.value.id).toBe(commit.value.id);
@@ -693,9 +703,9 @@ describe('T09-AC05 privacy-minimized receipt reload', () => {
 
 describe('T09-AC06 success copy explicitly says no real payment, order, email or delivery', () => {
   it('every successful receipt carries the simulation notice', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-notice`,
       cartId: ready.cartId,
@@ -717,10 +727,10 @@ describe('T09-AC06 success copy explicitly says no real payment, order, email or
 
 describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   it('rejects an order when the cart has expired', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    env.clock.advanceMs(24 * 60 * 60 * 1000);
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    environment.clock.advanceMs(24 * 60 * 60 * 1000);
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-cart-expired`,
       cartId: ready.cartId,
@@ -737,10 +747,10 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects an order when the quote has expired (TTL passed before commit)', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    env.clock.advanceMs(QUOTE_TTL_MS + 1);
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    environment.clock.advanceMs(QUOTE_TTL_MS + 1);
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-quote-expired`,
       cartId: ready.cartId,
@@ -755,15 +765,15 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
     expect(result.problem.status).toBe(409);
     expect(result.problem.code).toBe('QUOTE_EXPIRED');
     // Stock untouched.
-    expect(env.stocks.get(VARIANT_G256)).toBe(5);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(5);
   });
 
   it('rejects an order when stock is exhausted before commit', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
     // Drain simulated stock to leave only 0 available.
-    env.stocks.set(VARIANT_G256, 0);
-    const result = env.orderDomain.createOrder({
+    environment.stocks.set(VARIANT_G256, 0);
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-out-of-stock`,
       cartId: ready.cartId,
@@ -780,9 +790,9 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects an order when the cart is already ordered (replay attempt with fresh key)', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const first = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const first = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-already-ordered`,
       cartId: ready.cartId,
@@ -794,7 +804,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    const second = env.orderDomain.createOrder({
+    const second = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-already-ordered-2`,
       cartId: ready.cartId,
@@ -811,8 +821,8 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects an order against an unknown cart with 404 NOT_FOUND', () => {
-    const env = makeEnv();
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-unknown-cart`,
       cartId: 'cart-unknown',
@@ -828,19 +838,19 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects an order when the draft has no paymentMethod', async () => {
-    const env = makeEnv();
-    const cart = await seedCart(env);
+    const environment = makeEnvironment();
+    const cart = await seedCart(environment);
     // Quote generation also requires a complete draft, so build a draft
     // without paymentMethod by using a different approach: draft only contact
     // and delivery, then remove paymentMethod by re-issuing an empty paymentMethod
     // is not allowed. Instead we test the empty-paymentMethod branch by
     // using a fresh cart with no draft at all.
-    const empty = env.cartDomain.createCart({
+    const empty = environment.cartDomain.createCart({
       sessionId: 'session-cccccccccccc',
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-empty-cart`,
     });
     if (!empty.ok) throw new Error('createCart failed');
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: 'session-cccccccccccc',
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-no-method`,
       cartId: empty.value.id,
@@ -858,9 +868,9 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects demo_card with a missing paymentIntentId as 409 PAYMENT_REQUIRED', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_card');
-    const result = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_card');
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-missing-intent`,
       cartId: ready.cartId,
@@ -877,13 +887,13 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects demo_card with a declined intent as 409 PAYMENT_DECLINED', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_card');
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_card');
     // Replace the succeeded intent with a declined one so the
     // domain sees a deterministic declined payment.
-    env.paymentIntents.clearAll();
-    const declined = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    environment.paymentIntents.clearAll();
+    const declined = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: ready.cartId,
       cartVersion: ready.cartVersion,
       quoteId: ready.quoteId,
@@ -892,7 +902,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
       status: 'declined',
       isSimulation: true,
     });
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-declined`,
       cartId: ready.cartId,
@@ -909,13 +919,13 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects demo_card with a pending intent as 409 PAYMENT_PENDING', async () => {
-    const env = makeEnv('payment-pending-resolves');
-    const ready = await readyCheckout(env, 'demo_card');
+    const environment = makeEnvironment('payment-pending-resolves');
+    const ready = await readyCheckout(environment, 'demo_card');
     // readyCheckout creates the intent with succeeded status. Replace it
     // with a pending one for this test.
-    env.paymentIntents.clearAll();
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    environment.paymentIntents.clearAll();
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: ready.cartId,
       cartVersion: ready.cartVersion,
       quoteId: ready.quoteId,
@@ -924,7 +934,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
       status: 'pending',
       isSimulation: true,
     });
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-pending`,
       cartId: ready.cartId,
@@ -941,11 +951,11 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects demo_card when the intent was created against a different session', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_card');
-    env.paymentIntents.clearAll();
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_card');
+    environment.paymentIntents.clearAll();
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: ready.cartId,
       cartVersion: ready.cartVersion,
       quoteId: ready.quoteId,
@@ -954,7 +964,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
       status: 'succeeded',
       isSimulation: true,
     });
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-wrong-session`,
       cartId: ready.cartId,
@@ -970,11 +980,11 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects demo_card when the intent was created against a different quote', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_card');
-    env.paymentIntents.clearAll();
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_card');
+    environment.paymentIntents.clearAll();
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: ready.cartId,
       cartVersion: ready.cartVersion,
       quoteId: 'quote-other',
@@ -983,7 +993,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
       status: 'succeeded',
       isSimulation: true,
     });
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-wrong-quote`,
       cartId: ready.cartId,
@@ -1000,11 +1010,11 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects demo_card when the intent amount diverges from the quote total', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_card');
-    env.paymentIntents.clearAll();
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_card');
+    environment.paymentIntents.clearAll();
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: ready.cartId,
       cartVersion: ready.cartVersion,
       quoteId: ready.quoteId,
@@ -1013,7 +1023,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
       status: 'succeeded',
       isSimulation: true,
     });
-    const result = env.orderDomain.createOrder({
+    const result = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-amount-mismatch`,
       cartId: ready.cartId,
@@ -1030,9 +1040,9 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects header validation failures with 400 VALIDATION_FAILED', async () => {
-    const env = makeEnv();
-    const ready = await readyCheckout(env, 'demo_cod');
-    const noSession = env.orderDomain.createOrder({
+    const environment = makeEnvironment();
+    const ready = await readyCheckout(environment, 'demo_cod');
+    const noSession = environment.orderDomain.createOrder({
       sessionId: 'short',
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-bad-session`,
       cartId: ready.cartId,
@@ -1047,7 +1057,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
     expect(noSession.problem.status).toBe(400);
     expect(noSession.problem.code).toBe('VALIDATION_FAILED');
 
-    const shortKey = env.orderDomain.createOrder({
+    const shortKey = environment.orderDomain.createOrder({
       sessionId: SESSION_A,
       idempotencyKey: 'x',
       cartId: ready.cartId,
@@ -1064,8 +1074,11 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('getOrder returns 404 for an unknown order id', () => {
-    const env = makeEnv();
-    const result = env.orderDomain.getOrder({ sessionId: SESSION_A, orderId: 'order-unknown' });
+    const environment = makeEnvironment();
+    const result = environment.orderDomain.getOrder({
+      sessionId: SESSION_A,
+      orderId: 'order-unknown',
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.problem.status).toBe(404);
@@ -1073,13 +1086,13 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
   });
 
   it('rejects an order when the cart has no items (CHECKOUT_INCOMPLETE)', () => {
-    const env = makeEnv();
-    const created = env.cartDomain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.cartDomain.createCart({
       sessionId: 'session-cccccccccccc',
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-empty`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const draft = env.quoteDomain.updateDraft({
+    const draft = environment.quoteDomain.updateDraft({
       sessionId: 'session-cccccccccccc',
       cartId: created.value.id,
       cartVersion: created.value.version,
@@ -1091,7 +1104,7 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
       },
     });
     if (!draft.ok) throw new Error('updateDraft failed');
-    const quote = env.quoteDomain.createQuote({
+    const quote = environment.quoteDomain.createQuote({
       sessionId: 'session-cccccccccccc',
       cartId: created.value.id,
       cartVersion: draft.value.cartVersion,
@@ -1105,15 +1118,15 @@ describe('OrderDomain guards: expiry, stock, cart state, payment state', () => {
 
 describe('PaymentIntentStore edge cases', () => {
   it('returns undefined for an unknown intent id', () => {
-    const env = makeEnv();
-    expect(env.paymentIntents.findById('missing', 'default')).toBeUndefined();
-    expect(env.paymentIntents.findRaw('missing')).toBeUndefined();
+    const environment = makeEnvironment();
+    expect(environment.paymentIntents.findById('missing', 'default')).toBeUndefined();
+    expect(environment.paymentIntents.findRaw('missing')).toBeUndefined();
   });
 
   it('clear() removes an intent by id', () => {
-    const env = makeEnv();
-    const intent = env.paymentIntents.create({
-      id: env.ids.uuid(),
+    const environment = makeEnvironment();
+    const intent = environment.paymentIntents.create({
+      id: environment.ids.uuid(),
       cartId: 'cart-x',
       cartVersion: 1,
       quoteId: 'quote-x',
@@ -1122,24 +1135,24 @@ describe('PaymentIntentStore edge cases', () => {
       status: 'succeeded',
       isSimulation: true,
     });
-    env.paymentIntents.clear(intent.id);
-    expect(env.paymentIntents.findById(intent.id, 'default')).toBeUndefined();
+    environment.paymentIntents.clear(intent.id);
+    expect(environment.paymentIntents.findById(intent.id, 'default')).toBeUndefined();
   });
 });
 
 describe('StockTracker edge cases', () => {
   it('initializes lazily from variant.maxQuantity on first access', () => {
-    const env = makeEnv();
-    expect(env.stocks.get('unknown-variant')).toBe(0);
+    const environment = makeEnvironment();
+    expect(environment.stocks.get('unknown-variant')).toBe(0);
     // After construction, the cart domain's addCartItem seeded a variant.
-    expect(env.stocks.get(VARIANT_G256)).toBe(5);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(5);
   });
 
   it('does not re-initialize when stock is already populated', () => {
-    const env = makeEnv();
-    env.stocks.set(VARIANT_G256, 1);
-    env.stocks.reload();
-    expect(env.stocks.get(VARIANT_G256)).toBe(5);
+    const environment = makeEnvironment();
+    environment.stocks.set(VARIANT_G256, 1);
+    environment.stocks.reload();
+    expect(environment.stocks.get(VARIANT_G256)).toBe(5);
   });
 });
 
@@ -1149,15 +1162,15 @@ describe('StockTracker edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('handler dispatch path (MSW + SDK wire)', () => {
-  let env: Env;
+  let environment: Environment;
 
   beforeEach(() => {
-    env = makeEnv('default');
+    environment = makeEnvironment('default');
     const handlers = createHandlers({
-      repository: env.repository,
-      clock: env.clock,
-      ids: env.ids,
-      scenario: env.repository.getScenario(),
+      repository: environment.repository,
+      clock: environment.clock,
+      ids: environment.ids,
+      scenario: environment.repository.getScenario(),
       apiRoot: '/api/v1',
     });
     server.use(...handlers);
@@ -1416,7 +1429,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
       },
     );
     expect(response.status).toBe(201);
-    expect(env.stocks.get(VARIANT_G256)).toBe(4);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(4);
   });
 
   it('returns the SAME receipt on an exact-key/body retry without a second decrement', async () => {
@@ -1433,12 +1446,12 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
     const first = await createOrder(ready.cartId, ready.quoteId, idemKey, body);
     expect(first.status).toBe(201);
     const firstJson = (await first.json()) as OrderReceipt;
-    expect(env.stocks.get(VARIANT_G256)).toBe(4);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(4);
     const second = await createOrder(ready.cartId, ready.quoteId, idemKey, body);
     expect(second.status).toBe(201);
     const secondJson = (await second.json()) as OrderReceipt;
     expect(secondJson.id).toBe(firstJson.id);
-    expect(env.stocks.get(VARIANT_G256)).toBe(4);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(4);
   });
 
   it('returns 409 IDEMPOTENCY_CONFLICT on same-key + different-body retry', async () => {
@@ -1669,7 +1682,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
 
   it('returns 410 from createPaymentIntent when the cart has expired', async () => {
     const ready = await buildReadyCheckout('demo_card');
-    env.clock.advanceMs(24 * 60 * 60 * 1000);
+    environment.clock.advanceMs(24 * 60 * 60 * 1000);
     const response = await fetch(url('/payment-intents'), {
       method: 'POST',
       headers: commonHeaders(uniqueKey(`${IDEMPOTENCY_KEY_BASE}-wire-intent-expired-cart`)),
@@ -1803,7 +1816,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
 
   it('rolls back no state when the order commit fails (no decrement)', async () => {
     const ready = await buildReadyCheckout('demo_card');
-    const before = env.stocks.get(VARIANT_G256);
+    const before = environment.stocks.get(VARIANT_G256);
     // Use the wrong paymentIntentId -> should fail before any state change.
     const response = await createOrder(
       ready.cartId,
@@ -1819,7 +1832,7 @@ describe('handler dispatch path (MSW + SDK wire)', () => {
       },
     );
     expect(response.status).toBe(404);
-    expect(env.stocks.get(VARIANT_G256)).toBe(before);
+    expect(environment.stocks.get(VARIANT_G256)).toBe(before);
     // Cart remains active so the user can retry.
     const cartResponse = await fetch(url(`/carts/${ready.cartId}`), {
       headers: { 'X-Demo-Session': SESSION_A },

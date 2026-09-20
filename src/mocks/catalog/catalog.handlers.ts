@@ -34,14 +34,12 @@ import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-
 import type { Product, Variant } from '../repository';
 import { buildFacets, type ProductFacets } from './facets';
 import {
-  DEFAULT_PAGE_SIZE,
   filterProducts,
   paginateMatches,
   parseCatalogFilter,
   type CatalogFilter,
   type FilterParseError,
   type ProductMatch,
-  type SortMode,
 } from './filter-products';
 
 // ---------------------------------------------------------------------------
@@ -232,10 +230,9 @@ export function buildCatalogHandlers(options: CreateHandlersOptions): readonly R
   const getProduct = http.get(`*/api/v1/products/:slug`, ({ params }) => {
     const slug = String(params['slug']);
     const product = options.repository.getProductBySlug(slug);
-    if (!product) {
-      return notFoundProblem(options, `Ismeretlen termék: ${slug}.`, 'NOT_FOUND');
-    }
-    return HttpResponse.json(product);
+    return product
+      ? HttpResponse.json(product)
+      : notFoundProblem(options, `Ismeretlen termék: ${slug}.`, 'NOT_FOUND');
   });
 
   return [getConfig, listProducts, getProduct];
@@ -244,5 +241,5 @@ export function buildCatalogHandlers(options: CreateHandlersOptions): readonly R
 registerBusinessHandlers(buildCatalogHandlers);
 
 // Re-export so tests can import the same primitives the handlers use.
-export { DEFAULT_PAGE_SIZE };
-export type { SortMode };
+
+export { DEFAULT_PAGE_SIZE, type SortMode } from './filter-products';

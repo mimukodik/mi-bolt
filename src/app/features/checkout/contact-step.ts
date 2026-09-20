@@ -36,9 +36,9 @@
  *                        form actions.
  */
 
+import type { ElementRef } from '@angular/core';
 import {
   Component,
-  ElementRef,
   InjectionToken,
   computed,
   input,
@@ -85,16 +85,22 @@ export interface ContactSaveResult {
   message?: string;
 }
 
-/** Pluggable save function `ContactPage` (the owning container) calls. */
+/**
+Pluggable save function `ContactPage` (the owning container) calls.
+*/
 export type ContactDraftSaver = (contact: ContactSubmission) => Promise<ContactSaveResult>;
 
-/** injection token for the draft save. */
+/**
+injection token for the draft save.
+*/
 export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>('CONTACT_DRAFT_SAVER', {
   providedIn: 'root',
   factory: () => () => Promise.resolve({ ok: true }),
 });
 
-/** Convert the Signal Form errors array into the local FieldError shape. */
+/**
+Convert the Signal Form errors array into the local FieldError shape.
+*/
 function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readonly FieldError[] {
   const out: FieldError[] = [];
   for (const error of errors) {
@@ -102,7 +108,7 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
     out.push({
       code: error.kind,
       message: error.message ?? error.kind,
-      ...(pointer !== undefined ? { pointer } : {}),
+      ...(pointer !== undefined && { pointer }),
     });
   }
   return out;
@@ -124,7 +130,9 @@ export class ContactStep {
    *  invalid submission. */
   private readonly summaryRef = viewChild<ElementRef<HTMLElement>>('summary');
 
-  /** `true` after the user has tried to submit at least once. */
+  /**
+  `true` after the user has tried to submit at least once.
+  */
   readonly submitted = signal<boolean>(false);
 
   /** `saveState:AsyncStatus` carries no payload (`components.md:551-557`),
@@ -216,19 +224,18 @@ export class ContactStep {
     this.submitted.set(true);
 
     const contactFields = this.contactFields();
-    const ok = await submit(contactFields, {
-      action: () => {
+    const isOk = await submit(contactFields, {
+      action: () =>
         // No network call from inside the field tree's own submit flow —
         // the container performs the save when `continueRequested` fires.
-        return Promise.resolve(undefined);
-      },
+        Promise.resolve(undefined),
       onInvalid: () => {
         this.focusSummary();
         this.focusFirstInvalidField();
       },
     });
 
-    if (!ok) {
+    if (!isOk) {
       if (this.contactFields()().invalid()) {
         this.focusSummary();
         this.focusFirstInvalidField();
@@ -241,9 +248,9 @@ export class ContactStep {
 
   focusSummary(): void {
     queueMicrotask(() => {
-      const ref = this.summaryRef();
-      if (ref === undefined) return;
-      ref.nativeElement.focus();
+      const reference = this.summaryRef();
+      if (reference === undefined) return;
+      reference.nativeElement.focus();
     });
   }
 
@@ -269,8 +276,7 @@ export class ContactStep {
     if (this.saveState() === 'error') return 'server-error';
     if (this.saveState() === 'loading') return 'loading';
     if (invalid && this.submitted()) return 'submitted-invalid';
-    if (invalid && touched) return 'touched-invalid';
-    return 'default';
+    return invalid && touched ? 'touched-invalid' : 'default';
   }
 
   resolvePointer(pointer: string): ContactFieldKey | null {

@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 
 import { CatalogToolbar } from './catalog-toolbar';
@@ -9,15 +10,15 @@ import type { AsyncStatus } from '../../shared/types/async-status';
   imports: [CatalogToolbar],
   template: `
     <app-catalog-toolbar
-      [total]="total()"
-      [sort]="sort()"
-      [pageSize]="pageSize()"
-      [status]="status()"
       [appliedCount]="appliedCount()"
-      (sortChanged)="lastSort.set($event)"
-      (pageSizeChanged)="lastPageSize.set($event)"
+      [pageSize]="pageSize()"
+      [sort]="sort()"
+      [status]="status()"
+      [total]="total()"
       (openFilters)="openCount.set(openCount() + 1)"
-    ></app-catalog-toolbar>
+      (pageSizeChanged)="lastPageSize.set($event)"
+      (sortChanged)="lastSort.set($event)"
+    />
   `,
 })
 class HostComponent {

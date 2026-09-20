@@ -40,23 +40,23 @@ import { dirname } from 'node:path';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
 
-function parseArgs(argv) {
-  const opts = { staticDir: null };
-  for (let i = 0; i < argv.length; i++) {
-    const token = argv[i];
-    if (token === '--static-dir') opts.staticDir = argv[++i];
+function parseArguments(argv) {
+  const options = { staticDir: null };
+  for (let index = 0; index < argv.length; index++) {
+    const token = argv[index];
+    if (token === '--static-dir') options.staticDir = argv[++index];
     else if (token === '--help' || token === '-h') {
       process.stdout.write('Usage: check-budgets.mjs [--static-dir <path>]\n');
       process.exit(0);
     }
   }
-  return opts;
+  return options;
 }
 
-const args = parseArgs(argv);
+const arguments_ = parseArguments(argv);
 const STATIC_DIR = resolve(
   repoRoot,
-  args.staticDir ?? process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser',
+  arguments_.staticDir ?? process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser',
 );
 
 const BUDGETS = Object.freeze({
@@ -100,7 +100,9 @@ if (mainScript === null) {
   process.exit(1);
 }
 
-/** Extract every <link rel="modulepreload" href="..."> target. */
+/**
+Extract every <link rel="modulepreload" href="..."> target.
+*/
 function readModulePreloads(html) {
   const re = /<link\s+rel="modulepreload"\s+href="([^"]+)"\s*\/?>(?:\s|$)/gi;
   const out = [];
@@ -141,12 +143,16 @@ function inlineStyleBytes(html) {
   return total;
 }
 
-/** Strip a leading `./` so we can resolve the path against STATIC_DIR. */
+/**
+Strip a leading `./` so we can resolve the path against STATIC_DIR.
+*/
 function stripLeading(path) {
   return path.replace(/^\.\//, '');
 }
 
-/** Compute the gzip size of a static file. */
+/**
+Compute the gzip size of a static file.
+*/
 function gzipSize(filePath) {
   const data = readFileSync(filePath);
   return gzipSync(data).length;
@@ -182,7 +188,9 @@ function collectAssetFiles(root) {
   return out;
 }
 
-/** True when the file is a chunk / lazy / hashed JS asset. */
+/**
+True when the file is a chunk / lazy / hashed JS asset.
+*/
 function isJsAsset(name) {
   return extname(name) === '.js';
 }
@@ -285,11 +293,12 @@ for (const off of offendingLazies) {
 
 // Render the report so the reviewer can read the measured numbers
 // even when the budgets pass.
-const lines = [];
-lines.push('check-budgets — T28-AC04 / T28-AC06 resource gate');
-lines.push(`static-dir: ${STATIC_DIR}`);
-lines.push('');
-lines.push('initial bundle:');
+const lines = [
+  'check-budgets — T28-AC04 / T28-AC06 resource gate',
+  `static-dir: ${STATIC_DIR}`,
+  '',
+  'initial bundle:',
+];
 for (const file of initialJsFiles) {
   lines.push(`  - ${basename(file)}: ${formatKiB(gzipSize(file))} gzip`);
 }
@@ -304,9 +313,9 @@ lines.push(
 );
 lines.push(
   `  total first-view transferred: ${formatKiB(firstViewTotalBytes)} (budget ${formatKiB(BUDGETS.firstViewTotalBytes)}, excluding 3D)`,
+  '',
+  `per-route lazy chunks (${lazyJsFiles.length}):`,
 );
-lines.push('');
-lines.push(`per-route lazy chunks (${lazyJsFiles.length}):`);
 const sortedLazies = [...lazyJsByName].sort((a, b) => b.gzipBytes - a.gzipBytes);
 const top = sortedLazies.slice(0, 10);
 for (const entry of top) {
@@ -317,8 +326,7 @@ if (sortedLazies.length > top.length) {
 }
 
 if (violations.length > 0) {
-  lines.push('');
-  lines.push(`FAIL: ${violations.length} budget violation(s)`);
+  lines.push('', `FAIL: ${violations.length} budget violation(s)`);
   for (const v of violations) {
     lines.push(`  - [${v.code}] ${v.message}`);
   }
@@ -326,7 +334,6 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-lines.push('');
-lines.push('PASS: all budgets met');
+lines.push('', 'PASS: all budgets met');
 process.stdout.write(lines.join('\n') + '\n');
 process.exit(0);

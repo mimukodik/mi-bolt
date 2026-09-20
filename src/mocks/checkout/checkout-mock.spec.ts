@@ -15,7 +15,7 @@ import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CartDomain } from '../../mocks/cart/cart-domain';
 import { deriveIdempotencyKey, hashPayload, IdempotencyStore } from '../../mocks/idempotency';
 import type { Product, Variant } from '../../mocks/repository';
-import { Repository } from '../../mocks/repository';
+import { Repository as Repo } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
 import { CHECKOUT_OPTIONS } from '../../mocks/checkout/checkout.handlers';
 import { QUOTE_TTL_MS, QuoteDomain } from '../../mocks/checkout/quote-domain';
@@ -40,16 +40,16 @@ const VARIANT_G256 = 'demo-one-5g-graphite-256';
 const VARIANT_G512 = 'demo-one-5g-graphite-512';
 const IDEMPOTENCY_KEY_BASE = 'idem-key-12345678';
 
-interface Env {
+interface Environment {
   clock: ReturnType<typeof createFixedClock>;
   ids: ReturnType<typeof createDeterministicIds>;
-  repository: Repository;
+  repository: Repo;
   idempotency: IdempotencyStore;
   cartDomain: CartDomain;
   quoteDomain: QuoteDomain;
 }
 
-function makeEnv(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')): Env {
+function makeEnvironment(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')): Environment {
   const clock = createFixedClock(new Date(initialClockMs).toISOString());
   const ids = createDeterministicIds(7);
   const scenario = {
@@ -58,28 +58,33 @@ function makeEnv(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')): Env {
     clockOffsetMs: 0,
     isolated: true,
   };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
+  const repo = new Repo(scenario, ids, clock);
+  repo.loadProducts([DEMO_PRODUCT]);
   const idempotency = new IdempotencyStore(clock);
-  const cartDomain = new CartDomain(repository, clock, ids, idempotency);
-  const quoteDomain = new QuoteDomain(repository, clock, ids, idempotency);
-  return { clock, ids, repository, idempotency, cartDomain, quoteDomain };
+  const cartDomain = new CartDomain(repo, clock, ids, idempotency);
+  const quoteDomain = new QuoteDomain(repo, clock, ids, idempotency);
+  return { clock, ids, repository: repo, idempotency, cartDomain, quoteDomain };
 }
 
-function asProductFixture(env: Env): Product {
-  const product = env.repository.getProductById(DEMO_PRODUCT.id);
+function asProductFixture(environment: Environment): Product {
+  const product = environment.repository.getProductById(DEMO_PRODUCT.id);
   if (!product) throw new Error('demo product missing');
   return product;
 }
 
-async function seedCart(env: Env, sessionId = SESSION_A, variantId = VARIANT_G256, quantity = 1) {
+async function seedCart(
+  environment: Environment,
+  sessionId = SESSION_A,
+  variantId = VARIANT_G256,
+  quantity = 1,
+) {
   await Promise.resolve();
-  const created = env.cartDomain.createCart({
+  const created = environment.cartDomain.createCart({
     sessionId,
     idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-seed-${sessionId}-${variantId}`,
   });
   if (!created.ok) throw new Error('createCart failed');
-  const added = env.cartDomain.addCartItem({
+  const added = environment.cartDomain.addCartItem({
     sessionId,
     cartId: created.value.id,
     ifMatch: `"${String(created.value.version)}"`,
@@ -123,9 +128,9 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
   });
 
   it('rejects contact sections outside the JSON schema with field errors', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const result = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const result = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -145,9 +150,9 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
   });
 
   it('merges only the supplied sections and never erases prior values', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const first = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const first = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -159,7 +164,7 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
     expect(first.value.draft.contact?.fullName).toBe('Teszt Elek');
     expect(first.value.draft.contact?.email).toBe('teszt@example.test');
     expect(first.value.draft.paymentMethod).toBe('demo_card');
-    const second = env.quoteDomain.updateDraft({
+    const second = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: first.value.cartVersion,
@@ -177,9 +182,9 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
   });
 
   it('returns field errors without erasing previously-merged sections', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const first = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const first = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -188,7 +193,7 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('expected merge');
-    const invalid = env.quoteDomain.updateDraft({
+    const invalid = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: first.value.cartVersion,
@@ -210,7 +215,7 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
     expect(invalid.problem.status).toBe(422);
     expect(invalid.problem.fieldErrors[0]?.path).toBe('/delivery');
     // Re-read the session: previously merged contact + paymentMethod survive.
-    const next = env.quoteDomain.updateDraft({
+    const next = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: first.value.cartVersion,
@@ -226,9 +231,9 @@ describe('T08-AC01 contact normalization and partial-merge safety', () => {
 
 describe('T08-AC02 delivery rules and shipping fee', () => {
   it('accepts HU address for home_delivery and rejects non-HU country code', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const bad = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const bad = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -252,9 +257,9 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
   });
 
   it('rejects home_delivery without an address and pickup with an address', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const missing = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const missing = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -266,7 +271,7 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
     expect(missing.problem.code).toBe('VALIDATION_ERROR');
     expect(missing.problem.fieldErrors[0]?.path).toBe('/delivery/address');
 
-    const pickupWithAddress = env.quoteDomain.updateDraft({
+    const pickupWithAddress = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -289,9 +294,9 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
   });
 
   it('rejects malformed address fields with the matching JSON pointer', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const bad = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const bad = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -321,9 +326,9 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
   });
 
   it('quotes home_delivery at 1990 HUF and demo_pickup at 0 HUF, never client-supplied', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const updated = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const updated = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -336,7 +341,7 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
     });
     expect(updated.ok).toBe(true);
     if (!updated.ok) throw new Error('expected merge');
-    const home = env.quoteDomain.createQuote({
+    const home = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: updated.value.cartVersion,
@@ -348,7 +353,7 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
     expect(home.value.quote.subtotal).toEqual({ amount: 339_990, currency: 'HUF' });
     expect(home.value.quote.total).toEqual({ amount: 341_980, currency: 'HUF' });
 
-    const updatedPickup = env.quoteDomain.updateDraft({
+    const updatedPickup = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -361,7 +366,7 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
     });
     expect(updatedPickup.ok).toBe(true);
     if (!updatedPickup.ok) throw new Error('expected merge');
-    const pickup = env.quoteDomain.createQuote({
+    const pickup = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: updatedPickup.value.cartVersion,
@@ -387,13 +392,13 @@ describe('T08-AC02 delivery rules and shipping fee', () => {
 
 describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () => {
   it('rejects a quote for an empty cart with CHECKOUT_INCOMPLETE /cart pointer', () => {
-    const env = makeEnv();
-    const created = env.cartDomain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.cartDomain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-empty-cart`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const merged = env.quoteDomain.updateDraft({
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: created.value.id,
       cartVersion: created.value.version,
@@ -406,7 +411,7 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
     });
     expect(merged.ok).toBe(true);
     if (!merged.ok) throw new Error('expected merge');
-    const quote = env.quoteDomain.createQuote({
+    const quote = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: created.value.id,
       cartVersion: merged.value.cartVersion,
@@ -420,9 +425,9 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
   });
 
   it('rejects a quote when any of contact/delivery/payment is missing', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const noContact = env.quoteDomain.createQuote({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const noContact = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -437,7 +442,7 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
       expect.arrayContaining(['/contact', '/delivery', '/paymentMethod']),
     );
 
-    const merged = env.quoteDomain.updateDraft({
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -446,7 +451,7 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
     });
     expect(merged.ok).toBe(true);
     if (!merged.ok) throw new Error('expected merge');
-    const noDelivery = env.quoteDomain.createQuote({
+    const noDelivery = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: merged.value.cartVersion,
@@ -461,18 +466,18 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
   });
 
   it('returns 409 OUT_OF_STOCK when a variant is exhausted at quote time', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env, SESSION_A, VARIANT_G256, 1);
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment, SESSION_A, VARIANT_G256, 1);
     // Flip the catalogue to out_of_stock before the quote runs.
-    const product = asProductFixture(env);
+    const product = asProductFixture(environment);
     const oos = cloneProduct(
       product,
       product.variants.map((v) =>
         v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v,
       ),
     );
-    env.repository.loadProducts([oos]);
-    const merged = env.quoteDomain.updateDraft({
+    environment.repository.loadProducts([oos]);
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -485,7 +490,7 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
     });
     expect(merged.ok).toBe(true);
     if (!merged.ok) throw new Error('expected merge');
-    const quote = env.quoteDomain.createQuote({
+    const quote = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: merged.value.cartVersion,
@@ -501,9 +506,9 @@ describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () =>
 describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
   it('exposes the 5-minute TTL constant and keeps an active quote inside the window', async () => {
     expect(QUOTE_TTL_MS).toBe(5 * 60 * 1000);
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const merged = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -516,7 +521,7 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     });
     expect(merged.ok).toBe(true);
     if (!merged.ok) throw new Error('expected merge');
-    const first = env.quoteDomain.createQuote({
+    const first = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: merged.value.cartVersion,
@@ -525,16 +530,16 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('expected quote');
     const initialExpiresAt = first.value.quote.expiresAt;
-    env.clock.advanceMs(QUOTE_TTL_MS - 1);
-    expect(env.quoteDomain.getActiveQuote(seeded.id, seeded.version)?.expiresAt).toBe(
+    environment.clock.advanceMs(QUOTE_TTL_MS - 1);
+    expect(environment.quoteDomain.getActiveQuote(seeded.id, seeded.version)?.expiresAt).toBe(
       initialExpiresAt,
     );
   });
 
   it('expires the quote after exactly 5 mock-clock minutes', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const merged = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -547,7 +552,7 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     });
     expect(merged.ok).toBe(true);
     if (!merged.ok) throw new Error('expected merge');
-    const first = env.quoteDomain.createQuote({
+    const first = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: merged.value.cartVersion,
@@ -555,14 +560,14 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('expected quote');
-    env.clock.advanceMs(QUOTE_TTL_MS);
-    expect(env.quoteDomain.getActiveQuote(seeded.id, seeded.version)).toBeNull();
+    environment.clock.advanceMs(QUOTE_TTL_MS);
+    expect(environment.quoteDomain.getActiveQuote(seeded.id, seeded.version)).toBeNull();
   });
 
   it('invalidates the active quote when the cart version bumps (cart mutation)', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const merged = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -575,7 +580,7 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     });
     expect(merged.ok).toBe(true);
     if (!merged.ok) throw new Error('expected merge');
-    const first = env.quoteDomain.createQuote({
+    const first = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: merged.value.cartVersion,
@@ -583,7 +588,7 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('expected quote');
-    const bumped = env.cartDomain.addCartItem({
+    const bumped = environment.cartDomain.addCartItem({
       sessionId: SESSION_A,
       cartId: seeded.id,
       ifMatch: `"${String(seeded.version)}"`,
@@ -594,12 +599,12 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     expect(bumped.ok).toBe(true);
     if (!bumped.ok) throw new Error('expected bump');
     // Old quote (cartVersion < current) is treated as invalidated.
-    expect(env.quoteDomain.getActiveQuote(seeded.id, bumped.value.version)).toBeNull();
+    expect(environment.quoteDomain.getActiveQuote(seeded.id, bumped.value.version)).toBeNull();
 
     // Advance the clock by a millisecond so the fresh quote carries a
     // distinct expiresAt timestamp deterministically.
-    env.clock.advanceMs(1);
-    const next = env.quoteDomain.createQuote({
+    environment.clock.advanceMs(1);
+    const next = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: bumped.value.version,
@@ -613,9 +618,9 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
   });
 
   it('invalidates the active quote when a draft update succeeds and replaces it on the next call', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const first = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const first = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -628,7 +633,7 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('expected merge');
-    const quote = env.quoteDomain.createQuote({
+    const quote = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: first.value.cartVersion,
@@ -638,7 +643,7 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     if (!quote.ok) throw new Error('expected quote');
     const id1 = quote.value.quote.id;
 
-    const draftUpdate = env.quoteDomain.updateDraft({
+    const draftUpdate = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: first.value.cartVersion,
@@ -649,9 +654,9 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
     if (!draftUpdate.ok) throw new Error('expected merge');
 
     // Old quote is gone (treated as invalidated).
-    expect(env.quoteDomain.getActiveQuote(seeded.id, seeded.version)).toBeNull();
+    expect(environment.quoteDomain.getActiveQuote(seeded.id, seeded.version)).toBeNull();
 
-    const replacement = env.quoteDomain.createQuote({
+    const replacement = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -665,9 +670,9 @@ describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
 
 describe('T08-AC05 PRICE_CHANGED atomic update', () => {
   it('atomically updates cart line prices, bumps version, and returns PRICE_CHANGED', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const merged = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -683,16 +688,16 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
 
     // Mutate the catalogue price for the variant while the cart still
     // carries the old snapshot.
-    const product = asProductFixture(env);
+    const product = asProductFixture(environment);
     const mutated = cloneProduct(
       product,
       product.variants.map((v) =>
         v.id === VARIANT_G256 ? { ...v, price: { amount: 359_990, currency: 'HUF' } } : v,
       ),
     );
-    env.repository.loadProducts([mutated]);
+    environment.repository.loadProducts([mutated]);
 
-    const result = env.quoteDomain.createQuote({
+    const result = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: merged.value.cartVersion,
@@ -703,16 +708,16 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
     expect(result.problem.status).toBe(409);
     expect(result.problem.code).toBe('PRICE_CHANGED');
     // Cart version bumped by exactly one and price reflects the catalogue.
-    const stored = env.repository.getCart(seeded.id);
+    const stored = environment.repository.getCart(seeded.id);
     expect(stored?.version).toBe(seeded.version + 1);
     expect(stored?.items[0]?.unitPrice).toEqual({ amount: 359_990, currency: 'HUF' });
     expect(stored?.items[0]?.lineTotal).toEqual({ amount: 359_990, currency: 'HUF' });
   });
 
   it('keeps PRICE_CHANGED distinct from QUOTE_EXPIRED and OUT_OF_STOCK', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const merged = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const merged = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -727,7 +732,7 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
     if (!merged.ok) throw new Error('expected merge');
 
     // Quote once -> advance clock past TTL -> quote is gone but cart is intact.
-    const first = env.quoteDomain.createQuote({
+    const first = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: merged.value.cartVersion,
@@ -736,10 +741,10 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('expected quote');
 
-    env.clock.advanceMs(QUOTE_TTL_MS + 1);
+    environment.clock.advanceMs(QUOTE_TTL_MS + 1);
 
     // Same cart, same draft, same stock, same prices - strictly expiry.
-    const expired = env.quoteDomain.createQuote({
+    const expired = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -751,15 +756,15 @@ describe('T08-AC05 PRICE_CHANGED atomic update', () => {
 
     // Now flip a variant to out_of_stock at quote time; PRICE_CHANGED must
     // not be returned because the existing-prices branch is satisfied.
-    const product = asProductFixture(env);
+    const product = asProductFixture(environment);
     const oos = cloneProduct(
       product,
       product.variants.map((v) =>
         v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v,
       ),
     );
-    env.repository.loadProducts([oos]);
-    const stock = env.quoteDomain.createQuote({
+    environment.repository.loadProducts([oos]);
+    const stock = environment.quoteDomain.createQuote({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -801,7 +806,7 @@ describe('address and contact normalization helpers', () => {
     expect(normalizeAddressLine1([])).toBeNull();
     expect(normalizeAddressLine2(42)).toBeNull();
     // Empty strings.
-    expect(normalizeContactFullName('   ')).toBeNull();
+    expect(normalizeContactFullName(' '.repeat(3))).toBeNull();
     expect(normalizeContactEmail('')).toBeNull();
     expect(normalizeAddressCity('')).toBeNull();
     expect(normalizeAddressLine1('  ')).toBeNull();
@@ -827,8 +832,8 @@ describe('address and contact normalization helpers', () => {
 
 describe('QuoteDomain error paths and session guards', () => {
   it('rejects malformed X-Demo-Session headers with 400 VALIDATION_FAILED', () => {
-    const env = makeEnv();
-    const result = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const result = environment.quoteDomain.updateDraft({
       sessionId: 'short',
       cartId: 'cart-anything',
       cartVersion: 1,
@@ -842,8 +847,8 @@ describe('QuoteDomain error paths and session guards', () => {
   });
 
   it('rejects missing If-Match with 400 VALIDATION_FAILED', () => {
-    const env = makeEnv();
-    const result = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const result = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: 'cart-anything',
       cartVersion: null,
@@ -857,8 +862,8 @@ describe('QuoteDomain error paths and session guards', () => {
   });
 
   it('rejects missing Idempotency-Key with 400 VALIDATION_FAILED', () => {
-    const env = makeEnv();
-    const result = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const result = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: 'cart-anything',
       cartVersion: 1,
@@ -872,8 +877,8 @@ describe('QuoteDomain error paths and session guards', () => {
   });
 
   it('returns 404 NOT_FOUND when the cart does not belong to the session', () => {
-    const env = makeEnv();
-    const result = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const result = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: 'cart-unknown',
       cartVersion: 1,
@@ -887,10 +892,10 @@ describe('QuoteDomain error paths and session guards', () => {
   });
 
   it('returns 409 IDEMPOTENCY_CONFLICT on a same-key + different-body replay', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
     const key = `${IDEMPOTENCY_KEY_BASE}-conflicting-key`;
-    const first = env.quoteDomain.updateDraft({
+    const first = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -899,7 +904,7 @@ describe('QuoteDomain error paths and session guards', () => {
     });
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('expected first');
-    const conflict = env.quoteDomain.updateDraft({
+    const conflict = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: first.value.cartVersion,
@@ -913,9 +918,9 @@ describe('QuoteDomain error paths and session guards', () => {
   });
 
   it('rejects update with no recognized sections as 422 VALIDATION_ERROR', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const empty = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const empty = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -929,9 +934,9 @@ describe('QuoteDomain error paths and session guards', () => {
   });
 
   it('rejects unknown delivery option ids with the optionId pointer', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const result = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const result = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -944,9 +949,9 @@ describe('QuoteDomain error paths and session guards', () => {
   });
 
   it('rejects unknown payment methods with the paymentMethod pointer', async () => {
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const result = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const result = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -965,8 +970,8 @@ describe('QuoteDomain replay guards (isCheckoutSessionSnapshot / isQuoteReplayRe
     // the idempotency cache is seeded directly with a body that is not a
     // valid CheckoutSessionSnapshot, at the exact key/hash `updateDraft`
     // will look up.
-    const env = makeEnv();
-    const seeded = await seedCart(env);
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
     const idempotencyKey = `${IDEMPOTENCY_KEY_BASE}-corrupt-draft-replay`;
     const body = { contact: completeValidContact() };
     const idemKey = deriveIdempotencyKey(
@@ -976,9 +981,12 @@ describe('QuoteDomain replay guards (isCheckoutSessionSnapshot / isQuoteReplayRe
       idempotencyKey,
     );
     const payloadHash = hashPayload(body);
-    env.idempotency.record(idemKey, payloadHash, { status: 200, body: { not: 'a-snapshot' } });
+    environment.idempotency.record(idemKey, payloadHash, {
+      status: 200,
+      body: { not: 'a-snapshot' },
+    });
     expect(() =>
-      env.quoteDomain.updateDraft({
+      environment.quoteDomain.updateDraft({
         sessionId: SESSION_A,
         cartId: seeded.id,
         cartVersion: seeded.version,
@@ -991,9 +999,9 @@ describe('QuoteDomain replay guards (isCheckoutSessionSnapshot / isQuoteReplayRe
   it('throws when a cached createQuote replay body does not match the quote/cart pair', async () => {
     // Reject arm of `isQuoteReplayResult`: same technique, on the
     // `createQuote` path (`POST /checkout/{cartId}/quote`, hash of `{}`).
-    const env = makeEnv();
-    const seeded = await seedCart(env);
-    const draft = env.quoteDomain.updateDraft({
+    const environment = makeEnvironment();
+    const seeded = await seedCart(environment);
+    const draft = environment.quoteDomain.updateDraft({
       sessionId: SESSION_A,
       cartId: seeded.id,
       cartVersion: seeded.version,
@@ -1013,9 +1021,12 @@ describe('QuoteDomain replay guards (isCheckoutSessionSnapshot / isQuoteReplayRe
       idempotencyKey,
     );
     const payloadHash = hashPayload({});
-    env.idempotency.record(idemKey, payloadHash, { status: 200, body: { not: 'a-quote-pair' } });
+    environment.idempotency.record(idemKey, payloadHash, {
+      status: 200,
+      body: { not: 'a-quote-pair' },
+    });
     expect(() =>
-      env.quoteDomain.createQuote({
+      environment.quoteDomain.createQuote({
         sessionId: SESSION_A,
         cartId: seeded.id,
         cartVersion: draft.value.cartVersion,
@@ -1026,15 +1037,15 @@ describe('QuoteDomain replay guards (isCheckoutSessionSnapshot / isQuoteReplayRe
 });
 
 describe('checkout handler dispatch path (MSW + SDK wire)', () => {
-  let env: ReturnType<typeof makeEnv>;
+  let environment: ReturnType<typeof makeEnvironment>;
 
   beforeEach(() => {
-    env = makeEnv();
+    environment = makeEnvironment();
     const handlers = createHandlers({
-      repository: env.repository,
-      clock: env.clock,
-      ids: env.ids,
-      scenario: env.repository.getScenario(),
+      repository: environment.repository,
+      clock: environment.clock,
+      ids: environment.ids,
+      scenario: environment.repository.getScenario(),
       apiRoot: '/api/v1',
     });
     server.use(...handlers);
@@ -1345,7 +1356,9 @@ describe('checkout handler dispatch path (MSW + SDK wire)', () => {
   });
 });
 
-/** Test-only helpers below - small utilities used by the suite. */
+/**
+Test-only helpers below - small utilities used by the suite.
+*/
 
 function cloneProduct(product: Product, variants: readonly Variant[]): Product {
   return {

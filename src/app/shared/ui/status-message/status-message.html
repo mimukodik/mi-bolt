@@ -1,21 +1,21 @@
 <div
   class="root flex items-center justify-between gap-3 px-4 py-3 rounded"
+  data-testid="status-message"
+  [attr.aria-live]="severity() === 'error' ? 'assertive' : 'polite'"
+  [attr.role]="severity() === 'error' ? 'alert' : 'status'"
+  [class.is-error]="severity() === 'error'"
   [class.is-info]="severity() === 'info'"
   [class.is-success]="severity() === 'success'"
-  [class.is-error]="severity() === 'error'"
-  [attr.role]="severity() === 'error' ? 'alert' : 'status'"
-  [attr.aria-live]="severity() === 'error' ? 'assertive' : 'polite'"
-  data-testid="status-message"
 >
   <p class="message m-0">{{ message() }}</p>
   @if (!persistent()) {
     <div class="actions inline-flex items-center">
       <app-button
-        variant="secondary"
-        size="standard"
         label="Bezárás"
+        size="standard"
+        variant="secondary"
         (pressed)="dismissed.emit()"
-      ></app-button>
+      />
     </div>
   }
 </div>

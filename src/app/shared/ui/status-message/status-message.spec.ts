@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { StatusMessage } from './status-message';
 import type { StatusSeverity } from './status-message';
@@ -8,10 +9,10 @@ import type { StatusSeverity } from './status-message';
   template: `
     <app-status-message
       [message]="message()"
-      [severity]="severity()"
       [persistent]="persistent()"
+      [severity]="severity()"
       (dismissed)="dismissCount.set(dismissCount() + 1)"
-    ></app-status-message>
+    />
   `,
 })
 class HostComponent {
@@ -24,7 +25,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected HTMLElement');
+    throw new TypeError('Expected HTMLElement');
   }
   return raw;
 }
@@ -71,11 +72,11 @@ describe('StatusMessage primitive', () => {
 
   it('emits dismissed when the close button is clicked', () => {
     const { fixture, host } = setup();
-    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (!btn) {
+    const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!button) {
       throw new Error('Expected button');
     }
-    btn.click();
+    button.click();
     expect(host.dismissCount()).toBe(1);
   });
 
@@ -92,8 +93,8 @@ describe('StatusMessage primitive', () => {
       const { fixture, host } = setup();
       host.severity.set(severity);
       fixture.detectChanges();
-      const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-      if (!btn) {
+      const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+      if (!button) {
         throw new Error('Expected button');
       }
       // jsdom's computed-style engine (cssstyle) does not resolve CSS custom
@@ -112,8 +113,8 @@ describe('StatusMessage primitive', () => {
       // `is-secondary` (white background, brand-ink text/border — ~6.4:1 on
       // `--color-surface-light`, verified against the token hex values in
       // src/styles/tokens.css).
-      expect(btn.classList.contains('is-secondary-on-dark')).toBe(false);
-      expect(btn.classList.contains('is-secondary')).toBe(true);
+      expect(button.classList.contains('is-secondary-on-dark')).toBe(false);
+      expect(button.classList.contains('is-secondary')).toBe(true);
     },
   );
 

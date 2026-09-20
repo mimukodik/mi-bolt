@@ -17,12 +17,14 @@
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
-import { Repository } from './repository';
+import type { Repository as Repo } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 
-/** Inputs passed by both `setupWorker` and `setupServer` paths. */
+/**
+Inputs passed by both `setupWorker` and `setupServer` paths.
+*/
 export interface CreateHandlersOptions {
-  repository: Repository;
+  repository: Repo;
   clock: Clock;
   ids: Ids;
   scenario: ScenarioDescriptor;
@@ -43,10 +45,14 @@ export interface CreateHandlersOptions {
  */
 export type BusinessHandlerEntry = (options: CreateHandlersOptions) => readonly RequestHandler[];
 
-/** Module-local registry; append-only, ordered by registration time. */
+/**
+Module-local registry; append-only, ordered by registration time.
+*/
 const registry: BusinessHandlerEntry[] = [];
 
-/** Append a business handler entry. Called by T06–T09 slice files. */
+/**
+Append a business handler entry. Called by T06–T09 slice files.
+*/
 export function registerBusinessHandlers(entry: BusinessHandlerEntry): void {
   registry.push(entry);
 }

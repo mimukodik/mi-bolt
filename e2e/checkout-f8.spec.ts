@@ -28,12 +28,12 @@ test.describe('F8 — DeliveryStep onConfirm persists paymentMethod without 422'
   test('savePaymentMethod returns 200 and navigation reaches /penztar/ellenorzes', async ({
     page,
   }) => {
-    const putRequests: Array<{
+    const putRequests: {
       url: string;
       status: number;
       method: string;
       postData: string | null;
-    }> = [];
+    }[] = [];
 
     page.on('response', async (response) => {
       const url = response.url();

@@ -154,14 +154,13 @@ export function collectOperations(
     if (!pathItem || typeof pathItem !== 'object') continue;
     for (const method of HTTP_METHODS) {
       const op = (pathItem as Record<string, SpecOperation | undefined>)[method];
-      if (!op || typeof op !== 'object') continue;
-      if (typeof op.operationId !== 'string') continue;
-      const params = Array.isArray(op.parameters) ? op.parameters : [];
-      const pathParams = collectPathParams(pathKey, params, spec);
+      if (!op || typeof op !== 'object' || typeof op.operationId !== 'string') continue;
+      const parameters = Array.isArray(op.parameters) ? op.parameters : [];
+      const pathParameters = collectPathParameters(pathKey, parameters, spec);
       const documented = Object.keys(op.responses ?? {});
       const success = pickSuccessStatus(documented);
       const hasRequestBody = typeof op.requestBody === 'object' && op.requestBody !== null;
-      const bodyRequired = Boolean(
+      const isBodyRequired = Boolean(
         op.requestBody && 'required' in op.requestBody ? op.requestBody.required : false,
       );
       const tag = Array.isArray(op.tags) && typeof op.tags[0] === 'string' ? op.tags[0] : '';
@@ -169,11 +168,11 @@ export function collectOperations(
         operationId: op.operationId,
         method,
         path: pathKey.startsWith('/') ? pathKey : `/${pathKey}`,
-        pathParams,
+        pathParams: pathParameters,
         tag,
         successStatus: success,
         hasRequestBody,
-        bodyRequired,
+        bodyRequired: isBodyRequired,
         documentedStatuses: documented,
       });
     }
@@ -188,16 +187,20 @@ function pickSuccessStatus(statuses: string[]): string {
   return ok ?? statuses[0] ?? '200';
 }
 
-function collectPathParams(path: string, params: SpecParameter[], spec: OpenApiSpec): string[] {
+function collectPathParameters(
+  path: string,
+  parameters: SpecParameter[],
+  spec: OpenApiSpec,
+): string[] {
   const matches = path.matchAll(/\{([^}]+)\}/g);
   const names = Array.from(matches, (m) => m[1] ?? '').filter((n) => n.length > 0);
   const components = spec.components?.parameters ?? {};
   const declared = new Set<string>();
-  for (const p of params) {
+  for (const p of parameters) {
     if (typeof p.$ref === 'string') {
-      const refName = p.$ref.split('/').pop();
-      if (refName && refName in components) {
-        declared.add(components[refName]?.name ?? '');
+      const referenceName = p.$ref.split('/').pop();
+      if (referenceName && referenceName in components) {
+        declared.add(components[referenceName]?.name ?? '');
       }
     } else if (p.in === 'path') {
       declared.add(p.name ?? '');
@@ -207,7 +210,7 @@ function collectPathParams(path: string, params: SpecParameter[], spec: OpenApiS
   // surfaced — the consumer wants every `{x}` token to match a route
   // parameter, declared or implied.
   for (const name of names) declared.add(name);
-  return Array.from(declared);
+  return [...declared];
 }
 
 /**
@@ -216,7 +219,7 @@ function collectPathParams(path: string, params: SpecParameter[], spec: OpenApiS
  * correlate operation descriptors with handler routes.
  */
 export function openApiPathToMswPath(path: string): string {
-  return path.replace(/\{([^}]+)\}/g, ':$1');
+  return path.replaceAll(/\{([^}]+)\}/g, ':$1');
 }
 
 /**
@@ -231,13 +234,11 @@ export function compileResponseValidator(
 ): ValidateFunction | null {
   if (!responseValidators) return null;
   const map = responseValidators.get(operationId);
-  if (!map) return null;
-  return map.get(status) ?? null;
+  return map ? (map.get(status) ?? null) : null;
 }
 
 export function compileRequestValidator(operationId: string): ValidateFunction | null {
-  if (!requestValidators) return null;
-  return requestValidators.get(operationId) ?? null;
+  return requestValidators ? (requestValidators.get(operationId) ?? null) : null;
 }
 
 export function getProblemValidator(): ValidateFunction {

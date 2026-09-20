@@ -28,15 +28,14 @@
 
 import { deriveIdempotencyKey, hashPayload, type IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
+import type { Repository as Repo } from '../repository';
 import {
   type CartLine,
   type Money,
   type OrderReceipt as PersistedOrderReceipt,
-  type Variant,
-  Repository,
 } from '../repository';
 import type { Clock, Ids } from '../scenarios';
-import { QUOTE_TTL_MS, type DeliveryOptionId, QuoteDomain } from '../checkout/quote-domain';
+import { type DeliveryOptionId, QuoteDomain } from '../checkout/quote-domain';
 
 // ---------------------------------------------------------------------------
 // Payment method + intent vocabulary (matches OpenAPI enums).
@@ -47,15 +46,21 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export type PaymentIntentStatus = 'succeeded' | 'declined' | 'pending';
 
-/** Internal record kept by `PaymentIntentStore`; matches the wire shape plus internal validation fields. */
+/**
+Internal record kept by `PaymentIntentStore`; matches the wire shape plus internal validation fields.
+*/
 export interface PaymentIntentRecord {
   id: string;
   cartId: string;
-  /** Cart version captured at intent creation; required to match the order commit. */
+  /**
+  Cart version captured at intent creation; required to match the order commit.
+  */
   cartVersion: number;
   quoteId: string;
   amount: Money;
-  /** Session captured at intent creation; required to match the order commit. */
+  /**
+  Session captured at intent creation; required to match the order commit.
+  */
   sessionId: string;
   status: PaymentIntentStatus;
   isSimulation: true;
@@ -80,7 +85,9 @@ export class PaymentIntentStore {
 
   constructor(private readonly clock: Clock) {}
 
-  /** Creates a new intent and stores it. The status is supplied by the caller. */
+  /**
+  Creates a new intent and stores it. The status is supplied by the caller.
+  */
   create(input: Omit<PaymentIntentRecord, 'createdAt'>): PaymentIntentRecord {
     const record: PaymentIntentRecord = {
       ...input,
@@ -90,7 +97,9 @@ export class PaymentIntentStore {
     return record;
   }
 
-  /** Looks up an intent by id without resolving pending state. */
+  /**
+  Looks up an intent by id without resolving pending state.
+  */
   findRaw(id: string): PaymentIntentRecord | undefined {
     return this.intents.get(id);
   }
@@ -103,21 +112,26 @@ export class PaymentIntentStore {
    */
   findById(id: string, scenarioName: string): PaymentIntentRecord | undefined {
     const record = this.intents.get(id);
-    if (!record) return undefined;
-    return this.applyPendingResolution(record, scenarioName);
+    return record ? this.applyPendingResolution(record, scenarioName) : undefined;
   }
 
-  /** Removes an intent (used after a successful commit). */
+  /**
+  Removes an intent (used after a successful commit).
+  */
   clear(id: string): void {
     this.intents.delete(id);
   }
 
-  /** Test-only: count of stored intents. */
+  /**
+  Test-only: count of stored intents.
+  */
   size(): number {
     return this.intents.size;
   }
 
-  /** Test-only: drop every intent. */
+  /**
+  Test-only: drop every intent.
+  */
   clearAll(): void {
     this.intents.clear();
   }
@@ -146,9 +160,11 @@ export class PaymentIntentStore {
 export class StockTracker {
   private readonly stocks = new Map<string, number>();
 
-  constructor(private readonly repository: Repository) {}
+  constructor(private readonly repository: Repo) {}
 
-  /** Returns the remaining simulated stock for `variantId`, defaulting to 0. */
+  /**
+  Returns the remaining simulated stock for `variantId`, defaulting to 0.
+  */
   get(variantId: string): number {
     this.ensureInitialized();
     return this.stocks.get(variantId) ?? 0;
@@ -173,7 +189,9 @@ export class StockTracker {
     return shortages;
   }
 
-  /** Atomically decrements stock by the line quantities. Caller must have verified stock first. */
+  /**
+  Atomically decrements stock by the line quantities. Caller must have verified stock first.
+  */
   decrement(lines: readonly CartLine[]): void {
     this.ensureInitialized();
     for (const line of lines) {
@@ -182,12 +200,16 @@ export class StockTracker {
     }
   }
 
-  /** Test-only: explicitly seed the stock for `variantId`. */
+  /**
+  Test-only: explicitly seed the stock for `variantId`.
+  */
   set(variantId: string, value: number): void {
     this.stocks.set(variantId, value);
   }
 
-  /** Test-only: reload stock from the catalogue (used when fixtures change). */
+  /**
+  Test-only: reload stock from the catalogue (used when fixtures change).
+  */
   reload(): void {
     this.stocks.clear();
     this.ensureInitialized();
@@ -246,21 +268,21 @@ const SIMULATION_NOTICE =
 // ---------------------------------------------------------------------------
 
 function isMoney(value: unknown): value is Money {
-  if (!isRecord(value)) return false;
-  return typeof value['amount'] === 'number' && typeof value['currency'] === 'string';
+  return isRecord(value)
+    ? typeof value['amount'] === 'number' && typeof value['currency'] === 'string'
+    : false;
 }
 
 function isOrderLineSnapshot(value: unknown): value is OrderLineSnapshot {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value['productName'] === 'string' &&
-    typeof value['variantId'] === 'string' &&
-    typeof value['colorName'] === 'string' &&
-    typeof value['storageGb'] === 'number' &&
-    typeof value['quantity'] === 'number' &&
-    isMoney(value['unitPrice']) &&
-    isMoney(value['lineTotal'])
-  );
+  return isRecord(value)
+    ? typeof value['productName'] === 'string' &&
+        typeof value['variantId'] === 'string' &&
+        typeof value['colorName'] === 'string' &&
+        typeof value['storageGb'] === 'number' &&
+        typeof value['quantity'] === 'number' &&
+        isMoney(value['unitPrice']) &&
+        isMoney(value['lineTotal'])
+    : false;
 }
 
 /**
@@ -342,7 +364,7 @@ export type OrderResult<T> = { ok: true; value: T } | { ok: false; problem: Orde
 
 export class OrderDomain {
   constructor(
-    private readonly repository: Repository,
+    private readonly repository: Repo,
     private readonly clock: Clock,
     private readonly ids: Ids,
     private readonly idempotency: IdempotencyStore,
@@ -352,7 +374,9 @@ export class OrderDomain {
     private readonly scenarioName: string,
   ) {}
 
-  /** POST /orders — atomic commit. */
+  /**
+  POST /orders — atomic commit.
+  */
   createOrder(input: CreateOrderInput): OrderResult<OrderReceipt> {
     // 1. Header validation
     const session = validateSession(input.sessionId);
@@ -389,22 +413,22 @@ export class OrderDomain {
       return ok(replay.body);
     }
     if (this.idempotency.hasConflictingPayload(idemKey, payloadHash)) {
-      return err(idempotencyConflict());
+      return error(idempotencyConflict());
     }
 
     // 4. Cart lookup
     const cart = this.repository.getCart(input.cartId);
     if (cart?.sessionId !== input.sessionId) {
-      return err(notFound('A kosár nem található.'));
+      return error(notFound('A kosár nem található.'));
     }
     if (this.quoteDomain.isExpired(cart)) {
-      return err(cartExpired());
+      return error(cartExpired());
     }
     if (cart.status !== 'active') {
-      return err(notFound('A kosár már lezárult.'));
+      return error(notFound('A kosár már lezárult.'));
     }
     if (cart.items.length === 0) {
-      return err(
+      return error(
         checkoutIncomplete('A kosár üres.', [{ path: '/cart', message: 'A kosár jelenleg üres.' }]),
       );
     }
@@ -417,7 +441,7 @@ export class OrderDomain {
     const draft = this.quoteDomain.getSession(input.cartId, cart.version).draft;
     const method = draft.paymentMethod;
     if (method !== 'demo_card' && method !== 'demo_cod') {
-      return err(
+      return error(
         checkoutIncomplete('A fizetési mód hiányzik.', [
           { path: '/paymentMethod', message: 'A fizetési mód kiválasztása kötelező.' },
         ]),
@@ -427,29 +451,29 @@ export class OrderDomain {
     // 7. Quote lookup — must be unexpired, must reference this cart/version
     const quote = this.quoteDomain.getActiveQuote(input.cartId, cart.version);
     if (!quote) {
-      return err(quoteExpired());
+      return error(quoteExpired());
     }
     if (quote.id !== input.quoteId) {
-      return err(quoteExpired());
+      return error(quoteExpired());
     }
     if (quote.cartVersion !== cart.version) {
-      return err(priceChanged());
+      return error(priceChanged());
     }
 
     // 8. demo_card requires succeeded matching intent; demo_cod forbids one
     if (method === 'demo_card') {
       if (!input.paymentIntentId) {
-        return err(paymentRequired());
+        return error(paymentRequired());
       }
       const intent = this.paymentIntents.findById(input.paymentIntentId, this.scenarioName);
       if (!intent) {
-        return err(notFound('A fizetési szándék nem található.'));
+        return error(notFound('A fizetési szándék nem található.'));
       }
       if (intent.status === 'pending') {
-        return err(paymentPending());
+        return error(paymentPending());
       }
       if (intent.status === 'declined') {
-        return err(paymentDeclined());
+        return error(paymentDeclined());
       }
       const intentMatches = validateIntentMatch(intent, {
         sessionId: input.sessionId,
@@ -461,7 +485,7 @@ export class OrderDomain {
       if (!intentMatches.ok) return intentMatches;
     } else {
       if (input.paymentIntentId !== null && input.paymentIntentId !== undefined) {
-        return err(
+        return error(
           validationFailed('A demo_cod fizetési módhoz nem adható meg paymentIntentId.', [
             {
               path: '/paymentIntentId',
@@ -474,7 +498,7 @@ export class OrderDomain {
 
     // 9. Delivery option must be set
     if (!draft.delivery) {
-      return err(
+      return error(
         checkoutIncomplete('A szállítási mód hiányzik.', [
           { path: '/delivery', message: 'A szállítási mód kiválasztása kötelező.' },
         ]),
@@ -485,7 +509,7 @@ export class OrderDomain {
     // 10. Stock recheck
     const shortages = this.stocks.findShortages(cart.items);
     if (shortages.length > 0) {
-      return err(outOfStock(shortages));
+      return error(outOfStock(shortages));
     }
 
     // 11. ATOMIC COMMIT
@@ -533,12 +557,14 @@ export class OrderDomain {
     return ok(receipt);
   }
 
-  /** GET /orders/{orderId} — read a persisted receipt. */
+  /**
+  GET /orders/{orderId} — read a persisted receipt.
+  */
   getOrder(input: GetOrderInput): OrderResult<OrderReceipt> {
     const session = validateSession(input.sessionId);
     if (!session.ok) return session;
     const stored = this.repository.getOrder(input.orderId);
-    if (!stored) return err(notFound('A rendelés nem található.'));
+    if (!stored) return error(notFound('A rendelés nem található.'));
     // `Repository`'s own `OrderReceipt` type leaves every field but
     // id/orderNumber/sessionId/createdAt/total optional; `saveOrder` above
     // is this domain's only writer and always fills them in
@@ -575,10 +601,9 @@ export class OrderDomain {
         message: 'A szimuláció tudomásulvétele kötelező.',
       });
     }
-    if (fieldErrors.length > 0) {
-      return err(validationFailed('A megerősítés hiányos.', fieldErrors));
-    }
-    return ok(true);
+    return fieldErrors.length > 0
+      ? error(validationFailed('A megerősítés hiányos.', fieldErrors))
+      : ok(true);
   }
 }
 
@@ -596,21 +621,18 @@ interface IntentMatch {
 
 function validateIntentMatch(intent: PaymentIntentRecord, match: IntentMatch): OrderResult<true> {
   if (intent.sessionId !== match.sessionId) {
-    return err(notFound('A fizetési szándék nem tartozik ehhez a munkamenethez.'));
+    return error(notFound('A fizetési szándék nem tartozik ehhez a munkamenethez.'));
   }
   if (intent.cartId !== match.cartId) {
-    return err(notFound('A fizetési szándék nem tartozik ehhez a kosárhoz.'));
+    return error(notFound('A fizetési szándék nem tartozik ehhez a kosárhoz.'));
   }
   if (intent.cartVersion !== match.cartVersion) {
-    return err(paymentRequired());
+    return error(paymentRequired());
   }
   if (intent.quoteId !== match.quoteId) {
-    return err(quoteExpired());
+    return error(quoteExpired());
   }
-  if (intent.amount.amount !== match.amount.amount) {
-    return err(priceChanged());
-  }
-  return ok(true);
+  return intent.amount.amount === match.amount.amount ? ok(true) : error(priceChanged());
 }
 
 function buildOrderLine(line: CartLine): OrderLineSnapshot {
@@ -631,7 +653,9 @@ function sumMoney(items: readonly Money[]): Money {
   return { amount, currency: 'HUF' };
 }
 
-/** Drops the internal sessionId before returning the receipt to a caller. */
+/**
+Drops the internal sessionId before returning the receipt to a caller.
+*/
 function stripSession(stored: PersistedOrderReceipt & OrderReceipt): OrderReceipt {
   const { sessionId: _sessionId, ...rest } = stored;
   return rest;
@@ -648,7 +672,7 @@ const IDEMPOTENCY_MAX = 100;
 
 function validateSession(sessionId: string): OrderResult<string> {
   if (!SESSION_PATTERN.test(sessionId)) {
-    return err({
+    return error({
       status: 400,
       code: 'VALIDATION_FAILED',
       detail: 'Érvénytelen X-Demo-Session fejléc.',
@@ -662,7 +686,7 @@ function validateSession(sessionId: string): OrderResult<string> {
 
 function validateIdempotencyKey(key: string): OrderResult<string> {
   if (key.length < IDEMPOTENCY_MIN || key.length > IDEMPOTENCY_MAX) {
-    return err({
+    return error({
       status: 400,
       code: 'VALIDATION_FAILED',
       detail: 'Érvénytelen Idempotency-Key hossz.',
@@ -685,7 +709,7 @@ function ok<T>(value: T): OrderResult<T> {
   return { ok: true, value };
 }
 
-function err(problem: OrderProblem): OrderResult<never> {
+function error(problem: OrderProblem): OrderResult<never> {
   return { ok: false, problem };
 }
 
@@ -782,9 +806,6 @@ export function validationFailed(detail: string, fieldErrors: OrderFieldError[])
 // callers without re-importing the entire repository tree.
 // ---------------------------------------------------------------------------
 
-export { QUOTE_TTL_MS };
-export type { Variant };
-
 // ---------------------------------------------------------------------------
 // Shared stores — payment + order handlers need the same `PaymentIntentStore`
 // and `QuoteDomain` instances to see each other's state. The lookup is
@@ -799,21 +820,24 @@ export interface SharedStores {
   stocks: StockTracker;
 }
 
-const sharedStoresByRepository = new WeakMap<Repository, SharedStores>();
+const sharedStoresByRepo = new WeakMap<Repo, SharedStores>();
 
 export function getSharedStores(
-  repository: Repository,
+  repo: Repo,
   clock: Clock,
   ids: Ids,
   idempotencyForQuotes: IdempotencyStore,
 ): SharedStores {
-  const existing = sharedStoresByRepository.get(repository);
+  const existing = sharedStoresByRepo.get(repo);
   if (existing) return existing;
   const created: SharedStores = {
     paymentIntents: new PaymentIntentStore(clock),
-    quoteDomain: new QuoteDomain(repository, clock, ids, idempotencyForQuotes),
-    stocks: new StockTracker(repository),
+    quoteDomain: new QuoteDomain(repo, clock, ids, idempotencyForQuotes),
+    stocks: new StockTracker(repo),
   };
-  sharedStoresByRepository.set(repository, created);
+  sharedStoresByRepo.set(repo, created);
   return created;
 }
+
+export { QUOTE_TTL_MS } from '../checkout/quote-domain';
+export { type Variant } from '../repository';

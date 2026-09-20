@@ -15,14 +15,18 @@
 import type { Product } from '../repository';
 import { FACET_STORAGE_GB, matchProduct, type CatalogFilter } from './filter-products';
 
-/** One entry in a facet response: value, label and the count of products. */
+/**
+One entry in a facet response: value, label and the count of products.
+*/
 export interface FacetValue {
   value: string;
   label: string;
   count: number;
 }
 
-/** Brand + storage facet bundle the OpenAPI `ProductPage.facets` carries. */
+/**
+Brand + storage facet bundle the OpenAPI `ProductPage.facets` carries.
+*/
 export interface ProductFacets {
   brands: readonly FacetValue[];
   storageGb: readonly FacetValue[];
@@ -49,7 +53,7 @@ export function buildBrandFacet(
       entry.count += 1;
     }
   }
-  return Array.from(counts.entries())
+  return [...counts]
     .map(([value, { label, count }]) => ({ value, label, count }))
     .sort((a, b) => a.value.localeCompare(b.value));
 }
@@ -77,17 +81,14 @@ export function buildStorageFacet(
       counts.set(storageGb, (counts.get(storageGb) ?? 0) + 1);
     }
   }
-  const result: FacetValue[] = [];
-  for (const storageGb of FACET_STORAGE_GB) {
-    result.push({
-      value: String(storageGb),
-      label: `${String(storageGb)} GB`,
-      count: counts.get(storageGb) ?? 0,
-    });
-  }
+  const result: FacetValue[] = Array.from(FACET_STORAGE_GB, (storageGb) => ({
+    value: String(storageGb),
+    label: `${String(storageGb)} GB`,
+    count: counts.get(storageGb) ?? 0,
+  }));
   // Surface any storage sizes that exist in fixtures but were not
   // enumerated in FACET_STORAGE_GB (forward-compatible).
-  for (const [value, count] of counts.entries()) {
+  for (const [value, count] of counts) {
     if (FACET_STORAGE_GB.includes(value)) continue;
     result.push({
       value: String(value),
@@ -98,7 +99,9 @@ export function buildStorageFacet(
   return result.sort((a, b) => Number(a.value) - Number(b.value));
 }
 
-/** Builds both facets in one call. */
+/**
+Builds both facets in one call.
+*/
 export function buildFacets(
   products: readonly Product[],
   filter: CatalogFilter,

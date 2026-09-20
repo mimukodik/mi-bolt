@@ -34,11 +34,11 @@ import { expect, test } from '@playwright/test';
 const REPO_ROOT = resolve(__dirname, '..', '..');
 const SCREENSHOT_ROOT = resolve(REPO_ROOT, 'e2e/design/screenshots');
 
-const VIEWPORTS: ReadonlyArray<{
+const VIEWPORTS: readonly {
   readonly name: string;
   readonly width: number;
   readonly height: number;
-}> = [
+}[] = [
   { name: '320', width: 320, height: 720 },
   { name: '390', width: 390, height: 844 },
   { name: '768', width: 768, height: 1024 },
@@ -47,11 +47,11 @@ const VIEWPORTS: ReadonlyArray<{
   { name: '1920', width: 1920, height: 1080 },
 ];
 
-const ROUTES: ReadonlyArray<{
+const ROUTES: readonly {
   readonly family: 'home' | 'catalog' | 'product' | 'cart' | 'checkout' | 'success';
   readonly id: string;
   readonly path: string;
-}> = [
+}[] = [
   { family: 'home', id: 'home', path: '/' },
   { family: 'catalog', id: 'telefonok', path: '/telefonok' },
   // The mock catalog exposes `demo-one-5g` as the deterministic
@@ -70,7 +70,7 @@ const ROUTES: ReadonlyArray<{
 // through the flow — the catalogue trigger, the cart continue
 // button, the contact submit, etc. They are documented in the
 // `data-testid` attribute on each element (T18/T20/T21).
-const PRIMARY_CTA_BY_ROUTE: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
+const PRIMARY_CTA_BY_ROUTE: ReadonlyMap<string, readonly string[]> = new Map([
   ['home', ['app-marketing-layout a[href*="telefonok"]']],
   ['telefonok', ['[data-testid="filter-trigger"]']],
   ['product', ['app-product-page button']],
@@ -143,19 +143,19 @@ test.describe('T25-AC01 viewport matrix — overflow + 44px CTAs', () => {
           for (const selector of selectors) {
             const elements = page.locator(selector);
             const count = await elements.count();
-            for (let i = 0; i < count; i++) {
-              const box = await elements.nth(i).boundingBox();
+            for (let index = 0; index < count; index++) {
+              const box = await elements.nth(index).boundingBox();
               if (!box) continue;
               // R21 deliberately raises the WCAG 2.2 AA 2.5.8
               // baseline (24x24 CSS px) to 44x44 CSS px. We allow
               // a 1px sub-pixel rounding slack.
               expect(
                 box.width,
-                `${route.id} ${selector}#${i + 1} width ${box.width}`,
+                `${route.id} ${selector}#${index + 1} width ${box.width}`,
               ).toBeGreaterThanOrEqual(44);
               expect(
                 box.height,
-                `${route.id} ${selector}#${i + 1} height ${box.height}`,
+                `${route.id} ${selector}#${index + 1} height ${box.height}`,
               ).toBeGreaterThanOrEqual(44);
             }
           }

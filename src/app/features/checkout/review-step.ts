@@ -94,7 +94,9 @@ export class ReviewStep {
   private readonly termsTouched = signal<boolean>(false);
   private readonly simulationTouched = signal<boolean>(false);
 
-  /** Whether the demo terms dialog is open. */
+  /**
+  Whether the demo terms dialog is open.
+  */
   readonly termsOpened = signal<boolean>(false);
 
   /** Snapshot of the cart's items, mapped into the wire shape the
@@ -147,8 +149,7 @@ export class ReviewStep {
   readonly deliveryLabel = computed<string>(() => {
     const id = this.deliveryOptionId();
     if (id === 'home_delivery') return 'Házhoz szállítás (1990 Ft)';
-    if (id === 'demo_pickup') return 'Virtuális átvétel (0 Ft)';
-    return 'Nincs kiválasztva';
+    return id === 'demo_pickup' ? 'Virtuális átvétel (0 Ft)' : 'Nincs kiválasztva';
   });
 
   readonly paymentMethod = computed<'demo_card' | 'demo_cod' | null>(
@@ -158,8 +159,7 @@ export class ReviewStep {
   readonly paymentLabel = computed<string>(() => {
     const m = this.paymentMethod();
     if (m === 'demo_card') return 'Bankkártya (szimulált)';
-    if (m === 'demo_cod') return 'Utánvét (demó)';
-    return 'Nincs kiválasztva';
+    return m === 'demo_cod' ? 'Utánvét (demó)' : 'Nincs kiválasztva';
   });
 
   // ---------------------------------------------------------------------------
@@ -175,8 +175,7 @@ export class ReviewStep {
     readonly shipping: Money;
   } | null>(() => {
     const quote = this.quote();
-    if (quote === null) return null;
-    return { subtotal: quote.subtotal, shipping: quote.shipping };
+    return quote === null ? null : { subtotal: quote.subtotal, shipping: quote.shipping };
   });
 
   readonly summaryFootnote = computed<string | null>(() => {
@@ -187,10 +186,7 @@ export class ReviewStep {
     if (s === 'price-changed') {
       return 'A katalógus ára megváltozott; a kosár frissítésre került, az új végösszeg fent látható.';
     }
-    if (s === 'ready') {
-      return 'Az árajánlat a mock munkamenetben 5 percig érvényes.';
-    }
-    return null;
+    return s === 'ready' ? 'Az árajánlat a mock munkamenetben 5 percig érvényes.' : null;
   });
 
   // ---------------------------------------------------------------------------
@@ -212,37 +208,38 @@ export class ReviewStep {
 
   readonly termsConsentState = computed<string>(() => {
     if (!this.acceptedTerms() && this.termsTouched()) return 'touched-invalid';
-    if (this.submitted() && !this.acceptedTerms()) return 'submitted-invalid';
-    return 'default';
+    return this.submitted() && !this.acceptedTerms() ? 'submitted-invalid' : 'default';
   });
 
   readonly simulationConsentState = computed<string>(() => {
     if (!this.acknowledgedSimulation() && this.simulationTouched()) return 'touched-invalid';
-    if (this.submitted() && !this.acknowledgedSimulation()) return 'submitted-invalid';
-    return 'default';
+    return this.submitted() && !this.acknowledgedSimulation() ? 'submitted-invalid' : 'default';
   });
 
-  readonly termsConsentMessage = computed<string | null>(() => {
-    if (this.termsConsentState() === 'default') return null;
-    return 'A demó feltételek elfogadása kötelező.';
-  });
+  readonly termsConsentMessage = computed<string | null>(() =>
+    this.termsConsentState() === 'default' ? null : 'A demó feltételek elfogadása kötelező.',
+  );
 
-  readonly simulationConsentMessage = computed<string | null>(() => {
-    if (this.simulationConsentState() === 'default') return null;
-    return 'A szimuláció tudomásulvétele kötelező.';
-  });
+  readonly simulationConsentMessage = computed<string | null>(() =>
+    this.simulationConsentState() === 'default' ? null : 'A szimuláció tudomásulvétele kötelező.',
+  );
 
   /** True when the CTA may be pressed: a fresh quote, both consents
    *  checked, and a complete draft (payment method + delivery chosen). */
-  readonly canSubmit = computed<boolean>(() => {
-    if (this.state() !== 'ready') return false;
-    if (!this.acceptedTerms() || !this.acknowledgedSimulation()) return false;
-    if (this.draft().paymentMethod === undefined) return false;
-    if (this.draft().delivery === undefined) return false;
-    return true;
-  });
+  readonly canSubmit = computed<boolean>(
+    () =>
+      !(
+        this.state() !== 'ready' ||
+        !this.acceptedTerms() ||
+        !this.acknowledgedSimulation() ||
+        this.draft().paymentMethod === undefined ||
+        this.draft().delivery === undefined
+      ),
+  );
 
-  /** Human-readable reason the CTA is disabled, rendered below the button. */
+  /**
+  Human-readable reason the CTA is disabled, rendered below the button.
+  */
   readonly ctaExplanation = computed<string | null>(() => {
     if (this.canSubmit()) return null;
     const s = this.state();
@@ -255,10 +252,9 @@ export class ReviewStep {
     if (!this.acceptedTerms()) {
       return 'A demó feltételek elfogadása szükséges a leadáshoz.';
     }
-    if (!this.acknowledgedSimulation()) {
-      return 'A szimuláció tudomásulvétele szükséges a leadáshoz.';
-    }
-    return null;
+    return this.acknowledgedSimulation()
+      ? null
+      : 'A szimuláció tudomásulvétele szükséges a leadáshoz.';
   });
 
   // ---------------------------------------------------------------------------

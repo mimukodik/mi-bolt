@@ -1,13 +1,13 @@
 <button
-  [type]="type()"
   class="root"
+  [attr.aria-busy]="loading() ? 'true' : null"
+  [attr.aria-disabled]="disabled() ? 'true' : null"
+  [class.is-comfortable]="size() === 'comfortable'"
   [class.is-primary]="variant() === 'primary'"
   [class.is-secondary]="variant() === 'secondary'"
   [class.is-secondary-on-dark]="variant() === 'secondaryOnDark'"
-  [class.is-comfortable]="size() === 'comfortable'"
-  [attr.aria-busy]="loading() ? 'true' : null"
-  [attr.aria-disabled]="disabled() ? 'true' : null"
   [disabled]="disabled() || loading()"
+  [type]="type()"
   (click)="onClick($event)"
 >
   @if (loading()) {

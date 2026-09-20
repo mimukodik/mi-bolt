@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { QuantityControl } from './quantity-control';
 
@@ -6,14 +7,14 @@ import { QuantityControl } from './quantity-control';
   imports: [QuantityControl],
   template: `
     <app-quantity-control
-      [value]="value()"
-      [min]="min()"
-      [max]="max()"
       [disabled]="disabled()"
-      [pending]="pending()"
       [label]="label()"
+      [max]="max()"
+      [min]="min()"
+      [pending]="pending()"
+      [value]="value()"
       (quantityChanged)="changes.set([...changes(), $event])"
-    ></app-quantity-control>
+    />
   `,
 })
 class HostComponent {
@@ -29,7 +30,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected HTMLElement');
+    throw new TypeError('Expected HTMLElement');
   }
   return raw;
 }
@@ -40,18 +41,17 @@ interface ComponentWithStyles {
   };
 }
 
-function hasStyles(val: unknown): val is ComponentWithStyles {
-  if (typeof val !== 'function' && typeof val !== 'object') {
+function hasStyles(value: unknown): value is ComponentWithStyles {
+  if (typeof value !== 'function' && typeof value !== 'object') {
     return false;
   }
-  if (val === null || !('ɵcmp' in val)) {
+  if (value === null || !('ɵcmp' in value)) {
     return false;
   }
-  const cmp = val.ɵcmp;
-  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
-    return false;
-  }
-  return Array.isArray(cmp.styles);
+  const cmp = value.ɵcmp;
+  return typeof cmp !== 'object' || cmp === null || !('styles' in cmp)
+    ? false
+    : Array.isArray(cmp.styles);
 }
 
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {

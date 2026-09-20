@@ -26,7 +26,8 @@
  */
 
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 
@@ -44,34 +45,34 @@ import type { CheckoutOptions } from '../../api/generated/models/checkout-option
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected fixture.nativeElement to be HTMLElement');
+    throw new TypeError('Expected fixture.nativeElement to be HTMLElement');
   }
   return raw;
 }
 
 function getElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLElement)) {
+    throw new TypeError(`Expected HTMLElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 function getInputElement(parent: Element, selector: string): HTMLInputElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLInputElement)) {
-    throw new Error(`Expected HTMLInputElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLInputElement)) {
+    throw new TypeError(`Expected HTMLInputElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement | null {
-  const el = parent.querySelector(selector);
-  if (el === null) return null;
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (element === null) return null;
+  if (!(element instanceof HTMLElement)) {
+    throw new TypeError(`Expected HTMLElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 const DEFAULT_OPTIONS: CheckoutOptions = {
@@ -209,7 +210,7 @@ describe('T21-AC01 home delivery requires address; pickup removes it and announc
       'input[type="radio"][name="deliveryOption"]',
     );
     expect(radios.length).toBe(2);
-    const values = Array.from(radios).map((r) => r.value);
+    const values = [...radios].map((r) => r.value);
     expect(values).toContain('home_delivery');
     expect(values).toContain('demo_pickup');
   });
@@ -242,8 +243,8 @@ describe('T21-AC02 address field rules and fixed HU country', () => {
 
     const root = getRootElement(fixture);
     expect(root.querySelector('select')).toBeNull();
-    const countryEl = getElement(root, '[data-testid="address-field-country"]');
-    expect(countryEl.textContent).toContain('HU');
+    const countryElement = getElement(root, '[data-testid="address-field-country"]');
+    expect(countryElement.textContent).toContain('HU');
     expect(fixture.componentInstance.countryCode()).toBe('HU');
   });
 });
@@ -300,7 +301,7 @@ describe('T21-AC03 visible shipping fee per option; no tariff / installments / i
     const root = getRootElement(fixture);
     const radios = root.querySelectorAll<HTMLInputElement>('input[type="radio"]');
     expect(radios.length).toBe(2);
-    const values = Array.from(radios).map((r) => r.value);
+    const values = [...radios].map((r) => r.value);
     expect(values).toEqual(['demo_card', 'demo_cod']);
     expect(root.querySelector('input[name="cardnumber"]')).toBeNull();
   });
@@ -343,8 +344,8 @@ describe('T21-AC04 selection is announced by a visible badge, not by color alone
     fixture.detectChanges();
 
     let emitted: PaymentMethod | null = null;
-    fixture.componentInstance.paymentChanged.subscribe((val) => {
-      emitted = val;
+    fixture.componentInstance.paymentChanged.subscribe((value) => {
+      emitted = value;
     });
 
     fixture.componentInstance.onSelected('demo_cod');
@@ -365,7 +366,7 @@ describe('FIX-22 one working continue button and a readable summary', () => {
   it('DeliveryStep renders exactly one "Tovább az ellenőrzéshez" button', () => {
     const fixture = createFixture();
     const root = getRootElement(fixture);
-    const buttons = Array.from(root.querySelectorAll('button')).filter(
+    const buttons = [...root.querySelectorAll('button')].filter(
       (b) => b.textContent.trim() === 'Tovább az ellenőrzéshez',
     );
     expect(buttons.length).toBe(1);
@@ -481,7 +482,7 @@ describe('FIX-55 breadcrumbs use routerLink', () => {
     const root = getRootElement(fixture);
     const anchors = root.querySelectorAll<HTMLAnchorElement>('nav.breadcrumbs a');
     expect(anchors.length).toBe(3);
-    expect(Array.from(anchors).map((a) => a.getAttribute('href'))).toEqual([
+    expect([...anchors].map((a) => a.getAttribute('href'))).toEqual([
       '/',
       '/penztar/kosar',
       '/penztar/adatok',

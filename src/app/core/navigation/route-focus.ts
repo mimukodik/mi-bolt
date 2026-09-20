@@ -6,7 +6,8 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 import { NavigationEnd, Router, type Event } from '@angular/router';
-import { Observable, distinctUntilChanged, filter } from 'rxjs';
+import type { Observable } from 'rxjs';
+import { distinctUntilChanged, filter } from 'rxjs';
 
 /**
  * Route focus management.
@@ -121,7 +122,9 @@ export class RouteFocusService {
     return document.activeElement === document.body;
   }
 
-  /** Disconnect the pending heading watch, if there is one. */
+  /**
+  Disconnect the pending heading watch, if there is one.
+  */
   private stopHeadingWatch(): void {
     if (this.headingWatch === null) return;
     this.headingWatch.disconnect();
@@ -158,8 +161,10 @@ export class RouteFocusService {
     );
   }
 
-  /** Strips the query string and fragment off a URL, leaving the path. */
+  /**
+  Strips the query string and fragment off a URL, leaving the path.
+  */
   private static pathOnly(url: string): string {
-    return url.split('#')[0].split('?')[0];
+    return url.split('#', 1)[0].split('?', 1)[0];
   }
 }

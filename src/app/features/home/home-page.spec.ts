@@ -71,10 +71,7 @@ function getComponentStyles(comp: unknown): readonly string[] {
     return [];
   }
   const styles = cmp['styles'];
-  if (Array.isArray(styles)) {
-    return styles.filter((s): s is string => typeof s === 'string');
-  }
-  return [];
+  return Array.isArray(styles) ? styles.filter((s): s is string => typeof s === 'string') : [];
 }
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
@@ -101,7 +98,7 @@ afterEach(() => {
 // the same observable shape the real SDK would deliver.
 // ---------------------------------------------------------------------------
 
-interface GetProductParams {
+interface GetProductParameters {
   readonly slug: string;
 }
 
@@ -110,12 +107,12 @@ interface CapturedCall {
   readonly params: unknown;
 }
 
-function isGetProductParams(params: unknown): params is GetProductParams {
+function isGetProductParameters(parameters: unknown): parameters is GetProductParameters {
   return (
-    typeof params === 'object' &&
-    params !== null &&
-    'slug' in params &&
-    typeof params.slug === 'string'
+    typeof parameters === 'object' &&
+    parameters !== null &&
+    'slug' in parameters &&
+    typeof parameters.slug === 'string'
   );
 }
 
@@ -136,12 +133,12 @@ class StubApi {
 
   nextProductError: { slug: string; error: unknown } | null = null;
 
-  invoke(fn: typeof getConfig, params?: unknown): Observable<DemoConfig>;
-  invoke(fn: typeof getProduct, params: GetProductParams): Observable<Product>;
-  invoke(fn: unknown, params?: unknown): Observable<unknown> {
-    this.calls.push({ fn, params });
+  invoke(function_: typeof getConfig, parameters?: unknown): Observable<DemoConfig>;
+  invoke(function_: typeof getProduct, parameters: GetProductParameters): Observable<Product>;
+  invoke(function_: unknown, parameters?: unknown): Observable<unknown> {
+    this.calls.push({ fn: function_, params: parameters });
 
-    if (fn === getConfig) {
+    if (function_ === getConfig) {
       const response = this.configResponse;
       return new Observable<DemoConfig>((subscriber) => {
         queueMicrotask(() => {
@@ -152,11 +149,11 @@ class StubApi {
       });
     }
 
-    if (fn === getProduct) {
-      if (!isGetProductParams(params)) {
+    if (function_ === getProduct) {
+      if (!isGetProductParameters(parameters)) {
         throw new Error('StubApi: expected GetProductParams.');
       }
-      const slug = params.slug;
+      const slug = parameters.slug;
       const stream$ = new Subject<Product>();
       this.productBySlug.set(slug, stream$);
       const errorPlan = this.nextProductError;
@@ -166,8 +163,8 @@ class StubApi {
           next: (p) => {
             subscriber.next(p);
           },
-          error: (err: unknown) => {
-            subscriber.error(err);
+          error: (error: unknown) => {
+            subscriber.error(error);
           },
           complete: () => {
             subscriber.complete();
@@ -344,7 +341,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     const root = getRootElement(fixture);
     const heading = root.querySelector('[data-testid="hero-heading"]');
     expect(heading).not.toBeNull();
-    const collapsed = (heading?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const collapsed = (heading?.textContent ?? '').replaceAll(/\s+/g, ' ').trim();
     expect(collapsed).toBe('A következő mobilod. Egyszerűen.');
   });
 
@@ -360,9 +357,11 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     const root = getRootElement(fixture);
     const row = root.querySelector('[data-testid="hero-cta-row"]');
     expect(row).not.toBeNull();
-    const links = Array.from(row?.querySelectorAll('a') ?? []);
+    const links = [...(row?.querySelectorAll('a') ?? [])];
     expect(links.length).toBe(2);
-    expect((links[0]?.textContent ?? '').trim().startsWith('Megnézem a telefonokat')).toBe(true);
+    expect((links[0]?.textContent ?? '').trimStart().startsWith('Megnézem a telefonokat')).toBe(
+      true,
+    );
     expect(links[0]?.getAttribute('href')).toBe('/telefonok');
     expect((links[1]?.textContent ?? '').trim()).toBe('Hogyan működik?');
   });
@@ -401,7 +400,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
-    const shortcuts = Array.from(raw.querySelectorAll('[data-testid^="shortcut-"]'));
+    const shortcuts = [...raw.querySelectorAll('[data-testid^="shortcut-"]')];
     expect(shortcuts.length).toBe(3);
 
     // A string `routerLink` containing a literal `?`/`=` is the FIX-18
@@ -413,22 +412,22 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     // (the actual navigation target), not the static `routerLink`
     // attribute, and assert neither `%3F` nor `%3D` ever appears.
     const titles = shortcuts.map((s) => {
-      const titleEl = s.querySelector('.hero-shortcuts__title');
-      return titleEl === null ? '' : titleEl.textContent.trim();
+      const titleElement = s.querySelector('.hero-shortcuts__title');
+      return titleElement === null ? '' : titleElement.textContent.trim();
     });
     expect(titles).toEqual(['Összes telefon', '5G készülékek', 'Raktáron']);
 
     let hasAll = false;
     let has5g = false;
     let hasInStock = false;
-    shortcuts.forEach((s) => {
+    for (const s of shortcuts) {
       const href = s.getAttribute('href') ?? '';
       expect(href).not.toContain('%3F');
       expect(href).not.toContain('%3D');
       if (href === '/telefonok') hasAll = true;
       if (href.includes('is5g=true') && !href.includes('inStock=true')) has5g = true;
       if (href.includes('inStock=true') && !href.includes('is5g=true')) hasInStock = true;
-    });
+    }
     expect(hasAll).toBe(true);
     expect(has5g).toBe(true);
     expect(hasInStock).toBe(true);
@@ -472,7 +471,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(FeaturedProducts);
-    const mockProduct = makeProduct('demo-one-5g', 'Demo One 5G', 'DemoBrand', 249990);
+    const mockProduct = makeProduct('demo-one-5g', 'Demo One 5G', 'DemoBrand', 249_990);
     fixture.componentRef.setInput('slots', [
       { slug: 'demo-one-5g', status: 'success', product: mockProduct, error: null },
     ]);
@@ -496,7 +495,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     const root = getRootElement(fixture);
     const link = root.querySelector<HTMLAnchorElement>('[data-testid="featured-all-link"]');
     expect(link).not.toBeNull();
-    expect((link?.textContent ?? '').trim().startsWith('Minden telefon')).toBe(true);
+    expect((link?.textContent ?? '').trimStart().startsWith('Minden telefon')).toBe(true);
     expect(link?.getAttribute('href')).toBe('/telefonok');
   });
 });
@@ -514,13 +513,13 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     });
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(FeaturedProducts);
-    const mockProduct = makeProduct('demo-one-5g', 'Demo One 5G', 'DemoBrand', 339990);
+    const mockProduct = makeProduct('demo-one-5g', 'Demo One 5G', 'DemoBrand', 339_990);
     fixture.componentRef.setInput('slots', [
       { slug: 'demo-one-5g', status: 'success', product: mockProduct, error: null },
     ]);
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    expect(root.textContent.replace(/\u00a0/g, ' ')).toContain('339 990');
+    expect(root.textContent.replaceAll('\u{A0}', ' ')).toContain('339 990');
     expect(root.textContent).not.toContain('0 Ft');
   });
 
@@ -550,7 +549,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     const instance = fixture.componentInstance;
     // Wait for getConfig microtask to fire and loadOneFeatured to issue
     // the four getProduct calls.
-    for (let i = 0; i < 30; i += 1) {
+    for (let index = 0; index < 30; index += 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     const fixtures = productFixtures();
@@ -558,7 +557,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
       const product = fixtures.get(slug);
       if (product) api.resolveProduct(slug, product);
     }
-    for (let i = 0; i < 10; i += 1) {
+    for (let index = 0; index < 10; index += 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
 
@@ -615,13 +614,13 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
     // Wait for getConfig and per-slug getProduct to be issued.
-    for (let i = 0; i < 30; i += 1) {
+    for (let index = 0; index < 30; index += 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     for (const slug of FEATURED_SLUGS) {
       api.rejectProduct(slug, new Error('network down'));
     }
-    for (let i = 0; i < 10; i += 1) {
+    for (let index = 0; index < 10; index += 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     fixture.detectChanges();
@@ -652,7 +651,7 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
-    const tiles = Array.from(raw.querySelectorAll('[data-testid^="how-tile-"]'));
+    const tiles = [...raw.querySelectorAll('[data-testid^="how-tile-"]')];
     expect(tiles.length).toBe(3);
 
     const text = raw.querySelector('[data-testid="how-demo-works"]')?.textContent ?? '';
@@ -714,12 +713,12 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
       'hero-shortcuts',
     ];
     const elements = expectedOrder.map((id) => raw.querySelector(`[data-testid="${id}"]`));
-    elements.forEach((el) => {
-      expect(el).not.toBeNull();
-    });
-    for (let i = 0; i < elements.length - 1; i += 1) {
-      const a = elements[i];
-      const b = elements[i + 1];
+    for (const element of elements) {
+      expect(element).not.toBeNull();
+    }
+    for (let index = 0; index < elements.length - 1; index += 1) {
+      const a = elements[index];
+      const b = elements[index + 1];
       if (a !== null && b !== null) {
         expect(Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
       }
@@ -745,14 +744,16 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     expect(hero).not.toBeNull();
     expect(featured).not.toBeNull();
     expect(how).not.toBeNull();
-    if (hero !== null && featured !== null && how !== null) {
-      expect(
-        Boolean(hero.compareDocumentPosition(featured) & Node.DOCUMENT_POSITION_FOLLOWING),
-      ).toBe(true);
-      expect(
-        Boolean(featured.compareDocumentPosition(how) & Node.DOCUMENT_POSITION_FOLLOWING),
-      ).toBe(true);
+    if (hero === null || featured === null || how === null) {
+      return;
     }
+
+    expect(Boolean(hero.compareDocumentPosition(featured) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true,
+    );
+    expect(Boolean(featured.compareDocumentPosition(how) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true,
+    );
   });
 
   it('hero CSS prevents clipping at narrow widths (word-break + max-width)', async () => {

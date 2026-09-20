@@ -221,7 +221,7 @@ describe('T20-AC01 contact schema validation and normalization', () => {
   });
 
   it('reports the required error for an empty name, email, or phone', () => {
-    const blank: ContactInput = { fullName: '   ', email: '', phone: ' ' };
+    const blank: ContactInput = { fullName: ' '.repeat(3), email: '', phone: ' ' };
     const result = validateContact(blank);
     const codes = result.errors.map((e) => `${e.field}:${e.code}`).sort();
     expect(codes).toContain('fullName:required');
@@ -431,7 +431,7 @@ describe('T20-AC05 visual states', () => {
 
     const fields = root.querySelectorAll('.field');
     expect(fields.length).toBe(3);
-    for (const f of Array.from(fields)) {
+    for (const f of fields) {
       expect(f.getAttribute('data-state')).toBe('default');
     }
 

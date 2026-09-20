@@ -52,7 +52,9 @@ import type { Quote } from '../../api/generated/models/quote';
 
 import { CheckoutFacade, type CheckoutError } from './checkout.facade';
 
-/** Discriminated union exposed to the review component template. */
+/**
+Discriminated union exposed to the review component template.
+*/
 export type QuoteState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'loading' }
@@ -74,18 +76,22 @@ export type QuoteState =
  */
 export function mapQuoteError(error: CheckoutError): QuoteState {
   switch (error.code) {
-    case 'PRICE_CHANGED':
+    case 'PRICE_CHANGED': {
       return { kind: 'price-changed', detail: error.detail };
-    case 'QUOTE_EXPIRED':
+    }
+    case 'QUOTE_EXPIRED': {
       return { kind: 'quote-expired', detail: error.detail };
-    case 'OUT_OF_STOCK':
+    }
+    case 'OUT_OF_STOCK': {
       return { kind: 'out-of-stock', detail: error.detail };
-    default:
+    }
+    default: {
       return {
         kind: 'field-error',
         detail: error.detail,
         errors: error.fieldErrors,
       };
+    }
   }
 }
 
@@ -105,13 +111,17 @@ export class QuoteController {
    *  banner + CTA explanation. */
   readonly state: Signal<QuoteState> = this.stateWritable.asReadonly();
 
-  /** Convenience: the live `Quote` when the state is `ready`. */
+  /**
+  Convenience: the live `Quote` when the state is `ready`.
+  */
   readonly quote: Signal<Quote | null> = computed<Quote | null>(() => {
     const current = this.stateWritable();
     return current.kind === 'ready' ? current.quote : null;
   });
 
-  /** True while a quote request is in flight. */
+  /**
+  True while a quote request is in flight.
+  */
   readonly busy: Signal<boolean> = computed<boolean>(() => this.stateWritable().kind === 'loading');
 
   /** True only when the controller holds a fresh, submittable
@@ -195,17 +205,23 @@ export function toReviewState(
   }
   switch (state.kind) {
     case 'idle':
-    case 'loading':
+    case 'loading': {
       return 'quoting';
-    case 'ready':
+    }
+    case 'ready': {
       return 'ready';
-    case 'quote-expired':
+    }
+    case 'quote-expired': {
       return 'expired';
-    case 'price-changed':
+    }
+    case 'price-changed': {
       return 'price-changed';
-    case 'out-of-stock':
+    }
+    case 'out-of-stock': {
       return 'stock-error';
-    case 'field-error':
+    }
+    case 'field-error': {
       return 'error';
+    }
   }
 }

@@ -33,7 +33,10 @@ import { BehaviorSubject } from 'rxjs';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { Api } from '../../api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from '../../api/generated/api-configuration';
+import {
+  ApiConfiguration as ApiConfig,
+  provideApiConfiguration as provideApiConfig,
+} from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CatalogFacade } from './catalog.facade';
 import { CatalogPage } from './catalog-page';
@@ -63,10 +66,7 @@ function getComponentStyles(comp: unknown): readonly string[] {
     return [];
   }
   const styles = cmp['styles'];
-  if (Array.isArray(styles)) {
-    return styles.filter((s): s is string => typeof s === 'string');
-  }
-  return [];
+  return Array.isArray(styles) ? styles.filter((s): s is string => typeof s === 'string') : [];
 }
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
@@ -76,35 +76,37 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function queryButton(parent: Element, selector: string): HTMLButtonElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLButtonElement))
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLButtonElement))
     throw new Error(`Expected HTMLButtonElement: ${selector}`);
-  return el;
+  return element;
 }
 
 function queryInput(parent: Element, selector: string): HTMLInputElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLInputElement)) throw new Error(`Expected HTMLInputElement: ${selector}`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLInputElement))
+    throw new Error(`Expected HTMLInputElement: ${selector}`);
+  return element;
 }
 
 function querySelect(parent: Element, selector: string): HTMLSelectElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLSelectElement))
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLSelectElement))
     throw new Error(`Expected HTMLSelectElement: ${selector}`);
-  return el;
+  return element;
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
+  return element;
 }
 
 function queryImage(parent: Element, selector: string): HTMLImageElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLImageElement)) throw new Error(`Expected HTMLImageElement: ${selector}`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLImageElement))
+    throw new Error(`Expected HTMLImageElement: ${selector}`);
+  return element;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,8 +115,8 @@ function queryImage(parent: Element, selector: string): HTMLImageElement {
 // mirrors `docs/api/fixtures/products.json`.
 // ---------------------------------------------------------------------------
 
-function makeImage(id: string, src: string, alt: string): Variant['images'][number] {
-  return { id, src, alt, width: 320, height: 400 };
+function makeImage(id: string, source: string, alt: string): Variant['images'][number] {
+  return { id, src: source, alt, width: 320, height: 400 };
 }
 
 function money(amount: number): Money {
@@ -179,7 +181,9 @@ interface Harness {
   respond: (page: ProductPageDTO) => void;
   reject: (status: number) => void;
   tick: () => Promise<void>;
-  /** Returns when `vm.status` reaches the supplied target. */
+  /**
+  Returns when `vm.status` reaches the supplied target.
+  */
   waitForStatus: (
     status: 'loading' | 'refreshing' | 'success' | 'empty' | 'error',
   ) => Promise<void>;
@@ -207,9 +211,9 @@ function isMediaQueryListEvent(event: Event): event is MediaQueryListEvent {
 class StaticMediaQueryList extends EventTarget implements MediaQueryList {
   readonly matches: boolean = true;
   readonly media: string;
-  onchange: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null = null;
+  onchange: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null = null;
   private readonly legacyListeners = new Map<
-    (this: MediaQueryList, ev: MediaQueryListEvent) => unknown,
+    (this: MediaQueryList, event: MediaQueryListEvent) => unknown,
     EventListener
   >();
 
@@ -218,7 +222,9 @@ class StaticMediaQueryList extends EventTarget implements MediaQueryList {
     this.media = query;
   }
 
-  addListener(callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null): void {
+  addListener(
+    callback: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null,
+  ): void {
     if (callback === null) return;
     const wrapped: EventListener = (event) => {
       if (isMediaQueryListEvent(event)) callback.call(this, event);
@@ -228,7 +234,7 @@ class StaticMediaQueryList extends EventTarget implements MediaQueryList {
   }
 
   removeListener(
-    callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
+    callback: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null,
   ): void {
     if (callback === null) return;
     const wrapped = this.legacyListeners.get(callback);
@@ -239,8 +245,8 @@ class StaticMediaQueryList extends EventTarget implements MediaQueryList {
 }
 
 function installMatchMediaStub(): void {
-  if (typeof window.matchMedia === 'function') return;
-  window.matchMedia = (query: string): MediaQueryList => new StaticMediaQueryList(query);
+  if (typeof globalThis.matchMedia === 'function') return;
+  globalThis.matchMedia = (query: string): MediaQueryList => new StaticMediaQueryList(query);
 }
 
 beforeAll(() => {
@@ -249,13 +255,13 @@ beforeAll(() => {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
 });
 
-async function setupHarness(queryParams: Params = {}): Promise<Harness> {
+async function setupHarness(queryParameters: Params = {}): Promise<Harness> {
   TestBed.resetTestingModule();
   const captured: CapturedRequest[] = [];
   let responder: ((page: ProductPageDTO) => void) | null = null;
@@ -306,18 +312,18 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
     imports: [CatalogPage],
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       {
         provide: Api,
-        useFactory: (config: ApiConfiguration, http: HttpClient) => new Api(config, http),
-        deps: [ApiConfiguration, HttpClient],
+        useFactory: (config: ApiConfig, http: HttpClient) => new Api(config, http),
+        deps: [ApiConfig, HttpClient],
       },
       provideRouter([]),
       {
         provide: ActivatedRoute,
         useValue: {
-          snapshot: { queryParamMap: convertToParamMap(queryParams) },
-          queryParamMap: new BehaviorSubject(convertToParamMap(queryParams)).asObservable(),
+          snapshot: { queryParamMap: convertToParamMap(queryParameters) },
+          queryParamMap: new BehaviorSubject(convertToParamMap(queryParameters)).asObservable(),
         },
       },
     ],
@@ -331,7 +337,7 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
   fixture.detectChanges();
 
   const tick = async (): Promise<void> => {
-    for (let i = 0; i < 8; i += 1) {
+    for (let index = 0; index < 8; index += 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
     fixture.detectChanges();
@@ -340,7 +346,7 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
   const waitForStatus = async (
     status: 'loading' | 'refreshing' | 'success' | 'empty' | 'error',
   ): Promise<void> => {
-    for (let i = 0; i < 20; i += 1) {
+    for (let index = 0; index < 20; index += 1) {
       await tick();
       if (facade.vm().status === status) return;
     }
@@ -434,8 +440,8 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     // `[data-testid="catalog-grid"]` container.
     const harness = await setupHarness();
     const items = [
-      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
-      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256),
+      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219_990, true, 128),
     ];
     harness.respond(successPage(items, 2));
     await harness.waitForStatus('success');
@@ -461,7 +467,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     // alongside every result still rendering inside the shared
     // `[data-testid="catalog-grid"]` container.
     const harness = await setupHarness();
-    const items = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
+    const items = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256)];
     harness.respond(successPage(items, 1));
     await harness.waitForStatus('success');
     const root = getRootElement(harness.fixture);
@@ -472,8 +478,8 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     harness.cleanup();
   });
 
-  it('filter sidebar (>=1024 px) carries data-layout="sidebar" + filter button hidden', () => {
-    return (async (): Promise<void> => {
+  it('filter sidebar (>=1024 px) carries data-layout="sidebar" + filter button hidden', () =>
+    (async (): Promise<void> => {
       const harness = await setupHarness();
       const root = getRootElement(harness.fixture);
       const sidebar = root.querySelector('[data-testid="filter-sidebar"]');
@@ -484,10 +490,9 @@ describe('T13-AC01 catalog layout breakpoints', () => {
       // on the host so the CSS hides it.
       expect(trigger).not.toBeNull();
       const root2 = getRootElement(harness.fixture);
-      expect(root2.getAttribute('data-layout-mode') ?? 'sidebar').toBe('sidebar');
+      expect(root2.dataset['layoutMode'] ?? 'sidebar').toBe('sidebar');
       harness.cleanup();
-    })();
-  });
+    })());
 
   it('<1024 px render flips host to data-layout-mode="drawer" and shows the trigger button', async () => {
     // We assert the structural choice (host data-attribute + presence of the
@@ -513,7 +518,7 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     expect(harness.facade.vm().status).toBe('loading');
     expect(harness.facade.vm().items).toEqual([]);
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     expect(harness.facade.vm().items.length).toBe(1);
@@ -556,17 +561,17 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     // must carry at least one MiBolt Demo item for the button under
     // test to be enabled.
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     harness.captured.length = 0;
 
-    const brandBtn = queryButton(
+    const brandButton = queryButton(
       getRootElement(harness.fixture),
       '[data-testid="filter-brand-MiBolt Demo"]',
     );
-    expect(brandBtn).not.toBeNull();
-    brandBtn.click();
+    expect(brandButton).not.toBeNull();
+    brandButton.click();
     await harness.tick();
     expect(harness.captured.length).toBe(1);
     expect(harness.captured[0]?.params.getAll('brand')).toEqual(['MiBolt Demo']);
@@ -583,12 +588,12 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const storageBtn = queryButton(
+    const storageButton = queryButton(
       getRootElement(harness.fixture),
       '[data-testid="filter-storage-256"]',
     );
-    expect(storageBtn).not.toBeNull();
-    storageBtn.click();
+    expect(storageButton).not.toBeNull();
+    storageButton.click();
     await harness.tick();
     expect(harness.captured.length).toBe(1);
     expect(harness.captured[0]?.params.getAll('storageGb')).toEqual(['256']);
@@ -603,25 +608,25 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const inStockBtn = queryButton(
+    const inStockButton = queryButton(
       getRootElement(harness.fixture),
       '[data-testid="filter-inStock"]',
     );
-    const fiveGBtn = queryButton(getRootElement(harness.fixture), '[data-testid="filter-is5g"]');
-    expect(inStockBtn).not.toBeNull();
-    expect(fiveGBtn).not.toBeNull();
-    inStockBtn.click();
+    const fiveGButton = queryButton(getRootElement(harness.fixture), '[data-testid="filter-is5g"]');
+    expect(inStockButton).not.toBeNull();
+    expect(fiveGButton).not.toBeNull();
+    inStockButton.click();
     await harness.tick();
     // The filter panel is disabled while a request is in flight, so the
     // in-flight `inStock` toggle must resolve before the `is5g` toggle
     // can be clicked at all.
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
-    fiveGBtn.click();
+    fiveGButton.click();
     await harness.tick();
     expect(harness.captured.length).toBe(2);
-    expect(harness.captured[harness.captured.length - 1]?.params.get('inStock')).toBe('true');
-    expect(harness.captured[harness.captured.length - 1]?.params.get('is5g')).toBe('true');
+    expect(harness.captured.at(-1)?.params.get('inStock')).toBe('true');
+    expect(harness.captured.at(-1)?.params.get('is5g')).toBe('true');
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
     harness.cleanup();
@@ -630,13 +635,13 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
   it('renders one removable applied chip per active filter', async () => {
     const harness = await setupHarness({ brand: 'MiBolt Demo', inStock: 'true' });
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     const root = getRootElement(harness.fixture);
     const chips = root.querySelectorAll('[data-testid="applied-chip"]');
     expect(chips.length).toBe(2);
-    const labels = Array.from(chips).map((c) => c.textContent.trim());
+    const labels = [...chips].map((c) => c.textContent.trim());
     expect(labels.some((t) => t.includes('MiBolt Demo'))).toBe(true);
     expect(labels.some((t) => t.includes('raktáron'))).toBe(true);
     harness.cleanup();
@@ -648,12 +653,12 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     await harness.waitForStatus('empty');
     harness.captured.length = 0;
 
-    const removeBtn = queryButton(
+    const removeButton = queryButton(
       getRootElement(harness.fixture),
       '[data-testid="applied-chip-remove-brand"]',
     );
-    expect(removeBtn).not.toBeNull();
-    removeBtn.click();
+    expect(removeButton).not.toBeNull();
+    removeButton.click();
     await harness.tick();
     expect(harness.captured.length).toBeGreaterThanOrEqual(1);
     const last = harness.captured[harness.captured.length - 1];
@@ -705,8 +710,8 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
   it('renders the live result count from the backend total', async () => {
     const harness = await setupHarness();
     const items = [
-      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
-      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256),
+      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219_990, true, 128),
     ];
     harness.respond(successPage(items, 16));
     await harness.waitForStatus('success');
@@ -744,7 +749,7 @@ describe('T13-AC03 mobile filter drawer', () => {
     // response must carry a MiBolt Demo item for the draft toggle below
     // to be enabled.
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     harness.captured.length = 0;
@@ -789,7 +794,7 @@ describe('T13-AC03 mobile filter drawer', () => {
   it('Cancel discards the draft: the URL stays as the prior state', async () => {
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256)], 1),
     );
     await harness.waitForStatus('success');
     harness.captured.length = 0;
@@ -800,11 +805,11 @@ describe('T13-AC03 mobile filter drawer', () => {
     // was constructed with), so the initial ActivatedRoute snapshot
     // this harness seeds the facade from never reaches the router —
     // only a subsequent, user-driven filter change does.
-    const brandBtn = queryButton(
+    const brandButton = queryButton(
       getRootElement(harness.fixture),
       '[data-testid="filter-brand-MiBolt Demo"]',
     );
-    brandBtn.click();
+    brandButton.click();
     await harness.tick();
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
@@ -867,8 +872,8 @@ describe('T13-AC05 distinct visual states', () => {
   it('default state renders the result grid with one or more product cards', async () => {
     const harness = await setupHarness();
     const items = [
-      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
-      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256),
+      buildSummary('p-02', 'MiBolt Demo', 'Demo Air 5G', 219_990, true, 128),
     ];
     harness.respond(successPage(items, 2));
     await harness.waitForStatus('success');
@@ -932,7 +937,7 @@ describe('T13-AC05 distinct visual states', () => {
 
   it('missing-image state falls back to the named ProductImage fallback (no invented device)', async () => {
     const harness = await setupHarness();
-    const items = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
+    const items = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256)];
     harness.respond(successPage(items, 1));
     await harness.waitForStatus('success');
     const photo = queryImage(getRootElement(harness.fixture), '[data-testid="image-photo"]');
@@ -1051,7 +1056,9 @@ describe('FIX-24-AC01 clearing the filters clears the URL', () => {
 describe('FIX-24-AC03 clearing the filters restores the unfiltered result count', () => {
   it('the result count returns to the unfiltered count after applied-filters-clear is clicked', async () => {
     const harness = await setupHarness();
-    const unfilteredItems = [buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)];
+    const unfilteredItems = [
+      buildSummary('p-01', 'MiBolt Demo', 'Demo One 5G', 339_990, true, 256),
+    ];
     harness.respond(successPage(unfilteredItems, 16));
     await harness.waitForStatus('success');
     const root = getRootElement(harness.fixture);
@@ -1187,7 +1194,7 @@ describe('FIX-25 a filter keystroke does not disable the box being typed into', 
       // A blurred box is the defect, so the loop asserts the focus is
       // still where the user put it before each further keystroke.
       expect(active).toBe(min);
-      min.value = min.value + character;
+      min.value += character;
       min.dispatchEvent(new Event('input', { bubbles: true }));
       harness.fixture.detectChanges();
       // In a browser this is the assertion that carries the test: a box
@@ -1287,7 +1294,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
   it('clicking Következő onto the last page moves focus to the page indicator', async () => {
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339_990, true, 256)], 16),
     );
     await harness.waitForStatus('success');
 
@@ -1311,7 +1318,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 
     await harness.tick();
     harness.respond(
-      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219_990, true, 128)], 16, 2),
     );
     await harness.waitForStatus('success');
     harness.cleanup();
@@ -1320,21 +1327,21 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
   it('clicking Előző onto the first page moves focus to the page indicator', async () => {
     const harness = await setupHarness({ page: '2' });
     harness.respond(
-      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219_990, true, 128)], 16, 2),
     );
     await harness.waitForStatus('success');
 
     const root = getRootElement(harness.fixture);
-    const prev = queryButton(root, '[data-testid="pagination-prev"]');
-    expect(prev.disabled).toBe(false);
-    prev.focus();
-    expect(document.activeElement).toBe(prev);
+    const previous = queryButton(root, '[data-testid="pagination-prev"]');
+    expect(previous.disabled).toBe(false);
+    previous.focus();
+    expect(document.activeElement).toBe(previous);
 
-    prev.click();
+    previous.click();
     harness.fixture.detectChanges();
 
     expect(harness.facade.query().page).toBe(1);
-    expect(prev.disabled).toBe(true);
+    expect(previous.disabled).toBe(true);
 
     const indicator = queryElement(root, '[data-testid="pagination-current"]');
     expect(document.activeElement).toBe(indicator);
@@ -1342,7 +1349,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 
     await harness.tick();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339_990, true, 256)], 16),
     );
     await harness.waitForStatus('success');
     harness.cleanup();
@@ -1355,7 +1362,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
     // `RouteFocusService` refuses to make.
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 30),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339_990, true, 256)], 30),
     );
     await harness.waitForStatus('success');
 
@@ -1372,7 +1379,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 
     await harness.tick();
     harness.respond(
-      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 30, 2),
+      successPage([buildSummary('p-02', 'MiBolt Demo', 'Demo Air', 219_990, true, 128)], 30, 2),
     );
     await harness.waitForStatus('success');
     harness.cleanup();
@@ -1384,7 +1391,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
     // the user is in keeps it.
     const harness = await setupHarness();
     harness.respond(
-      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 5),
+      successPage([buildSummary('p-01', 'MiBolt Demo', 'Demo One', 339_990, true, 256)], 5),
     );
     await harness.waitForStatus('success');
 

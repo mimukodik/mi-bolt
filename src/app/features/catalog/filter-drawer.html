@@ -1,6 +1,6 @@
 <app-accessible-dialog
+  label="Szűrők"
   [opened]="opened()"
-  [label]="'Szűrők'"
   [restoreTarget]="restoreEl()"
   (closed)="onDialogClosed()"
 >
@@ -17,17 +17,17 @@
         @for (brand of brandFacets(); track brand.value) {
           <li>
             <button
-              type="button"
               class="option inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
-              [class.is-selected]="isBrandSelected(brand.value)"
-              [attr.data-testid]="'drawer-brand-' + brand.value"
+              type="button"
               [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
+              [attr.data-testid]="`drawer-brand-${brand.value}`"
+              [class.is-selected]="isBrandSelected(brand.value)"
               [disabled]="disabled() || brand.count === 0"
               (click)="toggleBrand(brand.value)"
             >
               <span
-                class="check inline-flex items-center justify-center w-5 font-bold"
                 aria-hidden="true"
+                class="check inline-flex items-center justify-center w-5 font-bold"
                 >{{ isBrandSelected(brand.value) ? '✓' : '' }}</span
               >
               <span class="option__label flex-1">{{ brand.label }}</span>
@@ -43,17 +43,17 @@
       <div class="chips flex flex-wrap gap-2">
         @for (bucket of storageBuckets(); track bucket) {
           <button
-            type="button"
             class="chip inline-flex items-center gap-2 min-h-10 px-3 rounded font-inherit cursor-pointer"
-            [class.is-selected]="isStorageSelected(bucket)"
-            [attr.data-testid]="'drawer-storage-' + bucket"
+            type="button"
             [attr.aria-pressed]="isStorageSelected(bucket) ? 'true' : 'false'"
+            [attr.data-testid]="`drawer-storage-${bucket}`"
+            [class.is-selected]="isStorageSelected(bucket)"
             [disabled]="disabled()"
             (click)="toggleStorage(bucket)"
           >
             <span
-              class="check inline-flex items-center justify-center w-5 font-bold"
               aria-hidden="true"
+              class="check inline-flex items-center justify-center w-5 font-bold"
               >{{ isStorageSelected(bucket) ? '✓' : '' }}</span
             >
             <span>{{ bucket }} GB</span>
@@ -68,73 +68,73 @@
         <label class="price__field flex flex-col gap-1">
           <span class="price__label">Min.</span>
           <input
-            type="number"
+            class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+            data-testid="drawer-min-price"
             inputmode="numeric"
             min="0"
             step="1000"
-            class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
-            data-testid="drawer-min-price"
+            type="number"
+            [disabled]="disabled()"
             [value]="minDraft()"
             (input)="onMinInput($event)"
-            [disabled]="disabled()"
           />
         </label>
         <label class="price__field flex flex-col gap-1">
           <span class="price__label">Max.</span>
           <input
-            type="number"
+            class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+            data-testid="drawer-max-price"
             inputmode="numeric"
             min="0"
             step="1000"
-            class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
-            data-testid="drawer-max-price"
+            type="number"
+            [disabled]="disabled()"
             [value]="maxDraft()"
             (input)="onMaxInput($event)"
-            [disabled]="disabled()"
           />
         </label>
       </div>
       @if (priceError()) {
         <app-form-field-message
           data-testid="drawer-price-error"
+          fieldId="drawer-price"
+          severity="error"
           [errors]="[{ code: 'INVALID_PRICE', message: priceError()!, pointer: 'price' }]"
           [touched]="true"
-          severity="error"
-          fieldId="drawer-price"
-        ></app-form-field-message>
+        />
       }
     </fieldset>
 
     <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="drawer-group-flags">
       <legend class="legend uppercase tracking-wider">További szűrők</legend>
       <button
-        type="button"
         class="option inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
-        [class.is-selected]="isInStockSelected()"
-        [attr.data-testid]="'drawer-inStock'"
+        type="button"
         [attr.aria-pressed]="isInStockSelected() ? 'true' : 'false'"
+        [attr.data-testid]="'drawer-inStock'"
+        [class.is-selected]="isInStockSelected()"
         [disabled]="disabled()"
         (click)="toggleInStock()"
       >
         <span
-          class="check inline-flex items-center justify-center w-5 font-bold"
           aria-hidden="true"
+          class="check inline-flex items-center justify-center w-5 font-bold"
           >{{ isInStockSelected() ? '✓' : '' }}</span
         >
         <span>Csak raktáron</span>
       </button>
       <button
-        type="button"
         class="option inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
-        [class.is-selected]="isFiveGSelected()"
-        [attr.data-testid]="'drawer-is5g'"
+        type="button"
         [attr.aria-pressed]="isFiveGSelected() ? 'true' : 'false'"
+        [attr.data-testid]="'drawer-is5g'"
+        [class.is-selected]="isFiveGSelected()"
         [disabled]="disabled()"
         (click)="toggleFiveG()"
       >
         <span
-          class="check inline-flex items-center justify-center w-5 font-bold"
           aria-hidden="true"
+          class="check inline-flex items-center justify-center w-5 font-bold"
           >{{ isFiveGSelected() ? '✓' : '' }}</span
         >
         <span>Csak 5G</span>
@@ -143,18 +143,18 @@
 
     <footer class="footer flex justify-end gap-3 pt-4 sticky bottom-0" data-testid="drawer-footer">
       <app-button
-        variant="secondary"
-        label="Mégse"
         data-testid="drawer-cancel"
+        label="Mégse"
+        variant="secondary"
         (pressed)="cancelDraft()"
-      ></app-button>
+      />
       <app-button
-        variant="primary"
-        [label]="applyLabel()"
         data-testid="drawer-apply"
+        variant="primary"
         [disabled]="!canApply()"
+        [label]="applyLabel()"
         (pressed)="applyDraft()"
-      ></app-button>
+      />
     </footer>
   </form>
 </app-accessible-dialog>

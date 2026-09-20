@@ -52,14 +52,14 @@ const ITEM: CartItem = {
   colorName: 'Éjfekete',
   id: 'item-1',
   image: { alt: '', height: 10, id: 'img-1', src: '/img.png', width: 10 },
-  lineTotal: { amount: 339990, currency: 'HUF' },
+  lineTotal: { amount: 339_990, currency: 'HUF' },
   maxQuantity: 5,
   productId: 'prod-1',
   productName: 'Teszt Telefon',
   productSlug: 'teszt-telefon',
   quantity: 1,
   storageGb: 128,
-  unitPrice: { amount: 339990, currency: 'HUF' },
+  unitPrice: { amount: 339_990, currency: 'HUF' },
   variantId: 'variant-1',
 };
 
@@ -69,7 +69,7 @@ const CART: Cart = {
   itemCount: 1,
   items: [ITEM],
   status: 'active',
-  subtotal: { amount: 339990, currency: 'HUF' },
+  subtotal: { amount: 339_990, currency: 'HUF' },
   version: 1,
 };
 
@@ -79,8 +79,8 @@ const QUOTE: Quote = {
   expiresAt: '2026-01-01T00:05:00.000Z',
   id: 'quote-1',
   shipping: { amount: 1990, currency: 'HUF' },
-  subtotal: { amount: 339990, currency: 'HUF' },
-  total: { amount: 341980, currency: 'HUF' },
+  subtotal: { amount: 339_990, currency: 'HUF' },
+  total: { amount: 341_980, currency: 'HUF' },
 };
 
 const DRAFT_COMPLETE: CheckoutDraft = {
@@ -335,7 +335,7 @@ describe('T22-AC02 demo terms + simulation acknowledgement', () => {
     const root = getRootElement(fixture);
     const checkboxes = root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
     expect(checkboxes.length).toBe(2);
-    for (const box of Array.from(checkboxes)) {
+    for (const box of checkboxes) {
       expect(box.checked).toBe(false);
     }
   });

@@ -53,12 +53,12 @@ const start = async (): Promise<void> => {
   const { startMocks, getPreparedPersistenceMode } = await import('./core/bootstrap-demo');
   try {
     await startMocks();
-  } catch (err: unknown) {
+  } catch (error: unknown) {
     // MSW is the application's entire data layer, not a development
     // convenience: every screen would render an error or an empty
     // state with no explanation. T05-AC01 requires an explicit,
     // retryable fatal state instead of a half-booted application.
-    showFatal(err);
+    showFatal(error);
     return;
   }
   bootstrapApplication(App, {
@@ -72,8 +72,8 @@ const start = async (): Promise<void> => {
 
 void start();
 
-function showFatal(err: unknown): void {
-  console.error('[MiBolt] Bootstrap failed:', err);
+function showFatal(error: unknown): void {
+  console.error('[MiBolt] Bootstrap failed:', error);
   const template = document.querySelector<HTMLTemplateElement>('#mi-bolt-fatal');
   if (template === null) {
     throw new Error(
@@ -81,7 +81,7 @@ function showFatal(err: unknown): void {
     );
   }
   const fragment = template.content.cloneNode(true);
-  document.body.appendChild(fragment);
+  document.body.append(fragment);
   document
     .querySelector<HTMLButtonElement>('[data-testid="fatal-retry"]')
     ?.addEventListener('click', () => {

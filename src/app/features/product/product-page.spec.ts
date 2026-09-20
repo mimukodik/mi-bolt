@@ -4,13 +4,14 @@ import '@angular/compiler';
 import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Location } from '@angular/common';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
@@ -131,7 +132,7 @@ afterEach(() => {
 
 @Component({
   imports: [ProductPage],
-  template: ` <app-product-page [slug]="slug()"></app-product-page> `,
+  template: ` <app-product-page [slug]="slug()" /> `,
 })
 class ProductPageHost {
   readonly slug = signal<string>('demo-one-5g');
@@ -139,32 +140,34 @@ class ProductPageHost {
 
 @Component({ template: '' })
 class StubCatalogPage {
-  /** Route target only; FIX-45-AC02 asserts on the resulting URL. */
+  /**
+  Route target only; FIX-45-AC02 asserts on the resulting URL.
+  */
   readonly loaded = true;
 }
 
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected HTMLElement');
+    throw new TypeError('Expected HTMLElement');
   }
   return raw;
 }
 
 function queryButton(parent: ParentNode, selector: string): HTMLButtonElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLButtonElement)) {
-    throw new Error(`Expected HTMLButtonElement: ${selector}`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLButtonElement)) {
+    throw new TypeError(`Expected HTMLButtonElement: ${selector}`);
   }
-  return el;
+  return element;
 }
 
 function queryElement(parent: ParentNode, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement: ${selector}`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLElement)) {
+    throw new TypeError(`Expected HTMLElement: ${selector}`);
   }
-  return el;
+  return element;
 }
 
 async function createHarness(): Promise<{
@@ -180,7 +183,7 @@ async function createHarness(): Promise<{
     imports: [ProductPageHost],
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       provideRouter([{ path: 'telefonok', component: StubCatalogPage }]),
     ],
     teardown: { destroyAfterEach: true },
@@ -195,7 +198,7 @@ async function createHarness(): Promise<{
   const location = TestBed.inject(Location);
 
   const tick = async (): Promise<void> => {
-    for (let i = 0; i < 8; i += 1) {
+    for (let index = 0; index < 8; index += 1) {
       await new Promise<void>((resolve) => {
         setTimeout(resolve, 15);
       });
@@ -240,11 +243,11 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
   it('T16-AC01: displays brand and product name matching the loaded product', async () => {
     const { root } = await createHarness();
 
-    const brandEl = queryElement(root, '.brand');
-    expect(brandEl.textContent.trim()).toBe('MiBolt Demo');
+    const brandElement = queryElement(root, '.brand');
+    expect(brandElement.textContent.trim()).toBe('MiBolt Demo');
 
-    const nameEl = queryElement(root, '[data-testid="product-name"]');
-    expect(nameEl.textContent.trim()).toBe('Demo One 5G');
+    const nameElement = queryElement(root, '[data-testid="product-name"]');
+    expect(nameElement.textContent.trim()).toBe('Demo One 5G');
   });
 });
 
@@ -252,13 +255,13 @@ describe('T16-AC02 product-page embeds the gallery primitive', () => {
   it('T16-AC02: mounts ProductGallery with active variant images and count', async () => {
     const { root } = await createHarness();
 
-    const galleryEl = queryElement(root, 'app-product-gallery');
-    expect(galleryEl).not.toBeNull();
+    const galleryElement = queryElement(root, 'app-product-gallery');
+    expect(galleryElement).not.toBeNull();
 
-    const galleryMain = queryElement(galleryEl, '[data-testid="gallery-main"]');
+    const galleryMain = queryElement(galleryElement, '[data-testid="gallery-main"]');
     expect(galleryMain).not.toBeNull();
 
-    const count = queryElement(galleryEl, '[data-testid="gallery-count"]');
+    const count = queryElement(galleryElement, '[data-testid="gallery-count"]');
     expect(count.textContent.trim()).toBe('1 / 1');
   });
 
@@ -271,8 +274,8 @@ describe('T16-AC02 product-page embeds the gallery primitive', () => {
     expect(galleryComp).not.toBeNull();
 
     // Select silver-256 which has silver front image
-    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
-    silverBtn.click();
+    const silverButton = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverButton.click();
     await tick();
     fixture.detectChanges();
 
@@ -287,19 +290,19 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     const colorGroup = queryElement(root, '[data-testid="variant-color-group"]');
     expect(colorGroup).not.toBeNull();
 
-    const graphiteBtn = queryButton(colorGroup, '[data-testid="variant-color-graphite"]');
-    const silverBtn = queryButton(colorGroup, '[data-testid="variant-color-silver"]');
+    const graphiteButton = queryButton(colorGroup, '[data-testid="variant-color-graphite"]');
+    const silverButton = queryButton(colorGroup, '[data-testid="variant-color-silver"]');
 
-    expect(graphiteBtn.getAttribute('aria-pressed')).toBe('true');
-    expect(silverBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(graphiteButton.getAttribute('aria-pressed')).toBe('true');
+    expect(silverButton.getAttribute('aria-pressed')).toBe('false');
 
-    const label = queryElement(graphiteBtn, '.label');
+    const label = queryElement(graphiteButton, '.label');
     expect(label.textContent.trim()).toBe('Grafit');
 
-    const swatch = queryElement(graphiteBtn, '.swatch');
+    const swatch = queryElement(graphiteButton, '.swatch');
     expect(swatch).not.toBeNull();
 
-    const check = queryElement(graphiteBtn, '.check');
+    const check = queryElement(graphiteButton, '.check');
     expect(check.textContent.trim()).toBe('✓');
   });
 
@@ -322,15 +325,15 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
   it('T16-AC03: clicking another color updates selection, active variant price and metadata', async () => {
     const { fixture, root, tick } = await createHarness();
 
-    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
-    silverBtn.click();
+    const silverButton = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverButton.click();
     await tick();
     fixture.detectChanges();
 
-    expect(silverBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(silverButton.getAttribute('aria-pressed')).toBe('true');
 
-    const graphiteBtn = queryButton(root, '[data-testid="variant-color-graphite"]');
-    expect(graphiteBtn.getAttribute('aria-pressed')).toBe('false');
+    const graphiteButton = queryButton(root, '[data-testid="variant-color-graphite"]');
+    expect(graphiteButton.getAttribute('aria-pressed')).toBe('false');
 
     const meta = queryElement(root, '.buy-header .meta');
     expect(meta.textContent).toContain('Ezüst');
@@ -430,9 +433,9 @@ describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
     ctaButton.click();
     await tick();
 
-    const addReq = capturedRequests.find((r) => r.url.includes('/items'));
-    expect(addReq).toBeDefined();
-    const body: unknown = JSON.parse(addReq?.bodyText ?? '{}');
+    const addRequest = capturedRequests.find((r) => r.url.includes('/items'));
+    expect(addRequest).toBeDefined();
+    const body: unknown = JSON.parse(addRequest?.bodyText ?? '{}');
     expect(body).toMatchObject({ variantId: 'demo-one-5g-graphite-256', quantity: 1 });
   });
 
@@ -451,22 +454,22 @@ describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
   it('T16-AC04/FIX-50: QuantityControl increments and the rail CTA adds the updated quantity', async () => {
     const { fixture, root, tick } = await createHarness();
 
-    const incrementBtn = queryButton(root, '[data-testid="quantity-increment"]');
-    incrementBtn.click();
+    const incrementButton = queryButton(root, '[data-testid="quantity-increment"]');
+    incrementButton.click();
     await tick();
     fixture.detectChanges();
 
-    const inputEl = root.querySelector('[data-testid="quantity-input"]');
-    if (inputEl instanceof HTMLInputElement) {
-      expect(inputEl.value).toBe('2');
+    const inputElement = root.querySelector('[data-testid="quantity-input"]');
+    if (inputElement instanceof HTMLInputElement) {
+      expect(inputElement.value).toBe('2');
     }
 
     const ctaButton = queryButton(root, '[data-testid="purchase-cta"] button');
     ctaButton.click();
     await tick();
 
-    const addReq = capturedRequests.find((r) => r.url.includes('/items'));
-    const body: unknown = JSON.parse(addReq?.bodyText ?? '{}');
+    const addRequest = capturedRequests.find((r) => r.url.includes('/items'));
+    const body: unknown = JSON.parse(addRequest?.bodyText ?? '{}');
     expect(body).toMatchObject({ quantity: 2 });
   });
 });
@@ -477,9 +480,9 @@ describe('T16-AC05 product-page has no 3D surface', () => {
 
     expect(root.querySelector('canvas')).toBeNull();
     const buttons = root.querySelectorAll('button');
-    buttons.forEach((btn) => {
-      const label = (btn.getAttribute('aria-label') ?? '').toLowerCase();
-      const text = btn.textContent.toLowerCase();
+    buttons.forEach((button) => {
+      const label = (button.getAttribute('aria-label') ?? '').toLowerCase();
+      const text = button.textContent.toLowerCase();
       expect(label).not.toContain('3d');
       expect(text).not.toContain('3d');
     });
@@ -492,18 +495,20 @@ describe('T16-AC05 product-page has no 3D surface', () => {
 describe('T16 product-page loading and error states', () => {
   it('displays loading state skeleton while product is in flight', async () => {
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return new Promise<Response>(() => {
-          // Keep request pending
-        });
-      }),
+      http.get(
+        `${BASE_URL}/products/:slug`,
+        () =>
+          new Promise<Response>(() => {
+            // Keep request pending
+          }),
+      ),
     );
 
     TestBed.configureTestingModule({
       imports: [ProductPageHost],
       providers: [
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
         provideRouter([]),
       ],
       teardown: { destroyAfterEach: true },
@@ -524,8 +529,8 @@ describe('T16 product-page loading and error states', () => {
     // which is its own dedicated 'notfound' state — see the FIX-23
     // describe block below).
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return HttpResponse.json(
+      http.get(`${BASE_URL}/products/:slug`, () =>
+        HttpResponse.json(
           {
             type: 'https://example.com/server-error',
             title: 'Szolgáltatás nem elérhető',
@@ -533,8 +538,8 @@ describe('T16 product-page loading and error states', () => {
             detail: 'Service unavailable',
           },
           { status: 503 },
-        );
-      }),
+        ),
+      ),
     );
 
     const { fixture, facade, root, tick } = await createHarness();
@@ -545,17 +550,17 @@ describe('T16 product-page loading and error states', () => {
     expect(errorState).not.toBeNull();
     expect(root.textContent).toContain('A termék nem tölthető be');
 
-    const retryBtn = queryButton(root, 'app-error-state button');
-    expect(retryBtn.textContent).toContain('Újrapróbálom');
+    const retryButton = queryButton(root, 'app-error-state button');
+    expect(retryButton.textContent).toContain('Újrapróbálom');
 
     // Simulate recovery on retry
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return HttpResponse.json(DEMO_PRODUCT, { status: 200 });
-      }),
+      http.get(`${BASE_URL}/products/:slug`, () =>
+        HttpResponse.json(DEMO_PRODUCT, { status: 200 }),
+      ),
     );
 
-    retryBtn.click();
+    retryButton.click();
     await tick();
     fixture.detectChanges();
 
@@ -611,8 +616,8 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
   it('FIX-45-AC04: stock line renders the out-of-stock sentence and the stock--out class for an unavailable variant', async () => {
     const outOfStockProduct = {
       ...DEMO_PRODUCT,
-      variants: DEMO_PRODUCT.variants.map((v, i) =>
-        i === 0 ? { ...v, availability: 'out_of_stock' as const } : v,
+      variants: DEMO_PRODUCT.variants.map((v, index) =>
+        index === 0 ? { ...v, availability: 'out_of_stock' as const } : v,
       ),
     };
     server.use(
@@ -698,8 +703,8 @@ describe('FIX-16/FIX-50 desktop CTA disabled state, against the real ProductPage
     fixture.detectChanges();
 
     const cta = queryElement(root, '.cta-desktop');
-    const addToCartEl = cta.querySelector('app-add-to-cart');
-    expect(addToCartEl).not.toBeNull();
+    const addToCartElement = cta.querySelector('app-add-to-cart');
+    expect(addToCartElement).not.toBeNull();
     const button = queryButton(cta, 'button');
     expect(button.disabled).toBe(true);
     expect(button.textContent.trim()).toBe('Kosárba teszem');
@@ -719,8 +724,8 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
   it('FIX-23-AC01/AC02: selecting a different variant writes ?variant= to the URL', async () => {
     const { fixture, root, location, tick } = await createHarness();
 
-    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
-    silverBtn.click();
+    const silverButton = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverButton.click();
     await tick();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -733,8 +738,8 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
 
     expect(facade.vm().status).toBe('success');
 
-    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
-    silverBtn.click();
+    const silverButton = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverButton.click();
     await tick();
     fixture.detectChanges();
 
@@ -757,8 +762,8 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
     const addButton = queryButton(root, '.cta-desktop button');
     expect(addButton.disabled).toBe(true);
 
-    const silverBtn = queryButton(root, '[data-testid="variant-color-silver"]');
-    silverBtn.click();
+    const silverButton = queryButton(root, '[data-testid="variant-color-silver"]');
+    silverButton.click();
     await tick();
     fixture.detectChanges();
 
@@ -767,8 +772,8 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
 
   it('FIX-23-AC06: a 404 renders the dedicated not-found state with a catalogue return, distinct from a transient error', async () => {
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return HttpResponse.json(
+      http.get(`${BASE_URL}/products/:slug`, () =>
+        HttpResponse.json(
           {
             type: 'https://example.com/not-found',
             title: 'Nem található',
@@ -776,8 +781,8 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
             detail: 'Product not found',
           },
           { status: 404 },
-        );
-      }),
+        ),
+      ),
     );
 
     const { facade, root } = await createHarness();

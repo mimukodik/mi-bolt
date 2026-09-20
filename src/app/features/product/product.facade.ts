@@ -51,24 +51,36 @@ import {
   type InitialVariantSelection,
 } from './variant-selection';
 
-/** Status of the most recent product load. */
+/**
+Status of the most recent product load.
+*/
 export type ProductStatus = 'idle' | 'loading' | 'success' | 'notfound' | 'error';
 
-/** A point-in-time view of the product page, derived from the live signals. */
+/**
+A point-in-time view of the product page, derived from the live signals.
+*/
 export interface ProductVm {
   readonly status: ProductStatus;
   readonly product: Product | null;
-  /** The variant the price, stock, maxQuantity and gallery belong to. */
+  /**
+  The variant the price, stock, maxQuantity and gallery belong to.
+  */
   readonly selectedVariant: Variant | null;
   readonly selectedImage: Image | null;
   readonly gallery: readonly Image[];
-  /** Index of `selectedImage` inside `gallery`, or -1 when empty. */
+  /**
+  Index of `selectedImage` inside `gallery`, or -1 when empty.
+  */
   readonly galleryIndex: number;
   readonly selectedColorCode: string | null;
   readonly selectedStorageGb: number | null;
-  /** The user's explicit selection. Never silently rewritten. */
+  /**
+  The user's explicit selection. Never silently rewritten.
+  */
   readonly quantity: number;
-  /** True when `quantity` is above the variant's `maxQuantity`. */
+  /**
+  True when `quantity` is above the variant's `maxQuantity`.
+  */
   readonly quantityOverMax: boolean;
   readonly disabledCombinations: readonly DisabledCombination[];
   readonly invalidVariantQuery: string | null;
@@ -78,16 +90,19 @@ export interface ProductVm {
   readonly slug: string | null;
 }
 
-/** Extract a human-readable message from an SDK error. */
-function describeError(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
-  return 'Ismeretlen hiba a termék betöltése közben.';
+/**
+Extract a human-readable message from an SDK error.
+*/
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === 'string' ? error : 'Ismeretlen hiba a termék betöltése közben.';
 }
 
-/** True when the SDK error is a 404 — an unknown slug, not a transient failure. */
-export function isProductNotFound(err: unknown): boolean {
-  return err instanceof HttpErrorResponse && err.status === 404;
+/**
+True when the SDK error is a 404 — an unknown slug, not a transient failure.
+*/
+export function isProductNotFound(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 404;
 }
 
 /**
@@ -117,10 +132,14 @@ export class ProductFacade {
   private readonly invalidQuerySignal = signal<string | null>(null);
   private readonly variantQuerySignal = signal<string | null>(null);
   private readonly slugSignal = signal<string | null>(null);
-  /** Monotonic counter so rapid retry clicks survive distinctUntilChanged. */
+  /**
+  Monotonic counter so rapid retry clicks survive distinctUntilChanged.
+  */
   private retryNonceCounter = 0;
 
-  /** Read-only view of the current view model — UI binds to this. */
+  /**
+  Read-only view of the current view model — UI binds to this.
+  */
   readonly vm = computed<ProductVm>(() => this.buildVm());
 
   constructor() {
@@ -156,11 +175,11 @@ export class ProductFacade {
         switchMap(({ slug }) =>
           this.api.invoke(getProduct, { slug }).pipe(
             map((product) => ({ kind: 'ok' as const, product })),
-            catchError((err: unknown) =>
+            catchError((error: unknown) =>
               of({
                 kind: 'err' as const,
-                error: describeError(err),
-                notFound: isProductNotFound(err),
+                error: describeError(error),
+                notFound: isProductNotFound(error),
               }),
             ),
           ),
@@ -190,11 +209,11 @@ export class ProductFacade {
    * URL search params are parsed in-place so callers can hand the raw
    * `URLSearchParams` from `ActivatedRoute.snapshot.queryParamMap`.
    */
-  load(slug: string, params: URLSearchParams): void {
+  load(slug: string, parameters: URLSearchParams): void {
     this.routeChange$.next({
       kind: 'load',
       slug,
-      variantQuery: parseVariantQuery(params),
+      variantQuery: parseVariantQuery(parameters),
     });
   }
 
@@ -279,8 +298,8 @@ export class ProductFacade {
     if (product === null) return;
     const variant = this.currentVariant(product);
     if (variant === null) return;
-    const exists = variant.images.some((i) => i.id === imageId);
-    if (!exists) return;
+    const isExists = variant.images.some((index) => index.id === imageId);
+    if (!isExists) return;
     this.galleryImageIdSignal.set(imageId);
   }
 
@@ -330,7 +349,9 @@ export class ProductFacade {
     this.invalidQuerySignal.set(null);
   }
 
-  /** Returns the variant currently driving the atomic view model. */
+  /**
+  Returns the variant currently driving the atomic view model.
+  */
   private currentVariant(product: Product | null): Variant | null {
     if (product === null) return null;
     const colorCode = this.selectedColorCodeSignal();

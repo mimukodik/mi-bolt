@@ -32,7 +32,7 @@ import { DestroyRef, Service, computed, inject, signal, type Signal } from '@ang
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { ApiConfiguration as ApiConfig } from '../../api/generated/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
 import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 import type { Cart } from '../../api/generated/models/cart';
@@ -45,20 +45,30 @@ import {
   type MutationIntent,
 } from './cart-mutation-queue';
 
-/** Conflict payload surfaced to the UI when a 409 arrives. */
+/**
+Conflict payload surfaced to the UI when a 409 arrives.
+*/
 export interface CartConflict {
   readonly code: 'CART_VERSION_CONFLICT';
   readonly status: 409;
   readonly detail: string;
-  /** Idempotency key the failed intent was issued under. */
+  /**
+  Idempotency key the failed intent was issued under.
+  */
   readonly idempotencyKey: string;
-  /** Kind of intent that conflicted (the one retry() will resubmit). */
+  /**
+  Kind of intent that conflicted (the one retry() will resubmit).
+  */
   readonly intentKind: MutationIntent['kind'];
-  /** Server-reported version after the refetch. */
+  /**
+  Server-reported version after the refetch.
+  */
   readonly serverVersion: number;
 }
 
-/** Generic error payload surfaced to the UI for non-recoverable failures. */
+/**
+Generic error payload surfaced to the UI for non-recoverable failures.
+*/
 export interface CartError {
   /** Server-reported code or the local `'UNKNOWN'` sentinel; `'UNKNOWN'`
    *  is not a member of the generated `ProblemCode` union, so the field is
@@ -82,43 +92,59 @@ export class CartFacade {
   private readonly destroyRef = inject(DestroyRef);
   private readonly queue = new CartMutationQueue();
 
-  /** Internal writable snapshot of the authoritative cart state. */
+  /**
+  Internal writable snapshot of the authoritative cart state.
+  */
   private readonly cartWritable = signal<Cart | null>(null);
 
-  /** Public readonly cart signal. Null until `ensureCart()` lands. */
+  /**
+  Public readonly cart signal. Null until `ensureCart()` lands.
+  */
   readonly cart: Signal<Cart | null> = this.cartWritable.asReadonly();
 
-  /** Sum of all line quantities. 0 when no cart exists yet. */
+  /**
+  Sum of all line quantities. 0 when no cart exists yet.
+  */
   readonly itemCount: Signal<number> = computed(() => {
     const cart = this.cartWritable();
-    if (cart === null) return 0;
-    return cart.itemCount;
+    return cart === null ? 0 : cart.itemCount;
   });
 
-  /** Authoritative subtotal in whole HUF. */
+  /**
+  Authoritative subtotal in whole HUF.
+  */
   readonly subtotal: Signal<Money> = computed(() => {
     const cart = this.cartWritable();
-    if (cart === null) return ZERO_MONEY;
-    return cart.subtotal;
+    return cart === null ? ZERO_MONEY : cart.subtotal;
   });
 
-  /** Number of intents currently queued or dispatching. */
+  /**
+  Number of intents currently queued or dispatching.
+  */
   readonly pending: Signal<number> = this.queue.pendingCount;
 
   private readonly errorWritable = signal<CartError | null>(null);
-  /** Last non-recoverable error, or null. */
+  /**
+  Last non-recoverable error, or null.
+  */
   readonly error: Signal<CartError | null> = this.errorWritable.asReadonly();
 
   private readonly conflictWritable = signal<CartConflict | null>(null);
-  /** Last 409 conflict, or null. Cleared on the next successful dispatch. */
+  /**
+  Last 409 conflict, or null. Cleared on the next successful dispatch.
+  */
   readonly conflict: Signal<CartConflict | null> = this.conflictWritable.asReadonly();
 
   private readonly cartGoneWritable = signal<boolean>(false);
-  /** True after the server returned 404 for the active cart. */
+  /**
+  True after the server returned 404 for the active cart.
+  */
   readonly cartGone: Signal<boolean> = this.cartGoneWritable.asReadonly();
 
   private readonly cartExpiredWritable = signal<boolean>(false);
-  /** True after the server returned 410 for the active cart. */
+  /**
+  True after the server returned 410 for the active cart.
+  */
   readonly cartExpired: Signal<boolean> = this.cartExpiredWritable.asReadonly();
 
   /**
@@ -154,7 +180,7 @@ export class CartFacade {
     // `ApiConfiguration`. In a real browser the same `new Api(...)`
     // call sees the live `HttpClient` produced by
     // `provideHttpClient(withFetch(), withInterceptors(...))`.
-    this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
+    this.api = new Api(inject(ApiConfig), inject(HttpClient));
     this.queue.setVersionProvider(() => this.cartWritable()?.version ?? null);
     this.destroyRef.onDestroy(() => {
       this.queue.destroy();
@@ -306,16 +332,21 @@ export class CartFacade {
     const retryIntent: MutationIntent = { ...failed, retry: true };
     const result = await this.queue.enqueue(retryIntent, (inputs) => {
       switch (inputs.intent.kind) {
-        case 'create':
+        case 'create': {
           return this.dispatchCreate(inputs);
-        case 'addItem':
+        }
+        case 'addItem': {
           return this.dispatchAddItem(inputs);
-        case 'setQuantity':
+        }
+        case 'setQuantity': {
           return this.dispatchSetQuantity(inputs);
-        case 'removeItem':
+        }
+        case 'removeItem': {
           return this.dispatchRemoveItem(inputs);
-        case 'refetch':
+        }
+        case 'refetch': {
           return this.dispatchRefetch(inputs);
+        }
       }
     });
     if (!this.shouldApplyResult(token)) return;
@@ -445,11 +476,11 @@ export class CartFacade {
         }),
       );
       return { ok: true, cart: response, replayed: false };
-    } catch (err) {
+    } catch (error) {
       // Route the failure through `handleError` so a 409/410/404 on
       // create surfaces in the same `conflict` / `cartGone` /
       // `cartExpired` signals the rest of the mutation API uses.
-      return this.handleError(inputs, err);
+      return this.handleError(inputs, error);
     }
   }
 
@@ -480,8 +511,8 @@ export class CartFacade {
         ),
       );
       return { ok: true, cart: response, replayed: false };
-    } catch (err) {
-      return this.handleError(inputs, err);
+    } catch (error) {
+      return this.handleError(inputs, error);
     }
   }
 
@@ -509,8 +540,8 @@ export class CartFacade {
         ),
       );
       return { ok: true, cart: response, replayed: false };
-    } catch (err) {
-      return this.handleError(inputs, err);
+    } catch (error) {
+      return this.handleError(inputs, error);
     }
   }
 
@@ -537,8 +568,8 @@ export class CartFacade {
         ),
       );
       return { ok: true, cart: response, replayed: false };
-    } catch (err) {
-      return this.handleError(inputs, err);
+    } catch (error) {
+      return this.handleError(inputs, error);
     }
   }
 
@@ -551,11 +582,11 @@ export class CartFacade {
         }),
       );
       return { ok: true, cart: response, replayed: false };
-    } catch (err) {
+    } catch (error) {
       // Funnel refetch failures through `handleError` too: a 404 here
       // means the cart disappeared between the original conflict and
       // the refetch, which the UI must surface as `cartGone`.
-      return this.handleError(inputs, err);
+      return this.handleError(inputs, error);
     }
   }
 
@@ -565,8 +596,8 @@ export class CartFacade {
   // and a 404 always in cartGone. Other Problems land in `error`.
   // -------------------------------------------------------------------------
 
-  private handleError(inputs: DispatchInputs, err: unknown): DispatchResult {
-    const result = mapError(err);
+  private handleError(inputs: DispatchInputs, error: unknown): DispatchResult {
+    const result = mapError(error);
     this.recordFailure(inputs.intent, result);
     return result;
   }
@@ -676,11 +707,11 @@ export class CartFacade {
 // without instantiating the facade.
 // ---------------------------------------------------------------------------
 
-function mapError(err: unknown): DispatchResult {
-  if (err instanceof HttpErrorResponse) {
-    const body: unknown = err.error;
+function mapError(error: unknown): DispatchResult {
+  if (error instanceof HttpErrorResponse) {
+    const body: unknown = error.error;
     let code = 'UNKNOWN';
-    let detail = err.message;
+    let detail = error.message;
     if (typeof body === 'object' && body !== null) {
       if ('code' in body && typeof body.code === 'string') {
         code = body.code;
@@ -689,24 +720,23 @@ function mapError(err: unknown): DispatchResult {
         detail = body.detail;
       }
     }
-    if (err.status === 409 && code === 'CART_VERSION_CONFLICT') {
+    if (error.status === 409 && code === 'CART_VERSION_CONFLICT') {
       return { ok: false, code: 'CART_VERSION_CONFLICT', status: 409, detail };
     }
-    if (err.status === 409 && code === 'OUT_OF_STOCK') {
+    if (error.status === 409 && code === 'OUT_OF_STOCK') {
       return { ok: false, code: 'OUT_OF_STOCK', status: 409, detail };
     }
-    if (err.status === 409 && code === 'IDEMPOTENCY_CONFLICT') {
+    if (error.status === 409 && code === 'IDEMPOTENCY_CONFLICT') {
       return { ok: false, code: 'IDEMPOTENCY_CONFLICT', status: 409, detail };
     }
-    if (err.status === 410 && code === 'CART_EXPIRED') {
+    if (error.status === 410 && code === 'CART_EXPIRED') {
       return { ok: false, code: 'CART_EXPIRED', status: 410, detail };
     }
-    if (err.status === 404 && code === 'NOT_FOUND') {
-      return { ok: false, code: 'NOT_FOUND', status: 404, detail };
-    }
-    return { ok: false, code, status: err.status, detail };
+    return error.status === 404 && code === 'NOT_FOUND'
+      ? { ok: false, code: 'NOT_FOUND', status: 404, detail }
+      : { ok: false, code, status: error.status, detail };
   }
-  return { ok: false, code: 'SERVICE_UNAVAILABLE', status: 0, detail: String(err) };
+  return { ok: false, code: 'SERVICE_UNAVAILABLE', status: 0, detail: String(error) };
 }
 
 function mapMissingCart(): DispatchResult {

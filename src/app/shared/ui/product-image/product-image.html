@@ -1,33 +1,33 @@
 <div
   class="root relative block w-full rounded overflow-hidden"
-  [style.aspect-ratio]="aspectRatio()"
+  [attr.aria-label]="decorative() ? null : image().alt"
   [attr.data-status]="status()"
   [attr.role]="decorative() ? null : 'img'"
-  [attr.aria-label]="decorative() ? null : image().alt"
+  [style.aspect-ratio]="aspectRatio()"
 >
   @switch (status()) {
     @case ('loading') {
       <span
-        class="skeleton absolute inset-0"
         aria-hidden="true"
+        class="skeleton absolute inset-0"
         data-testid="image-skeleton"
       ></span>
     }
     @case ('loaded') {
       <img
         class="photo object-contain"
-        [src]="resolvedSrc()"
-        [alt]="decorative() ? '' : image().alt"
+        data-testid="image-photo"
         decoding="async"
         loading="lazy"
-        data-testid="image-photo"
+        [alt]="decorative() ? '' : image().alt"
+        [src]="resolvedSrc()"
         (error)="onError()"
       />
     }
     @case ('error') {
       <div
-        class="fallback absolute inset-0 flex items-center justify-center"
         aria-hidden="true"
+        class="fallback absolute inset-0 flex items-center justify-center"
         data-testid="image-fallback"
       >
         <span class="fallback-mark font-bold tracking-wider">{{ initial() }}</span>

@@ -23,23 +23,33 @@
 import { isRecord } from './is-record';
 import type { ScenarioName } from './scenarios';
 
-/** Snapshot key prefix; the scenario name namespaces the entry. */
+/**
+Snapshot key prefix; the scenario name namespaces the entry.
+*/
 const SNAPSHOT_KEY_PREFIX = 'mi-bolt.snapshot.';
 
-/** Bumped whenever the on-disk shape changes incompatibly. */
+/**
+Bumped whenever the on-disk shape changes incompatibly.
+*/
 export const SNAPSHOT_SCHEMA_VERSION = 1;
 
-/** Snapshots older than this are considered stale and discarded. */
+/**
+Snapshots older than this are considered stale and discarded.
+*/
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Minimal cart line kept across reload. */
+/**
+Minimal cart line kept across reload.
+*/
 export interface PersistedCartLine {
   id: string;
   variantId: string;
   quantity: number;
 }
 
-/** Cart snapshot — line ids, variant ids, quantities, version. */
+/**
+Cart snapshot — line ids, variant ids, quantities, version.
+*/
 export interface PersistedCart {
   id: string;
   version: number;
@@ -47,7 +57,9 @@ export interface PersistedCart {
   lastUpdatedAt: string;
 }
 
-/** Single committed order line in a privacy-minimized receipt. */
+/**
+Single committed order line in a privacy-minimized receipt.
+*/
 export interface PersistedReceiptItem {
   variantId: string;
   quantity: number;
@@ -55,7 +67,9 @@ export interface PersistedReceiptItem {
   lineTotal: { amount: number; currency: string };
 }
 
-/** Receipt kept across reload — order id, total, items, method, date. */
+/**
+Receipt kept across reload — order id, total, items, method, date.
+*/
 export interface PersistedReceipt {
   id: string;
   orderNumber: string;
@@ -65,7 +79,9 @@ export interface PersistedReceipt {
   items: readonly PersistedReceiptItem[];
 }
 
-/** Root snapshot written under `${SNAPSHOT_KEY_PREFIX}${scenarioName}`. */
+/**
+Root snapshot written under `${SNAPSHOT_KEY_PREFIX}${scenarioName}`.
+*/
 export interface MockSnapshot {
   schemaVersion: number;
   providerId: 'mi-bolt';
@@ -77,24 +93,32 @@ export interface MockSnapshot {
 }
 
 export interface PersistenceOptions {
-  /** Injectable clock so tests can exercise age/v expiry deterministically. */
+  /**
+  Injectable clock so tests can exercise age/v expiry deterministically.
+  */
   nowMs: () => number;
-  /** Injectable storage adapter; defaults to `globalThis.sessionStorage`. */
+  /**
+  Injectable storage adapter; defaults to `globalThis.sessionStorage`.
+  */
   storage?: StorageLike | null;
 }
 
-/** Storage shape used by the adapter — works for both `Storage` and stubs. */
+/**
+Storage shape used by the adapter — works for both `Storage` and stubs.
+*/
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
 }
 
-/** Single-warn flag carried per-instance so test setup stays isolated. */
+/**
+Single-warn flag carried per-instance so test setup stays isolated.
+*/
 class SessionStorageAdapter {
   private denied = false;
   private warned = false;
-  private memory = new Map<string, string>();
+  private readonly memory = new Map<string, string>();
 
   constructor(private readonly storage: StorageLike | null) {}
 
@@ -136,7 +160,9 @@ class SessionStorageAdapter {
     this.memory.delete(key);
   }
 
-  /** Whether storage access has failed and the adapter is using the in-memory fallback. */
+  /**
+  Whether storage access has failed and the adapter is using the in-memory fallback.
+  */
   isDenied(): boolean {
     return this.denied;
   }
@@ -158,14 +184,15 @@ export function snapshotKey(scenarioName: ScenarioName): string {
   return `${SNAPSHOT_KEY_PREFIX}${scenarioName}`;
 }
 
-/** True when `value` is an object shaped like `StorageLike` (get/set/remove item). */
+/**
+True when `value` is an object shaped like `StorageLike` (get/set/remove item).
+*/
 function isStorageLike(value: unknown): value is StorageLike {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value['getItem'] === 'function' &&
-    typeof value['setItem'] === 'function' &&
-    typeof value['removeItem'] === 'function'
-  );
+  return isRecord(value)
+    ? typeof value['getItem'] === 'function' &&
+        typeof value['setItem'] === 'function' &&
+        typeof value['removeItem'] === 'function'
+    : false;
 }
 
 /**
@@ -174,16 +201,17 @@ function isStorageLike(value: unknown): value is StorageLike {
  * `sessionStorage` at all, whatever the DOM lib types assume.
  */
 function hasSessionStorage(value: unknown): value is { sessionStorage: StorageLike } {
-  if (!isRecord(value)) return false;
-  if (!('sessionStorage' in value)) return false;
-  return isStorageLike(value['sessionStorage']);
+  return !isRecord(value) || !('sessionStorage' in value)
+    ? false
+    : isStorageLike(value['sessionStorage']);
 }
 
-/** Detects Node and other non-DOM environments where sessionStorage is missing. */
+/**
+Detects Node and other non-DOM environments where sessionStorage is missing.
+*/
 function resolveDefaultStorage(): StorageLike | null {
   const globalScope: unknown = globalThis;
-  if (!hasSessionStorage(globalScope)) return null;
-  return globalScope.sessionStorage;
+  return hasSessionStorage(globalScope) ? globalScope.sessionStorage : null;
 }
 
 /**
@@ -211,7 +239,9 @@ export class Persistence {
     private readonly nowMs: () => number,
   ) {}
 
-  /** Persists a snapshot for the given scenario. */
+  /**
+  Persists a snapshot for the given scenario.
+  */
   save(scenarioName: ScenarioName, snapshot: MockSnapshot): { ok: boolean } {
     const key = snapshotKey(scenarioName);
     const result = this.adapter.write(key, JSON.stringify(snapshot));
@@ -260,12 +290,16 @@ export class Persistence {
     return parsed;
   }
 
-  /** Clears the snapshot for the given scenario (used by tests and `reset`). */
+  /**
+  Clears the snapshot for the given scenario (used by tests and `reset`).
+  */
   clear(scenarioName: ScenarioName): void {
     this.adapter.remove(snapshotKey(scenarioName));
   }
 
-  /** Returns the last hydrated snapshot, useful for handler factories. */
+  /**
+  Returns the last hydrated snapshot, useful for handler factories.
+  */
   peekLast(): MockSnapshot | null {
     return this.lastSnapshot;
   }
@@ -290,12 +324,15 @@ export class Persistence {
 function isValidSnapshot(value: unknown): value is MockSnapshot {
   if (!isRecord(value)) return false;
   const v = value;
-  if (typeof v['schemaVersion'] !== 'number') return false;
-  if (v['providerId'] !== 'mi-bolt') return false;
-  if (typeof v['simulatedSessionId'] !== 'string') return false;
-  if (typeof v['savedAt'] !== 'string') return false;
-  if (typeof v['expiresAt'] !== 'string') return false;
-  if (!Array.isArray(v['receipts'])) return false;
+  if (
+    typeof v['schemaVersion'] !== 'number' ||
+    v['providerId'] !== 'mi-bolt' ||
+    typeof v['simulatedSessionId'] !== 'string' ||
+    typeof v['savedAt'] !== 'string' ||
+    typeof v['expiresAt'] !== 'string' ||
+    !Array.isArray(v['receipts'])
+  )
+    return false;
   const cart = v['cart'];
   if (cart !== undefined && !isValidCart(cart)) return false;
   for (const receipt of v['receipts']) {
@@ -322,10 +359,13 @@ function isValidSnapshot(value: unknown): value is MockSnapshot {
 function isValidCart(value: unknown): value is PersistedCart {
   if (!isRecord(value)) return false;
   const c = value;
-  if (typeof c['id'] !== 'string') return false;
-  if (typeof c['version'] !== 'number') return false;
-  if (!Array.isArray(c['items'])) return false;
-  if (typeof c['lastUpdatedAt'] !== 'string') return false;
+  if (
+    typeof c['id'] !== 'string' ||
+    typeof c['version'] !== 'number' ||
+    !Array.isArray(c['items']) ||
+    typeof c['lastUpdatedAt'] !== 'string'
+  )
+    return false;
   const allowed = new Set(['id', 'version', 'items', 'lastUpdatedAt']);
   for (const key of Object.keys(c)) {
     if (!allowed.has(key)) return false;
@@ -338,12 +378,15 @@ function isValidCart(value: unknown): value is PersistedCart {
 
 function isValidCartLine(value: unknown): value is PersistedCartLine {
   if (!isRecord(value)) return false;
-  const i = value;
-  if (typeof i['id'] !== 'string') return false;
-  if (typeof i['variantId'] !== 'string') return false;
-  if (!isPositiveInteger(i['quantity'])) return false;
+  const index = value;
+  if (
+    typeof index['id'] !== 'string' ||
+    typeof index['variantId'] !== 'string' ||
+    !isPositiveInteger(index['quantity'])
+  )
+    return false;
   const allowed = new Set(['id', 'variantId', 'quantity']);
-  for (const key of Object.keys(i)) {
+  for (const key of Object.keys(index)) {
     if (!allowed.has(key)) return false;
   }
   return true;
@@ -352,13 +395,15 @@ function isValidCartLine(value: unknown): value is PersistedCartLine {
 function isValidReceipt(value: unknown): value is PersistedReceipt {
   if (!isRecord(value)) return false;
   const r = value;
-  if (typeof r['id'] !== 'string') return false;
-  if (typeof r['orderNumber'] !== 'string') return false;
-  if (typeof r['createdAt'] !== 'string') return false;
+  if (
+    typeof r['id'] !== 'string' ||
+    typeof r['orderNumber'] !== 'string' ||
+    typeof r['createdAt'] !== 'string'
+  )
+    return false;
   const method = r['paymentMethod'];
   if (method !== 'demo_card' && method !== 'demo_cod') return false;
-  if (!isValidMoney(r['total'])) return false;
-  if (!Array.isArray(r['items'])) return false;
+  if (!isValidMoney(r['total']) || !Array.isArray(r['items'])) return false;
   const allowed = new Set(['id', 'orderNumber', 'total', 'paymentMethod', 'createdAt', 'items']);
   for (const key of Object.keys(r)) {
     if (!allowed.has(key)) return false;
@@ -371,13 +416,16 @@ function isValidReceipt(value: unknown): value is PersistedReceipt {
 
 function isValidReceiptItem(value: unknown): value is PersistedReceiptItem {
   if (!isRecord(value)) return false;
-  const i = value;
-  if (typeof i['variantId'] !== 'string') return false;
-  if (!isPositiveInteger(i['quantity'])) return false;
-  if (!isValidMoney(i['unitPrice'])) return false;
-  if (!isValidMoney(i['lineTotal'])) return false;
+  const index = value;
+  if (
+    typeof index['variantId'] !== 'string' ||
+    !isPositiveInteger(index['quantity']) ||
+    !isValidMoney(index['unitPrice']) ||
+    !isValidMoney(index['lineTotal'])
+  )
+    return false;
   const allowed = new Set(['variantId', 'quantity', 'unitPrice', 'lineTotal']);
-  for (const key of Object.keys(i)) {
+  for (const key of Object.keys(index)) {
     if (!allowed.has(key)) return false;
   }
   return true;
@@ -386,10 +434,10 @@ function isValidReceiptItem(value: unknown): value is PersistedReceiptItem {
 function isValidMoney(value: unknown): value is { amount: number; currency: string } {
   if (!isRecord(value)) return false;
   const m = value;
-  if (typeof m['amount'] !== 'number' || !Number.isFinite(m['amount']) || m['amount'] < 0)
-    return false;
-  if (typeof m['currency'] !== 'string') return false;
-  return true;
+  return (
+    !(typeof m['amount'] !== 'number' || !Number.isFinite(m['amount']) || m['amount'] < 0) &&
+    typeof m['currency'] === 'string'
+  );
 }
 
 function isPositiveInteger(value: unknown): value is number {

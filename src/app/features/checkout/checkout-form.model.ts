@@ -39,10 +39,14 @@ import type { WritableSignal } from '@angular/core';
 import type { CheckoutSession } from '../../api/generated/models/checkout-session';
 import { PHONE_INTERNATIONAL } from './contact.schema';
 
-/** Allowed delivery option ids (matches OpenAPI `optionId` enum). */
+/**
+Allowed delivery option ids (matches OpenAPI `optionId` enum).
+*/
 export type DeliveryOptionId = 'home_delivery' | 'demo_pickup' | '';
 
-/** Allowed payment method ids (matches OpenAPI `paymentMethod` enum). */
+/**
+Allowed payment method ids (matches OpenAPI `paymentMethod` enum).
+*/
 export type PaymentMethod = 'demo_card' | 'demo_cod' | '';
 
 /**
@@ -74,10 +78,14 @@ export interface CheckoutFormModel {
   acknowledgedSimulation: boolean;
 }
 
-/** Re-exported under the historical name; the rule itself lives in contact.schema.ts. */
+/**
+Re-exported under the historical name; the rule itself lives in contact.schema.ts.
+*/
 export const PHONE_PATTERN = PHONE_INTERNATIONAL;
 
-/** HU postal code regex shared between the schema and the tests. */
+/**
+HU postal code regex shared between the schema and the tests.
+*/
 export const POSTAL_CODE_PATTERN = /^[1-9][0-9]{3}$/;
 
 /**
@@ -207,7 +215,7 @@ export const checkoutFormSchema: SchemaFn<CheckoutFormModel> = (path) => {
   // child field's context, so `value` is the address signal — we
   // must read the sibling `deliveryOptionId` via `valueOf`.
   hidden(path.address, {
-    when: (ctx) => ctx.valueOf(path.deliveryOptionId) !== 'home_delivery',
+    when: (context) => context.valueOf(path.deliveryOptionId) !== 'home_delivery',
   });
 
   required(path.address.postalCode, {

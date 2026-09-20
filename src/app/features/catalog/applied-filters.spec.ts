@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 
 import { AppliedFilters } from './applied-filters';
@@ -25,9 +26,9 @@ const ALL_FILTERS: CatalogQuery = {
   template: `
     <app-applied-filters
       [query]="query()"
-      (filterRemoved)="lastRemoved.set($event)"
       (cleared)="clearedCount.set(clearedCount() + 1)"
-    ></app-applied-filters>
+      (filterRemoved)="lastRemoved.set($event)"
+    />
   `,
 })
 class HostComponent {
@@ -87,9 +88,11 @@ describe('AppliedFilters', () => {
       host.query.set(ALL_FILTERS);
       fixture.detectChanges();
       const root = getNativeElement(fixture);
-      const removeBtn = root.querySelector<HTMLButtonElement>(`[data-testid="${testCase.testId}"]`);
-      expect(removeBtn).not.toBeNull();
-      removeBtn?.click();
+      const removeButton = root.querySelector<HTMLButtonElement>(
+        `[data-testid="${testCase.testId}"]`,
+      );
+      expect(removeButton).not.toBeNull();
+      removeButton?.click();
       fixture.detectChanges();
       expect(host.lastRemoved()).toEqual({ name: testCase.name, value: testCase.value });
     });
@@ -110,7 +113,7 @@ describe('AppliedFilters', () => {
     host.query.set({ ...NO_FILTERS, brands: ['MiBolt Demo'] });
     fixture.detectChanges();
     const root = getNativeElement(fixture);
-    const removeBtn = root.querySelector('[data-testid="applied-chip-remove-brand"]');
-    expect(removeBtn?.getAttribute('aria-label')).toBe('Szűrő eltávolítása: MiBolt Demo');
+    const removeButton = root.querySelector('[data-testid="applied-chip-remove-brand"]');
+    expect(removeButton?.getAttribute('aria-label')).toBe('Szűrő eltávolítása: MiBolt Demo');
   });
 });

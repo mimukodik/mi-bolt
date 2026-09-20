@@ -4,7 +4,9 @@ import { RouterLink } from '@angular/router';
 import type { Product } from '../../api/generated/models/product';
 import type { Money } from '../../api/generated/models/money';
 
-/** Status of a single featured-product slot in the home grid. */
+/**
+Status of a single featured-product slot in the home grid.
+*/
 export type FeaturedSlotStatus = 'loading' | 'success' | 'error';
 
 /**
@@ -49,7 +51,9 @@ export interface FeaturedSlot {
   styleUrl: './featured-products.scss',
 })
 export class FeaturedProducts {
-  /** Slots from the orchestrator. */
+  /**
+  Slots from the orchestrator.
+  */
   readonly slots = input<readonly FeaturedSlot[]>([]);
 
   /** Re-fire signal — surfaced when the user clicks "Újrapróbálom"
@@ -57,28 +61,29 @@ export class FeaturedProducts {
    *  retry CTA on their own; the whole-grid state does. */
   readonly retryRequested = output();
 
-  /** True when every slot is in error state (the grid-level error UI). */
+  /**
+  True when every slot is in error state (the grid-level error UI).
+  */
   readonly allErrored = computed(() => {
     const list = this.slots();
-    if (list.length === 0) return false;
-    return list.every((s) => s.status === 'error');
+    return list.length === 0 ? false : list.every((s) => s.status === 'error');
   });
 
-  /** Joined error messages for the whole-grid error state. */
+  /**
+  Joined error messages for the whole-grid error state.
+  */
   readonly errorMessage = computed(() => {
     const list = this.slots();
     const messages = list.map((s) => s.error).filter((m): m is string => m !== null);
-    if (messages.length === 0) {
-      return 'A kiemelt termékek jelenleg nem érhetők el.';
-    }
-    return messages[0];
+    return messages.length === 0 ? 'A kiemelt termékek jelenleg nem érhetők el.' : messages[0];
   });
 
-  /** Returns the first image src for the product, or null if absent. */
+  /**
+  Returns the first image src for the product, or null if absent.
+  */
   firstImageSrc(product: Product): string | null {
     const images = product.defaultVariant.images;
-    if (images.length === 0) return null;
-    return images[0].src;
+    return images.length === 0 ? null : images[0].src;
   }
 
   firstImageAlt(product: Product): string {
@@ -90,11 +95,12 @@ export class FeaturedProducts {
 
   initialFor(name: string): string {
     const trimmed = name.trim();
-    if (trimmed.length === 0) return '·';
-    return trimmed.charAt(0).toUpperCase();
+    return trimmed.length === 0 ? '·' : trimmed.charAt(0).toUpperCase();
   }
 
-  /** Hungarian integer HUF formatter. Non-breaking space thousands separator. */
+  /**
+  Hungarian integer HUF formatter. Non-breaking space thousands separator.
+  */
   formatPrice(money: Money): string {
     const amount = money.amount;
     if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
@@ -102,7 +108,7 @@ export class FeaturedProducts {
     }
     const grouped = Math.trunc(Math.abs(amount))
       .toString()
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      .replaceAll(/\B(?=(\d{3})+(?!\d))/g, ' ');
     return grouped;
   }
 }

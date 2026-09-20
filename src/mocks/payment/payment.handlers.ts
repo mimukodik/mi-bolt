@@ -31,15 +31,14 @@ import { IdempotencyStore, deriveIdempotencyKey, hashPayload } from '../idempote
 import { isRecord } from '../is-record';
 import { type Money } from '../repository';
 
+import type { PaymentIntentStore } from '../orders/commit-order';
 import {
-  PaymentIntentStore,
   type PaymentIntentRecord,
   type PaymentIntentStatus,
-  type PaymentMethod,
   getSharedStores,
 } from '../orders/commit-order';
 
-import { QuoteDomain, type Problem, type QuoteSnapshot } from '../checkout/quote-domain';
+import type { QuoteDomain } from '../checkout/quote-domain';
 
 // ---------------------------------------------------------------------------
 // Header validation rules — mirror the cart / checkout layers.
@@ -62,7 +61,7 @@ function problemResponse(
   problem: PaymentProblemLike,
   traceId: string,
 ): HttpResponse<Record<string, unknown>> {
-  const code = problem.code.toLowerCase().replace(/_/g, '-');
+  const code = problem.code.toLowerCase().replaceAll('_', '-');
   const body = {
     type: `urn:mi-bolt:problem:${code}`,
     title: problem.detail,
@@ -111,10 +110,9 @@ async function readJsonBody(request: Request): Promise<unknown> {
 
 function initialStatusFor(scenarioName: string): PaymentIntentStatus {
   if (scenarioName === 'payment-declined') return 'declined';
-  if (scenarioName === 'payment-pending-resolves' || scenarioName === 'payment-pending-timeout') {
-    return 'pending';
-  }
-  return 'succeeded';
+  return scenarioName === 'payment-pending-resolves' || scenarioName === 'payment-pending-timeout'
+    ? 'pending'
+    : 'succeeded';
 }
 
 // ---------------------------------------------------------------------------
@@ -196,10 +194,9 @@ function readBody(
   if (typeof cartId !== 'string' || cartId.length === 0) {
     return { ok: false, detail: 'A cartId mező kötelező szöveg.' };
   }
-  if (typeof quoteId !== 'string' || quoteId.length === 0) {
-    return { ok: false, detail: 'A quoteId mező kötelező szöveg.' };
-  }
-  return { ok: true, value: { cartId, quoteId } };
+  return typeof quoteId !== 'string' || quoteId.length === 0
+    ? { ok: false, detail: 'A quoteId mező kötelező szöveg.' }
+    : { ok: true, value: { cartId, quoteId } };
 }
 
 // ---------------------------------------------------------------------------
@@ -392,4 +389,5 @@ registerBusinessHandlers(paymentHandlersEntry);
 // Shared types re-exported for downstream test fixtures.
 // ---------------------------------------------------------------------------
 
-export type { PaymentIntentRecord, PaymentMethod, QuoteSnapshot, Problem };
+export { type PaymentMethod, type PaymentIntentRecord } from '../orders/commit-order';
+export { type Problem, type QuoteSnapshot } from '../checkout/quote-domain';

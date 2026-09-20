@@ -6,24 +6,24 @@
   >
     <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
       <a
-        routerLink="/"
-        class="brand inline-flex items-center gap-2 no-underline min-h-10"
         aria-label="MiBolt kezdőlap"
+        class="brand inline-flex items-center gap-2 no-underline min-h-10"
+        routerLink="/"
       >
         <span
-          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
           aria-hidden="true"
+          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
           >M</span
         >
         <span class="brand__word font-bold tracking-wide">MiBolt</span>
       </a>
-      <span class="header__label uppercase tracking-wider" aria-label="Demó pénztár"
+      <span aria-label="Demó pénztár" class="header__label uppercase tracking-wider"
         >Demó pénztár</span
       >
       <a
-        routerLink="/telefonok"
         class="header__back inline-flex items-center no-underline min-h-10 rounded"
         data-testid="back-to-shop"
+        routerLink="/telefonok"
         >Vissza a shopba</a
       >
     </div>
@@ -37,35 +37,35 @@
     <div class="header__inner flex items-center gap-4 mx-auto w-full max-w-screen-xl min-h-16 px-4">
       <button
         #menuTrigger
-        type="button"
-        class="menu-trigger inline-flex items-center justify-center w-10 h-10 rounded border border-transparent bg-transparent cursor-pointer text-xl lg:hidden"
-        [attr.aria-expanded]="drawerOpen()"
         aria-controls="mobile-drawer"
         aria-label="Menü megnyitása"
+        class="menu-trigger inline-flex items-center justify-center w-10 h-10 rounded border border-transparent bg-transparent cursor-pointer text-xl lg:hidden"
         data-testid="menu-trigger"
+        type="button"
+        [attr.aria-expanded]="drawerOpen()"
         (click)="toggleDrawer()"
       >
         ☰
       </button>
       <a
-        routerLink="/"
-        class="brand inline-flex items-center gap-2 no-underline min-h-10"
         aria-label="MiBolt kezdőlap"
+        class="brand inline-flex items-center gap-2 no-underline min-h-10"
+        routerLink="/"
       >
         <span
-          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
           aria-hidden="true"
+          class="brand__mark inline-flex items-center justify-center w-9 h-9 rounded font-bold"
           >M</span
         >
         <span class="brand__word font-bold tracking-wide">MiBolt</span>
       </a>
-      <nav class="header__nav hidden gap-4 flex-1 justify-center lg:flex" aria-label="Fő navigáció">
+      <nav aria-label="Fő navigáció" class="header__nav hidden gap-4 flex-1 justify-center lg:flex">
         @for (link of navLinks(); track link.label) {
           <a
             class="inline-flex items-center no-underline min-h-10 rounded"
-            [routerLink]="link.routerLink"
-            [fragment]="link.fragment"
             routerLinkActive="is-active"
+            [fragment]="link.fragment"
+            [routerLink]="link.routerLink"
             [routerLinkActiveOptions]="link.routerLink === '/' ? { exact: true } : { exact: false }"
             >{{ link.label }}</a
           >
@@ -78,46 +78,46 @@
         >
           <span class="sr-only">Keresés a telefonok között</span>
           <input
+            autocomplete="off"
             class="bg-transparent border-0 outline-none min-w-50 font-inherit h-10"
-            type="search"
+            data-testid="header-search-input"
+            inputmode="search"
             name="q"
             placeholder="Keresés…"
-            autocomplete="off"
-            inputmode="search"
-            data-testid="header-search-input"
+            type="search"
             [value]="searchDraft()"
             (input)="onSearchDraftInput($event)"
             (keydown.enter)="commitSearch()"
           />
         </label>
         <a
-          routerLink="/penztar/kosar"
           class="cart relative inline-flex items-center gap-2 no-underline min-h-10 px-3 rounded"
-          [attr.aria-label]="cartLabel()"
           data-testid="cart-link"
+          routerLink="/penztar/kosar"
+          [attr.aria-label]="cartLabel()"
         >
-          <span class="cart__icon inline-flex" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true">
+          <span aria-hidden="true" class="cart__icon inline-flex">
+            <svg aria-hidden="true" focusable="false" height="24" viewBox="0 0 24 24" width="24">
               <path
-                fill="currentColor"
                 d="M7 4h-2l-1 2v1h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 20h10v-2H10.4l1.1-2H18a2 2 0 0 0 1.8-1.11l3.6-6.49L22.4 7H7.21l-.94-2H7Zm3 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"
+                fill="currentColor"
               />
             </svg>
           </span>
           <span class="cart__label hidden lg:inline">Kosár</span>
           @if (cartFacade.itemCount() > 0) {
             <span
+              aria-hidden="true"
               class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold"
               data-testid="cart-badge"
-              aria-hidden="true"
             >
               {{ cartFacade.itemCount() }}
             </span>
           } @else {
             <span
+              aria-hidden="true"
               class="cart__badge inline-flex items-center justify-center min-w-6 h-6 px-1 rounded-full font-bold"
               data-testid="cart-badge"
-              aria-hidden="true"
               >0</span
             >
           }
@@ -132,13 +132,13 @@
       <label class="mobile-search__field block">
         <span class="sr-only">Keresés a telefonok között</span>
         <input
+          autocomplete="off"
           class="w-full min-h-10 px-3 bg-transparent border border-transparent rounded font-inherit"
-          type="search"
+          data-testid="mobile-search-input"
+          inputmode="search"
           name="q-mobile"
           placeholder="Keresés a telefonok között…"
-          autocomplete="off"
-          inputmode="search"
-          data-testid="mobile-search-input"
+          type="search"
           [value]="searchDraft()"
           (input)="onSearchDraftInput($event)"
           (keydown.enter)="commitSearch()"
@@ -148,16 +148,16 @@
   </header>
   <app-mobile-drawer
     id="mobile-drawer"
-    [opened]="drawerOpen()"
     label="Menü"
+    [opened]="drawerOpen()"
     [triggerEl]="menuTriggerEl()"
     (closed)="closeDrawer()"
   >
     @for (link of navLinks(); track link.label) {
       <a
         class="block no-underline"
-        [routerLink]="link.routerLink"
         [fragment]="link.fragment"
+        [routerLink]="link.routerLink"
         (click)="closeDrawer()"
         >{{ link.label }}</a
       >

@@ -36,12 +36,8 @@ import {
 import { IdempotencyStore } from '../idempotency';
 import { getSharedStores } from '../orders/commit-order';
 
-import {
-  QuoteDomain,
-  type CheckoutSessionSnapshot,
-  type Problem,
-  type QuoteSnapshot,
-} from './quote-domain';
+import type { QuoteDomain } from './quote-domain';
+import { type CheckoutSessionSnapshot, type Problem, type QuoteSnapshot } from './quote-domain';
 
 // ---------------------------------------------------------------------------
 // Static checkout options — mirrored from `docs/api/fixtures/checkout-options.json`
@@ -77,7 +73,7 @@ export const CHECKOUT_OPTIONS = {
 const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
 
 function problemResponse(problem: Problem, traceId: string): HttpResponse<Record<string, unknown>> {
-  const code = problem.code.toLowerCase().replace(/_/g, '-');
+  const code = problem.code.toLowerCase().replaceAll('_', '-');
   const body = {
     type: `urn:mi-bolt:problem:${code}`,
     title: problem.detail,
@@ -106,12 +102,10 @@ async function readJsonBody(request: Request): Promise<unknown> {
 }
 
 function parseIfMatch(header: string | null): number | null {
-  if (header === null) return null;
-  if (!/^"[0-9]+"$/.test(header)) return null;
+  if (header === null || !/^"[0-9]+"$/.test(header)) return null;
   const inner = header.slice(1, -1);
   const value = Number.parseInt(inner, 10);
-  if (!Number.isFinite(value) || value < 1) return null;
-  return value;
+  return !Number.isFinite(value) || value < 1 ? null : value;
 }
 
 function sessionOf(request: Request): string | null {
@@ -230,7 +224,7 @@ export function buildCheckoutHandlers(options: CreateHandlersOptions): readonly 
         cartId: String(params['cartId']),
         cartVersion,
         idempotencyKey,
-        body: body,
+        body,
       });
       if (!result.ok) return problemResponse(result.problem, traceId);
       const cart = repository.getCart(result.value.cartId);
@@ -276,7 +270,9 @@ export function buildCheckoutHandlers(options: CreateHandlersOptions): readonly 
   return [getCheckoutOptions, getCheckoutSession, updateCheckout, createCheckoutQuote];
 }
 
-/** Public registration entry — wired by `registerBusinessHandlers`. */
+/**
+Public registration entry — wired by `registerBusinessHandlers`.
+*/
 export const checkoutHandlersEntry: BusinessHandlerEntry = (options) =>
   buildCheckoutHandlers(options);
 

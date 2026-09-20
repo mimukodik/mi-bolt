@@ -32,7 +32,9 @@ import { signal, type Signal, type WritableSignal } from '@angular/core';
 
 import type { Cart } from '../../api/generated/models/cart';
 
-/** Discriminator for every intent the queue can serialize. */
+/**
+Discriminator for every intent the queue can serialize.
+*/
 export type MutationIntentKind = 'create' | 'addItem' | 'setQuantity' | 'removeItem' | 'refetch';
 
 /**
@@ -42,12 +44,16 @@ export type MutationIntentKind = 'create' | 'addItem' | 'setQuantity' | 'removeI
 export interface MutationIntent {
   readonly kind: MutationIntentKind;
   readonly idempotencyKey: string;
-  /** True when this intent is being re-submitted after a 409. */
+  /**
+  True when this intent is being re-submitted after a 409.
+  */
   readonly retry: boolean;
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
-/** Inputs the queue hands to the dispatcher at actual dispatch time. */
+/**
+Inputs the queue hands to the dispatcher at actual dispatch time.
+*/
 export interface DispatchInputs {
   readonly intent: MutationIntent;
   /**
@@ -58,11 +64,15 @@ export interface DispatchInputs {
   readonly expectedVersion: number | null;
 }
 
-/** Successful dispatch returns the authoritative cart snapshot. */
+/**
+Successful dispatch returns the authoritative cart snapshot.
+*/
 export interface SuccessfulDispatch {
   readonly ok: true;
   readonly cart: Cart;
-  /** True when the server replayed the cached idempotency body. */
+  /**
+  True when the server replayed the cached idempotency body.
+  */
   readonly replayed: boolean;
 }
 
@@ -109,7 +119,9 @@ export type DispatchResult = SuccessfulDispatch | FailedDispatch;
  */
 export class CartMutationQueue {
   private readonly pendingWritable: WritableSignal<number> = signal(0);
-  /** Readonly queue-depth signal — observed by the facade. */
+  /**
+  Readonly queue-depth signal — observed by the facade.
+  */
   readonly pendingCount: Signal<number> = this.pendingWritable.asReadonly();
 
   private tail: Promise<void> = Promise.resolve();
@@ -170,13 +182,11 @@ export class CartMutationQueue {
     );
     void next.then(
       () => {
-        if (this.destroyed) return;
-        if (clearGeneration !== this.clearGeneration) return;
+        if (this.destroyed || clearGeneration !== this.clearGeneration) return;
         this.pendingWritable.update((n) => n - 1);
       },
       () => {
-        if (this.destroyed) return;
-        if (clearGeneration !== this.clearGeneration) return;
+        if (this.destroyed || clearGeneration !== this.clearGeneration) return;
         this.pendingWritable.update((n) => n - 1);
       },
     );
@@ -226,7 +236,9 @@ export class CartMutationQueue {
   }
 }
 
-/** Exposed so tests can wait for the queue to drain. */
+/**
+Exposed so tests can wait for the queue to drain.
+*/
 export function settleQueue(queue: CartMutationQueue): Promise<void> {
   return queue.settle();
 }

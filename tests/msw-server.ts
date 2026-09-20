@@ -45,8 +45,10 @@ if (isNodeProcess) {
   server = setupServer();
 }
 
-/** True between the `listen()` and the `close()` of the shared server. */
-let listening = false;
+/**
+True between the `listen()` and the `close()` of the shared server.
+*/
+let isListening = false;
 
 /**
  * Registers the shared server's lifecycle in the calling file's suite:
@@ -66,9 +68,9 @@ let listening = false;
  */
 export function useMswServer(): void {
   beforeAll(() => {
-    if (listening || !server) return;
+    if (isListening || !server) return;
     server.listen({ onUnhandledRequest: 'error' });
-    listening = true;
+    isListening = true;
   });
 
   afterEach(() => {
@@ -76,9 +78,9 @@ export function useMswServer(): void {
   });
 
   afterAll(() => {
-    if (!listening || !server) return;
+    if (!isListening || !server) return;
     server.close();
-    listening = false;
+    isListening = false;
   });
 }
 

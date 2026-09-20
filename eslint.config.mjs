@@ -37,6 +37,7 @@ export default defineConfig([
       // and is never hand-edited (MIM-209 step 3).
       'src/app/api/generated/**',
       'vitest.config.*',
+      'vitest.*.config.*',
       'vitest.config.*.timestamp*',
       'playwright.config.ts',
       'tsconfig*.json',
@@ -176,7 +177,7 @@ export default defineConfig([
           },
         },
       ],
-      '@typescript-eslint/prefer-for-of': 'warn',
+      '@typescript-eslint/prefer-for-of': 'error',
       'arrow-body-style': ['error', 'as-needed'],
       'object-shorthand': 'error',
       '@typescript-eslint/adjacent-overload-signatures': 'error',
@@ -184,7 +185,7 @@ export default defineConfig([
       'no-promise-executor-return': ['error'],
       'no-unmodified-loop-condition': ['error'],
       curly: ['error'],
-      'default-param-last': ['warn'],
+      'default-param-last': ['error'],
       eqeqeq: ['error', 'always'],
       'no-invalid-this': ['error'],
       'no-iterator': ['error'],
@@ -260,8 +261,11 @@ export default defineConfig([
           format: ['PascalCase'],
         },
         {
+          // PascalCase for type parameters (T, K, V, TKey, TValue)
+          // — the standard TypeScript convention. The example-eslint
+          // baseline's UPPER_CASE was wrong: it forces T_KEY over TKey.
           selector: 'typeParameter',
-          format: ['UPPER_CASE'],
+          format: ['PascalCase'],
         },
       ],
       '@typescript-eslint/array-type': [
@@ -323,6 +327,11 @@ export default defineConfig([
       'unicorn/no-useless-undefined': 'off',
       'unicorn/no-null': 'off',
       'unicorn/number-literal-case': 'off',
+      // unicorn/single-line-block-comment-style's default is "multiline",
+      // which autofixes `/** foo */` into a broken
+      // `/**\n   foo\n   */` shape with no `*` alignment. Override to
+      // "single-line" so the existing JSDoc style is preserved.
+      'unicorn/single-line-block-comment-style': ['error', 'single-line', { ignore: [] }],
       'unicorn/name-replacements': [
         'error',
         {
@@ -341,6 +350,12 @@ export default defineConfig([
             'i',
             'j',
             'k', // loop indices
+            'n', // count / number locals
+            'm', // matched / matrix
+            'r', // result / reader
+            'h', // hour / handle
+            'p', // pointer / promise
+            'q', // query string
             'id', // universal identifier field
             'of',
             'to',

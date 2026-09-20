@@ -34,7 +34,9 @@ export class TermsDialog {
    *  toggle signal. */
   readonly opened = input<boolean>(false);
 
-  /** Localised accessible label for the dialog. */
+  /**
+  Localised accessible label for the dialog.
+  */
   readonly label = input<string>('Demó pénztár — feltételek');
 
   /** Emits whenever the dialog closes by any mechanism (close

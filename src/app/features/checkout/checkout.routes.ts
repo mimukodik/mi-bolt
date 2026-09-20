@@ -38,7 +38,7 @@ import { contactGuard, deliveryGuard, reviewGuard, successGuard } from './checko
 import { CheckoutLayout } from '../../layouts/checkout-layout';
 
 import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { ApiConfiguration as ApiConfig } from '../../api/generated/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
 import { updateCheckout } from '../../api/generated/fn/checkout/update-checkout';
 
@@ -84,20 +84,20 @@ function mapFieldErrors(
  * `CheckoutFacade.mapError` for the fields the contact step
  * surfaces; nothing else in the wizard reads them.
  */
-function mapErrorToSaveResult(err: unknown): ContactSaveResult {
-  if (err instanceof HttpErrorResponse) {
-    const body = (err.error ?? {}) as {
+function mapErrorToSaveResult(error: unknown): ContactSaveResult {
+  if (error instanceof HttpErrorResponse) {
+    const body = (error.error ?? {}) as {
       detail?: string;
       fieldErrors?: { path: string; message: string }[];
     };
     const fieldErrors = mapFieldErrors(body.fieldErrors ?? []);
     return {
       ok: false,
-      ...(Object.keys(fieldErrors).length > 0 ? { fieldErrors } : {}),
-      message: body.detail ?? err.message,
+      ...(Object.keys(fieldErrors).length > 0 && { fieldErrors }),
+      message: body.detail ?? error.message,
     };
   }
-  return { ok: false, message: String(err) };
+  return { ok: false, message: String(error) };
 }
 
 /**
@@ -127,7 +127,7 @@ function buildContactDraftSaver(
   cartFacade: CartFacade,
   checkoutFacade: CheckoutFacade,
 ): ContactDraftSaver {
-  const api = new Api(inject(ApiConfiguration), inject(HttpClient));
+  const api = new Api(inject(ApiConfig), inject(HttpClient));
   return async (contact: ContactSubmission): Promise<ContactSaveResult> => {
     const cart = cartFacade.cart();
     if (cart === null) {
@@ -156,8 +156,8 @@ function buildContactDraftSaver(
       // the user advance to the delivery step.
       await checkoutFacade.loadSession(cart.id, { clearOnLoad: false });
       return { ok: true };
-    } catch (err) {
-      return mapErrorToSaveResult(err);
+    } catch (error) {
+      return mapErrorToSaveResult(error);
     }
   };
 }
@@ -246,5 +246,7 @@ export const checkoutRoutes: Routes = [
   },
 ];
 
-/** Default export so `loadChildren` consumers can use it directly. */
+/**
+Default export so `loadChildren` consumers can use it directly.
+*/
 export default checkoutRoutes;

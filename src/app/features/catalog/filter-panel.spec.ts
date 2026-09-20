@@ -53,27 +53,28 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function queryInput(parent: Element, selector: string): HTMLInputElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLInputElement)) throw new Error(`Expected HTMLInputElement: ${selector}`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLInputElement))
+    throw new Error(`Expected HTMLInputElement: ${selector}`);
+  return element;
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
-  return el;
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
+  return element;
 }
 
 function queryButton(parent: Element, selector: string): HTMLButtonElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLButtonElement))
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLButtonElement))
     throw new Error(`Expected HTMLButtonElement: ${selector}`);
-  return el;
+  return element;
 }
 
-function fireInput(el: HTMLInputElement, value: string): void {
-  el.value = value;
-  el.dispatchEvent(new Event('input'));
+function fireInput(element: HTMLInputElement, value: string): void {
+  element.value = value;
+  element.dispatchEvent(new Event('input'));
 }
 
 // ---------------------------------------------------------------------------

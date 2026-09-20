@@ -16,31 +16,24 @@ import { readFile } from 'node:fs/promises';
 import '@angular/compiler';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { http, HttpResponse } from 'msw';
+import type { http, HttpResponse } from 'msw';
 
 import { server } from '../msw-server';
-import {
-  HttpClient,
-  HttpContext,
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-} from '@angular/common/http';
+import type { HttpClient, HttpContext } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting,
 } from '@angular/platform-browser-dynamic/testing';
-import { firstValueFrom } from 'rxjs';
+import type { firstValueFrom } from 'rxjs';
 
-import { Api } from '../../src/app/api/generated/api';
-import {
-  ApiConfiguration,
-  provideApiConfiguration,
-} from '../../src/app/api/generated/api-configuration';
+import type { Api } from '../../src/app/api/generated/api';
+import type { ApiConfiguration as ApiConfig } from '../../src/app/api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../src/app/api/generated/api-configuration';
 import * as operations from '../../src/app/api/generated/functions';
 import { createHandlers, createStrictHandlers } from '../../src/mocks/create-handlers';
-import { Repository } from '../../src/mocks/repository';
+import { Repository as Repo } from '../../src/mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -70,10 +63,8 @@ import {
   type OpenApiSpec,
   type OperationDescriptor,
 } from './response-validation';
-import {
-  demoSessionInterceptor,
-  withIfMatch,
-} from '../../src/app/core/api/demo-session.interceptor';
+import type { withIfMatch } from '../../src/app/core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '../../src/app/core/api/demo-session.interceptor';
 
 const BASE_URL = 'http://localhost/api/v1';
 const API_ROOT = '/api/v1';
@@ -109,8 +100,8 @@ describe('T26-AC01 operation inventory parity', () => {
 
   it('exposes every operationId in the generated SDK functions module', () => {
     for (const op of operationsById.values()) {
-      const fn = (operations as unknown as Record<string, unknown>)[op.operationId];
-      expect(typeof fn, `SDK function ${op.operationId} is missing`).toBe('function');
+      const function_ = (operations as unknown as Record<string, unknown>)[op.operationId];
+      expect(typeof function_, `SDK function ${op.operationId} is missing`).toBe('function');
     }
   });
 
@@ -218,7 +209,7 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
     // Every Problem code the contract documents MUST appear at least
     // once; this catches both an accidental removal in the spec and a
     // schema fork that orphaned a code.
-    const matrix = Array.from(problemMatrix.keys());
+    const matrix = [...problemMatrix.keys()];
     expect(matrix.length).toBeGreaterThanOrEqual(documentedCodes.size);
   });
 });
@@ -239,7 +230,7 @@ describe('T26-AC03 business-error code coverage', () => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
+        provideApiConfig(BASE_URL),
       ],
       teardown: { destroyAfterEach: true },
     });
@@ -503,7 +494,7 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
             colorName: 'X',
             swatchHex: '#000000',
             storageGb: 256,
-            price: { amount: 33999.5, currency: 'HUF' },
+            price: { amount: 33_999.5, currency: 'HUF' },
             availability: 'in_stock',
             maxQuantity: 5,
             images: [{ id: 'i', src: '/assets/x.webp', alt: 'x', width: 1, height: 1 }],
@@ -551,7 +542,7 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
 // ---------------------------------------------------------------------------
 
 function makeOptions(scenario: ScenarioDescriptor): {
-  repository: Repository;
+  repository: Repo;
   clock: ReturnType<typeof createFixedClock>;
   ids: ReturnType<typeof createDeterministicIds>;
   scenario: ScenarioDescriptor;
@@ -559,8 +550,8 @@ function makeOptions(scenario: ScenarioDescriptor): {
 } {
   const clock = createFixedClock('2026-09-15T10:00:00.000Z');
   const ids = createDeterministicIds(scenario.seed);
-  const repository = new Repository(scenario, ids, clock);
-  return { repository, clock, ids, scenario, apiRoot: API_ROOT };
+  const repo = new Repo(scenario, ids, clock);
+  return { repository: repo, clock, ids, scenario, apiRoot: API_ROOT };
 }
 
 function collectRegisteredRoutes(): Set<string> {
@@ -599,9 +590,10 @@ function routeKey(handler: unknown): string {
 function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unknown {
   const schemas = (spec.components?.schemas ?? {}) as Record<string, Record<string, unknown>>;
   switch (op.operationId) {
-    case 'getConfig':
+    case 'getConfig': {
       return schemas['DemoConfig']?.['examples']?.[0] ?? emptyObject(schemas, 'DemoConfig');
-    case 'listProducts':
+    }
+    case 'listProducts': {
       return {
         items: [],
         total: 0,
@@ -609,8 +601,10 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
         pageSize: 12,
         facets: { brands: [], storageGb: [] },
       };
-    case 'getProduct':
+    }
+    case 'getProduct': {
       return schemas['Product']?.['examples']?.[0] ?? emptyObject(schemas, 'Product');
+    }
     case 'createCart':
     case 'getCart': {
       return (
@@ -627,7 +621,7 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
     }
     case 'addCartItem':
     case 'setCartItemQuantity':
-    case 'removeCartItem':
+    case 'removeCartItem': {
       return {
         id: 'cart-fixture',
         version: 2,
@@ -637,19 +631,23 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
         status: 'active',
         expiresAt: '2026-09-15T10:00:00.000Z',
       };
-    case 'getCheckoutOptions':
+    }
+    case 'getCheckoutOptions': {
       return (
         schemas['CheckoutOptions']?.['examples']?.[0] ?? emptyObject(schemas, 'CheckoutOptions')
       );
+    }
     case 'getCheckoutSession':
-    case 'updateCheckout':
+    case 'updateCheckout': {
       return (
         schemas['CheckoutSession']?.['examples']?.[0] ?? emptyObject(schemas, 'CheckoutSession')
       );
-    case 'createCheckoutQuote':
+    }
+    case 'createCheckoutQuote': {
       return schemas['Quote']?.['examples']?.[0] ?? emptyObject(schemas, 'Quote');
+    }
     case 'createPaymentIntent':
-    case 'getPaymentIntent':
+    case 'getPaymentIntent': {
       // PaymentIntent has no schema-level example; build a hand-rolled
       // fixture that satisfies every required field.
       return {
@@ -660,11 +658,14 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
         isSimulation: true,
         amount: { amount: 0, currency: 'HUF' },
       };
+    }
     case 'createOrder':
-    case 'getOrder':
+    case 'getOrder': {
       return schemas['OrderReceipt']?.['examples']?.[0] ?? emptyObject(schemas, 'OrderReceipt');
-    default:
+    }
+    default: {
       return {};
+    }
   }
 }
 
@@ -683,18 +684,16 @@ function emptyObject(
   return out;
 }
 
-function sampleValueFor(prop: Record<string, unknown> | undefined): unknown {
-  if (!prop) return null;
-  if (Array.isArray(prop['enum']) && prop['enum'].length > 0) return prop['enum'][0];
-  const type = prop['type'];
+function sampleValueFor(property: Record<string, unknown> | undefined): unknown {
+  if (!property) return null;
+  if (Array.isArray(property['enum']) && property['enum'].length > 0) return property['enum'][0];
+  const type = property['type'];
   if (type === 'string') {
-    if (prop['format'] === 'date-time') return '2026-09-15T10:00:00.000Z';
-    return 'demo';
+    return property['format'] === 'date-time' ? '2026-09-15T10:00:00.000Z' : 'demo';
   }
   if (type === 'integer' || type === 'number') return 1;
   if (type === 'boolean') return true;
-  if (type === 'array') return [];
-  return {};
+  return type === 'array' ? [] : {};
 }
 
 function breakRequestFixture(op: OperationDescriptor): unknown {
@@ -708,17 +707,22 @@ function breakRequestFixture(op: OperationDescriptor): unknown {
 
 function sampleRequest(op: OperationDescriptor): unknown {
   switch (op.operationId) {
-    case 'createCart':
+    case 'createCart': {
       return { providerId: 'mi-bolt' };
-    case 'addCartItem':
+    }
+    case 'addCartItem': {
       return { variantId: 'demo-one-5g-graphite-256', quantity: 1 };
-    case 'setCartItemQuantity':
+    }
+    case 'setCartItemQuantity': {
       return { quantity: 1 };
-    case 'updateCheckout':
+    }
+    case 'updateCheckout': {
       return { paymentMethod: 'demo_cod' };
-    case 'createPaymentIntent':
+    }
+    case 'createPaymentIntent': {
       return { cartId: 'cart-x', quoteId: 'quote-x' };
-    case 'createOrder':
+    }
+    case 'createOrder': {
       return {
         cartId: 'cart-x',
         quoteId: 'quote-x',
@@ -726,8 +730,10 @@ function sampleRequest(op: OperationDescriptor): unknown {
         acceptedTerms: true,
         acknowledgedSimulation: true,
       };
-    default:
+    }
+    default: {
       return {};
+    }
   }
 }
 
@@ -738,24 +744,29 @@ function buildDriftedFixture(op: OperationDescriptor): unknown {
   // required field into a wrong type so AJV fails on type mismatch.
   const fixture = buildHappyPathFixture(op, dereferencedSpec) as Record<string, unknown>;
   switch (op.operationId) {
-    case 'getConfig':
+    case 'getConfig': {
       fixture['maximumLineQuantity'] = 'five'; // wrong type
       break;
-    case 'listProducts':
+    }
+    case 'listProducts': {
       fixture['page'] = 'one'; // wrong type
       break;
+    }
     case 'createCart':
     case 'getCart':
     case 'addCartItem':
     case 'setCartItemQuantity':
-    case 'removeCartItem':
+    case 'removeCartItem': {
       fixture['version'] = 'one'; // wrong type
       break;
-    case 'createCheckoutQuote':
+    }
+    case 'createCheckoutQuote': {
       fixture['cartVersion'] = 'one'; // wrong type
       break;
-    default:
+    }
+    default: {
       fixture.driftMarker = true;
+    }
   }
   return fixture;
 }
@@ -772,7 +783,7 @@ function extractProblemCodes(op: OperationDescriptor): string[] {
     if (!schema || typeof schema !== 'object') continue;
     collectEnumStrings(schema, codes);
   }
-  return Array.from(codes);
+  return [...codes];
 }
 
 function collectEnumStrings(node: unknown, codes: Set<string>): void {
@@ -830,8 +841,8 @@ async function invokeResolver(
   // track once/used state). Instead we boot a temporary node server
   // with the exact same handler list and route the request through it.
   const { setupServer } = await import('msw/node');
-  const tempServer = setupServer(...(handlers as Parameters<typeof setupServer>));
-  tempServer.listen({ onUnhandledRequest: 'error' });
+  const temporaryServer = setupServer(...(handlers as Parameters<typeof setupServer>));
+  temporaryServer.listen({ onUnhandledRequest: 'error' });
   try {
     const init: RequestInit = {
       method,
@@ -843,7 +854,7 @@ async function invokeResolver(
     const parsed = text.length > 0 ? safeParse(text) : undefined;
     return { status: res.status, body: parsed, headers: res.headers };
   } finally {
-    tempServer.close();
+    temporaryServer.close();
   }
 }
 
@@ -864,7 +875,7 @@ export type _UsedImports =
   | typeof HttpContext
   | typeof firstValueFrom
   | typeof Api
-  | typeof ApiConfiguration
+  | typeof ApiConfig
   | typeof withIfMatch
   | typeof http
   | typeof HttpResponse;

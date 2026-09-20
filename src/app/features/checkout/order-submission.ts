@@ -67,7 +67,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { ApiConfiguration as ApiConfig } from '../../api/generated/api-configuration';
 
 import type { OrderReceipt } from '../../api/generated/models/order-receipt';
 import type { PaymentIntent } from '../../api/generated/models/payment-intent';
@@ -106,13 +106,17 @@ export type SubmitOutcome =
       readonly source: 'getOrder' | 'replay';
     };
 
-/** Recovered order returned by `recoverPersistedOrder`. */
+/**
+Recovered order returned by `recoverPersistedOrder`.
+*/
 export interface RecoveredOrder {
   readonly orderId: string;
   readonly source: 'getOrder' | 'replay';
 }
 
-/** Normalized order body persisted for replay / recovery. */
+/**
+Normalized order body persisted for replay / recovery.
+*/
 export interface NormalizedOrderBody {
   readonly cartId: string;
   readonly quoteId: string;
@@ -122,7 +126,9 @@ export interface NormalizedOrderBody {
   readonly acknowledgedSimulation: true;
 }
 
-/** Whitelist-only context the safe logger emits. */
+/**
+Whitelist-only context the safe logger emits.
+*/
 export interface SafeLogContext {
   readonly cartId?: string;
   readonly quoteId?: string;
@@ -146,7 +152,9 @@ export interface SafeLogContext {
   readonly amount?: { amount: number; currency: string };
 }
 
-/** Safe-logger sink — receives one batch of redacted entries per call. */
+/**
+Safe-logger sink — receives one batch of redacted entries per call.
+*/
 export type SafeLogger = (entries: readonly SafeLogContext[]) => void;
 
 const noopLogger: SafeLogger = () => undefined;
@@ -204,10 +212,14 @@ export class OrderSubmission {
   private readonly cart = inject(CartFacade);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Active clock — overridable in tests via `bindClock`. */
+  /**
+  Active clock — overridable in tests via `bindClock`.
+  */
   private clock: FakeClockLike = new RealClock();
 
-  /** Active safe-logger sink — overridable in tests via `bindSafeLogger`. */
+  /**
+  Active safe-logger sink — overridable in tests via `bindSafeLogger`.
+  */
   private logger: SafeLogger = noopLogger;
 
   /**
@@ -217,19 +229,29 @@ export class OrderSubmission {
    */
   private inFlightPromise: Promise<SubmitOutcome> | null = null;
 
-  /** `true` whenever a submit is currently executing. */
+  /**
+  `true` whenever a submit is currently executing.
+  */
   private readonly inFlightWritable: WritableSignal<boolean> = signal(false);
 
-  /** True when the last terminal outcome was `declined`. */
+  /**
+  True when the last terminal outcome was `declined`.
+  */
   private readonly declinedWritable: WritableSignal<boolean> = signal(false);
 
-  /** True when the last terminal outcome was `pending-timeout`. */
+  /**
+  True when the last terminal outcome was `pending-timeout`.
+  */
   private readonly timeoutWritable: WritableSignal<boolean> = signal(false);
 
-  /** Most recent `committed` / `declined` outcome. `null` at start. */
+  /**
+  Most recent `committed` / `declined` outcome. `null` at start.
+  */
   private readonly lastOutcomeWritable: WritableSignal<SubmitOutcome | null> = signal(null);
 
-  /** Active payment intent id, or null when no polling is running. */
+  /**
+  Active payment intent id, or null when no polling is running.
+  */
   private readonly pollingIntentWritable: WritableSignal<string | null> = signal(null);
 
   /**
@@ -239,17 +261,21 @@ export class OrderSubmission {
    */
   private readonly progressSubscribers = new Set<(tick: PaymentProgressTick) => void>();
 
-  /** Timer handle for the active polling tick (used by `abort`). */
+  /**
+  Timer handle for the active polling tick (used by `abort`).
+  */
   private pollHandle: number | null = null;
 
-  /** `AbortController` for the active polling loop. */
+  /**
+  `AbortController` for the active polling loop.
+  */
   private pollAbort: AbortController | null = null;
 
   constructor() {
     // The generated `Api` class needs decorator metadata for its
     // constructor injection; vitest's esbuild pipeline strips that
     // metadata, so wire it manually (same pattern CartFacade uses).
-    this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
+    this.api = new Api(inject(ApiConfig), inject(HttpClient));
     this.destroyRef.onDestroy(() => {
       this.cancelPolling();
     });
@@ -259,43 +285,62 @@ export class OrderSubmission {
   // Public read-only surface.
   // -------------------------------------------------------------------------
 
-  /** `true` while a submit is executing. */
+  /**
+  `true` while a submit is executing.
+  */
   readonly inFlight: Signal<boolean> = this.inFlightWritable.asReadonly();
 
-  /** `true` when the last terminal outcome was `declined`. */
+  /**
+  `true` when the last terminal outcome was `declined`.
+  */
   readonly declined: Signal<boolean> = this.declinedWritable.asReadonly();
 
-  /** `true` when the last terminal outcome was `pending-timeout`. */
+  /**
+  `true` when the last terminal outcome was `pending-timeout`.
+  */
   readonly timedOut: Signal<boolean> = this.timeoutWritable.asReadonly();
 
-  /** Most recent `committed` / `declined` outcome. */
+  /**
+  Most recent `committed` / `declined` outcome.
+  */
   readonly lastOutcome: Signal<SubmitOutcome | null> = this.lastOutcomeWritable.asReadonly();
 
-  /** Active payment intent id while polling is in flight. */
+  /**
+  Active payment intent id while polling is in flight.
+  */
   readonly pollingIntent: Signal<string | null> = this.pollingIntentWritable.asReadonly();
 
-  /** True when the page can offer a retry (declined + valid form). */
-  readonly canRetry: Signal<boolean> = computed(() => {
-    if (!this.declinedWritable()) return false;
-    return this.checkout.readyToSubmit();
-  });
+  /**
+  True when the page can offer a retry (declined + valid form).
+  */
+  readonly canRetry: Signal<boolean> = computed(() =>
+    this.declinedWritable() ? this.checkout.readyToSubmit() : false,
+  );
 
-  /** True when the user can switch to demo_cod after a declined card. */
+  /**
+  True when the user can switch to demo_cod after a declined card.
+  */
   readonly canChangeMethod: Signal<boolean> = computed(() => this.declinedWritable());
 
-  /** True when a pending-timeout was recorded and recovery is safe. */
+  /**
+  True when a pending-timeout was recorded and recovery is safe.
+  */
   readonly canRetryUnknown: Signal<boolean> = computed(() => this.timeoutWritable());
 
   // -------------------------------------------------------------------------
   // Test seams — bind a deterministic clock / safe-logger sink.
   // -------------------------------------------------------------------------
 
-  /** Replaces the clock used for the polling loop. */
+  /**
+  Replaces the clock used for the polling loop.
+  */
   bindClock(clock: FakeClockLike): void {
     this.clock = clock;
   }
 
-  /** Replaces the safe-logger sink; entries are already redacted. */
+  /**
+  Replaces the safe-logger sink; entries are already redacted.
+  */
   bindSafeLogger(logger: SafeLogger): void {
     this.logger = logger;
   }
@@ -369,8 +414,9 @@ export class OrderSubmission {
       case 'createPaymentIntent':
       case 'getPaymentIntent':
       case 'createOrder':
-      case 'getOrder':
+      case 'getOrder': {
         return true;
+      }
     }
   }
 
@@ -382,34 +428,30 @@ export class OrderSubmission {
   private readonly createPaymentIntent = async (body: {
     cartId: string;
     quoteId: string;
-  }): Promise<PaymentIntent> => {
-    return firstValueFrom(
+  }): Promise<PaymentIntent> =>
+    firstValueFrom(
       this.api.invoke(functions.createPaymentIntent, {
         'Idempotency-Key': freshIdempotencyKey(),
         body,
       }),
     );
-  };
 
-  private readonly getPaymentIntent = async (paymentIntentId: string): Promise<PaymentIntent> => {
-    return firstValueFrom(this.api.invoke(functions.getPaymentIntent, { paymentIntentId }));
-  };
+  private readonly getPaymentIntent = async (paymentIntentId: string): Promise<PaymentIntent> =>
+    firstValueFrom(this.api.invoke(functions.getPaymentIntent, { paymentIntentId }));
 
   private readonly createOrder = async (
     key: string,
     body: NormalizedOrderBody,
-  ): Promise<OrderReceipt> => {
-    return firstValueFrom(
+  ): Promise<OrderReceipt> =>
+    firstValueFrom(
       this.api.invoke(functions.createOrder, {
         'Idempotency-Key': key,
         body,
       }),
     );
-  };
 
-  private readonly getOrder = async (orderId: string): Promise<OrderReceipt> => {
-    return firstValueFrom(this.api.invoke(functions.getOrder, { orderId }));
-  };
+  private readonly getOrder = async (orderId: string): Promise<OrderReceipt> =>
+    firstValueFrom(this.api.invoke(functions.getOrder, { orderId }));
 
   // -------------------------------------------------------------------------
   // Submission driver.
@@ -423,11 +465,9 @@ export class OrderSubmission {
       return { kind: 'unknown', safeKey: '', reason: 'Hiányzó kosár vagy árajánlat.' };
     }
 
-    if (paymentMethod === 'demo_cod') {
-      return this.commitDirectly(cartId, quote.id, null);
-    }
-
-    return this.runCardFlow(cartId, quote.id);
+    return paymentMethod === 'demo_cod'
+      ? this.commitDirectly(cartId, quote.id, null)
+      : this.runCardFlow(cartId, quote.id);
   }
 
   /**
@@ -636,8 +676,8 @@ export class OrderSubmission {
       });
       try {
         current = await this.getPaymentIntent(current.id);
-      } catch (err) {
-        const mapped = mapError(err);
+      } catch (error) {
+        const mapped = mapError(error);
         // A poll failure does not change intent state — keep going.
         this.logger([
           {
@@ -709,14 +749,14 @@ export class OrderSubmission {
 // Pure helpers.
 // ---------------------------------------------------------------------------
 
-function mapError(err: unknown): { status: number; code: string; detail: string } {
-  if (err instanceof HttpErrorResponse) {
-    const body = (err.error ?? {}) as { code?: string; detail?: string };
+function mapError(error: unknown): { status: number; code: string; detail: string } {
+  if (error instanceof HttpErrorResponse) {
+    const body = (error.error ?? {}) as { code?: string; detail?: string };
     return {
-      status: err.status,
+      status: error.status,
       code: body.code ?? 'UNKNOWN',
-      detail: body.detail ?? err.message,
+      detail: body.detail ?? error.message,
     };
   }
-  return { status: 0, code: 'SERVICE_UNAVAILABLE', detail: String(err) };
+  return { status: 0, code: 'SERVICE_UNAVAILABLE', detail: String(error) };
 }

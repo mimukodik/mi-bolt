@@ -16,7 +16,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { ApiConfiguration as ApiConfig } from '../../api/generated/api-configuration';
 import * as operations from '../../api/generated/functions';
 
 import { CheckoutFacade, type CheckoutError } from './checkout.facade';
@@ -42,7 +42,9 @@ type LoadState =
 })
 export class DeliveryPage {
   private readonly http = inject(HttpClient);
-  /** Not private: the template binds `[fields]="checkoutFacade.form"`. */
+  /**
+  Not private: the template binds `[fields]="checkoutFacade.form"`.
+  */
   readonly checkoutFacade = inject(CheckoutFacade);
   private readonly router = inject(Router);
   private readonly api: Api;
@@ -80,10 +82,9 @@ export class DeliveryPage {
   readonly saveFailureMessage = computed<string>(() => {
     const failure = this.saveFailure();
     if (failure === null) return '';
-    if (failure.detail === '') {
-      return 'A kosarad és az adataid megmaradtak. Próbáld újra.';
-    }
-    return `${failure.detail} A kosarad és az adataid megmaradtak. Próbáld újra.`;
+    return failure.detail === ''
+      ? 'A kosarad és az adataid megmaradtak. Próbáld újra.'
+      : `${failure.detail} A kosarad és az adataid megmaradtak. Próbáld újra.`;
   });
 
   constructor() {
@@ -92,7 +93,7 @@ export class DeliveryPage {
     // that metadata, so we wire it manually from `HttpClient` and
     // `ApiConfiguration`. The same `new Api(...)` call sees the live
     // HttpClient in the browser.
-    this.api = new Api(inject(ApiConfiguration), this.http);
+    this.api = new Api(inject(ApiConfig), this.http);
     void this.loadOptions();
   }
 
@@ -103,7 +104,7 @@ export class DeliveryPage {
       // over the wire response so the user sees ONLY what the server
       // told them is available.
       this.state.set({ kind: 'ready', options: response });
-    } catch (_err) {
+    } catch {
       // The exact cause is surfaced through the network console; the
       // user-visible message stays generic on purpose so we never
       // leak backend detail (R15).

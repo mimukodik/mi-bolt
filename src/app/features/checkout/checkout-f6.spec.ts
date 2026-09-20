@@ -62,12 +62,12 @@ describe('F6 (superseded) — DeliveryStep address accessors stay stable under r
 
     // Drive a flurry of writes the way real typing would, well beyond
     // what a single keystroke produces.
-    for (let i = 0; i < 50; i++) {
-      const n = String(i);
+    for (let index = 0; index < 50; index++) {
+      const n = String(index);
       step.setPostalCode(`10${n}`);
       step.setCity(`Város${n}`);
       step.setLine1(`Utca ${n}.`);
-      step.setLine2(i % 2 === 0 ? `Emelet ${n}` : '');
+      step.setLine2(index % 2 === 0 ? `Emelet ${n}` : '');
     }
     fixture.detectChanges();
 

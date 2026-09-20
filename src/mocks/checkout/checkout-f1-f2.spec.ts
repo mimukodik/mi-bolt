@@ -14,7 +14,7 @@ import { createHandlers, registerBusinessHandlers } from '../../mocks/create-han
 // the live application does.
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { checkoutHandlersEntry } from '../../mocks/checkout/checkout.handlers';
-import { Repository } from '../../mocks/repository';
+import { Repository as Repo } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
 import { server, useMswServer } from '../../../tests/msw-server';
 
@@ -29,10 +29,9 @@ interface CheckoutOptionsBody {
 }
 
 function isCheckoutOptionsBody(data: unknown): data is CheckoutOptionsBody {
-  if (typeof data !== 'object' || data === null) {
-    return false;
-  }
-  return 'deliveryOptions' in data && 'paymentMethods' in data;
+  return typeof data !== 'object' || data === null
+    ? false
+    : 'deliveryOptions' in data && 'paymentMethods' in data;
 }
 
 // Force-register the checkout entry.
@@ -48,10 +47,10 @@ describe('F1 - checkout.options responds 200 when handlers are added individuall
       clockOffsetMs: 0,
       isolated: true,
     };
-    const repository = new Repository(scenario, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
+    const repo = new Repo(scenario, ids, clock);
+    repo.loadProducts([DEMO_PRODUCT]);
     const handlers = createHandlers({
-      repository,
+      repository: repo,
       clock,
       ids,
       scenario,

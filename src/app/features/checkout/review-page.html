@@ -1,14 +1,14 @@
 @if (cartFacade.cart(); as cart) {
   @if (checkoutFacade.session(); as session) {
     <app-review-step
-      [quote]="quoteController.quote()"
       [cart]="cart"
       [draft]="session"
+      [quote]="quoteController.quote()"
       [state]="reviewState()"
       (editRequested)="onEditRequested()"
       (refreshQuote)="onRefreshQuote()"
       (submitRequested)="onSubmitRequested()"
-    ></app-review-step>
+    />
 
     @if (paymentStatus() !== 'idle' && paymentStatus() !== 'error') {
       <!-- OrderSubmission's polling/decline/unknown outcomes render
@@ -19,37 +19,37 @@
            room for the signal this container drives it from
            (FIX-63). -->
       <app-payment-progress
-        [status]="paymentStatus()"
         [pollCount]="pollCount()"
-        (retryRequested)="onPaymentRetry()"
+        [status]="paymentStatus()"
         (changeMethodRequested)="onPaymentChangeMethod()"
-      ></app-payment-progress>
+        (retryRequested)="onPaymentRetry()"
+      />
     }
     @if (submitFailure(); as failure) {
       @if (failure.kind === 'error') {
         <div class="submit-failure" data-testid="review-submit-failure">
           <app-status-message
-            [message]="submitFailureMessage()"
             severity="error"
+            [message]="submitFailureMessage()"
             [persistent]="true"
-          ></app-status-message>
+          />
           <app-button
-            variant="secondary"
-            size="comfortable"
-            label="Fizetési mód módosítása"
-            (pressed)="onPaymentChangeMethod()"
             data-testid="review-change-payment"
-          ></app-button>
+            label="Fizetési mód módosítása"
+            size="comfortable"
+            variant="secondary"
+            (pressed)="onPaymentChangeMethod()"
+          />
         </div>
       }
     }
   } @else {
     <div class="loading" data-testid="review-loading">
-      <app-loading-state variant="lines" label="Rendelés adatainak betöltése"></app-loading-state>
+      <app-loading-state label="Rendelés adatainak betöltése" variant="lines" />
     </div>
   }
 } @else {
   <div class="loading" data-testid="review-loading">
-    <app-loading-state variant="lines" label="Kosár betöltése"></app-loading-state>
+    <app-loading-state label="Kosár betöltése" variant="lines" />
   </div>
 }

@@ -18,7 +18,7 @@ import {
   deriveIdempotencyKey,
   hashPayload,
 } from '../../mocks/idempotency';
-import { Repository } from '../../mocks/repository';
+import { Repository as Repo } from '../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
 import { server, useMswServer } from '../../../tests/msw-server';
 
@@ -38,7 +38,7 @@ function quoteEtag(version: number): string {
   return `"${String(version)}"`;
 }
 
-function makeEnv(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')) {
+function makeEnvironment(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')) {
   const clock = createFixedClock(new Date(initialClockMs).toISOString());
   const ids = createDeterministicIds(7);
   const scenario = {
@@ -47,17 +47,17 @@ function makeEnv(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')) {
     clockOffsetMs: 0,
     isolated: true,
   };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
+  const repo = new Repo(scenario, ids, clock);
+  repo.loadProducts([DEMO_PRODUCT]);
   const idempotency = new IdempotencyStore(clock);
-  const domain = new CartDomain(repository, clock, ids, idempotency);
-  return { clock, ids, repository, idempotency, domain };
+  const domain = new CartDomain(repo, clock, ids, idempotency);
+  return { clock, ids, repository: repo, idempotency, domain };
 }
 
 describe('T07-AC01: variant merging and quantity boundary', () => {
   it('merges repeated adds of the same variant into one line and accumulates quantity', () => {
-    const env = makeEnv();
-    const cart = env.domain.createCart({
+    const environment = makeEnvironment();
+    const cart = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-1`,
     });
@@ -65,7 +65,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     if (!cart.ok) throw new Error('createCart failed');
     const cartId = cart.value.id;
     const ifMatch1 = quoteEtag(cart.value.version);
-    const first = env.domain.addCartItem({
+    const first = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId,
       ifMatch: ifMatch1,
@@ -76,7 +76,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     expect(first.ok).toBe(true);
     if (!first.ok) throw new Error('first add failed');
     const ifMatch2 = quoteEtag(first.value.version);
-    const second = env.domain.addCartItem({
+    const second = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId,
       ifMatch: ifMatch2,
@@ -94,14 +94,14 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
   });
 
   it('keeps different variants on separate lines and computes subtotals per line', () => {
-    const env = makeEnv();
-    const cart = env.domain.createCart({
+    const environment = makeEnvironment();
+    const cart = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-4`,
     });
     if (!cart.ok) throw new Error('createCart failed');
     const ifMatch1 = quoteEtag(cart.value.version);
-    const a = env.domain.addCartItem({
+    const a = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
       ifMatch: ifMatch1,
@@ -111,7 +111,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     });
     if (!a.ok) throw new Error('add G256 failed');
     const ifMatch2 = quoteEtag(a.value.version);
-    const b = env.domain.addCartItem({
+    const b = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
       ifMatch: ifMatch2,
@@ -131,13 +131,13 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
   });
 
   it('rejects quantity above max (5) with 422 QUANTITY_LIMIT and never silently clamps', () => {
-    const env = makeEnv();
-    const cart = env.domain.createCart({
+    const environment = makeEnvironment();
+    const cart = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-7`,
     });
     if (!cart.ok) throw new Error('createCart failed');
-    const tooHigh = env.domain.addCartItem({
+    const tooHigh = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
       ifMatch: quoteEtag(cart.value.version),
@@ -150,18 +150,18 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     expect(tooHigh.problem.status).toBe(422);
     expect(tooHigh.problem.code).toBe('QUANTITY_LIMIT');
     // Cart unchanged.
-    expect(env.repository.getCart(cart.value.id)?.items).toHaveLength(0);
-    expect(env.repository.getCart(cart.value.id)?.version).toBe(1);
+    expect(environment.repository.getCart(cart.value.id)?.items).toHaveLength(0);
+    expect(environment.repository.getCart(cart.value.id)?.version).toBe(1);
   });
 
   it('rejects quantity below 1 with 422 QUANTITY_LIMIT', () => {
-    const env = makeEnv();
-    const cart = env.domain.createCart({
+    const environment = makeEnvironment();
+    const cart = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-9`,
     });
     if (!cart.ok) throw new Error('createCart failed');
-    const tooLow = env.domain.addCartItem({
+    const tooLow = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
       ifMatch: quoteEtag(cart.value.version),
@@ -176,13 +176,13 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
   });
 
   it('rejects merged total above variant maxQuantity with 422 QUANTITY_LIMIT', () => {
-    const env = makeEnv();
-    const cart = env.domain.createCart({
+    const environment = makeEnvironment();
+    const cart = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-11`,
     });
     if (!cart.ok) throw new Error('createCart failed');
-    const first = env.domain.addCartItem({
+    const first = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
       ifMatch: quoteEtag(cart.value.version),
@@ -191,7 +191,7 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
       quantity: 4,
     });
     if (!first.ok) throw new Error('first add failed');
-    const tooMuch = env.domain.addCartItem({
+    const tooMuch = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
       ifMatch: quoteEtag(first.value.version),
@@ -204,19 +204,19 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
     expect(tooMuch.problem.status).toBe(422);
     expect(tooMuch.problem.code).toBe('QUANTITY_LIMIT');
     // Cart preserved.
-    const stored = env.repository.getCart(cart.value.id);
+    const stored = environment.repository.getCart(cart.value.id);
     expect(stored?.items[0]?.quantity).toBe(4);
     expect(stored?.version).toBe(2);
   });
 
   it('rejects unknown variant ids with 404 NOT_FOUND', () => {
-    const env = makeEnv();
-    const cart = env.domain.createCart({
+    const environment = makeEnvironment();
+    const cart = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-14`,
     });
     if (!cart.ok) throw new Error('createCart failed');
-    const missing = env.domain.addCartItem({
+    const missing = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: cart.value.id,
       ifMatch: quoteEtag(cart.value.version),
@@ -233,14 +233,14 @@ describe('T07-AC01: variant merging and quantity boundary', () => {
 
 describe('T07-AC02: version increments and stale-version guard', () => {
   it('increments cart version by exactly one on every successful mutation', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-16`,
     });
     if (!created.ok) throw new Error('createCart failed');
     expect(created.value.version).toBe(1);
-    const firstAdd = env.domain.addCartItem({
+    const firstAdd = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -250,7 +250,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     });
     if (!firstAdd.ok) throw new Error('first add failed');
     expect(firstAdd.value.version).toBe(2);
-    const secondAdd = env.domain.addCartItem({
+    const secondAdd = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(firstAdd.value.version),
@@ -261,7 +261,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     if (!secondAdd.ok) throw new Error('second add failed');
     expect(secondAdd.value.version).toBe(3);
     const itemId = secondAdd.value.items[0]?.id ?? '';
-    const set = env.domain.setCartItemQuantity({
+    const set = environment.domain.setCartItemQuantity({
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId,
@@ -271,7 +271,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     });
     if (!set.ok) throw new Error('set failed');
     expect(set.value.version).toBe(4);
-    const removed = env.domain.removeCartItem({
+    const removed = environment.domain.removeCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId,
@@ -283,14 +283,14 @@ describe('T07-AC02: version increments and stale-version guard', () => {
   });
 
   it('returns 409 CART_VERSION_CONFLICT on stale If-Match without mutating the cart', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-17`,
     });
     if (!created.ok) throw new Error('createCart failed');
     // First successful add -> v2.
-    const first = env.domain.addCartItem({
+    const first = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -300,7 +300,7 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     });
     if (!first.ok) throw new Error('first add failed');
     // Second attempt uses the stale (initial) version -> conflict.
-    const stale = env.domain.addCartItem({
+    const stale = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -312,20 +312,20 @@ describe('T07-AC02: version increments and stale-version guard', () => {
     if (stale.ok) throw new Error('expected rejection');
     expect(stale.problem.status).toBe(409);
     expect(stale.problem.code).toBe('CART_VERSION_CONFLICT');
-    const stored = env.repository.getCart(created.value.id);
+    const stored = environment.repository.getCart(created.value.id);
     expect(stored?.version).toBe(2);
     expect(stored?.items).toHaveLength(1);
     expect(stored?.items[0]?.variantId).toBe(VARIANT_G256);
   });
 
   it('totals are whole HUF derived from catalogue prices', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-20`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const result = env.domain.addCartItem({
+    const result = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -343,13 +343,13 @@ describe('T07-AC02: version increments and stale-version guard', () => {
 
 describe('T07-AC03: idempotency replay and conflict', () => {
   it('replays the cached response before the version check', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-22`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const initialAdd = env.domain.addCartItem({
+    const initialAdd = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -360,7 +360,7 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     if (!initialAdd.ok) throw new Error('add failed');
     // Replay uses a stale If-Match - replay must win over the version
     // check, returning the original cart body without mutating.
-    const replay = env.domain.addCartItem({
+    const replay = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: '"1"',
@@ -371,17 +371,17 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     expect(replay.ok).toBe(true);
     if (!replay.ok) throw new Error('expected replay');
     expect(replay.value.version).toBe(initialAdd.value.version);
-    expect(env.repository.getCart(created.value.id)?.version).toBe(2);
+    expect(environment.repository.getCart(created.value.id)?.version).toBe(2);
   });
 
   it('returns 409 IDEMPOTENCY_CONFLICT when the same key carries a different payload', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-24`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const first = env.domain.addCartItem({
+    const first = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -390,7 +390,7 @@ describe('T07-AC03: idempotency replay and conflict', () => {
       quantity: 1,
     });
     if (!first.ok) throw new Error('first add failed');
-    const conflict = env.domain.addCartItem({
+    const conflict = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(first.value.version),
@@ -402,22 +402,22 @@ describe('T07-AC03: idempotency replay and conflict', () => {
     if (conflict.ok) throw new Error('expected conflict');
     expect(conflict.problem.status).toBe(409);
     expect(conflict.problem.code).toBe('IDEMPOTENCY_CONFLICT');
-    expect(env.repository.getCart(created.value.id)?.version).toBe(2);
+    expect(environment.repository.getCart(created.value.id)?.version).toBe(2);
   });
 
   it('expires idempotency cache entries after the 24-hour window', () => {
-    const env = makeEnv();
+    const environment = makeEnvironment();
     // We exercise the cache boundary by clearing the entry directly so
     // the cart and idempotency expiry timelines (both 24h) do not
     // collapse into a 410. The IdempotencyStore's expiry logic is
     // covered by the next test; this one proves the cart-domain wires
     // a missing replay into a fresh execution path.
-    const created = env.domain.createCart({
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-26`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const first = env.domain.addCartItem({
+    const first = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -426,8 +426,8 @@ describe('T07-AC03: idempotency replay and conflict', () => {
       quantity: 1,
     });
     if (!first.ok) throw new Error('first add failed');
-    env.idempotency.clear();
-    const after = env.domain.addCartItem({
+    environment.idempotency.clear();
+    const after = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(first.value.version),
@@ -441,13 +441,13 @@ describe('T07-AC03: idempotency replay and conflict', () => {
   });
 
   it('keeps the replay inside the 24-hour window when the clock advances partially', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-26b`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const first = env.domain.addCartItem({
+    const first = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -456,8 +456,8 @@ describe('T07-AC03: idempotency replay and conflict', () => {
       quantity: 1,
     });
     if (!first.ok) throw new Error('first add failed');
-    env.clock.advanceMs(IDEMPOTENCY_WINDOW_MS - 1);
-    const replay = env.domain.addCartItem({
+    environment.clock.advanceMs(IDEMPOTENCY_WINDOW_MS - 1);
+    const replay = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: '"99"',
@@ -486,38 +486,38 @@ describe('T07-AC03: idempotency replay and conflict', () => {
   });
 
   it('IdempotencyStore returns cached outcomes and clears expired entries', () => {
-    const env = makeEnv();
-    env.idempotency.record('k', 'hash-a', { status: 201, body: { hello: 'world' } });
-    expect(env.idempotency.find('k', 'hash-a')).toEqual({
+    const environment = makeEnvironment();
+    environment.idempotency.record('k', 'hash-a', { status: 201, body: { hello: 'world' } });
+    expect(environment.idempotency.find('k', 'hash-a')).toEqual({
       status: 201,
       body: { hello: 'world' },
     });
-    expect(env.idempotency.find('k', 'hash-b')).toBeNull();
-    expect(env.idempotency.hasConflictingPayload('k', 'hash-b')).toBe(true);
-    env.clock.advanceMs(IDEMPOTENCY_WINDOW_MS + 1);
-    expect(env.idempotency.find('k', 'hash-a')).toBeNull();
-    expect(env.idempotency.hasConflictingPayload('k', 'hash-b')).toBe(false);
+    expect(environment.idempotency.find('k', 'hash-b')).toBeNull();
+    expect(environment.idempotency.hasConflictingPayload('k', 'hash-b')).toBe(true);
+    environment.clock.advanceMs(IDEMPOTENCY_WINDOW_MS + 1);
+    expect(environment.idempotency.find('k', 'hash-a')).toBeNull();
+    expect(environment.idempotency.hasConflictingPayload('k', 'hash-b')).toBe(false);
   });
 
   it('IdempotencyStore.clear and size expose the test-only contract', () => {
-    const env = makeEnv();
-    expect(env.idempotency.size()).toBe(0);
-    env.idempotency.record('k', 'hash', { status: 200, body: null });
-    expect(env.idempotency.size()).toBe(1);
-    env.idempotency.clear();
-    expect(env.idempotency.size()).toBe(0);
+    const environment = makeEnvironment();
+    expect(environment.idempotency.size()).toBe(0);
+    environment.idempotency.record('k', 'hash', { status: 200, body: null });
+    expect(environment.idempotency.size()).toBe(1);
+    environment.idempotency.clear();
+    expect(environment.idempotency.size()).toBe(0);
   });
 });
 
 describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
   it('returns 410 CART_EXPIRED once now >= expiresAt and preserves cart content', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-28`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const initialAdd = env.domain.addCartItem({
+    const initialAdd = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -526,13 +526,13 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
       quantity: 2,
     });
     if (!initialAdd.ok) throw new Error('add failed');
-    env.clock.advanceMs(CART_DURATION_MS);
-    const get = env.domain.getCart({ sessionId: SESSION_A, cartId: created.value.id });
+    environment.clock.advanceMs(CART_DURATION_MS);
+    const get = environment.domain.getCart({ sessionId: SESSION_A, cartId: created.value.id });
     expect(get.ok).toBe(false);
     if (get.ok) throw new Error('expected expiry');
     expect(get.problem.status).toBe(410);
     expect(get.problem.code).toBe('CART_EXPIRED');
-    const addAfterExpiry = env.domain.addCartItem({
+    const addAfterExpiry = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(initialAdd.value.version),
@@ -544,19 +544,19 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
     if (addAfterExpiry.ok) throw new Error('expected expiry');
     expect(addAfterExpiry.problem.status).toBe(410);
     // Visible cart content unchanged on 410 (still v2 with two units).
-    const stored = env.repository.getCart(created.value.id);
+    const stored = environment.repository.getCart(created.value.id);
     expect(stored?.version).toBe(2);
     expect(stored?.items[0]?.quantity).toBe(2);
   });
 
   it('keeps cart content + version unchanged when a 409 CART_VERSION_CONFLICT is raised', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-31`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const first = env.domain.addCartItem({
+    const first = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -565,7 +565,7 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
       quantity: 1,
     });
     if (!first.ok) throw new Error('first add failed');
-    const stale = env.domain.addCartItem({
+    const stale = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -574,7 +574,7 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
       quantity: 2,
     });
     expect(stale.ok).toBe(false);
-    const stored = env.repository.getCart(created.value.id);
+    const stored = environment.repository.getCart(created.value.id);
     expect(stored?.version).toBe(2);
     expect(stored?.items).toHaveLength(1);
     expect(stored?.items[0]?.variantId).toBe(VARIANT_G256);
@@ -584,13 +584,13 @@ describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
 
 describe('T07-AC05: session isolation', () => {
   it('rejects cross-session reads with 404 NOT_FOUND', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-34`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const wrongSession = env.domain.getCart({
+    const wrongSession = environment.domain.getCart({
       sessionId: SESSION_B,
       cartId: created.value.id,
     });
@@ -601,13 +601,13 @@ describe('T07-AC05: session isolation', () => {
   });
 
   it('rejects cross-session mutations with 404 NOT_FOUND', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-35`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const wrongSession = env.domain.addCartItem({
+    const wrongSession = environment.domain.addCartItem({
       sessionId: SESSION_B,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -620,21 +620,21 @@ describe('T07-AC05: session isolation', () => {
     expect(wrongSession.problem.status).toBe(404);
     expect(wrongSession.problem.code).toBe('NOT_FOUND');
     // Visible cart unchanged.
-    const stored = env.repository.getCart(created.value.id);
+    const stored = environment.repository.getCart(created.value.id);
     expect(stored?.items).toHaveLength(0);
     expect(stored?.version).toBe(1);
   });
 
   it('treats idempotency keys as session-scoped', () => {
-    const env = makeEnv();
+    const environment = makeEnvironment();
     // Session A creates a cart and records an idempotent create result.
-    const a = env.domain.createCart({
+    const a = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-37`,
     });
     if (!a.ok) throw new Error('a failed');
     // Session B uses the same Idempotency-Key and gets a fresh cart.
-    const b = env.domain.createCart({
+    const b = environment.domain.createCart({
       sessionId: SESSION_B,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-37`,
     });
@@ -646,8 +646,8 @@ describe('T07-AC05: session isolation', () => {
 
 describe('CartDomain header validation', () => {
   it('rejects malformed session, If-Match, and Idempotency-Key with 400', () => {
-    const env = makeEnv();
-    const badSession = env.domain.createCart({
+    const environment = makeEnvironment();
+    const badSession = environment.domain.createCart({
       sessionId: 'short',
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-38`,
     });
@@ -656,12 +656,12 @@ describe('CartDomain header validation', () => {
     expect(badSession.problem.status).toBe(400);
     expect(badSession.problem.code).toBe('VALIDATION_FAILED');
 
-    const created = env.domain.createCart({
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-39`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const missingKey = env.domain.addCartItem({
+    const missingKey = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: '"1"',
@@ -673,7 +673,7 @@ describe('CartDomain header validation', () => {
     if (missingKey.ok) throw new Error('expected rejection');
     expect(missingKey.problem.status).toBe(400);
 
-    const shortKey = env.domain.addCartItem({
+    const shortKey = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: '"1"',
@@ -685,7 +685,7 @@ describe('CartDomain header validation', () => {
     if (shortKey.ok) throw new Error('expected rejection');
     expect(shortKey.problem.status).toBe(400);
 
-    const badIfMatch = env.domain.addCartItem({
+    const badIfMatch = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: 'not-quoted',
@@ -697,7 +697,7 @@ describe('CartDomain header validation', () => {
     if (badIfMatch.ok) throw new Error('expected rejection');
     expect(badIfMatch.problem.status).toBe(400);
 
-    const missingIfMatch = env.domain.addCartItem({
+    const missingIfMatch = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: null,
@@ -711,13 +711,13 @@ describe('CartDomain header validation', () => {
   });
 
   it('rejects non-integer quantity with 422', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-42`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const fractional = env.domain.addCartItem({
+    const fractional = environment.domain.addCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       ifMatch: quoteEtag(created.value.version),
@@ -732,13 +732,13 @@ describe('CartDomain header validation', () => {
   });
 
   it('rejects setCartItemQuantity on unknown itemId with 404', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-44`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const result = env.domain.setCartItemQuantity({
+    const result = environment.domain.setCartItemQuantity({
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId: 'missing-line-id',
@@ -752,13 +752,13 @@ describe('CartDomain header validation', () => {
   });
 
   it('rejects removeCartItem on unknown itemId with 404', () => {
-    const env = makeEnv();
-    const created = env.domain.createCart({
+    const environment = makeEnvironment();
+    const created = environment.domain.createCart({
       sessionId: SESSION_A,
       idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-46`,
     });
     if (!created.ok) throw new Error('createCart failed');
-    const result = env.domain.removeCartItem({
+    const result = environment.domain.removeCartItem({
       sessionId: SESSION_A,
       cartId: created.value.id,
       itemId: 'missing-line-id',
@@ -772,15 +772,15 @@ describe('CartDomain header validation', () => {
 });
 
 describe('cart handler dispatch path (MSW + SDK wire)', () => {
-  let env: ReturnType<typeof makeEnv>;
+  let environment: ReturnType<typeof makeEnvironment>;
 
   beforeEach(() => {
-    env = makeEnv();
+    environment = makeEnvironment();
     const handlers = createHandlers({
-      repository: env.repository,
-      clock: env.clock,
-      ids: env.ids,
-      scenario: env.repository.getScenario(),
+      repository: environment.repository,
+      clock: environment.clock,
+      ids: environment.ids,
+      scenario: environment.repository.getScenario(),
       apiRoot: '/api/v1',
     });
     server.use(...handlers);
@@ -875,9 +875,8 @@ describe('cart handler dispatch path (MSW + SDK wire)', () => {
 
   it('returns 410 CART_EXPIRED after the clock advances past the cart expiry', async () => {
     const cart = await postCart();
-    env.clock.advanceMs(CART_DURATION_MS + 1);
+    environment.clock.advanceMs(CART_DURATION_MS + 1);
     const response = await fetch(url(`/carts/${cart.id}`), {
-      method: 'GET',
       headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-expired`),
     });
     expect(response.status).toBe(410);
@@ -888,7 +887,6 @@ describe('cart handler dispatch path (MSW + SDK wire)', () => {
   it('returns 404 when a different session reads the cart', async () => {
     const cart = await postCart();
     const response = await fetch(url(`/carts/${cart.id}`), {
-      method: 'GET',
       headers: {
         ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-other`),
         'X-Demo-Session': SESSION_B,

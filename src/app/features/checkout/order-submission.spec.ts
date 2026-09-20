@@ -33,13 +33,13 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
 import { IdempotencyStore } from '../../../mocks/idempotency';
-import { Repository } from '../../../mocks/repository';
+import { Repository as Repo } from '../../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
 import '../../../mocks/cart/cart.handlers';
@@ -70,14 +70,14 @@ useMswServer();
 const BASE_URL = 'http://localhost/api/v1';
 const VARIANT_G256 = 'demo-one-5g-graphite-256';
 
-interface Env {
-  repository: Repository;
+interface Environment {
+  repository: Repo;
   clock: ReturnType<typeof createFixedClock>;
   ids: ReturnType<typeof createDeterministicIds>;
   scenario: { name: string; seed: number; clockOffsetMs: number; isolated: boolean };
 }
 
-function makeEnv(scenarioName = 't23-suite'): Env {
+function makeEnvironment(scenarioName = 't23-suite'): Environment {
   const clock = createFixedClock(new Date(Date.parse('2026-09-15T10:00:00.000Z')).toISOString());
   const ids = createDeterministicIds(23);
   const scenario = {
@@ -86,26 +86,26 @@ function makeEnv(scenarioName = 't23-suite'): Env {
     clockOffsetMs: 0,
     isolated: true,
   };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
+  const repo = new Repo(scenario, ids, clock);
+  repo.loadProducts([DEMO_PRODUCT]);
   new IdempotencyStore(clock);
-  return { repository, clock, ids, scenario };
+  return { repository: repo, clock, ids, scenario };
 }
 
-let currentEnv: Env;
+let currentEnvironment: Environment;
 
 function buildHandlers(): readonly RequestHandler[] {
   return createHandlers({
-    repository: currentEnv.repository,
-    clock: currentEnv.clock,
-    ids: currentEnv.ids,
-    scenario: currentEnv.scenario,
+    repository: currentEnvironment.repository,
+    clock: currentEnvironment.clock,
+    ids: currentEnvironment.ids,
+    scenario: currentEnvironment.scenario,
     apiRoot: '/api/v1',
   });
 }
 
 beforeEach(() => {
-  currentEnv = makeEnv();
+  currentEnvironment = makeEnvironment();
   server.use(...buildHandlers());
 });
 
@@ -120,7 +120,7 @@ function configureTestBed(): void {
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
@@ -162,7 +162,9 @@ async function fillContactDeliveryPayment(
   expect(quote.ok).toBe(true);
 }
 
-/** Deterministic test clock — fires every queued callback once. */
+/**
+Deterministic test clock — fires every queued callback once.
+*/
 function makeFakeClock(): FakeClock {
   let pending = 0;
   const callbacks = new Map<number, () => void>();
@@ -184,10 +186,10 @@ function makeFakeClock(): FakeClock {
       }
     },
     fire(): void {
-      const ordered = [...callbacks.entries()].sort(([a], [b]) => a - b);
+      const ordered = [...callbacks].sort(([a], [b]) => a - b);
       callbacks.clear();
       pending = 0;
-      for (const [, cb] of ordered) cb();
+      for (const [, callback] of ordered) callback();
     },
     pending(): number {
       return pending;
@@ -202,7 +204,7 @@ function makeFakeClock(): FakeClock {
  * setTimeout queue; the HTTP roundtrip still needs an event-loop tick.
  */
 async function flushAsync(iterations = 5): Promise<void> {
-  for (let i = 0; i < iterations; i += 1) {
+  for (let index = 0; index < iterations; index += 1) {
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 }
@@ -318,7 +320,7 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
     // mock never resolves it. The override below forces the GET
     // handler to keep returning `pending` so the suite is not
     // sensitive to the mock's internal resolve-after-1s behaviour.
-    currentEnv = makeEnv('payment-pending-timeout');
+    currentEnvironment = makeEnvironment('payment-pending-timeout');
     server.resetHandlers();
     server.use(...buildHandlers());
   });
@@ -365,7 +367,7 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
     await flushAsync();
     // Drive the polling through exactly 10 ticks. The fake clock must
     // produce exactly 10 setTimeout calls (one per attempt).
-    for (let i = 0; i < 10; i += 1) {
+    for (let index = 0; index < 10; index += 1) {
       fakeClock.fire();
       await flushAsync();
     }
@@ -412,7 +414,7 @@ describe('T23-AC02 pending intent polling with deterministic clock', () => {
 
     const submitted = submission.submitOrder();
     await flushAsync();
-    for (let i = 0; i < 10; i += 1) {
+    for (let index = 0; index < 10; index += 1) {
       fakeClock.fire();
       await flushAsync();
     }
@@ -453,7 +455,7 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
           {
             id: 'order-once',
             orderNumber: 'DEMO-000001',
-            createdAt: currentEnv.clock.now(),
+            createdAt: currentEnvironment.clock.now(),
             status: 'demo_confirmed',
             isSimulation: true,
             items: [],
@@ -522,7 +524,7 @@ describe('T23-AC03 single commit semantics under retries and concurrent submit',
     resolverHolder.resolve({
       id: 'order-only-one',
       orderNumber: 'DEMO-000001',
-      createdAt: currentEnv.clock.now(),
+      createdAt: currentEnvironment.clock.now(),
       status: 'demo_confirmed',
       isSimulation: true,
       items: [],
@@ -593,12 +595,12 @@ describe('FIX-61 the order-commit idempotency key is held per fingerprint', () =
     checkout.form.acknowledgedSimulation().value.set(true);
 
     const keys: string[] = [];
-    let failNext = true;
+    let isFailNext = true;
     server.use(
       http.post('*/api/v1/orders', ({ request }) => {
         keys.push(request.headers.get('Idempotency-Key') ?? '');
-        if (failNext) {
-          failNext = false;
+        if (isFailNext) {
+          isFailNext = false;
           return HttpResponse.json(
             {
               type: 'about:blank',
@@ -742,7 +744,7 @@ describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () 
   });
 
   it('SafeLogger.redact() strips contact / address / payment-like fields', () => {
-    const ctx: SafeLogContext = {
+    const context: SafeLogContext = {
       cartId: 'cart-redact',
       quoteId: 'quote-abc',
       paymentIntentId: 'pi-xyz',
@@ -757,7 +759,7 @@ describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () 
       cvv: 'cvc-999',
       amount: { amount: 339_990, currency: 'HUF' },
     };
-    const safe = SafeLogger.redact(ctx);
+    const safe = SafeLogger.redact(context);
     const json = JSON.stringify(safe);
     // The PII fields must be absent from the redacted record.
     expect(json).not.toMatch(/Teszt Elek/);

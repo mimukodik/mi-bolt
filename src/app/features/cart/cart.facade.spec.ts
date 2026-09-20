@@ -24,14 +24,14 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { http, HttpResponse, type RequestHandler } from 'msw';
 import { server, useMswServer } from '../../../../tests/msw-server';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 import type { Cart } from '../../../app/api/generated/models/cart';
 
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { CART_DURATION_MS, CartDomain } from '../../../mocks/cart/cart-domain';
 import { IdempotencyStore } from '../../../mocks/idempotency';
-import { Repository } from '../../../mocks/repository';
+import { Repository as Repo } from '../../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 
 import { CartFacade } from '../../../app/features/cart/cart.facade';
@@ -54,11 +54,9 @@ const VARIANT_G512 = 'demo-one-5g-graphite-512';
 const VARIANT_S256 = 'demo-one-5g-silver-256';
 
 function getQueue(target: unknown): CartMutationQueue | null {
-  if (typeof target !== 'object' || target === null) return null;
-  if (!('queue' in target)) return null;
+  if (typeof target !== 'object' || target === null || !('queue' in target)) return null;
   const q = target.queue;
-  if (q instanceof CartMutationQueue) return q;
-  return null;
+  return q instanceof CartMutationQueue ? q : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,14 +84,14 @@ function captureRequest(request: Request, body: string): void {
 }
 
 let currentDomain: CartDomain;
-let currentEnv: {
-  repository: Repository;
+let currentEnvironment: {
+  repository: Repo;
   clock: { now(): string; advanceMs(n: number): void };
   ids: { uuid(): string };
   scenario: { name: string; seed: number; clockOffsetMs: number; isolated: boolean };
 };
 
-function makeEnv(): typeof currentEnv {
+function makeEnvironment(): typeof currentEnvironment {
   const clock = createFixedClock(new Date(Date.parse('2026-09-14T10:00:00.000Z')).toISOString());
   const ids = createDeterministicIds(7);
   const scenario = {
@@ -102,20 +100,20 @@ function makeEnv(): typeof currentEnv {
     clockOffsetMs: 0,
     isolated: true,
   };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
-  currentDomain = new CartDomain(repository, clock, ids, new IdempotencyStore(clock));
-  return { repository, clock, ids, scenario };
+  const repo = new Repo(scenario, ids, clock);
+  repo.loadProducts([DEMO_PRODUCT]);
+  currentDomain = new CartDomain(repo, clock, ids, new IdempotencyStore(clock));
+  return { repository: repo, clock, ids, scenario };
 }
 
 function buildHandlers(): RequestHandler[] {
-  const env = currentEnv;
+  const environment = currentEnvironment;
   return [
     ...cartHandlersEntry({
-      repository: env.repository,
-      clock: env.clock,
-      ids: env.ids,
-      scenario: env.scenario,
+      repository: environment.repository,
+      clock: environment.clock,
+      ids: environment.ids,
+      scenario: environment.scenario,
       apiRoot: '/api/v1',
     }),
   ];
@@ -142,7 +140,7 @@ let detachCapture: (() => void) | null = null;
 
 beforeEach(() => {
   captures.length = 0;
-  currentEnv = makeEnv();
+  currentEnvironment = makeEnvironment();
   server.use(...buildHandlers());
   detachCapture = attachRequestCapture(server);
 });
@@ -164,7 +162,7 @@ function configureTestBed(): void {
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
@@ -186,8 +184,8 @@ function addsTo(cartId: string): CapturedRequest[] {
  * namespace carts, so OOB operations must match it exactly.
  */
 function readDemoSessionId(): string {
-  for (let i = captures.length - 1; i >= 0; i--) {
-    const value = captures[i]?.headers['x-demo-session'];
+  for (let index = captures.length - 1; index >= 0; index--) {
+    const value = captures[index]?.headers['x-demo-session'];
     if (typeof value === 'string') return value;
   }
   throw new Error('No captured request found: call facade.ensureCart() first.');
@@ -475,7 +473,7 @@ describe('T17-AC05: 404/410/explicit recovery; no 401 path', () => {
     await facade.ensureCart();
     const cartId = facade.cartId;
     // Advance the deterministic clock past the cart expiry.
-    currentEnv.clock.advanceMs(CART_DURATION_MS + 1);
+    currentEnvironment.clock.advanceMs(CART_DURATION_MS + 1);
 
     await facade.addItem(VARIANT_G256, 1).catch(() => undefined);
     expect(facade.cartExpired()).toBe(true);
@@ -531,12 +529,12 @@ describe('FIX-10: CartFacade acquires its cart on construction', () => {
             width: 320,
             height: 400,
           },
-          unitPrice: { amount: 339990, currency: 'HUF' },
-          lineTotal: { amount: 339990, currency: 'HUF' },
+          unitPrice: { amount: 339_990, currency: 'HUF' },
+          lineTotal: { amount: 339_990, currency: 'HUF' },
         },
       ],
       itemCount: 1,
-      subtotal: { amount: 339990, currency: 'HUF' },
+      subtotal: { amount: 339_990, currency: 'HUF' },
       expiresAt: '2026-12-31T23:59:59.000Z',
     } satisfies Cart;
     // Override the default createCart handler so the boot restore
@@ -556,7 +554,7 @@ describe('FIX-10: CartFacade acquires its cart on construction', () => {
 
     expect(facade.cart()?.id).toBe('cart-boot-restore-1');
     expect(facade.itemCount()).toBe(1);
-    expect(facade.subtotal()).toEqual({ amount: 339990, currency: 'HUF' });
+    expect(facade.subtotal()).toEqual({ amount: 339_990, currency: 'HUF' });
     expect(facade.error()).toBeNull();
   });
 
@@ -614,9 +612,9 @@ describe('T24-AC03: in-flight mutation results are dropped after resetOrderedCar
     // call `resetOrderedCart()` while the dispatch is in flight, so
     // the `applySuccess(...)` path is exercised AFTER the reset.
     const inFlight = facade.addItem(VARIANT_G256, 1);
-    const ordered = currentEnv.repository.getCart(cartIdBefore ?? '');
+    const ordered = currentEnvironment.repository.getCart(cartIdBefore ?? '');
     if (ordered) {
-      currentEnv.repository.updateCart({ ...ordered, status: 'ordered' });
+      currentEnvironment.repository.updateCart({ ...ordered, status: 'ordered' });
     }
     facade.resetOrderedCart();
     await inFlight;

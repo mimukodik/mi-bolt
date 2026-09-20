@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, input, output, viewChildren } from '@angular/core';
+import type { ElementRef } from '@angular/core';
+import { Component, computed, input, output, viewChildren } from '@angular/core';
 
 /**
  * `Pagination` — `docs/spec/components.md:386`.
@@ -33,8 +34,7 @@ export class Pagination {
   readonly totalPages = computed<number>(() => {
     const total = this.total();
     const size = this.pageSize();
-    if (total <= 0) return 1;
-    return Math.max(1, Math.ceil(total / size));
+    return total <= 0 ? 1 : Math.max(1, Math.ceil(total / size));
   });
 
   readonly pageNumbers = computed<readonly number[]>(() => {

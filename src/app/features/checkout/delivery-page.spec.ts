@@ -23,7 +23,7 @@ import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Api } from '../../api/generated/api';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../api/generated/api-configuration';
 import * as operations from '../../api/generated/functions';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 
@@ -63,20 +63,20 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function getElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLElement)) {
+    throw new TypeError(`Expected HTMLElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement | null {
-  const el = parent.querySelector(selector);
-  if (el === null) return null;
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (element === null) return null;
+  if (!(element instanceof HTMLElement)) {
+    throw new TypeError(`Expected HTMLElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 afterEach(() => {
@@ -89,7 +89,7 @@ function configureTestBed(): void {
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       provideRouter([]),
     ],
     teardown: { destroyAfterEach: true },
@@ -152,8 +152,8 @@ describe('T21-AC05 (relocated to DeliveryPage) options-load error has retry, no 
     // scripted to fail-then-succeed; anything else (the cart creation)
     // gets an inert success so it does not throw inside the cart queue.
     let optionsCallCount = 0;
-    const invokeSpy = vi.spyOn(Api.prototype, 'invoke').mockImplementation((fn: unknown) => {
-      if (fn === operations.getCheckoutOptions) {
+    const invokeSpy = vi.spyOn(Api.prototype, 'invoke').mockImplementation((function_: unknown) => {
+      if (function_ === operations.getCheckoutOptions) {
         optionsCallCount++;
         return optionsCallCount === 1
           ? throwError(() => new Error('Service unavailable'))

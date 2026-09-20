@@ -13,9 +13,13 @@ import { isHTMLInputElement } from '../../shared/utils/event-target';
  * plus whether the applied query still carries any filter at all.
  */
 interface DraftSource {
-  /** The applied value of the mirrored field, rendered as input text. */
+  /**
+  The applied value of the mirrored field, rendered as input text.
+  */
   readonly field: string;
-  /** `hasActiveFilters()` — false once every filter has been cleared. */
+  /**
+  `hasActiveFilters()` — false once every filter has been cleared.
+  */
   readonly filtered: boolean;
 }
 
@@ -48,8 +52,7 @@ function keepDraftUnlessAppliedChanged(
 ): string {
   if (previous === undefined) return source.field;
   if (previous.source.field !== source.field) return source.field;
-  if (previous.source.filtered && !source.filtered) return source.field;
-  return previous.value;
+  return previous.source.filtered && !source.filtered ? source.field : previous.value;
 }
 
 /**
@@ -96,25 +99,37 @@ function keepDraftUnlessAppliedChanged(
   styleUrl: './filter-panel.scss',
 })
 export class FilterPanel {
-  /** The current query reflected by the controls. */
+  /**
+  The current query reflected by the controls.
+  */
   readonly value = input.required<CatalogQuery>();
 
-  /** Facet buckets from the latest successful response, if any. */
+  /**
+  Facet buckets from the latest successful response, if any.
+  */
   readonly facets = input<{
     readonly brands: readonly FacetValue[];
     readonly storageGb: readonly FacetValue[];
   } | null>(null);
 
-  /** True when the panel should be inert (loading or error refresh). */
+  /**
+  True when the panel should be inert (loading or error refresh).
+  */
   readonly disabled = input<boolean>(false);
 
-  /** Emits the next complete CatalogQuery when the user changes a control. */
+  /**
+  Emits the next complete CatalogQuery when the user changes a control.
+  */
   readonly filtersChanged = output<CatalogQuery>();
 
-  /** Storage buckets exposed by the documented storage enum. */
+  /**
+  Storage buckets exposed by the documented storage enum.
+  */
   readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => ALLOWED_STORAGE_GB);
 
-  /** Brand facets, falling back to an empty list when none are present. */
+  /**
+  Brand facets, falling back to an empty list when none are present.
+  */
   readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
 
   // Local drafts for the controls that need an "in progress" copy. Each
@@ -148,25 +163,30 @@ export class FilterPanel {
   readonly hasActiveFilters = computed<boolean>(() => {
     const q = this.value();
     if (q.q !== undefined && q.q.length > 0) return true;
-    if ((q.brands?.length ?? 0) > 0) return true;
-    if ((q.storageGb?.length ?? 0) > 0) return true;
-    if (q.minPrice !== undefined) return true;
-    if (q.maxPrice !== undefined) return true;
-    if (q.inStock !== undefined) return true;
-    if (q.is5g !== undefined) return true;
-    if (q.featured === true) return true;
+    if (
+      (q.brands?.length ?? 0) > 0 ||
+      (q.storageGb?.length ?? 0) > 0 ||
+      q.minPrice !== undefined ||
+      q.maxPrice !== undefined ||
+      q.inStock !== undefined ||
+      q.is5g !== undefined ||
+      q.featured === true
+    )
+      return true;
     return false;
   });
 
-  /** Hungarian reason describing the price range problem, or null. */
+  /**
+  Hungarian reason describing the price range problem, or null.
+  */
   readonly priceError = computed<string | null>(() => {
     const min = this.parsePrice(this.minDraft());
     const max = this.parsePrice(this.maxDraft());
     if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
     if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    if (min !== null && max !== null && min > max)
-      return 'A minimum nem lehet nagyobb a maximum árnál.';
-    return null;
+    return min !== null && max !== null && min > max
+      ? 'A minimum nem lehet nagyobb a maximum árnál.'
+      : null;
   });
 
   // ---------------------------------------------------------------------------
@@ -264,18 +284,20 @@ export class FilterPanel {
     return this.value().is5g === true;
   }
 
-  /** Compose the next query (page resets on filter changes via the facade). */
+  /**
+  Compose the next query (page resets on filter changes via the facade).
+  */
   private emit(partial: Partial<CatalogQuery>): void {
     const next: CatalogQuery = { ...this.value(), ...partial };
     this.filtersChanged.emit(next);
   }
 
-  /** Parse a price input string; returns null when blank, the integer otherwise. */
+  /**
+  Parse a price input string; returns null when blank, the integer otherwise.
+  */
   private parsePrice(raw: string): number | null {
     const trimmed = raw.trim();
-    if (trimmed.length === 0) return null;
-    if (!/^-?\d+$/.test(trimmed)) return null;
-    return Number(trimmed);
+    return trimmed.length === 0 || !/^-?\d+$/.test(trimmed) ? null : Number(trimmed);
   }
 }
 

@@ -37,25 +37,41 @@ import { Button } from '../../shared/ui/button/button';
 // burning real wall-clock seconds.
 // ---------------------------------------------------------------------------
 
-/** Minimal setTimeout-shaped interface used by `OrderSubmission`. */
+/**
+Minimal setTimeout-shaped interface used by `OrderSubmission`.
+*/
 export interface FakeClockLike {
-  /** Returns the current ISO timestamp; only used for log redaction. */
+  /**
+  Returns the current ISO timestamp; only used for log redaction.
+  */
   nowIso(): string;
-  /** Schedules `handler` after `delayMs`. Returns an opaque handle. */
+  /**
+  Schedules `handler` after `delayMs`. Returns an opaque handle.
+  */
   setTimeoutFn(handler: () => void, delayMs: number): number;
-  /** Cancels a scheduled handler. No-op if the handle is unknown. */
+  /**
+  Cancels a scheduled handler. No-op if the handle is unknown.
+  */
   clearTimeoutFn(handle: number): void;
 }
 
-/** Test helper: synchronously fire every scheduled callback once. */
+/**
+Test helper: synchronously fire every scheduled callback once.
+*/
 export interface FakeClock extends FakeClockLike {
-  /** Run every queued handler exactly once, in insertion order. */
+  /**
+  Run every queued handler exactly once, in insertion order.
+  */
   fire(): void;
-  /** Number of handlers still queued. */
+  /**
+  Number of handlers still queued.
+  */
   pending(): number;
 }
 
-/** Production clock backed by `setTimeout` / `clearTimeout`. */
+/**
+Production clock backed by `setTimeout` / `clearTimeout`.
+*/
 export class RealClock implements FakeClockLike {
   nowIso(): string {
     return new Date().toISOString();
@@ -64,7 +80,7 @@ export class RealClock implements FakeClockLike {
     return window.setTimeout(handler, delayMs);
   }
   clearTimeoutFn(handle: number): void {
-    window.clearTimeout(handle);
+    globalThis.clearTimeout(handle);
   }
 }
 
@@ -74,37 +90,61 @@ export class RealClock implements FakeClockLike {
 // reference a single source of truth.
 // ---------------------------------------------------------------------------
 
-/** Polling interval for `GET /payment-intents/{id}` per T23-AC02. */
+/**
+Polling interval for `GET /payment-intents/{id}` per T23-AC02.
+*/
 export const PAYMENT_POLL_INTERVAL_MS = 1000;
 
-/** Maximum number of polling attempts per T23-AC02 (deterministic cap). */
+/**
+Maximum number of polling attempts per T23-AC02 (deterministic cap).
+*/
 export const PAYMENT_POLL_MAX_ATTEMPTS = 10;
 
 // ---------------------------------------------------------------------------
 // Tick shape — emitted by `OrderSubmission.watchProgress()`.
 // ---------------------------------------------------------------------------
 
-/** Discrete payment-intent state changes observed by the UI. */
+/**
+Discrete payment-intent state changes observed by the UI.
+*/
 export type PaymentProgressState =
-  /** Service started polling; first attempt scheduled. */
+  /**
+  Service started polling; first attempt scheduled.
+  */
   | 'pending'
-  /** Polling attempt N (1-indexed) is about to run. */
+  /**
+  Polling attempt N (1-indexed) is about to run.
+  */
   | 'attempt'
-  /** Intent became succeeded and the order was committed. */
+  /**
+  Intent became succeeded and the order was committed.
+  */
   | 'succeeded'
-  /** Intent became declined; review stays open with retry affordances. */
+  /**
+  Intent became declined; review stays open with retry affordances.
+  */
   | 'declined'
-  /** Max attempts reached without a terminal status — recoverable. */
+  /**
+  Max attempts reached without a terminal status — recoverable.
+  */
   | 'timeout';
 
 export interface PaymentProgressTick {
-  /** Stable kind for the emitted tick. */
+  /**
+  Stable kind for the emitted tick.
+  */
   readonly state: PaymentProgressState;
-  /** Payment intent id, when known. */
+  /**
+  Payment intent id, when known.
+  */
   readonly intentId: string | null;
-  /** Current attempt (1-indexed) when the tick was emitted. */
+  /**
+  Current attempt (1-indexed) when the tick was emitted.
+  */
   readonly attempt: number;
-  /** Terminal outcome carried by `succeeded` / `declined` ticks. */
+  /**
+  Terminal outcome carried by `succeeded` / `declined` ticks.
+  */
   readonly outcome: SubmitOutcomeSnapshot;
 }
 
@@ -150,25 +190,35 @@ export class PaymentProgress {
 
   readonly maxAttempts: Signal<number> = computed(() => PAYMENT_POLL_MAX_ATTEMPTS);
 
-  /** Heading copy that follows the current status. */
+  /**
+  Heading copy that follows the current status.
+  */
   readonly heading: Signal<string> = computed(() => {
     switch (this.status()) {
-      case 'pending':
+      case 'pending': {
         return 'Fizetési szándék ellenőrzése';
-      case 'succeeded':
+      }
+      case 'succeeded': {
         return 'Fizetés sikeres';
-      case 'declined':
+      }
+      case 'declined': {
         return 'Fizetés elutasítva';
-      case 'unknown':
+      }
+      case 'unknown': {
         return 'Időtúllépés';
-      case 'error':
+      }
+      case 'error': {
         return 'A rendelés leadása nem sikerült';
-      default:
+      }
+      default: {
         return '';
+      }
     }
   });
 
-  /** Attempt counter copy, e.g. "3 / 10". */
+  /**
+  Attempt counter copy, e.g. "3 / 10".
+  */
   readonly attemptLabel: Signal<string> = computed(() => {
     const a = this.pollCount();
     const max = this.maxAttempts();

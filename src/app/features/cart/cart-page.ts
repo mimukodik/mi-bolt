@@ -57,10 +57,7 @@ function describeCartError(facade: CartFacade): string {
     return 'A kosár nem található. Indíts egy új pénztárat a frissítés gombra kattintva.';
   }
   const error = facade.error();
-  if (error !== null) {
-    return error.detail;
-  }
-  return 'A kosár betöltése sikertelen.';
+  return error === null ? 'A kosár betöltése sikertelen.' : error.detail;
 }
 
 @Component({
@@ -83,7 +80,9 @@ export class CartPage {
   private readonly facade = inject(CartFacade);
   private readonly router = inject(Router);
 
-  /** Snapshot of the cart once it has loaded. */
+  /**
+  Snapshot of the cart once it has loaded.
+  */
   readonly cart = signal<Cart | null>(null);
   /** `true` while the user has clicked "Tovább a pénztárhoz" and the
    *  revalidation + navigation chain is in flight. */
@@ -101,14 +100,17 @@ export class CartPage {
     return id === null ? new Set() : new Set([id]);
   });
 
-  /** Items list (the cart is non-null in the success branch). */
+  /**
+  Items list (the cart is non-null in the success branch).
+  */
   readonly items = computed(() => this.cart()?.items ?? []);
 
-  /** Subtotal as whole-HUF Money for the PriceBlock primitive. */
+  /**
+  Subtotal as whole-HUF Money for the PriceBlock primitive.
+  */
   readonly subtotal = computed<Money>(() => {
     const cart = this.cart();
-    if (cart === null) return { amount: 0, currency: 'HUF' };
-    return cart.subtotal;
+    return cart === null ? { amount: 0, currency: 'HUF' } : cart.subtotal;
   });
 
   /** Summary footnote copy shown under the total. The shipping fee
@@ -120,7 +122,9 @@ export class CartPage {
    *  branches so the user is told why their cart vanished. */
   readonly errorMessage = computed<string>(() => describeCartError(this.facade));
 
-  /** Cart state machine: drives the four documented branches. */
+  /**
+  Cart state machine: drives the four documented branches.
+  */
   readonly state = computed<ScreenState>(() => {
     const facadeCart = this.facade.cart();
     // Local mirror is the source of truth once it has landed.
@@ -129,14 +133,10 @@ export class CartPage {
       if (this.facade.error() !== null || this.facade.cartGone() || this.facade.cartExpired()) {
         return 'error';
       }
-      if (this.facade.pending() > 0) {
-        return 'loading';
-      }
-      return 'loading';
+      return this.facade.pending() > 0 ? 'loading' : 'loading';
     }
     if (this.facade.error() !== null) return 'error';
-    if (cart.items.length === 0) return 'empty';
-    return 'ready';
+    return cart.items.length === 0 ? 'empty' : 'ready';
   });
 
   /**
@@ -148,16 +148,17 @@ export class CartPage {
    */
   readonly canContinue = computed<boolean>(() => {
     const cart = this.cart();
-    if (cart === null) return false;
-    if (cart.items.length === 0) return false;
-    if (this.continuing()) return false;
-    if (this.revalidating()) return false;
-    if (this.facade.pending() > 0) return false;
-    if (this.facade.conflict() !== null) return false;
-    if (this.facade.error() !== null) return false;
-    if (this.facade.cartGone()) return false;
-    if (this.facade.cartExpired()) return false;
-    return true;
+    return !(
+      cart === null ||
+      cart.items.length === 0 ||
+      this.continuing() ||
+      this.revalidating() ||
+      this.facade.pending() > 0 ||
+      this.facade.conflict() !== null ||
+      this.facade.error() !== null ||
+      this.facade.cartGone() ||
+      this.facade.cartExpired()
+    );
   });
 
   /**
@@ -172,10 +173,7 @@ export class CartPage {
    */
   readonly statusMessage = computed<{ text: string; severity: StatusSeverity } | null>(() => {
     const error = this.facade.error();
-    if (error !== null) {
-      return { text: error.detail, severity: 'error' };
-    }
-    return this.transientStatus();
+    return error === null ? this.transientStatus() : { text: error.detail, severity: 'error' };
   });
 
   private readonly transientStatus = signal<{ text: string; severity: StatusSeverity } | null>(

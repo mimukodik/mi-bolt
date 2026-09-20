@@ -29,19 +29,29 @@ import type { Variant } from '../../api/generated/models/variant';
   styleUrl: './add-to-cart.scss',
 })
 export class AddToCart {
-  /** The variant to add. Null until the parent has resolved one. */
+  /**
+  The variant to add. Null until the parent has resolved one.
+  */
   readonly variant = input<Variant | null>(null);
 
-  /** Quantity the parent wants added. The component never invents it. */
+  /**
+  Quantity the parent wants added. The component never invents it.
+  */
   readonly quantity = input<number>(1);
 
-  /** In-flight state of the parent's single cart mutation. */
+  /**
+  In-flight state of the parent's single cart mutation.
+  */
   readonly pending = input<boolean>(false);
 
-  /** The parent's last cart-mutation failure, or null. */
+  /**
+  The parent's last cart-mutation failure, or null.
+  */
   readonly error = input<UiProblem | null>(null);
 
-  /** Emitted once per click; the parent performs the actual mutation. */
+  /**
+  Emitted once per click; the parent performs the actual mutation.
+  */
   readonly addRequested = output<{ variantId: string; quantity: number }>();
 
   readonly disabled = computed<boolean>(() => this.variant() === null || this.pending());
@@ -54,10 +64,7 @@ export class AddToCart {
       return { text: 'A termék hozzáadása a kosárhoz…', severity: 'info' };
     }
     const problem = this.error();
-    if (problem !== null) {
-      return { text: problem.message, severity: 'error' };
-    }
-    return null;
+    return problem === null ? null : { text: problem.message, severity: 'error' };
   });
 
   /** Severity accessor so the StatusMessage primitive owns the

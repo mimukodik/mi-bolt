@@ -51,7 +51,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { ApiConfiguration as ApiConfig } from '../../api/generated/api-configuration';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
 
 import type { Address } from '../../api/generated/models/address';
@@ -79,11 +79,15 @@ import {
   type PaymentMethod,
 } from './checkout-form.model';
 
-/** A single guarded step in the wizard. */
+/**
+A single guarded step in the wizard.
+*/
 export type CheckoutStep =
   'cart' | 'contact' | 'delivery' | 'review' | 'submitting' | 'success' | 'error';
 
-/** Errors surfaced to the UI as a banner string. */
+/**
+Errors surfaced to the UI as a banner string.
+*/
 export interface CheckoutError {
   readonly code: string;
   readonly status: number;
@@ -91,7 +95,9 @@ export interface CheckoutError {
   readonly fieldErrors: readonly { path: string; message: string }[];
 }
 
-/** Result returned by every save / quote / submit helper. */
+/**
+Result returned by every save / quote / submit helper.
+*/
 export type CheckoutMutationResult<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: CheckoutError };
 
@@ -104,7 +110,7 @@ function toContactPayload(form: CheckoutFormModel): Contact {
   return {
     fullName: form.fullName.trim().normalize('NFC'),
     email: form.email.trim().toLowerCase().normalize('NFC'),
-    phone: form.phone.replace(/\s+/g, ''),
+    phone: form.phone.replaceAll(/\s+/g, ''),
   };
 }
 
@@ -115,7 +121,7 @@ function toAddressPayload(address: CheckoutFormAddress): Address {
     postalCode: address.postalCode,
     city: address.city.trim().normalize('NFC'),
     line1: address.line1.trim().normalize('NFC'),
-    ...(line2Trimmed.length > 0 ? { line2: line2Trimmed.normalize('NFC') } : {}),
+    ...(line2Trimmed.length > 0 && { line2: line2Trimmed.normalize('NFC') }),
   };
 }
 
@@ -141,18 +147,18 @@ function normalizePaymentMethod(value: unknown): PaymentMethod {
  * Maps an SDK / network error to the surface shape the UI consumes.
  * The HTTP body is the canonical Problem JSON the mock emits.
  */
-function mapError(err: unknown): CheckoutError {
-  if (err instanceof HttpErrorResponse) {
-    const body = (err.error ?? {}) as {
+function mapError(error: unknown): CheckoutError {
+  if (error instanceof HttpErrorResponse) {
+    const body = (error.error ?? {}) as {
       code?: string;
       detail?: string;
       fieldErrors?: { path: string; message: string }[];
     };
     const code = body.code ?? 'UNKNOWN';
-    const detail = body.detail ?? err.message;
+    const detail = body.detail ?? error.message;
     return {
       code,
-      status: err.status,
+      status: error.status,
       detail,
       fieldErrors: body.fieldErrors ?? [],
     };
@@ -160,7 +166,7 @@ function mapError(err: unknown): CheckoutError {
   return {
     code: 'SERVICE_UNAVAILABLE',
     status: 0,
-    detail: String(err),
+    detail: String(error),
     fieldErrors: [],
   };
 }
@@ -176,7 +182,9 @@ export class CheckoutFacade {
   private readonly cartFacade = inject(CartFacade);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** The single writable signal that owns the form data. */
+  /**
+  The single writable signal that owns the form data.
+  */
   private readonly modelWritable: WritableSignal<CheckoutFormModel> = signal(
     createInitialCheckoutFormModel(),
   );
@@ -189,33 +197,47 @@ export class CheckoutFacade {
    */
   readonly form = buildCheckoutForm(this.modelWritable);
 
-  /** Writable signal carrying the latest server-side draft. */
+  /**
+  Writable signal carrying the latest server-side draft.
+  */
   private readonly sessionWritable: WritableSignal<CheckoutSession | null> =
     signal<CheckoutSession | null>(null);
 
-  /** Readonly view of the server-side draft. */
+  /**
+  Readonly view of the server-side draft.
+  */
   readonly session: Signal<CheckoutSession | null> = this.sessionWritable.asReadonly();
 
-  /** Active quote, or null until the review step calls `createQuote()`. */
+  /**
+  Active quote, or null until the review step calls `createQuote()`.
+  */
   private readonly quoteWritable: WritableSignal<Quote | null> = signal<Quote | null>(null);
   readonly quote: Signal<Quote | null> = this.quoteWritable.asReadonly();
 
-  /** Payment intent created by the explicit "Fizetés indítása" click. */
+  /**
+  Payment intent created by the explicit "Fizetés indítása" click.
+  */
   private readonly paymentIntentWritable: WritableSignal<PaymentIntent | null> =
     signal<PaymentIntent | null>(null);
   readonly paymentIntent: Signal<PaymentIntent | null> = this.paymentIntentWritable.asReadonly();
 
-  /** Order receipt produced by the final commit. */
+  /**
+  Order receipt produced by the final commit.
+  */
   private readonly orderWritable: WritableSignal<OrderReceipt | null> = signal<OrderReceipt | null>(
     null,
   );
   readonly order: Signal<OrderReceipt | null> = this.orderWritable.asReadonly();
 
-  /** True while any network mutation is in flight. */
+  /**
+  True while any network mutation is in flight.
+  */
   private readonly busyWritable: WritableSignal<boolean> = signal(false);
   readonly busy: Signal<boolean> = this.busyWritable.asReadonly();
 
-  /** Last non-recoverable error message; null when the flow is clean. */
+  /**
+  Last non-recoverable error message; null when the flow is clean.
+  */
   private readonly errorWritable: WritableSignal<CheckoutError | null> =
     signal<CheckoutError | null>(null);
   readonly error: Signal<CheckoutError | null> = this.errorWritable.asReadonly();
@@ -229,18 +251,26 @@ export class CheckoutFacade {
   private readonly draftDirtyWritable: WritableSignal<boolean> = signal(false);
   readonly draftDirty: Signal<boolean> = this.draftDirtyWritable.asReadonly();
 
-  /** The cart id this facade is currently bound to. */
+  /**
+  The cart id this facade is currently bound to.
+  */
   private readonly cartIdWritable: WritableSignal<string | null> = signal<string | null>(null);
   readonly cartId: Signal<string | null> = this.cartIdWritable.asReadonly();
 
-  /** True once the model has been hydrated from the server. */
+  /**
+  True once the model has been hydrated from the server.
+  */
   private readonly hydratedWritable: WritableSignal<boolean> = signal(false);
   readonly hydrated: Signal<boolean> = this.hydratedWritable.asReadonly();
 
-  /** Held idempotency key for the last `saveSection()` fingerprint. */
+  /**
+  Held idempotency key for the last `saveSection()` fingerprint.
+  */
   private savedSectionKey: { fingerprint: string; key: string } | null = null;
 
-  /** Held idempotency key for the last `createQuote()` fingerprint. */
+  /**
+  Held idempotency key for the last `createQuote()` fingerprint.
+  */
   private heldQuoteKey: { fingerprint: string; key: string } | null = null;
 
   /** Held idempotency key for the last `createPaymentIntent()` fingerprint,
@@ -253,7 +283,7 @@ export class CheckoutFacade {
     // for constructor injection. Vitest's esbuild pipeline does not
     // emit that metadata, so we wire it manually here exactly like
     // `CartFacade` does.
-    this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
+    this.api = new Api(inject(ApiConfig), inject(HttpClient));
   }
 
   // -------------------------------------------------------------------------
@@ -270,10 +300,9 @@ export class CheckoutFacade {
     const session = this.session();
     if (session === null) return 'cart';
     if (session.contact === undefined) return 'contact';
-    if (session.delivery === undefined || session.paymentMethod === undefined) {
-      return 'delivery';
-    }
-    return 'review';
+    return session.delivery === undefined || session.paymentMethod === undefined
+      ? 'delivery'
+      : 'review';
   });
 
   /**
@@ -285,31 +314,35 @@ export class CheckoutFacade {
     const cart = this.cartFacade.cart();
     if (cart === null || cart.items.length === 0) return 'cart';
     const session = this.session();
-    if (session === null) return 'contact';
-    if (session.contact === undefined) return 'contact';
-    if (session.delivery === undefined) return 'delivery';
-    if (session.paymentMethod === undefined) return 'delivery';
-    return 'review';
+    if (session?.contact === undefined) return 'contact';
+    return session.delivery === undefined || session.paymentMethod === undefined
+      ? 'delivery'
+      : 'review';
   });
 
-  /** True when the contact section validates AND has been saved on the server. */
+  /**
+  True when the contact section validates AND has been saved on the server.
+  */
   readonly contactSaved: Signal<boolean> = computed(() => this.session()?.contact !== undefined);
 
-  /** True when the delivery + paymentMethod sections are both saved. */
+  /**
+  True when the delivery + paymentMethod sections are both saved.
+  */
   readonly deliverySaved: Signal<boolean> = computed(
     () => this.session()?.delivery !== undefined && this.session()?.paymentMethod !== undefined,
   );
 
-  /** True when every required section is saved and a quote exists. */
-  readonly readyToSubmit: Signal<boolean> = computed(() => {
-    return (
+  /**
+  True when every required section is saved and a quote exists.
+  */
+  readonly readyToSubmit: Signal<boolean> = computed(
+    () =>
       this.contactSaved() &&
       this.deliverySaved() &&
       this.quote() !== null &&
       this.form().valid() &&
-      !this.busy()
-    );
-  });
+      !this.busy(),
+  );
 
   // -------------------------------------------------------------------------
   // Lifecycle / recovery.
@@ -340,10 +373,10 @@ export class CheckoutFacade {
       );
       this.applySession(session, options);
       return session;
-    } catch (err) {
+    } catch (error) {
       // The server returning 404 / 410 simply means there is no
       // draft yet — the wizard should start at the contact step.
-      const mapped = mapError(err);
+      const mapped = mapError(error);
       if (mapped.status === 404 || mapped.status === 410) {
         this.applySession(
           {
@@ -402,13 +435,17 @@ export class CheckoutFacade {
     return this.saveSection({ contact: toContactPayload(value) });
   }
 
-  /** Persists the delivery section (option + address). */
+  /**
+  Persists the delivery section (option + address).
+  */
   async saveDeliverySection(): Promise<CheckoutMutationResult<CheckoutSession>> {
     const value = this.modelWritable();
     return this.saveSection({ delivery: toDeliveryPayload(value) });
   }
 
-  /** Persists the payment method. */
+  /**
+  Persists the payment method.
+  */
   async savePaymentMethod(): Promise<CheckoutMutationResult<CheckoutSession>> {
     const value = this.modelWritable();
     return this.saveSection({ paymentMethod: value.paymentMethod as 'demo_card' | 'demo_cod' });
@@ -484,8 +521,8 @@ export class CheckoutFacade {
       this.draftDirtyWritable.set(false);
       this.errorWritable.set(null);
       return { ok: true, value: session };
-    } catch (err) {
-      const mapped = mapError(err);
+    } catch (error) {
+      const mapped = mapError(error);
       // 422 VALIDATION_ERROR leaves the form intact so the user can
       // correct field-level errors; the banner shows the first
       // message. Do NOT reset the model.
@@ -548,8 +585,8 @@ export class CheckoutFacade {
       this.quoteWritable.set(quote);
       this.errorWritable.set(null);
       return { ok: true, value: quote };
-    } catch (err) {
-      const mapped = mapError(err);
+    } catch (error) {
+      const mapped = mapError(error);
       this.recordFailure(mapped);
       return { ok: false, error: mapped };
     } finally {
@@ -594,8 +631,8 @@ export class CheckoutFacade {
       this.orderWritable.set(receipt);
       this.errorWritable.set(null);
       return { ok: true, value: receipt };
-    } catch (err) {
-      const mapped = mapError(err);
+    } catch (error) {
+      const mapped = mapError(error);
       if (mapped.status === 404) {
         return {
           ok: false,
@@ -676,8 +713,8 @@ export class CheckoutFacade {
       // attempt and must mint a fresh key.
       this.heldPaymentIntentKey = null;
       return { ok: true, value: intent };
-    } catch (err) {
-      const mapped = mapError(err);
+    } catch (error) {
+      const mapped = mapError(error);
       this.recordFailure(mapped);
       // Decline / pending / etc. leave contact + address + cart intact
       // (AC03) — only the payment intent is left unset so the user
@@ -718,9 +755,8 @@ export class CheckoutFacade {
     const body = {
       cartId,
       quoteId: quote.id,
-      ...(paymentMethod === 'demo_card' && paymentIntent !== null
-        ? { paymentIntentId: paymentIntent.id }
-        : {}),
+      ...(paymentMethod === 'demo_card' &&
+        paymentIntent !== null && { paymentIntentId: paymentIntent.id }),
       termsVersion: 'demo-1' as const,
       acceptedTerms: true as const,
       acknowledgedSimulation: true as const,
@@ -783,8 +819,8 @@ export class CheckoutFacade {
       this.orderWritable.set(receipt);
       this.errorWritable.set(null);
       return { ok: true, value: receipt };
-    } catch (err) {
-      const mapped = mapError(err);
+    } catch (error) {
+      const mapped = mapError(error);
       this.recordFailure(mapped);
       return { ok: false, error: mapped };
     } finally {
@@ -837,7 +873,9 @@ export class CheckoutFacade {
     this.hydratedWritable.set(true);
   }
 
-  /** Surfaces a non-recoverable error on the wizard banner. */
+  /**
+  Surfaces a non-recoverable error on the wizard banner.
+  */
   private recordFailure(error: CheckoutError): void {
     this.errorWritable.set(error);
   }

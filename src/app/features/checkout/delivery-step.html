@@ -1,13 +1,13 @@
 <section class="delivery" data-testid="delivery-step">
   <header class="heading">
-    <nav class="breadcrumbs" aria-label="Navigáció">
-      <a routerLink="/" class="breadcrumb">Főoldal</a>
+    <nav aria-label="Navigáció" class="breadcrumbs">
+      <a class="breadcrumb" routerLink="/">Főoldal</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/kosar" class="breadcrumb">Kosár</a>
+      <a class="breadcrumb" routerLink="/penztar/kosar">Kosár</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/adatok" class="breadcrumb">Adatok</a>
+      <a class="breadcrumb" routerLink="/penztar/adatok">Adatok</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <span class="breadcrumb is-current" aria-current="page">Szállítás</span>
+      <span aria-current="page" class="breadcrumb is-current">Szállítás</span>
     </nav>
     <h1 class="title">Átvétel és fizetés</h1>
   </header>
@@ -21,31 +21,31 @@
           @for (option of options().deliveryOptions; track option.id) {
             <li
               class="option"
-              [class.is-active]="option.id === selectedOptionId()"
               data-testid="delivery-option"
+              [class.is-active]="option.id === selectedOptionId()"
             >
               <label class="option-label" [attr.for]="radioId(option.id)">
                 <input
-                  type="radio"
                   class="radio"
-                  [id]="radioId(option.id)"
+                  data-testid="delivery-radio"
                   name="deliveryOption"
-                  [value]="option.id"
-                  [checked]="option.id === selectedOptionId()"
+                  type="radio"
                   [attr.aria-checked]="option.id === selectedOptionId() ? 'true' : 'false'"
                   [attr.aria-describedby]="optionDescId(option.id)"
+                  [checked]="option.id === selectedOptionId()"
+                  [id]="radioId(option.id)"
+                  [value]="option.id"
                   (change)="onOptionSelected(option.id)"
-                  data-testid="delivery-radio"
                 />
                 <span class="option-body">
                   <span class="option-row">
                     <span class="option-title">{{ option.label }}</span>
                     <span class="option-fee">
                       <app-price-block
+                        label="Szállítási díj"
+                        status="success"
                         [money]="feeFor(option)"
-                        [label]="'Szállítási díj'"
-                        [status]="'success'"
-                      ></app-price-block>
+                      />
                     </span>
                   </span>
                   <span class="option-description" [id]="optionDescId(option.id)">
@@ -53,8 +53,8 @@
                   </span>
                   @if (option.id === selectedOptionId()) {
                     <span
-                      class="option-badge"
                       aria-live="polite"
+                      class="option-badge"
                       data-testid="delivery-selected-badge"
                     >
                       Kiválasztva
@@ -69,19 +69,19 @@
 
       @if (requiresAddress()) {
         <app-address-form
-          [postalCode]="postalCode()"
-          (postalCodeChange)="setPostalCode($event)"
           [city]="city()"
-          (cityChange)="setCity($event)"
           [line1]="line1()"
-          (line1Change)="setLine1($event)"
           [line2]="line2()"
-          (line2Change)="setLine2($event)"
-          [(submitted)]="addressSubmitted"
+          [postalCode]="postalCode()"
           [(addressChanged)]="addressSnapshot"
-        ></app-address-form>
+          [(submitted)]="addressSubmitted"
+          (cityChange)="setCity($event)"
+          (line1Change)="setLine1($event)"
+          (line2Change)="setLine2($event)"
+          (postalCodeChange)="setPostalCode($event)"
+        />
       } @else {
-        <p class="pickup-notice" role="note" data-testid="pickup-notice">
+        <p class="pickup-notice" data-testid="pickup-notice" role="note">
           A virtuális átvétel egy demó szállítási opció: nincs valós üzletcím, a rendelés a pénztár
           demófolyamatán belül készül, valós átvételi pont nélkül.
         </p>
@@ -89,14 +89,14 @@
 
       <app-payment-method-selector
         [value]="paymentMethod()"
-        (valueChange)="onPaymentChanged($event)"
         (paymentChanged)="onPaymentChanged($event)"
-      ></app-payment-method-selector>
+        (valueChange)="onPaymentChanged($event)"
+      />
     </div>
 
     <aside
-      class="summary"
       aria-label="Átvételi és fizetési összegzés"
+      class="summary"
       data-testid="delivery-summary"
     >
       <h2 class="summary-title">Átvétel és fizetés összesítése</h2>
@@ -105,10 +105,10 @@
           <dt>Szállítási díj</dt>
           <dd>
             <app-price-block
-              [money]="currentShippingFee()"
+              status="success"
               [label]="deliveryLabel()"
-              [status]="'success'"
-            ></app-price-block>
+              [money]="currentShippingFee()"
+            />
           </dd>
         </div>
         <div class="summary-row" data-testid="summary-row-payment">
@@ -119,31 +119,31 @@
 
       @if (saveState() === 'error') {
         <app-status-message
-          [message]="saveErrorMessage"
-          severity="error"
-          [persistent]="true"
           data-testid="delivery-save-failure"
-        ></app-status-message>
+          severity="error"
+          [message]="saveErrorMessage"
+          [persistent]="true"
+        />
         <app-button
-          variant="secondary"
-          size="comfortable"
-          label="Újrapróbálom"
-          (pressed)="onRetry()"
           data-testid="delivery-retry"
-        ></app-button>
+          label="Újrapróbálom"
+          size="comfortable"
+          variant="secondary"
+          (pressed)="onRetry()"
+        />
       }
 
       <div class="actions">
         <app-button
-          variant="primary"
-          size="comfortable"
-          [label]="confirmLabel()"
-          [loadingLabel]="'Mentés…'"
-          [loading]="saveState() === 'loading'"
-          [disabled]="!canConfirm()"
-          (pressed)="onConfirm()"
           data-testid="delivery-confirm"
-        ></app-button>
+          loadingLabel="Mentés…"
+          size="comfortable"
+          variant="primary"
+          [disabled]="!canConfirm()"
+          [label]="confirmLabel()"
+          [loading]="saveState() === 'loading'"
+          (pressed)="onConfirm()"
+        />
       </div>
     </aside>
   </div>

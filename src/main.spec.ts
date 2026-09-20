@@ -29,19 +29,29 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-/** The `src/` tree, derived from the runner's working directory. */
+/**
+The `src/` tree, derived from the runner's working directory.
+*/
 const SRC_ROOT = resolve(process.cwd(), 'src');
 
-/** The repository root, which is where `angular.json` lives. */
+/**
+The repository root, which is where `angular.json` lives.
+*/
 const REPO_ROOT = resolve(SRC_ROOT, '..');
 
-/** The module every source file imports, and the one `fileReplacements` swaps. */
+/**
+The module every source file imports, and the one `fileReplacements` swaps.
+*/
 const DEFAULT_ENVIRONMENT_MODULE = 'src/environments/environment.ts';
 
-/** `src/main.ts` without its extension — the shape `importsEntryPoint` compares against. */
+/**
+`src/main.ts` without its extension — the shape `importsEntryPoint` compares against.
+*/
 const ENTRY_POINT = join(SRC_ROOT, 'main');
 
-/** Every `*.spec.ts` file under `directory`, which is the set `ng test` collects. */
+/**
+Every `*.spec.ts` file under `directory`, which is the set `ng test` collects.
+*/
 function collectSpecFiles(directory: string): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -120,7 +130,9 @@ interface EnvironmentFlags {
   readonly e2e: boolean;
 }
 
-/** One entry of an `ng build` configuration's `fileReplacements` array. */
+/**
+One entry of an `ng build` configuration's `fileReplacements` array.
+*/
 interface FileReplacement {
   readonly replace: string;
   readonly with: string;
@@ -136,8 +148,10 @@ function isFileReplacement(value: unknown): value is FileReplacement {
   );
 }
 
-/** Reads `fileReplacements` for one build configuration out of `angular.json`. */
-function readFileReplacements(configuration: string): FileReplacement[] {
+/**
+Reads `fileReplacements` for one build configuration out of `angular.json`.
+*/
+function readFileReplacements(config: string): FileReplacement[] {
   const parsed: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'angular.json'), 'utf8'));
   let node: unknown = parsed;
   for (const key of [
@@ -146,7 +160,7 @@ function readFileReplacements(configuration: string): FileReplacement[] {
     'architect',
     'build',
     'configurations',
-    configuration,
+    config,
     'fileReplacements',
   ]) {
     node = isRecord(node) ? node[key] : undefined;
@@ -160,14 +174,16 @@ function readFileReplacements(configuration: string): FileReplacement[] {
  * default module, which is what makes the missing entry observable
  * here rather than silently passing.
  */
-function environmentModuleFor(configuration: string): string {
-  const entry = readFileReplacements(configuration).find(
+function environmentModuleFor(config: string): string {
+  const entry = readFileReplacements(config).find(
     (replacement) => replacement.replace === DEFAULT_ENVIRONMENT_MODULE,
   );
   return entry === undefined ? DEFAULT_ENVIRONMENT_MODULE : entry.with;
 }
 
-/** Reads the three flags out of an environment module's object literal. */
+/**
+Reads the three flags out of an environment module's object literal.
+*/
 function parseEnvironmentFlags(source: string): EnvironmentFlags {
   const literal = /export const environment[^=]*=\s*\{([^}]*)\}/.exec(source);
   if (literal === null) {

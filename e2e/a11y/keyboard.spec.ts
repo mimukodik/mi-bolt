@@ -37,24 +37,34 @@ const SCREENSHOT_ROOT = resolve(REPO_ROOT, 'e2e/design/screenshots');
 type KeyboardStep = {
   readonly name: string;
   readonly path: string;
-  /** Test-id to wait for before interacting. */
+  /**
+  Test-id to wait for before interacting.
+  */
   readonly waitFor: string;
-  /** Action to perform. */
+  /**
+  Action to perform.
+  */
   readonly action:
     | { kind: 'click'; selector: string }
     | { kind: 'tab'; count: number }
     | { kind: 'enter' }
     | { kind: 'escape' }
     | { kind: 'focus'; selector: string };
-  /** Assertion about the focused element after the action. */
+  /**
+  Assertion about the focused element after the action.
+  */
   readonly expectFocused?: string;
-  /** Assertion about the page after the action (URL / testid). */
+  /**
+  Assertion about the page after the action (URL / testid).
+  */
   readonly expectVisible?: string;
-  /** Whether this step depends on a route / feature not yet built. */
+  /**
+  Whether this step depends on a route / feature not yet built.
+  */
   readonly built?: boolean;
 };
 
-const FLOW: ReadonlyArray<KeyboardStep> = [
+const FLOW: readonly KeyboardStep[] = [
   {
     name: 'home loads',
     path: '/',
@@ -136,7 +146,7 @@ async function gotoAndCheck(
     return { ok: false, status: response.status() };
   }
   try {
-    await expect(page.getByTestId(waitFor).first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId(waitFor).first()).toBeVisible({ timeout: 5000 });
     return { ok: true };
   } catch {
     return { ok: false, status: response.status() };
@@ -160,23 +170,28 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
       }
 
       switch (step.action.kind) {
-        case 'click':
+        case 'click': {
           await page.locator(step.action.selector).first().click();
           break;
-        case 'tab':
-          for (let i = 0; i < step.action.count; i++) {
+        }
+        case 'tab': {
+          for (let index = 0; index < step.action.count; index++) {
             await page.keyboard.press('Tab');
           }
           break;
-        case 'enter':
+        }
+        case 'enter': {
           await page.keyboard.press('Enter');
           break;
-        case 'escape':
+        }
+        case 'escape': {
           await page.keyboard.press('Escape');
           break;
-        case 'focus':
+        }
+        case 'focus': {
           await page.locator(step.action.selector).first().focus();
           break;
+        }
       }
 
       if (step.expectFocused) {
@@ -189,7 +204,7 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
       const screenshotPath = resolve(
         SCREENSHOT_ROOT,
         'keyboard',
-        `${testInfo.project.name}-${step.name.replace(/\s+/g, '-').toLowerCase()}.png`,
+        `${testInfo.project.name}-${step.name.replaceAll(/\s+/g, '-').toLowerCase()}.png`,
       );
       mkdirSync(resolve(SCREENSHOT_ROOT, 'keyboard'), { recursive: true });
       await page.screenshot({ path: screenshotPath, fullPage: true });
@@ -223,8 +238,8 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
     // The :focus-visible outline colour must NOT be transparent —
     // the design tokens ship `--color-focus-light` (#174EB5) on
     // light surfaces.
-    const outlineColor = await trigger.evaluate((el) => {
-      const style = window.getComputedStyle(el);
+    const outlineColor = await trigger.evaluate((element) => {
+      const style = globalThis.getComputedStyle(element);
       return style.outlineColor;
     });
     expect(outlineColor).not.toBe('rgba(0, 0, 0, 0)');
@@ -271,13 +286,13 @@ test.describe('T25-AC03 keyboard flow — full purchase path', () => {
     const buttons = page.locator('button, [role="button"], a');
     const total = await buttons.count();
     let named = 0;
-    for (let i = 0; i < total; i++) {
-      const name = await buttons.nth(i).evaluate((el) => {
-        const aria = el.getAttribute('aria-label');
+    for (let index = 0; index < total; index++) {
+      const name = await buttons.nth(index).evaluate((element) => {
+        const aria = element.getAttribute('aria-label');
         if (aria && aria.trim().length > 0) return aria;
-        const text = (el.textContent ?? '').trim();
+        const text = (element.textContent ?? '').trim();
         if (text.length > 0) return text;
-        const labelledBy = el.getAttribute('aria-labelledby');
+        const labelledBy = element.getAttribute('aria-labelledby');
         return labelledBy ? `labelledby:${labelledBy}` : '';
       });
       if (name && name.length > 0) named += 1;

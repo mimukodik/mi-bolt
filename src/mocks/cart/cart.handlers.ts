@@ -30,7 +30,8 @@ import {
 } from '../create-handlers';
 import { IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
-import { type Money, type Product, Repository } from '../repository';
+import type { Repository as Repo } from '../repository';
+import { type Money, type Product } from '../repository';
 
 import { CartDomain } from './cart-domain';
 
@@ -156,9 +157,9 @@ export const DEMO_PRODUCT: Product = {
  * already populated the catalogue. Tests rely on the fixture being
  * present; T06 will overwrite with the full catalog.
  */
-function ensureFixture(repository: Repository): void {
-  if (repository.listProducts().length === 0) {
-    repository.loadProducts([DEMO_PRODUCT]);
+function ensureFixture(repo: Repo): void {
+  if (repo.listProducts().length === 0) {
+    repo.loadProducts([DEMO_PRODUCT]);
   }
 }
 
@@ -182,7 +183,7 @@ interface ProblemLike {
  * wire contract requires `itemCount` and `subtotal` derivations the
  * repository does not maintain.
  */
-function serializeCart(cart: ReturnType<Repository['createCart']>): Record<string, unknown> {
+function serializeCart(cart: ReturnType<Repo['createCart']>): Record<string, unknown> {
   const itemCount = cart.items.reduce((sum, line) => sum + line.quantity, 0);
   const subtotal: Money = {
     amount: cart.items.reduce((sum, line) => sum + line.lineTotal.amount, 0),
@@ -209,7 +210,7 @@ function problemResponse(
   traceId: string,
 ): HttpResponse<Record<string, unknown>> {
   const body = {
-    type: `urn:mi-bolt:problem:${problem.code.toLowerCase().replace(/_/g, '-')}`,
+    type: `urn:mi-bolt:problem:${problem.code.toLowerCase().replaceAll('_', '-')}`,
     title: problem.detail,
     status: problem.status,
     code: problem.code,
@@ -233,19 +234,17 @@ function badRequest(detail: string, traceId: string): HttpResponse<Record<string
 function readVariantId(body: unknown): { ok: true; value: string } | { ok: false; detail: string } {
   if (!isRecord(body)) return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
   const variantId = body['variantId'];
-  if (typeof variantId !== 'string' || variantId.length === 0) {
-    return { ok: false, detail: 'A variantId mező kötelező szöveg.' };
-  }
-  return { ok: true, value: variantId };
+  return typeof variantId !== 'string' || variantId.length === 0
+    ? { ok: false, detail: 'A variantId mező kötelező szöveg.' }
+    : { ok: true, value: variantId };
 }
 
 function readQuantity(body: unknown): { ok: true; value: number } | { ok: false; detail: string } {
   if (!isRecord(body)) return { ok: false, detail: 'A kérés törzse érvénytelen JSON.' };
   const quantity = body['quantity'];
-  if (typeof quantity !== 'number' || !Number.isFinite(quantity) || !Number.isInteger(quantity)) {
-    return { ok: false, detail: 'A quantity mező kötelező egész szám.' };
-  }
-  return { ok: true, value: quantity };
+  return typeof quantity !== 'number' || !Number.isFinite(quantity) || !Number.isInteger(quantity)
+    ? { ok: false, detail: 'A quantity mező kötelező egész szám.' }
+    : { ok: true, value: quantity };
 }
 
 /**

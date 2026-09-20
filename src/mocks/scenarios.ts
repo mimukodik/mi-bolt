@@ -14,10 +14,14 @@
 
 import { isRecord } from './is-record';
 
-/** Identifier of a scenario as carried in URLs and test fixtures. */
+/**
+Identifier of a scenario as carried in URLs and test fixtures.
+*/
 export type ScenarioName = string;
 
-/** A scenario carries the seed, the clock origin and the isolation flag. */
+/**
+A scenario carries the seed, the clock origin and the isolation flag.
+*/
 export interface ScenarioDescriptor {
   readonly name: ScenarioName;
   readonly seed: number;
@@ -25,17 +29,27 @@ export interface ScenarioDescriptor {
   readonly isolated: boolean;
 }
 
-/** Clock injected into the handler factory. */
+/**
+Clock injected into the handler factory.
+*/
 export interface Clock {
-  /** Returns the current ISO timestamp. */
+  /**
+  Returns the current ISO timestamp.
+  */
   now(): string;
-  /** Advances the deterministic clock by the given delta. */
+  /**
+  Advances the deterministic clock by the given delta.
+  */
   advanceMs(delta: number): void;
 }
 
-/** Id factory injected into the handler factory. */
+/**
+Id factory injected into the handler factory.
+*/
 export interface Ids {
-  /** Returns a contract-conforming opaque identifier. */
+  /**
+  Returns a contract-conforming opaque identifier.
+  */
   uuid(): string;
 }
 
@@ -47,7 +61,9 @@ export interface Ids {
  */
 export const ID_PATTERN = /^[a-zA-Z0-9_-]{8,80}$/;
 
-/** Default scenario for the demo UI when no query param is provided. */
+/**
+Default scenario for the demo UI when no query param is provided.
+*/
 export const DEFAULT_SCENARIO: ScenarioDescriptor = Object.freeze({
   name: 'default',
   seed: 1,
@@ -110,12 +126,11 @@ export function resolveScenario(name: ScenarioName | null | undefined): Scenario
  * the DOM lib types assume.
  */
 function hasLocationSearch(value: unknown): value is { location: { search: string } } {
-  if (!isRecord(value)) return false;
-  if (!('location' in value)) return false;
+  if (!isRecord(value) || !('location' in value)) return false;
   const location = value['location'];
-  if (!isRecord(location)) return false;
-  if (!('search' in location)) return false;
-  return typeof location['search'] === 'string';
+  return !isRecord(location) || !('search' in location)
+    ? false
+    : typeof location['search'] === 'string';
 }
 
 /**
@@ -126,8 +141,8 @@ function hasLocationSearch(value: unknown): value is { location: { search: strin
 export function parseScenarioFromLocation(): ScenarioDescriptor {
   const globalScope: unknown = globalThis;
   if (!hasLocationSearch(globalScope)) return DEFAULT_SCENARIO;
-  const params = new URLSearchParams(globalScope.location.search);
-  return resolveScenario(params.get('mi-scenario'));
+  const parameters = new URLSearchParams(globalScope.location.search);
+  return resolveScenario(parameters.get('mi-scenario'));
 }
 
 /**

@@ -14,7 +14,8 @@
  * two feature directories owned by other agents' worktrees this round.
  * That wiring is deferred; see this task's Status line.
  */
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import { AccessibleDialog } from './accessible-dialog';
@@ -22,11 +23,11 @@ import { AccessibleDialog } from './accessible-dialog';
 @Component({
   imports: [AccessibleDialog, DialogModule],
   template: `
-    <button #trigger type="button" data-testid="trigger-a">Trigger A</button>
-    <button #other type="button" data-testid="trigger-b">Trigger B</button>
+    <button #trigger data-testid="trigger-a" type="button">Trigger A</button>
+    <button #other data-testid="trigger-b" type="button">Trigger B</button>
     <app-accessible-dialog
+      label="Megerősítés"
       [opened]="opened()"
-      [label]="'Megerősítés'"
       [restoreTarget]="restoreTarget()"
       (closed)="closed.set(closed() + 1)"
     >
@@ -43,14 +44,14 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected HTMLElement');
+    throw new TypeError('Expected HTMLElement');
   }
   return raw;
 }
 
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
-    el.remove();
+  document.body.querySelectorAll('.cdk-overlay-container').forEach((element) => {
+    element.remove();
   });
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ imports: [HostComponent] });

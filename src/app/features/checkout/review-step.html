@@ -1,15 +1,15 @@
-<section class="review" [attr.data-status]="state()" data-testid="review-page">
+<section class="review" data-testid="review-page" [attr.data-status]="state()">
   <header class="heading">
-    <nav class="breadcrumbs" aria-label="Navigáció">
-      <a routerLink="/" class="breadcrumb">Főoldal</a>
+    <nav aria-label="Navigáció" class="breadcrumbs">
+      <a class="breadcrumb" routerLink="/">Főoldal</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/kosar" class="breadcrumb">Kosár</a>
+      <a class="breadcrumb" routerLink="/penztar/kosar">Kosár</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/adatok" class="breadcrumb">Adatok</a>
+      <a class="breadcrumb" routerLink="/penztar/adatok">Adatok</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <a routerLink="/penztar/szallitas" class="breadcrumb">Szállítás</a>
+      <a class="breadcrumb" routerLink="/penztar/szallitas">Szállítás</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <span class="breadcrumb is-current" aria-current="page"> Ellenőrzés </span>
+      <span aria-current="page" class="breadcrumb is-current"> Ellenőrzés </span>
     </nav>
     <h1 class="title">Minden rendben?</h1>
     <p class="demo-notice" data-testid="review-demo-notice" role="note">
@@ -25,9 +25,9 @@
         <header class="card-header">
           <h2 class="card-title">Kapcsolattartási adatok</h2>
           <a
-            routerLink="/penztar/adatok"
             class="edit-link"
             data-testid="review-edit-contact"
+            routerLink="/penztar/adatok"
             (click)="onEditContact()"
           >
             Módosítás
@@ -53,9 +53,9 @@
         <header class="card-header">
           <h2 class="card-title">Szállítási és fizetési mód</h2>
           <a
-            routerLink="/penztar/szallitas"
             class="edit-link"
             data-testid="review-edit-delivery"
+            routerLink="/penztar/szallitas"
             (click)="onEditDelivery()"
           >
             Módosítás
@@ -102,19 +102,15 @@
                   <p class="line-variant">{{ line.variantLabel }}</p>
                   <p class="line-quantity">
                     {{ line.quantity }} ×
-                    <app-price-block
-                      [money]="line.unitPrice"
-                      [label]="'Egységár'"
-                      [status]="'success'"
-                    ></app-price-block>
+                    <app-price-block label="Egységár" status="success" [money]="line.unitPrice" />
                   </p>
                 </div>
                 <div class="line-total">
                   <app-price-block
+                    label="Sor végösszeg"
+                    status="success"
                     [money]="line.lineTotal"
-                    [label]="'Sor végösszeg'"
-                    [status]="'success'"
-                  ></app-price-block>
+                  />
                 </div>
               </li>
             }
@@ -125,38 +121,34 @@
       <div class="status-row" data-testid="review-status">
         @switch (state()) {
           @case ('quoting') {
-            <app-loading-state variant="lines" label="Árajánlat frissítése"></app-loading-state>
+            <app-loading-state label="Árajánlat frissítése" variant="lines" />
           }
           @case ('price-changed') {
             <app-status-message
-              [message]="priceChangedMessage"
               severity="error"
+              [message]="priceChangedMessage"
               [persistent]="true"
-            ></app-status-message>
+            />
           }
           @case ('expired') {
             <app-status-message
-              [message]="quoteExpiredMessage"
               severity="error"
+              [message]="quoteExpiredMessage"
               [persistent]="true"
-            ></app-status-message>
+            />
           }
           @case ('stock-error') {
             <app-status-message
-              [message]="outOfStockMessage"
               severity="error"
+              [message]="outOfStockMessage"
               [persistent]="true"
-            ></app-status-message>
+            />
           }
           @case ('error') {
-            <app-status-message
-              [message]="errorMessage"
-              severity="error"
-              [persistent]="true"
-            ></app-status-message>
+            <app-status-message severity="error" [message]="errorMessage" [persistent]="true" />
           }
           @case ('submitting') {
-            <app-loading-state variant="lines" label="Véglegesítés…"></app-loading-state>
+            <app-loading-state label="Véglegesítés…" variant="lines" />
           }
         }
       </div>
@@ -167,26 +159,26 @@
 
         <div
           class="consent"
-          [attr.data-state]="termsConsentState()"
           data-testid="review-consent-terms"
+          [attr.data-state]="termsConsentState()"
         >
           <label class="consent-label" for="review-consent-terms-input">
             <input
+              class="checkbox"
+              data-testid="review-consent-terms-input"
               id="review-consent-terms-input"
               type="checkbox"
-              class="checkbox"
               [checked]="acceptedTerms()"
-              (change)="onAcceptedTermsChange($event)"
               (blur)="onAcceptedTermsBlur()"
-              data-testid="review-consent-terms-input"
+              (change)="onAcceptedTermsChange($event)"
             />
             <span class="consent-text">
               Elfogadom a
               <button
-                type="button"
                 class="terms-link"
-                (click)="openTerms()"
                 data-testid="review-consent-terms-button"
+                type="button"
+                (click)="openTerms()"
               >
                 demó vásárlási feltételeket
               </button>
@@ -196,8 +188,8 @@
           @if (termsConsentMessage() !== null) {
             <p
               class="consent-message"
-              id="review-consent-terms-message"
               data-testid="review-consent-terms-message"
+              id="review-consent-terms-message"
               role="alert"
             >
               {{ termsConsentMessage() }}
@@ -207,18 +199,18 @@
 
         <div
           class="consent"
-          [attr.data-state]="simulationConsentState()"
           data-testid="review-consent-simulation"
+          [attr.data-state]="simulationConsentState()"
         >
           <label class="consent-label" for="review-consent-simulation-input">
             <input
+              class="checkbox"
+              data-testid="review-consent-simulation-input"
               id="review-consent-simulation-input"
               type="checkbox"
-              class="checkbox"
               [checked]="acknowledgedSimulation()"
-              (change)="onAcknowledgedSimulationChange($event)"
               (blur)="onAcknowledgedSimulationBlur()"
-              data-testid="review-consent-simulation-input"
+              (change)="onAcknowledgedSimulationChange($event)"
             />
             <span class="consent-text">
               Tudomásul veszem, hogy ez egy szimuláció: nem történik valódi rendelés, fizetés vagy
@@ -228,8 +220,8 @@
           @if (simulationConsentMessage() !== null) {
             <p
               class="consent-message"
-              id="review-consent-simulation-message"
               data-testid="review-consent-simulation-message"
+              id="review-consent-simulation-message"
               role="alert"
             >
               {{ simulationConsentMessage() }}
@@ -240,15 +232,15 @@
 
       <div class="actions" data-testid="review-actions">
         <app-button
-          variant="primary"
-          size="comfortable"
-          [label]="'Demórendelés véglegesítése'"
-          [loadingLabel]="'Véglegesítés…'"
-          [loading]="state() === 'submitting'"
-          [disabled]="!canSubmit()"
-          (pressed)="onSubmit()"
           data-testid="review-submit"
-        ></app-button>
+          label="Demórendelés véglegesítése"
+          loadingLabel="Véglegesítés…"
+          size="comfortable"
+          variant="primary"
+          [disabled]="!canSubmit()"
+          [loading]="state() === 'submitting'"
+          (pressed)="onSubmit()"
+        />
       </div>
 
       @if (ctaExplanation() !== null) {
@@ -258,18 +250,18 @@
       }
     </div>
 
-    <aside class="summary" aria-label="Rendelés végösszege" data-testid="review-summary">
+    <aside aria-label="Rendelés végösszege" class="summary" data-testid="review-summary">
       <h2 class="summary-title">Rendelés végösszege</h2>
 
       @if (readySummary() !== null) {
         <app-order-summary
-          [subtotal]="readySummary()!.subtotal"
-          [shipping]="readySummary()!.shipping"
           [footnote]="summaryFootnote()"
-        ></app-order-summary>
+          [shipping]="readySummary()!.shipping"
+          [subtotal]="readySummary()!.subtotal"
+        />
       } @else {
         <div class="summary-loading" data-testid="review-summary-loading">
-          <app-loading-state variant="lines" label="Árajánlat betöltése"></app-loading-state>
+          <app-loading-state label="Árajánlat betöltése" variant="lines" />
         </div>
       }
 
@@ -291,16 +283,16 @@
       </dl>
 
       <button
-        type="button"
         class="refresh"
-        (click)="onRefresh()"
-        [disabled]="busy()"
         data-testid="review-refresh"
+        type="button"
+        [disabled]="busy()"
+        (click)="onRefresh()"
       >
         Árajánlat frissítése
       </button>
     </aside>
   </div>
 
-  <app-terms-dialog [opened]="termsOpened()" (closed)="closeTerms()"></app-terms-dialog>
+  <app-terms-dialog [opened]="termsOpened()" (closed)="closeTerms()" />
 </section>

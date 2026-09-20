@@ -84,13 +84,17 @@ export class DeliveryStep {
   readonly continueRequested = output();
   readonly retryOptions = output();
 
-  /** Selected delivery option id (null until the user picks one). */
+  /**
+  Selected delivery option id (null until the user picks one).
+  */
   readonly selectedOptionId = signal<'home_delivery' | 'demo_pickup' | null>(null);
 
   readonly addressSubmitted = signal<boolean>(false);
   readonly addressSnapshot = signal<Address | null>(null);
 
-  /** Current payment method — defaults to `demo_card`. */
+  /**
+  Current payment method — defaults to `demo_card`.
+  */
   readonly paymentMethod = signal<PaymentMethod>('demo_card');
 
   // ---------------------------------------------------------------------------
@@ -125,22 +129,16 @@ export class DeliveryStep {
 
   readonly currentShippingFee = computed<Money>(() => {
     const id = this.selectedOptionId();
-    if (id === 'home_delivery') return HOME_DELIVERY_FEE;
-    return PICKUP_FEE;
+    return id === 'home_delivery' ? HOME_DELIVERY_FEE : PICKUP_FEE;
   });
 
-  readonly requiresAddress = computed<boolean>(() => {
-    return this.selectedOptionId() === 'home_delivery';
-  });
+  readonly requiresAddress = computed<boolean>(() => this.selectedOptionId() === 'home_delivery');
 
   readonly canConfirm = computed<boolean>(() => {
     if (this.saveState() === 'loading') return false;
     const optionId = this.selectedOptionId();
     if (optionId === null) return false;
-    if (optionId === 'home_delivery') {
-      return this.isAddressComplete();
-    }
-    return true;
+    return optionId === 'home_delivery' ? this.isAddressComplete() : true;
   });
 
   readonly confirmLabel = computed<string>(() => 'Tovább az ellenőrzéshez');
@@ -156,8 +154,7 @@ export class DeliveryStep {
 
   readonly paymentLabel = computed<string>(() => {
     const id = this.paymentMethod();
-    if (id === 'demo_card') return 'Bankkártya (szimulált)';
-    return 'Utánvét (demó)';
+    return id === 'demo_card' ? 'Bankkártya (szimulált)' : 'Utánvét (demó)';
   });
 
   /** `saveState:AsyncStatus` carries no payload (`components.md:570-572`), so
@@ -171,8 +168,7 @@ export class DeliveryStep {
   // ---------------------------------------------------------------------------
 
   feeFor(option: DeliveryOption): Money {
-    if (option.id === 'home_delivery') return HOME_DELIVERY_FEE;
-    return PICKUP_FEE;
+    return option.id === 'home_delivery' ? HOME_DELIVERY_FEE : PICKUP_FEE;
   }
 
   radioId(id: 'home_delivery' | 'demo_pickup'): string {
@@ -259,7 +255,7 @@ export class DeliveryStep {
       postalCode: this.postalCode().trim(),
       city: this.city().trim(),
       line1: this.line1().trim(),
-      ...(line2.length > 0 ? { line2 } : {}),
+      ...(line2.length > 0 && { line2 }),
     };
   }
 }

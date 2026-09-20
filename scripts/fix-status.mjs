@@ -62,7 +62,9 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FIX_DIR = join(REPO_ROOT, 'docs', 'fix');
 
-/** Paths a reference may start with. Anything else is prose, not a path. */
+/**
+Paths a reference may start with. Anything else is prose, not a path.
+*/
 const PATH_ROOTS = ['src/', 'tests/', 'e2e/', 'scripts/', 'docs/', '.claude/', 'packages/'];
 
 /**
@@ -77,12 +79,16 @@ const PATH_ROOTS = ['src/', 'tests/', 'e2e/', 'scripts/', 'docs/', '.claude/', '
  * references across all 74 documents while 36 `tests/` paths were in
  * fact gone.
  */
-const ROOT_ALTERNATION = `(?:${PATH_ROOTS.map((root) => root.replaceAll('.', '\\.')).join('|')})`;
+const ROOT_ALTERNATION = `(?:${PATH_ROOTS.map((root) => root.replaceAll('.', String.raw`\.`)).join('|')})`;
 
-/** The row kinds that fail the gate. The header says why only these two. */
+/**
+The row kinds that fail the gate. The header says why only these two.
+*/
 const GATING_KINDS = new Set(['DRIFT', 'UNBACKED']);
 
-/** Extensions that make a bare token a file reference rather than a directory. */
+/**
+Extensions that make a bare token a file reference rather than a directory.
+*/
 const FILE_EXTENSIONS = ['.ts', '.html', '.scss', '.md', '.json', '.mjs', '.mts', '.yaml', '.yml'];
 
 /**
@@ -144,7 +150,9 @@ function commitsNaming(id) {
   return out.split('\n').filter((line) => line.length > 0);
 }
 
-/** The `Status:` line's value, or null when the document has none. */
+/**
+The `Status:` line's value, or null when the document has none.
+*/
 function statusOf(body) {
   const match = /^Status:[ \t]*(.+)$/m.exec(body);
   return match === null ? null : match[1].trim();
@@ -157,7 +165,7 @@ function statusOf(body) {
  * when the file is edited rather than only when it is deleted.
  */
 function lineReferences(body) {
-  const pattern = new RegExp(`(${ROOT_ALTERNATION}[A-Za-z0-9/._-]+):(\\d+)`, 'g');
+  const pattern = new RegExp(String.raw`(${ROOT_ALTERNATION}[A-Za-z0-9/._-]+):(\d+)`, 'g');
   const found = new Map();
   for (const match of body.matchAll(pattern)) {
     const [, path, line] = match;
@@ -167,7 +175,9 @@ function lineReferences(body) {
   return found;
 }
 
-/** Bare paths carrying a file extension, with no line number attached. */
+/**
+Bare paths carrying a file extension, with no line number attached.
+*/
 function barePaths(body) {
   const pattern = new RegExp(`(${ROOT_ALTERNATION}[A-Za-z0-9/._-]+)`, 'g');
   const found = new Set();
@@ -178,22 +188,30 @@ function barePaths(body) {
   return found;
 }
 
-/** Line count of a file already known to exist. */
+/**
+Line count of a file already known to exist.
+*/
 function lineCount(path) {
   return readFileSync(join(REPO_ROOT, path), 'utf8').split('\n').length;
 }
 
-/** True when the status text claims the task has not run yet. */
+/**
+True when the status text claims the task has not run yet.
+*/
 function claimsPlanned(status) {
   return /\bPLANNED\b/i.test(status) || /\bnot executed\b/i.test(status);
 }
 
-/** True when the status text claims the task has landed. */
+/**
+True when the status text claims the task has landed.
+*/
 function claimsDone(status) {
   return /\b(DONE|LANDED|EXECUTED|COMPLETE)\b/i.test(status) && !claimsPlanned(status);
 }
 
-/** Every finding for one document, in the order a reader should act on them. */
+/**
+Every finding for one document, in the order a reader should act on them.
+*/
 function auditDocument(id, body) {
   const findings = [];
   const status = statusOf(body);
@@ -298,11 +316,11 @@ function main() {
   const documentsWithFindings = new Set(findings.map((finding) => finding.doc)).size;
 
   if (!quiet) {
-    let currentDoc = '';
+    let currentDocument = '';
     for (const finding of findings) {
-      if (finding.doc !== currentDoc) {
-        currentDoc = finding.doc;
-        process.stdout.write(`\n${currentDoc}\n`);
+      if (finding.doc !== currentDocument) {
+        currentDocument = finding.doc;
+        process.stdout.write(`\n${currentDocument}\n`);
       }
       process.stdout.write(`  ${finding.kind.padEnd(10)} ${finding.detail}\n`);
     }

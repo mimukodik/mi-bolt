@@ -45,15 +45,21 @@ type Surface = {
   readonly state: 'default' | 'loading' | 'empty' | 'error';
   readonly routeId: string;
   readonly path: string;
-  /** Selector / text the surface exposes in the named state. */
+  /**
+  Selector / text the surface exposes in the named state.
+  */
   readonly assertion: { kind: 'testid'; testId: string } | { kind: 'text'; match: RegExp };
-  /** Optional query string the page needs to force the state. */
+  /**
+  Optional query string the page needs to force the state.
+  */
   readonly query?: string;
-  /** Whether this route is currently implemented in the build. */
+  /**
+  Whether this route is currently implemented in the build.
+  */
   readonly built?: boolean;
 };
 
-const SURFACES: ReadonlyArray<Surface> = [
+const SURFACES: readonly Surface[] = [
   // Default: the catalogue renders its product grid.
   {
     state: 'default',
@@ -128,8 +134,8 @@ test.describe('T25 state matrix — default / loading / empty / error', () => {
       // audit captures the limitation without failing.
       if (surface.assertion.kind === 'testid') {
         const root = page.getByTestId(surface.assertion.testId);
-        const mounted = (await root.count()) > 0;
-        if (!mounted) {
+        const isMounted = (await root.count()) > 0;
+        if (!isMounted) {
           test.skip(
             true,
             `${surface.assertion.testId} not mounted on ${url} — empty / error surface not exposed by this build`,
@@ -139,8 +145,8 @@ test.describe('T25 state matrix — default / loading / empty / error', () => {
         await expect(root.first()).toBeVisible({ timeout: 10_000 });
       } else {
         const text = page.getByText(surface.assertion.match);
-        const mounted = (await text.count()) > 0;
-        if (!mounted) {
+        const isMounted = (await text.count()) > 0;
+        if (!isMounted) {
           test.skip(true, `text matching ${surface.assertion.match} not present on ${url}`);
           return;
         }

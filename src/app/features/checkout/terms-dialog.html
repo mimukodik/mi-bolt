@@ -1,8 +1,8 @@
 <app-accessible-dialog
-  [opened]="opened()"
-  [label]="label()"
-  (closed)="onClosed()"
   data-testid="review-terms-dialog"
+  [label]="label()"
+  [opened]="opened()"
+  (closed)="onClosed()"
 >
   <div class="body flex flex-col gap-3 leading-relaxed" data-testid="terms-body">
     <p class="m-0">

@@ -32,7 +32,8 @@ import {
   provideZonelessChangeDetection,
   ɵresolveComponentResources,
 } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { readdir, readFile } from 'node:fs/promises';
@@ -40,11 +41,11 @@ import { join as pathJoin, resolve as pathResolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../api/generated/api-configuration';
 import { CartDomain } from '../../../mocks/cart/cart-domain';
 import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
 import { IdempotencyStore } from '../../../mocks/idempotency';
-import { Repository } from '../../../mocks/repository';
+import { Repository as Repo } from '../../../mocks/repository';
 import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { Button } from '../../shared/ui/button/button';
@@ -77,8 +78,8 @@ const DEMO_CART_ITEM: CartItem = {
   colorName: 'Grafit',
   storageGb: 256,
   quantity: 2,
-  unitPrice: { amount: 339990, currency: 'HUF' },
-  lineTotal: { amount: 679980, currency: 'HUF' },
+  unitPrice: { amount: 339_990, currency: 'HUF' },
+  lineTotal: { amount: 679_980, currency: 'HUF' },
   maxQuantity: 5,
   availability: 'in_stock',
   image: {
@@ -100,41 +101,42 @@ function registerComponentMetadata(
 ): void {
   if (typeof componentClass !== 'function') return;
   const raw: unknown = Reflect.get(componentClass, 'propDecorators');
-  const propDecorators: Record<string, unknown[]> = {};
+  const propertyDecorators: Record<string, unknown[]> = {};
   if (typeof raw === 'object' && raw !== null) {
     for (const [key, value] of Object.entries(raw)) {
-      if (Array.isArray(value)) {
-        const arr: unknown[] = [];
-        for (const item of value) {
-          arr.push(item);
-        }
-        propDecorators[key] = arr;
+      if (!Array.isArray(value)) {
+        continue;
       }
+
+      const array: unknown[] = [...value];
+      propertyDecorators[key] = array;
     }
   }
   if (config.inputs !== undefined) {
     for (const name of config.inputs) {
-      const arr = propDecorators[name] ?? [];
-      arr.push({ type: Input, args: [{ isSignal: true }] });
-      propDecorators[name] = arr;
+      const array = propertyDecorators[name] ?? [];
+      array.push({ type: Input, args: [{ isSignal: true }] });
+      propertyDecorators[name] = array;
     }
   }
   if (config.outputs !== undefined) {
     for (const name of config.outputs) {
-      const arr = propDecorators[name] ?? [];
-      arr.push({ type: Output, args: [] });
-      propDecorators[name] = arr;
+      const array = propertyDecorators[name] ?? [];
+      array.push({ type: Output, args: [] });
+      propertyDecorators[name] = array;
     }
   }
   if (config.models !== undefined) {
     for (const name of config.models) {
-      const arr = propDecorators[name] ?? [];
-      arr.push({ type: Input, args: [{ isSignal: true }] });
-      arr.push({ type: Output, args: [`${name}Change`] });
-      propDecorators[name] = arr;
+      const array = propertyDecorators[name] ?? [];
+      array.push(
+        { type: Input, args: [{ isSignal: true }] },
+        { type: Output, args: [`${name}Change`] },
+      );
+      propertyDecorators[name] = array;
     }
   }
-  Reflect.set(componentClass, 'propDecorators', propDecorators);
+  Reflect.set(componentClass, 'propDecorators', propertyDecorators);
 }
 
 registerComponentMetadata(CartLine, {
@@ -178,42 +180,42 @@ registerComponentMetadata(StatusMessage, {
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new Error('Expected fixture.nativeElement to be HTMLElement');
+    throw new TypeError('Expected fixture.nativeElement to be HTMLElement');
   }
   return raw;
 }
 
 function getElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLElement)) {
+    throw new TypeError(`Expected HTMLElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement | null {
-  const el = parent.querySelector(selector);
-  if (el === null) return null;
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (element === null) return null;
+  if (!(element instanceof HTMLElement)) {
+    throw new TypeError(`Expected HTMLElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 function getButtonElement(parent: Element, selector: string): HTMLButtonElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLButtonElement)) {
-    throw new Error(`Expected HTMLButtonElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLButtonElement)) {
+    throw new TypeError(`Expected HTMLButtonElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 function getInputElement(parent: Element, selector: string): HTMLInputElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLInputElement)) {
-    throw new Error(`Expected HTMLInputElement matching "${selector}"`);
+  const element = parent.querySelector(selector);
+  if (!(element instanceof HTMLInputElement)) {
+    throw new TypeError(`Expected HTMLInputElement matching "${selector}"`);
   }
-  return el;
+  return element;
 }
 
 /**
@@ -224,7 +226,7 @@ function getInputElement(parent: Element, selector: string): HTMLInputElement {
  * timers and re-renders between each tick instead.
  */
 async function settleMutation(fixture: ComponentFixture<unknown>): Promise<void> {
-  for (let i = 0; i < 6; i += 1) {
+  for (let index = 0; index < 6; index += 1) {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 10);
     });
@@ -266,7 +268,7 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
   return content;
 }
 
-function makeEnv() {
+function makeEnvironment() {
   const clock = createFixedClock(new Date(Date.parse('2026-09-14T10:00:00.000Z')).toISOString());
   const ids = createDeterministicIds(7);
   const scenario = {
@@ -275,11 +277,11 @@ function makeEnv() {
     clockOffsetMs: 0,
     isolated: true,
   };
-  const repository = new Repository(scenario, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
+  const repo = new Repo(scenario, ids, clock);
+  repo.loadProducts([DEMO_PRODUCT]);
   const idempotency = new IdempotencyStore(clock);
-  new CartDomain(repository, clock, ids, idempotency);
-  return { repository, clock, ids, scenario, apiRoot: '/api/v1' };
+  new CartDomain(repo, clock, ids, idempotency);
+  return { repository: repo, clock, ids, scenario, apiRoot: '/api/v1' };
 }
 
 beforeAll(async () => {
@@ -288,14 +290,14 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  const env = makeEnv();
-  server.use(...cartHandlersEntry(env));
+  const environment = makeEnvironment();
+  server.use(...cartHandlersEntry(environment));
   TestBed.configureTestingModule({
     imports: [CartPage, CartLine, OrderSummary],
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
       provideRouter([
         { path: 'penztar/adatok', component: CartPage },
         { path: 'termekek', component: CartPage },
@@ -325,8 +327,8 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
 
     expect(queryElement(root, 'app-product-image')).not.toBeNull();
 
-    const nameEl = getElement(root, '[data-testid="cart-line-name"]');
-    expect(nameEl.textContent.trim()).toBe('Demo One 5G');
+    const nameElement = getElement(root, '[data-testid="cart-line-name"]');
+    expect(nameElement.textContent.trim()).toBe('Demo One 5G');
 
     const variantColor = getElement(root, '.variant-color');
     expect(variantColor.textContent.trim()).toBe('Grafit');
@@ -372,10 +374,10 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
     });
 
     const root = getRootElement(fixture);
-    const removeBtn = getElement(root, '[data-testid="cart-line-remove"]');
-    expect(removeBtn.getAttribute('aria-label')).toBe('Törlés: Demo One 5G');
+    const removeButton = getElement(root, '[data-testid="cart-line-remove"]');
+    expect(removeButton.getAttribute('aria-label')).toBe('Törlés: Demo One 5G');
 
-    removeBtn.click();
+    removeButton.click();
     expect(removedId).toBe('cart-item-1');
   });
 
@@ -394,10 +396,10 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
 
     const line = cartLines[0];
     if (!(line instanceof HTMLElement)) {
-      throw new Error('Expected HTMLElement');
+      throw new TypeError('Expected HTMLElement');
     }
-    const nameEl = getElement(line, '[data-testid="cart-line-name"]');
-    expect(nameEl.textContent.trim()).toBe('Demo One 5G');
+    const nameElement = getElement(line, '[data-testid="cart-line-name"]');
+    expect(nameElement.textContent.trim()).toBe('Demo One 5G');
   });
 });
 
@@ -421,7 +423,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 
   it('OrderSummary renders the Hungarian "shipping decided next step" message when no method is selected', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: 679_980, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', null);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -432,12 +434,12 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 
   it('OrderSummary computes subtotal + shipping = total when a method is supplied', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: 679_980, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', { amount: 1990, currency: 'HUF' });
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.total().amount).toBe(681970);
+    expect(fixture.componentInstance.total().amount).toBe(681_970);
     expect(fixture.componentInstance.total().currency).toBe('HUF');
 
     const root = getRootElement(fixture);
@@ -448,7 +450,7 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 
   it('never invents a monthly fee or hidden add-on (T18-AC05)', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: 679_980, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', null);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -491,11 +493,11 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    const lineEl = getElement(root, '[data-testid="cart-line"]');
-    expect(lineEl.getAttribute('aria-busy')).toBe('true');
+    const lineElement = getElement(root, '[data-testid="cart-line"]');
+    expect(lineElement.getAttribute('aria-busy')).toBe('true');
 
-    const removeBtn = getElement(root, '[data-testid="cart-line-remove"]');
-    expect(removeBtn.hasAttribute('disabled')).toBe(true);
+    const removeButton = getElement(root, '[data-testid="cart-line-remove"]');
+    expect(removeButton.hasAttribute('disabled')).toBe(true);
   });
 
   it('CartPage renders the EmptyState when no items remain (removing the last line)', async () => {
@@ -515,8 +517,8 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
 
   it('CartPage renders a loading skeleton on first arrival and an ErrorState on a failure', async () => {
     server.use(
-      http.get('*/api/v1/carts/:cartId', () => {
-        return HttpResponse.json(
+      http.get('*/api/v1/carts/:cartId', () =>
+        HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:service-unavailable',
             title: 'Hiba',
@@ -526,10 +528,10 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
             fieldErrors: [],
           },
           { status: 503, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-      http.post('*/api/v1/carts', () => {
-        return HttpResponse.json(
+        ),
+      ),
+      http.post('*/api/v1/carts', () =>
+        HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:service-unavailable',
             title: 'Hiba',
@@ -539,8 +541,8 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
             fieldErrors: [],
           },
           { status: 503, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
+        ),
+      ),
     );
 
     const cartFacade = TestBed.inject(CartFacade);
@@ -571,8 +573,8 @@ describe('FIX-21 only the mutating line is disabled', () => {
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    const lineEl = getElement(root, '[data-testid="cart-line"]');
-    expect(lineEl.hasAttribute('aria-busy')).toBe(false);
+    const lineElement = getElement(root, '[data-testid="cart-line"]');
+    expect(lineElement.hasAttribute('aria-busy')).toBe(false);
 
     expect(getButtonElement(root, '[data-testid="quantity-decrement"]').disabled).toBe(false);
     expect(getButtonElement(root, '[data-testid="quantity-increment"]').disabled).toBe(false);
@@ -594,12 +596,12 @@ describe('FIX-21 only the mutating line is disabled', () => {
 
     expect(getInputElement(root, '[data-testid="quantity-input"]').value).toBe('3');
 
-    const lineEl = getElement(root, '[data-testid="cart-line"]');
-    const totalsEl = getElement(lineEl, '.totals');
-    const lineTotalAmount = getElement(totalsEl, '[data-testid="price-amount"]');
+    const lineElement = getElement(root, '[data-testid="cart-line"]');
+    const totalsElement = getElement(lineElement, '.totals');
+    const lineTotalAmount = getElement(totalsElement, '[data-testid="price-amount"]');
     expect(lineTotalAmount.textContent.trim()).toBe(PriceBlock.formatHuf(339_990 * 3));
 
-    expect(lineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(lineElement.hasAttribute('aria-busy')).toBe(false);
   });
 
   it('FIX-21-AC03: removing the last line empties the cart and renders the empty state', async () => {
@@ -637,30 +639,30 @@ describe('FIX-21 only the mutating line is disabled', () => {
     const firstHost = cartLineHosts[0];
     const secondHost = cartLineHosts[1];
     if (!(firstHost instanceof HTMLElement) || !(secondHost instanceof HTMLElement)) {
-      throw new Error('Expected HTMLElement cart-line hosts');
+      throw new TypeError('Expected HTMLElement cart-line hosts');
     }
 
-    const firstLineEl = getElement(firstHost, '[data-testid="cart-line"]');
-    const secondLineEl = getElement(secondHost, '[data-testid="cart-line"]');
+    const firstLineElement = getElement(firstHost, '[data-testid="cart-line"]');
+    const secondLineElement = getElement(secondHost, '[data-testid="cart-line"]');
 
     getButtonElement(firstHost, '[data-testid="quantity-increment"]').click();
     await Promise.resolve();
     fixture.detectChanges();
 
-    expect(firstLineEl.getAttribute('aria-busy')).toBe('true');
+    expect(firstLineElement.getAttribute('aria-busy')).toBe('true');
     expect(getButtonElement(firstHost, '[data-testid="quantity-decrement"]').disabled).toBe(true);
     expect(getButtonElement(firstHost, '[data-testid="quantity-increment"]').disabled).toBe(true);
     expect(getButtonElement(firstHost, '[data-testid="cart-line-remove"]').disabled).toBe(true);
 
-    expect(secondLineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(secondLineElement.hasAttribute('aria-busy')).toBe(false);
     expect(getButtonElement(secondHost, '[data-testid="quantity-decrement"]').disabled).toBe(false);
     expect(getButtonElement(secondHost, '[data-testid="quantity-increment"]').disabled).toBe(false);
     expect(getButtonElement(secondHost, '[data-testid="cart-line-remove"]').disabled).toBe(false);
 
     await settleMutation(fixture);
 
-    expect(firstLineEl.hasAttribute('aria-busy')).toBe(false);
-    expect(secondLineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(firstLineElement.hasAttribute('aria-busy')).toBe(false);
+    expect(secondLineElement.hasAttribute('aria-busy')).toBe(false);
   });
 
   it('a mutation that fails still re-enables the line once it settles (R24 regression guard)', async () => {
@@ -674,8 +676,8 @@ describe('FIX-21 only the mutating line is disabled', () => {
     // the line's own controls must come back even though the mutation
     // did not succeed.
     server.use(
-      http.patch('*/api/v1/carts/:cartId/items/:itemId', () => {
-        return HttpResponse.json(
+      http.patch('*/api/v1/carts/:cartId/items/:itemId', () =>
+        HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:cart-version-conflict',
             title: 'Ütközés',
@@ -685,8 +687,8 @@ describe('FIX-21 only the mutating line is disabled', () => {
             fieldErrors: [],
           },
           { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
+        ),
+      ),
     );
 
     const fixture = TestBed.createComponent(CartPage);
@@ -698,12 +700,12 @@ describe('FIX-21 only the mutating line is disabled', () => {
     await Promise.resolve();
     fixture.detectChanges();
 
-    const lineEl = getElement(root, '[data-testid="cart-line"]');
-    expect(lineEl.getAttribute('aria-busy')).toBe('true');
+    const lineElement = getElement(root, '[data-testid="cart-line"]');
+    expect(lineElement.getAttribute('aria-busy')).toBe('true');
 
     await settleMutation(fixture);
 
-    expect(lineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(lineElement.hasAttribute('aria-busy')).toBe(false);
     expect(getButtonElement(root, '[data-testid="quantity-decrement"]').disabled).toBe(false);
     expect(getButtonElement(root, '[data-testid="quantity-increment"]').disabled).toBe(false);
     expect(getButtonElement(root, '[data-testid="cart-line-remove"]').disabled).toBe(false);
@@ -729,8 +731,8 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     expect(fixture.componentInstance.canContinue()).toBe(true);
 
     const root = getRootElement(fixture);
-    const continueBtn = getElement(root, '[data-testid="cart-continue"] button');
-    expect(continueBtn.hasAttribute('disabled')).toBe(false);
+    const continueButton = getElement(root, '[data-testid="cart-continue"] button');
+    expect(continueButton.hasAttribute('disabled')).toBe(false);
   });
 
   it('navigates only after facade.ensureCart() resolves successfully', async () => {
@@ -764,7 +766,7 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.subtotal().amount).toBe(679980);
+    expect(fixture.componentInstance.subtotal().amount).toBe(679_980);
     expect(fixture.componentInstance.subtotal().currency).toBe('HUF');
 
     const root = getRootElement(fixture);
@@ -823,8 +825,8 @@ describe('FIX-35 cart page copy matches screens.md:73', () => {
     const h1 = getElement(root, 'h1');
     expect(h1.textContent.trim()).toBe('A kosarad');
 
-    const continueBtn = getElement(root, '[data-testid="cart-continue"] button');
-    expect(continueBtn.textContent.trim()).toBe('Tovább az adatokhoz');
+    const continueButton = getElement(root, '[data-testid="cart-continue"] button');
+    expect(continueButton.textContent.trim()).toBe('Tovább az adatokhoz');
 
     expect(root.textContent).toContain('A következő lépésben választod ki.');
   });
@@ -852,7 +854,7 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
 
   it('OrderSummary only imports PriceBlock from the shared UI surface', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
-    fixture.componentRef.setInput('subtotal', { amount: 679980, currency: 'HUF' });
+    fixture.componentRef.setInput('subtotal', { amount: 679_980, currency: 'HUF' });
     fixture.componentRef.setInput('shipping', { amount: 1990, currency: 'HUF' });
     await fixture.whenStable();
     fixture.detectChanges();
