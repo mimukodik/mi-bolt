@@ -1400,3 +1400,143 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
     harness.cleanup();
   });
 });
+
+// ===========================================================================
+// Self-removing control focus: a click that destroys the button it was made on
+// ===========================================================================
+
+describe('self-removing controls — focus moves to the results counter, not <body>', () => {
+  /**
+   * The defect, measured in Chrome at 1440x900 on `/telefonok`：removing
+   * a filter chip, clearing all filters, resetting from the empty
+   * state and retrying from the error state each destroyed the button
+   * the click was made on. The browser then handed focus back to
+   * `BODY`, and a keyboard user was left with no focus ring and had to
+   * tab from the top of the document again (WCAG 2.4.3, 2.4.7).
+   *
+   * This is NOT the FIX-25 cause and NOT the pagination arm. FIX-25 is
+   * "activation disables the control"; the pagination fix is the
+   * disabling arm, and `Pagination.onBoundary` answers it. The arm
+   * here is activation removing the control from the DOM — `AsyncContent`
+   * tears down the empty/error branch when the facade leaves the
+   * matching status, and the chip row disappears with the last chip.
+   * It needs a different remedy.
+   *
+   * jsdom does implement focus loss on element removal (the HTML focus
+   * fixup rule applies here, unlike the disabled-button case), so
+   * unlike the pagination block above the `<body>` half of this defect
+   * reproduces here. `toBe(document.body)` is therefore a real pre-fix
+   * reading rather than an inference, and the post-fix assertions
+   * below are the same in both environments.
+   */
+
+  it('removing an inStock chip (one of two) moves focus to the results counter', async () => {
+    const harness = await setupHarness({ inStock: 'true', is5g: 'true' });
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+
+    const root = getRootElement(harness.fixture);
+    const remove = queryButton(root, '[data-testid="applied-chip-remove-inStock"]');
+    const counter = queryElement(root, '[data-testid="result-count"]');
+    remove.focus();
+    expect(document.activeElement).toBe(remove);
+
+    remove.click();
+    harness.fixture.detectChanges();
+
+    expect(document.activeElement).toBe(counter);
+    expect(document.activeElement).not.toBe(document.body);
+    harness.cleanup();
+  });
+
+  it('removing the last chip (is5g) moves focus to the results counter', async () => {
+    const harness = await setupHarness({ is5g: 'true' });
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+
+    const root = getRootElement(harness.fixture);
+    const remove = queryButton(root, '[data-testid="applied-chip-remove-is5g"]');
+    const counter = queryElement(root, '[data-testid="result-count"]');
+    remove.focus();
+    expect(document.activeElement).toBe(remove);
+
+    remove.click();
+    harness.fixture.detectChanges();
+
+    // The whole chip row disappears with its last chip, but the
+    // counter is rendered unconditionally and is what focus lands on.
+    expect(root.querySelector('[data-testid="applied-filters"]')).toBeNull();
+    expect(document.activeElement).toBe(counter);
+    expect(document.activeElement).not.toBe(document.body);
+    harness.cleanup();
+  });
+
+  it('clicking applied-filters-clear moves focus to the results counter', async () => {
+    const harness = await setupHarness({ inStock: 'true', is5g: 'true' });
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+
+    const root = getRootElement(harness.fixture);
+    const clearAll = queryButton(root, '[data-testid="applied-filters-clear"]');
+    const counter = queryElement(root, '[data-testid="result-count"]');
+    clearAll.focus();
+    expect(document.activeElement).toBe(clearAll);
+
+    clearAll.click();
+    harness.fixture.detectChanges();
+
+    expect(root.querySelector('[data-testid="applied-filters"]')).toBeNull();
+    expect(document.activeElement).toBe(counter);
+    expect(document.activeElement).not.toBe(document.body);
+    harness.cleanup();
+  });
+
+  it('clicking the empty-state reset action moves focus to the results counter', async () => {
+    // The empty-state action is `app-button` projected into
+    // `AsyncContent` with `data-async-empty-action`, and its `(pressed)`
+    // is bound to `CatalogPage.onClearAll`. The chip row is not on
+    // screen in this state, so the entry point that destroys the
+    // button under the user is the projected reset action itself.
+    const harness = await setupHarness({ inStock: 'true' });
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+
+    const root = getRootElement(harness.fixture);
+    const reset = queryButton(root, '[data-testid="catalog-empty"] app-button button');
+    const counter = queryElement(root, '[data-testid="result-count"]');
+    reset.focus();
+    expect(document.activeElement).toBe(reset);
+
+    reset.click();
+    harness.fixture.detectChanges();
+
+    expect(root.querySelector('[data-testid="catalog-empty"]')).toBeNull();
+    expect(document.activeElement).toBe(counter);
+    expect(document.activeElement).not.toBe(document.body);
+    harness.cleanup();
+  });
+
+  it('clicking the error-state retry button moves focus to the results counter', async () => {
+    // `ErrorState`'s retry `(retryRequested)` is bound to
+    // `CatalogPage.onRetry`, which clears the facade's error and
+    // `AsyncContent` then tears down the error branch under the user's
+    // hands. Same shape as the empty-state action above.
+    const harness = await setupHarness({ q: 'demo' });
+    harness.reject(503);
+    await harness.waitForStatus('error');
+
+    const root = getRootElement(harness.fixture);
+    const retry = queryButton(root, '[data-testid="catalog-error"] app-button button');
+    const counter = queryElement(root, '[data-testid="result-count"]');
+    retry.focus();
+    expect(document.activeElement).toBe(retry);
+
+    retry.click();
+    harness.fixture.detectChanges();
+
+    expect(root.querySelector('[data-testid="catalog-error"]')).toBeNull();
+    expect(document.activeElement).toBe(counter);
+    expect(document.activeElement).not.toBe(document.body);
+    harness.cleanup();
+  });
+});

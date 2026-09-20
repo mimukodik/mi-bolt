@@ -232,6 +232,7 @@ export class CatalogPage {
   }
 
   onChipRemoved(identity: FilterIdentity): void {
+    this.focusResultCount();
     switch (identity.name) {
       case 'q':
         this.facade.setSearch('');
@@ -263,11 +264,32 @@ export class CatalogPage {
   }
 
   onClearAll(): void {
+    this.focusResultCount();
     this.facade.reset();
   }
 
   onRetry(): void {
+    this.focusResultCount();
     this.facade.retry();
+  }
+
+  /** Hand focus to the live results counter. Used by the three handlers
+   *  that remove the control the user just activated from the DOM —
+   *  removing a filter chip, clearing all filters and the empty-state
+   *  reset action share `onClearAll`, and retrying from the error state
+   *  destroys the retry button under the user's hands — so a keyboard
+   *  user is not left with focus on `<body>` and has to tab from the
+   *  top of the document again (WCAG 2.4.3, 2.4.7). The counter is
+   *  rendered unconditionally and is never destroyed, so the call is
+   *  synchronous and moves focus off the doomed button before the
+   *  re-render removes it — the same reason `Pagination.onBoundary`
+   *  works synchronously, stated in its own docstring. The user chose
+   *  this target on 2026-09-20 because it is the result of the action
+   *  and one target serves all five cases. This is the DOM-removal
+   *  arm of the same problem `Pagination.onBoundary` answers for the
+   *  disabling arm. */
+  private focusResultCount(): void {
+    this.toolbar()?.resultCountEl()?.focus();
   }
 
   openDrawer(): void {

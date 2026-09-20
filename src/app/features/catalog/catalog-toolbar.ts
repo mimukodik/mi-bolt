@@ -57,6 +57,16 @@ export class CatalogToolbar {
     () => this.filterTriggerRef()?.nativeElement ?? null,
   );
 
+  /** The live results counter, exposed so `CatalogPage` can hand focus
+   *  to it when a sibling control removes itself from the DOM. Same
+   *  non-input/output shape as `filterTriggerEl` above: a public
+   *  property a parent reads is neither an input nor an output, so
+   *  `components.md:371`'s declared surface is unchanged. */
+  private readonly resultCountRef = viewChild<ElementRef<HTMLElement>>('resultCount');
+  readonly resultCountEl = computed<HTMLElement | null>(
+    () => this.resultCountRef()?.nativeElement ?? null,
+  );
+
   /** Whether the drawer this trigger opens is currently open, pushed in
    *  by `CatalogPage` and reflected onto the trigger's
    *  `aria-expanded`/`aria-controls` (WCAG 4.1.2: a disclosure control
