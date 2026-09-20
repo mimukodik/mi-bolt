@@ -1,6 +1,7 @@
 /**
- * Pure URL predicates the browser worker's handlers are built from
- * (FIX-51, T05-AC05 — `docs/tasks/T05.md:49`). Kept in a module of
+ * Pure URL predicates the browser worker's handlers are built from,
+ * so unknown API endpoints cannot pass through and external scripts,
+ * fonts, telemetry and business hosts are disallowed. Kept in a module of
  * their own, with no `msw` import, so a unit test can exercise them
  * directly: `src/mocks/browser.ts`'s module scope calls
  * `setupWorker()` from `msw/browser`, which throws outside a real

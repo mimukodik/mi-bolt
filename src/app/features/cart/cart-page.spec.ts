@@ -557,8 +557,8 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
 });
 
 // ---------------------------------------------------------------------------
-// FIX-21: only the cart line whose mutation is in flight is marked busy.
-// Behavioural criteria from docs/fix/FIX-21.md ("## Acceptance criteria").
+// Only the cart line whose mutation is in flight is marked busy: every
+// other line stays interactive, so quantity and remove keep working.
 // ---------------------------------------------------------------------------
 describe('FIX-21 only the mutating line is disabled', () => {
   it('FIX-21-AC01: an idle line at quantity 2 has no aria-busy and every control is enabled', async () => {

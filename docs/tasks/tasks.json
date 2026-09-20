@@ -1401,8 +1401,7 @@
     "files": [
       "e2e/design/viewport-matrix.spec.ts",
       "e2e/design/state-matrix.spec.ts",
-      "e2e/a11y/keyboard.spec.ts",
-      "docs/mi-bolt/execution/design-review.md"
+      "e2e/a11y/keyboard.spec.ts"
     ],
     "interface": "Input: every screen and relevant component state. Output: measured screenshots, axe results, keyboard/focus report and R01–R26 evidence.",
     "deliverable": "Independent review against `docs/design/yettel.md` across the complete flow.",

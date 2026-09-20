@@ -17,9 +17,9 @@
  * a real network error rather than reaching the network or resolving
  * with a status. Every other cross-origin request — a script, a font,
  * a telemetry beacon, another company's API — is answered with an
- * explicit 403 rather than passed through: T05-AC05
- * (`docs/tasks/T05.md:49`) requires that "external scripts, fonts,
- * telemetry and business hosts are disallowed", and `docs/spec/
+ * explicit 403 rather than passed through: the requirement is that
+ * "external scripts, fonts, telemetry and business hosts are disallowed",
+ * and `docs/spec/
  * architecture.md` §8 and `docs/spec/acceptance.md` AC25 build the
  * whole demo on the premise that the page reaches no network at all.
  *

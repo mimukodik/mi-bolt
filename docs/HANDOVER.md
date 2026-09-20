@@ -193,7 +193,6 @@ content area.
 - Two branches on `origin`: `feat/mi-bolt-mvp-implementation` and
   `run/deeplink-wait` (§1). Nothing else is left anywhere — no worktree to
   inherit, no background process, no runner to resume.
-- `docs/fix/` holds 77 fix docs: **40 DONE, 28 PARTIAL, 4 PLANNED, 2 BLOCKED**.
 
 ### Commits this session
 
