@@ -130,6 +130,20 @@ function hasPaymentIntentId(
 }
 
 /**
+ * True when a checkout failure carries enough information to be
+ * considered a definite outcome (the server saw the request and
+ * answered). 0 is the local sentinel for a transport failure, and
+ * any 5xx is treated as uncertain because a proxy or load balancer
+ * may have accepted the request without forwarding it — the design's
+ * `uncertain retains, definite rotates` rule applies to both.
+ */
+function isDefiniteOutcome(status: number): boolean {
+  if (status === 0) return false;
+  if (status >= 500 && status < 600) return false;
+  return true;
+}
+
+/**
  * Root-provided checkout owner. `TestBed.inject(CheckoutFacade)` returns
  * the same instance across the four pages of the wizard and across the
  * payment-return cold start, so the in-memory snapshot survives the
@@ -354,12 +368,12 @@ export class CheckoutFacade {
           // Definite outcomes (412, 410, 422, 409) must rotate the key
           // so the next attempt mints a fresh one; otherwise the
           // server replays the same answer. Uncertain outcomes
-          // (status 0, a transport failure; 503, an unknown outcome)
-          // retain — the next attempt carries the same fingerprint
-          // and replays the original request, which is the design's
-          // `uncertain retains, definite rotates` rule.
+          // (status 0, a transport failure; any 5xx, an unknown
+          // outcome) retain — the next attempt carries the same
+          // fingerprint and replays the original request, which is
+          // the design's `uncertain retains, definite rotates` rule.
           const error = mapError(err);
-          if (error.status !== 0 && error.status !== 503) {
+          if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateIntentKey();
           }
           return { ok: false, error };
@@ -443,7 +457,7 @@ export class CheckoutFacade {
             await this.recordPriceChange(error);
             return { ok: false, error };
           }
-          if (error.status !== 0 && error.status !== 503) {
+          if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateOrderKey();
           }
           return { ok: false, error };
@@ -620,10 +634,17 @@ export class CheckoutFacade {
   private async recordPriceChange(error: CheckoutError): Promise<void> {
     const shownTotal = this.summary()?.total;
     checkoutKeys.rotateOrderKey();
-    await this.cart.refetch();
-    await this.ensureSession(true);
+    try {
+      await this.cart.refetch();
+      await this.ensureSession(true);
+    } catch {
+      // A failed refetch must not strand the user on the review step
+      // without an error surface. Fall through with the totals the
+      // facade already had; the error is set below so the banner
+      // appears even when the refetch did not.
+    }
     const currentTotal = this.summary()?.total;
-    if (shownTotal !== undefined && currentTotal !== undefined) {
+    if (shownTotal !== undefined && currentTotal !== undefined && shownTotal !== currentTotal) {
       this.priceChangeWritable.set({ shownTotal, currentTotal, awaitingConfirmation: true });
     }
     this.errorWritable.set(error);
