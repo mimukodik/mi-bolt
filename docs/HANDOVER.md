@@ -386,3 +386,23 @@ The runner state store is committed-adjacent and survives:
 `scripts/coder-agent/sessions/<name>/` holds each runner's `claude.args`,
 `meta` and per-turn results. `coder-agent.sh result <name> --turn N` prints a
 runner's report; that is how to read `deeplink-wait`'s without re-running it.
+
+**`coder-agent.sh rm` deletes that store** — its last statement is
+`rm -rf "$d"` over the session directory, so the runner's report and the exact
+`--allowedTools` tail in `claude.args` go with it. It does **not** delete the
+git branch. So before removing a session whose work is not finished, copy
+whatever is still wanted out of `scripts/coder-agent/sessions/<name>/` first.
+
+On `deeplink-wait` specifically: the worktree stays, by the user's decision on
+2026-09-20, because `coder-agent.sh resume deeplink-wait` runs in that directory
+and resuming is the cheapest route to the fix round in §1. The directory itself
+holds nothing unique — it is clean, with no uncommitted and no untracked files,
+and `e172c9a` lives in the main repository's object store — so removing it would
+lose no code. What it would cost is the resume, which would then mean a fresh
+runner started against the existing `run/deeplink-wait` branch.
+
+Nothing in `e172c9a` can be taken over without coding, either. The async-guard
+change and the reordering §1 rejects sit in the same file and the same function
+region; `checkout-state.spec.ts`'s rewritten cases only pass with the new
+guards; and `success-page.spec.ts` is meaningless without them. There is no
+file-level or commit-level slice that delivers value without the defect.
