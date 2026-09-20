@@ -18,7 +18,15 @@ body {
 
 html {
   font-family: var(--font-family-base);
-  font-size: var(--type-body);
+  /* 100%, not var(--type-body): an explicit px value on the root
+     replaces the size the browser derived from the user's own
+     font-size preference. The 16 px body step of the type scale is
+     unchanged — it lives in --type-body and in the component rules
+     that use it — and at the default setting this resolves to the
+     same 16 px. docs/spec/acceptance.md:27 (AC23) and
+     docs/spec/test-scenarios.md:116 (E110) require text sizing to
+     work; mi-bolt-design R07 fixes the scale, not the root. */
+  font-size: 100%;
   line-height: var(--line-height-body);
   color: var(--color-text-primary);
   background: var(--color-surface-light);
