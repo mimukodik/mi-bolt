@@ -312,6 +312,8 @@ export class CheckoutFacade {
           const session = await firstValueFrom(
             this.api.invoke(updateCheckout, { body }, withIfMatch(expectedVersion)),
           );
+          this.sessionWritable.set(session);
+          this.cart.acceptServerVersion(session.version);
           return { ok: true, value: session };
         } catch (err) {
           return { ok: false, error: mapError(err) };
@@ -352,12 +354,12 @@ export class CheckoutFacade {
           // Definite outcomes (412, 410, 422, 409) must rotate the key
           // so the next attempt mints a fresh one; otherwise the
           // server replays the same answer. Uncertain outcomes
-          // (status 0, a transport failure) retain — the next attempt
-          // carries the same fingerprint and replays the original
-          // request, which is the design's `uncertain retains, definite
-          // rotates` rule.
+          // (status 0, a transport failure; 503, an unknown outcome)
+          // retain — the next attempt carries the same fingerprint
+          // and replays the original request, which is the design's
+          // `uncertain retains, definite rotates` rule.
           const error = mapError(err);
-          if (error.status !== 0) {
+          if (error.status !== 0 && error.status !== 503) {
             checkoutKeys.rotateIntentKey();
           }
           return { ok: false, error };
@@ -432,14 +434,19 @@ export class CheckoutFacade {
               withIfMatch(expectedVersion),
             ),
           );
-          checkoutKeys.clearAll();
           this.orderWritable.set(receipt);
-          this.sessionWritable.set(null);
-          this.paymentIntentWritable.set(null);
-          this.clearFailureOverlay();
+          this.resetAfterOrder();
           return { ok: true, value: receipt };
         } catch (err) {
-          return { ok: false, error: mapError(err) };
+          const error = mapError(err);
+          if (error.code === 'PRICE_CHANGED') {
+            await this.recordPriceChange(error);
+            return { ok: false, error };
+          }
+          if (error.status !== 0 && error.status !== 503) {
+            checkoutKeys.rotateOrderKey();
+          }
+          return { ok: false, error };
         }
       },
     };
@@ -493,6 +500,19 @@ export class CheckoutFacade {
     this.priceChangeWritable.set(null);
   }
 
+  /**
+   * Ends the checkout session a placed order closed: the draft, the
+   * intent and every stored key go, the receipt stays for the success
+   * page to render (design §3.4). The cart's own post-order reset is
+   * the success page's call, not this one.
+   */
+  resetAfterOrder(): void {
+    checkoutKeys.clearAll();
+    this.sessionWritable.set(null);
+    this.paymentIntentWritable.set(null);
+    this.clearFailureOverlay();
+  }
+
   // -------------------------------------------------------------------------
   // Private serialiser. Mirrors the cart's semantics without its types:
   // every checkout mutation chains onto `tail`, binds `If-Match` to
@@ -510,7 +530,13 @@ export class CheckoutFacade {
         return result;
       }
       const result = await mutation.run(expectedVersion);
-      this.recordFailure(mutation, result);
+      if (!result.ok && result.error.code === 'PRICE_CHANGED') {
+        // The PRICE_CHANGED recovery already ran inside `mutation.run`;
+        // recordFailure must not touch the priceChange signal or reset
+        // lastFailedIntent on top of it (design §3.7).
+      } else {
+        this.recordFailure(mutation, result);
+      }
       return result;
     });
     this.tail = next.then(
@@ -539,6 +565,11 @@ export class CheckoutFacade {
       return;
     }
     const { error } = result;
+    if (error.status === 404) {
+      // The caller renders its own recovery for a missing intent or
+      // order (design §3.5); a 404 never becomes a banner.
+      return;
+    }
     if (error.code === 'CART_VERSION_CONFLICT') {
       // A back-to-back conflict must keep the FIRST failed intent so
       // retry() replays the user's original operation, not the second
@@ -558,8 +589,7 @@ export class CheckoutFacade {
       this.cartExpiredWritable.set(false);
       // Fire-and-forget so the failed intent resolves immediately and
       // the serialiser can move on. We do NOT await either call here.
-      void this.cart.refetch();
-      void this.ensureSession(true);
+      void Promise.all([this.cart.refetch(), this.ensureSession(true)]);
       return;
     }
     if (error.code === 'CART_EXPIRED') {
@@ -567,28 +597,6 @@ export class CheckoutFacade {
       this.cartExpiredWritable.set(true);
       this.conflictWritable.set(null);
       this.errorWritable.set(null);
-      return;
-    }
-    if (error.code === 'PRICE_CHANGED' && mutation.kind === 'order') {
-      // §8.2 sequence: capture the shown total, rotate the order key,
-      // refetch cart and session, arm priceChange, return the failure.
-      // The refetches are fire-and-forget, like the 412 branch: the
-      // failed call resolves immediately and the serialiser moves on.
-      const shownTotal = this.summary()?.total;
-      checkoutKeys.rotateOrderKey();
-      void Promise.all([this.cart.refetch(), this.ensureSession(true)]).then(() => {
-        const currentTotal = this.summary()?.total;
-        if (shownTotal !== undefined && currentTotal !== undefined) {
-          this.priceChangeWritable.set({
-            shownTotal,
-            currentTotal,
-            awaitingConfirmation: true,
-          });
-        }
-      });
-      this.errorWritable.set(error);
-      this.conflictWritable.set(null);
-      this.cartExpiredWritable.set(false);
       return;
     }
     // Generic failure branch: clear the stale conflict overlay so the
@@ -599,6 +607,26 @@ export class CheckoutFacade {
     if (this.conflictWritable() === null) {
       this.lastFailedIntent = null;
     }
+    this.conflictWritable.set(null);
+    this.cartExpiredWritable.set(false);
+  }
+
+  /**
+   * The §8.2 sequence for a 409 PRICE_CHANGED on POST /orders: the
+   * shopper must see the old and the new total and confirm before a
+   * resubmit, so the caller's promise resolves only once `priceChange`
+   * is armed (design §3.7).
+   */
+  private async recordPriceChange(error: CheckoutError): Promise<void> {
+    const shownTotal = this.summary()?.total;
+    checkoutKeys.rotateOrderKey();
+    await this.cart.refetch();
+    await this.ensureSession(true);
+    const currentTotal = this.summary()?.total;
+    if (shownTotal !== undefined && currentTotal !== undefined) {
+      this.priceChangeWritable.set({ shownTotal, currentTotal, awaitingConfirmation: true });
+    }
+    this.errorWritable.set(error);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
   }
