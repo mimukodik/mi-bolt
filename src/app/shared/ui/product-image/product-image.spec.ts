@@ -10,6 +10,7 @@ import type { ImageLike } from './product-image';
       [image]="image()"
       [productName]="productName()"
       [aspectRatio]="aspectRatio()"
+      [decorative]="decorative()"
       (loadFailed)="failedCount.set(failedCount() + 1)"
     ></app-product-image>
   `,
@@ -24,6 +25,7 @@ class HostComponent {
   readonly productName = signal('Demo One 5G');
   readonly aspectRatio = signal('4 / 3');
   readonly failedCount = signal(0);
+  readonly decorative = signal(false);
 }
 
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
@@ -65,8 +67,34 @@ describe('ProductImage primitive', () => {
   it('exposes the alt text via aria-label and a visually-hidden span', () => {
     const { fixture } = setup();
     const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBe('img');
     expect(root?.getAttribute('aria-label')).toBe('Demo telefon fotó');
     expect(root?.textContent).toContain('Demo telefon fotó');
+  });
+
+  // FIX-29 item 3: axe image-redundant-alt. When the surrounding markup
+  // already names the image in visible text (product-card.html), the
+  // primitive must not repeat that name a second time for a screen reader.
+  it('suppresses role, aria-label, alt and the hidden span when decorative (FIX-29-AC03)', () => {
+    const { fixture, host } = setup();
+    host.decorative.set(true);
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBeNull();
+    expect(root?.getAttribute('aria-label')).toBeNull();
+    expect(root?.textContent.trim()).toBe('');
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    expect(photo?.getAttribute('alt')).toBe('');
+  });
+
+  it('keeps the real alt when decorative is false (the default)', () => {
+    const { fixture } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    expect(photo?.getAttribute('alt')).toBe('Demo telefon fotó');
   });
 
   it('reserves the aspect ratio via style binding', () => {

@@ -169,7 +169,7 @@ function setup(): {
 // ---------------------------------------------------------------------------
 
 describe('T13-AC04 ProductCard', () => {
-  it('renders the matching variant image with 4:3 frame and intact alt', () => {
+  it('renders the matching variant image with 4:3 frame and a decorative (empty) alt', () => {
     const { fixture } = setup();
     const raw = getRootElement(fixture);
     const frame = queryElement(raw, '[data-testid="product-card-image"]');
@@ -180,9 +180,14 @@ describe('T13-AC04 ProductCard', () => {
     // it from where it actually lands.
     const mediaRoot = queryElement(frame, '.root');
     expect(mediaRoot.style.aspectRatio.replace(/\s+/g, '')).toBe('4/3');
+    // FIX-29 item 3 (axe image-redundant-alt): the card passes
+    // [decorative]="true" because the name, colour and storage already
+    // render as visible text below the image (product-card.html:17-28),
+    // so the image itself carries no alt and the wrapper carries no
+    // role="img" — repeating the same words would announce them twice.
     const photo = queryImage(raw, '[data-testid="image-photo"]');
-    expect(photo.getAttribute('alt')).toContain('Demo One 5G');
-    expect(photo.getAttribute('alt')).toContain('256 GB');
+    expect(photo.getAttribute('alt')).toBe('');
+    expect(mediaRoot.getAttribute('role')).toBeNull();
   });
 
   it('preserves the full device aspect: no cropping, object-fit contain', () => {

@@ -97,24 +97,29 @@
     aria-label="Fizetés és szállítás"
     data-testid="receipt-meta"
   >
-    <div
-      class="meta__row flex items-center justify-between gap-3"
-      data-testid="receipt-row-payment"
-    >
-      <dt class="m-0">Fizetési mód</dt>
-      <dd class="m-0">{{ paymentLabel() }}</dd>
-    </div>
-    <div
-      class="meta__row flex items-center justify-between gap-3"
-      data-testid="receipt-row-delivery"
-    >
-      <dt class="m-0">Szállítási mód</dt>
-      <dd class="m-0">{{ deliveryLabel() }}</dd>
-    </div>
-    <div class="meta__row flex items-center justify-between gap-3" data-testid="receipt-row-status">
-      <dt class="m-0">Státusz</dt>
-      <dd class="m-0">Demó rendelés visszaigazolva</dd>
-    </div>
+    <dl class="meta__list flex flex-col gap-2 m-0">
+      <div
+        class="meta__row flex items-center justify-between gap-3"
+        data-testid="receipt-row-payment"
+      >
+        <dt class="m-0">Fizetési mód</dt>
+        <dd class="m-0">{{ paymentLabel() }}</dd>
+      </div>
+      <div
+        class="meta__row flex items-center justify-between gap-3"
+        data-testid="receipt-row-delivery"
+      >
+        <dt class="m-0">Szállítási mód</dt>
+        <dd class="m-0">{{ deliveryLabel() }}</dd>
+      </div>
+      <div
+        class="meta__row flex items-center justify-between gap-3"
+        data-testid="receipt-row-status"
+      >
+        <dt class="m-0">Státusz</dt>
+        <dd class="m-0">Demó rendelés visszaigazolva</dd>
+      </div>
+    </dl>
   </section>
 
   <p

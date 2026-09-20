@@ -37,6 +37,11 @@ export class ProductImage {
   readonly productName = input.required<string>();
   readonly aspectRatio = input<string>('4 / 3');
 
+  /** When true the image is presentational: the surrounding markup
+   *  already names it in visible text, so repeating the alt here
+   *  duplicates that text for a screen reader (axe image-redundant-alt). */
+  readonly decorative = input<boolean>(false);
+
   readonly loadFailed = output();
 
   private readonly doc = inject(DOCUMENT);

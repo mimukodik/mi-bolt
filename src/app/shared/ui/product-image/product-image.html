@@ -2,8 +2,8 @@
   class="root relative block w-full rounded overflow-hidden"
   [style.aspect-ratio]="aspectRatio()"
   [attr.data-status]="status()"
-  role="img"
-  [attr.aria-label]="image().alt"
+  [attr.role]="decorative() ? null : 'img'"
+  [attr.aria-label]="decorative() ? null : image().alt"
 >
   @switch (status()) {
     @case ('loading') {
@@ -17,7 +17,7 @@
       <img
         class="photo absolute inset-0 w-full h-full object-contain block"
         [src]="resolvedSrc()"
-        [alt]="image().alt"
+        [alt]="decorative() ? '' : image().alt"
         [attr.width]="image().width ?? null"
         [attr.height]="image().height ?? null"
         decoding="async"
@@ -36,5 +36,7 @@
       </div>
     }
   }
-  <span class="sr-only absolute w-px h-px overflow-hidden">{{ image().alt }}</span>
+  @if (!decorative()) {
+    <span class="sr-only absolute w-px h-px overflow-hidden">{{ image().alt }}</span>
+  }
 </div>

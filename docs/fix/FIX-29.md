@@ -1,6 +1,42 @@
 # FIX-29 — Fix the structural accessibility violations axe reports
 
-Status: PLANNED — not executed.
+Status: PARTIAL — five of the six structural markup fixes land, plus the unit regression spec
+(item b); worktree commit (sha filled in by the orchestrator after cherry-pick). Item 2 (the
+critical `label` violation on the hidden 1×1 catalogue search input) needed no fix here: **FIX-43
+already removed that input and its `search-commit` button entirely** (confirmed —
+`catalog-page.spec.ts:547-548` now asserts both are `null`, and `grep -rn "catalog-search"
+src/app/` finds only that assertion), and the catalogue's real search control now lives inside
+`FilterPanel` (`filter-panel.html:17-30`, `data-testid="filter-search-input"`), already wrapped in
+a `<label>` with a visually-hidden `Keresés a telefonok között` span — a stronger fix than this
+document's aria-label addition, landed by other work before this task ran. Items 1, 3, 4, 5 and 6
+land as this document specifies, adapted to files that had moved since it was written:
+- **catalog-page.ts no longer carries an inline template.** It uses `templateUrl` /
+  `styleUrl` already (**FIX-60**'s extraction), so item 4's hidden `h2` went into the real
+  `catalog-page.html`, first child of `.results`, before `<app-catalog-toolbar>`.
+- **product-card.html and product-image.ts/.html have gained inputs and states since this
+  document was written** (loading/loaded/error switch, `productName`, `initial()` fallback
+  marker); the `decorative` input and its three conditional bindings (role/aria-label on the
+  wrapper, `alt` on the `<img>`, the hidden span) were added onto that current shape rather than
+  the document's simpler quoted version.
+- **delivery-step.html and payment-method-selector.html match the document closely**; only the
+  `role="radiogroup" aria-label="…"` pair was removed in favour of `role="list"`, exactly as
+  specified.
+- **order-receipt.html's dt/dd rows match the document's quote exactly**; wrapped in a new
+  `<dl class="meta__list">`, with the matching `.meta__list` rule added to `order-receipt.scss`
+  immediately after `.receipt__meta`.
+A pre-existing test, `product-card.spec.ts`'s "renders the matching variant image with 4:3 frame
+and intact alt", asserted the real alt text this task's fix removes; it is rewritten in the same
+commit to assert the new decorative contract (`alt === ''`, no `role="img"`) instead, red before
+the fix and green after (measured directly: reverting the `[decorative]="true"` binding fails it).
+**Two parts of this document are BLOCKED — out of scope, not attempted**: the Playwright axe suite
+(`e2e/a11y/axe.spec.ts`, Regression tests item a) and the comment correction in
+`e2e/a11y/keyboard.spec.ts`. Both are under `e2e/**`, which this worktree's file boundary reserves
+for a sibling agent, and the user's own instruction for this session is "no e2e test at all is
+needed, there will be a browser test anyway, only the unit test should remain for now". `src/app/a11y-structure.spec.ts` (Regression tests item b) is **not** blocked by that instruction — it is a
+unit spec under `src/`, per this document's own placement — and lands in full, covering all five
+named structural facts. Open: every browser/axe acceptance criterion (AC01–AC07, AC10) is deferred
+to the orchestrator's batched browser-verification pass; the axe suite and the keyboard.spec.ts
+comment are open for whichever session owns `e2e/**` next.
 Severity: blocker
 Source: B2 F11, B2 F12, B2 F13, B2 F14
 
