@@ -36,7 +36,7 @@ import {
 import { isRecord } from '../is-record';
 import { type Product, Repository } from '../repository';
 
-import { CartStore } from './cart-store';
+import { buildTraceId, CartStore, type ProblemBody } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
 
 const VARIANTS: Product['variants'] = [
@@ -194,25 +194,6 @@ function outcomeResponse(outcome: ReturnType<CartStore['get']>): HttpResponse<De
   });
 }
 
-/** A problem body shaped like the catalogue's `ProblemBody`. */
-interface ProblemBody {
-  type: string;
-  title: string;
-  status: number;
-  code: string;
-  detail: string;
-  traceId: string;
-  fieldErrors: readonly { path: string; code: string }[];
-  params?: Readonly<Record<string, unknown>>;
-}
-
-/** Build a deterministic 24-char lowercase-hex trace id from the clock. */
-function traceId(options: CreateHandlersOptions): string {
-  const ms = Date.parse(options.clock.now());
-  const hex = (ms >>> 0).toString(16).padStart(8, '0');
-  return (hex + '0000000000000000').slice(0, 24);
-}
-
 /** 400 problem for a missing or malformed input. */
 function invalidRequest(
   options: CreateHandlersOptions,
@@ -225,7 +206,7 @@ function invalidRequest(
     status: 400,
     code: 'INVALID_REQUEST',
     detail,
-    traceId: traceId(options),
+    traceId: buildTraceId(options),
     fieldErrors: [],
     params,
   };
