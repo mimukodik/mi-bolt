@@ -224,12 +224,16 @@ describe('T17-AC02: serialized mutations bind If-Match to the previous response'
     const facade = TestBed.inject(CartFacade);
     await settled(facade);
 
-    captures.length = 0;
+    const bootGets = requestsTo('GET', '/cart');
+    expect(bootGets).toHaveLength(1);
+    expect(bootGets[0]?.headers['if-match']).toBeUndefined();
+
     await facade.refetch();
 
     const gets = requestsTo('GET', '/cart');
-    expect(gets).toHaveLength(1);
+    expect(gets).toHaveLength(2);
     expect(gets[0]?.headers['if-match']).toBeUndefined();
+    expect(gets[1]?.headers['if-match']).toBeUndefined();
   });
 });
 
@@ -243,6 +247,8 @@ describe('T17-AC03: pending controls and authoritative totals', () => {
 
   it('reports pending>0 while an intent is queued, then drops to 0', async () => {
     const facade = TestBed.inject(CartFacade);
+    await settled(facade);
+
     const p = facade.addItem(VARIANT_MOTO_256, 1);
 
     expect(facade.pending()).toBe(1);
