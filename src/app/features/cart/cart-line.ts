@@ -3,8 +3,8 @@
  *
  * Renders one cart item as a card with:
  *
- *   - Product image (ProductImage primitive, lazy via NgOptimizedImage
- *     when src is local).
+ *   - Product image (ProductImage primitive, lazy through the
+ *     <img> element's own loading="lazy" attribute).
  *   - Product name + variant descriptor (color name + storage bucket).
  *   - Unit price + line total through the PriceBlock primitive so the
  *     whole HUF formatting and the loading/empty states are reused.

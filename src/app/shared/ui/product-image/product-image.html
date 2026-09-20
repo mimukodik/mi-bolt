@@ -16,9 +16,8 @@
     @case ('loaded') {
       <img
         class="photo object-contain"
-        [ngSrc]="resolvedSrc()"
+        [src]="resolvedSrc()"
         [alt]="decorative() ? '' : image().alt"
-        fill
         decoding="async"
         loading="lazy"
         data-testid="image-photo"

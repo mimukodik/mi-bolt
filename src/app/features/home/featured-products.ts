@@ -1,5 +1,4 @@
 import { Component, computed, input, output } from '@angular/core';
-import { NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 import type { Product } from '../../api/generated/models/product';
@@ -45,7 +44,7 @@ export interface FeaturedSlot {
  */
 @Component({
   selector: 'app-featured-products',
-  imports: [RouterLink, NgOptimizedImage],
+  imports: [RouterLink],
   templateUrl: './featured-products.html',
   styleUrl: './featured-products.scss',
 })

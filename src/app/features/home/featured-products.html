@@ -35,9 +35,8 @@
                     <div class="featured__image">
                       @if (firstImageSrc(slot.product); as src) {
                         <img
-                          [ngSrc]="src"
+                          [src]="src"
                           [alt]="firstImageAlt(slot.product)"
-                          fill
                           decoding="async"
                           loading="lazy"
                           data-testid="image-photo"
