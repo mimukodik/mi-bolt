@@ -1,6 +1,6 @@
 # FIX-69 — Widen lintFilePatterns so ng lint reaches the test trees
 
-Status: PLANNED — not executed.
+Status: DONE — `angular.json`'s `lintFilePatterns` now includes `tests/**/*.ts` and `e2e/**/*.ts`, `eslint.config.js`'s first block is narrowed to `src/**/*.ts` and a non-type-aware block added for the two widened trees; commits 4f71230 and 20254c1. The widened run surfaced two files with findings and both are fixed: `tests/contract/operation-matrix.spec.ts` (dead imports/vars/functions plus an `any` cast that was removable outright, `OpenApiSpec.paths` already being typed through the existing `SpecPaths` type), and `e2e/deployment/deep-links.spec.ts:40`, where the unused `request` fixture was dropped from the destructure rather than renamed — the `^_` ignore convention lives only on the `src/**/*.ts` block, so `_request` was still flagged. `npm run lint` exits 0 with zero errors; the 27 remaining warnings are FIX-02's pre-existing unused-eslint-disable directives under `src/app/api/generated/**`.
 Severity: major
 Source: Review round finding **S1-4**, which named `docs/fix/FIX-01.md`'s "Widening
 `lintFilePatterns`" bullet as stale (it pointed at `FIX-39` for a test-policy gate that

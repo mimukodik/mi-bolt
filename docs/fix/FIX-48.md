@@ -1,6 +1,6 @@
 # FIX-48 — Stop the e2e a11y suite writing screenshots outside the repository
 
-Status: PLANNED — not executed.
+Status: DONE — `e2e/a11y/keyboard.spec.ts:34`'s `REPO_ROOT` now walks two `..` instead of three, matching every sibling spec; commit 69a2e06. `npx playwright test e2e/a11y/keyboard.spec.ts` exits 0 (6 passed, 2 skipped) and creates no directory outside the repository.
 Severity: major
 Source: A5 (test-suite sweep), orchestrator confirmation of the resolved path, plus a directory measured on disk outside the checkout.
 

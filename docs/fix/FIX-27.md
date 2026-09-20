@@ -1,6 +1,6 @@
 # FIX-27 — Fix the three horizontal-overflow bugs
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the three unshrinkable button rows now carry `flex-wrap: wrap` (`header-nav.scss`, `filter-drawer.scss`, `delivery-step.scss`), each with the one-line comment the document specifies; commit f3c1468. No unit spec was added, per this document's own FIX-27-AC07 reasoning that jsdom has no layout engine. Open: AC01–AC06 and AC10 are real-browser width measurements at 320/390/1024 and are deferred to the orchestrator's batched browser-verification pass.
 Severity: major
 Source: B2 F2, B2 F4, B2 F5
 

@@ -1,6 +1,6 @@
 # FIX-54 — Drop the `/mi-bolt/` sub-path deployment
 
-Status: PLANNED — not executed.
+Status: PARTIAL — the `/mi-bolt/` sub-path is gone from the code and the specification: `_provideBaseHref` and its `APP_BASE_HREF`/`environment` imports deleted from `app.config.ts`, the stale `T01-AC04` test block and its only caller `hasUseValue` deleted from `app.spec.ts`, the `/mi-bolt/` clause trimmed from `api-root.ts`'s comment, and the four specification sentences, their three JSON twins and all seven `docs/index.html` mirrors edited; commit 99ea610. `<base href="/">` in `src/index.html` is deliberately untouched, per this document's stated deviation. `npm run build`, `npm run test` and `npx playwright test e2e/deployment/deep-links.spec.ts` all exit 0. Open: AC05–AC08 are the real-browser checks that are the actual proof the `<base href="/">` deviation is safe — deep-link render, the favicon network-log path, in-app navigation and the rendered `docs/index.html` report — deferred to the batched browser-verification pass.
 Severity: blocker
 Source: Review round item N2 (orchestrator-measured); decision **D14**; `docs/tasks/T01.md:51` (T01-AC05), `docs/tasks/T28.md:43` (T28-AC02), `docs/spec/test-scenarios.md:125` (E119).
 
