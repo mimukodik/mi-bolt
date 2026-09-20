@@ -798,7 +798,7 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     // authoritative cart snapshot: `_seedCart` is the test seam that
     // points the facade at a known cart id.
     const facade = TestBed.inject(CartCountFacade);
-    facade._seedCart({ id: 'cart-test-001', itemCount: 3 });
+    facade._seedCart({ id: 'cart-test-001', totalQuantity: 3 });
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');

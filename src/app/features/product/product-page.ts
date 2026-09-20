@@ -368,7 +368,6 @@ export class ProductPage {
     return (
       this.cartFacade.error() !== null ||
       this.cartFacade.conflict() !== null ||
-      this.cartFacade.cartGone() ||
       this.cartFacade.cartExpired()
     );
   }
