@@ -166,9 +166,6 @@ export class CartPage {
       if (this.facade.error() !== null || this.facade.cartExpired()) {
         return 'error';
       }
-      if (this.facade.pending() > 0) {
-        return 'loading';
-      }
       return 'loading';
     }
     if (this.facade.error() !== null) return 'error';
@@ -198,19 +195,37 @@ export class CartPage {
   });
 
   /**
-   * Transient status banner. The page surfaces:
-   *   - "A termék a kosárban van." after a successful add;
-   *   - "A mennyiség frissítve." after a successful setQuantity;
-   *   - "A termék törölve a kosárból." after a successful remove;
-   *   - any surfaced error.
+   * Transient status banner. The page surfaces, in order:
+   *   - the wire-level `error` when present (generic Problem);
+   *   - the 412 `conflict` overlay, so the user is told the cart
+   *     diverged from the server even when no in-flight mutation
+   *     is around to set the transient banner;
+   *   - the 410 `cartExpired` overlay, the same shape as the
+   *     `errorMessage` string;
+   *   - the `transientStatus` set by the per-mutation handlers.
    *
-   * The banner text is Hungarian; the body never invents numbers
-   * and never mentions stock urgency (R25).
+   * The conflict overlay must not be hidden by a successful
+   * `transientStatus` set up by the next mutation — once the
+   * post-conflict refetch lands the user has not yet pressed
+   * "Retry", and a transient "Sikeres frissítés." after that would
+   * tell them the conflict was cleared when actually nothing was.
    */
   readonly statusMessage = computed<{ text: string; severity: StatusSeverity } | null>(() => {
     const error = this.facade.error();
     if (error !== null) {
       return { text: error.detail, severity: 'error' };
+    }
+    if (this.facade.conflict() !== null) {
+      return {
+        text: 'A kosár időközben megváltozott; frissítsd az oldalt, vagy próbáld újra a műveletet.',
+        severity: 'error',
+      };
+    }
+    if (this.facade.cartExpired()) {
+      return {
+        text: 'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.',
+        severity: 'error',
+      };
     }
     return this.transientStatus();
   });
@@ -233,11 +248,12 @@ export class CartPage {
       this.cart.set(next);
     });
 
-    // Reset the transient status banner when the cart resolves to
-    // a new shape so a stale "X törölve" message does not survive a
+    // Reset the transient status banner when the cart resolves to a
+    // new shape so a stale "X törölve" message does not survive a
     // subsequent successful mutation.
     effect(() => {
       this.cart();
+      this.transientStatus.set(null);
     });
   }
 
@@ -247,12 +263,28 @@ export class CartPage {
     void this.facade
       .setQuantity(item.variantId, quantity)
       .then(() => {
-        // The facade's error / conflict / cartExpired
-        // signals own the wire-level state. The banner is the
-        // user-facing summary, so we only flip it when the promise
-        // resolved without throwing.
+        // The facade exposes three failure signals — error (generic
+        // Problem), conflict (412), cartExpired (410). The banner
+        // is the user-facing summary, so we surface every one of
+        // them rather than only the generic error: a 412 clears
+        // `error` and sets `conflict`, and a 410 clears `error` and
+        // sets `cartExpired`, so a check on `error()` alone would
+        // show "Sikeres frissítés." for a conflict that did not
+        // actually land.
         if (this.facade.error() === null) {
-          this.transientStatus.set({ text: 'A mennyiség frissítve.', severity: 'success' });
+          if (this.facade.conflict() !== null) {
+            this.transientStatus.set({
+              text: 'A kosár időközben megváltozott; frissítsd az oldalt.',
+              severity: 'error',
+            });
+          } else if (this.facade.cartExpired()) {
+            this.transientStatus.set({
+              text: 'A kosár lejárt; indíts új pénztárat.',
+              severity: 'error',
+            });
+          } else {
+            this.transientStatus.set({ text: 'A mennyiség frissítve.', severity: 'success' });
+          }
         } else {
           this.transientStatus.set({
             text: 'A mennyiség frissítése nem sikerült; a kosár változatlan.',
@@ -272,10 +304,22 @@ export class CartPage {
       .removeItem(variantId)
       .then(() => {
         if (this.facade.error() === null) {
-          this.transientStatus.set({
-            text: 'A termék törölve a kosárból.',
-            severity: 'success',
-          });
+          if (this.facade.conflict() !== null) {
+            this.transientStatus.set({
+              text: 'A kosár időközben megváltozott; frissítsd az oldalt.',
+              severity: 'error',
+            });
+          } else if (this.facade.cartExpired()) {
+            this.transientStatus.set({
+              text: 'A kosár lejárt; indíts új pénztárat.',
+              severity: 'error',
+            });
+          } else {
+            this.transientStatus.set({
+              text: 'A termék törölve a kosárból.',
+              severity: 'success',
+            });
+          }
         } else {
           this.transientStatus.set({
             text: 'A termék eltávolítása nem sikerült; a kosár változatlan.',
@@ -295,7 +339,19 @@ export class CartPage {
       .clear()
       .then(() => {
         if (this.facade.error() === null) {
-          this.transientStatus.set({ text: 'A kosár kiürítve.', severity: 'success' });
+          if (this.facade.conflict() !== null) {
+            this.transientStatus.set({
+              text: 'A kosár időközben megváltozott; frissítsd az oldalt.',
+              severity: 'error',
+            });
+          } else if (this.facade.cartExpired()) {
+            this.transientStatus.set({
+              text: 'A kosár lejárt; indíts új pénztárat.',
+              severity: 'error',
+            });
+          } else {
+            this.transientStatus.set({ text: 'A kosár kiürítve.', severity: 'success' });
+          }
         } else {
           this.transientStatus.set({
             text: 'A kosár ürítése nem sikerült; a kosár változatlan.',
