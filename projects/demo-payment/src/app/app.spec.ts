@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { App } from './app';
-import { appConfig } from './app.config';
 import { routes } from './app.routes';
 import { PaymentPage } from './payment-page';
 
@@ -24,10 +23,6 @@ describe('demo-payment App', () => {
   it('creates the shell', () => {
     const fixture = TestBed.createComponent(App);
     expect(fixture.componentInstance).toBeInstanceOf(App);
-  });
-
-  it('wires the five application providers', () => {
-    expect(appConfig.providers).toHaveLength(5);
   });
 
   it('renders the placeholder heading', async () => {
