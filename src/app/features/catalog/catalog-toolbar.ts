@@ -40,9 +40,18 @@ export class CatalogToolbar {
    *  `AsyncContent`), so the refresh-specific wording the pre-extraction
    *  label carried ("… (frissítés alatt)") is not reproducible from this
    *  input alone; the doc's own item 2 asks for "a computed over
-   *  total() and status()", so this is the deliberate result. */
+   *  total() and status()", so this is the deliberate result.
+   *
+   *  The `'error'` branch exists because `CatalogPage.focusResultCount()`
+   *  moves focus here from `onRetry()` while the facade's status is
+   *  still `'error'`, so this is the text a screen reader announces at
+   *  the moment the user asked to retry after a server failure —
+   *  falling through to the zero-results test would have the page say
+   *  "no results found" at that moment, which is the bug this branch
+   *  exists to fix. */
   readonly resultCountLabel = computed<string>(() => {
     if (this.status() === 'loading') return 'Keresés a katalógusban…';
+    if (this.status() === 'error') return 'A katalógus betöltése nem sikerült.';
     if (this.total() === 0) return 'Nincs találat.';
     return `Találatok: ${String(this.total())}`;
   });

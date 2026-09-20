@@ -1539,4 +1539,36 @@ describe('self-removing controls — focus moves to the results counter, not <bo
     expect(document.activeElement).not.toBe(document.body);
     harness.cleanup();
   });
+
+  it('the results counter announces the failed-load wording while the error is on screen', async () => {
+    // `focusResultCount()` hands focus to the counter from `onRetry()`
+    // while the facade's status is still `'error'`, so the label must
+    // answer that branch — falling through to the zero-results test
+    // would have a screen reader say "Nincs találat" (no results) at
+    // the moment the user pressed retry after a server failure. The
+    // second assertion is the one the pre-fix code failed and is the
+    // pin this case exists to set.
+    const harness = await setupHarness({ q: 'demo' });
+    harness.reject(503);
+    await harness.waitForStatus('error');
+
+    const root = getRootElement(harness.fixture);
+    const counter = queryElement(root, '[data-testid="result-count"]');
+    expect(counter.textContent.trim()).toBe('A katalógus betöltése nem sikerült.');
+    expect(counter.textContent.trim()).not.toBe('Nincs találat.');
+    harness.cleanup();
+  });
+
+  it('the results counter still says "Nincs találat" in the empty state', async () => {
+    // Regression guard for the new branch above: the error branch must
+    // not swallow the empty-state wording the page already relies on.
+    const harness = await setupHarness();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+
+    const root = getRootElement(harness.fixture);
+    const counter = queryElement(root, '[data-testid="result-count"]');
+    expect(counter.textContent.trim()).toBe('Nincs találat.');
+    harness.cleanup();
+  });
 });

@@ -137,12 +137,19 @@ export class CatalogPage {
     return { code: 'catalog-error', message, fieldErrors: [], retryable: true };
   });
 
-  /** `CatalogToolbar`'s `status` — the toolbar only needs the
-   *  loading/not-loading distinction `controlsDisabled` already makes;
-   *  every non-loading status maps onto `'success'`. */
-  readonly toolbarStatus = computed<AsyncStatus>(() =>
-    this.controlsDisabled() ? 'loading' : 'success',
-  );
+  /** `CatalogToolbar`'s `status` — the toolbar's own wording branches on
+   *  this, so the toolbar needs more than a loading/not-loading
+   *  distinction: `controlsDisabled` still wins and yields `'loading'`,
+   *  `'error'` passes through so the counter can say so too
+   *  (otherwise it falls through to the zero-results test and reports
+   *  an empty result set at the moment a screen-reader user pressed
+   *  retry), and every remaining status collapses onto `'success'`. */
+  readonly toolbarStatus = computed<AsyncStatus>(() => {
+    const status = this.facade.vm().status;
+    if (this.controlsDisabled()) return 'loading';
+    if (status === 'error') return 'error';
+    return 'success';
+  });
 
   /** Snapshot of the current sort option (defaults to 'recommended'). */
   readonly currentSort = computed<Sort>(() => this.facade.query().sort ?? 'recommended');
