@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, output } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { AssetUrlError, resolveAssetUrl } from '../../media/resolve-asset-url';
 
@@ -23,7 +23,8 @@ export interface ImageLike {
  * invented image of another device. (R11 — preserve dimensions and aspect.)
  *
  * Required states:
- * - `loading` — skeleton with reserved aspect ratio, no decorative content.
+ * - `loading` — the `<img>` is in the DOM so the browser fetches it,
+ *     with the skeleton laid over it and the aspect ratio reserved.
  * - `loaded`  — the real image, `object-fit: contain`, accessible alt.
  * - `error`   — neutral named fallback (product name), no invented photo.
  */
@@ -47,8 +48,6 @@ export class ProductImage {
 
   private readonly doc = inject(DOCUMENT);
 
-  private readonly failed = signal(false);
-
   /** Resolution result: the deployment-resolved image URL, or null when
    *  `resolveAssetUrl` rejected the wire value. A rejection renders the
    *  same neutral fallback as a failed network load; it never renders a
@@ -62,15 +61,30 @@ export class ProductImage {
     }
   });
 
-  readonly status = computed<'loading' | 'loaded' | 'error'>(() =>
-    this.failed() || this.resolution() === null ? 'error' : 'loaded',
-  );
-
   /** Non-null view of `resolution()`, and the only member the template
-   *  reads. `status()` is `'loaded'` only when `resolution()` is non-null
-   *  and the `@case ('loaded')` branch is its only reader, so the
+   *  reads. The `<img>` is rendered only while `status()` is `'loading'`
+   *  or `'loaded'`, both of which require a non-null resolution, so the
    *  empty-string arm never reaches the DOM. */
   readonly resolvedSrc = computed<string>(() => this.resolution() ?? '');
+
+  /** What the `<img>` currently in the DOM has reported for
+   *  `resolvedSrc()`. Linked to that URL so a new image starts in
+   *  `loading` again instead of inheriting the previous one's outcome
+   *  when the gallery switches variant. */
+  private readonly phase = linkedSignal<string, 'loading' | 'loaded' | 'error'>({
+    source: () => this.resolvedSrc(),
+    computation: () => 'loading',
+  });
+
+  readonly status = computed<'loading' | 'loaded' | 'error'>(() => {
+    // `phase()` is read before the null check, never inside the branch: a
+    // `linkedSignal` only notices its source moved when it is read, so a
+    // short-circuit that skips it while `resolution()` is null would hide
+    // the intermediate empty source, and an image that failed before a
+    // rejected one would come back still carrying its old failure.
+    const reported = this.phase();
+    return this.resolution() === null ? 'error' : reported;
+  });
 
   readonly initial = computed<string>(() => {
     const name = this.productName().trim();
@@ -79,9 +93,14 @@ export class ProductImage {
     return first;
   });
 
+  onLoad(): void {
+    if (this.phase() === 'error') return;
+    this.phase.set('loaded');
+  }
+
   onError(): void {
-    if (this.failed()) return;
-    this.failed.set(true);
+    if (this.phase() === 'error') return;
+    this.phase.set('error');
     this.loadFailed.emit();
   }
 }
