@@ -184,15 +184,19 @@ export class OrderSubmission {
   }
 
   private async runSubmit(): Promise<SubmitOutcome> {
-    // 1. session and options must both be loaded.
+    // 1. session must be loaded; options are only required when there
+    // is something to commit, so the incomplete check runs first.
     const session = this.checkout.session();
-    const options = this.checkout.options();
-    if (session === null || options === null) {
+    if (session === null) {
       return this.setOutcome({ kind: 'unknown', code: 'NO_SESSION' });
     }
     // 2. incomplete draft → navigate to the first missing step.
     if (!session.complete) {
       return this.setOutcome({ kind: 'incomplete', route: firstMissingSessionRoute(session) });
+    }
+    const options = this.checkout.options();
+    if (options === null) {
+      return this.setOutcome({ kind: 'unknown', code: 'NO_OPTIONS' });
     }
 
     const method = session.payment?.method;

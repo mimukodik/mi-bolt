@@ -623,21 +623,6 @@ All interactive states additionally require visible hover/focus and native disab
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
-### PaymentProgress — purchase/review / T23
-
-**Owner:** local presentation.
-
-**Signal inputs:** `status:PaymentStatus; pollCount:number`.
-
-**Outputs:** `retryRequested:void; changeMethodRequested:void`.
-
-**Functions:** Explain simulated in-flight/declined/unknown; limit polling in orchestrator, never in template.
-
-**Required states:** pending,succeeded,declined,unknown,error.
-
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
-
-
 ### SuccessStep — purchase/success / T24
 
 **Owner:** page container.

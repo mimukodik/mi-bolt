@@ -120,6 +120,15 @@ interface CapturedRequest {
 }
 let captures: CapturedRequest[] = [];
 
+/** Captures the first `X-Demo-Session` the MSW stream sees so raw
+ * `fetch` calls in helper resolvers can carry the same id. The
+ * interceptor's module-level cache survives `sessionStorage.clear()`
+ * between tests, so reading storage would land on an empty slot by
+ * test two and the wrong id would 404 against the freshly seeded
+ * store. The MSW request stream sees the same value the interceptor
+ * actually emitted, which is the one the OrderStore locked in. */
+let capturedDemoSession: string | null = null;
+
 async function captureRequest(request: Request): Promise<void> {
   const headers: Record<string, string | undefined> = {};
   request.headers.forEach((v, k) => {
@@ -170,6 +179,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   captures = [];
+  capturedDemoSession = null;
   clock = createFixedClock('2026-09-20T10:00:00.000Z');
   ids = createDeterministicIds(1);
   options = {
@@ -182,6 +192,10 @@ beforeEach(() => {
   options.repository.loadProducts([DEMO_PRODUCT]);
   server.use(...createHandlers(options));
   server.events.on('request:start', ({ request }) => {
+    if (capturedDemoSession === null) {
+      const session = request.headers.get('X-Demo-Session');
+      if (session !== null) capturedDemoSession = session;
+    }
     void captureRequest(request);
   });
 });
@@ -242,7 +256,10 @@ async function seedCompleteDraft(
 async function resolveSucceeded(intentId: string): Promise<void> {
   const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Demo-Session': capturedDemoSession ?? '',
+    },
     body: JSON.stringify({ outcome: 'succeeded' }),
   });
   expect(res.status).toBe(200);
@@ -791,7 +808,11 @@ describe('payment intents', () => {
     if (first.ok) return;
     expect(first.error.status).toBe(422);
 
-    const firstStoredKey = readStoredKey('mi-bolt.checkout.intent-key');
+    // The 422 is a definite outcome, so `rotateIntentKey()` has
+    // already wiped the slot; the captured request header is the
+    // surviving record of the key the first attempt used.
+    const firstStoredKey =
+      findRequest('POST', '/payment-intents')?.headers['idempotency-key'] ?? '';
 
     captures.length = 0;
     server.resetHandlers(...createHandlers(options));
@@ -1066,7 +1087,11 @@ describe('orders', () => {
     // Add HONOR via raw fetch — facade's session.summary stays at 89990.
     const addHonor = await fetch('http://localhost/api/v1/cart/items', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'If-Match': '"6"' },
+      headers: {
+        'Content-Type': 'application/json',
+        'If-Match': '"6"',
+        'X-Demo-Session': capturedDemoSession ?? '',
+      },
       body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
     });
     expect(addHonor.status).toBe(200);
@@ -1123,7 +1148,11 @@ describe('orders', () => {
 
     const addHonor = await fetch('http://localhost/api/v1/cart/items', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'If-Match': '"6"' },
+      headers: {
+        'Content-Type': 'application/json',
+        'If-Match': '"6"',
+        'X-Demo-Session': capturedDemoSession ?? '',
+      },
       body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
     });
     expect(addHonor.status).toBe(200);
@@ -1193,6 +1222,58 @@ describe('orders', () => {
     const newKey = posts[0]?.headers['idempotency-key'] ?? '';
     expect(newKey).toMatch(KEY_PATTERN);
     expect(newKey).not.toBe('');
+  });
+
+  it('F-29: startNewPurchase() clears the receipt and the session so the guards see no order', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    await seedMoto();
+    await checkout.ensureOptions();
+    await seedCompleteDraft(checkout, 'cash_on_delivery');
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'cash_on_delivery',
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+
+    // submitOrder stores the receipt and then runs resetAfterOrder,
+    // which drops the session but keeps the receipt for the success
+    // page. The guards see a non-null order and redirect back to the
+    // success URL — that is the loop the new shopping CTA must break.
+    expect(checkout.order()).not.toBeNull();
+    expect(checkout.order()?.id).toBe(placed.value.id);
+
+    checkout.startNewPurchase();
+
+    expect(checkout.order()).toBeNull();
+    expect(checkout.session()).toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
+  });
+
+  it('F-30: a card order consumes its payment intent: after the commit the facade holds none, so a new draft must mint a fresh one', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    await seedMoto();
+    await checkout.ensureOptions();
+    await seedCompleteDraft(checkout, 'card');
+
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    await resolveSucceeded(created.value.id);
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: created.value.id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+
+    expect(checkout.order()).not.toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
   });
 
   it('F-28: fetchOrder() hydrates by id through GET and never POSTs', async () => {

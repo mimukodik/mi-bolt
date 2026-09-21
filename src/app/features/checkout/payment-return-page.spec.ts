@@ -89,6 +89,15 @@ const HOME_DELIVERY: DeliverySelection = {
 
 const CARD_PAYMENT: PaymentSelection = { method: 'card' };
 
+/** Captures the first `X-Demo-Session` the MSW stream sees so raw
+ * `fetch` calls in helper resolvers can carry the same id. The
+ * interceptor's module-level cache survives `sessionStorage.clear()`
+ * between tests, so reading storage would land on an empty slot by
+ * test two and the wrong id would 404 against the freshly seeded
+ * store. The MSW request stream sees the same value the interceptor
+ * actually emitted, which is the one the OrderStore locked in. */
+let capturedDemoSession: string | null = null;
+
 beforeAll(() => {
   if (!isCatalogFixtureShape(catalogFixture)) {
     throw new Error('[payment-return-page.spec] committed fixture does not match expected shape');
@@ -110,7 +119,14 @@ beforeEach((): void => {
   };
   // Side-effect: ensures the clock is wired to the idempotency store.
   new IdempotencyStore(clock);
+  capturedDemoSession = null;
   server.use(...createHandlers(options));
+  server.events.on('request:start', ({ request }) => {
+    if (capturedDemoSession === null) {
+      const session = request.headers.get('X-Demo-Session');
+      if (session !== null) capturedDemoSession = session;
+    }
+  });
 });
 
 afterEach(() => {
@@ -170,7 +186,10 @@ async function resolveIntentOutcome(
 ): Promise<void> {
   const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Demo-Session': capturedDemoSession ?? '',
+    },
     body: JSON.stringify({ outcome }),
   });
   expect(res.status).toBe(200);

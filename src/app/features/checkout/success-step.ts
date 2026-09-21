@@ -46,6 +46,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -149,6 +150,12 @@ export class SuccessStep {
     // Drive the hydration pipeline off the URL signal. We don't reach
     // into the SDK directly: every wire call goes through
     // `CheckoutFacade.fetchOrder()` (a GET, never a POST).
+    //
+    // The effect tracks only the URL's `orderId`. `hydrate` reads
+    // `checkout.order()` to decide whether to issue the GET; without
+    // `untracked` that read would be tracked too, and `startNewPurchase`
+    // clearing the in-memory receipt would re-fire the effect and
+    // refetch the same order — undoing the "new purchase" reset.
     effect(() => {
       const id = this.orderId();
       if (id === null) {
@@ -158,7 +165,9 @@ export class SuccessStep {
         this.loadState.set({ kind: 'missing' });
         return;
       }
-      void this.hydrate(id);
+      untracked(() => {
+        void this.hydrate(id);
+      });
     });
 
     // The success page also reseeds the cart so the header badge
@@ -209,7 +218,7 @@ export class SuccessStep {
     });
   }
 
-  /** Subscribed once: move focus to the success heading. */
+  /** Moves focus to the success heading after each navigation end, until the component is destroyed. */
   private scheduleHeadingFocus(heading: ElementRef<HTMLElement>): void {
     this.routeFocus
       .navigationEnd$()
@@ -257,17 +266,19 @@ export class SuccessStep {
     //      but idempotent — `ensureCart` will create a fresh one);
     //   2. Call `ensureCart()` so the next add-to-cart hits a server-
     //      side cart instead of creating a phantom one locally;
-    //   3. Clear the in-memory order receipt so the wizard guards
-    //      (T24-AC04) do not bounce the next review / contact /
-    //      delivery navigation back to this success URL — the user
-    //      is explicitly choosing to start a fresh purchase;
-    //   4. Navigate to the shop so the user can keep shopping.
+    //   3. Navigate to the shop first so the receipt block does
+    //      not blank on screen — `successGuard` only runs on
+    //      navigation TO the success route, so clearing after
+    //      leaving is safe;
+    //   4. Clear the checkout session and the receipt through
+    //      `startNewPurchase()` so the wizard guards do not bounce
+    //      a later navigation back to this success URL.
     void this.cart
       .ensureCart()
-      .then(() => {
-        this.checkout.resetAfterOrder();
-      })
       .then(() => this.router.navigate(['/telefonok']))
+      .then(() => {
+        this.checkout.startNewPurchase();
+      })
       .catch(() => this.router.navigate(['/penztar/kosar']))
       .finally(() => {
         this.startingNewCart.set(false);

@@ -490,6 +490,8 @@ describe('DP-07..DP-09 gated section saves', () => {
     const updateBilling = vi
       .spyOn(facade, 'updateBilling')
       .mockResolvedValue({ ok: true, value: fullSession });
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     const { fields } = fixture.componentInstance;
     fields.deliveryOptionId().value.set('pickup_point');
@@ -523,6 +525,8 @@ describe('DP-07..DP-09 gated section saves', () => {
       .mockResolvedValue({ ok: true, value: fullSession });
     vi.spyOn(facadeA, 'updateDelivery').mockResolvedValue({ ok: true, value: fullSession });
     vi.spyOn(facadeA, 'updatePayment').mockResolvedValue({ ok: true, value: fullSession });
+    const routerA = TestBed.inject(Router);
+    vi.spyOn(routerA, 'navigate').mockResolvedValue(true);
 
     {
       const fields = fixtureA.componentInstance.fields;

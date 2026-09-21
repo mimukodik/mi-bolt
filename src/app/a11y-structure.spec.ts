@@ -216,16 +216,33 @@ describe('FIX-29 fact 3 — delivery and payment option lists carry role=list', 
         fee: { amount: 1990, currency: 'HUF' },
         requiresAddress: true,
         description: 'Kiszállítás a megadott címre.',
+        available: true,
       },
       {
-        id: 'demo_pickup',
-        label: 'Virtuális átvétel',
+        id: 'pickup_point',
+        label: 'Átvételi pont',
         fee: { amount: 0, currency: 'HUF' },
         requiresAddress: false,
         description: 'Demó átvételi mód, valós üzletcím nélkül.',
+        available: true,
       },
     ],
-    paymentMethods: ['demo_card', 'demo_cod'],
+    paymentMethods: [
+      {
+        id: 'card',
+        label: 'Bankkártya',
+        description: 'Online kártyás fizetés.',
+        fee: { amount: 0, currency: 'HUF' },
+        available: true,
+      },
+      {
+        id: 'cash_on_delivery',
+        label: 'Utánvét',
+        description: 'Készpénzzel vagy kártyával a futárnál.',
+        fee: { amount: 490, currency: 'HUF' },
+        available: true,
+      },
+    ],
     termsVersion: 'demo-1',
   };
 
@@ -258,6 +275,7 @@ describe('FIX-29 fact 3 — delivery and payment option lists carry role=list', 
       providers: [provideZonelessChangeDetection()],
     });
     const fixture = TestBed.createComponent(PaymentMethodSelector);
+    fixture.componentRef.setInput('options', OPTIONS.paymentMethods);
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const list = root.querySelector('[data-testid="payment-option"]')?.closest('ul');
@@ -275,8 +293,7 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
   const RECEIPT: OrderReceipt = {
     id: 'demo-order-123',
     orderNumber: 'DEMO-2026-0001',
-    isSimulation: true,
-    status: 'demo_confirmed',
+    status: 'confirmed',
     items: [
       {
         variantId: 'demo-one-5g-graphite-256',
@@ -289,10 +306,21 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
       },
     ],
     subtotal: money(339990),
-    shipping: money(0),
+    shippingFee: money(0),
     total: money(339990),
-    paymentMethod: 'demo_cod',
-    deliveryOptionId: 'demo_pickup',
+    paymentMethod: 'cash_on_delivery',
+    delivery: { optionId: 'pickup_point' },
+    billing: {
+      name: 'Demo Vásárló',
+      address: {
+        line1: 'Demo utca 1.',
+        city: 'Budapest',
+        postalCode: '1111',
+        countryCode: 'HU',
+      },
+    },
+    contactEmail: 'demo@example.com',
+    paymentFee: money(490),
     notice: 'Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés — ez egy demó folyamat.',
     createdAt: '2026-09-15T09:00:00.000Z',
   };

@@ -956,8 +956,48 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
   });
 
   it('navigating to another slug clears the related list before the new one arrives', async () => {
-    // The first product's related response is delayed so it cannot
-    // beat the route change.
+    // The first product's related response is delayed and resolves
+    // to a non-empty list. The point is that the list cannot land
+    // on the new product's screen: the route change must both
+    // reset the `relatedSignal` synchronously (product.facade.ts:182)
+    // and tear down the in-flight subscription (lines 178-181) so the
+    // dangling response's `next` callback never fires. With those two
+    // guards removed, the very last assertion below would fail: the
+    // delayed `next` would call `this.relatedSignal.set(items)` and
+    // repopulate the strip on the new product.
+    const relatedItem = (): CatalogItem => ({
+      id: 'demo-related-first',
+      slug: 'demo-related-first',
+      brand: 'MiBolt Demo',
+      name: 'Demo Related First',
+      highlights: ['Hasonló ajánlat'],
+      is5g: true,
+      releasedAt: '2026-01-01',
+      storageGb: 128,
+      variantId: 'demo-related-first-graphite-128',
+      variantSlug: 'demo-related-first-graphite-128',
+      price: { amount: 199_990, currency: 'HUF' },
+      availability: 'in_stock',
+      maxQuantity: 5,
+      image: {
+        id: 'demo-related-first-graphite-128-front',
+        src: '/assets/products/silver-front.webp',
+        alt: 'Demo Related First',
+        width: 320,
+        height: 400,
+      },
+      colors: [
+        {
+          colorCode: 'graphite',
+          colorName: 'Grafit',
+          swatchHex: '#343B43',
+          variantId: 'demo-related-first-graphite-128',
+          variantSlug: 'demo-related-first-graphite-128',
+          price: { amount: 199_990, currency: 'HUF' },
+          availability: 'in_stock',
+        },
+      ],
+    });
     const resolvers: { current?: () => void } = {};
     server.use(
       http.get(`${BASE_URL}/products/:slug/related`, ({ params }) => {
@@ -965,16 +1005,51 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
         if (slug === 'demo-one-5g') {
           return new Promise<Response>((resolve) => {
             resolvers.current = (): void => {
-              resolve(HttpResponse.json([]));
+              resolve(HttpResponse.json([relatedItem()]));
             };
           });
         }
+        // The second product's related request returns [] immediately.
+        // It is irrelevant to the assertions — the reset and the
+        // tear-down are what keep the strip empty on the new product.
         return HttpResponse.json([], { status: 200 });
       }),
     );
 
-    const { fixture, facade, root, tick } = await createHarness();
+    // Inlined harness: createHarness awaits `fixture.whenStable()`,
+    // which waits for the hung related request above; that wait
+    // never resolves and the case times out. Build the same fixture
+    // without waiting for the related request, then drive the case.
+    TestBed.configureTestingModule({
+      imports: [ProductPageHost],
+      providers: [
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
+        provideApiConfiguration(BASE_URL),
+        provideRouter([{ path: 'telefonok', component: StubCatalogPage }]),
+      ],
+      teardown: { destroyAfterEach: true },
+    });
 
+    await TestBed.compileComponents();
+
+    const fixture = TestBed.createComponent(ProductPageHost);
+    const facade = TestBed.inject(ProductFacade);
+    const root = getRootElement(fixture);
+
+    const tick = async (): Promise<void> => {
+      for (let i = 0; i < 8; i += 1) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 15);
+        });
+        fixture.detectChanges();
+      }
+    };
+
+    fixture.detectChanges();
+    await tick();
+
+    // The first request is still hanging, so the related signal has
+    // not been written to. assert it's [] and no section renders.
     expect(facade.vm().related).toEqual([]);
     expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
 
@@ -989,12 +1064,71 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     expect(facade.vm().related).toEqual([]);
 
     // Now resolve the dangling first request — the facade must not let
-    // it repopulate the list for the new product.
+    // it repopulate the list for the new product. The subscription was
+    // torn down (lines 178-181), so the `next` callback never fires
+    // and `relatedSignal` stays at the empty array the reset put there.
     resolvers.current?.();
     await new Promise<void>((r) => setTimeout(r, 30));
+    fixture.detectChanges();
 
     expect(facade.vm().slug).toBe('demo-pro-5g');
     expect(facade.vm().related).toEqual([]);
+    expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
+  });
+
+  it('a related response for the current slug populates the list', async () => {
+    // Positive companion to the reset case above: a non-empty related
+    // response that arrives in time lands on the strip. Pairs the
+    // tear-down proof with the proof that ordinary (in-time) responses
+    // still work.
+    const relatedItem = (): CatalogItem => ({
+      id: 'demo-related-first',
+      slug: 'demo-related-first',
+      brand: 'MiBolt Demo',
+      name: 'Demo Related First',
+      highlights: ['Hasonló ajánlat'],
+      is5g: true,
+      releasedAt: '2026-01-01',
+      storageGb: 128,
+      variantId: 'demo-related-first-graphite-128',
+      variantSlug: 'demo-related-first-graphite-128',
+      price: { amount: 199_990, currency: 'HUF' },
+      availability: 'in_stock',
+      maxQuantity: 5,
+      image: {
+        id: 'demo-related-first-graphite-128-front',
+        src: '/assets/products/silver-front.webp',
+        alt: 'Demo Related First',
+        width: 320,
+        height: 400,
+      },
+      colors: [
+        {
+          colorCode: 'graphite',
+          colorName: 'Grafit',
+          swatchHex: '#343B43',
+          variantId: 'demo-related-first-graphite-128',
+          variantSlug: 'demo-related-first-graphite-128',
+          price: { amount: 199_990, currency: 'HUF' },
+          availability: 'in_stock',
+        },
+      ],
+    });
+    server.use(
+      http.get(`${BASE_URL}/products/:slug/related`, ({ params }) => {
+        const slug = String(params['slug']);
+        if (slug === 'demo-one-5g') {
+          return HttpResponse.json([relatedItem()], { status: 200 });
+        }
+        return HttpResponse.json([], { status: 200 });
+      }),
+    );
+
+    const { facade } = await createHarness();
+
+    expect(facade.vm().slug).toBe('demo-one-5g');
+    expect(facade.vm().related).toHaveLength(1);
+    expect(facade.vm().related[0]?.slug).toBe('demo-related-first');
   });
 
   it('renders two storage sizes of one related product without a duplicate track key (MIM-210)', async () => {
