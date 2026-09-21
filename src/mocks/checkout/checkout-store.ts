@@ -40,7 +40,7 @@ import type { UnavailableReason } from '../../app/api/generated/models/unavailab
 
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';
-import { buildTraceId, problemType } from '../cart/cart-store';
+import { buildTraceId, problemType, titleForStatus } from '../cart/cart-store';
 import { isRecord } from '../is-record';
 import type { PersistedCheckoutDraft } from '../persistence';
 import {
@@ -121,16 +121,6 @@ export type CheckoutOptionsOutcome =
 export type CheckoutReadResult =
   | { ok: true; cart: Cart; draft: CheckoutDraft; session: CheckoutSession }
   | { ok: false; problem: Problem };
-
-export function titleForStatus(status: number): string {
-  if (status === 400) return 'Invalid request';
-  if (status === 404) return 'Resource not found';
-  if (status === 409) return 'Conflict';
-  if (status === 410) return 'Gone';
-  if (status === 412) return 'Precondition failed';
-  if (status === 422) return 'Unprocessable content';
-  return 'Unknown';
-}
 
 /** The one place a checkout / order Problem body is assembled (design §7). */
 export function checkoutProblem(

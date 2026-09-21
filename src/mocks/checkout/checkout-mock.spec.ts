@@ -613,6 +613,7 @@ describe('PATCH /checkout', () => {
     const body: unknown = await res.json();
     expectRecord(body);
     expect(body['code']).toBe('VALIDATION_FAILED');
+    expect(body['title']).toBe('Unprocessable content');
     const errors = readFieldErrors(body);
     expect(errors).toEqual(
       expect.arrayContaining([

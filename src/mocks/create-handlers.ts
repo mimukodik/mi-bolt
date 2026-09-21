@@ -20,6 +20,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 import { Repository } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 import type { MockSnapshot } from './persistence';
+import { PROBLEM_CONTENT_TYPE } from './problem-response';
 
 /** Inputs passed by both `setupWorker` and `setupServer` paths. */
 export interface CreateHandlersOptions {
@@ -109,7 +110,7 @@ function createDispatcherShell(options: CreateHandlersOptions): readonly Request
   const prefix = `${base}/`;
   const responseInit = {
     status: 404,
-    headers: { 'content-type': 'application/problem+json' },
+    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
   } as const;
   return [
     http.all(base, () => HttpResponse.json(notFoundBody(options), responseInit)),
