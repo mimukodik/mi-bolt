@@ -1,4 +1,4 @@
-<section class="catalog" data-layout-mode="sidebar">
+<section class="catalog">
   <header class="heading flex flex-col gap-2 pb-6 border-b border-[var(--color-line)]">
     <nav class="breadcrumbs flex gap-2 items-center" aria-label="Navigáció">
       <a routerLink="/" class="breadcrumb no-underline">Főoldal</a>
@@ -13,7 +13,7 @@
   </header>
 
   <div class="layout gap-6">
-    <aside class="sidebar hidden lg:block" data-testid="filter-sidebar">
+    <aside class="sidebar" data-testid="filter-sidebar">
       <app-filter-panel
         [value]="facade.query()"
         [facets]="facade.vm().facets"

@@ -62,7 +62,9 @@
         type="button"
         class="more"
         data-testid="filter-brand-more"
-        [attr.aria-expanded]="brandsExpanded() ? 'true' : 'false'"
+        [attr.aria-expanded]="
+          visibleBrandFacets().length === brandFacets().length ? 'true' : 'false'
+        "
         (click)="toggleBrandsExpanded()"
       >
         {{ brandsExpanded() ? 'Kevesebb gyártó' : 'Még több gyártó' }}
