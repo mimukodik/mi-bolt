@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 
 import { Pagination } from './pagination';
@@ -7,12 +8,12 @@ import { Pagination } from './pagination';
   imports: [Pagination],
   template: `
     <app-pagination
+      [disabled]="disabled()"
       [page]="page()"
       [pageSize]="pageSize()"
       [total]="total()"
-      [disabled]="disabled()"
       (pageChanged)="lastPage.set($event); page.set($event)"
-    ></app-pagination>
+    />
   `,
 })
 class HostComponent {

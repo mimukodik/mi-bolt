@@ -388,9 +388,14 @@ function setupFacade(): SetupHandle {
   });
   const facade = TestBed.inject(CatalogFacade);
 
-  const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+  const tick = (): Promise<void> =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
   const waitDebounce = async (): Promise<void> => {
-    await new Promise((r) => setTimeout(r, SEARCH_DEBOUNCE_MS + 20));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, SEARCH_DEBOUNCE_MS + 20);
+    });
   };
 
   return {
@@ -421,9 +426,13 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     expect(SEARCH_DEBOUNCE_MS).toBe(300);
 
     facade.setSearch('a');
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
     facade.setSearch('ap');
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
     facade.setSearch('app');
     // Still inside the 300 ms window from the last setSearch.
     expect(api.calls.length).toBe(0);
