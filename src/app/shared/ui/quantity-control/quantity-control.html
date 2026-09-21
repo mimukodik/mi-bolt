@@ -1,51 +1,51 @@
 <div
   class="root inline-flex flex-col gap-1"
+  data-testid="quantity-control"
   [class.is-disabled]="disabled()"
   [class.is-invalid]="invalid()"
-  data-testid="quantity-control"
 >
   <div class="row inline-flex items-center">
     <button
-      type="button"
       class="step inline-flex items-center justify-center min-w-10 h-10 rounded font-medium cursor-pointer leading-none"
+      data-testid="quantity-decrement"
+      type="button"
       [attr.aria-label]="'Darabszám csökkentése'"
       [disabled]="decrementDisabled()"
       (click)="decrement()"
-      data-testid="quantity-decrement"
     >
       −
     </button>
     <input
-      type="text"
-      inputmode="numeric"
       class="value inline-flex items-center justify-center w-16 h-10 border-l-0 border-r-0 text-center tabular-nums font-inherit leading-none cursor-text"
-      [attr.aria-label]="label()"
-      [attr.aria-invalid]="invalid() ? 'true' : 'false'"
-      [attr.aria-describedby]="invalid() ? describedById : null"
-      [value]="value()"
-      [disabled]="disabled()"
-      (input)="onInput($event)"
-      (blur)="onBlur()"
       data-testid="quantity-input"
+      inputmode="numeric"
+      type="text"
+      [attr.aria-describedby]="invalid() ? describedById : null"
+      [attr.aria-invalid]="invalid() ? 'true' : 'false'"
+      [attr.aria-label]="label()"
+      [disabled]="disabled()"
+      [value]="value()"
+      (blur)="onBlur()"
+      (input)="onInput($event)"
     />
     <button
-      type="button"
       class="step inline-flex items-center justify-center min-w-10 h-10 rounded font-medium cursor-pointer leading-none"
+      data-testid="quantity-increment"
+      type="button"
       [attr.aria-label]="'Darabszám növelése'"
       [disabled]="incrementDisabled()"
       (click)="increment()"
-      data-testid="quantity-increment"
     >
       +
     </button>
   </div>
   @if (invalid() && message()) {
     <p
-      class="message m-0 px-2"
-      [id]="describedById"
-      role="status"
       aria-live="polite"
+      class="message m-0 px-2"
       data-testid="quantity-message"
+      role="status"
+      [id]="describedById"
     >
       {{ message() }}
     </p>

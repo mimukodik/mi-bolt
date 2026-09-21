@@ -1,6 +1,6 @@
+import type { TemplateRef } from '@angular/core';
 import {
   Component,
-  TemplateRef,
   ViewContainerRef,
   effect,
   inject,
@@ -8,7 +8,8 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
+import type { DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DialogModule } from '@angular/cdk/dialog';
 
 /**
  * MiBolt AccessibleDialog primitive.
@@ -81,9 +82,9 @@ export class AccessibleDialog {
   constructor() {
     effect(() => {
       const open = this.opened();
-      if (open && !this.ref) {
+      if (open && this.ref === null) {
         this.openInternal();
-      } else if (!open && this.ref) {
+      } else if (!open && this.ref !== null) {
         this.closeInternal();
       }
     });
@@ -125,7 +126,7 @@ export class AccessibleDialog {
   }
 
   private closeInternal(): void {
-    if (!this.ref) return;
+    if (this.ref === null) return;
     const ref = this.ref;
     // Setting ref = null first so the effect does not loop on the next
     // tick when the parent observes `closed` and sets `opened` back to false.

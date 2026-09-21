@@ -1,25 +1,25 @@
 <ng-template #body>
   <div
+    aria-modal="true"
     class="panel flex flex-col gap-3 rounded-lg"
     role="dialog"
-    aria-modal="true"
     [attr.aria-label]="label()"
     [attr.aria-labelledby]="labelledBy()"
   >
     <header class="header flex items-center justify-between gap-3">
       <h2 class="title font-bold m-0">{{ label() }}</h2>
       <button
-        type="button"
-        class="close inline-flex items-center justify-center rounded border border-transparent bg-transparent cursor-pointer text-2xl leading-none"
         aria-label="Bezárás"
+        class="close inline-flex items-center justify-center rounded border border-transparent bg-transparent cursor-pointer text-2xl leading-none"
         data-testid="dialog-close"
+        type="button"
         (click)="close()"
       >
         ×
       </button>
     </header>
     <div class="body leading-relaxed">
-      <ng-content></ng-content>
+      <ng-content />
     </div>
   </div>
 </ng-template>
