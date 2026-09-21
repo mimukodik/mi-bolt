@@ -34,7 +34,7 @@ function toGeneratedProduct(source: typeof DEMO_PRODUCT): Product {
     slug: `${v.id}-variant`,
     images: [...v.images],
   });
-  // Drop the legacy fields the mock fixture still carries but the
+  // Drop the fields the mock fixture still carries but the
   // 2.0.0 Product type no longer accepts, and supply the `releasedAt`
   // field ProductBase requires but the mock fixture omits.
   const { isDemo: _isDemo, defaultVariant: _defaultVariant, ...rest } = source;

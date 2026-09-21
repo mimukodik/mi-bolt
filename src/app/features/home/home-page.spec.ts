@@ -8,7 +8,7 @@
  * / cart / simulated order (AC04: and nothing about tariffs, internet,
  * services, payments or bank cards).
  *
- * The vitest legacy-decorator transform cannot resolve `styleUrl`
+ * The vitest decorator transform cannot resolve `styleUrl`
  * CSS imports or read `input()` signal inputs from the transpiled
  * class body, so the suite mixes three strategies:
  *
@@ -27,7 +27,7 @@
  *      `invoke(fn, params)` surface the production facade uses. We
  *      read the resulting signals to verify the request lifecycle
  *      without forcing the full render of FeaturedProducts (whose
- *      signal inputs cannot be resolved through the legacy-decorator
+ *      signal inputs cannot be resolved through the decorator
  *      transform).
  *
  * Mobile content order (AC05) is asserted on the DOM order of the
