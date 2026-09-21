@@ -34,7 +34,8 @@ function readScenarioNameFromSnapshotKeys(): string | null {
   try {
     for (let index = 0; index < sessionStorage.length; index += 1) {
       const key = sessionStorage.key(index);
-      if (!key?.startsWith(SNAPSHOT_KEY_PREFIX)) continue;
+      if (key === null) continue;
+      if (!key.startsWith(SNAPSHOT_KEY_PREFIX)) continue;
       if (found !== null) return null;
       found = key.slice(SNAPSHOT_KEY_PREFIX.length);
     }
