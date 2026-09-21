@@ -1,4 +1,4 @@
-/* Alias token names used by the component styles, each resolving to a yettel theme variable declared in src/styles.css. The mapping, row by row with its yettel source, is docs/design/yettel.md §9. */
+/* Token names used by the component styles. The colour, radius and font entries resolve to the yettel theme variables declared in src/styles.css; the spacing, size, typography, layout and motion entries are declared here as values. The mapping, row by row with its yettel source, is docs/design/yettel.md §9. */
 
 :root {
   /* color brand */

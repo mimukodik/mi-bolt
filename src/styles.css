@@ -1,9 +1,9 @@
 /* Global stylesheet and the single central Tailwind theme. Every yettel.hu
    value the build uses is declared once in the theme block below, so
    utilities exist for it: --color-* gives the bg, text and border utilities,
-   --radius-* gives rounded-*, --font-* gives font-*. The alias token names
-   in src/styles/tokens.css resolve to these variables; the alias-to-theme
-   mapping is docs/design/yettel.md §9. */
+   --radius-* gives rounded-*, --font-* gives font-*. The colour, radius and
+   font token names in src/styles/tokens.css resolve to these variables; the
+   token-to-theme mapping is docs/design/yettel.md §9. */
 
 @import 'tailwindcss';
 
