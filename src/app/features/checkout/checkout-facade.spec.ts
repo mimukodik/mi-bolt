@@ -95,6 +95,16 @@ function readString(body: Record<string, unknown>, key: string): string {
   return value;
 }
 
+/** Reads the stored `key` from a checkout-namespaced sessionStorage slot,
+ *  narrowing the JSON without a cast. */
+function readStoredKey(slot: string): string {
+  const raw = sessionStorage.getItem(slot);
+  if (raw === null) throw new Error(`expected sessionStorage slot ${slot} to exist`);
+  const parsed: unknown = JSON.parse(raw);
+  if (!isRecord(parsed)) throw new Error(`expected ${slot} to be a record`);
+  return readString(parsed, 'key');
+}
+
 // ---------------------------------------------------------------------------
 // Capture harness — every request lands here so a case can assert the
 // method, the URL, the headers and the body. Body reading is async and
@@ -507,22 +517,30 @@ describe('conflict and error handling', () => {
     await seedMoto();
     captures.length = 0;
 
+    let attempt = 0;
     server.use(
-      http.patch('*/api/v1/checkout', () =>
-        HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:cart-version-conflict',
-            title: 'Precondition failed',
-            status: 412,
-            code: 'CART_VERSION_CONFLICT',
-            detail: 'The cart changed since the version supplied in If-Match',
-            params: { expected: 3, received: '"2"' },
-            traceId: 'mock-trace-test',
-            fieldErrors: [],
-          },
-          { status: 412, headers: { 'content-type': 'application/problem+json' } },
-        ),
-      ),
+      http.patch('*/api/v1/checkout', () => {
+        attempt += 1;
+        if (attempt === 1) {
+          return HttpResponse.json(
+            {
+              type: 'urn:mi-bolt:problem:cart-version-conflict',
+              title: 'Precondition failed',
+              status: 412,
+              code: 'CART_VERSION_CONFLICT',
+              detail: 'The cart changed since the version supplied in If-Match',
+              params: { expected: 3, received: '"2"' },
+              traceId: 'mock-trace-test',
+              fieldErrors: [],
+            },
+            { status: 412, headers: { 'content-type': 'application/problem+json' } },
+          );
+        }
+        // The retry PATCH must reach the default mock. Returning
+        // undefined hands control back to the layered queue, so the
+        // retry succeeds against the reconciled cart version.
+        return undefined;
+      }),
     );
 
     await checkout.updateContact(VALID_CONTACT);
@@ -552,23 +570,29 @@ describe('conflict and error handling', () => {
     await seedMoto();
     await checkout.updateContact(VALID_CONTACT);
 
-    let _patchCount = 0;
+    let attempt = 0;
     server.use(
       http.patch('*/api/v1/checkout', () => {
-        _patchCount += 1;
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:cart-version-conflict',
-            title: 'Precondition failed',
-            status: 412,
-            code: 'CART_VERSION_CONFLICT',
-            detail: 'The cart changed since the version supplied in If-Match',
-            params: { expected: 9, received: '"x"' },
-            traceId: 'mock-trace-test',
-            fieldErrors: [],
-          },
-          { status: 412, headers: { 'content-type': 'application/problem+json' } },
-        );
+        attempt += 1;
+        // First two PATCHes (contact, delivery) answer 412; the third
+        // (the retry) hands back to the default mock so the
+        // back-to-back assertion runs against the same handler.
+        if (attempt <= 2) {
+          return HttpResponse.json(
+            {
+              type: 'urn:mi-bolt:problem:cart-version-conflict',
+              title: 'Precondition failed',
+              status: 412,
+              code: 'CART_VERSION_CONFLICT',
+              detail: 'The cart changed since the version supplied in If-Match',
+              params: { expected: 9, received: '"x"' },
+              traceId: 'mock-trace-test',
+              fieldErrors: [],
+            },
+            { status: 412, headers: { 'content-type': 'application/problem+json' } },
+          );
+        }
+        return undefined;
       }),
     );
     captures.length = 0;
@@ -736,14 +760,7 @@ describe('payment intents', () => {
     // not called). A second call with the same cart version is
     // expected to reuse that stored key — the actual idempotency-key
     // value, not a literal sentinel.
-    const stored = sessionStorage.getItem('mi-bolt.checkout.intent-key');
-    expect(stored).not.toBeNull();
-    let firstStoredKey = '';
-    if (stored !== null) {
-      const parsed: unknown = JSON.parse(stored);
-      if (!isRecord(parsed)) throw new Error('expected intent-key record');
-      firstStoredKey = readString(parsed, 'key');
-    }
+    const firstStoredKey = readStoredKey('mi-bolt.checkout.intent-key');
     expect(second?.headers['idempotency-key']).toBe(firstStoredKey);
   });
 
@@ -774,14 +791,7 @@ describe('payment intents', () => {
     if (first.ok) return;
     expect(first.error.status).toBe(422);
 
-    const stored = sessionStorage.getItem('mi-bolt.checkout.intent-key');
-    expect(stored).not.toBeNull();
-    let firstStoredKey = '';
-    if (stored !== null) {
-      const parsed: unknown = JSON.parse(stored);
-      if (!isRecord(parsed)) throw new Error('expected intent-key record');
-      firstStoredKey = readString(parsed, 'key');
-    }
+    const firstStoredKey = readStoredKey('mi-bolt.checkout.intent-key');
 
     captures.length = 0;
     server.resetHandlers(...createHandlers(options));
@@ -816,14 +826,7 @@ describe('payment intents', () => {
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
-    const storedRaw = sessionStorage.getItem('mi-bolt.checkout.intent-key');
-    expect(storedRaw).not.toBeNull();
-    let storedKey = '';
-    if (storedRaw !== null) {
-      const parsed: unknown = JSON.parse(storedRaw);
-      if (!isRecord(parsed)) throw new Error('expected intent-key record');
-      storedKey = readString(parsed, 'key');
-    }
+    const storedKey = readStoredKey('mi-bolt.checkout.intent-key');
 
     TestBed.resetTestingModule();
     configureTestBed();
@@ -984,7 +987,7 @@ describe('orders', () => {
       termsVersion: TERMS_VERSION,
       acceptedTerms: true,
     });
-    // The cart is empty after `resetAfterCart`; the default mock
+    // The cart is empty after `resetForOrder`; the default mock
     // answers 422 CHECKOUT_INCOMPLETE — the assertion below is on the
     // captured Idempotency-Key, not on the result.
     expect(second.ok).toBe(false);
@@ -1035,12 +1038,12 @@ describe('orders', () => {
     if (first.ok) return;
     expect(first.error.status).toBe(503);
 
-    const _second = await checkout.submitOrder({
+    const second = await checkout.submitOrder({
       paymentMethod: 'cash_on_delivery',
       termsVersion: TERMS_VERSION,
       acceptedTerms: true,
     });
-    expect(_second.ok).toBe(false);
+    expect(second.ok).toBe(false);
 
     const posts = requestsTo('POST', '/orders');
     expect(posts).toHaveLength(2);
