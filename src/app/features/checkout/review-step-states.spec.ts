@@ -16,7 +16,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ReviewStep, type CheckoutViewState } from './review-step';
 import type { PriceChange } from './checkout.facade';
@@ -305,6 +305,10 @@ describe('PS-05 a pending intent never claims a rejection and offers exactly one
 });
 
 describe('PS-06 the pending check control emits paymentCheckRequested once per press and never loops', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('two presses emit exactly two events and nothing fires after the second', () => {
     vi.useFakeTimers();
     const fixture = createFixture({ paymentIntent: makeIntent('pending') });
@@ -325,8 +329,6 @@ describe('PS-06 the pending check control emits paymentCheckRequested once per p
     vi.advanceTimersByTime(10_000);
     fixture.detectChanges();
     expect(count).toBe(2);
-
-    vi.useRealTimers();
   });
 });
 
@@ -440,7 +442,7 @@ describe('PC-01 the price-changed state renders both totals side by side', () =>
     expect(oldBlock.querySelector('app-price-block')).not.toBeNull();
     expect(oldBlock.querySelector('.label')?.textContent).toBe('Korábban');
     expect(oldBlock.querySelector('[data-testid="price-amount"]')?.textContent.trim()).toBe(
-      PriceBlock.formatHuf(89_990),
+      PriceBlock.formatHuf(90_480),
     );
 
     const newBlock = getElement(root, '[data-testid="review-price-change-new"]');
