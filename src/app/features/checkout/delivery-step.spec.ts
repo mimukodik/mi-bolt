@@ -127,6 +127,7 @@ function createFixture(
     seedFields?: (fields: CheckoutFieldTree) => void;
   } = {},
 ): ComponentFixture<DeliveryStep> {
+  TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [provideZonelessChangeDetection(), provideRouter([])],
   });
