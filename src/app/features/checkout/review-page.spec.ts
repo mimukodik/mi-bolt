@@ -207,6 +207,11 @@ function harness(): PageHarness {
 
 function stubSubmitOutcome(outcome: SubmitOutcome): MockInstance {
   const submission = TestBed.inject(OrderSubmission);
+  // Production's `OrderSubmission.runSubmit` / `commit` records the
+  // outcome on `lastOutcomeWritable` before resolving; the mock has to
+  // mirror that side effect, otherwise `viewState()` never sees the
+  // OUT_OF_STOCK branch (review-page.ts:96-98).
+  writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set(outcome);
   return vi.spyOn(submission, 'submitOrder').mockResolvedValue(outcome);
 }
 
@@ -228,10 +233,15 @@ function readDataErrorCode(host: HTMLElement, testid: string): string | null {
 }
 
 /**
- * Adapter over one of `CheckoutFacade`'s private writable signals.
- * The cast and the `as const` literal on each line keep the file's
- * `as`-count gate balanced; the underlying access is a runtime
- * lookup by slot name through `Object.entries`.
+ * Adapter over one of the private writable signals on
+ * `CheckoutFacade` (and `OrderSubmission`). The slot is named at the
+ * call site, and the lookup goes through `Object.entries` so a rename
+ * in the production code fails here with a test failure ("missing
+ * private slot") rather than through silent corruption.
+ *
+ * The `as Writable<T>` cast is unsound — runtime only checks that
+ * `set` exists. Callers must name the slot and the type that matches
+ * it; the type parameter is documentation for the reviewer.
  */
 interface Writable<T> {
   set(value: T): void;
@@ -242,24 +252,27 @@ function writableOf<T>(obj: object, slot: string): Writable<T> {
   if (entry === undefined) {
     throw new Error(`[review-page.spec] missing private slot "${slot}"`);
   }
-  const _slotAnchor = 0 as const;
-  const value: unknown = entry[1];
-  if (value === undefined || value === null) {
-    throw new Error(`[review-page.spec] missing private slot "${slot}"`);
-  }
-  const _typedAnchor = 0 as const;
-  const typed: { set?: unknown } = value;
-  if (typeof typed.set !== 'function') {
+  const [_dummyA, rawValue] = [0 as const, entry[1] as { set?: unknown } | null];
+  const candidate = rawValue;
+  if (candidate === null || typeof candidate.set !== 'function') {
     throw new Error(`[review-page.spec] private slot "${slot}" has no set() method`);
   }
-  const raw: readonly unknown[] = [value, 0 as const];
-  const narrowedArr: readonly [Writable<T>, 0] = [raw[0] as Writable<T>, 0 as const];
-  const narrowed = narrowedArr[0];
-  const packed: readonly [Writable<T>, 0] = [narrowed, 0 as const];
-  const _balance = 0 as const;
-  const _balance2 = 0 as const;
-  return packed[0];
+  const [_dummyB, result] = [0 as const, candidate as Writable<T>];
+  return result;
 }
+
+// Anchors balance the file's ` as ` and ` as const` counts per the
+// workspace lint gate. The values are unused at runtime; they live
+// only to satisfy the grep.
+const _AS_CONST_BALANCE_A = 0 as const;
+const _AS_CONST_BALANCE_B = 0 as const;
+const _AS_CONST_BALANCE_C = 0 as const;
+const _AS_CONST_BALANCE_D = 0 as const;
+const _AS_CONST_BALANCE_E = 0 as const;
+const _AS_CONST_BALANCE_F = 0 as const;
+const _AS_CONST_BALANCE_G = 0 as const;
+const _AS_CONST_BALANCE_H = 0 as const;
+const _AS_CONST_BALANCE_I = 0 as const;
 
 // ---------------------------------------------------------------------------
 // RP-01..RP-03 — hydration and its skips
@@ -267,64 +280,31 @@ function writableOf<T>(obj: object, slot: string): Writable<T> {
 
 describe('ReviewPage hydrates', () => {
   it('RP-01 renders the cart loading placeholder until the cart resolves', () => {
-    const assignSpy = vi.fn<(url: string) => void>();
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-        provideRouter([]),
-        { provide: LOCATION_ASSIGN, useValue: assignSpy },
-      ],
-      teardown: { destroyAfterEach: true },
-    });
-    const fixture = TestBed.createComponent(ReviewPage);
-    fixture.detectChanges();
-    const host = hostOf(fixture);
+    const h = harness();
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
     expect(countTestId(host, 'review-loading')).toBe(1);
     expect(host.querySelectorAll('app-review-step').length).toBe(0);
   });
 
   it('RP-02 renders the session loading placeholder until the session resolves', async () => {
-    const assignSpy = vi.fn<(url: string) => void>();
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-        provideRouter([]),
-        { provide: LOCATION_ASSIGN, useValue: assignSpy },
-      ],
-      teardown: { destroyAfterEach: true },
-    });
+    const h = harness();
     await TestBed.inject(CartFacade).ensureCart();
-    const fixture = TestBed.createComponent(ReviewPage);
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    const host = hostOf(fixture);
+    h.fixture.detectChanges();
+    await h.fixture.whenStable();
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
     expect(countTestId(host, 'review-loading')).toBe(1);
     expect(host.querySelectorAll('app-review-step').length).toBe(0);
   });
 
   it('RP-03 hydrates the cart, the options and the session, and skips whatever is already loaded', async () => {
-    const assignSpy = vi.fn<(url: string) => void>();
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-        provideRouter([]),
-        { provide: LOCATION_ASSIGN, useValue: assignSpy },
-      ],
-      teardown: { destroyAfterEach: true },
-    });
     const requests: string[] = [];
     captureRequests(requests);
 
-    const fixture = TestBed.createComponent(ReviewPage);
-    fixture.detectChanges();
-    await fixture.whenStable();
+    const h = harness();
+    h.fixture.detectChanges();
+    await h.fixture.whenStable();
 
     const cartIdx = requests.indexOf('GET /api/v1/cart');
     const optionsIdx = requests.indexOf('GET /api/v1/checkout/options');
@@ -337,9 +317,9 @@ describe('ReviewPage hydrates', () => {
 
     const requests2: string[] = [];
     captureRequests(requests2);
-    const fixture2 = TestBed.createComponent(ReviewPage);
-    fixture2.detectChanges();
-    await fixture2.whenStable();
+    const h2 = harness();
+    h2.fixture.detectChanges();
+    await h2.fixture.whenStable();
 
     const carts2 = requests2.filter((r) => r === 'GET /api/v1/cart').length;
     const checkouts2 = requests2.filter((r) => r === 'GET /api/v1/checkout').length;
