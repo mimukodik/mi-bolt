@@ -29,17 +29,8 @@
 
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  catchError,
-  distinctUntilChanged,
-  map,
-  of,
-  Subject,
-  Subscription,
-  switchMap,
-  take,
-  tap,
-} from 'rxjs';
+import type { Subscription } from 'rxjs';
+import { catchError, distinctUntilChanged, map, of, Subject, switchMap, take, tap } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
 import { getProduct } from '../../api/generated/fn/catalog/get-product';
@@ -265,7 +256,7 @@ export class ProductFacade {
     const product = this.productSignal();
     if (product === null) return;
     const variant = product.variants.find((v) => v.id === variantId);
-    if (!variant) return;
+    if (variant === undefined) return;
     this.selectedColorCodeSignal.set(variant.colorCode);
     this.selectedStorageGbSignal.set(variant.storageGb);
     this.galleryImageIdSignal.set(null);

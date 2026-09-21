@@ -1,7 +1,7 @@
-<section class="root" aria-label="Műszaki adatok" data-testid="spec-accordion">
+<section aria-label="Műszaki adatok" class="root" data-testid="spec-accordion">
   <div class="boxes">
     @for (group of groups(); track group.id) {
-      <div class="group" [attr.data-testid]="'spec-group-' + group.id">
+      <div class="group" [attr.data-testid]="`spec-group-${group.id}`">
         <h3 class="title">{{ group.title }}</h3>
         <dl class="rows">
           @for (row of group.rows; track row.label) {

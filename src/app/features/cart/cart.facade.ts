@@ -533,7 +533,7 @@ export class CartFacade {
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
     this.errorWritable.set(null);
-    if (!options.fromRefetch) {
+    if (options.fromRefetch !== true) {
       this.lastFailedIntent = null;
     }
   }
