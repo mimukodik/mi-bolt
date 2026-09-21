@@ -203,7 +203,7 @@ describe('PS-01 a succeeded intent renders the approved sentence and offers no r
     const root = getRootElement(fixture);
 
     const status = getElement(root, '[data-testid="review-payment-status"]');
-    expect(status.textContent).toBe('A fizetés jóváhagyva.');
+    expect(status.textContent.trim()).toBe('A fizetés jóváhagyva.');
 
     expect(queryElement(root, '[data-testid="review-payment-retry"]')).toBeNull();
     expect(queryElement(root, '[data-testid="review-payment-change"]')).toBeNull();
@@ -221,7 +221,7 @@ describe('PS-02 a declined intent renders the declined sentence with a retry and
     const root = getRootElement(fixture);
 
     const status = getElement(root, '[data-testid="review-payment-status"]');
-    expect(status.textContent).toBe('A szimulált fizetés elutasítva.');
+    expect(status.textContent.trim()).toBe('A szimulált fizetés elutasítva.');
 
     const retry = getButton(root, 'review-payment-retry');
     expect(retry.textContent.trim()).toBe('Újrapróbálom');
@@ -290,7 +290,7 @@ describe('PS-05 a pending intent never claims a rejection and offers exactly one
     const root = getRootElement(fixture);
 
     const status = getElement(root, '[data-testid="review-payment-status"]');
-    expect(status.textContent).toBe(
+    expect(status.textContent.trim()).toBe(
       'Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.',
     );
 
@@ -343,7 +343,7 @@ describe('PS-07 a requires_action intent renders the unfinished sentence with a 
 
     const root = getRootElement(fixture);
     const status = getElement(root, '[data-testid="review-payment-status"]');
-    expect(status.textContent).toBe('A fizetés nem fejeződött be.');
+    expect(status.textContent.trim()).toBe('A fizetés nem fejeződött be.');
 
     const back = getButton(root, 'review-payment-back');
     expect(back.textContent.trim()).toBe('Vissza a fizetéshez');
@@ -372,7 +372,7 @@ describe('PS-08 no intent on a card draft that already started a payment says th
     const root = getRootElement(fixture);
 
     const status = getElement(root, '[data-testid="review-payment-status"]');
-    expect(status.textContent).toBe('A fizetési szándék nem található.');
+    expect(status.textContent.trim()).toBe('A fizetési szándék nem található.');
 
     const newPayment = getButton(root, 'review-payment-new');
     expect(newPayment.textContent.trim()).toBe('Új fizetés indítása');
@@ -392,7 +392,7 @@ describe('PS-09 no intent on a card draft that never started a payment invites t
     const root = getRootElement(fixture);
 
     const status = getElement(root, '[data-testid="review-payment-status"]');
-    expect(status.textContent).toBe('A kártyás fizetéshez indítsd el a fizetést.');
+    expect(status.textContent.trim()).toBe('A kártyás fizetéshez indítsd el a fizetést.');
 
     const newPayment = getButton(root, 'review-payment-new');
     expect(newPayment.textContent.trim()).toBe('Fizetés indítása');
@@ -419,6 +419,7 @@ describe('PS-10 the new-payment control emits newPaymentRequested once, and the 
 
     // Second sub-case: no intent, not flagged missing — the entire
     // intent branch is absent (no status sentence, no new control).
+    TestBed.resetTestingModule();
     const absentFixture = createFixture({
       paymentIntent: null,
       paymentIntentMissing: false,
@@ -534,6 +535,7 @@ describe('ST-02 the stock-error and error states each render their own fixed sen
       getElement(stockRoot, '[data-testid="review-status"]').querySelectorAll('app-button').length,
     ).toBe(0);
 
+    TestBed.resetTestingModule();
     const errorFixture = createFixture({ state: 'error' });
     const errorRoot = getRootElement(errorFixture);
     const errorMessages = errorRoot.querySelectorAll('[data-testid="status-message"]');
@@ -555,11 +557,13 @@ describe('ST-03 the submitting and loading states each render their own loader, 
 
     const submittingLoaders = submittingRoot.querySelectorAll('app-loading-state');
     expect(submittingLoaders.length).toBe(1);
-    expect(submittingLoaders[0].getAttribute('aria-label')).toBe('Feldolgozás…');
+    expect(
+      submittingRoot.querySelector('[data-testid="loading-state"]')?.getAttribute('aria-label'),
+    ).toBe('Feldolgozás…');
 
     const submittingSubmit = getButton(submittingRoot, 'review-submit');
     expect(submittingSubmit.disabled).toBe(true);
-    expect(submittingSubmit.textContent.trim()).toBe('Feldolgozás…');
+    expect(submittingSubmit.querySelector('.label')?.textContent.trim()).toBe('Feldolgozás…');
 
     const submittingExplanation = getElement(
       submittingRoot,
@@ -569,12 +573,15 @@ describe('ST-03 the submitting and loading states each render their own loader, 
       'A véglegesítés folyamatban van; kérlek várj.',
     );
 
+    TestBed.resetTestingModule();
     const loadingFixture = createFixture({ state: 'loading' });
     const loadingRoot = getRootElement(loadingFixture);
 
     const loadingLoaders = loadingRoot.querySelectorAll('app-loading-state');
     expect(loadingLoaders.length).toBe(1);
-    expect(loadingLoaders[0].getAttribute('aria-label')).toBe('Rendelés adatainak betöltése');
+    expect(
+      loadingRoot.querySelector('[data-testid="loading-state"]')?.getAttribute('aria-label'),
+    ).toBe('Rendelés adatainak betöltése');
 
     const loadingSubmit = getButton(loadingRoot, 'review-submit');
     expect(loadingSubmit.textContent.trim()).toBe('Demórendelés véglegesítése');
@@ -583,5 +590,19 @@ describe('ST-03 the submitting and loading states each render their own loader, 
     expect(loadingExplanation.textContent.trim()).toBe(
       'A rendelés adatai még betöltés alatt vannak.',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ST-04 — conflict / stock-error / error: no CTA explanation
+// ---------------------------------------------------------------------------
+describe('ST-04 the conflict, stock-error and error states render no CTA explanation, because their banner already says what happened', () => {
+  it('renders no review-cta-explanation in any of the three states', () => {
+    for (const state of ['conflict', 'stock-error', 'error'] as const) {
+      TestBed.resetTestingModule();
+      const fixture = createFixture({ state });
+      const root = getRootElement(fixture);
+      expect(root.querySelectorAll('[data-testid="review-cta-explanation"]').length).toBe(0);
+    }
   });
 });
