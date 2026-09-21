@@ -1,8 +1,4 @@
-<article
-  class="line grid gap-4"
-  data-testid="cart-line"
-  [attr.aria-busy]="pending() ? 'true' : null"
->
+<article class="line" data-testid="cart-line" [attr.aria-busy]="pending() ? 'true' : null">
   <div class="media flex items-start justify-center min-w-0">
     <app-product-image
       aspectRatio="1 / 1"
@@ -35,7 +31,7 @@
     </div>
   </div>
 
-  <div class="totals flex flex-row justify-between items-baseline">
+  <div class="totals">
     <button
       class="remove"
       data-testid="cart-line-remove"

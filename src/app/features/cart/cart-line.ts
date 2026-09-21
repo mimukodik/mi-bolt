@@ -6,8 +6,8 @@
  *   - Product image (ProductImage primitive, lazy through the
  *     <img> element's own loading="lazy" attribute).
  *   - Product name + variant descriptor (color name + storage bucket).
- *   - Unit price + line total through the PriceBlock primitive so the
- *     whole HUF formatting and the loading/empty states are reused.
+ *   - Line total through the PriceBlock primitive so the whole HUF
+ *     formatting and the loading/empty states are reused.
  *   - QuantityControl (T10) so the user can increment / decrement
  *     within the variant's `maxQuantity` ceiling. The component
  *     surfaces `pending` so the controls disable while a
