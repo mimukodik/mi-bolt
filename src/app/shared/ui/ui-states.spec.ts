@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import {
@@ -24,11 +25,7 @@ import {
 
 @Component({
   imports: [Button],
-  template: `<app-button
-    [label]="label()"
-    [disabled]="disabled()"
-    [loading]="loading()"
-  ></app-button>`,
+  template: `<app-button [disabled]="disabled()" [label]="label()" [loading]="loading()" />`,
 })
 class ButtonHost {
   readonly label = signal('Művelet');
@@ -38,7 +35,7 @@ class ButtonHost {
 
 @Component({
   imports: [PriceBlock],
-  template: `<app-price-block [money]="money()" label="Ár" [status]="status()"></app-price-block>`,
+  template: `<app-price-block label="Ár" [money]="money()" [status]="status()" />`,
 })
 class PriceHost {
   readonly money = signal<Money | null>({ amount: 339990, currency: 'HUF' });
@@ -49,10 +46,10 @@ class PriceHost {
   imports: [ProductImage],
   template: `
     <app-product-image
-      [image]="image()"
       productName="Demo One 5G"
+      [image]="image()"
       (loadFailed)="failedCount.set(failedCount() + 1)"
-    ></app-product-image>
+    />
   `,
 })
 class ImageHost {
@@ -69,11 +66,11 @@ class ImageHost {
   imports: [ErrorState],
   template: `
     <app-error-state
-      [title]="'Hiba'"
-      [message]="'Most nem sikerül.'"
+      message="Most nem sikerül."
+      title="Hiba"
       [pending]="pending()"
       [preserving]="true"
-    ></app-error-state>
+    />
   `,
 })
 class ErrorHost {
@@ -82,10 +79,7 @@ class ErrorHost {
 
 @Component({
   imports: [LoadingState],
-  template: `<app-loading-state
-    [variant]="variant()"
-    label="Adatok betöltése"
-  ></app-loading-state>`,
+  template: `<app-loading-state label="Adatok betöltése" [variant]="variant()" />`,
 })
 class LoadingHost {
   readonly variant = signal<'block' | 'lines' | 'card'>('block');
@@ -95,10 +89,10 @@ class LoadingHost {
   imports: [EmptyState],
   template: `
     <app-empty-state
+      actionLabel="Szűrők törlése"
+      message="Próbáld meg kevesebb szűrővel."
       [title]="title()"
-      [message]="'Próbáld meg kevesebb szűrővel.'"
-      [actionLabel]="'Szűrők törlése'"
-    ></app-empty-state>
+    />
   `,
 })
 class EmptyHost {
@@ -110,10 +104,10 @@ class EmptyHost {
   template: `
     <app-form-field-message
       fieldId="email"
+      severity="error"
       [errors]="errors()"
       [touched]="touched()"
-      [severity]="'error'"
-    ></app-form-field-message>
+    />
   `,
 })
 class FormHost {
@@ -124,12 +118,7 @@ class FormHost {
 @Component({
   imports: [QuantityControl],
   template: `
-    <app-quantity-control
-      [value]="value()"
-      [min]="1"
-      [max]="5"
-      [disabled]="disabled()"
-    ></app-quantity-control>
+    <app-quantity-control [disabled]="disabled()" [max]="5" [min]="1" [value]="value()" />
   `,
 })
 class QuantityHost {
@@ -141,8 +130,8 @@ class QuantityHost {
   imports: [AccessibleDialog, DialogModule],
   template: `
     <app-accessible-dialog
-      [opened]="opened()"
       [label]="label()"
+      [opened]="opened()"
       [restoreTarget]="triggerEl"
       (closed)="closedCount.set(closedCount() + 1)"
     >
@@ -163,11 +152,7 @@ class DialogHost {
 @Component({
   imports: [StatusMessage],
   template: `
-    <app-status-message
-      [message]="message()"
-      [severity]="severity()"
-      [persistent]="persistent()"
-    ></app-status-message>
+    <app-status-message [message]="message()" [persistent]="persistent()" [severity]="severity()" />
   `,
 })
 class StatusHost {
@@ -226,7 +211,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const f = TestBed.createComponent(ButtonHost);
       f.detectChanges();
       const btn = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (!btn) {
+      if (btn === null) {
         throw new Error('Expected button');
       }
       expect(btn.disabled).toBe(false);
@@ -239,7 +224,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.loading.set(true);
       f.detectChanges();
       const lb = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (!lb) {
+      if (lb === null) {
         throw new Error('Expected button');
       }
       expect(lb.getAttribute('aria-busy')).toBe('true');
@@ -295,7 +280,7 @@ describe('MiBolt primitives: Required State Contract', () => {
         '[data-testid="image-photo"]',
       );
       expect(photo).not.toBeNull();
-      if (!photo) {
+      if (photo === null) {
         throw new Error('Expected photo');
       }
       photo.dispatchEvent(new Event('error'));
@@ -317,7 +302,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.pending.set(true);
       f.detectChanges();
       const btn = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (!btn) {
+      if (btn === null) {
         throw new Error('Expected button');
       }
       expect(btn.disabled).toBe(true);
@@ -381,7 +366,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const dec = getNativeElement(f).querySelector<HTMLButtonElement>(
         '[data-testid="quantity-decrement"]',
       );
-      if (!dec) {
+      if (dec === null) {
         throw new Error('Expected decrement button');
       }
       expect(dec.disabled).toBe(true);
@@ -392,7 +377,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const input = getNativeElement(f).querySelector<HTMLInputElement>(
         '[data-testid="quantity-input"]',
       );
-      if (!input) {
+      if (input === null) {
         throw new Error('Expected quantity input');
       }
       input.value = '99';

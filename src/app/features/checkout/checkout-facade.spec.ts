@@ -145,7 +145,9 @@ async function captureRequest(request: Request): Promise<void> {
 
 /** Lets the async body-reads finish before a case reads the captures. */
 async function flushCaptures(): Promise<void> {
-  await new Promise<void>((r) => setTimeout(r, 20));
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 20);
+  });
 }
 
 function requestsTo(method: string, pathSuffix: string): CapturedRequest[] {
@@ -224,7 +226,9 @@ async function bootCart(): Promise<CartFacade> {
   const cart = TestBed.inject(CartFacade);
   // The cart facade fires its own `ensureCart()` in the constructor;
   // give it a microtask to land before we read signals.
-  await new Promise<void>((r) => setTimeout(r, 0));
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
   await flushCaptures();
   return cart;
 }
@@ -523,7 +527,9 @@ describe('conflict and error handling', () => {
     expect(checkout.error()).toBeNull();
 
     // Let the fire-and-forget refetch + refreshSession settle.
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
 
     const cart = TestBed.inject(CartFacade);
     expect(cart.cart()?.version).toBe(2);
@@ -566,7 +572,9 @@ describe('conflict and error handling', () => {
     // Let the background refetch settle before retry — `refreshSession`
     // in the conflict path adopted the server's v2 into the cart, so
     // the retry PATCH will carry If-Match "2".
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
     captures.length = 0;
 
     await checkout.retry();
@@ -622,13 +630,17 @@ describe('conflict and error handling', () => {
     expect(contactResult.ok).toBe(false);
     expect(checkout.conflict()?.intent).toBe('contact');
 
-    await new Promise<void>((r) => setTimeout(r, 30));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 30);
+    });
 
     const deliveryResult = await checkout.updateDelivery({ optionId: 'pickup_point' });
     expect(deliveryResult.ok).toBe(false);
     expect(checkout.conflict()?.intent).toBe('contact');
 
-    await new Promise<void>((r) => setTimeout(r, 30));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 30);
+    });
     captures.length = 0;
 
     await checkout.retry();
@@ -1124,7 +1136,9 @@ describe('orders', () => {
     expect(result.ok).toBe(false);
 
     // Wait for the recordPriceChange refetch + ensureSession to land.
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
 
     expect(requestsTo('POST', '/orders')).toHaveLength(1);
     const change = checkout.priceChange();
@@ -1203,7 +1217,9 @@ describe('orders', () => {
       termsVersion: TERMS_VERSION,
       acceptedTerms: true,
     });
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
     expect(checkout.priceChange()).not.toBeNull();
 
     checkout.confirmPriceChange();

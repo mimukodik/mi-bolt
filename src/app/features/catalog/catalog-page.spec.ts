@@ -351,7 +351,9 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
 
   const tick = async (): Promise<void> => {
     for (let i = 0; i < 8; i += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
     fixture.detectChanges();
   };
@@ -387,11 +389,11 @@ async function setupHarness(queryParams: Params = {}): Promise<Harness> {
     facade,
     captured,
     respond: (page) => {
-      if (!responder) throw new Error('no responder');
+      if (responder === null) throw new Error('no responder');
       responder(page);
     },
     reject: (status) => {
-      if (!rejecter) throw new Error('no rejecter');
+      if (rejecter === null) throw new Error('no rejecter');
       rejecter(status);
     },
     tick,
@@ -499,8 +501,8 @@ describe('T13-AC01 catalog layout breakpoints', () => {
     harness.cleanup();
   });
 
-  it('filter sidebar (>=1024 px) carries data-layout="sidebar" + filter button hidden', () => {
-    return (async (): Promise<void> => {
+  it('filter sidebar (>=1024 px) carries data-layout="sidebar" + filter button hidden', () =>
+    (async (): Promise<void> => {
       const harness = await setupHarness();
       const root = getRootElement(harness.fixture);
       const sidebar = root.querySelector('[data-testid="filter-sidebar"]');
@@ -513,8 +515,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
       const root2 = getRootElement(harness.fixture);
       expect(root2.getAttribute('data-layout-mode') ?? 'sidebar').toBe('sidebar');
       harness.cleanup();
-    })();
-  });
+    })());
 
   it('<1024 px render flips host to data-layout-mode="drawer" and shows the trigger button', async () => {
     // We assert the structural choice (host data-attribute + presence of the
@@ -558,9 +559,13 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
     harness.captured.length = 0;
 
     harness.facade.setSearch('demo');
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
     expect(harness.captured.length).toBe(0);
-    await new Promise<void>((r) => setTimeout(r, 320));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 320);
+    });
     expect(harness.captured.length).toBe(1);
     expect(harness.captured[0]?.params.get('q')).toBe('demo');
     harness.respond(successPage([], 0));
@@ -1238,7 +1243,7 @@ describe('FIX-25 a filter keystroke does not disable the box being typed into', 
       // A blurred box is the defect, so the loop asserts the focus is
       // still where the user put it before each further keystroke.
       expect(active).toBe(min);
-      min.value = min.value + character;
+      min.value += character;
       min.dispatchEvent(new Event('input', { bubbles: true }));
       harness.fixture.detectChanges();
       // In a browser this is the assertion that carries the test: a box

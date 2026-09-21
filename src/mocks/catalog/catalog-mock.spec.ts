@@ -385,9 +385,10 @@ describe('GET /products filters', () => {
     // distinct products; the first one in recommended order is
     // motorola-edge-50-fusion @ 256. The total is derived from the
     // fixture so a future regeneration rewrites it alongside.
-    const expectedZoldCount = catalogFixture.products.reduce((acc, product) => {
-      return acc + product.variants.filter((v) => v.colorCode === 'zold').length;
-    }, 0);
+    const expectedZoldCount = catalogFixture.products.reduce(
+      (acc, product) => acc + product.variants.filter((v) => v.colorCode === 'zold').length,
+      0,
+    );
     const body = await loadJson('/api/v1/products?color=zold');
     expect(readNumber(body, 'total')).toBe(expectedZoldCount);
     const items = readItems(body);
@@ -777,11 +778,11 @@ describe('GET /products facets', () => {
     const filteredApple = findBrand(filteredBrands, 'apple');
     expect(baseApple).toBeDefined();
     expect(filteredApple).toBeDefined();
-    if (!baseApple || !filteredApple) return;
+    if (baseApple === undefined || filteredApple === undefined) return;
     expect(readNumber(baseApple, 'count')).toBe(readNumber(filteredApple, 'count'));
     const filteredHonor = findBrand(filteredBrands, 'honor');
     expect(filteredHonor).toBeDefined();
-    if (!filteredHonor) return;
+    if (filteredHonor === undefined) return;
     expect(readNumber(filteredHonor, 'count')).toBe(8);
   });
 });
@@ -860,10 +861,10 @@ describe('GET /products/:slug/related', () => {
       // The related path picks the smallest storage the product carries.
       const store = catalogStore.current;
       expect(store).not.toBeNull();
-      if (!store) return;
+      if (store === null) return;
       const product = store.getProduct(slug);
       expect(product).toBeDefined();
-      if (!product) return;
+      if (product === undefined) return;
       const minStorage = Math.min(...product.variants.map((v) => v.storageGb));
       expect(storageGb).toBe(minStorage);
     }
@@ -899,10 +900,10 @@ describe('GET /media/:imageId', () => {
     // Pick a real image id from the first product's first variant.
     const store = catalogStore.current;
     expect(store).not.toBeNull();
-    if (!store) return;
+    if (store === null) return;
     const product = store.getProduct('motorola-edge-50-fusion');
     expect(product).toBeDefined();
-    if (!product) return;
+    if (product === undefined) return;
     const firstVariant = product.variants.at(0);
     expect(firstVariant).toBeDefined();
     if (firstVariant === undefined) return;
@@ -942,7 +943,7 @@ describe('store bookkeeping', () => {
     expect(catalogStore.current).not.toBeNull();
     const store = catalogStore.current;
     expect(store).not.toBeNull();
-    if (!store) return;
+    if (store === null) return;
     expect(store.listProducts().length).toBe(48);
     expect(store.listEntries().length).toBe(TOTAL_ENTRIES);
     const images = new Set<string>();
@@ -957,10 +958,10 @@ describe('store bookkeeping', () => {
   it('getVariant resolves a known id to product and variant, and unknown ids to undefined', () => {
     const store = catalogStore.current;
     expect(store).not.toBeNull();
-    if (!store) return;
+    if (store === null) return;
     const hit = store.getVariant('motorola-edge-50-fusion--zold--256');
     expect(hit).toBeDefined();
-    if (!hit) return;
+    if (hit === undefined) return;
     expect(hit.product.slug).toBe('motorola-edge-50-fusion');
     expect(hit.variant.storageGb).toBe(256);
     expect(hit.variant.maxQuantity).toBe(5);
