@@ -53,17 +53,14 @@ export type CartOutcome = { ok: true; cart: Cart } | { ok: false; problem: Probl
 /** Look up a variant by id from whatever catalogue the caller mounted. */
 export type VariantLookupFn = (variantId: string) => VariantLookup | undefined;
 
-/**
- * Title shown on the Problem body for each status code. Matched by
- * the catalogue handlers, copied rather than imported so the cart
- * mock stays self-contained.
- */
-function titleForStatus(status: number): string {
+/** Title shown on the Problem body for each status code; shared by the cart and checkout stores. */
+export function titleForStatus(status: number): string {
   if (status === 400) return 'Invalid request';
   if (status === 404) return 'Resource not found';
   if (status === 409) return 'Conflict';
   if (status === 410) return 'Gone';
   if (status === 412) return 'Precondition failed';
+  if (status === 422) return 'Unprocessable content';
   return 'Unknown';
 }
 

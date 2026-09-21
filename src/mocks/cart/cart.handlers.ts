@@ -36,9 +36,9 @@ import {
 import { isRecord } from '../is-record';
 import { type Product, Repository } from '../repository';
 
-import type { Problem } from '../../app/api/generated/models/problem';
-import { buildTraceId, CartStore } from './cart-store';
+import { CartStore } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
+import { PROBLEM_CONTENT_TYPE, invalidRequest } from '../problem-response';
 
 /** Cross-handler reference to the cart store; consumed by the checkout and order mocks. */
 export const cartStore: { current: CartStore | null } = { current: null };
@@ -182,8 +182,6 @@ function requireCatalog(): NonNullable<typeof catalogStore.current> {
   return catalogStore.current;
 }
 
-const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
-
 /** Map an outcome onto the matching `HttpResponse`. */
 function outcomeResponse(outcome: ReturnType<CartStore['get']>): HttpResponse<DefaultBodyType> {
   if (outcome.ok) {
@@ -194,28 +192,6 @@ function outcomeResponse(outcome: ReturnType<CartStore['get']>): HttpResponse<De
   }
   return HttpResponse.json(outcome.problem, {
     status: outcome.problem.status,
-    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
-  });
-}
-
-/** 400 problem for a missing or malformed input. */
-function invalidRequest(
-  options: CreateHandlersOptions,
-  detail: string,
-  params: Record<string, unknown>,
-): HttpResponse<DefaultBodyType> {
-  const body: Problem = {
-    type: 'urn:mi-bolt:problem:invalid-request',
-    title: 'Invalid request',
-    status: 400,
-    code: 'INVALID_REQUEST',
-    detail,
-    traceId: buildTraceId(options),
-    fieldErrors: [],
-    params,
-  };
-  return HttpResponse.json(body, {
-    status: 400,
     headers: { 'content-type': PROBLEM_CONTENT_TYPE },
   });
 }

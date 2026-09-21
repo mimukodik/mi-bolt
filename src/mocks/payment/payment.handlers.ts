@@ -19,16 +19,14 @@
  * that arrives before registration still surfaces a clear error.
  */
 
-import { http, HttpResponse, type DefaultBodyType, type RequestHandler } from 'msw';
+import { http, HttpResponse, type RequestHandler } from 'msw';
 
 import {
   registerBusinessHandlers,
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
-import { buildTraceId, problemType } from '../cart/cart-store';
-import type { Problem } from '../../app/api/generated/models/problem';
-import { PROBLEM_CONTENT_TYPE, problemResponse } from '../problem-response';
+import { invalidRequest, problemResponse } from '../problem-response';
 
 import { orderStore } from '../checkout/checkout.handlers';
 
@@ -37,28 +35,6 @@ function requireOrderStore(): NonNullable<typeof orderStore.current> {
     throw new Error('[payment.handlers] order store has not been loaded');
   }
   return orderStore.current;
-}
-
-/** 400 Problem for a missing or malformed handler-level input. */
-function invalidRequest(
-  options: CreateHandlersOptions,
-  detail: string,
-  params: Record<string, unknown>,
-): HttpResponse<DefaultBodyType> {
-  const body: Problem = {
-    type: problemType('INVALID_REQUEST'),
-    title: 'Invalid request',
-    status: 400,
-    code: 'INVALID_REQUEST',
-    detail,
-    traceId: buildTraceId(options),
-    fieldErrors: [],
-    params,
-  };
-  return HttpResponse.json(body, {
-    status: 400,
-    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
-  });
 }
 
 async function readJsonBody(request: Request): Promise<unknown> {

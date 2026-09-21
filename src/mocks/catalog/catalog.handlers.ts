@@ -17,6 +17,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 
 import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
 import { isRecord as isPlainRecord } from '../is-record';
+import { PROBLEM_CONTENT_TYPE } from '../problem-response';
 import {
   type CatalogEntry,
   type CatalogFixture,
@@ -35,8 +36,6 @@ import {
   toCatalogItems,
 } from './catalog-filter';
 import { buildFacets } from './catalog-facets';
-
-const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
 
 /** Module-local store. `src/mocks/browser.ts` calls `loadCatalogFixture(store)`. */
 export const catalogStore: { current: CatalogStore | null } = { current: null };

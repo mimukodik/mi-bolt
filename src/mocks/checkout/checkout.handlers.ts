@@ -25,10 +25,9 @@ import {
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
-import { buildTraceId, problemType } from '../cart/cart-store';
 import { cartStore } from '../cart/cart.handlers';
 import { IdempotencyStore } from '../idempotency';
-import type { Problem } from '../../app/api/generated/models/problem';
+import { PROBLEM_CONTENT_TYPE, invalidRequest } from '../problem-response';
 
 import { OrderStore } from '../orders/order-store';
 import { CheckoutStore } from './checkout-store';
@@ -53,30 +52,6 @@ function requireCheckoutStore(): NonNullable<typeof checkoutStore.current> {
     throw new Error('[checkout.handlers] checkout store has not been loaded');
   }
   return checkoutStore.current;
-}
-
-const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
-
-/** 400 Problem for a missing or malformed handler-level input. */
-function invalidRequest(
-  options: CreateHandlersOptions,
-  detail: string,
-  params: Record<string, unknown>,
-): HttpResponse<DefaultBodyType> {
-  const body: Problem = {
-    type: problemType('INVALID_REQUEST'),
-    title: 'Invalid request',
-    status: 400,
-    code: 'INVALID_REQUEST',
-    detail,
-    traceId: buildTraceId(options),
-    fieldErrors: [],
-    params,
-  };
-  return HttpResponse.json(body, {
-    status: 400,
-    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
-  });
 }
 
 async function readJsonBody(request: Request): Promise<unknown> {
