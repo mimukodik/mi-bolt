@@ -466,7 +466,7 @@ describe('FilterPanel — facets wire-up', () => {
     const mid = queryElement(root, '[data-testid="filter-storage-256"]');
     expect(mid.textContent).toContain('256 GB');
     const midCount = mid.querySelector('.option__count');
-    expect(midCount?.textContent.trim()).toBe('5');
+    expect(midCount?.textContent.trim()).toBe('(5)');
   });
 
   it('stock and 5G toggles show their facet count when facets are loaded', () => {
@@ -484,11 +484,11 @@ describe('FilterPanel — facets wire-up', () => {
 
     const inStock = queryElement(root, '[data-testid="filter-inStock"]');
     const inStockCount = inStock.querySelector('.option__count');
-    expect(inStockCount?.textContent.trim()).toBe('7');
+    expect(inStockCount?.textContent.trim()).toBe('(7)');
 
     const is5g = queryElement(root, '[data-testid="filter-is5g"]');
     const is5gCount = is5g.querySelector('.option__count');
-    expect(is5gCount?.textContent.trim()).toBe('9');
+    expect(is5gCount?.textContent.trim()).toBe('(9)');
   });
 
   it('price inputs carry the price range as a placeholder when facets are loaded', () => {
@@ -516,5 +516,33 @@ describe('FilterPanel — facets wire-up', () => {
 
     expect(min.getAttribute('placeholder')).toBe('69990');
     expect(max.getAttribute('placeholder')).toBe('699990');
+  });
+
+  it('the "more" toggle label follows the same condition as its aria-expanded (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [
+        { value: 'apple', label: 'Apple', count: 3 },
+        { value: 'google pixel', label: 'Google Pixel', count: 2 },
+        { value: 'honor', label: 'HONOR', count: 4 },
+        { value: 'motorola', label: 'Motorola', count: 1 },
+        { value: 'samsung', label: 'Samsung', count: 5 },
+        { value: 'vivo', label: 'Vivo', count: 2 },
+        { value: 'xiaomi', label: 'Xiaomi', count: 1 },
+      ],
+      colors: [],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    // A brand beyond row five is selected, forcing the list open without
+    // the user ever clicking "more" — brandsExpanded stays false.
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, brands: ['xiaomi'] });
+    fixture.detectChanges();
+
+    const more = queryButton(getRootElement(fixture), '[data-testid="filter-brand-more"]');
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(more.textContent.trim()).toBe('Kevesebb gyártó');
   });
 });

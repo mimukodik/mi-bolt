@@ -7,13 +7,19 @@ import type { Money } from './price-block';
 @Component({
   imports: [PriceBlock],
   template: `
-    <app-price-block [money]="money()" [label]="label()" [status]="status()"></app-price-block>
+    <app-price-block
+      [money]="money()"
+      [label]="label()"
+      [status]="status()"
+      [size]="size()"
+    ></app-price-block>
   `,
 })
 class HostComponent {
   readonly money = signal<Money | null>({ amount: 339990, currency: 'HUF' });
   readonly label = signal('Készülékár, egyszeri díj');
   readonly status = signal<AsyncStatus>('success');
+  readonly size = signal<'md' | 'lg'>('lg');
 }
 
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
@@ -137,5 +143,23 @@ describe('PriceBlock primitive', () => {
     expect(amount?.parentElement).toBe(currency?.parentElement);
     expect(amount?.parentElement).not.toBe(root);
     expect(amount?.parentElement?.classList.contains('row')).toBe(true);
+  });
+
+  it('renders lg by default on the root (MIM-210)', () => {
+    const { fixture } = setup();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root instanceof HTMLElement).toBe(true);
+    if (!(root instanceof HTMLElement)) return;
+    expect(root.getAttribute('data-size')).toBe('lg');
+  });
+
+  it('renders the md size on the root when asked (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.size.set('md');
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root instanceof HTMLElement).toBe(true);
+    if (!(root instanceof HTMLElement)) return;
+    expect(root.getAttribute('data-size')).toBe('md');
   });
 });

@@ -49,7 +49,7 @@ function queryElement(selector: string): HTMLElement {
   template: `<app-filter-drawer
     [applied]="applied()"
     [facets]="facets()"
-    [opened]="true"
+    [opened]="opened()"
     (filtersChanged)="onFiltersChanged($event)"
     (closed)="onClosed()"
   />`,
@@ -57,6 +57,7 @@ function queryElement(selector: string): HTMLElement {
 class HostComponent {
   readonly applied = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
   readonly facets = signal<Facets | null>(null);
+  readonly opened = signal(true);
 
   onFiltersChanged(_next: CatalogQuery): void {
     // No-op: the drawer applies the draft through this output.
@@ -105,7 +106,7 @@ describe('FilterDrawer — facets wire-up', () => {
     const mid = queryElement('[data-testid="drawer-storage-256"]');
     expect(mid.textContent).toContain('256 GB');
     const midCount = mid.querySelector('.option__count');
-    expect(midCount?.textContent.trim()).toBe('5');
+    expect(midCount?.textContent.trim()).toBe('(5)');
   });
 
   it('stock and 5G toggles show their facet count when facets are loaded', () => {
@@ -121,10 +122,10 @@ describe('FilterDrawer — facets wire-up', () => {
     fixture.detectChanges();
 
     const inStock = queryElement('[data-testid="drawer-inStock"]');
-    expect(inStock.querySelector('.option__count')?.textContent.trim()).toBe('7');
+    expect(inStock.querySelector('.option__count')?.textContent.trim()).toBe('(7)');
 
     const is5g = queryElement('[data-testid="drawer-is5g"]');
-    expect(is5g.querySelector('.option__count')?.textContent.trim()).toBe('9');
+    expect(is5g.querySelector('.option__count')?.textContent.trim()).toBe('(9)');
   });
 
   it('price inputs carry the price range as a placeholder when facets are loaded', () => {
@@ -151,5 +152,69 @@ describe('FilterDrawer — facets wire-up', () => {
 
     expect(min.getAttribute('placeholder')).toBe('69990');
     expect(max.getAttribute('placeholder')).toBe('699990');
+  });
+
+  it('the brand list collapses again when the drawer reopens (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [
+        { value: 'apple', label: 'Apple', count: 3 },
+        { value: 'google pixel', label: 'Google Pixel', count: 2 },
+        { value: 'honor', label: 'HONOR', count: 4 },
+        { value: 'motorola', label: 'Motorola', count: 1 },
+        { value: 'samsung', label: 'Samsung', count: 5 },
+        { value: 'vivo', label: 'Vivo', count: 2 },
+        { value: 'xiaomi', label: 'Xiaomi', count: 1 },
+      ],
+      colors: [],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+
+    const more = queryElement('[data-testid="drawer-group-brand"] .more');
+    expect(more.textContent.trim()).toBe('Még több gyártó');
+    more.click();
+    fixture.detectChanges();
+    expect(document.body.querySelectorAll('[data-testid="drawer-group-brand"] li').length).toBe(7);
+
+    host.opened.set(false);
+    fixture.detectChanges();
+    host.opened.set(true);
+    fixture.detectChanges();
+
+    expect(document.body.querySelectorAll('[data-testid="drawer-group-brand"] li').length).toBe(5);
+    const moreAfter = queryElement('[data-testid="drawer-group-brand"] .more');
+    expect(moreAfter.textContent.trim()).toBe('Még több gyártó');
+  });
+
+  it('the "more" toggle label follows the same condition as its aria-expanded (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [
+        { value: 'apple', label: 'Apple', count: 3 },
+        { value: 'google pixel', label: 'Google Pixel', count: 2 },
+        { value: 'honor', label: 'HONOR', count: 4 },
+        { value: 'motorola', label: 'Motorola', count: 1 },
+        { value: 'samsung', label: 'Samsung', count: 5 },
+        { value: 'vivo', label: 'Vivo', count: 2 },
+        { value: 'xiaomi', label: 'Xiaomi', count: 1 },
+      ],
+      colors: [],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    // A brand beyond row five is applied, forcing the list open through
+    // the reopen-reseed effect without the user ever clicking "more".
+    host.applied.set({ ...DEFAULT_CATALOG_QUERY, brands: ['xiaomi'] });
+    fixture.detectChanges();
+
+    const more = queryElement('[data-testid="drawer-group-brand"] .more');
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(more.textContent.trim()).toBe('Kevesebb gyártó');
   });
 });

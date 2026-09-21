@@ -439,28 +439,26 @@ function successPage(
 // ===========================================================================
 
 describe('T13-AC01 catalog layout breakpoints', () => {
-  it('>=1280px desktop renders a sidebar + 3-column grid (CSS data-layout=desktop-3col)', () => {
+  it('>=1024px desktop renders a sidebar + 3-column grid (CSS data-layout=desktop-3col)', () => {
     // FIX-60 moved the grid rules out of CatalogPage into AsyncContent,
     // which now owns the `[data-testid="catalog-grid"]` element.
+    // The 3-column breakpoint is 1024 px
+    // to match the new filter sidebar width (docs/design/yettel.md §5).
     const css = getComponentStyles(AsyncContent).join('\n');
-    expect(css).toMatch(/min-width:\s*1280px/);
+    expect(css).toMatch(/min-width:\s*1024px/);
     // Three columns: grid-template-columns repeat(3, ...) inside the desktop media block.
-    const desktopBlock = /@media[^{]*min-width:\s*1280px[^}]*\{[^}]*\}/s.exec(css);
+    const desktopBlock = /@media[^{]*min-width:\s*1024px[^}]*\{[^}]*\}/s.exec(css);
     expect(desktopBlock).not.toBeNull();
     expect(desktopBlock?.[0]).toMatch(/repeat\(3/);
   });
 
-  it('1024-1279 px desktop renders a sidebar + 2-column grid', async () => {
-    // jsdom does not evaluate `@media` rules in computed style (verified:
-    // `getComputedStyle` on an element with a base
-    // `grid-template-columns` rule plus a `@media (min-width: …)`
-    // override returns the base rule's value regardless of
-    // `window.innerWidth`), so the column count itself cannot be
-    // asserted from rendered DOM or computed style here. What the DOM
-    // does show at this breakpoint is the sidebar mount (CSS hides the
-    // drawer trigger and switches `.layout` to `264px 1fr` at
-    // `min-width: 1024px`) with every result rendered inside the shared
-    // `[data-testid="catalog-grid"]` container.
+  it('1024-1279 px renders a sidebar + 3-column grid (CSS @media repeat(3))', async () => {
+    // jsdom does not evaluate `@media` rules in computed style, so the
+    // column count itself cannot be asserted from rendered DOM. What
+    // the DOM does show at this breakpoint is the sidebar mount (CSS
+    // hides the drawer trigger and switches `.layout` to
+    // `280px minmax(0, 1fr)` at `min-width: 1024px`) with every result
+    // rendered inside the shared `[data-testid="catalog-grid"]` container.
     const harness = await setupHarness();
     const items = [
       buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
@@ -477,7 +475,9 @@ describe('T13-AC01 catalog layout breakpoints', () => {
   });
 
   it('640-1023 px renders a drawer + 2-column grid', () => {
-    // Same move as the 1280px case above.
+    // The 2-column rule lives at `min-width: 640px` (the 1024 px rule
+    // overrides it to 3 columns above). jsdom cannot evaluate @media,
+    // so the stylesheet text is what the assertion runs against.
     const css = getComponentStyles(AsyncContent).join('\n');
     expect(css).toMatch(/min-width:\s*640px[^{]*\{[^}]*repeat\(2/s);
   });

@@ -1,4 +1,4 @@
-import { Component, computed, input, linkedSignal, output } from '@angular/core';
+import { Component, computed, input, linkedSignal, output, signal } from '@angular/core';
 
 import type { CatalogQuery, Sort } from './catalog-query';
 import { ALLOWED_STORAGE_GB, SORT_MODES, isStorageBucket } from './catalog-query';
@@ -157,6 +157,40 @@ export class FilterPanel {
 
   /** Brand facets, falling back to an empty list when none are present. */
   readonly brandFacets = computed(() => this.facets()?.brands ?? []);
+
+  /** The brand list collapses to the first five rows behind a
+   *  `Még több gyártó` text link. A brand selected beyond the first
+   *  five keeps the list expanded so the chip the user picked stays
+   *  visible. */
+  readonly brandsExpanded = signal(false);
+
+  /** Brands to render: the first five when collapsed, otherwise the
+   *  full list. When collapsed but a brand beyond row five is selected,
+   *  the list stays open so the chip stays visible. */
+  readonly visibleBrandFacets = computed<readonly FacetValue[]>(() => {
+    const all = this.brandFacets();
+    if (this.brandsExpanded()) return all;
+    if (all.length <= 5) return all;
+    const selectedBrands = this.value().brands ?? [];
+    const hasDeeperSelection = selectedBrands.some((b) => {
+      const idx = all.findIndex((f) => f.value === b);
+      return idx >= 5;
+    });
+    if (hasDeeperSelection) return all;
+    return all.slice(0, 5);
+  });
+
+  /** Whether every brand facet is currently rendered — either because the
+   *  user expanded the list, or because a selection beyond row five forces
+   *  it open. Drives both the "more" button's `aria-expanded` and its own
+   *  label, so the two can never disagree. */
+  readonly brandsAllVisible = computed(
+    () => this.visibleBrandFacets().length === this.brandFacets().length,
+  );
+
+  toggleBrandsExpanded(): void {
+    this.brandsExpanded.update((v) => !v);
+  }
 
   /** Colour facets, falling back to an empty list when none are present. */
   readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);

@@ -23,6 +23,11 @@
   /* color border */
   --color-border-subtle: var(--color-line);
   --color-border-control: var(--color-text-muted);
+  /* Card border on the catalogue list (docs/design/yettel.md §5
+     "Product card on the list page"). */
+  --color-line-card: #f3f3f3;
+  /* Pager prev/next ring (docs/design/yettel.md §5 "Sort control and pager"). */
+  --color-pager-ring: #003f73;
 
   /* color status */
   --color-status-success: var(--color-success);

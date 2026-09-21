@@ -1,4 +1,8 @@
-<div class="root inline-flex flex-col items-start gap-1" [attr.data-status]="status()">
+<div
+  class="root inline-flex flex-col items-start gap-1"
+  [attr.data-status]="status()"
+  [attr.data-size]="size()"
+>
   <span class="label">{{ label() }}</span>
   @switch (status()) {
     @case ('loading') {

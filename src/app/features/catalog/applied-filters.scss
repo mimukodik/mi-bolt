@@ -5,31 +5,38 @@
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
   align-items: center;
+  gap: var(--space-2);
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-brand-ink);
-  border-radius: var(--radius-badge);
-  background: var(--color-brand-accent-soft);
-  color: var(--color-brand-ink);
+  min-height: 36px;
+  padding: 0 12px;
+  border: 2px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface-light);
+  color: var(--color-text-on-primary);
+  font-family: var(--font-family-light);
   font-size: var(--type-helper);
   line-height: 1.4;
 }
 
 .chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 0;
-  color: var(--color-brand-ink);
+  color: var(--color-text-on-primary);
   cursor: pointer;
-  font-size: 1rem;
-  padding: 0 var(--space-1);
-  min-height: var(--size-control);
+  font-size: 14px;
+  padding: 0;
+  min-width: 24px;
+  min-height: 24px;
+
   line-height: 1;
 }
 
@@ -39,23 +46,22 @@
 }
 
 .chip-clear {
+  display: inline-flex;
+  align-items: center;
   background: transparent;
   border: 0;
-  color: var(--color-brand-ink);
-  font-family: inherit;
+  color: var(--color-primary);
+  font-family: var(--font-family-light);
   font-size: var(--type-helper);
-  cursor: pointer;
-  padding: var(--space-1) var(--space-2);
-  min-height: var(--size-control);
-}
-
-.chip-clear:hover,
-.chip-clear:focus-visible {
+  line-height: 1.4;
   text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  min-height: 36px;
 }
 
 .chip-clear:focus-visible {
   outline: 2px solid var(--color-focus-light);
   outline-offset: 2px;
-  border-radius: var(--radius-control);
+  border-radius: 4px;
 }

@@ -68,15 +68,17 @@ const TOTAL_IMAGES = (() => {
   return seen.size;
 })();
 
-// brand facet for the default list (no filters): 7 brands, counts by entries
+// brand facet for the default list (no filters): 7 brands, counts by entries.
+// Labels are the product page display names ("Apple", not "apple");
+// the `value` is the lowercased brand key the URL and the panel filter on.
 const DEFAULT_BRAND_FACET = [
-  { value: 'apple', label: 'apple', count: 17 },
-  { value: 'google pixel', label: 'google pixel', count: 4 },
-  { value: 'honor', label: 'honor', count: 8 },
-  { value: 'motorola', label: 'motorola', count: 1 },
-  { value: 'samsung', label: 'samsung', count: 13 },
-  { value: 'vivo', label: 'vivo', count: 3 },
-  { value: 'xiaomi', label: 'xiaomi', count: 9 },
+  { value: 'apple', label: 'Apple', count: 17 },
+  { value: 'google pixel', label: 'Google Pixel', count: 4 },
+  { value: 'honor', label: 'HONOR', count: 8 },
+  { value: 'motorola', label: 'Motorola', count: 1 },
+  { value: 'samsung', label: 'Samsung', count: 13 },
+  { value: 'vivo', label: 'Vivo', count: 3 },
+  { value: 'xiaomi', label: 'Xiaomi', count: 9 },
 ];
 const DEFAULT_STORAGE_FACET = [
   { value: '128', label: '128 GB', count: 11 },
@@ -448,9 +450,9 @@ describe('GET /products filters', () => {
     const facets = body['facets'];
     expectRecord(facets);
     expect(facets['brands']).toEqual([
-      { value: 'apple', label: 'apple', count: 2 },
-      { value: 'honor', label: 'honor', count: 1 },
-      { value: 'motorola', label: 'motorola', count: 1 },
+      { value: 'apple', label: 'Apple', count: 2 },
+      { value: 'honor', label: 'HONOR', count: 1 },
+      { value: 'motorola', label: 'Motorola', count: 1 },
     ]);
     expect(facets['storageGb']).toEqual([
       { value: '128', label: '128 GB', count: 1 },
@@ -754,6 +756,26 @@ describe('GET /products facets', () => {
     expectRecord(max);
     expect(readNumber(min, 'amount')).toBe(DEFAULT_PRICE_RANGE.min);
     expect(readNumber(max, 'amount')).toBe(DEFAULT_PRICE_RANGE.max);
+  });
+
+  it('brand facet labels carry the display name (MIM-210)', async () => {
+    const body = await loadJson('/api/v1/products');
+    const facets = body['facets'];
+    expectRecord(facets);
+    const brands = facets['brands'];
+    expectArray(brands);
+    const findBrand = (list: unknown[], value: string): Record<string, unknown> | undefined => {
+      for (const entry of list) {
+        expectRecord(entry);
+        if (entry['value'] === value) return entry;
+      }
+      return undefined;
+    };
+    const apple = findBrand(brands, 'apple');
+    expect(apple).toBeDefined();
+    if (!apple) return;
+    expect(readString(apple, 'label')).toBe('Apple');
+    expect(readString(apple, 'value')).toBe('apple');
   });
 
   it('brand facet stays disjunctive under brand selection', async () => {

@@ -5,18 +5,19 @@
 >
   <button
     type="button"
-    class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
+    class="page page--boundary"
     data-testid="pagination-prev"
+    aria-label="Előző oldal"
     [disabled]="page() <= 1 || disabled()"
     (click)="onBoundary(page() - 1); onPageClick(page() - 1)"
   >
-    Előző
+    <span aria-hidden="true">‹</span>
   </button>
   @for (n of pageNumbers(); track n) {
     <button
       #pageButton
       type="button"
-      class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
+      class="page page--number"
       [class.page--current]="n === page()"
       [attr.data-testid]="n === page() ? 'pagination-current' : 'pagination-page-' + n"
       [attr.aria-label]="n + '. oldal'"
@@ -29,11 +30,12 @@
   }
   <button
     type="button"
-    class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
+    class="page page--boundary"
     data-testid="pagination-next"
+    aria-label="Következő oldal"
     [disabled]="page() >= totalPages() || disabled()"
     (click)="onBoundary(page() + 1); onPageClick(page() + 1)"
   >
-    Következő
+    <span aria-hidden="true">›</span>
   </button>
 </nav>
