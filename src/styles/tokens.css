@@ -28,6 +28,9 @@
   --color-line-card: #f3f3f3;
   /* Pager prev/next ring (docs/design/yettel.md §5 "Sort control and pager"). */
   --color-pager-ring: #003f73;
+  /* Thumbnail and variant-chip ring on the device page (docs/design/yettel.md §5
+     "Gallery" and "Variant chips"). */
+  --color-line-thumb: #e5e9ec;
 
   /* color status */
   --color-status-success: var(--color-success);

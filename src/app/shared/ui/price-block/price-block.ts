@@ -43,6 +43,8 @@ export class PriceBlock {
   readonly status = input<AsyncStatus>('idle');
   /** Amount size: `lg` is the product page's 28 px, `md` the 20 px list-card amount. */
   readonly size = input<'md' | 'lg'>('lg');
+  /** Inverse colours for a navy card: white label, lime amount. */
+  readonly inverse = input(false);
 
   readonly amountText = computed<string | null>(() => {
     const m = this.money();

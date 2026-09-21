@@ -12,6 +12,7 @@ import type { Money } from './price-block';
       [label]="label()"
       [status]="status()"
       [size]="size()"
+      [inverse]="inverse()"
     ></app-price-block>
   `,
 })
@@ -20,6 +21,7 @@ class HostComponent {
   readonly label = signal('Készülékár, egyszeri díj');
   readonly status = signal<AsyncStatus>('success');
   readonly size = signal<'md' | 'lg'>('lg');
+  readonly inverse = signal(false);
 }
 
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
@@ -161,5 +163,32 @@ describe('PriceBlock primitive', () => {
     expect(root instanceof HTMLElement).toBe(true);
     if (!(root instanceof HTMLElement)) return;
     expect(root.getAttribute('data-size')).toBe('md');
+  });
+
+  it('renders no data-inverse attribute by default (MIM-210)', () => {
+    const { fixture } = setup();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root).not.toBeNull();
+    expect(root?.hasAttribute('data-inverse')).toBe(false);
+  });
+
+  it('renders data-inverse on the root when inverse is set (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.inverse.set(true);
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root).not.toBeNull();
+    expect(root?.hasAttribute('data-inverse')).toBe(true);
+  });
+
+  it('renders the error dash inside an inverse root (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.inverse.set(true);
+    host.status.set('error');
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root?.hasAttribute('data-inverse')).toBe(true);
+    const dash = root?.querySelector('[data-testid="price-error"]');
+    expect(dash?.classList.contains('amount--error')).toBe(true);
   });
 });
