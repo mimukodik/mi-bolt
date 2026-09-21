@@ -1,8 +1,10 @@
-/* review-step.scss — extracted from inline styles.
-   Tailwind v4 utility classes live alongside the scoped selectors below.
-   This sheet holds only the rules Tailwind utilities cannot express:
-   focus-visible / data-state / disabled state, grid template columns,
-   and one-off values like `font-size: inherit` or `accent-color`. */
+/* Tailwind utility classes in review-step.html carry the layout, the
+   spacing, the colour and the typography (the @theme / tokens.css
+   values through the utility-(--token) shorthand), the same way
+   delivery-step.html does. This sheet holds only what those utilities
+   cannot express: the two-column grids, the link-shaped buttons and
+   their focus ring, the consent's data-state colouring, the checkbox
+   accent, and reduced motion. */
 
 :host {
   display: block;
@@ -40,18 +42,6 @@
   gap: var(--space-1);
 }
 
-.cta-explanation {
-  margin: 0;
-  font-size: var(--type-helper);
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
-.edit-link:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .row {
   display: grid;
   grid-template-columns: minmax(7rem, auto) 1fr;
@@ -71,19 +61,30 @@
   color: var(--color-text-primary);
 }
 
-.status-row {
-  display: block;
+/* `Módosítás` and the terms trigger read as links but act as buttons:
+   the page owns every navigation on this screen, so an anchor would
+   either navigate twice or carry no href at all. */
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--color-brand-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:focus-visible,
+.checkbox:focus-visible {
+  outline: 2px solid var(--color-focus-light);
+  outline-offset: 2px;
 }
 
 .consent[data-state='touched-invalid'],
 .consent[data-state='submitted-invalid'] {
   border-color: var(--color-status-error);
   background: var(--color-brand-accent-soft);
-}
-
-.checkbox,
-.terms-link {
-  font-family: inherit;
 }
 
 .checkbox {
@@ -93,21 +94,11 @@
   accent-color: var(--color-brand-ink);
 }
 
-.checkbox:focus-visible,
-.terms-link:focus-visible,
-.refresh:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
-.terms-link {
-  background: none;
-  border: 0;
-  padding: 0;
-  font-size: inherit;
-  color: var(--color-brand-ink);
-  text-decoration: underline;
-  cursor: pointer;
+.cta-explanation {
+  margin: 0;
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 
 .summary-loading {
@@ -125,24 +116,6 @@
   font-weight: var(--weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-.refresh {
-  align-self: flex-start;
-  background: none;
-  border: 0;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--type-helper);
-  color: var(--color-brand-ink);
-  text-decoration: underline;
-  cursor: pointer;
-  min-height: var(--size-control);
-}
-
-.refresh:disabled {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  cursor: not-allowed;
 }
 
 @media (prefers-reduced-motion: reduce) {

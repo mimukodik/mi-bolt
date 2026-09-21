@@ -1,5 +1,5 @@
 <section
-  class="review flex flex-col gap-(--space-6)"
+  class="review flex flex-col gap-(--space-6) text-(color:--color-text-primary)"
   [attr.data-status]="state()"
   data-testid="review-page"
 >
@@ -10,7 +10,7 @@
       Minden rendben?
     </h1>
     <p
-      class="demo-notice m-0 py-(--space-3) px-(--space-4) bg-(--color-brand-accent-soft) border border-(--color-brand-ink) rounded-(--radius-card) text-(color:--color-text-primary) text-(length:--type-helper) leading-(--line-height-body)"
+      class="demo-notice m-0 py-(--space-3) px-(--space-4) bg-(--color-brand-accent-soft) border border-(--color-brand-ink) rounded-(--radius-card) text-(length:--type-helper) leading-(--line-height-body)"
       data-testid="review-demo-notice"
       role="note"
     >
@@ -35,14 +35,14 @@
           >
             Kapcsolattartási adatok
           </h2>
-          <a
-            routerLink="/penztar/adatok"
-            class="edit-link text-(length:--type-helper) text-(color:--color-brand-ink) underline"
+          <button
+            type="button"
+            class="link-button text-(length:--type-helper)"
             data-testid="review-edit-contact"
             (click)="onEditContact()"
           >
             Módosítás
-          </a>
+          </button>
         </header>
         <dl class="data-list flex flex-col gap-(--space-2) m-0">
           <div class="row">
@@ -70,36 +70,35 @@
           >
             Szállítási és fizetési mód
           </h2>
-          <a
-            routerLink="/penztar/szallitas"
-            class="edit-link text-(length:--type-helper) text-(color:--color-brand-ink) underline"
+          <button
+            type="button"
+            class="link-button text-(length:--type-helper)"
             data-testid="review-edit-delivery"
             (click)="onEditDelivery()"
           >
             Módosítás
-          </a>
+          </button>
         </header>
         <dl class="data-list flex flex-col gap-(--space-2) m-0">
           <div class="row">
             <dt>Szállítási mód</dt>
             <dd>{{ deliveryLabel() }}</dd>
           </div>
-          @if (deliveryAddress() !== null) {
+          @if (deliveryAddress(); as address) {
             <div class="row" data-testid="review-delivery-address">
               <dt>Cím</dt>
               <dd>
-                {{ deliveryAddress()!.line1 }}<br />
-                @if (deliveryAddress()!.line2) {
-                  {{ deliveryAddress()!.line2 }}<br />
+                {{ address.line1 }}<br />
+                @if (address.line2) {
+                  {{ address.line2 }}<br />
                 }
-                {{ deliveryAddress()!.postalCode }}
-                {{ deliveryAddress()!.city }}
+                {{ address.postalCode }} {{ address.city }}
               </dd>
             </div>
           }
           <div class="row">
             <dt>Fizetési mód</dt>
-            <dd>{{ paymentLabel() }}</dd>
+            <dd data-testid="review-payment">{{ paymentLabel() }}</dd>
           </div>
         </dl>
       </article>
@@ -127,7 +126,7 @@
           </p>
         } @else {
           <ul class="line-list">
-            @for (line of lines(); track line.id) {
+            @for (line of lines(); track line.variantId) {
               <li class="line" data-testid="review-line">
                 <div class="line-body">
                   <p
@@ -162,24 +161,131 @@
         }
       </article>
 
-      <div class="status-row" data-testid="review-status">
+      <div class="status-row flex flex-col gap-(--space-3)" data-testid="review-status">
+        @if (paymentIntent(); as intent) {
+          <div
+            class="branch flex flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
+            role="status"
+          >
+            <p
+              class="branch-message m-0 text-(length:--type-body) leading-(--line-height-body)"
+              data-testid="review-payment-status"
+            >
+              {{ paymentStatusMessage() }}
+            </p>
+            @switch (intent.status) {
+              @case ('declined') {
+                <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
+                  <app-button
+                    variant="primary"
+                    label="Újrapróbálom"
+                    (pressed)="paymentRetryRequested.emit()"
+                    data-testid="review-payment-retry"
+                  ></app-button>
+                  <app-button
+                    variant="secondary"
+                    label="Fizetési mód módosítása"
+                    (pressed)="paymentChangeMethodRequested.emit()"
+                    data-testid="review-payment-change"
+                  ></app-button>
+                </div>
+              }
+              @case ('pending') {
+                <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
+                  <app-button
+                    variant="secondary"
+                    label="Állapot ellenőrzése"
+                    (pressed)="paymentCheckRequested.emit()"
+                    data-testid="review-payment-check"
+                  ></app-button>
+                </div>
+              }
+              @case ('requires_action') {
+                <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
+                  <app-button
+                    variant="primary"
+                    label="Vissza a fizetéshez"
+                    (pressed)="backToPaymentRequested.emit()"
+                    data-testid="review-payment-back"
+                  ></app-button>
+                </div>
+              }
+            }
+          </div>
+        } @else if (paymentIntentMissing()) {
+          <div
+            class="branch flex flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
+            role="status"
+          >
+            <p
+              class="branch-message m-0 text-(length:--type-body) leading-(--line-height-body)"
+              data-testid="review-payment-status"
+            >
+              {{ paymentStatusMessage() }}
+            </p>
+            <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
+              <app-button
+                variant="primary"
+                [label]="newPaymentLabel()"
+                (pressed)="newPaymentRequested.emit()"
+                data-testid="review-payment-new"
+              ></app-button>
+            </div>
+          </div>
+        }
+
         @switch (state()) {
-          @case ('quoting') {
-            <app-loading-state variant="lines" label="Árajánlat frissítése"></app-loading-state>
-          }
           @case ('price-changed') {
-            <app-status-message
-              [message]="priceChangedMessage"
-              severity="error"
-              [persistent]="true"
-            ></app-status-message>
+            @if (priceChange(); as change) {
+              <div
+                class="price-change flex flex-col gap-(--space-3) p-(--space-4) bg-(--color-brand-accent-soft) border border-(--color-status-error) rounded-(--radius-card)"
+                role="alert"
+                data-testid="review-price-change"
+              >
+                <p
+                  class="price-change-message m-0 text-(length:--type-body) [font-weight:var(--weight-medium)]"
+                >
+                  {{ priceChangedMessage }}
+                </p>
+                <div class="price-change-rows flex flex-wrap gap-(--space-5)">
+                  <div data-testid="review-price-change-old">
+                    <app-price-block
+                      [money]="change.shownTotal"
+                      [label]="'Korábban'"
+                      [status]="'success'"
+                    ></app-price-block>
+                  </div>
+                  <div data-testid="review-price-change-new">
+                    <app-price-block
+                      [money]="change.currentTotal"
+                      [label]="'Most'"
+                      [status]="'success'"
+                    ></app-price-block>
+                  </div>
+                </div>
+                <app-button
+                  variant="primary"
+                  [label]="priceChangeConfirmLabel()"
+                  (pressed)="priceChangeConfirmed.emit()"
+                  data-testid="review-price-change-confirm"
+                ></app-button>
+              </div>
+            }
           }
-          @case ('expired') {
-            <app-status-message
-              [message]="quoteExpiredMessage"
-              severity="error"
-              [persistent]="true"
-            ></app-status-message>
+          @case ('conflict') {
+            <div class="conflict flex flex-col gap-(--space-3)">
+              <app-status-message
+                [message]="conflictMessage"
+                severity="error"
+                [persistent]="true"
+              ></app-status-message>
+              <app-button
+                variant="secondary"
+                label="Újrapróbálom"
+                (pressed)="retryRequested.emit()"
+                data-testid="review-conflict-retry"
+              ></app-button>
+            </div>
           }
           @case ('stock-error') {
             <app-status-message
@@ -196,7 +302,13 @@
             ></app-status-message>
           }
           @case ('submitting') {
-            <app-loading-state variant="lines" label="Véglegesítés…"></app-loading-state>
+            <app-loading-state variant="lines" label="Feldolgozás…"></app-loading-state>
+          }
+          @case ('loading') {
+            <app-loading-state
+              variant="lines"
+              label="Rendelés adatainak betöltése"
+            ></app-loading-state>
           }
         }
       </div>
@@ -210,9 +322,6 @@
         >
           Demó feltételek
         </h2>
-        <p class="hint m-0 text-(length:--type-helper) text-(color:--color-text-secondary)">
-          Mindkét jelölőnégyzet elfogadása kötelező a demórendelés leadásához.
-        </p>
 
         <div
           class="consent flex flex-col gap-(--space-2) p-(--space-3) border border-(--color-border-subtle) rounded-(--radius-control)"
@@ -220,7 +329,7 @@
           data-testid="review-consent-terms"
         >
           <label
-            class="consent-label inline-flex items-start gap-(--space-3) cursor-pointer text-(length:--type-body) text-(color:--color-text-primary) leading-(--line-height-body)"
+            class="consent-label inline-flex items-start gap-(--space-3) cursor-pointer text-(length:--type-body) leading-(--line-height-body)"
             for="review-consent-terms-input"
           >
             <input
@@ -236,61 +345,31 @@
               Elfogadom a
               <button
                 type="button"
-                class="terms-link"
+                class="link-button"
                 (click)="openTerms()"
                 data-testid="review-consent-terms-button"
               >
-                demó vásárlási feltételeket
-              </button>
-              (szimulált folyamat, nem valós szerződés).
+                demó rendelési feltételeit</button
+              >.
             </span>
           </label>
-          @if (termsConsentMessage() !== null) {
+          @if (termsConsentMessage(); as message) {
             <p
               class="consent-message m-0 text-(length:--type-helper) text-(color:--color-status-error)"
               id="review-consent-terms-message"
               data-testid="review-consent-terms-message"
               role="alert"
             >
-              {{ termsConsentMessage() }}
+              {{ message }}
             </p>
           }
         </div>
 
-        <div
-          class="consent flex flex-col gap-(--space-2) p-(--space-3) border border-(--color-border-subtle) rounded-(--radius-control)"
-          [attr.data-state]="simulationConsentState()"
-          data-testid="review-consent-simulation"
+        <p
+          class="simulation-note m-0 text-(length:--type-helper) text-(color:--color-text-secondary) leading-(--line-height-body)"
         >
-          <label
-            class="consent-label inline-flex items-start gap-(--space-3) cursor-pointer text-(length:--type-body) text-(color:--color-text-primary) leading-(--line-height-body)"
-            for="review-consent-simulation-input"
-          >
-            <input
-              id="review-consent-simulation-input"
-              type="checkbox"
-              class="checkbox"
-              [checked]="acknowledgedSimulation()"
-              (change)="onAcknowledgedSimulationChange($event)"
-              (blur)="onAcknowledgedSimulationBlur()"
-              data-testid="review-consent-simulation-input"
-            />
-            <span class="consent-text min-w-0">
-              Tudomásul veszem, hogy ez egy szimuláció: nem történik valódi rendelés, fizetés vagy
-              e-mail küldés.
-            </span>
-          </label>
-          @if (simulationConsentMessage() !== null) {
-            <p
-              class="consent-message m-0 text-(length:--type-helper) text-(color:--color-status-error)"
-              id="review-consent-simulation-message"
-              data-testid="review-consent-simulation-message"
-              role="alert"
-            >
-              {{ simulationConsentMessage() }}
-            </p>
-          }
-        </div>
+          Tudomásul veszem, hogy ez egy demó, nem valódi vásárlás.
+        </p>
       </article>
 
       <div
@@ -300,7 +379,7 @@
         <app-button
           variant="primary"
           [label]="'Demórendelés véglegesítése'"
-          [loadingLabel]="'Véglegesítés…'"
+          [loadingLabel]="'Feldolgozás…'"
           [loading]="state() === 'submitting'"
           [disabled]="!canSubmit()"
           (pressed)="onSubmit()"
@@ -308,40 +387,36 @@
         ></app-button>
       </div>
 
-      @if (ctaExplanation() !== null) {
+      @if (ctaExplanation(); as explanation) {
         <p class="cta-explanation" data-testid="review-cta-explanation" role="note">
-          {{ ctaExplanation() }}
+          {{ explanation }}
         </p>
       }
     </div>
 
-    <aside
-      class="summary flex flex-col gap-(--space-4) p-(--space-5) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) sticky top-(--space-5) sm:p-(--space-6)"
-      aria-label="Rendelés végösszege"
+    <div
+      class="summary flex flex-col gap-(--space-4) lg:sticky lg:top-(--space-5)"
       data-testid="review-summary"
     >
-      <h2
-        class="summary-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)]"
-      >
-        Rendelés végösszege
-      </h2>
-
-      @if (readySummary() !== null) {
+      @if (summary(); as totals) {
         <app-order-summary
-          [subtotal]="readySummary()!.subtotal"
-          [shipping]="readySummary()!.shipping"
-          [footnote]="summaryFootnote()"
+          [subtotal]="totals.subtotal"
+          [shipping]="totals.shippingFee"
+          [paymentFee]="totals.paymentFee"
+          [serverTotal]="totals.total"
         ></app-order-summary>
       } @else {
         <div class="summary-loading" data-testid="review-summary-loading">
-          <app-loading-state variant="lines" label="Árajánlat betöltése"></app-loading-state>
+          <app-loading-state variant="lines" label="Összesítő betöltése"></app-loading-state>
         </div>
       }
 
-      <dl class="summary-rows flex flex-col gap-(--space-3) m-0">
+      <dl
+        class="summary-rows flex flex-col gap-(--space-3) m-0 p-(--space-5) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
+      >
         <div class="row">
           <dt>Fizetési mód</dt>
-          <dd data-testid="review-payment">{{ paymentLabel() }}</dd>
+          <dd>{{ paymentLabel() }}</dd>
         </div>
         <div class="row">
           <dt>Szállítási mód</dt>
@@ -350,21 +425,11 @@
         <div class="row">
           <dt>Demórendelés státusza</dt>
           <dd>
-            <span class="badge badge--demo" data-testid="review-demo-badge"> Demó </span>
+            <span class="badge" data-testid="review-demo-badge">Demó</span>
           </dd>
         </div>
       </dl>
-
-      <button
-        type="button"
-        class="refresh"
-        (click)="onRefresh()"
-        [disabled]="busy()"
-        data-testid="review-refresh"
-      >
-        Árajánlat frissítése
-      </button>
-    </aside>
+    </div>
   </div>
 
   <app-terms-dialog [opened]="termsOpened()" (closed)="closeTerms()"></app-terms-dialog>

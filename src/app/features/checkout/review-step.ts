@@ -1,63 +1,64 @@
 /**
- * T22 — final review step (S4.4).
+ * S3-C5 — the review step on the 2.0.0 contract.
  *
- * FIX-63 gave `ReviewStep` the signature `docs/spec/components.md:611-617`
- * declares: `quote`/`cart`/`draft`/`state` inputs, `editRequested`/
- * `refreshQuote`/`submitRequested` outputs. The component is purely
- * presentational: it renders the cart lines, the contact/delivery/payment
- * snapshot from `draft()`, the live quote total from `quote()`, and the
- * seven-member `ReviewState` the owning container (`review-page.ts`)
- * computes. It injects nothing, fetches nothing, and commits no order —
- * the container owns `QuoteController`, `OrderSubmission`, `CartFacade`,
- * `CheckoutFacade` and the `Router`, and renders `PaymentProgress` plus
- * the generic-error retry banner itself, because `ReviewState` is a
- * plain string union with no room for the backend `detail` or the
- * `pending`-versus-`declined` distinction those two surfaces need.
+ * Written from scratch against the 2.0.0 models: the 1.0.0 file was
+ * built on `Quote`, `ReviewState` and a client-side price refresh,
+ * none of which the contract still has (design §5.5, §6.3). What it
+ * renders now:
  *
- * Responsibilities kept here:
- *   - render the cart items, contact snapshot, delivery choice and
- *     payment method so the user can verify the order (T22-AC01);
- *   - render two unchecked consents (demo purchase + simulation
- *     acknowledgement) as local presentation state — nothing outside
- *     this screen reads them (`components.md:615` declares no
- *     field-tree input for `ReviewStep`), and the wire commit already
- *     sends `acceptedTerms`/`acknowledgedSimulation` as the literal
- *     `true` the domain requires (`checkout.facade.ts:677-678`). The
- *     first consent opens `TermsDialog`, built on `AccessibleDialog`
- *     for R23 compliance (T22-AC02);
- *   - expose the "Demórendelés véglegesítése" CTA only when `state()`
- *     is `'ready'` and both consents are checked (T22-AC04);
- *   - emit `submitRequested`, `refreshQuote` and `editRequested` for
- *     the container to act on;
- *   - render every state its own presentation covers — quoting, ready,
- *     expired, price-changed, stock-error, submitting, error — without
- *     erasing the order summary (T22-AC05).
+ *   - the cart lines, the contact / delivery / payment snapshot read
+ *     from the server-confirmed `draft`, and the four-row summary
+ *     (subtotal, shipping fee, payment fee, total) the server
+ *     recomputes on every read (`CheckoutSummary`);
+ *   - the delivery and payment labels taken from the wire
+ *     (`CheckoutOptions`), never a hard-coded Hungarian option name
+ *     (`01-kommunikacio.md` §160-163);
+ *   - the payment-return branches: a succeeded, declined, pending,
+ *     unfinished or missing intent, each with the control that
+ *     recovers it and no polling loop of any kind (design §5.3);
+ *   - the 409 PRICE_CHANGED confirmation: both totals side by side
+ *     and one control whose visible label names the new amount, so
+ *     the new total can never be accepted silently (design §3.7);
+ *   - the terms consent and the final CTA.
  *
- * Edit affordances (T22-AC01): the contact and delivery sections each
- * carry a `Módosítás` link that emits `editRequested`; the in-memory
- * session survives the round trip.
+ * It is purely presentational: it injects nothing and calls no
+ * network. `review-page.ts` owns the facades, the submission and
+ * every navigation, and drives this component through inputs.
  */
 
 import { Component, computed, input, output, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
-import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
+import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 import { OrderSummary } from '../cart/order-summary';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { TermsDialog } from './terms-dialog';
 
+import type { Address } from '../../api/generated/models/address';
 import type { Cart } from '../../api/generated/models/cart';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { Quote } from '../../api/generated/models/quote';
-import type { CheckoutDraft } from './checkout-form.model';
-import type { ReviewState } from './quote-state';
+import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
+import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
+import type { Money } from '../../api/generated/models/money';
+import type { PaymentIntent } from '../../api/generated/models/payment-intent';
+import type { PriceChange } from './checkout.facade';
 
+/**
+ * The seven states the review surface can be in (design §6.3).
+ * Replaces the 1.0.0 `ReviewState`: `quoting` and `expired` lost
+ * their subject with the quote, and `conflict` is new with the
+ * shared version counter.
+ */
+export type CheckoutViewState =
+  'loading' | 'ready' | 'price-changed' | 'stock-error' | 'conflict' | 'submitting' | 'error';
+
+/** One cart line as this template renders it. Keyed by `variantId`:
+ *  the 2.0.0 `CartItem` has no `id` member. */
 interface ReviewLineDisplay {
-  readonly id: string;
+  readonly variantId: string;
   readonly productName: string;
   readonly variantLabel: string;
   readonly quantity: number;
@@ -65,51 +66,70 @@ interface ReviewLineDisplay {
   readonly lineTotal: Money;
 }
 
+/** Rendered when an option id has no matching entry on the wire. */
+const UNKNOWN_LABEL = '—';
+
 @Component({
   selector: 'app-review-step',
   imports: [
-    RouterLink,
     Button,
     CheckoutStepHeader,
     LoadingState,
+    OrderSummary,
     PriceBlock,
     StatusMessage,
-    OrderSummary,
     TermsDialog,
   ],
   templateUrl: './review-step.html',
   styleUrl: './review-step.scss',
 })
 export class ReviewStep {
-  readonly quote = input<Quote | null>(null);
+  /** The server's recomputed summary. Null only while it loads. */
+  readonly summary = input<CheckoutSummary | null>(null);
   readonly cart = input.required<Cart>();
-  readonly draft = input.required<CheckoutDraft>();
-  readonly state = input.required<ReviewState>();
+  readonly draft = input.required<CheckoutSession>();
+  /** Source of every delivery and payment label on this screen. */
+  readonly options = input<CheckoutOptions | null>(null);
+  readonly state = input.required<CheckoutViewState>();
+  /** The active payment intent, or null when none has been read. */
+  readonly paymentIntent = input<PaymentIntent | null>(null);
+  /** Non-null while a 409 PRICE_CHANGED awaits confirmation. */
+  readonly priceChange = input<PriceChange | null>(null);
+  /** True when the draft pays by card and no intent is on the facade. */
+  readonly paymentIntentMissing = input<boolean>(false);
+  /** True when a payment was started earlier in this session, which
+   *  is what tells "the intent is gone" apart from "no payment has
+   *  been started yet" (design §5.3's 404 row). */
+  readonly paymentStarted = input<boolean>(false);
 
   readonly editRequested = output<'contact' | 'delivery'>();
-  readonly refreshQuote = output();
   readonly submitRequested = output();
+  /** 412: the shopper asks the facade to replay the failed write. */
+  readonly retryRequested = output();
+  /** 409 PRICE_CHANGED: the new total is accepted explicitly. */
+  readonly priceChangeConfirmed = output();
+  readonly paymentRetryRequested = output();
+  readonly paymentChangeMethodRequested = output();
+  /** pending: exactly one re-read, never a loop. */
+  readonly paymentCheckRequested = output();
+  /** requires_action: back to the payment page's redirect URL. */
+  readonly backToPaymentRequested = output();
+  /** No intent: start one. */
+  readonly newPaymentRequested = output();
 
-  /** Whether the user has tried to submit at least once — used to
-   *  flip the per-consent error state from "default" to
-   *  "submitted-invalid". */
+  /** Whether the shopper has pressed the CTA at least once — flips
+   *  the consent from "default" to "submitted-invalid". */
   readonly submitted = signal<boolean>(false);
 
-  /** Local presentation state: nothing outside this screen reads
-   *  either consent (`components.md:615`), and the wire commit already
-   *  sends the literal `true` the domain requires once the container
-   *  is allowed to submit at all. */
+  /** Local presentation state. The wire body sends `acceptedTerms`
+   *  as the literal `true` (`order-submission.ts:208`) because the
+   *  CTA is dead until this is checked. */
   readonly acceptedTerms = signal<boolean>(false);
-  readonly acknowledgedSimulation = signal<boolean>(false);
   private readonly termsTouched = signal<boolean>(false);
-  private readonly simulationTouched = signal<boolean>(false);
 
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);
 
-  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
-   *  the previous template: Főoldal → Kosár → Adatok → Szállítás, with
-   *  this step (`Ellenőrzés`) as the trailing non-link. */
   protected readonly crumbs: readonly CheckoutCrumb[] = [
     { label: 'Főoldal', link: '/' },
     { label: 'Kosár', link: '/penztar/kosar' },
@@ -117,15 +137,11 @@ export class ReviewStep {
     { label: 'Szállítás', link: '/penztar/szallitas' },
   ];
 
-  /** Snapshot of the cart's items, mapped into the wire shape the
-   *  template needs. */
-  readonly items = computed<CartItem[]>(() => this.cart().items);
+  readonly items = computed(() => this.cart().items);
 
-  /** Each line as the template renders it: human-readable variant
-   *  label and the line subtotal already aggregated. */
   readonly lines = computed<readonly ReviewLineDisplay[]>(() =>
     this.items().map((item) => ({
-      id: item.id,
+      variantId: item.variantId,
       productName: item.productName,
       variantLabel: `${item.colorName} · ${String(item.storageGb)} GB`,
       quantity: item.quantity,
@@ -136,92 +152,86 @@ export class ReviewStep {
 
   // ---------------------------------------------------------------------------
   // Contact / delivery / payment snapshot, read from the server-confirmed
-  // `draft` input rather than a live form the user may not have saved yet.
+  // draft rather than from a form the shopper may not have saved.
   // ---------------------------------------------------------------------------
 
   readonly contactName = computed<string>(() => (this.draft().contact?.fullName ?? '').trim());
   readonly contactEmail = computed<string>(() => (this.draft().contact?.email ?? '').trim());
   readonly contactPhone = computed<string>(() => (this.draft().contact?.phone ?? '').trim());
 
-  readonly deliveryOptionId = computed<'home_delivery' | 'demo_pickup' | null>(
-    () => this.draft().delivery?.optionId ?? null,
-  );
-
-  readonly deliveryAddress = computed<{
-    line1: string;
-    line2: string;
-    postalCode: string;
-    city: string;
-  } | null>(() => {
-    if (this.deliveryOptionId() !== 'home_delivery') return null;
-    const address = this.draft().delivery?.address;
-    if (address === undefined) return null;
-    return {
-      line1: address.line1.trim(),
-      line2: (address.line2 ?? '').trim(),
-      postalCode: address.postalCode.trim(),
-      city: address.city.trim(),
-    };
+  /** The delivery address, or null for pickup: the pickup arm of
+   *  `DeliverySelection` has no address member at all, so the
+   *  narrowing on `optionId` is what reaches `address` without a cast. */
+  readonly deliveryAddress = computed<Address | null>(() => {
+    const delivery = this.draft().delivery;
+    if (delivery?.optionId !== 'home_delivery') return null;
+    return delivery.address;
   });
 
   readonly deliveryLabel = computed<string>(() => {
-    const id = this.deliveryOptionId();
-    if (id === 'home_delivery') return 'Házhoz szállítás (1990 Ft)';
-    if (id === 'demo_pickup') return 'Virtuális átvétel (0 Ft)';
-    return 'Nincs kiválasztva';
+    const id = this.draft().delivery?.optionId;
+    const options = this.options();
+    if (id === undefined || options === null) return UNKNOWN_LABEL;
+    return options.deliveryOptions.find((option) => option.id === id)?.label ?? UNKNOWN_LABEL;
   });
-
-  readonly paymentMethod = computed<'demo_card' | 'demo_cod' | null>(
-    () => this.draft().paymentMethod ?? null,
-  );
 
   readonly paymentLabel = computed<string>(() => {
-    const m = this.paymentMethod();
-    if (m === 'demo_card') return 'Bankkártya (szimulált)';
-    if (m === 'demo_cod') return 'Utánvét (demó)';
-    return 'Nincs kiválasztva';
+    const method = this.draft().payment?.method;
+    const options = this.options();
+    if (method === undefined || options === null) return UNKNOWN_LABEL;
+    return options.paymentMethods.find((option) => option.id === method)?.label ?? UNKNOWN_LABEL;
   });
 
   // ---------------------------------------------------------------------------
-  // Quote / state-driven summary
+  // The payment-return branch table (design §5.3). Every sentence is
+  // fixed copy; the server's English `detail` never reaches the screen.
   // ---------------------------------------------------------------------------
 
-  readonly busy = computed<boolean>(
-    () => this.state() === 'quoting' || this.state() === 'submitting',
+  readonly paymentStatusMessage = computed<string | null>(() => {
+    const intent = this.paymentIntent();
+    if (intent === null) {
+      if (!this.paymentIntentMissing()) return null;
+      return this.paymentStarted()
+        ? 'A fizetési szándék nem található.'
+        : 'A kártyás fizetéshez indítsd el a fizetést.';
+    }
+    switch (intent.status) {
+      case 'succeeded':
+        return 'A fizetés jóváhagyva.';
+      case 'declined':
+        return 'A szimulált fizetés elutasítva.';
+      case 'pending':
+        return 'Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.';
+      case 'requires_action':
+        return 'A fizetés nem fejeződött be.';
+    }
+  });
+
+  /** Label of the control that starts a payment. Names what the press
+   *  does in each of the two missing-intent cases. */
+  readonly newPaymentLabel = computed<string>(() =>
+    this.paymentStarted() ? 'Új fizetés indítása' : 'Fizetés indítása',
   );
 
-  readonly readySummary = computed<{
-    readonly subtotal: Money;
-    readonly shipping: Money;
-  } | null>(() => {
-    const quote = this.quote();
-    if (quote === null) return null;
-    return { subtotal: quote.subtotal, shipping: quote.shipping };
-  });
+  // ---------------------------------------------------------------------------
+  // The price-change confirmation (design §3.7).
+  // ---------------------------------------------------------------------------
 
-  readonly summaryFootnote = computed<string | null>(() => {
-    const s = this.state();
-    if (s === 'expired') {
-      return 'Az árajánlat lejárt; frissítsd a „Árajánlat frissítése” gombra kattintva.';
-    }
-    if (s === 'price-changed') {
-      return 'A katalógus ára megváltozott; a kosár frissítésre került, az új végösszeg fent látható.';
-    }
-    if (s === 'ready') {
-      return 'Az árajánlat a mock munkamenetben 5 percig érvényes.';
-    }
-    return null;
+  /** The confirm control names the new total, so pressing it is the
+   *  shopper's explicit acceptance of that amount and nothing else. */
+  readonly priceChangeConfirmLabel = computed<string>(() => {
+    const change = this.priceChange();
+    if (change === null) return '';
+    return `Elfogadom az új végösszeget: ${PriceBlock.formatHuf(change.currentTotal.amount)} Ft`;
   });
 
   // ---------------------------------------------------------------------------
-  // Per-state banner copy. `ReviewState` carries no payload — the backend
-  // `detail` string is not rendered (R15) — so these are fixed sentences.
+  // Per-state banner copy. `CheckoutViewState` carries no payload —
+  // the backend `detail` is never rendered (R15) — so these are fixed.
   // ---------------------------------------------------------------------------
 
-  readonly priceChangedMessage =
-    'A katalógus ára megváltozott. Erősítsd meg az új végösszeget a „Árajánlat frissítése” gombra kattintva.';
-  readonly quoteExpiredMessage =
-    'Az árajánlat lejárt. Kattints a „Árajánlat frissítése” gombra az új végösszegért.';
+  readonly priceChangedMessage = 'A végösszeg időközben megváltozott.';
+  readonly conflictMessage = 'Az adatok időközben megváltoztak. Ellenőrizd és próbáld újra.';
   readonly outOfStockMessage =
     'Egy vagy több változat elfogyott. Visszavonulhatsz a kosárhoz a cikk korrigálásához.';
   readonly errorMessage = 'A rendelés leadása nem sikerült.';
@@ -236,47 +246,46 @@ export class ReviewStep {
     return 'default';
   });
 
-  readonly simulationConsentState = computed<string>(() => {
-    if (!this.acknowledgedSimulation() && this.simulationTouched()) return 'touched-invalid';
-    if (this.submitted() && !this.acknowledgedSimulation()) return 'submitted-invalid';
-    return 'default';
-  });
-
   readonly termsConsentMessage = computed<string | null>(() => {
     if (this.termsConsentState() === 'default') return null;
     return 'A demó feltételek elfogadása kötelező.';
   });
 
-  readonly simulationConsentMessage = computed<string | null>(() => {
-    if (this.simulationConsentState() === 'default') return null;
-    return 'A szimuláció tudomásulvétele kötelező.';
-  });
-
-  /** True when the CTA may be pressed: a fresh quote, both consents
-   *  checked, and a complete draft (payment method + delivery chosen). */
+  /**
+   * The CTA is live only when the state is `ready`, the server calls
+   * the draft complete, the terms are accepted, no price change is
+   * awaiting confirmation (§3.7), and — for a card draft — the
+   * payment has already succeeded. A card order is never placed on
+   * an unauthorised intent.
+   */
   readonly canSubmit = computed<boolean>(() => {
     if (this.state() !== 'ready') return false;
-    if (!this.acceptedTerms() || !this.acknowledgedSimulation()) return false;
-    if (this.draft().paymentMethod === undefined) return false;
-    if (this.draft().delivery === undefined) return false;
+    if (!this.draft().complete) return false;
+    if (!this.acceptedTerms()) return false;
+    if (this.priceChange() !== null) return false;
+    if (this.draft().payment?.method === 'card') {
+      return this.paymentIntent()?.status === 'succeeded';
+    }
     return true;
   });
 
-  /** Human-readable reason the CTA is disabled, rendered below the button. */
+  /** The first unmet condition, in `canSubmit`'s own order. Null when
+   *  the CTA is live, and null for the three failure states whose
+   *  banner already says what happened. */
   readonly ctaExplanation = computed<string | null>(() => {
     if (this.canSubmit()) return null;
-    const s = this.state();
-    if (s === 'submitting') {
-      return 'A véglegesítés folyamatban van; kérlek várj.';
+    const state = this.state();
+    if (state === 'submitting') return 'A véglegesítés folyamatban van; kérlek várj.';
+    if (state === 'loading') return 'A rendelés adatai még betöltés alatt vannak.';
+    if (this.priceChange() !== null) {
+      return 'Erősítsd meg az új végösszeget a rendelés leadásához.';
     }
-    if (s !== 'ready') {
-      return 'Az árajánlat még nem áll készen; a frissítés gombra kattintva új árajánlatot kérhetsz.';
+    if (!this.draft().complete) {
+      return 'Hiányzó adatok: egészítsd ki a korábbi lépéseket a rendelés leadásához.';
     }
-    if (!this.acceptedTerms()) {
-      return 'A demó feltételek elfogadása szükséges a leadáshoz.';
-    }
-    if (!this.acknowledgedSimulation()) {
-      return 'A szimuláció tudomásulvétele szükséges a leadáshoz.';
+    if (!this.acceptedTerms()) return 'A demó feltételek elfogadása szükséges a leadáshoz.';
+    if (this.draft().payment?.method === 'card') {
+      return 'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.';
     }
     return null;
   });
@@ -291,10 +300,6 @@ export class ReviewStep {
 
   onEditDelivery(): void {
     this.editRequested.emit('delivery');
-  }
-
-  onRefresh(): void {
-    this.refreshQuote.emit();
   }
 
   openTerms(): void {
@@ -312,15 +317,6 @@ export class ReviewStep {
 
   onAcceptedTermsBlur(): void {
     this.termsTouched.set(true);
-  }
-
-  onAcknowledgedSimulationChange(event: Event): void {
-    if (!isHTMLInputElement(event.target)) return;
-    this.acknowledgedSimulation.set(event.target.checked);
-  }
-
-  onAcknowledgedSimulationBlur(): void {
-    this.simulationTouched.set(true);
   }
 
   onSubmit(): void {
