@@ -183,7 +183,7 @@ export class OrderSubmission {
     });
   }
 
-  private async runSubmit(): Promise<SubmitOutcome> {
+  private runSubmit(): Promise<SubmitOutcome> {
     // 1. session must be loaded; options are only required when there
     // is something to commit, so the incomplete check runs first.
     const session = this.checkout.session();
@@ -246,9 +246,9 @@ export class OrderSubmission {
    *  pre-commit return path in `runSubmit` and `commit` goes through
    *  this so the page's `canRetry` / `canChangeMethod` signals always
    *  reflect the most recent terminal state. */
-  private setOutcome(outcome: SubmitOutcome): SubmitOutcome {
+  private setOutcome(outcome: SubmitOutcome): Promise<SubmitOutcome> {
     this.lastOutcomeWritable.set(outcome);
-    return outcome;
+    return Promise.resolve(outcome);
   }
 
   private async commit(body: OrderRequest): Promise<SubmitOutcome> {

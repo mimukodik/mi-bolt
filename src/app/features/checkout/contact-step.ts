@@ -36,9 +36,9 @@
  *                        form actions.
  */
 
+import type { ElementRef } from '@angular/core';
 import {
   Component,
-  ElementRef,
   InjectionToken,
   Injector,
   afterNextRender,
@@ -257,7 +257,7 @@ export class ContactStep {
   // ---- Actions ------------------------------------------------------
 
   async onSubmit(event?: Event): Promise<void> {
-    if (event && typeof event.preventDefault === 'function') {
+    if (event !== undefined && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
     if (this.saveState() === 'loading') return;
@@ -266,11 +266,10 @@ export class ContactStep {
 
     const contactFields = this.contactFields();
     const ok = await submit(contactFields, {
-      action: () => {
+      action: () =>
         // No network call from inside the field tree's own submit flow —
         // the container performs the save when `continueRequested` fires.
-        return Promise.resolve(undefined);
-      },
+        Promise.resolve(undefined),
       onInvalid: () => {
         this.focusSummary();
         this.focusFirstInvalidField();

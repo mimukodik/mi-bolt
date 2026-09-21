@@ -2,7 +2,7 @@
   class="delivery flex flex-col gap-(--space-6) text-(color:--color-text-primary)"
   data-testid="delivery-step"
 >
-  <app-checkout-step-header [crumbs]="crumbs" current="Szállítás">
+  <app-checkout-step-header current="Szállítás" [crumbs]="crumbs">
     <h1
       class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
     >
@@ -32,27 +32,27 @@
           @for (option of options().deliveryOptions; track option.id) {
             <li
               class="option rounded-(--radius-card) border transition-colors"
+              data-testid="delivery-option"
               [class.is-active]="option.id === selectedOptionId()"
               [class.is-unavailable]="!option.available"
-              data-testid="delivery-option"
             >
               <label
                 class="option-label flex items-start gap-(--space-3) p-(--space-4)"
-                [class.cursor-pointer]="option.available"
                 [attr.for]="radioId(option.id)"
+                [class.cursor-pointer]="option.available"
               >
                 <input
-                  type="radio"
                   class="radio w-5 h-5 mt-1 accent-(--color-brand-ink)"
-                  [id]="radioId(option.id)"
+                  data-testid="delivery-radio"
                   name="deliveryOption"
-                  [value]="option.id"
-                  [checked]="option.id === selectedOptionId()"
-                  [disabled]="!option.available"
+                  type="radio"
                   [attr.aria-checked]="option.id === selectedOptionId() ? 'true' : 'false'"
                   [attr.aria-describedby]="optionDescId(option.id)"
+                  [checked]="option.id === selectedOptionId()"
+                  [disabled]="!option.available"
+                  [id]="radioId(option.id)"
+                  [value]="option.id"
                   (change)="onOptionSelected(option)"
-                  data-testid="delivery-radio"
                 />
                 <span class="option-body flex flex-col gap-(--space-2) min-w-0">
                   <span class="option-row flex items-center justify-between gap-(--space-3)">
@@ -60,11 +60,7 @@
                       class="option-title text-(length:--type-body) [font-weight:var(--weight-medium)]"
                       >{{ option.label }}</span
                     >
-                    <app-price-block
-                      [money]="option.fee"
-                      label="Szállítási díj"
-                      status="success"
-                    ></app-price-block>
+                    <app-price-block label="Szállítási díj" status="success" [money]="option.fee" />
                   </span>
                   <span
                     class="option-description text-(length:--type-helper) text-(color:--color-text-secondary) leading-(--line-height-body)"
@@ -82,8 +78,8 @@
                   }
                   @if (option.id === selectedOptionId()) {
                     <span
-                      class="option-badge self-start inline-flex items-center px-(--space-2) py-(--space-1) rounded-full [font-weight:var(--weight-bold)]"
                       aria-live="polite"
+                      class="option-badge self-start inline-flex items-center px-(--space-2) py-(--space-1) rounded-full [font-weight:var(--weight-bold)]"
                       data-testid="delivery-selected-badge"
                     >
                       Kiválasztva
@@ -98,21 +94,21 @@
 
       @if (requiresAddress()) {
         <app-address-form
-          [postalCode]="postalCode()"
-          (postalCodeChange)="setPostalCode($event)"
           [city]="city()"
-          (cityChange)="setCity($event)"
           [line1]="line1()"
-          (line1Change)="setLine1($event)"
           [line2]="line2()"
-          (line2Change)="setLine2($event)"
+          [postalCode]="postalCode()"
           [(submitted)]="addressSubmitted"
-        ></app-address-form>
+          (cityChange)="setCity($event)"
+          (line1Change)="setLine1($event)"
+          (line2Change)="setLine2($event)"
+          (postalCodeChange)="setPostalCode($event)"
+        />
       } @else {
         <p
           class="pickup-notice m-0 p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) text-(length:--type-helper) text-(color:--color-text-secondary) leading-(--line-height-body)"
-          role="note"
           data-testid="pickup-notice"
+          role="note"
         >
           A virtuális átvétel egy demó szállítási opció: nincs valós üzletcím, a rendelés a pénztár
           demófolyamatán belül készül, valós átvételi pont nélkül.
@@ -122,9 +118,9 @@
       <app-payment-method-selector
         [options]="options().paymentMethods"
         [value]="paymentMethod()"
-        (valueChange)="onPaymentChanged($event)"
         (paymentChanged)="onPaymentChanged($event)"
-      ></app-payment-method-selector>
+        (valueChange)="onPaymentChanged($event)"
+      />
 
       <fieldset
         class="billing m-0 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) flex flex-col gap-(--space-4)"
@@ -142,11 +138,11 @@
             data-testid="billing-same-as-delivery-label"
           >
             <input
-              type="checkbox"
               class="checkbox w-5 h-5 accent-(--color-brand-ink)"
+              data-testid="billing-same-as-delivery"
+              type="checkbox"
               [checked]="billingSameAsDelivery()"
               (change)="onBillingSameAsDeliveryChanged($event)"
-              data-testid="billing-same-as-delivery"
             />
             A számlázási cím megegyezik a szállítási címmel
           </label>
@@ -155,44 +151,44 @@
         <label class="field flex flex-col gap-(--space-2) min-w-0" data-testid="billing-name-field">
           <span class="label">Név</span>
           <input
-            type="text"
             autocomplete="name"
             class="input w-full min-h-10 px-(--space-3) rounded font-inherit border border-(--color-border-control)"
-            [attr.aria-invalid]="billingNameInvalid() ? 'true' : 'false'"
-            [attr.aria-describedby]="'billing-name-message'"
-            [value]="billingName()"
-            (input)="onBillingNameInput($event)"
-            (blur)="markBillingNameTouched()"
             data-testid="billing-name-input"
+            type="text"
+            [attr.aria-describedby]="'billing-name-message'"
+            [attr.aria-invalid]="billingNameInvalid() ? 'true' : 'false'"
+            [value]="billingName()"
+            (blur)="markBillingNameTouched()"
+            (input)="onBillingNameInput($event)"
           />
           <app-form-field-message
             fieldId="billing-name"
             [errors]="billingNameErrors()"
             [touched]="billingNameTouched()"
-          ></app-form-field-message>
+          />
         </label>
 
         @if (showBillingAddressFields()) {
           <app-address-form
-            [postalCode]="billingPostalCode()"
-            (postalCodeChange)="setBillingPostalCode($event)"
-            [city]="billingCity()"
-            (cityChange)="setBillingCity($event)"
-            [line1]="billingLine1()"
-            (line1Change)="setBillingLine1($event)"
-            [line2]="billingLine2()"
-            (line2Change)="setBillingLine2($event)"
-            pointerBase="/billing/address"
-            [legend]="null"
             data-testid="billing-address-form"
-          ></app-address-form>
+            pointerBase="/billing/address"
+            [city]="billingCity()"
+            [legend]="null"
+            [line1]="billingLine1()"
+            [line2]="billingLine2()"
+            [postalCode]="billingPostalCode()"
+            (cityChange)="setBillingCity($event)"
+            (line1Change)="setBillingLine1($event)"
+            (line2Change)="setBillingLine2($event)"
+            (postalCodeChange)="setBillingPostalCode($event)"
+          />
         }
       </fieldset>
     </div>
 
     <aside
-      class="summary flex flex-col gap-(--space-4) p-(--space-5) sm:p-(--space-6) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
       aria-label="Átvételi és fizetési összegzés"
+      class="summary flex flex-col gap-(--space-4) p-(--space-5) sm:p-(--space-6) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
       data-testid="delivery-summary"
     >
       <h2
@@ -210,10 +206,10 @@
           </dt>
           <dd class="m-0 text-(length:--type-body)">
             <app-price-block
-              [money]="currentShippingFee()"
-              [label]="deliveryLabel()"
               status="success"
-            ></app-price-block>
+              [label]="deliveryLabel()"
+              [money]="currentShippingFee()"
+            />
           </dd>
         </div>
         <div
@@ -233,31 +229,31 @@
 
       @if (saveState() === 'error') {
         <app-status-message
-          [message]="saveErrorMessage"
-          severity="error"
-          [persistent]="true"
           data-testid="delivery-save-failure"
-        ></app-status-message>
+          severity="error"
+          [message]="saveErrorMessage"
+          [persistent]="true"
+        />
         <app-button
-          variant="secondary"
-          label="Újrapróbálom"
-          (pressed)="onRetry()"
           data-testid="delivery-retry"
-        ></app-button>
+          label="Újrapróbálom"
+          variant="secondary"
+          (pressed)="onRetry()"
+        />
       }
 
       <div
         class="actions flex flex-col gap-(--space-3) sm:flex-row sm:flex-wrap sm:justify-between"
       >
         <app-button
-          variant="primary"
-          [label]="confirmLabel()"
-          loadingLabel="Mentés…"
-          [loading]="saveState() === 'loading'"
-          [disabled]="!canConfirm()"
-          (pressed)="onConfirm()"
           data-testid="delivery-confirm"
-        ></app-button>
+          loadingLabel="Mentés…"
+          variant="primary"
+          [disabled]="!canConfirm()"
+          [label]="confirmLabel()"
+          [loading]="saveState() === 'loading'"
+          (pressed)="onConfirm()"
+        />
       </div>
     </aside>
   </div>

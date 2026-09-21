@@ -27,11 +27,11 @@
  * validator.
  */
 
+import type { PathKind } from '@angular/forms/signals';
 import {
   type FieldTree,
   type SchemaFn,
   type SchemaPathTree,
-  PathKind,
   email,
   form,
   pattern,
