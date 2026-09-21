@@ -306,9 +306,17 @@ describe('PaymentReturnPage', () => {
   it('R-04 hydrates the cart and the session before reading the intent', async () => {
     await seedCompleteCardDraft();
     const checkout = TestBed.inject(CheckoutFacade);
+    const cart = TestBed.inject(CartFacade);
     const created = await checkout.createPaymentIntent();
     if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
     const id = created.value.id;
+
+    // Drop the local cart and session snapshots so the page's hydrate
+    // reissues GET /cart and GET /checkout; without this both calls
+    // short-circuit on the cached snapshots and the captured request
+    // log never contains the two GETs the assertion expects.
+    checkout.resetAfterOrder();
+    cart.resetOrderedCart();
 
     const requests: string[] = [];
     captureRequests(requests);
