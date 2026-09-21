@@ -66,14 +66,8 @@
   min-height: 18rem;
 }
 
-.layout {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
 .section-label {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
   font-family: var(--font-family-light);
   font-size: var(--type-meta);
   line-height: 16px;
@@ -86,10 +80,6 @@
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.summary-column {
-  display: block;
 }
 
 .actions {
