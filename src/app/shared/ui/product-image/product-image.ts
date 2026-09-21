@@ -44,6 +44,9 @@ export class ProductImage {
    *  duplicates that text for a screen reader (axe image-redundant-alt). */
   readonly decorative = input<boolean>(false);
 
+  /** When true the photo loads eagerly: the page's largest image must not be lazy (Angular NG0913). */
+  readonly eager = input<boolean>(false);
+
   readonly loadFailed = output();
 
   private readonly doc = inject(DOCUMENT);

@@ -14,15 +14,15 @@
       <span class="fallback-mark font-bold tracking-wider">{{ initial() }}</span>
     </div>
   } @else {
-    <!-- The photo is in the DOM while loading too, because the browser
-         only fetches an `<img>` it can see; the skeleton is laid over it
-         until the `load` event arrives. -->
+    <!-- The photo element is in the DOM while loading too, because the
+         browser only fetches an image it can see; the skeleton is laid
+         over it until the `load` event arrives. -->
     <img
       class="photo object-contain"
       [src]="resolvedSrc()"
       [alt]="decorative() ? '' : image().alt"
       decoding="async"
-      loading="lazy"
+      [attr.loading]="eager() ? 'eager' : 'lazy'"
       data-testid="image-photo"
       (load)="onLoad()"
       (error)="onError()"

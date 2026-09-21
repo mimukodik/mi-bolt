@@ -191,7 +191,10 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
     expect(host.emittedImageSelected).toEqual(['img-back']);
     expect(host.selectedImageId()).toBe('img-back');
 
-    const activePhoto = queryImage(root, '[data-testid="image-photo"]');
+    const activePhoto = queryImage(
+      root,
+      '[data-testid="gallery-main"] [data-testid="image-photo"]',
+    );
     expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-back.webp');
 
     // From the second image, prev button returns to the first
@@ -201,9 +204,9 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
 
     expect(host.emittedImageSelected).toEqual(['img-back', 'img-front']);
     expect(host.selectedImageId()).toBe('img-front');
-    expect(imagePath(queryImage(root, '[data-testid="image-photo"]'))).toBe(
-      '/assets/products/demo-one-front.webp',
-    );
+    expect(
+      imagePath(queryImage(root, '[data-testid="gallery-main"] [data-testid="image-photo"]')),
+    ).toBe('/assets/products/demo-one-front.webp');
   });
 
   it('T16-AC02: disables prev button at the first image and does not wrap backward', async () => {
@@ -258,22 +261,29 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
 
     sampleImages.forEach((image, index) => {
       const thumb = queryButton(root, `[data-testid="gallery-thumb-${String(index)}"]`);
-      const img = queryImage(thumb, 'img.thumb-img');
-      expect(img.getAttribute('src')).toBe(image.src);
+      const img = queryImage(
+        thumb,
+        '[data-testid="gallery-thumb-image"] [data-testid="image-photo"]',
+      );
+      expect(imagePath(img)).toBe(image.src);
       expect(thumb.querySelector('.thumb-mark')).toBeNull();
       expect(thumb.textContent).not.toContain(String(index + 1));
       expect(thumb.getAttribute('aria-current')).toBe(index === 0 ? 'true' : 'false');
     });
   });
 
-  it('T16-AC02: renders each thumbnail image with explicit width and height attributes from the model', async () => {
+  it('T16-AC02: renders each thumbnail image through app-product-image with the configured aspect ratio', async () => {
     const { root } = await createHarness();
 
     sampleImages.forEach((image, index) => {
       const thumb = queryButton(root, `[data-testid="gallery-thumb-${String(index)}"]`);
-      const img = queryImage(thumb, 'img.thumb-img');
-      expect(img.getAttribute('width')).toBe(String(image.width));
-      expect(img.getAttribute('height')).toBe(String(image.height));
+      const img = queryImage(
+        thumb,
+        '[data-testid="gallery-thumb-image"] [data-testid="image-photo"]',
+      );
+      expect(imagePath(img)).toBe(image.src);
+      const rootEl = queryElement(thumb, '[data-testid="gallery-thumb-image"] .root');
+      expect(rootEl.style.aspectRatio).toBe('1 / 1');
     });
   });
 
@@ -292,7 +302,10 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     expect(thumb0.getAttribute('aria-current')).toBe('false');
     expect(thumb2.getAttribute('aria-current')).toBe('true');
 
-    const activePhoto = queryImage(root, '[data-testid="image-photo"]');
+    const activePhoto = queryImage(
+      root,
+      '[data-testid="gallery-main"] [data-testid="image-photo"]',
+    );
     expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-side.webp');
   });
 
@@ -328,7 +341,10 @@ describe('FIX-50 product-gallery id resolution', () => {
     const note = queryElement(root, '[data-testid="gallery-image-error"]');
     expect(note.getAttribute('role')).toBe('status');
 
-    const activePhoto = queryImage(root, '[data-testid="image-photo"]');
+    const activePhoto = queryImage(
+      root,
+      '[data-testid="gallery-main"] [data-testid="image-photo"]',
+    );
     expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-front.webp');
   });
 
@@ -447,19 +463,53 @@ describe('T16-AC02 product-gallery image error fallback and no autoplay', () => 
   it('T16-AC02: renders fallback mark on image load error without substituting other device photo', async () => {
     const { fixture, root } = await createHarness();
 
-    const photoImg = queryImage(root, '[data-testid="image-photo"]');
+    const photoImg = queryImage(root, '[data-testid="gallery-main"] [data-testid="image-photo"]');
     expect(photoImg).not.toBeNull();
-    expect(root.querySelector('[data-testid="image-fallback"]')).toBeNull();
+    expect(
+      root.querySelector('[data-testid="gallery-main"] [data-testid="image-fallback"]'),
+    ).toBeNull();
 
     photoImg.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const fallback = queryElement(root, '[data-testid="image-fallback"]');
+    const fallback = queryElement(
+      root,
+      '[data-testid="gallery-main"] [data-testid="image-fallback"]',
+    );
     expect(fallback).not.toBeNull();
     const fallbackMark = queryElement(fallback, '.fallback-mark');
     expect(fallbackMark.textContent.trim()).toBe('D');
-    expect(root.querySelector('[data-testid="image-photo"]')).toBeNull();
+    expect(
+      root.querySelector('[data-testid="gallery-main"] [data-testid="image-photo"]'),
+    ).toBeNull();
+  });
+
+  it('renders every thumbnail through app-product-image with the neutral fallback on error', async () => {
+    const { fixture, root } = await createHarness();
+
+    const thumbPhoto = queryImage(
+      root,
+      '[data-testid="gallery-thumb-image"] [data-testid="image-photo"]',
+    );
+    expect(thumbPhoto).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="gallery-thumb-image"] [data-testid="image-fallback"]'),
+    ).toBeNull();
+    const mainPhoto = queryImage(root, '[data-testid="gallery-main"] [data-testid="image-photo"]');
+    expect(mainPhoto).not.toBeNull();
+
+    thumbPhoto.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(
+      root.querySelector('[data-testid="gallery-thumb-image"] [data-testid="image-fallback"]'),
+    ).not.toBeNull();
+    // The main photo must remain on screen while the thumbnail falls back.
+    expect(
+      root.querySelector('[data-testid="gallery-main"] [data-testid="image-photo"]'),
+    ).not.toBeNull();
   });
 
   it('T16-AC02: does not autoplay or advance index automatically without user action', async () => {

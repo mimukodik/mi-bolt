@@ -66,14 +66,13 @@
                 [attr.aria-label]="item.name + ' — részletek'"
               >
                 <span class="featured__tag">DEMÓTERMÉK</span>
-                <div class="featured__image block aspect-[4/5] overflow-hidden">
-                  <img
-                    class="block h-full w-full object-contain"
-                    [src]="item.image.src"
-                    [alt]="firstImageAlt(item)"
-                    decoding="async"
-                    loading="lazy"
-                    data-testid="image-photo"
+                <div class="featured__image block overflow-hidden">
+                  <app-product-image
+                    [image]="item.image"
+                    [productName]="item.name"
+                    aspectRatio="4 / 5"
+                    [decorative]="true"
+                    [eager]="$first"
                   />
                 </div>
               </a>

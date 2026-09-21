@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Money } from '../../api/generated/models/money';
 import { Button } from '../../shared/ui/button/button';
+import { ProductImage } from '../../shared/ui/product-image/product-image';
 
 /** Status of the whole featured grid in the home page. */
 export type FeaturedStatus = 'loading' | 'success' | 'error';
@@ -29,23 +30,25 @@ export interface FeaturedState {
  * catalogue detail route with the documented slug and variant id
  * (T14-AC02).
  *
- * The home page renders its own price block / image element rather
- * than the shared `PriceBlock` / `ProductImage` primitives (FIX-33
- * item 5). `PriceBlock` requires a `label: string` input with no
- * value fixed anywhere in the specification, and its skeleton/empty
- * states use different class names and test ids from the ones this
- * card and its existing spec assertions already rely on
- * (`.featured__skeleton--price`, `data-testid="price-skeleton"`).
- * Swapping it in was attempted and measured; adopting it would mean
- * inventing the label text (R25) and rewriting the price-state
- * assertions in the same commit as the rest of this rebuild, which
- * this task defers rather than doing under scope pressure. The
- * component keeps the same data contract so a future task can make
- * the swap deliberately.
+ * The home page renders its own price block rather than the shared
+ * `PriceBlock` primitive (FIX-33 item 5). `PriceBlock` requires a
+ * `label: string` input with no value fixed anywhere in the
+ * specification, and its skeleton/empty states use different class
+ * names and test ids from the ones this card and its existing spec
+ * assertions already rely on (`.featured__skeleton--price`,
+ * `data-testid="price-skeleton"`). Swapping it in was attempted and
+ * measured; adopting it would mean inventing the label text (R25)
+ * and rewriting the price-state assertions in the same commit as
+ * the rest of this rebuild, which this task defers rather than
+ * doing under scope pressure. The component keeps the same data
+ * contract so a future task can make the swap deliberately. The
+ * images themselves render through the shared `ProductImage`
+ * primitive (`MIM-210`), with the first card's photo eager-loaded
+ * (`loading="eager"`) and the rest lazy.
  */
 @Component({
   selector: 'app-featured-products',
-  imports: [RouterLink, Button],
+  imports: [RouterLink, Button, ProductImage],
   templateUrl: './featured-products.html',
   styleUrl: './featured-products.scss',
 })
@@ -71,12 +74,6 @@ export class FeaturedProducts {
 
   /** Items for the success branch. */
   readonly items = computed(() => this.state().items);
-
-  /** Returns the image alt text for the item, falling back to the name. */
-  firstImageAlt(item: CatalogItem): string {
-    const alt = item.image.alt;
-    return alt.length > 0 ? alt : item.name;
-  }
 
   /** Hungarian integer HUF formatter. Non-breaking space thousands separator. */
   formatPrice(money: Money): string {
