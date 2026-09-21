@@ -189,4 +189,32 @@ describe('FilterDrawer — facets wire-up', () => {
     const moreAfter = queryElement('[data-testid="drawer-group-brand"] .more');
     expect(moreAfter.textContent.trim()).toBe('Még több gyártó');
   });
+
+  it('the "more" toggle label follows the same condition as its aria-expanded (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [
+        { value: 'apple', label: 'Apple', count: 3 },
+        { value: 'google pixel', label: 'Google Pixel', count: 2 },
+        { value: 'honor', label: 'HONOR', count: 4 },
+        { value: 'motorola', label: 'Motorola', count: 1 },
+        { value: 'samsung', label: 'Samsung', count: 5 },
+        { value: 'vivo', label: 'Vivo', count: 2 },
+        { value: 'xiaomi', label: 'Xiaomi', count: 1 },
+      ],
+      colors: [],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    // A brand beyond row five is applied, forcing the list open through
+    // the reopen-reseed effect without the user ever clicking "more".
+    host.applied.set({ ...DEFAULT_CATALOG_QUERY, brands: ['xiaomi'] });
+    fixture.detectChanges();
+
+    const more = queryElement('[data-testid="drawer-group-brand"] .more');
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(more.textContent.trim()).toBe('Kevesebb gyártó');
+  });
 });

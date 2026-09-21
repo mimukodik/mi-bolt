@@ -180,6 +180,14 @@ export class FilterPanel {
     return all.slice(0, 5);
   });
 
+  /** Whether every brand facet is currently rendered — either because the
+   *  user expanded the list, or because a selection beyond row five forces
+   *  it open. Drives both the "more" button's `aria-expanded` and its own
+   *  label, so the two can never disagree. */
+  readonly brandsAllVisible = computed(
+    () => this.visibleBrandFacets().length === this.brandFacets().length,
+  );
+
   toggleBrandsExpanded(): void {
     this.brandsExpanded.update((v) => !v);
   }

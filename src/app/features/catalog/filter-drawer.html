@@ -42,12 +42,10 @@
         <button
           type="button"
           class="more"
-          [attr.aria-expanded]="
-            visibleBrandFacets().length === brandFacets().length ? 'true' : 'false'
-          "
+          [attr.aria-expanded]="brandsAllVisible() ? 'true' : 'false'"
           (click)="toggleBrandsExpanded()"
         >
-          {{ brandsExpanded() ? 'Kevesebb gyártó' : 'Még több gyártó' }}
+          {{ brandsAllVisible() ? 'Kevesebb gyártó' : 'Még több gyártó' }}
         </button>
       }
     </fieldset>

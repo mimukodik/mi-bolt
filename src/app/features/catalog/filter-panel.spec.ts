@@ -517,4 +517,32 @@ describe('FilterPanel — facets wire-up', () => {
     expect(min.getAttribute('placeholder')).toBe('69990');
     expect(max.getAttribute('placeholder')).toBe('699990');
   });
+
+  it('the "more" toggle label follows the same condition as its aria-expanded (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [
+        { value: 'apple', label: 'Apple', count: 3 },
+        { value: 'google pixel', label: 'Google Pixel', count: 2 },
+        { value: 'honor', label: 'HONOR', count: 4 },
+        { value: 'motorola', label: 'Motorola', count: 1 },
+        { value: 'samsung', label: 'Samsung', count: 5 },
+        { value: 'vivo', label: 'Vivo', count: 2 },
+        { value: 'xiaomi', label: 'Xiaomi', count: 1 },
+      ],
+      colors: [],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    // A brand beyond row five is selected, forcing the list open without
+    // the user ever clicking "more" — brandsExpanded stays false.
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, brands: ['xiaomi'] });
+    fixture.detectChanges();
+
+    const more = queryButton(getRootElement(fixture), '[data-testid="filter-brand-more"]');
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(more.textContent.trim()).toBe('Kevesebb gyártó');
+  });
 });
