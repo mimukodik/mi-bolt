@@ -114,6 +114,9 @@ export default defineConfig([
       // pattern above, and the brief said to keep that pattern rather
       // than replace it.
       'unused-imports/no-unused-imports': 'error',
+      // An Angular component or layout with a template and no members is an
+      // empty class by design; the decorator is the exemption (MIM-220).
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       // Type-aware rules ported from example-eslint.config.mjs. These
       // live only in this src/**/*.ts block (which has `projectService`)
       // and are deliberately NOT added to the tests/**/*.ts block below:

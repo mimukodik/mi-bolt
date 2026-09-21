@@ -23,5 +23,4 @@ import { AppShell } from '../shared/shell/app-shell';
   templateUrl: './shop-layout.html',
   styleUrl: './shop-layout.scss',
 })
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ShopLayout {}
