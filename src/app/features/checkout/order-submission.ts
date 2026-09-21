@@ -32,13 +32,15 @@ import { CheckoutFacade } from './checkout.facade';
 
 export type SubmitOutcome =
   | { readonly kind: 'committed'; readonly orderId: string; readonly orderNumber: string }
-  | { readonly kind: 'declined'; readonly intentId: string }
+  | { readonly kind: 'declined'; readonly intentId: string | null }
   | {
+      /** `null` means no payment has been started yet, so the surface
+       *  offers "start a payment" rather than "back to the payment page". */
       readonly kind: 'payment-required';
-      readonly intentId: string;
-      readonly redirectUrl: string;
+      readonly intentId: string | null;
+      readonly redirectUrl: string | null;
     }
-  | { readonly kind: 'payment-pending'; readonly intentId: string }
+  | { readonly kind: 'payment-pending'; readonly intentId: string | null }
   | { readonly kind: 'price-changed' }
   | { readonly kind: 'incomplete'; readonly route: string }
   | { readonly kind: 'conflict' }
@@ -182,9 +184,7 @@ export class OrderSubmission {
     const promise = this.runSubmit();
     this.inFlightPromise = promise;
     return promise.finally(() => {
-      if (this.inFlightPromise === promise) {
-        this.inFlightPromise = null;
-      }
+      this.inFlightPromise = null;
       this.inFlightWritable.set(false);
     });
   }
@@ -194,11 +194,11 @@ export class OrderSubmission {
     const session = this.checkout.session();
     const options = this.checkout.options();
     if (session === null || options === null) {
-      return { kind: 'unknown', code: 'NO_SESSION' };
+      return this.setOutcome({ kind: 'unknown', code: 'NO_SESSION' });
     }
     // 2. incomplete draft → navigate to the first missing step.
     if (!session.complete) {
-      return { kind: 'incomplete', route: firstMissingSessionRoute(session) };
+      return this.setOutcome({ kind: 'incomplete', route: firstMissingSessionRoute(session) });
     }
 
     const method = session.payment?.method;
@@ -215,22 +215,26 @@ export class OrderSubmission {
     //    shopper reached submit without redirecting first.
     const intent = this.checkout.paymentIntent();
     if (intent === null) {
-      return {
+      return this.setOutcome({
         kind: 'payment-required',
-        intentId: '',
-        redirectUrl: '',
-      };
+        intentId: null,
+        redirectUrl: null,
+      });
     }
     // 4. a non-succeeded intent must yield an outcome before submitOrder
     //    is even called — a poll there would contradict the redirect.
     if (intent.status === 'declined') {
-      return { kind: 'declined', intentId: intent.id };
+      return this.setOutcome({ kind: 'declined', intentId: intent.id });
     }
     if (intent.status === 'pending') {
-      return { kind: 'payment-pending', intentId: intent.id };
+      return this.setOutcome({ kind: 'payment-pending', intentId: intent.id });
     }
     if (intent.status === 'requires_action') {
-      return { kind: 'payment-required', intentId: intent.id, redirectUrl: intent.redirectUrl };
+      return this.setOutcome({
+        kind: 'payment-required',
+        intentId: intent.id,
+        redirectUrl: intent.redirectUrl,
+      });
     }
     return this.commit({
       paymentMethod: 'card',
@@ -238,6 +242,15 @@ export class OrderSubmission {
       acceptedTerms: true,
       termsVersion: options.termsVersion,
     } satisfies CardOrderRequest);
+  }
+
+  /** Records `outcome` on `lastOutcomeWritable` and returns it. Every
+   *  pre-commit return path in `runSubmit` and `commit` goes through
+   *  this so the page's `canRetry` / `canChangeMethod` signals always
+   *  reflect the most recent terminal state. */
+  private setOutcome(outcome: SubmitOutcome): SubmitOutcome {
+    this.lastOutcomeWritable.set(outcome);
+    return outcome;
   }
 
   private async commit(body: OrderRequest): Promise<SubmitOutcome> {
@@ -274,13 +287,13 @@ export class OrderSubmission {
       case 'PAYMENT_REQUIRED':
         return {
           kind: 'payment-required',
-          intentId: intent?.id ?? '',
-          redirectUrl: intent?.redirectUrl ?? '',
+          intentId: intent?.id ?? null,
+          redirectUrl: intent?.redirectUrl ?? null,
         };
       case 'PAYMENT_PENDING':
-        return { kind: 'payment-pending', intentId: intent?.id ?? '' };
+        return { kind: 'payment-pending', intentId: intent?.id ?? null };
       case 'PAYMENT_DECLINED':
-        return { kind: 'declined', intentId: intent?.id ?? '' };
+        return { kind: 'declined', intentId: intent?.id ?? null };
       case 'PRICE_CHANGED':
         return { kind: 'price-changed' };
       case 'CHECKOUT_INCOMPLETE':
