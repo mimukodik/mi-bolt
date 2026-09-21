@@ -477,8 +477,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     );
     expect(link).not.toBeNull();
     expect(link?.textContent).toContain('Részletek');
-    expect(link?.getAttribute('href')).toContain('/telefonok/demo-one-5g');
-    expect(link?.getAttribute('href')).toContain('variant=');
+    expect(link?.getAttribute('href')).toBe('/telefonok/demo-one-5g?variant=' + items[0].variantId);
   });
 
   it('FIX-33-AC04: featured section header carries a "Minden telefon" link to the catalogue', async () => {

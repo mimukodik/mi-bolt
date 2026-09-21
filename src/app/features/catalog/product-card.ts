@@ -24,8 +24,8 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
  *     "Egyszeri készülékár" one-time label so the user never confuses
  *     it with a monthly fee (R13);
  *   - asks for navigation through `RouterLink`, not a manual click
- *     handler. The variant id rides along in the route matrix so the
- *     product page lands on the exact same configuration (R17);
+ *     handler. The variant id travels as `?variant=` so the product
+ *     page lands on the exact same configuration (R17);
  *   - uses an outlined CTA per the catalogue rule: one filled
  *     primary per page section, never per card (R08).
  *
@@ -70,11 +70,14 @@ export class ProductCard {
     this.product().highlights.slice(0, 2),
   );
 
-  /** Router link to the product page, including the matching variant id. */
+  /** Router link to the product page; the variant goes in `detailsQuery`. */
   readonly detailsLink = computed(() => {
     const item = this.product();
-    return ['/telefonok', item.slug, { variant: item.variantId }];
+    return ['/telefonok', item.slug];
   });
+
+  /** The selected variant travels as `?variant=`, which the product page reads. */
+  readonly detailsQuery = computed(() => ({ variant: this.product().variantId }));
 
   /** Concatenated accessible name for the image link. */
   readonly ariaLabel = computed(() => {
