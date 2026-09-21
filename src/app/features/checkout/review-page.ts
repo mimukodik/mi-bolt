@@ -1,195 +1,257 @@
 /**
- * FIX-63: `ReviewPage` is the owning container `checkout.routes.ts:231`
- * routes `ellenorzes` to. It owns `CartFacade`, `CheckoutFacade`,
- * `QuoteController`, `OrderSubmission` and the `Router` — the four
- * dependencies `ReviewStep` used to inject itself
- * (`components.md:611-617`) — and renders the `PaymentProgress` /
- * generic-error retry surfaces beside `<app-review-step>`, because the
- * declared `state:ReviewState` input is a plain seven-member string union
- * with no room for the backend `detail` or the `pending`-versus-`declined`
- * distinction those two surfaces need.
+ * S3-C5 — the review page on the 2.0.0 contract.
+ *
+ * The page holds the facades, maps the submission outcomes to
+ * navigation and renders the step; the payment itself is a full-page
+ * redirect the SPA does not survive (design §1 fact d, §5.5).
+ *
+ * It is the owning container `checkout.routes.ts` routes
+ * `/penztar/ellenorzes` to. It hydrates the cart, the options and the
+ * session; maps the facade's signals onto the step's
+ * `CheckoutViewState`; and turns each of `OrderSubmission`'s eight
+ * outcomes into a navigation, a redirect or a rendered state. The
+ * step renders; this file decides.
+ *
+ * The full-page redirect goes through `LOCATION_ASSIGN` rather than
+ * through `window` directly, so a unit test can observe the URL the
+ * page would have sent the shopper to without leaving the harness.
  */
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 
-import { CartFacade } from '../cart/cart.facade';
-import { CheckoutFacade } from './checkout.facade';
-import { OrderSubmission } from './order-submission';
-import { PaymentProgress, type PaymentProgressTick } from './payment-progress';
-import { QuoteController, toReviewState, type ReviewState } from './quote-state';
-import { ReviewStep } from './review-step';
+import { Component, DestroyRef, InjectionToken, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import { CartFacade } from '../cart/cart.facade';
+import { checkoutKeys } from './checkout-keys';
+import { CheckoutFacade } from './checkout.facade';
+import { OrderSubmission } from './order-submission';
+import { ReviewStep, type CheckoutViewState } from './review-step';
 
-import type { PaymentStatus } from '../../shared/types/payment-status';
+/**
+ * Seam for the full-page navigation to the payment application.
+ * `Router` cannot express it: the payment page is a different
+ * document and the SPA is destroyed by the hop.
+ */
+export const LOCATION_ASSIGN = new InjectionToken<(url: string) => void>('LOCATION_ASSIGN', {
+  providedIn: 'root',
+  factory: () => (url: string) => {
+    globalThis.location.assign(url);
+  },
+});
 
-/** Outcome of the last submit attempt that did not produce an order.
- *  Moved up from `ReviewStep` verbatim (FIX-25's shape) — `ReviewState`
- *  cannot carry the backend detail or the `pending`-versus-`declined`
- *  distinction this container's own template still needs. */
-type SubmitFailure =
-  | { readonly kind: 'declined'; readonly detail: string }
-  | { readonly kind: 'pending'; readonly detail: string }
-  | { readonly kind: 'error'; readonly detail: string };
+/** The one submit outcome this container renders itself. The `code`
+ *  is the server's ProblemCode: it is carried for diagnostics and
+ *  never rendered (R15), so the message beside it is fixed copy. */
+interface SubmitFailure {
+  readonly kind: 'error';
+  readonly code: string;
+}
 
 @Component({
   selector: 'app-review-page',
-  imports: [Button, LoadingState, PaymentProgress, ReviewStep, StatusMessage],
+  imports: [Button, LoadingState, ReviewStep, StatusMessage],
   templateUrl: './review-page.html',
   styleUrl: './review-page.scss',
 })
 export class ReviewPage {
-  /** Not private: the template reads `cartFacade.cart()` /
-   *  `checkoutFacade.session()` / `quoteController.quote()` directly. */
+  /** Not private: the template reads `cartFacade.cart()` and the
+   *  checkout signals directly. */
   readonly cartFacade = inject(CartFacade);
   readonly checkoutFacade = inject(CheckoutFacade);
-  readonly quoteController = inject(QuoteController);
-  private readonly router = inject(Router);
   private readonly orderSubmission = inject(OrderSubmission);
+  private readonly router = inject(Router);
+  private readonly locationAssign = inject(LOCATION_ASSIGN);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** True while a network mutation (quote / payment intent / order)
-   *  is in flight. */
-  readonly submitting = signal<boolean>(false);
+  /**
+   * Whether a payment was started earlier in this browser session.
+   * Read once, before anything can clear it, because it is what
+   * tells "the intent the payment page sent us back with is gone"
+   * (design §5.3's 404 row) apart from "no card payment has been
+   * started yet".
+   */
+  readonly paymentStarted: boolean = checkoutKeys.activeIntentId() !== null;
 
-  /** Null until a submit attempt fails; cleared by the next attempt
-   *  and by a quote refresh. */
+  /** True between the CTA press and the outcome. `inFlight` covers
+   *  the wire call; this one also covers the navigation after it. */
+  private readonly submitting = signal<boolean>(false);
+
+  /** Null until a submit or an intent create fails in a way only
+   *  this container renders. */
   readonly submitFailure = signal<SubmitFailure | null>(null);
 
-  /** Most recent progress tick from `OrderSubmission.watchProgress()`;
-   *  cleared at the start of every submission attempt. This container
-   *  is `OrderSubmission`'s orchestrator (`components.md:632`): it
-   *  polls the submission service and maps each tick onto
-   *  `PaymentProgress`'s declared inputs, so that component never
-   *  subscribes to the service itself. */
-  private readonly latestTick = signal<PaymentProgressTick | null>(null);
+  /** Fixed copy: the server's English `detail` never reaches the
+   *  screen, and the sentence that matters is that nothing was lost. */
+  readonly submitFailureMessage =
+    'A kosarad és az adataid megmaradtak. Próbáld újra, vagy módosítsd a fizetési módot.';
 
-  readonly paymentStatus = computed<PaymentStatus>(() => {
-    const tick = this.latestTick();
-    if (tick !== null) {
-      switch (tick.state) {
-        case 'pending':
-        case 'attempt':
-          return 'pending';
-        case 'succeeded':
-          return 'succeeded';
-        case 'declined':
-          return 'declined';
-        case 'timeout':
-          return 'unknown';
-      }
+  /** The step's seven states, in the priority design §6.3 sets. */
+  readonly viewState = computed<CheckoutViewState>(() => {
+    if (this.submitting() || this.orderSubmission.inFlight()) return 'submitting';
+    if (this.checkoutFacade.priceChange() !== null) return 'price-changed';
+    if (this.checkoutFacade.conflict() !== null) return 'conflict';
+    const outcome = this.orderSubmission.lastOutcome();
+    if (outcome !== null && outcome.kind === 'unknown' && outcome.code === 'OUT_OF_STOCK') {
+      return 'stock-error';
     }
-    const failure = this.submitFailure();
-    if (failure === null) return 'idle';
-    if (failure.kind === 'declined') return 'declined';
-    if (failure.kind === 'pending') return 'unknown';
-    return 'error';
+    if (this.submitFailure() !== null) return 'error';
+    if (this.checkoutFacade.session() === null || this.checkoutFacade.options() === null) {
+      return 'loading';
+    }
+    return 'ready';
   });
 
-  readonly pollCount = computed<number>(() => this.latestTick()?.attempt ?? 0);
-
-  readonly reviewState = computed<ReviewState>(() =>
-    toReviewState(
-      this.quoteController.state(),
-      this.submitting(),
-      this.submitFailure()?.kind === 'pending',
-    ),
-  );
-
-  /** Rendered when the last submit attempt did not produce an order.
-   *  Moved up from `ReviewStep` verbatim. */
-  readonly submitFailureMessage = computed<string>(() => {
-    const failure = this.submitFailure();
-    if (failure === null) return '';
-    const preserved = 'A kosarad és az adataid megmaradtak.';
-    switch (failure.kind) {
-      case 'declined':
-        return `A szimulált fizetés elutasítva. ${preserved} Próbáld újra, vagy módosítsd a fizetési módot.`;
-      case 'pending':
-        return 'A demórendelés feldolgozás alatt… Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak. Nem küldünk újabb rendelést ismételt kattintásra.';
-      case 'error':
-        return `${failure.detail} ${preserved} Próbáld újra, vagy módosítsd a fizetési módot.`;
-    }
+  /**
+   * True when the draft pays by card and the facade holds no intent:
+   * either the return leg's read came back 404 (design §5.3) or no
+   * payment has been started at all. `paymentStarted` tells the step
+   * which of the two it is, and the step words its sentence from it.
+   */
+  readonly paymentIntentMissing = computed<boolean>(() => {
+    if (this.checkoutFacade.paymentIntent() !== null) return false;
+    return this.checkoutFacade.session()?.payment?.method === 'card';
   });
 
   constructor() {
-    // Drop the active quote whenever the user edits an earlier
-    // step — the next refresh() must produce a fresh quoteId.
-    this.quoteController.syncFromFacade();
-
-    // Trigger a fresh quote whenever the page mounts and there is
-    // no quote yet. The guard avoids a duplicate request after the
-    // sync above already populated the state.
-    effect(() => {
-      const state = this.quoteController.state();
-      if (state.kind === 'idle') {
-        void this.quoteController.refresh();
-      }
+    let cancelled = false;
+    this.destroyRef.onDestroy(() => {
+      cancelled = true;
     });
-
-    const stopWatching = this.orderSubmission.watchProgress((tick) => {
-      this.latestTick.set(tick);
-    });
-    this.destroyRef.onDestroy(stopWatching);
+    void this.load(() => cancelled);
   }
 
-  onEditRequested(): void {
-    this.quoteController.invalidate();
+  /**
+   * Hydrates whatever the shopper's route into this page did not.
+   * Each call is skipped when its signal is already populated, so a
+   * hand-off from `payment-return-page.ts`, which has just loaded the
+   * cart and the session, costs one `GET /checkout/options` at most.
+   */
+  private async load(cancelled: () => boolean): Promise<void> {
+    if (this.cartFacade.cart() === null) {
+      await this.cartFacade.ensureCart();
+      if (cancelled()) return;
+    }
+    await this.checkoutFacade.ensureOptions();
+    if (cancelled()) return;
+    if (this.checkoutFacade.session() === null) {
+      await this.checkoutFacade.ensureSession();
+    }
   }
 
-  onRefreshQuote(): void {
-    this.submitFailure.set(null);
-    void this.quoteController.refresh();
+  onEditRequested(section: 'contact' | 'delivery'): void {
+    const route = section === 'contact' ? '/penztar/adatok' : '/penztar/szallitas';
+    void this.router.navigate([route]);
   }
 
+  /** The eight `SubmitOutcome` kinds, each to its recovery. */
   async onSubmitRequested(): Promise<void> {
-    await this.runSubmission();
-  }
-
-  /** Bound to `PaymentProgress`'s `(retryRequested)` from the
-   *  declined / unknown states, and to the generic-error retry
-   *  button. Runs the same submission again without `canSubmit()`'s
-   *  gate — that gate refuses a retry while the outcome is `pending`,
-   *  which is exactly the state this control exists to recover from.
-   *  `CheckoutFacade`'s held idempotency key (per-fingerprint) is what
-   *  makes this a true replay rather than a new request. */
-  async onPaymentRetry(): Promise<void> {
-    await this.runSubmission();
-  }
-
-  /** Bound to `PaymentProgress`'s `(changeMethodRequested)` and to the
-   *  generic-error "Fizetési mód módosítása" button. */
-  onPaymentChangeMethod(): void {
-    void this.router.navigate(['/penztar/szallitas']);
-  }
-
-  /** Orchestrates one submission attempt through `OrderSubmission`
-   *  and branches on the five `SubmitOutcome` kinds. */
-  private async runSubmission(): Promise<void> {
     this.submitFailure.set(null);
-    this.latestTick.set(null);
     this.submitting.set(true);
     try {
       const outcome = await this.orderSubmission.submitOrder();
       switch (outcome.kind) {
         case 'committed':
-        case 'recovered':
           await this.router.navigate(['/penztar/siker', outcome.orderId]);
           return;
-        case 'declined':
-          this.submitFailure.set({ kind: 'declined', detail: outcome.reason });
+        case 'payment-required':
+          // A redirect URL means the intent exists and wants the
+          // shopper back on the payment page. No URL means the draft
+          // reached submit with no intent at all, which `canSubmit()`
+          // already refuses for a card draft: the step's
+          // "Fizetés indítása" control is the way forward, so this
+          // arm only records that the submit did not land.
+          if (outcome.redirectUrl !== null) {
+            this.locationAssign(outcome.redirectUrl);
+            return;
+          }
+          this.submitFailure.set({ kind: 'error', code: 'PAYMENT_REQUIRED' });
           return;
-        case 'pending-timeout':
-          this.submitFailure.set({ kind: 'pending', detail: '' });
+        case 'incomplete':
+          // The route carries `?navigationReason=incomplete`
+          // (`order-submission.ts:93-98`), so it is a URL, not a
+          // segment array.
+          await this.router.navigateByUrl(outcome.route);
           return;
         case 'unknown':
-          this.submitFailure.set({ kind: 'error', detail: outcome.reason });
+          this.submitFailure.set({ kind: 'error', code: outcome.code });
+          return;
+        case 'declined':
+        case 'payment-pending':
+          // The facade already holds the intent these two read from;
+          // the step renders its branch.
+          return;
+        case 'price-changed':
+        case 'conflict':
+          // The facade armed `priceChange` / `conflict`; `viewState`
+          // picks them up and the step renders the recovery.
           return;
       }
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  /** §3.7: the only way to clear `priceChange`, and therefore the
+   *  only way to reach the CTA after a 409. */
+  onPriceChangeConfirmed(): void {
+    this.checkoutFacade.confirmPriceChange();
+  }
+
+  /** 412: replay the write that conflicted, with the current version. */
+  async onRetryRequested(): Promise<void> {
+    await this.checkoutFacade.retry();
+  }
+
+  /** A declined payment is retried as a new payment, never as a
+   *  replay of the declined one. */
+  async onPaymentRetry(): Promise<void> {
+    await this.startPayment();
+  }
+
+  onPaymentChangeMethod(): void {
+    void this.router.navigate(['/penztar/szallitas']);
+  }
+
+  /** Exactly one re-read of the pending intent. Never a loop: the
+   *  shopper presses the control again if they want another. */
+  async onPaymentCheck(): Promise<void> {
+    const id = this.checkoutFacade.paymentIntent()?.id ?? checkoutKeys.activeIntentId();
+    if (id === null || id.length === 0) return;
+    await this.checkoutFacade.readPaymentIntent(id);
+  }
+
+  /** `requires_action`: back to the payment page the intent names.
+   *  Never automatic — an auto-redirect would trap a shopper who
+   *  pressed Back (design §5.3). */
+  onBackToPayment(): void {
+    const intent = this.checkoutFacade.paymentIntent();
+    if (intent === null) return;
+    this.locationAssign(intent.redirectUrl);
+  }
+
+  async onNewPayment(): Promise<void> {
+    await this.startPayment();
+  }
+
+  /**
+   * Creates a payment intent and sends the shopper to it. The stored
+   * intent key is rotated first: a successful create leaves its key
+   * under the same cart-version fingerprint
+   * (`checkout-keys.ts:108-110`), so without the rotation the server
+   * would idempotently replay the intent that was just declined
+   * instead of minting a new one. Design §5.3 requires the opposite:
+   * "Újrapróbálom (new intent, new key)".
+   */
+  private async startPayment(): Promise<void> {
+    this.submitFailure.set(null);
+    checkoutKeys.rotateIntentKey();
+    const result = await this.checkoutFacade.createPaymentIntent();
+    if (result.ok) {
+      this.locationAssign(result.value.redirectUrl);
+      return;
+    }
+    this.submitFailure.set({ kind: 'error', code: result.error.code });
   }
 }
