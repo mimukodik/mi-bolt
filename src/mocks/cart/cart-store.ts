@@ -29,6 +29,7 @@ import type {
 } from '../../app/api/generated/models';
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { VariantLookup } from '../catalog/catalog-store';
+import type { PersistedCart } from '../persistence';
 
 export const CART_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -215,6 +216,42 @@ export class CartStore {
    */
   resetForOrder(sessionId: string): void {
     this.carts.delete(sessionId);
+  }
+
+  /**
+   * Seeds the session's cart from a hydrated snapshot. Called once at
+   * handler-construction time when `options.snapshot?.cart` is set, so
+   * a reload restores the lines and the version the snapshot was
+   * saved with. Expiry is re-checked on the next read against the
+   * live clock (`isExpired` below), so a stale snapshot still 410s.
+   */
+  seedFromSnapshot(sessionId: string, persisted: PersistedCart): void {
+    this.carts.set(sessionId, {
+      id: persisted.id,
+      version: persisted.version,
+      createdAt: persisted.createdAt,
+      expiresAt: persisted.expiresAt,
+      lines: persisted.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+    });
+  }
+
+  /**
+   * Returns the cart in the shape `MockSnapshot` carries, or
+   * `undefined` when the session has no cart. Pricing and
+   * availability are deliberately omitted: `view()` re-derives them
+   * from the live catalogue on every read, so persisting them would
+   * let stale data defeat that reconcile pass.
+   */
+  toPersistedCart(sessionId: string): PersistedCart | undefined {
+    const cart = this.carts.get(sessionId);
+    if (!cart) return undefined;
+    return {
+      id: cart.id,
+      version: cart.version,
+      createdAt: cart.createdAt,
+      expiresAt: cart.expiresAt,
+      items: cart.lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+    };
   }
 
   // ---------------------------------------------------------------------------

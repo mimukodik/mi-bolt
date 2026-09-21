@@ -286,53 +286,6 @@ export class Repository {
   }
 
   /**
-   * Restores a previously-persisted cart into the in-memory
-   * repository. Used by `bootstrap-demo` so a reload rehydrates the
-   * cart snapshot before the first intercepted request arrives.
-   * Lines whose `variantId` is unknown are silently dropped so a
-   * fixture removal between sessions never crashes the rehydrate.
-   */
-  loadPersistedCart(persisted: import('./persistence').PersistedCart, sessionId: string): void {
-    const items: CartLine[] = [];
-    for (const line of persisted.items) {
-      const lookup = this.variantsById.get(line.variantId);
-      if (!lookup) continue;
-      const variant = lookup.variant;
-      const firstImage = variant.images.at(0);
-      if (!firstImage) continue;
-      items.push({
-        id: line.id,
-        productId: lookup.product.id,
-        productSlug: lookup.product.slug,
-        productName: lookup.product.name,
-        variantId: variant.id,
-        colorName: variant.colorName,
-        storageGb: variant.storageGb,
-        image: firstImage,
-        quantity: line.quantity,
-        unitPrice: variant.price,
-        lineTotal: {
-          amount: variant.price.amount * line.quantity,
-          currency: variant.price.currency,
-        },
-        availability: variant.availability,
-        maxQuantity: variant.maxQuantity,
-      });
-    }
-    const cart: Cart = {
-      id: persisted.id,
-      version: persisted.version,
-      status: 'active',
-      sessionId,
-      items,
-      createdAt: persisted.lastUpdatedAt,
-      expiresAt: new Date(Date.parse(persisted.lastUpdatedAt) + 24 * 60 * 60 * 1000).toISOString(),
-    };
-    this.carts.set(cart.id, cart);
-    this.cartsBySession.set(sessionId, cart.id);
-  }
-
-  /**
    * Returns the session's cart, or undefined when it has none. Unlike
    * `ensureCart` this never creates one, so a caller that is only
    * reading (the snapshot builder) cannot mint a cart as a side
@@ -342,51 +295,5 @@ export class Repository {
     const cartId = this.cartsBySession.get(sessionId);
     if (cartId === undefined) return undefined;
     return this.carts.get(cartId);
-  }
-
-  /** Lists every committed receipt. The snapshot builder reads it. */
-  listOrders(): readonly OrderReceipt[] {
-    return Array.from(this.orders.values());
-  }
-
-  /** Restores persisted order receipts from snapshot across reload. */
-  loadPersistedOrders(
-    receipts: readonly import('./persistence').PersistedReceipt[],
-    sessionId: string,
-  ): void {
-    for (const r of receipts) {
-      const items = r.items.map((it) => {
-        const lookup = this.variantsById.get(it.variantId);
-        return {
-          productName: lookup?.product.name ?? '',
-          variantId: it.variantId,
-          colorName: lookup?.variant.colorName ?? '',
-          storageGb: lookup?.variant.storageGb ?? 128,
-          quantity: it.quantity,
-          unitPrice: it.unitPrice,
-          lineTotal: it.lineTotal,
-        };
-      });
-      const subtotalAmount = items.reduce((sum, it) => sum + it.lineTotal.amount, 0);
-      const shippingAmount = Math.max(0, r.total.amount - subtotalAmount);
-      const currency = r.total.currency as 'HUF';
-      const order: OrderReceipt = {
-        id: r.id,
-        orderNumber: r.orderNumber,
-        sessionId,
-        createdAt: r.createdAt,
-        total: r.total,
-        status: 'demo_confirmed',
-        isSimulation: true,
-        items,
-        subtotal: { amount: subtotalAmount, currency },
-        shipping: { amount: shippingAmount, currency },
-        paymentMethod: r.paymentMethod,
-        deliveryOptionId: shippingAmount > 0 ? 'home_delivery' : 'demo_pickup',
-        notice:
-          'A demórendelés elkészült. Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés.',
-      };
-      this.orders.set(order.id, order);
-    }
   }
 }

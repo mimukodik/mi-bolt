@@ -42,6 +42,7 @@ import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';
 import { buildTraceId, problemType } from '../cart/cart-store';
 import { isRecord } from '../is-record';
+import type { PersistedCheckoutDraft } from '../persistence';
 import {
   normalizeAddressCity,
   normalizeAddressCountryCode,
@@ -349,6 +350,30 @@ export class CheckoutStore {
   /** Clear the draft for `OrderStore` after a successful order. */
   clearDraft(sessionId: string): void {
     this.drafts.delete(sessionId);
+  }
+
+  /**
+   * Seeds the session's draft from a hydrated snapshot. Called once
+   * at handler-construction time when `options.snapshot?.checkoutDraft`
+   * is set, so a reload restores every section the shopper had filled
+   * in. `CheckoutStore.read()` already tolerates a draft pointing at
+   * an option since made unavailable, so no extra guard is needed.
+   */
+  seedFromSnapshot(sessionId: string, persisted: PersistedCheckoutDraft): void {
+    this.drafts.set(sessionId, { ...persisted });
+  }
+
+  /**
+   * Returns the draft in the shape `MockSnapshot` carries, or
+   * `undefined` when the session has no draft or the draft is empty.
+   * An empty draft is omitted from the snapshot: `hydrate()` parses
+   * an absent `checkoutDraft` the same way as one whose sections are
+   * all undefined, so the snapshot stays minimal.
+   */
+  toPersistedDraft(sessionId: string): PersistedCheckoutDraft | undefined {
+    const draft = this.drafts.get(sessionId);
+    if (!draft || Object.keys(draft).length === 0) return undefined;
+    return { ...draft };
   }
 
   // ---------------------------------------------------------------------------

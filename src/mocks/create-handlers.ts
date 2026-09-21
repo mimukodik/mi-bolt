@@ -19,6 +19,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 
 import { Repository } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
+import type { MockSnapshot } from './persistence';
 
 /** Inputs passed by both `setupWorker` and `setupServer` paths. */
 export interface CreateHandlersOptions {
@@ -34,6 +35,13 @@ export interface CreateHandlersOptions {
    * the module header promises.
    */
   persist?: (sessionId: string) => void;
+  /**
+   * When set, each entry factory reads the matching fields at
+   * construction time and seeds its store with the hydrated
+   * snapshot. The Node and unit paths pass `undefined`; the browser
+   * bootstrap passes the value `Persistence.hydrate(...)` returned.
+   */
+  snapshot?: MockSnapshot | null;
 }
 
 /**

@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHandlers } from '../mocks/create-handlers';
 import { Repository } from '../mocks/repository';
 import {
+  SNAPSHOT_SCHEMA_VERSION,
   createBrowserPersistence,
   snapshotKey,
   type MockSnapshot,
@@ -25,7 +26,12 @@ import {
   resolveScenario,
 } from '../mocks/scenarios';
 import { buildSnapshot } from './snapshot';
+import { CartStore, type VariantLookupFn } from './cart/cart-store';
+import { CheckoutStore } from './checkout/checkout-store';
+import { OrderStore } from './orders/order-store';
+import { IdempotencyStore } from './idempotency';
 import { DEMO_PRODUCT } from './cart/cart.handlers';
+import type { VariantLookup } from './catalog/catalog-store';
 import { useMswServer } from '../../tests/msw-server';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
@@ -50,12 +56,13 @@ function writeRaw(value: string): void {
 
 function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
   return {
-    schemaVersion: 1,
+    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
     providerId: 'mi-bolt',
     simulatedSessionId: 'sess-test-12345',
     savedAt: '2026-09-14T11:00:00.000Z',
     expiresAt: '2026-09-21T11:00:00.000Z',
     cart: undefined,
+    paymentIntents: [],
     receipts: [],
     ...overrides,
   };
@@ -122,27 +129,80 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
       cart: {
         id: 'cart-test-001',
         version: 3,
+        createdAt: '2026-09-14T10:00:00.000Z',
+        expiresAt: '2026-09-15T10:00:00.000Z',
         items: [
-          { id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 2 },
-          { id: 'line-2', variantId: 'demo-one-5g-silver-512', quantity: 1 },
+          { variantId: 'demo-one-5g-graphite-256', quantity: 2 },
+          { variantId: 'demo-one-5g-silver-512', quantity: 1 },
         ],
-        lastUpdatedAt: '2026-09-14T11:00:00.000Z',
       },
+      checkoutDraft: {
+        contact: { fullName: 'Test User', email: 'test@example.com', phone: '+36123456789' },
+        billing: {
+          name: 'Test User',
+          address: {
+            countryCode: 'HU',
+            postalCode: '1111',
+            city: 'Budapest',
+            line1: 'Fo utca 1',
+          },
+        },
+        delivery: { optionId: 'pickup_point' },
+        payment: { method: 'card' },
+      },
+      paymentIntents: [
+        {
+          id: 'pi-1',
+          createdAt: '2026-09-14T11:00:00.000Z',
+          expiresAt: '2026-09-14T11:30:00.000Z',
+          redirectUrl: '/demo-fizetes/pi-1',
+          returnUrl: '/penztar?paymentIntentId=pi-1',
+          status: 'requires_action',
+          amount: { amount: 683_980, currency: 'HUF' },
+        },
+      ],
       receipts: [
         {
           id: 'order-test-001',
           orderNumber: 'DEMO-000001',
-          total: { amount: 683_980, currency: 'HUF' },
-          paymentMethod: 'demo_card',
+          status: 'confirmed',
           createdAt: '2026-09-14T11:00:00.000Z',
+          contactEmail: 'test@example.com',
+          notice: 'A demo notification.',
+          paymentMethod: 'card',
+          billing: {
+            name: 'Test User',
+            address: {
+              countryCode: 'HU',
+              postalCode: '1111',
+              city: 'Budapest',
+              line1: 'Fo utca 1',
+            },
+          },
+          delivery: {
+            optionId: 'home_delivery',
+            address: {
+              countryCode: 'HU',
+              postalCode: '1111',
+              city: 'Budapest',
+              line1: 'Fo utca 1',
+            },
+          },
           items: [
             {
               variantId: 'demo-one-5g-graphite-256',
+              productName: 'Demo One 5G',
+              colorName: 'Graphite',
+              storageGb: 256,
               quantity: 2,
               unitPrice: { amount: 339_990, currency: 'HUF' },
               lineTotal: { amount: 679_980, currency: 'HUF' },
             },
           ],
+          subtotal: { amount: 679_980, currency: 'HUF' },
+          shippingFee: { amount: 1490, currency: 'HUF' },
+          paymentFee: { amount: 0, currency: 'HUF' },
+          total: { amount: 683_970, currency: 'HUF' },
         },
       ],
     });
@@ -331,18 +391,413 @@ describe('T05-AC06 scenario isolation', () => {
   });
 });
 
-describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection', () => {
-  it('buildSnapshot contains only allowlisted keys', () => {
+describe('snapshot v2 — allowlist rejects unknown keys at every level', () => {
+  beforeEach(() => {
+    clearStorage();
+  });
+
+  // Each case adds an unknown key at the level named in the test name;
+  // every nested validator has its own allowlist and rejects the same way.
+  const cases: readonly { name: string; patch: (base: MockSnapshot) => MockSnapshot }[] = [
+    {
+      name: 'top-level',
+      patch: (b) => ({ ...b, extra: 'junk' }),
+    },
+    {
+      name: 'cart',
+      patch: (b) => ({
+        ...b,
+        cart: {
+          id: 'c',
+          version: 1,
+          createdAt: '2026-09-14T10:00:00.000Z',
+          expiresAt: '2026-09-15T10:00:00.000Z',
+          items: [],
+          extra: 'junk' as unknown as string,
+        },
+      }),
+    },
+    {
+      name: 'cart line',
+      patch: (b) => ({
+        ...b,
+        cart: {
+          id: 'c',
+          version: 1,
+          createdAt: '2026-09-14T10:00:00.000Z',
+          expiresAt: '2026-09-15T10:00:00.000Z',
+          items: [{ variantId: 'x', quantity: 1, extra: 'junk' as unknown as number }],
+        },
+      }),
+    },
+    {
+      name: 'checkoutDraft',
+      patch: (b) => ({ ...b, checkoutDraft: { ...(b.checkoutDraft ?? {}), extra: 'junk' } }),
+    },
+    {
+      name: 'contact',
+      patch: (b) => ({
+        ...b,
+        checkoutDraft: {
+          ...(b.checkoutDraft ?? {}),
+          contact: { fullName: 'a', email: 'a@b.c', phone: '+361', extra: 'junk' },
+        },
+      }),
+    },
+    {
+      name: 'billing',
+      patch: (b) => ({
+        ...b,
+        checkoutDraft: {
+          ...(b.checkoutDraft ?? {}),
+          billing: {
+            name: 'a',
+            address: { countryCode: 'HU', postalCode: '1', city: 'a', line1: 'a' },
+            extra: 'junk',
+          },
+        },
+      }),
+    },
+    {
+      name: 'address',
+      patch: (b) => ({
+        ...b,
+        checkoutDraft: {
+          ...(b.checkoutDraft ?? {}),
+          billing: {
+            name: 'a',
+            address: { countryCode: 'HU', postalCode: '1', city: 'a', line1: 'a', extra: 'junk' },
+          },
+        },
+      }),
+    },
+    {
+      name: 'delivery (home)',
+      patch: (b) => ({
+        ...b,
+        checkoutDraft: {
+          ...(b.checkoutDraft ?? {}),
+          delivery: {
+            optionId: 'home_delivery',
+            address: { countryCode: 'HU', postalCode: '1', city: 'a', line1: 'a' },
+            extra: 'junk',
+          },
+        },
+      }),
+    },
+    {
+      name: 'delivery (pickup)',
+      patch: (b) => ({
+        ...b,
+        checkoutDraft: {
+          ...(b.checkoutDraft ?? {}),
+          delivery: { optionId: 'pickup_point', extra: 'junk' },
+        },
+      }),
+    },
+    {
+      name: 'payment',
+      patch: (b) => ({
+        ...b,
+        checkoutDraft: {
+          ...(b.checkoutDraft ?? {}),
+          payment: { method: 'card', extra: 'junk' },
+        },
+      }),
+    },
+    {
+      name: 'paymentIntent',
+      patch: (b) => ({
+        ...b,
+        paymentIntents: [
+          {
+            id: 'pi-x',
+            createdAt: '2026-09-14T11:00:00.000Z',
+            expiresAt: '2026-09-14T11:30:00.000Z',
+            redirectUrl: '/x',
+            returnUrl: '/y',
+            status: 'requires_action',
+            amount: { amount: 0, currency: 'HUF' },
+            extra: 'junk',
+          },
+        ],
+      }),
+    },
+    {
+      name: 'orderReceipt',
+      patch: (b) => ({
+        ...b,
+        receipts: [
+          {
+            id: 'r-1',
+            orderNumber: 'DEMO-000001',
+            status: 'confirmed' as const,
+            createdAt: '2026-09-14T11:00:00.000Z',
+            contactEmail: 'a@b.c',
+            notice: 'n',
+            paymentMethod: 'card' as const,
+            billing: {
+              name: 'a',
+              address: { countryCode: 'HU' as const, postalCode: '1', city: 'a', line1: 'a' },
+            },
+            delivery: { optionId: 'pickup_point' as const },
+            items: [],
+            subtotal: { amount: 0, currency: 'HUF' as const },
+            shippingFee: { amount: 0, currency: 'HUF' as const },
+            paymentFee: { amount: 0, currency: 'HUF' as const },
+            total: { amount: 0, currency: 'HUF' as const },
+            extra: 'junk',
+          },
+        ],
+      }),
+    },
+    {
+      name: 'orderLine',
+      patch: (b) => ({
+        ...b,
+        receipts: [
+          {
+            id: 'r-1',
+            orderNumber: 'DEMO-000001',
+            status: 'confirmed' as const,
+            createdAt: '2026-09-14T11:00:00.000Z',
+            contactEmail: 'a@b.c',
+            notice: 'n',
+            paymentMethod: 'card' as const,
+            billing: {
+              name: 'a',
+              address: { countryCode: 'HU' as const, postalCode: '1', city: 'a', line1: 'a' },
+            },
+            delivery: { optionId: 'pickup_point' as const },
+            items: [
+              {
+                variantId: 'v',
+                productName: 'p',
+                colorName: 'c',
+                storageGb: 256 as const,
+                quantity: 1,
+                unitPrice: { amount: 0, currency: 'HUF' as const },
+                lineTotal: { amount: 0, currency: 'HUF' as const },
+                extra: 'junk',
+              },
+            ],
+            subtotal: { amount: 0, currency: 'HUF' as const },
+            shippingFee: { amount: 0, currency: 'HUF' as const },
+            paymentFee: { amount: 0, currency: 'HUF' as const },
+            total: { amount: 0, currency: 'HUF' as const },
+          },
+        ],
+      }),
+    },
+  ];
+
+  for (const { name, patch } of cases) {
+    it(`rejects an unknown key at the ${name} level`, () => {
+      writeRaw(JSON.stringify(patch(makeSnapshot())));
+      const persistence = createBrowserPersistence({
+        nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+      });
+      expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+      expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    });
+  }
+});
+
+describe('CartStore seed / persist round-trip (MIM-212 Unit 1)', () => {
+  // Minimal VariantLookupFn that returns a valid hit for the one
+  // variantId used in the test data, so the cart store's reconcile
+  // pass does not drop the seeded line.
+  const lookup: VariantLookupFn = (variantId): VariantLookup | undefined => {
+    if (variantId === 'demo-one-5g-graphite-256') {
+      return {
+        product: DEMO_PRODUCT as unknown as VariantLookup['product'],
+        variant: DEMO_PRODUCT.defaultVariant as unknown as VariantLookup['variant'],
+      };
+    }
+    return undefined;
+  };
+
+  it('seedFromSnapshot seeds lines, get() returns them', () => {
+    const options = {
+      repository: new Repository(
+        DEFAULT_SCENARIO,
+        createDeterministicIds(1),
+        createFixedClock('2026-09-14T10:00:00.000Z'),
+      ),
+      clock: createFixedClock('2026-09-14T10:00:00.000Z'),
+      ids: createDeterministicIds(1),
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const store = new CartStore(options, lookup);
+    const persisted: PersistedCart = {
+      id: 'cart-seeded-1',
+      version: 5,
+      createdAt: '2026-09-14T10:00:00.000Z',
+      expiresAt: '2026-09-15T10:00:00.000Z',
+      items: [{ variantId: 'demo-one-5g-graphite-256', quantity: 3 }],
+    };
+    store.seedFromSnapshot('sess-seed', persisted);
+    const result = store.get('sess-seed');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cart.id).toBe('cart-seeded-1');
+    expect(result.cart.version).toBe(5);
+    expect(result.cart.items).toHaveLength(1);
+    expect(result.cart.items[0].variantId).toBe('demo-one-5g-graphite-256');
+    expect(result.cart.items[0].quantity).toBe(3);
+  });
+
+  it('toPersistedCart round-trips through seedFromSnapshot', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, createDeterministicIds(1), clock),
+      clock,
+      ids: createDeterministicIds(1),
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const store = new CartStore(options, lookup);
+    // add a line through the public API
+    const firstAdd = store.add('sess-rt', '"1"', 'demo-one-5g-graphite-256', 2);
+    expect(firstAdd.ok).toBe(true);
+
+    const persisted = store.toPersistedCart('sess-rt');
+    expect(persisted).toBeDefined();
+    if (!persisted) return;
+    expect(persisted.items).toEqual([{ variantId: 'demo-one-5g-graphite-256', quantity: 2 }]);
+
+    // Second store, seeded from the first store's persisted snapshot.
+    const store2 = new CartStore(options, lookup);
+    store2.seedFromSnapshot('sess-rt-2', persisted);
+    const fromSeed = store2.toPersistedCart('sess-rt-2');
+    expect(fromSeed).toEqual(persisted);
+  });
+
+  it('a seeded cart with a past expiresAt 410s on the next get()', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, createDeterministicIds(1), clock),
+      clock,
+      ids: createDeterministicIds(1),
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const store = new CartStore(options, lookup);
+    const stale: PersistedCart = {
+      id: 'cart-stale-1',
+      version: 1,
+      createdAt: '2026-09-14T09:00:00.000Z',
+      // expiresAt is in the past relative to the seeded clock.
+      expiresAt: '2026-09-14T09:30:00.000Z',
+      items: [{ variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
+    };
+    store.seedFromSnapshot('sess-stale', stale);
+
+    const result = store.get('sess-stale');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.problem.status).toBe(410);
+    expect(result.problem.code).toBe('CART_EXPIRED');
+  });
+});
+
+describe('OrderStore.seedFromSnapshot leaves next orderNumber above restored ones', () => {
+  it('seeds DEMO-000042 and the next nextOrderNumber-driven order is above it', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.ensureCart('sess-12345');
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const lookup: VariantLookupFn = (variantId): VariantLookup | undefined =>
+      variantId === 'demo-one-5g-graphite-256'
+        ? {
+            product: DEMO_PRODUCT as unknown as VariantLookup['product'],
+            variant: DEMO_PRODUCT.defaultVariant as unknown as VariantLookup['variant'],
+          }
+        : undefined;
+    const cart = new CartStore(options, lookup);
+    const checkout = new CheckoutStore(options, () => cart);
+    const idempotency = new IdempotencyStore(clock);
+    const order = new OrderStore(options, checkout, idempotency, () => cart);
 
-    const built = buildSnapshot(repository, 'sess-12345', Date.now());
+    // Seed a cart line so `createOrder`'s CHECKOUT_INCOMPLETE guard
+    // has items to count; then patch a complete draft onto the
+    // checkout store for the same session so the cash-on-delivery
+    // order can be committed end-to-end.
+    cart.add('sess-orders', '"1"', 'demo-one-5g-graphite-256', 1);
+    checkout.seedFromSnapshot('sess-orders', {
+      contact: { fullName: 'a', email: 'a@b.c', phone: '+361' },
+      billing: {
+        name: 'a',
+        address: { countryCode: 'HU', postalCode: '1', city: 'a', line1: 'a' },
+      },
+      delivery: { optionId: 'pickup_point' },
+      payment: { method: 'cash_on_delivery' },
+    });
+
+    order.seedFromSnapshot('sess-orders', {
+      intents: [],
+      receipts: [
+        {
+          id: 'r-1',
+          orderNumber: 'DEMO-000042',
+          status: 'confirmed',
+          createdAt: '2026-09-14T10:00:00.000Z',
+          contactEmail: 'a@b.c',
+          notice: 'n',
+          paymentMethod: 'card',
+          billing: {
+            name: 'a',
+            address: { countryCode: 'HU', postalCode: '1', city: 'a', line1: 'a' },
+          },
+          delivery: { optionId: 'pickup_point' },
+          items: [],
+          subtotal: { amount: 0, currency: 'HUF' },
+          shippingFee: { amount: 0, currency: 'HUF' },
+          paymentFee: { amount: 0, currency: 'HUF' },
+          total: { amount: 0, currency: 'HUF' },
+        },
+      ],
+    });
+
+    const committed = order.createOrder('sess-orders', 'idem-key-neworder-1', `"2"`, {
+      acceptedTerms: true,
+      termsVersion: '2026-09',
+      paymentMethod: 'cash_on_delivery',
+    });
+    expect(committed.ok).toBe(true);
+    if (!committed.ok) return;
+    const num = Number(committed.receipt.orderNumber.replace(/^DEMO-/, ''));
+    expect(Number.isFinite(num)).toBe(true);
+    expect(num).toBeGreaterThan(42);
+  });
+});
+
+describe('snapshot v2 — buildSnapshot reads from stores and yields exactly the expected top-level keys', () => {
+  it('contains exactly the allowlisted top-level keys when no cart or draft is present', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const cart = new CartStore(options, () => undefined);
+    const checkout = new CheckoutStore(options, () => cart);
+    const idempotency = new IdempotencyStore(clock);
+    const order = new OrderStore(options, checkout, idempotency, () => cart);
+
+    const built = buildSnapshot({ cart, checkout, order }, 'sess-keys', Date.now());
     expect(Object.keys(built).sort()).toEqual([
-      'cart',
       'expiresAt',
+      'paymentIntents',
       'providerId',
       'receipts',
       'savedAt',
@@ -350,190 +805,9 @@ describe('FIX-10-AC07 and FIX-10-AC08 snapshot persistence and cart reconnection
       'simulatedSessionId',
     ]);
   });
-
-  it('reconnects existing persisted cart on ensureCart and findCartBySession (FIX-10-AC08)', () => {
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-
-    const persistedCart: PersistedCart = {
-      id: 'cart-persisted-x',
-      version: 1,
-      items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
-      lastUpdatedAt: '2026-09-14T10:00:00.000Z',
-    };
-    repository.loadPersistedCart(persistedCart, 'sess-x');
-
-    expect(repository.ensureCart('sess-x').id).toBe(persistedCart.id);
-    expect(repository.findCartBySession('sess-x')?.id).toBe(persistedCart.id);
-  });
-
-  it('buildSnapshot round-trips a well-formed receipt item unchanged', () => {
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
-      id: 'order-wellformed-1',
-      orderNumber: 'DEMO-000001',
-      sessionId: 'sess-wellformed',
-      createdAt: '2026-09-14T10:00:00.000Z',
-      total: { amount: 10_000, currency: 'HUF' },
-      paymentMethod: 'demo_card',
-      items: [
-        {
-          variantId: 'demo-one-5g-graphite-256',
-          quantity: 2,
-          unitPrice: { amount: 5_000, currency: 'HUF' },
-          lineTotal: { amount: 10_000, currency: 'HUF' },
-        },
-      ],
-    });
-
-    const built = buildSnapshot(repository, 'sess-wellformed', Date.now());
-
-    expect(built.receipts).toHaveLength(1);
-    expect(built.receipts[0].items).toEqual([
-      {
-        variantId: 'demo-one-5g-graphite-256',
-        quantity: 2,
-        unitPrice: { amount: 5_000, currency: 'HUF' },
-        lineTotal: { amount: 10_000, currency: 'HUF' },
-      },
-    ]);
-  });
-
-  it('buildSnapshot degrades a malformed receipt item instead of dropping it', () => {
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
-      id: 'order-malformed-1',
-      orderNumber: 'DEMO-000002',
-      sessionId: 'sess-malformed',
-      createdAt: '2026-09-14T10:00:00.000Z',
-      total: { amount: 0, currency: 'HUF' },
-      items: [{ variantId: 42, quantity: 'two', unitPrice: null, lineTotal: 'not-money' }],
-    });
-
-    const built = buildSnapshot(repository, 'sess-malformed', Date.now());
-
-    expect(built.receipts).toHaveLength(1);
-    expect(built.receipts[0].items).toEqual([
-      {
-        variantId: '',
-        quantity: 1,
-        unitPrice: { amount: 0, currency: 'HUF' },
-        lineTotal: { amount: 0, currency: 'HUF' },
-      },
-    ]);
-  });
-
-  it('buildSnapshot maps paymentMethod to demo_cod only when the receipt says so', () => {
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
-      id: 'order-cod-1',
-      orderNumber: 'DEMO-000003',
-      sessionId: 'sess-payment',
-      createdAt: '2026-09-14T10:00:00.000Z',
-      total: { amount: 0, currency: 'HUF' },
-      paymentMethod: 'demo_cod',
-    });
-    repository.saveOrder({
-      id: 'order-other-1',
-      orderNumber: 'DEMO-000004',
-      sessionId: 'sess-payment',
-      createdAt: '2026-09-14T10:00:00.000Z',
-      total: { amount: 0, currency: 'HUF' },
-      paymentMethod: 'something-else',
-    });
-    repository.saveOrder({
-      id: 'order-absent-1',
-      orderNumber: 'DEMO-000005',
-      sessionId: 'sess-payment',
-      createdAt: '2026-09-14T10:00:00.000Z',
-      total: { amount: 0, currency: 'HUF' },
-    });
-
-    const built = buildSnapshot(repository, 'sess-payment', Date.now());
-    const byId = (id: string) => built.receipts.find((r) => r.id === id);
-
-    expect(byId('order-cod-1')?.paymentMethod).toBe('demo_cod');
-    expect(byId('order-other-1')?.paymentMethod).toBe('demo_card');
-    expect(byId('order-absent-1')?.paymentMethod).toBe('demo_card');
-  });
-
-  it('buildSnapshot produces an empty items array when the order has no items', () => {
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-    repository.saveOrder({
-      id: 'order-noitems-1',
-      orderNumber: 'DEMO-000006',
-      sessionId: 'sess-noitems',
-      createdAt: '2026-09-14T10:00:00.000Z',
-      total: { amount: 0, currency: 'HUF' },
-    });
-
-    const built = buildSnapshot(repository, 'sess-noitems', Date.now());
-
-    expect(built.receipts).toHaveLength(1);
-    expect(built.receipts[0].items).toEqual([]);
-  });
 });
 
 describe('ensureCart does not resurrect an expired restored cart', () => {
-  it('still returns an unexpired restored cart (no regression on FIX-10-AC08)', () => {
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-
-    const persistedCart: PersistedCart = {
-      id: 'cart-unexpired-x',
-      version: 1,
-      items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
-      lastUpdatedAt: '2026-09-14T10:00:00.000Z',
-    };
-    repository.loadPersistedCart(persistedCart, 'sess-unexpired');
-    // loadPersistedCart sets expiresAt to lastUpdatedAt + 24h; the clock has
-    // not advanced, so the cart is still well within its window.
-    clock.advanceMs(23 * 60 * 60 * 1000);
-
-    expect(repository.ensureCart('sess-unexpired').id).toBe(persistedCart.id);
-  });
-
-  it('mints a fresh, empty cart when the restored cart has already expired', () => {
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const ids = createDeterministicIds(1);
-    const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
-
-    const persistedCart: PersistedCart = {
-      id: 'cart-expired-x',
-      version: 1,
-      items: [{ id: 'line-1', variantId: 'demo-one-5g-graphite-256', quantity: 1 }],
-      lastUpdatedAt: '2026-09-14T10:00:00.000Z',
-    };
-    repository.loadPersistedCart(persistedCart, 'sess-expired');
-    // loadPersistedCart's expiresAt is lastUpdatedAt + 24h; a six-day-old
-    // snapshot (well inside persistence's 7-day MAX_AGE_MS) still carries a
-    // cart that is long past that 24h mark.
-    clock.advanceMs(6 * 24 * 60 * 60 * 1000);
-
-    const fresh = repository.ensureCart('sess-expired');
-
-    expect(fresh.id).not.toBe(persistedCart.id);
-    expect(fresh.items).toEqual([]);
-    expect(repository.findCartBySession('sess-expired')?.id).toBe(fresh.id);
-  });
-
   it('treats an unparseable expiresAt as not expired (matches CartDomain.isExpired)', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
@@ -541,11 +815,9 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
     repository.loadProducts([DEMO_PRODUCT]);
 
     // Built directly through createCart/updateCart rather than
-    // loadPersistedCart: loadPersistedCart derives expiresAt from
-    // lastUpdatedAt via `new Date(...).toISOString()`, which throws on
-    // an unparseable input rather than producing an unparseable
-    // expiresAt string. This isolates the guard on `cart.expiresAt`
-    // itself, per "Do not change loadPersistedCart's expiry arithmetic".
+    // loadPersistedCart: loadPersistedCart was retired with the v2
+    // snapshot path. This isolates the guard on `cart.expiresAt`
+    // itself.
     const created = repository.createCart('sess-bad-date');
     repository.updateCart({ ...created, expiresAt: 'not-a-real-date' });
 
