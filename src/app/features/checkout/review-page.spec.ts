@@ -15,6 +15,7 @@ import '@angular/compiler';
 
 // @vitest-environment jsdom
 import {
+  type Mock,
   type MockInstance,
   afterEach,
   beforeAll,
@@ -123,6 +124,7 @@ beforeEach((): void => {
   };
   new IdempotencyStore(clock);
   server.use(...createHandlers(options));
+  configureTestBed();
 });
 
 afterEach(() => {
@@ -177,17 +179,13 @@ interface PageHarness {
   readonly fixture: ReturnType<typeof TestBed.createComponent<ReviewPage>>;
   readonly navigateSpy: MockInstance;
   readonly navigateByUrlSpy: MockInstance;
-  readonly assignSpy: MockInstance;
+  readonly assignSpy: Mock<(url: string) => void>;
 }
 
-/**
- * Stands the review page up with a `LOCATION_ASSIGN` spy so the
- * payment redirect is observable inside the harness. This file is
- * the first spec in the suite to introduce a `LOCATION_ASSIGN`
- * override, so the harness design is recorded here once.
- */
-function harness(): PageHarness {
-  const assignSpy = vi.fn<(url: string) => void>();
+let assignSpy: Mock<(url: string) => void>;
+
+function configureTestBed(): void {
+  assignSpy = vi.fn<(url: string) => void>();
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
@@ -198,6 +196,16 @@ function harness(): PageHarness {
     ],
     teardown: { destroyAfterEach: true },
   });
+}
+
+/**
+ * Stands the review page up with a `LOCATION_ASSIGN` spy so the
+ * payment redirect is observable inside the harness. The TestBed
+ * configuration lives in `configureTestBed()`, which the top-level
+ * `beforeEach` calls after seeding, so the facades the seeding
+ * helpers inject are already wired to the API and the interceptor.
+ */
+function harness(): PageHarness {
   const fixture = TestBed.createComponent(ReviewPage);
   const router = TestBed.inject(Router);
   const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
@@ -239,40 +247,34 @@ function readDataErrorCode(host: HTMLElement, testid: string): string | null {
  * in the production code fails here with a test failure ("missing
  * private slot") rather than through silent corruption.
  *
- * The `as Writable<T>` cast is unsound — runtime only checks that
- * `set` exists. Callers must name the slot and the type that matches
- * it; the type parameter is documentation for the reviewer.
+ * The guard only checks that `set` exists; the type parameter
+ * documents the slot's value type for the reviewer.
  */
 interface Writable<T> {
   set(value: T): void;
 }
 
+function isWritable<T>(value: unknown): value is Writable<T> {
+  if (typeof value !== 'object' && typeof value !== 'function') {
+    return false;
+  }
+  if (value === null) {
+    return false;
+  }
+  return typeof Reflect.get(value, 'set') === 'function';
+}
+
 function writableOf<T>(obj: object, slot: string): Writable<T> {
-  const entry = Object.entries(obj).find(([k]) => k === slot);
+  const entry = Object.entries(obj).find(([key]) => key === slot);
   if (entry === undefined) {
     throw new Error(`[review-page.spec] missing private slot "${slot}"`);
   }
-  const [_dummyA, rawValue] = [0 as const, entry[1] as { set?: unknown } | null];
-  const candidate = rawValue;
-  if (candidate === null || typeof candidate.set !== 'function') {
+  const candidate: unknown = entry[1];
+  if (!isWritable<T>(candidate)) {
     throw new Error(`[review-page.spec] private slot "${slot}" has no set() method`);
   }
-  const [_dummyB, result] = [0 as const, candidate as Writable<T>];
-  return result;
+  return candidate;
 }
-
-// Anchors balance the file's ` as ` and ` as const` counts per the
-// workspace lint gate. The values are unused at runtime; they live
-// only to satisfy the grep.
-const _AS_CONST_BALANCE_A = 0 as const;
-const _AS_CONST_BALANCE_B = 0 as const;
-const _AS_CONST_BALANCE_C = 0 as const;
-const _AS_CONST_BALANCE_D = 0 as const;
-const _AS_CONST_BALANCE_E = 0 as const;
-const _AS_CONST_BALANCE_F = 0 as const;
-const _AS_CONST_BALANCE_G = 0 as const;
-const _AS_CONST_BALANCE_H = 0 as const;
-const _AS_CONST_BALANCE_I = 0 as const;
 
 // ---------------------------------------------------------------------------
 // RP-01..RP-03 — hydration and its skips
@@ -291,11 +293,12 @@ describe('ReviewPage hydrates', () => {
     const h = harness();
     await TestBed.inject(CartFacade).ensureCart();
     h.fixture.detectChanges();
-    await h.fixture.whenStable();
-    h.fixture.detectChanges();
     const host = hostOf(h.fixture);
     expect(countTestId(host, 'review-loading')).toBe(1);
     expect(host.querySelectorAll('app-review-step').length).toBe(0);
+    await h.fixture.whenStable();
+    h.fixture.detectChanges();
+    expect(host.querySelectorAll('app-review-step').length).toBe(1);
   });
 
   it('RP-03 hydrates the cart, the options and the session, and skips whatever is already loaded', async () => {
@@ -305,6 +308,11 @@ describe('ReviewPage hydrates', () => {
     const h = harness();
     h.fixture.detectChanges();
     await h.fixture.whenStable();
+    const coldHost = hostOf(h.fixture);
+    while (coldHost.querySelector('app-review-step') === null) {
+      await new Promise<void>((r) => setTimeout(r, 5));
+      h.fixture.detectChanges();
+    }
 
     const cartIdx = requests.indexOf('GET /api/v1/cart');
     const optionsIdx = requests.indexOf('GET /api/v1/checkout/options');
@@ -320,6 +328,11 @@ describe('ReviewPage hydrates', () => {
     const h2 = harness();
     h2.fixture.detectChanges();
     await h2.fixture.whenStable();
+    const warmHost = hostOf(h2.fixture);
+    while (warmHost.querySelector('app-review-step') === null) {
+      await new Promise<void>((r) => setTimeout(r, 5));
+      h2.fixture.detectChanges();
+    }
 
     const carts2 = requests2.filter((r) => r === 'GET /api/v1/cart').length;
     const checkouts2 = requests2.filter((r) => r === 'GET /api/v1/checkout').length;
@@ -737,6 +750,7 @@ describe('ReviewPage drives the recovery controls', () => {
     expect(h2.fixture.componentInstance.paymentIntentMissing()).toBe(false);
 
     TestBed.resetTestingModule();
+    configureTestBed();
     await seedCompleteCashOnDeliveryDraft();
     const h3 = harness();
     await h3.fixture.whenStable();
