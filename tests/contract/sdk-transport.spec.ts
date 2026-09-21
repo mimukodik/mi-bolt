@@ -16,13 +16,8 @@ import '@angular/compiler';
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import yaml from 'js-yaml';
-import {
-  HttpClient,
-  HttpContext,
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-} from '@angular/common/http';
+import type { HttpContext } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
   BrowserDynamicTestingModule,
@@ -33,9 +28,11 @@ import { http, HttpResponse } from 'msw';
 import { server, useMswServer } from '../msw-server';
 
 import { Api } from '../../src/app/api/generated/api';
+import type { Cart } from '../../src/app/api/generated/models/cart';
+import type { Product } from '../../src/app/api/generated/models/product';
 import {
-  ApiConfiguration,
-  provideApiConfiguration,
+  ApiConfiguration as ApiConfig,
+  provideApiConfiguration as provideApiConfig,
 } from '../../src/app/api/generated/api-configuration';
 import * as operations from '../../src/app/api/generated/functions';
 import {
@@ -68,13 +65,13 @@ interface OpenApiSpec {
       string,
       {
         operationId?: string;
-        parameters?: Array<{
+        parameters?: {
           $ref?: string;
           in?: string;
           name?: string;
           required?: boolean;
           schema?: { type?: string };
-        }>;
+        }[];
         requestBody?: unknown;
         responses?: Record<string, unknown>;
       }
@@ -214,9 +211,9 @@ const MINIMAL_QUOTE = {
   id: 'quote-demo-001',
   cartId: 'cart-demo-001',
   cartVersion: 1,
-  subtotal: { amount: 339990, currency: 'HUF' },
+  subtotal: { amount: 339_990, currency: 'HUF' },
   shipping: { amount: 1990, currency: 'HUF' },
-  total: { amount: 341980, currency: 'HUF' },
+  total: { amount: 341_980, currency: 'HUF' },
   expiresAt: '2026-09-14T10:05:00Z',
 };
 const MINIMAL_PAYMENT_INTENT = {
@@ -225,7 +222,7 @@ const MINIMAL_PAYMENT_INTENT = {
   quoteId: 'quote-demo-001',
   status: 'succeeded',
   isSimulation: true,
-  amount: { amount: 341980, currency: 'HUF' },
+  amount: { amount: 341_980, currency: 'HUF' },
 };
 const MINIMAL_ORDER = {
   id: 'order-demo-001',
@@ -241,7 +238,7 @@ const MINIMAL_ORDER = {
   deliveryOptionId: 'home_delivery',
   notice: 'demo',
 };
-function MINIMAL_CART(version: number) {
+function MINIMAL_CART(version: number): Cart {
   return {
     id: 'cart-demo-001',
     version,
@@ -252,7 +249,7 @@ function MINIMAL_CART(version: number) {
     expiresAt: '2026-09-15T10:00:00Z',
   };
 }
-function MINIMAL_PRODUCT(slug: string) {
+function MINIMAL_PRODUCT(slug: string): Product {
   return {
     id: 'p-01',
     slug,
@@ -265,7 +262,7 @@ function MINIMAL_PRODUCT(slug: string) {
       colorName: 'Grafit',
       swatchHex: '#343B43',
       storageGb: 256,
-      price: { amount: 339990, currency: 'HUF' },
+      price: { amount: 339_990, currency: 'HUF' },
       availability: 'in_stock',
       maxQuantity: 5,
       images: [
@@ -309,7 +306,7 @@ beforeEach(() => {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
-      provideApiConfiguration(BASE_URL),
+      provideApiConfig(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
@@ -322,9 +319,9 @@ beforeEach(() => {
  * the same two dependencies (HttpClient + ApiConfiguration) sidesteps the
  * JIT metadata issue while still exercising the generated `invoke` path.
  */
-function makeSdk(): { api: Api; httpClient: HttpClient; config: ApiConfiguration } {
+function makeSdk(): { api: Api; httpClient: HttpClient; config: ApiConfig } {
   const httpClient = TestBed.inject(HttpClient);
-  const config = TestBed.inject(ApiConfiguration);
+  const config = TestBed.inject(ApiConfig);
   const api = new Api(config, httpClient);
   return { api, httpClient, config };
 }
@@ -336,7 +333,7 @@ function makeSdk(): { api: Api; httpClient: HttpClient; config: ApiConfiguration
 describe('T04-AC04 every generated operation reaches MSW', () => {
   it('exercises all 16 operations end-to-end through the real HttpClient', async () => {
     const { api } = makeSdk();
-    expect(TestBed.inject(ApiConfiguration).rootUrl).toBe(BASE_URL);
+    expect(TestBed.inject(ApiConfig).rootUrl).toBe(BASE_URL);
 
     await callOperation(api, 'getConfig');
     await callOperation(api, 'listProducts');
@@ -406,7 +403,9 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
 
     for (const op of opRows) {
       const pathRe = new RegExp(
-        '^' + `${BASE_URL_PATH}${op.path}`.replace(/\{[^}]+\}/g, '[^/]+') + '(?:\\?.*)?$',
+        '^' +
+          `${BASE_URL_PATH}${op.path}`.replaceAll(/\{[^}]+\}/g, '[^/]+') +
+          String.raw`(?:\?.*)?$`,
       );
       const matches = [...captures.values()].filter((c) => {
         const url = new URL(c.url);
@@ -505,7 +504,7 @@ describe('T04-AC05 baseUrl is document.baseURI-aware', () => {
 
 describe('T04-AC05 generated SDK is the only API surface', () => {
   it('exposes the ApiConfiguration class with rootUrl set from provideApiConfiguration', () => {
-    const config = TestBed.inject(ApiConfiguration);
+    const config = TestBed.inject(ApiConfig);
     expect(config.rootUrl).toBe(BASE_URL);
   });
 });
@@ -514,15 +513,15 @@ describe('T04-AC05 generated SDK is the only API surface', () => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-type OpFn = (
+type OpFunction = (
   http: HttpClient,
   rootUrl: string,
-  params?: Record<string, unknown>,
+  parameters?: Record<string, unknown>,
   context?: HttpContext,
 ) => {
   subscribe: (observer: {
     next: (value: unknown) => void;
-    error: (err: unknown) => void;
+    error: (error: unknown) => void;
   }) => unknown;
 };
 
@@ -535,15 +534,15 @@ type OpFn = (
 async function callOperation(
   api: Api,
   operationId: string,
-  params: Record<string, unknown> = {},
+  parameters: Record<string, unknown> = {},
   context?: HttpContext,
 ): Promise<void> {
   seenOperationIds.add(operationId);
-  const fn = (operations as unknown as Record<string, OpFn>)[operationId];
-  if (typeof fn !== 'function') {
-    throw new Error(`Generated SDK is missing function ${operationId}`);
+  const function_ = (operations as unknown as Record<string, OpFunction>)[operationId];
+  if (typeof function_ !== 'function') {
+    throw new TypeError(`Generated SDK is missing function ${operationId}`);
   }
-  await firstValueFrom(api.invoke(fn as never, params as never, context));
+  await firstValueFrom(api.invoke(function_ as never, parameters as never, context));
 }
 
 /**
@@ -555,11 +554,16 @@ function collectOperations(s: OpenApiSpec): OperationRow[] {
   const rows: OperationRow[] = [];
   for (const [pathKey, pathItem] of Object.entries(s.paths)) {
     for (const [method, op] of Object.entries(pathItem)) {
-      if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue;
-      if (!op || typeof op !== 'object' || typeof op.operationId !== 'string') continue;
+      if (
+        !['get', 'post', 'put', 'patch', 'delete'].includes(method) ||
+        !op ||
+        typeof op !== 'object' ||
+        typeof op.operationId !== 'string'
+      )
+        continue;
       const queryArrays: string[] = [];
-      const params = Array.isArray(op.parameters) ? op.parameters : [];
-      for (const p of params) {
+      const parameters = Array.isArray(op.parameters) ? op.parameters : [];
+      for (const p of parameters) {
         if (p.in === 'query' && p.schema?.type === 'array') queryArrays.push(p.name ?? '');
       }
       rows.push({

@@ -85,10 +85,7 @@ function safeResolveFromUrl(rawUrl) {
   // file the SPA fallback would have answered for `/telefonok`.
   const trimmed = decoded.replace(/\/+$/, '') || '/';
   const candidate = normalize(join(STATIC_DIR, trimmed));
-  if (!candidate.startsWith(STATIC_DIR + sep) && candidate !== STATIC_DIR) {
-    return null;
-  }
-  return candidate;
+  return !candidate.startsWith(STATIC_DIR + sep) && candidate !== STATIC_DIR ? null : candidate;
 }
 
 /**
@@ -100,55 +97,67 @@ function safeResolveFromUrl(rawUrl) {
  */
 function cacheHeadersFor(filePath) {
   const base = filePath.split(sep).pop() ?? '';
-  if (base === 'index.html') return NO_CACHE_HEADERS;
-  if (base === 'mockServiceWorker.js') return NO_CACHE_HEADERS;
-  if (base === 'favicon.ico') return NO_CACHE_HEADERS;
-  if (
-    /^main-[A-Za-z0-9_-]+\.js$/.test(base) ||
+  if (base === 'index.html' || base === 'mockServiceWorker.js' || base === 'favicon.ico')
+    return NO_CACHE_HEADERS;
+  return /^main-[A-Za-z0-9_-]+\.js$/.test(base) ||
     /^chunk-[A-Za-z0-9_-]+\.js$/.test(base) ||
-    /^styles-[A-Za-z0-9_-]+\.css$/.test(base)
-  ) {
-    return IMMUTABLE_HEADERS;
-  }
-  if (filePath.includes(`${sep}assets${sep}`)) return IMMUTABLE_HEADERS;
-  return NO_CACHE_HEADERS;
+    /^styles-[A-Za-z0-9_-]+\.css$/.test(base) ||
+    filePath.includes(`${sep}assets${sep}`)
+    ? IMMUTABLE_HEADERS
+    : NO_CACHE_HEADERS;
 }
 
-/** Map a file extension to a content-type for the most common static assets. */
+/**
+Map a file extension to a content-type for the most common static assets.
+*/
 function contentTypeFor(filePath) {
-  const ext = extname(filePath).toLowerCase();
-  switch (ext) {
-    case '.html':
+  const extension = extname(filePath).toLowerCase();
+  switch (extension) {
+    case '.html': {
       return 'text/html; charset=utf-8';
+    }
     case '.js':
-    case '.mjs':
+    case '.mjs': {
       return 'application/javascript; charset=utf-8';
-    case '.css':
+    }
+    case '.css': {
       return 'text/css; charset=utf-8';
-    case '.json':
+    }
+    case '.json': {
       return 'application/json; charset=utf-8';
-    case '.svg':
+    }
+    case '.svg': {
       return 'image/svg+xml';
-    case '.ico':
+    }
+    case '.ico': {
       return 'image/x-icon';
-    case '.png':
+    }
+    case '.png': {
       return 'image/png';
+    }
     case '.jpg':
-    case '.jpeg':
+    case '.jpeg': {
       return 'image/jpeg';
-    case '.webp':
+    }
+    case '.webp': {
       return 'image/webp';
+    }
     case '.woff':
-    case '.woff2':
+    case '.woff2': {
       return 'font/woff2';
-    case '.map':
+    }
+    case '.map': {
       return 'application/json; charset=utf-8';
-    default:
+    }
+    default: {
       return 'application/octet-stream';
+    }
   }
 }
 
-/** Reply with an RFC 7807 application/problem+json body for /api/* misses. */
+/**
+Reply with an RFC 7807 application/problem+json body for /api/* misses.
+*/
 function sendApiProblem(res, status, title, detail) {
   const body = JSON.stringify({
     type: `https://mi-bolt.example/problems/${title}`,
@@ -165,7 +174,9 @@ function sendApiProblem(res, status, title, detail) {
   res.end(body);
 }
 
-/** Stream a static file with the headers this server applies. */
+/**
+Stream a static file with the headers this server applies.
+*/
 function sendFile(res, filePath) {
   const stat = statSync(filePath);
   const headers = {
@@ -178,7 +189,9 @@ function sendFile(res, filePath) {
   createReadStream(filePath).pipe(res);
 }
 
-/** Reply with the SPA fallback document. */
+/**
+Reply with the SPA fallback document.
+*/
 function sendSpaFallback(res) {
   const indexPath = join(STATIC_DIR, 'index.html');
   try {
@@ -196,12 +209,12 @@ function sendSpaFallback(res) {
  *      favicon) are served as themselves.
  *   3. Everything else falls back to `index.html`.
  */
-function handle(req, res) {
-  const urlPath = req.url ?? '/';
+function handle(request, res) {
+  const urlPath = request.url ?? '/';
   // Only GET and HEAD go through the SPA fallback; other methods
   // surface as 405 so a misconfigured POST is not silently served
   // the shell.
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
     res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' });
     res.end('Method Not Allowed');
     return;
@@ -230,18 +243,18 @@ function handle(req, res) {
   sendSpaFallback(res);
 }
 
-const server = createServer((req, res) => {
+const server = createServer((request, res) => {
   try {
-    handle(req, res);
-  } catch (err) {
+    handle(request, res);
+  } catch (error) {
     // A bug must never crash the listener; reply with a 500 so the
     // caller sees the failure instead of a torn connection.
-    process.stderr.write(`[serve-static] ${err?.stack ?? err}\n`);
-    if (!res.headersSent) {
+    process.stderr.write(`[serve-static] ${error?.stack ?? error}\n`);
+    if (res.headersSent) {
+      res.end();
+    } else {
       res.writeHead(500, { 'content-type': 'text/plain' });
       res.end('Internal Server Error');
-    } else {
-      res.end();
     }
   }
 });

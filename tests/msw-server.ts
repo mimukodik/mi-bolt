@@ -33,10 +33,11 @@
  * `listen()` single.
  */
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import type { setupServer as SetupServerFn } from 'msw/node';
 
 const isNodeProcess = typeof process !== 'undefined' && Boolean(process.versions?.node);
 
-let server!: ReturnType<typeof import('msw/node').setupServer>;
+let server!: ReturnType<typeof SetupServerFn>;
 
 if (isNodeProcess) {
   // Dynamic import keeps `msw/node` (and the @mswjs/interceptors
@@ -45,8 +46,10 @@ if (isNodeProcess) {
   server = setupServer();
 }
 
-/** True between the `listen()` and the `close()` of the shared server. */
-let listening = false;
+/**
+True between the `listen()` and the `close()` of the shared server.
+*/
+let isListening = false;
 
 /**
  * Registers the shared server's lifecycle in the calling file's suite:
@@ -66,9 +69,9 @@ let listening = false;
  */
 export function useMswServer(): void {
   beforeAll(() => {
-    if (listening || !server) return;
+    if (isListening || !server) return;
     server.listen({ onUnhandledRequest: 'error' });
-    listening = true;
+    isListening = true;
   });
 
   afterEach(() => {
@@ -76,9 +79,9 @@ export function useMswServer(): void {
   });
 
   afterAll(() => {
-    if (!listening || !server) return;
+    if (!isListening || !server) return;
     server.close();
-    listening = false;
+    isListening = false;
   });
 }
 

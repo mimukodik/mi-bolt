@@ -7,14 +7,14 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const heading = '### Unit coverage';
 
-const arg = process.argv[2];
-if (!arg) {
+const argument = process.argv[2];
+if (!argument) {
   console.log(heading);
   console.log('coverage-summary.json path is required');
   process.exit(0);
 }
 
-if (!existsSync(arg)) {
+if (!existsSync(argument)) {
   console.log(heading);
   console.log('coverage-summary.json not found');
   process.exit(0);
@@ -22,7 +22,7 @@ if (!existsSync(arg)) {
 
 let total;
 try {
-  const raw = readFileSync(arg, 'utf8');
+  const raw = readFileSync(argument, 'utf8');
   const parsed = JSON.parse(raw);
   if (typeof parsed === 'object' && parsed !== null && 'total' in parsed) {
     const candidate = parsed.total;
@@ -56,11 +56,12 @@ const pct = (entry) => {
   return totalCount === 0 ? '100.0%' : ((covered / totalCount) * 100).toFixed(1) + '%';
 };
 
-const num = (entry) => (entry && typeof entry.total === 'number' ? String(entry.total) : 'n/a');
+const number_ = (entry) => (entry && typeof entry.total === 'number' ? String(entry.total) : 'n/a');
 
 const lines = [heading, '', '| Metric | Covered | Total | Pct |', '| --- | ---: | ---: | ---: |'];
 for (const [label, entry] of rows) {
-  const covered = entry && typeof entry.covered === 'number' ? String(entry.covered) : num(entry);
-  lines.push(`| ${label} | ${covered} | ${num(entry)} | ${pct(entry)} |`);
+  const covered =
+    entry && typeof entry.covered === 'number' ? String(entry.covered) : number_(entry);
+  lines.push(`| ${label} | ${covered} | ${number_(entry)} | ${pct(entry)} |`);
 }
 console.log(lines.join('\n'));

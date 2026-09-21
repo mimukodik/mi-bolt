@@ -19,31 +19,31 @@ const REMOTE_PATH = 'api/openapi.yaml';
 const LOCAL_PATH = 'docs/api/openapi.yaml';
 const USAGE = 'usage: node scripts/api-sync.mjs [--ref <ref>] [--dry-run]';
 
-const args = process.argv.slice(2);
-let ref = 'main';
-let dryRun = false;
+const arguments_ = process.argv.slice(2);
+let reference = 'main';
+let isDryRun = false;
 
-for (let i = 0; i < args.length; i++) {
-  const arg = args[i];
-  if (arg === '--ref') {
-    const value = args[i + 1];
+for (let index = 0; index < arguments_.length; index++) {
+  const argument = arguments_[index];
+  if (argument === '--ref') {
+    const value = arguments_[index + 1];
     if (!value || value.startsWith('--')) {
       process.stderr.write(`${USAGE}\n`);
       process.exit(2);
     }
-    ref = value;
-    i++;
+    reference = value;
+    index++;
     continue;
   }
-  if (arg === '--dry-run') {
-    dryRun = true;
+  if (argument === '--dry-run') {
+    isDryRun = true;
     continue;
   }
   process.stderr.write(`${USAGE}\n`);
   process.exit(2);
 }
 
-const metadataPath = `repos/${OWNER}/${REPO}/contents/${REMOTE_PATH}?ref=${encodeURIComponent(ref)}`;
+const metadataPath = `repos/${OWNER}/${REPO}/contents/${REMOTE_PATH}?ref=${encodeURIComponent(reference)}`;
 
 let metadata;
 try {
@@ -73,10 +73,10 @@ if (
 }
 
 process.stdout.write(
-  `api-sync: ${OWNER}/${REPO}@${ref} ${REMOTE_PATH} sha=${metadata.sha} size=${metadata.size}\n`,
+  `api-sync: ${OWNER}/${REPO}@${reference} ${REMOTE_PATH} sha=${metadata.sha} size=${metadata.size}\n`,
 );
 
-if (dryRun) {
+if (isDryRun) {
   process.exit(0);
 }
 
