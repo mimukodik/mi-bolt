@@ -53,7 +53,6 @@ import type { FilterIdentity } from '../../shared/types/filter-identity';
  * Layout:
  *
  *   - >=1024px: 280px filter sidebar + 3-column grid.
- *   - 1024-1279: sidebar + 2-column grid.
  *   - 640-1023: drawer trigger + 2-column grid.
  *   - <640: drawer trigger + 1 column.
  *
