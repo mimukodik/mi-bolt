@@ -1,8 +1,8 @@
 /**
  * MIM-212 — checkout wizard guard cases on the 2.0.0 contract.
  *
- * Eleven cases lifted from the retired `checkout-state.spec.ts` and
- * updated to the 2.0.0 session: `CheckoutFacade.updateContact` /
+ * Eleven guard cases on the 2.0.0 checkout session and
+ * `CheckoutFacade.updateContact` /
  * `updateDelivery` / `updatePayment` / `updateBilling` write the four
  * sections, and the three guards (`contactGuard`, `deliveryGuard`,
  * `reviewGuard`) run against the in-memory snapshot. The harness
