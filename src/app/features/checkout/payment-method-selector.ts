@@ -68,7 +68,7 @@ export class PaymentMethodSelector {
 
   onSelected(id: PaymentMethodId): void {
     const option = this.options().find((o) => o.id === id);
-    if (!option?.available) return;
+    if (option?.available !== true) return;
     if (this.value() === id) return;
     this.value.set(id);
     this.paymentChanged.emit(id);

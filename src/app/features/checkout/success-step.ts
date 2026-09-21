@@ -38,10 +38,10 @@
  * never talks to the SDK directly.
  */
 
+import type { ElementRef } from '@angular/core';
 import {
   Component,
   DestroyRef,
-  ElementRef,
   computed,
   effect,
   inject,
@@ -214,7 +214,8 @@ export class SuccessStep {
     }
     this.loadState.set({
       kind: 'error',
-      detail: result.error.detail || 'A rendelés visszatöltése sikertelen.',
+      detail:
+        result.error.detail !== '' ? result.error.detail : 'A rendelés visszatöltése sikertelen.',
     });
   }
 

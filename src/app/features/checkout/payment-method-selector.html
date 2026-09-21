@@ -12,38 +12,34 @@
     @for (option of options(); track option.id) {
       <li
         class="option rounded-(--radius-card) border transition-colors"
+        data-testid="payment-option"
         [class.is-active]="isSelected(option.id)"
         [class.is-unavailable]="!option.available"
-        data-testid="payment-option"
       >
         <label
           class="option-label flex items-start gap-(--space-3) p-(--space-4)"
-          [class.cursor-pointer]="option.available"
           [attr.for]="optionId(option.id)"
+          [class.cursor-pointer]="option.available"
         >
           <input
-            type="radio"
             class="radio w-5 h-5 mt-1 accent-(--color-brand-ink)"
-            [id]="optionId(option.id)"
+            data-testid="payment-radio"
             name="paymentMethod"
-            [value]="option.id"
-            [checked]="isSelected(option.id)"
-            [disabled]="!option.available"
+            type="radio"
             [attr.aria-checked]="isSelected(option.id) ? 'true' : 'false'"
             [attr.aria-describedby]="helperId(option.id)"
+            [checked]="isSelected(option.id)"
+            [disabled]="!option.available"
+            [id]="optionId(option.id)"
+            [value]="option.id"
             (change)="onSelected(option.id)"
-            data-testid="payment-radio"
           />
           <span class="option-body flex flex-col gap-(--space-1) min-w-0">
             <span class="option-row inline-flex items-baseline gap-(--space-2) flex-wrap">
               <span class="option-title [font-weight:var(--weight-medium)]">{{
                 option.label
               }}</span>
-              <app-price-block
-                [money]="option.fee"
-                label="Fizetési díj"
-                status="success"
-              ></app-price-block>
+              <app-price-block label="Fizetési díj" status="success" [money]="option.fee" />
             </span>
             <span
               class="option-helper leading-(--line-height-body) text-(length:--type-helper) text-(color:--color-text-secondary)"
@@ -60,8 +56,8 @@
             }
             @if (isSelected(option.id)) {
               <span
-                class="option-badge mt-(--space-1) inline-flex items-center self-start px-(--space-2) py-(--space-1) rounded-full [font-weight:var(--weight-bold)]"
                 aria-live="polite"
+                class="option-badge mt-(--space-1) inline-flex items-center self-start px-(--space-2) py-(--space-1) rounded-full [font-weight:var(--weight-bold)]"
                 data-testid="payment-selected-badge"
               >
                 Kiválasztva

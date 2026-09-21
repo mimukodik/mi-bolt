@@ -1,25 +1,25 @@
 @if (cartFacade.cart(); as cart) {
   @if (checkoutFacade.session(); as session) {
     <app-review-step
-      [summary]="checkoutFacade.summary()"
       [cart]="cart"
       [draft]="session"
       [options]="checkoutFacade.options()"
-      [state]="viewState()"
       [paymentIntent]="checkoutFacade.paymentIntent()"
-      [priceChange]="checkoutFacade.priceChange()"
       [paymentIntentMissing]="paymentIntentMissing()"
       [paymentStarted]="paymentStarted"
+      [priceChange]="checkoutFacade.priceChange()"
+      [state]="viewState()"
+      [summary]="checkoutFacade.summary()"
+      (backToPaymentRequested)="onBackToPayment()"
       (editRequested)="onEditRequested($event)"
-      (submitRequested)="onSubmitRequested()"
-      (retryRequested)="onRetryRequested()"
-      (priceChangeConfirmed)="onPriceChangeConfirmed()"
-      (paymentRetryRequested)="onPaymentRetry()"
+      (newPaymentRequested)="onNewPayment()"
       (paymentChangeMethodRequested)="onPaymentChangeMethod()"
       (paymentCheckRequested)="onPaymentCheck()"
-      (backToPaymentRequested)="onBackToPayment()"
-      (newPaymentRequested)="onNewPayment()"
-    ></app-review-step>
+      (paymentRetryRequested)="onPaymentRetry()"
+      (priceChangeConfirmed)="onPriceChangeConfirmed()"
+      (retryRequested)="onRetryRequested()"
+      (submitRequested)="onSubmitRequested()"
+    />
 
     @if (submitFailure(); as failure) {
       <div
@@ -27,26 +27,22 @@
         data-testid="review-submit-failure"
         [attr.data-error-code]="failure.code"
       >
-        <app-status-message
-          [message]="submitFailureMessage"
-          severity="error"
-          [persistent]="true"
-        ></app-status-message>
+        <app-status-message severity="error" [message]="submitFailureMessage" [persistent]="true" />
         <app-button
-          variant="secondary"
-          label="Fizetési mód módosítása"
-          (pressed)="onPaymentChangeMethod()"
           data-testid="review-change-payment"
-        ></app-button>
+          label="Fizetési mód módosítása"
+          variant="secondary"
+          (pressed)="onPaymentChangeMethod()"
+        />
       </div>
     }
   } @else {
     <div class="loading" data-testid="review-loading">
-      <app-loading-state variant="lines" label="Rendelés adatainak betöltése"></app-loading-state>
+      <app-loading-state label="Rendelés adatainak betöltése" variant="lines" />
     </div>
   }
 } @else {
   <div class="loading" data-testid="review-loading">
-    <app-loading-state variant="lines" label="Kosár betöltése"></app-loading-state>
+    <app-loading-state label="Kosár betöltése" variant="lines" />
   </div>
 }
