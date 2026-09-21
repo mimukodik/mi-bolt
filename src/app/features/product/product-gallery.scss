@@ -82,6 +82,9 @@ app-product-image {
   transform: none;
   font-size: var(--type-helper);
   font-weight: var(--weight-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .count {
@@ -140,19 +143,6 @@ app-product-image {
 .thumb:focus-visible {
   outline: 2px solid var(--color-focus-light);
   outline-offset: 2px;
-}
-
-.thumb-check {
-  display: none;
-  position: absolute;
-  inset-block-end: var(--space-1);
-  inset-inline-end: var(--space-1);
-  margin-left: 0;
-  font-weight: var(--weight-bold);
-}
-
-.thumb[aria-current='true'] .thumb-check {
-  display: inline-block;
 }
 
 @media (max-width: 640px) {

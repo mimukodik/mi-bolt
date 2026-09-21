@@ -268,6 +268,7 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
       );
       expect(imagePath(img)).toBe(image.src);
       expect(thumb.querySelector('.thumb-mark')).toBeNull();
+      expect(thumb.querySelector('.thumb-check')).toBeNull();
       expect(thumb.textContent).not.toContain(String(index + 1));
       expect(thumb.getAttribute('aria-current')).toBe(index === 0 ? 'true' : 'false');
     });
@@ -361,6 +362,8 @@ describe('T16-AC02 product-gallery zoom dialog', () => {
 
     const zoomBtn = queryButton(root, '[data-testid="gallery-zoom-open"]');
     expect(zoomBtn).not.toBeNull();
+    expect(zoomBtn.getAttribute('aria-label')).toBe('Kép nagyítása');
+    expect(zoomBtn.querySelector('svg')).not.toBeNull();
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
 
     zoomBtn.click();
