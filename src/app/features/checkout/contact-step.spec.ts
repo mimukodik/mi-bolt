@@ -494,15 +494,16 @@ describe('T20 contact-step shared wiring', () => {
 
     // A second form with a server-style error carrying `pointer` is built
     // through an inline schema that returns the error from `validate()`.
-    // Signal Forms preserves the returned object's extra properties, so
-    // `errorPointer` reads the `pointer` field rather than falling back
-    // to the field key.
+    // The `pointer` value differs from the field-path fallback (`/email`)
+    // so the assertion below fails if Signal Forms strips the field rather
+    // than preserves it: a fallback `/${key}` here would land on `/email`,
+    // not `/server-error`.
     const fieldsWithServerError = TestBed.runInInjectionContext(() =>
       form(signal(EMPTY_CONTACT), (path) => {
         validate(path.email, () => ({
           kind: 'server',
           message: 'Hibás e-mail',
-          pointer: '/email',
+          pointer: '/server-error',
         }));
       }),
     );
@@ -514,7 +515,7 @@ describe('T20 contact-step shared wiring', () => {
     const emailEntry = serverFixture.componentInstance
       .invalidFields()
       .find((entry) => entry.field === 'email');
-    expect(emailEntry?.pointer).toBe('/email');
+    expect(emailEntry?.pointer).toBe('/server-error');
     expect(emailEntry?.message).toBe('Hibás e-mail');
   });
 });

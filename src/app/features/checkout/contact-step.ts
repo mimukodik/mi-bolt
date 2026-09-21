@@ -95,7 +95,8 @@ export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>('CONTAC
   factory: () => () => Promise.resolve({ ok: true }),
 });
 
-/** The pointer a server field error carries; absent on the schema's own errors. */
+/** Reads the `pointer` a server-style field error carries; schema-defined
+ *  errors do not carry one and the function returns `undefined` for them. */
 function errorPointer(error: ValidationError.WithFieldTree): string | undefined {
   if (!('pointer' in error)) return undefined;
   const { pointer } = error;
