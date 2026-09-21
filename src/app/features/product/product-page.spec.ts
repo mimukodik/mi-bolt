@@ -59,8 +59,8 @@ function toGeneratedProduct(source: typeof DEMO_PRODUCT): Product {
  *   - T16-AC02: gallery is mounted via ProductGallery with active variant
  *     images, image count, and imageChange forwarding to the facade.
  *   - T16-AC03: color and storage variant selection with label, swatch,
- *     checkmark, and aria-pressed; specification accordion with disclosure
- *     pattern (aria-expanded, aria-controls, panel role=region).
+ *     checkmark, and aria-pressed; specification groups rendered as
+ *     always-open boxes with a title and label/value rows.
  *   - T16-AC04: mobile purchase rail carries price block + primary CTA
  *     and dispatches the chosen variant id and quantity to CartFacade
  *     through the page's own add orchestrator (FIX-50).
@@ -437,37 +437,31 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     expect(priceSection.textContent).toContain('378');
   });
 
-  it('T16-AC03: SpecificationAccordion renders disclosure triggers with aria-expanded and aria-controls', async () => {
+  it('T16-AC03: SpecificationAccordion renders every group as an open box with its title', async () => {
     const { root } = await createHarness();
 
     const accordion = queryElement(root, '[data-testid="spec-accordion"]');
     expect(accordion).not.toBeNull();
+    expect(accordion.querySelector('button')).toBeNull();
 
-    const displayTrigger = queryButton(accordion, '[data-testid="spec-disclosure-display"]');
-    expect(displayTrigger.getAttribute('aria-expanded')).toBe('false');
-    expect(displayTrigger.getAttribute('aria-controls')).toBe('spec-panel-display');
-    expect(displayTrigger.textContent).toContain('Kijelző és kialakítás');
-
-    expect(accordion.querySelector('[data-testid="spec-panel-display"]')).toBeNull();
+    const display = queryElement(accordion, '[data-testid="spec-group-display"]');
+    expect(display.querySelector('h3')?.textContent).toContain('Kijelző és kialakítás');
   });
 
-  it('T16-AC03: SpecificationAccordion expands panel with role=region and displays rows on click', async () => {
-    const { fixture, root, tick } = await createHarness();
+  it('T16-AC03: SpecificationAccordion renders the label/value rows from the first render', async () => {
+    const { root } = await createHarness();
 
-    const displayTrigger = queryButton(root, '[data-testid="spec-disclosure-display"]');
-    displayTrigger.click();
-    await tick();
-    fixture.detectChanges();
-
-    expect(displayTrigger.getAttribute('aria-expanded')).toBe('true');
-
-    const panel = queryElement(root, '[data-testid="spec-panel-display"]');
-    expect(panel).not.toBeNull();
-    expect(panel.getAttribute('role')).toBe('region');
-    expect(panel.getAttribute('aria-labelledby')).toBe('spec-trigger-display');
-
-    expect(panel.textContent).toContain('Kijelző');
-    expect(panel.textContent).toContain('Képfrissítés');
+    const display = queryElement(root, '[data-testid="spec-group-display"]');
+    const rows = Array.from(display.querySelectorAll('dl > div'));
+    expect(rows.length).toBe(2);
+    const pairs = rows.map((row) => [
+      queryElement(row, 'dt').textContent.trim(),
+      queryElement(row, 'dd').textContent.trim(),
+    ]);
+    expect(pairs).toEqual([
+      ['Kijelző', '6,7″ • demóadat'],
+      ['Képfrissítés', '120 Hz • demóadat'],
+    ]);
   });
 
   it('T16-AC03: renders highlights list when product highlights are present', async () => {

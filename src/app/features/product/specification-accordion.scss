@@ -1,99 +1,70 @@
-/* specification-accordion.scss — extracted from inline styles.
-   Tailwind v4 utility classes live alongside the scoped selectors below. */
-
 :host {
   display: block;
 }
 
-.root {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.boxes {
+  column-count: 1;
+}
+
+@media (min-width: 640px) {
+  .boxes {
+    column-count: 2;
+    column-gap: 30px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .boxes {
+    column-count: 3;
+    column-gap: 30px;
+  }
 }
 
 .group {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  background: var(--color-surface-light);
+  break-inside: avoid;
+  margin-bottom: 30px;
+  border: 2px solid var(--color-line-card);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.heading {
+.title {
+  font-family: var(--font-family-bold);
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--color-primary);
+  background: var(--color-line-card);
+  padding: 12px 16px;
   margin: 0;
 }
 
-.trigger {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-height: var(--size-control);
-  padding: 0 var(--space-4);
-  border: 0;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--type-body);
-  font-weight: var(--weight-medium);
-  text-align: left;
-  cursor: pointer;
-}
-
-.trigger:hover {
-  background: var(--color-surface-section);
-}
-
-.trigger:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: -2px;
-}
-
-.caret {
-  font-size: var(--type-card-title);
-  font-weight: var(--weight-bold);
-  color: var(--color-text-secondary);
-  line-height: 1;
-}
-
-.panel {
-  padding: 0 var(--space-4) var(--space-4);
-}
-
 .rows {
-  display: grid;
-  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
-  gap: var(--space-2) var(--space-4);
   margin: 0;
 }
 
 .row {
-  display: contents;
+  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+  gap: 0 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-line-card);
+  display: grid;
 }
 
 .label {
-  font-size: var(--type-helper);
+  font-family: var(--font-family-light);
+  font-size: 14px;
   color: var(--color-text-secondary);
   margin: 0;
 }
 
 .value {
-  font-size: var(--type-body);
-  color: var(--color-text-primary);
+  font-size: 14px;
+  color: var(--color-primary);
   margin: 0;
 }
 
-@media (max-width: 640px) {
-  .rows {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-1) 0;
-  }
+@media (max-width: 639px) {
   .row {
-    display: grid;
     grid-template-columns: minmax(0, 1fr);
-    padding-bottom: var(--space-2);
-    border-bottom: 1px solid var(--color-border-subtle);
-  }
-  .row:last-of-type {
-    border-bottom: 0;
   }
 }
