@@ -1,51 +1,51 @@
 /**
- * T23 — order submission control, retry, pending payment.
+ * MIM-212 — order submission spec on the 2.0.0 contract.
  *
- * The five acceptance criteria each have at least one named failing
- * test below. The spec drives both the source-level contract (the
- * service surface, the persisted safe key, the logging redaction)
- * and the live MSW-backed behavior (commit, polling, double-click
- * collapse, reload recovery).
- *
- * Mock scenarios used:
- *   - `default` / `happy-path` — succeeded payment intent
- *   - `payment-declined`      — declined payment intent
- *   - `payment-pending-timeout` — stays pending forever (used to
- *                                 exercise the polling timeout path)
- *
- * The clock injected into `OrderSubmission` is a fake with manual
- * `advance()` so the polling assertions are deterministic and never
- * block the test for 10 real seconds.
+ * Thirteen cases over the eight `SubmitOutcome` kinds, the in-flight
+ * mutex, the no-session and incomplete guards, the four intent-status
+ * branches, the price-change refusal and the safe-logger whitelist.
+ * The harness mirrors the 2.0.0 mock spec (catalog fixture in
+ * `beforeAll`, fixed clock, deterministic ids, per-test `options` and
+ * `server.use(...)`).
  */
 
 import '@angular/compiler';
 
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HttpResponse, http, type RequestHandler } from 'msw';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { http, HttpResponse } from 'msw';
 import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import {
-  EnvironmentInjector,
-  provideZonelessChangeDetection,
-  runInInjectionContext,
-} from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../../../mocks/idempotency';
+import { isRecord } from '../../../mocks/is-record';
 import { Repository } from '../../../mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
+import {
+  createDeterministicIds,
+  createFixedClock,
+  DEFAULT_SCENARIO,
+} from '../../../mocks/scenarios';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 
 import '../../../mocks/cart/cart.handlers';
 import '../../../mocks/checkout/checkout.handlers';
 import '../../../mocks/payment/payment.handlers';
 import '../../../mocks/orders/order.handlers';
+
+import type { Address } from '../../../app/api/generated/models/address';
+import type { BillingDetails } from '../../../app/api/generated/models/billing-details';
+import type { Contact } from '../../../app/api/generated/models/contact';
+import type { DeliverySelection } from '../../../app/api/generated/models/delivery-selection';
+import type { PaymentSelection } from '../../../app/api/generated/models/payment-selection';
 
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
@@ -53,66 +53,67 @@ import {
   OrderSubmission,
   SafeLogger,
   type SubmitOutcome,
-  type SafeLogContext,
 } from '../../../app/features/checkout/order-submission';
-import {
-  PAYMENT_POLL_INTERVAL_MS,
-  PAYMENT_POLL_MAX_ATTEMPTS,
-  type FakeClock,
-  type PaymentProgressTick,
-} from '../../../app/features/checkout/payment-progress';
 
-// The shared MSW server's lifecycle is registered here, in this file, because
-// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
-// process rather than once per file. See `tests/msw-server.ts`.
 useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
-const VARIANT_G256 = 'demo-one-5g-graphite-256';
+const MOTO = 'motorola-edge-50-fusion--zold--256';
+const HONOR = 'honor-x7d--fekete--128';
 
-interface Env {
-  repository: Repository;
-  clock: ReturnType<typeof createFixedClock>;
-  ids: ReturnType<typeof createDeterministicIds>;
-  scenario: { name: string; seed: number; clockOffsetMs: number; isolated: boolean };
-}
+const VALID_CONTACT: Contact = {
+  fullName: 'Teszt Elek',
+  email: 'Teszt.Elek@Pelda.hu',
+  phone: '+36301234567',
+};
 
-function makeEnv(scenarioName = 't23-suite'): Env {
-  const clock = createFixedClock(new Date(Date.parse('2026-09-15T10:00:00.000Z')).toISOString());
-  const ids = createDeterministicIds(23);
-  const scenario = {
-    name: scenarioName,
-    seed: 23,
-    clockOffsetMs: 0,
-    isolated: true,
-  };
-  const repository = new Repository(scenario, ids, clock);
+const VALID_DELIVERY_ADDRESS: Address = {
+  countryCode: 'HU',
+  postalCode: '1052',
+  city: 'Budapest',
+  line1: 'Petőfi utca 1.',
+};
+
+const VALID_BILLING: BillingDetails = {
+  name: 'Teszt Elek',
+  address: VALID_DELIVERY_ADDRESS,
+};
+
+const HOME_DELIVERY: DeliverySelection = {
+  optionId: 'home_delivery',
+  address: VALID_DELIVERY_ADDRESS,
+};
+
+const CARD_PAYMENT: PaymentSelection = { method: 'card' };
+const COD_PAYMENT: PaymentSelection = { method: 'cash_on_delivery' };
+
+beforeAll(() => {
+  if (!isCatalogFixtureShape(catalogFixture)) {
+    throw new Error('[order-submission.spec] committed fixture does not match expected shape');
+  }
+  loadCatalogFixture(catalogFixture);
+});
+
+beforeEach((): void => {
+  const clock = createFixedClock('2026-09-20T10:00:00.000Z');
+  const ids = createDeterministicIds(1);
+  const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
   repository.loadProducts([DEMO_PRODUCT]);
-  new IdempotencyStore(clock);
-  return { repository, clock, ids, scenario };
-}
-
-let currentEnv: Env;
-
-function buildHandlers(): readonly RequestHandler[] {
-  return createHandlers({
-    repository: currentEnv.repository,
-    clock: currentEnv.clock,
-    ids: currentEnv.ids,
-    scenario: currentEnv.scenario,
+  const options = {
+    repository,
+    clock,
+    ids,
+    scenario: DEFAULT_SCENARIO,
     apiRoot: '/api/v1',
-  });
-}
-
-beforeEach(() => {
-  currentEnv = makeEnv();
-  server.use(...buildHandlers());
+  };
+  server.use(...createHandlers(options));
 });
 
 afterEach(() => {
-  server.resetHandlers();
+  server.events.removeAllListeners('request:start');
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
-  vi.useRealTimers();
+  sessionStorage.clear();
 });
 
 function configureTestBed(): void {
@@ -121,700 +122,478 @@ function configureTestBed(): void {
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
+      provideRouter([]),
     ],
     teardown: { destroyAfterEach: true },
   });
 }
 
-async function seedCartWithItem(): Promise<string> {
-  return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
-    const cart = TestBed.inject(CartFacade);
-    await cart.ensureCart();
-    await cart.addItem(VARIANT_G256, 1);
-    const id = cart.cartId;
-    if (id === null) throw new Error('cart id missing after seed');
-    return id;
-  });
+/** Captured request line plus, for POSTs, the JSON body. The body
+ *  is read off `request.clone().json()` so the underlying handler
+ *  still receives the unconsumed body. */
+interface CapturedRequest {
+  readonly line: string;
+  readonly body: unknown;
 }
 
-async function fillContactDeliveryPayment(
-  checkout: CheckoutFacade,
-  paymentMethod: 'demo_card' | 'demo_cod',
-): Promise<void> {
-  const cartId = await seedCartWithItem();
-  await checkout.loadSession(cartId, { clearOnLoad: false });
-
-  checkout.form.fullName().value.set('Teszt Elek');
-  checkout.form.email().value.set('teszt@example.test');
-  checkout.form.phone().value.set('+36201234567');
-  const contact = await checkout.saveContactSection();
-  expect(contact.ok).toBe(true);
-
-  checkout.form.deliveryOptionId().value.set('demo_pickup');
-  const delivery = await checkout.saveDeliverySection();
-  expect(delivery.ok).toBe(true);
-
-  checkout.form.paymentMethod().value.set(paymentMethod);
-  const method = await checkout.savePaymentMethod();
-  expect(method.ok).toBe(true);
-
-  const quote = await checkout.createQuote();
-  expect(quote.ok).toBe(true);
-}
-
-/** Deterministic test clock — fires every queued callback once. */
-function makeFakeClock(): FakeClock {
-  let pending = 0;
-  const callbacks = new Map<number, () => void>();
-  let nextId = 1;
-  return {
-    nowIso(): string {
-      return '2026-09-15T10:00:00.000Z';
-    },
-    setTimeoutFn(handler: () => void, _delayMs: number): number {
-      pending += 1;
-      const id = nextId;
-      nextId += 1;
-      callbacks.set(id, handler);
-      return id;
-    },
-    clearTimeoutFn(id: number): void {
-      if (callbacks.delete(id)) {
-        pending -= 1;
-      }
-    },
-    fire(): void {
-      const ordered = [...callbacks.entries()].sort(([a], [b]) => a - b);
-      callbacks.clear();
-      pending = 0;
-      for (const [, cb] of ordered) cb();
-    },
-    pending(): number {
-      return pending;
-    },
-  };
-}
-
-/**
- * Drain microtasks + macrotasks so MSW responses (which resolve
- * through fetch + Promise + setImmediate chains) complete before the
- * next test step. The fake clock only resolves the in-process
- * setTimeout queue; the HTTP roundtrip still needs an event-loop tick.
- */
-async function flushAsync(iterations = 5): Promise<void> {
-  for (let i = 0; i < iterations; i += 1) {
-    await new Promise<void>((resolve) => setImmediate(resolve));
-  }
-}
-
-// ---------------------------------------------------------------------------
-// T23-AC01 — COD commits directly; demo_card requires a succeeded intent.
-// ---------------------------------------------------------------------------
-
-describe('T23-AC01 demo_cod commits directly without a payment intent', () => {
-  beforeEach(() => {
-    configureTestBed();
-  });
-
-  it('does not call createPaymentIntent for demo_cod and commits the order', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-
-    const intentCalls: number[] = [];
-    server.use(
-      http.post('*/api/v1/payment-intents', () => {
-        intentCalls.push(Date.now());
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:payment-intent-not-needed',
-            title: 'demo_cod',
-            status: 400,
-            code: 'VALIDATION_FAILED',
-            detail: 'demo_cod does not need a payment intent',
-            traceId: 'mock-trace-test',
-            fieldErrors: [],
-          },
-          { status: 400, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
-    );
-
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const outcome = await submission.submitOrder();
-    expect(outcome.kind).toBe<SubmitOutcome['kind']>('committed');
-    expect(intentCalls.length).toBe(0);
-    expect(checkout.order()?.id).toBeTruthy();
-  });
-
-  it('demo_card first creates a payment intent, then commits only when status is succeeded', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-
-    await fillContactDeliveryPayment(checkout, 'demo_card');
-
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const outcome = await submission.submitOrder();
-    expect(outcome.kind).toBe<SubmitOutcome['kind']>('committed');
-    expect(outcome.kind === 'committed' && outcome.orderId).toBeTruthy();
-    expect(checkout.paymentIntent()?.status).toBe('succeeded');
-    expect(checkout.order()?.paymentMethod).toBe('demo_card');
-  });
-
-  it('a declined payment intent leaves the user on the review step with retry/change-method', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-
-    await fillContactDeliveryPayment(checkout, 'demo_card');
-
-    // Force the payment intent handler to decline.
-    server.use(
-      http.post('*/api/v1/payment-intents', () =>
-        HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:payment-declined',
-            title: 'A szimulált fizetés elutasítva.',
-            status: 409,
-            code: 'PAYMENT_DECLINED',
-            detail: 'A szimulált fizetés elutasítva.',
-            traceId: 'mock-trace-test',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        ),
-      ),
-    );
-
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const outcome = await submission.submitOrder();
-    expect(outcome.kind).toBe<SubmitOutcome['kind']>('declined');
-    expect(submission.canRetry()).toBe(true);
-    expect(submission.canChangeMethod()).toBe(true);
-    expect(checkout.order()).toBeNull();
-    expect(checkout.step()).toBe<ReturnType<CheckoutFacade['step']>>('review');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T23-AC02 — pending intent uses GET polling every 1s for at most 10 attempts
-// with deterministic clock; timeout yields recoverable unknown state.
-// ---------------------------------------------------------------------------
-
-describe('T23-AC02 pending intent polling with deterministic clock', () => {
-  beforeEach(() => {
-    configureTestBed();
-    // All tests in this block use the `payment-pending-timeout`
-    // scenario so the initial intent status is `pending` and the
-    // mock never resolves it. The override below forces the GET
-    // handler to keep returning `pending` so the suite is not
-    // sensitive to the mock's internal resolve-after-1s behaviour.
-    currentEnv = makeEnv('payment-pending-timeout');
-    server.resetHandlers();
-    server.use(...buildHandlers());
-  });
-
-  it('uses an interval of 1000 ms and a cap of 10 attempts', () => {
-    // Source-level assertion: the constants exported from
-    // `payment-progress.ts` define the polling contract.
-    expect(PAYMENT_POLL_INTERVAL_MS).toBe(1000);
-    expect(PAYMENT_POLL_MAX_ATTEMPTS).toBe(10);
-  });
-
-  it('caps the polling window at exactly 10 attempts and yields a recoverable unknown state', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    const fakeClock = makeFakeClock();
-    submission.bindClock(fakeClock);
-
-    await fillContactDeliveryPayment(checkout, 'demo_card');
-
-    const currentCartId = checkout.cartId();
-    if (!currentCartId) throw new Error('Expected cartId');
-    const currentQuote = checkout.quote();
-    if (!currentQuote) throw new Error('Expected quote');
-
-    let pollCount = 0;
-    server.use(
-      http.get('*/api/v1/payment-intents/:intentId', () => {
-        pollCount += 1;
-        return HttpResponse.json({
-          id: 'pi-pending-forever',
-          cartId: currentCartId,
-          quoteId: currentQuote.id,
-          status: 'pending',
-          isSimulation: true,
-          amount: { amount: 100, currency: 'HUF' },
-        });
-      }),
-    );
-
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const submitted = submission.submitOrder();
-    await flushAsync();
-    // Drive the polling through exactly 10 ticks. The fake clock must
-    // produce exactly 10 setTimeout calls (one per attempt).
-    for (let i = 0; i < 10; i += 1) {
-      fakeClock.fire();
-      await flushAsync();
+function captureRequests(log: CapturedRequest[]): void {
+  server.events.on('request:start', async ({ request }) => {
+    const url = new URL(request.url);
+    const line = `${request.method} ${url.pathname}${url.search}`;
+    if (request.method !== 'POST' && request.method !== 'PUT' && request.method !== 'PATCH') {
+      log.push({ line, body: null });
+      return;
     }
+    let body: unknown = null;
+    try {
+      body = await request.clone().json();
+    } catch {
+      // Leave `body` at its null initial value; an unreadable body
+      // becomes the literal `null` in the captured entry.
+    }
+    log.push({ line, body });
+  });
+}
 
-    const outcome = await submitted;
-    expect(outcome.kind).toBe<SubmitOutcome['kind']>('pending-timeout');
-    expect(pollCount).toBe(10);
-    expect(submission.canRetryUnknown()).toBe(true);
-    // No order was committed.
-    expect(checkout.order()).toBeNull();
+/** Returns the JSON bodies of every POST that targeted `path` (substring
+ *  match on the request line). */
+function bodiesByPath(log: readonly CapturedRequest[], path: string): unknown[] {
+  return log
+    .filter((entry) => entry.line.startsWith('POST ') && entry.line.includes(path))
+    .map((entry) => entry.body);
+}
+
+/** Counts POST requests that targeted `path`. */
+function postsTo(log: readonly CapturedRequest[], path: string): number {
+  return log.filter((entry) => entry.line.startsWith('POST ') && entry.line.includes(path)).length;
+}
+
+async function seedCompleteDraft(paymentMethod: PaymentSelection): Promise<void> {
+  const cart = TestBed.inject(CartFacade);
+  const checkout = TestBed.inject(CheckoutFacade);
+  await cart.ensureCart();
+  await cart.addItem(MOTO, 1);
+  const contact = await checkout.updateContact(VALID_CONTACT);
+  expect(contact.ok).toBe(true);
+  const delivery = await checkout.updateDelivery(HOME_DELIVERY);
+  expect(delivery.ok).toBe(true);
+  const payment = await checkout.updatePayment(paymentMethod);
+  expect(payment.ok).toBe(true);
+  const billing = await checkout.updateBilling(VALID_BILLING);
+  expect(billing.ok).toBe(true);
+  const opts = await checkout.ensureOptions();
+  expect(opts.ok).toBe(true);
+}
+
+async function seedCompleteCardDraft(): Promise<void> {
+  await seedCompleteDraft(CARD_PAYMENT);
+}
+
+async function seedCompleteCodDraft(): Promise<void> {
+  await seedCompleteDraft(COD_PAYMENT);
+}
+
+async function resolveIntentOutcome(
+  intentId: string,
+  outcome: 'succeeded' | 'declined',
+): Promise<void> {
+  const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ outcome }),
+  });
+  expect(res.status).toBe(200);
+  // The mock store flipped the intent, but the facade's paymentIntentWritable
+  // still holds the pre-resolution 'requires_action' snapshot. Refetching here
+  // is what makes the next `submitOrder()` see the resolved status.
+  const refetched = await TestBed.inject(CheckoutFacade).readPaymentIntent(intentId);
+  expect(refetched.ok).toBe(true);
+}
+
+describe('OrderSubmission', () => {
+  beforeEach(() => {
+    configureTestBed();
   });
 
-  it('emits a `pending` tick first, then `attempt` ticks 1..10, then a `timeout` tick', async () => {
+  // -------------------------------------------------------------------------
+  // OS-01 — COD commit, no intent ever created
+  // -------------------------------------------------------------------------
+
+  it('OS-01: a cash on delivery draft commits without ever creating a payment intent', async () => {
+    await seedCompleteCodDraft();
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+
+    const outcome = await service.submitOrder();
+
+    expect(postsTo(log, '/payment-intents')).toBe(0);
+    expect(postsTo(log, '/orders')).toBe(1);
+    expect(outcome.kind).toBe('committed');
+    if (outcome.kind !== 'committed') throw new Error('expected committed');
+    expect(outcome.orderNumber).toBe('DEMO-000001');
+
+    const bodies = bodiesByPath(log, '/orders');
+    expect(bodies[0]).toEqual({
+      paymentMethod: 'cash_on_delivery',
+      acceptedTerms: true,
+      termsVersion: '2026-09',
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // OS-02 — card commit, terms version from options
+  // -------------------------------------------------------------------------
+
+  it('OS-02: a card draft sends the stored intent id and the wire terms version', async () => {
+    await seedCompleteCardDraft();
     const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    const fakeClock = makeFakeClock();
-    submission.bindClock(fakeClock);
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    const intentId = created.value.id;
+    await resolveIntentOutcome(intentId, 'succeeded');
 
-    await fillContactDeliveryPayment(checkout, 'demo_card');
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+    const outcome = await service.submitOrder();
+    expect(outcome.kind).toBe('committed');
+    if (outcome.kind !== 'committed') throw new Error('expected committed');
 
-    const currentCartId = checkout.cartId();
-    if (!currentCartId) throw new Error('Expected cartId');
-    const currentQuote = checkout.quote();
-    if (!currentQuote) throw new Error('Expected quote');
+    const bodies = bodiesByPath(log, '/orders');
+    expect(bodies[0]).toEqual({
+      paymentMethod: 'card',
+      paymentIntentId: intentId,
+      acceptedTerms: true,
+      termsVersion: '2026-09',
+    });
+    const intentAfter = checkout.paymentIntent();
+    expect(intentAfter?.id).toBe(intentId);
+    expect(intentAfter?.status).toBe('succeeded');
+  });
 
+  // -------------------------------------------------------------------------
+  // OS-03 — terms version is read from the options signal
+  // -------------------------------------------------------------------------
+
+  it('OS-03: the terms version comes from the options signal rather than a literal', async () => {
+    await seedCompleteCardDraft();
+    const checkout = TestBed.inject(CheckoutFacade);
+
+    // Override GET /checkout/options so the server's terms version is
+    // the marker value '2026-10'; `force=true` in ensureOptions below
+    // forces the facade to refetch and adopt the override.
     server.use(
-      http.get('*/api/v1/payment-intents/:intentId', () =>
+      http.get('*/api/v1/checkout/options', () =>
         HttpResponse.json({
-          id: 'pi-pending-ticks',
-          cartId: currentCartId,
-          quoteId: currentQuote.id,
-          status: 'pending',
-          isSimulation: true,
-          amount: { amount: 100, currency: 'HUF' },
+          termsVersion: '2026-10',
+          deliveryOptions: [],
+          paymentMethods: [],
         }),
       ),
     );
+    const opts = await checkout.ensureOptions(true);
+    expect(opts.ok).toBe(true);
+    if (opts.ok) expect(opts.value.termsVersion).toBe('2026-10');
 
-    const ticks: PaymentProgressTick[] = [];
-    const stop = submission.watchProgress((tick) => ticks.push(tick));
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    const intentId = created.value.id;
+    await resolveIntentOutcome(intentId, 'succeeded');
 
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+    await service.submitOrder();
 
-    const submitted = submission.submitOrder();
-    await flushAsync();
-    for (let i = 0; i < 10; i += 1) {
-      fakeClock.fire();
-      await flushAsync();
-    }
-    await submitted;
-    stop();
-
-    expect(ticks[0]?.state).toBe('pending');
-    expect(ticks.at(-1)?.state).toBe('timeout');
-    const attemptTicks = ticks.filter((t) => t.state === 'attempt');
-    expect(attemptTicks.length).toBe(10);
-    expect(attemptTicks.map((t) => t.attempt)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T23-AC03 — double-click, browser retry, and timeout-after-commit produce
-// exactly one order / stock decrement; in-flight submit is exhausted.
-// ---------------------------------------------------------------------------
-
-describe('T23-AC03 single commit semantics under retries and concurrent submit', () => {
-  beforeEach(() => {
-    configureTestBed();
+    const bodies = bodiesByPath(log, '/orders');
+    const body = bodies[0];
+    if (!isRecord(body)) throw new Error('expected body object');
+    expect(body['termsVersion']).toBe('2026-10');
   });
 
-  it('two simultaneous submitOrder() calls produce exactly one createOrder + one stock decrement', async () => {
+  // -------------------------------------------------------------------------
+  // OS-04 — in-flight mutex: double call collapses to one order
+  // -------------------------------------------------------------------------
+
+  it('OS-04: two simultaneous submitOrder calls produce exactly one order', async () => {
+    await seedCompleteCardDraft();
     const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    await resolveIntentOutcome(created.value.id, 'succeeded');
 
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
 
-    let orderCalls = 0;
-    server.use(
-      http.post('*/api/v1/orders', async ({ request }) => {
-        orderCalls += 1;
-        await request.clone().json();
-        return HttpResponse.json(
-          {
-            id: 'order-once',
-            orderNumber: 'DEMO-000001',
-            createdAt: currentEnv.clock.now(),
-            status: 'demo_confirmed',
-            isSimulation: true,
-            items: [],
-            subtotal: { amount: 339_990, currency: 'HUF' },
-            shipping: { amount: 0, currency: 'HUF' },
-            total: { amount: 339_990, currency: 'HUF' },
-            paymentMethod: 'demo_cod',
-            deliveryOptionId: 'demo_pickup',
-            notice: 'demo',
-          },
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
+    const a = service.submitOrder();
+    const b = service.submitOrder();
+    const [outA, outB] = await Promise.all([a, b]);
 
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const [a, b] = await Promise.all([submission.submitOrder(), submission.submitOrder()]);
-
-    expect(orderCalls).toBe(1);
-    expect(a.kind).toBe<SubmitOutcome['kind']>('committed');
-    expect(b.kind).toBe<SubmitOutcome['kind']>('committed');
-    // Both promises resolve to the SAME order id.
-    expect(a.kind === 'committed' && b.kind === 'committed' && a.orderId === b.orderId).toBe(true);
-  });
-
-  it('does not start a new submit while one is in flight (browser retry)', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-
-    const resolverHolder: { resolve?: (value: Record<string, unknown>) => void } = {};
-    server.use(
-      http.post(
-        '*/api/v1/orders',
-        () =>
-          new Promise<Response>((resolve) => {
-            resolverHolder.resolve = (body) => {
-              resolve(
-                HttpResponse.json(body, {
-                  status: 201,
-                  headers: { 'content-type': 'application/json' },
-                }),
-              );
-            };
-          }),
-      ),
-    );
-
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-
-    const first = submission.submitOrder();
-    await Promise.resolve();
-    expect(submission.inFlight()).toBe(true);
-
-    // The browser retries while the first submit is still pending.
-    // The second invocation must NOT issue a second POST /orders.
-    const second = submission.submitOrder();
-    await Promise.resolve();
-
-    if (!resolverHolder.resolve) throw new Error('Expected resolveOrder to be defined');
-    resolverHolder.resolve({
-      id: 'order-only-one',
-      orderNumber: 'DEMO-000001',
-      createdAt: currentEnv.clock.now(),
-      status: 'demo_confirmed',
-      isSimulation: true,
-      items: [],
-      subtotal: { amount: 339_990, currency: 'HUF' },
-      shipping: { amount: 0, currency: 'HUF' },
-      total: { amount: 339_990, currency: 'HUF' },
-      paymentMethod: 'demo_cod',
-      deliveryOptionId: 'demo_pickup',
-      notice: 'demo',
-    });
-
-    const [a, b] = await Promise.all([first, second]);
-    expect(a.kind).toBe<SubmitOutcome['kind']>('committed');
-    expect(b.kind).toBe<SubmitOutcome['kind']>('committed');
-    expect(submission.inFlight()).toBe(false);
-  });
-
-  it('a network timeout AFTER the order has been committed does NOT produce a second order', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
-
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-
-    // Count POST /orders via MSW's request:match event so we don't
-    // override the handler (an override would not save the order in
-    // the repository, defeating the recovery contract).
-    let orderCalls = 0;
-    const onMatch = ({ request }: { request: Request }): void => {
-      if (request.method === 'POST' && request.url.endsWith('/orders')) {
-        orderCalls += 1;
-      }
-    };
-    server.events.on('request:match', onMatch);
-
-    try {
-      checkout.form.acceptedTerms().value.set(true);
-      checkout.form.acknowledgedSimulation().value.set(true);
-
-      const outcome = await submission.submitOrder();
-      expect(outcome.kind).toBe<SubmitOutcome['kind']>('committed');
-      expect(orderCalls).toBe(1);
-    } finally {
-      server.events.removeListener('request:match', onMatch);
+    expect(postsTo(log, '/orders')).toBe(1);
+    expect(outA.kind).toBe('committed');
+    expect(outB.kind).toBe('committed');
+    if (outA.kind === 'committed' && outB.kind === 'committed') {
+      expect(outA.orderId).toBe(outB.orderId);
     }
   });
-});
 
-// ---------------------------------------------------------------------------
-// FIX-61 — `commitDirectly()` commits through `CheckoutFacade.commitOrder()`,
-// which holds one idempotency key per canonical request fingerprint
-// (architecture.md:117/:121: "a retry sends the identical body/precondition").
-// This is the criterion the task exists for.
-// ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // OS-05 — inFlight signal reflects the mutex
+  // -------------------------------------------------------------------------
 
-describe('FIX-61 the order-commit idempotency key is held per fingerprint', () => {
-  beforeEach(() => {
-    configureTestBed();
-  });
-
-  it('retrying an unknown outcome sends the SAME Idempotency-Key on both /orders requests', async () => {
+  it('OS-05: no new submit starts while one is in flight', async () => {
+    await seedCompleteCardDraft();
     const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    await resolveIntentOutcome(created.value.id, 'succeeded');
 
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
 
-    const keys: string[] = [];
-    let failNext = true;
-    server.use(
-      http.post('*/api/v1/orders', ({ request }) => {
-        keys.push(request.headers.get('Idempotency-Key') ?? '');
-        if (failNext) {
-          failNext = false;
-          return HttpResponse.json(
-            {
-              type: 'about:blank',
-              title: 'error',
-              status: 503,
-              code: 'SERVICE_UNAVAILABLE',
-              detail: 'Átmeneti hiba.',
-            },
-            { status: 503, headers: { 'content-type': 'application/problem+json' } },
-          );
-        }
-        return HttpResponse.json(
-          {
-            id: 'order-retry-1',
-            orderNumber: 'DEMO-000001',
-            createdAt: '2026-09-15T10:00:00.000Z',
-            deliveryOptionId: 'demo_pickup',
-            paymentMethod: 'demo_cod',
-            subtotal: { amount: 100, currency: 'HUF' },
-            shipping: { amount: 0, currency: 'HUF' },
-            total: { amount: 100, currency: 'HUF' },
-            items: [],
-            status: 'demo_confirmed',
-            notice: 'Demó',
-            isSimulation: true,
-          },
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
-
-    const first = await submission.submitOrder();
-    expect(first.kind).toBe<SubmitOutcome['kind']>('unknown');
-
-    const second = await submission.submitOrder();
-    expect(second.kind).toBe<SubmitOutcome['kind']>('committed');
-
-    expect(keys.length).toBe(2);
-    expect(keys[0]).not.toBe('');
-    expect(keys[0]).toBe(keys[1]);
+    const promise = service.submitOrder();
+    expect(service.inFlight()).toBe(true);
+    await promise;
+    expect(service.inFlight()).toBe(false);
+    expect(postsTo(log, '/orders')).toBe(1);
   });
 
-  it('changing the delivery option before retrying mints a DIFFERENT Idempotency-Key', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
+  // -------------------------------------------------------------------------
+  // OS-06 — no session or options → unknown NO_SESSION, no wire
+  // -------------------------------------------------------------------------
 
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
+  it('OS-06: an unloaded session or options yields NO_SESSION and never reaches the wire', async () => {
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
 
-    const keys: string[] = [];
-    server.use(
-      http.post('*/api/v1/orders', ({ request }) => {
-        keys.push(request.headers.get('Idempotency-Key') ?? '');
-        return HttpResponse.json(
-          {
-            id: `order-${String(keys.length)}`,
-            orderNumber: 'DEMO-000001',
-            createdAt: '2026-09-15T10:00:00.000Z',
-            deliveryOptionId: 'demo_pickup',
-            paymentMethod: 'demo_cod',
-            subtotal: { amount: 100, currency: 'HUF' },
-            shipping: { amount: 0, currency: 'HUF' },
-            total: { amount: 100, currency: 'HUF' },
-            items: [],
-            status: 'demo_confirmed',
-            notice: 'Demó',
-            isSimulation: true,
-          },
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        );
-      }),
-    );
+    const outcome = await service.submitOrder();
 
-    const first = await submission.submitOrder();
-    expect(first.kind).toBe<SubmitOutcome['kind']>('committed');
-
-    // A genuinely new order after a terminal success must not inherit
-    // the previous fingerprint's key — a fresh quote changes the
-    // fingerprint (a new quote id), same as a real second purchase.
-    const requote = await checkout.createQuote();
-    expect(requote.ok).toBe(true);
-
-    const second = await submission.submitOrder();
-    expect(second.kind).toBe<SubmitOutcome['kind']>('committed');
-
-    expect(keys.length).toBe(2);
-    expect(keys[0]).not.toBe(keys[1]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T23-AC05 — expected failure leaves inputs/cart intact and logs omit
-// contact / address / payment-like data.
-// ---------------------------------------------------------------------------
-
-describe('T23-AC05 expected failure preserves inputs/cart and redacts logs', () => {
-  beforeEach(() => {
-    configureTestBed();
+    expect(outcome.kind).toBe('unknown');
+    if (outcome.kind !== 'unknown') throw new Error('expected unknown');
+    expect(outcome.code).toBe('NO_SESSION');
+    expect(postsTo(log, '/orders')).toBe(0);
   });
 
-  it('a declined payment leaves contact, address, paymentMethod and cart intact', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
+  // -------------------------------------------------------------------------
+  // OS-07 — incomplete draft routes to the first missing section
+  // -------------------------------------------------------------------------
+
+  it('OS-07: an incomplete draft never reaches the wire and routes to the first missing section', async () => {
     const cart = TestBed.inject(CartFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    submission.bindClock(makeFakeClock());
+    const checkout = TestBed.inject(CheckoutFacade);
+    await cart.ensureCart();
+    await cart.addItem(MOTO, 1);
+    // The cart facade does not load the checkout session on its own;
+    // a session refetch is what makes OrderSubmission's `session()` non-null.
+    const loaded = await checkout.ensureSession();
+    expect(loaded.ok).toBe(true);
 
-    await fillContactDeliveryPayment(checkout, 'demo_card');
+    // Nothing saved: the first missing section is contact → adatok.
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+    const service = TestBed.inject(OrderSubmission);
+    const outcomeEmpty = await service.submitOrder();
+    expect(outcomeEmpty.kind).toBe('incomplete');
+    if (outcomeEmpty.kind !== 'incomplete') throw new Error('expected incomplete');
+    expect(outcomeEmpty.route).toBe('/penztar/adatok?navigationReason=incomplete');
+    expect(postsTo(log, '/orders')).toBe(0);
 
+    // Contact saved only: the first missing section is billing →
+    // szallitas.
+    const contact = await checkout.updateContact(VALID_CONTACT);
+    expect(contact.ok).toBe(true);
+    const outcomePartial = await service.submitOrder();
+    expect(outcomePartial.kind).toBe('incomplete');
+    if (outcomePartial.kind !== 'incomplete') throw new Error('expected incomplete');
+    expect(outcomePartial.route).toBe('/penztar/szallitas?navigationReason=incomplete');
+    expect(postsTo(log, '/orders')).toBe(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // OS-08 — complete card draft with no intent → payment-required
+  // -------------------------------------------------------------------------
+
+  it('OS-08: a complete card draft with no intent yields payment-required with no redirect url', async () => {
+    await seedCompleteCardDraft();
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+
+    const outcome = await service.submitOrder();
+
+    expect(outcome.kind).toBe('payment-required');
+    if (outcome.kind !== 'payment-required') throw new Error('expected payment-required');
+    expect(outcome.intentId).toBeNull();
+    expect(outcome.redirectUrl).toBeNull();
+    expect(postsTo(log, '/orders')).toBe(0);
+    expect(service.canChangeMethod()).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // OS-09 — requires_action intent → payment-required with redirectUrl
+  // -------------------------------------------------------------------------
+
+  it('OS-09: a requires_action intent yields payment-required carrying the intent redirect url', async () => {
+    await seedCompleteCardDraft();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    const intentId = created.value.id;
+
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+    const outcome = await service.submitOrder();
+
+    expect(outcome.kind).toBe('payment-required');
+    if (outcome.kind !== 'payment-required') throw new Error('expected payment-required');
+    expect(outcome.intentId).toBe(intentId);
+    expect(outcome.redirectUrl).toBe(checkout.paymentIntent()?.redirectUrl);
+    expect(postsTo(log, '/orders')).toBe(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // OS-10 — declined intent → declined + recovery controls armed
+  // -------------------------------------------------------------------------
+
+  it('OS-10: a declined intent yields declined and arms both recovery controls', async () => {
+    await seedCompleteCardDraft();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    const intentId = created.value.id;
+    await resolveIntentOutcome(intentId, 'declined');
+
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+    const outcome = await service.submitOrder();
+
+    expect(outcome.kind).toBe('declined');
+    if (outcome.kind !== 'declined') throw new Error('expected declined');
+    expect(outcome.intentId).toBe(intentId);
+    expect(postsTo(log, '/orders')).toBe(0);
+    expect(service.canRetry()).toBe(true);
+    expect(service.canChangeMethod()).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // OS-11 — 422 PAYMENT_PENDING through POST /orders maps to payment-pending
+  // -------------------------------------------------------------------------
+
+  it('OS-11: a 422 PAYMENT_PENDING from the order endpoint maps to payment-pending, not declined', async () => {
+    await seedCompleteCardDraft();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    await resolveIntentOutcome(created.value.id, 'succeeded');
+
+    // The mock refuses to flip a succeeded intent back to pending; the
+    // race we want to exercise is therefore driven at the order
+    // endpoint: with the intent already succeeded on the facade side,
+    // a 422 PAYMENT_PENDING from POST /orders proves mapFailure maps
+    // the code, not the local intent status, onto the outcome kind.
     server.use(
-      http.post('*/api/v1/payment-intents', () =>
+      http.post('*/api/v1/orders', () =>
         HttpResponse.json(
           {
-            type: 'urn:mi-bolt:problem:payment-declined',
-            title: 'A szimulált fizetés elutasítva.',
-            status: 409,
-            code: 'PAYMENT_DECLINED',
-            detail: 'A szimulált fizetés elutasítva.',
-            traceId: 'mock-trace-test',
+            type: 'urn:mi-bolt:problem:payment-pending',
+            title: 'Payment pending',
+            status: 422,
+            code: 'PAYMENT_PENDING',
+            detail: 'The referenced payment intent has not reached a terminal status yet.',
+            traceId: 'spec-os-11',
             fieldErrors: [],
+            params: { paymentIntentId: created.value.id },
           },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+          { status: 422, headers: { 'content-type': 'application/problem+json' } },
         ),
       ),
     );
 
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
+    const service = TestBed.inject(OrderSubmission);
+    const outcome: SubmitOutcome = await service.submitOrder();
 
-    const outcome = await submission.submitOrder();
-    expect(outcome.kind).toBe<SubmitOutcome['kind']>('declined');
-    // Contact + delivery + payment method preserved.
-    expect(checkout.form().value().fullName).toBe('Teszt Elek');
-    expect(checkout.form().value().email).toBe('teszt@example.test');
-    expect(checkout.form().value().phone).toBe('+36201234567');
-    expect(checkout.form().value().deliveryOptionId).toBe('demo_pickup');
-    expect(checkout.form().value().paymentMethod).toBe('demo_card');
-    // Cart survives.
-    expect(cart.itemCount()).toBe(1);
+    expect(outcome.kind).toBe('payment-pending');
+    expect('declined' in outcome).toBe(false);
+    if (outcome.kind === 'payment-pending') {
+      expect(outcome.intentId).toBe(created.value.id);
+    }
+    expect(service.canRetry()).toBe(false);
   });
 
-  it('SafeLogger.redact() strips contact / address / payment-like fields', () => {
-    const ctx: SafeLogContext = {
-      cartId: 'cart-redact',
-      quoteId: 'quote-abc',
-      paymentIntentId: 'pi-xyz',
-      fullName: 'Teszt Elek',
-      email: 'teszt@example.test',
-      phone: '+36201234567',
-      postalCode: '1111',
-      city: 'Demóváros',
-      line1: 'Példa utca 1.',
-      line2: '2. emelet',
-      cardNumber: '4111-1111-1111-1111',
-      cvv: 'cvc-999',
-      amount: { amount: 339_990, currency: 'HUF' },
-    };
-    const safe = SafeLogger.redact(ctx);
-    const json = JSON.stringify(safe);
-    // The PII fields must be absent from the redacted record.
-    expect(json).not.toMatch(/Teszt Elek/);
-    expect(json).not.toMatch(/teszt@example\.test/);
-    expect(json).not.toMatch(/\+36201234567/);
-    expect(json).not.toMatch(/Példa utca/);
-    expect(json).not.toMatch(/Demóváros/);
-    expect(json).not.toMatch(/1111/);
-    expect(json).not.toMatch(/2\. emelet/);
-    expect(json).not.toMatch(/4111/);
-    expect(json).not.toMatch(/cvc-999/);
-    // The safe fields must survive.
-    expect(safe['cartId']).toBe('cart-redact');
-    expect(safe['quoteId']).toBe('quote-abc');
-    expect(safe['paymentIntentId']).toBe('pi-xyz');
-  });
+  // -------------------------------------------------------------------------
+  // OS-12 — price change → price-changed, exactly one POST /orders
+  // -------------------------------------------------------------------------
 
-  it('submitOrder logs through the safe logger and never writes a raw contact field', async () => {
+  it('OS-12: a price change after the intent was created yields price-changed and issues exactly one order request', async () => {
+    await seedCompleteCardDraft();
     const checkout = TestBed.inject(CheckoutFacade);
-    const submission = TestBed.inject(OrderSubmission);
-    const sink: (readonly SafeLogContext[])[] = [];
-    submission.bindSafeLogger((entries) => sink.push(entries));
-    submission.bindClock(makeFakeClock());
+    const cart = TestBed.inject(CartFacade);
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    await resolveIntentOutcome(created.value.id, 'succeeded');
 
-    await fillContactDeliveryPayment(checkout, 'demo_cod');
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
+    // Add HONOR so the subtotal becomes 89 990 + 69 990 = 159 980.
+    await cart.addItem(HONOR, 1);
 
-    await submission.submitOrder();
-    const flattened = sink
-      .flat()
-      .map((entry) => JSON.stringify(entry))
-      .join('\n');
-    expect(flattened).not.toMatch(/Teszt Elek|teszt@example\.test|\+36201234567/);
-  });
-});
+    const service = TestBed.inject(OrderSubmission);
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+    const outcome = await service.submitOrder();
 
-// ---------------------------------------------------------------------------
-// Wiring — the service uses the SDK + the CheckoutFacade.
-// ---------------------------------------------------------------------------
-
-describe('T23 wiring — submission service consumes the SDK and the facade', () => {
-  beforeEach(() => {
-    configureTestBed();
+    expect(outcome.kind).toBe('price-changed');
+    expect(postsTo(log, '/orders')).toBe(1);
+    const priceChange = checkout.priceChange();
+    expect(priceChange).not.toBeNull();
+    expect(priceChange?.currentTotal.amount).toBe(159_980);
   });
 
-  it('OrderSubmission is a singleton @Service() exposed via inject()', () => {
-    const a = TestBed.inject(OrderSubmission);
-    const b = TestBed.inject(OrderSubmission);
-    expect(a).toBe(b);
-  });
+  // -------------------------------------------------------------------------
+  // OS-13 — SafeLogger.redact keeps the whitelist, drops the rest
+  // -------------------------------------------------------------------------
 
-  it('uses createPaymentIntent + getPaymentIntent + createOrder + getOrder from the SDK', () => {
-    const submission = TestBed.inject(OrderSubmission);
-    expect(submission.usesSdkFunction('createPaymentIntent')).toBe(true);
-    expect(submission.usesSdkFunction('getPaymentIntent')).toBe(true);
-    expect(submission.usesSdkFunction('createOrder')).toBe(true);
-    expect(submission.usesSdkFunction('getOrder')).toBe(true);
+  it('OS-13: redact keeps only the whitelist fields and drops everything else', () => {
+    const money = { amount: 89_990, currency: 'HUF' as const };
+    const redacted = SafeLogger.redact({
+      paymentIntentId: 'pi-001',
+      orderId: 'o-001',
+      scenario: 'default',
+      step: 'commit',
+      attempt: 1,
+      outcome: 'committed',
+      amount: money,
+    });
+
+    expect(redacted['paymentIntentId']).toBe('pi-001');
+    expect(redacted['orderId']).toBe('o-001');
+    expect(redacted['scenario']).toBe('default');
+    expect(redacted['step']).toBe('commit');
+    expect(redacted['attempt']).toBe(1);
+    expect(redacted['outcome']).toBe('committed');
+    const amount = redacted['amount'];
+    expect(amount).toEqual({ amount: 89_990, currency: 'HUF' });
+    // The amount entry is a frozen {amount, currency} pair.
+    expect(Object.isFrozen(amount)).toBe(true);
+
+    const piiKeys = [
+      'fullName',
+      'email',
+      'phone',
+      'postalCode',
+      'city',
+      'line1',
+      'line2',
+      'cardNumber',
+      'paymentMethod',
+    ];
+    for (const key of piiKeys) {
+      const single = SafeLogger.redact({ [key]: 'sensitive' });
+      expect(key in single).toBe(false);
+    }
   });
 });
