@@ -158,22 +158,10 @@ export const checkoutFormSchema: SchemaFn<CheckoutFormModel> = (path) => {
     message: 'Válassz fizetési módot.',
   });
 
-  // Billing block. The name is always required (and bounded by the
-  // wire contract: openapi.yaml's `BillingDetails.name` allows 2..100
-  // characters, which the client mirrors so a too-short or too-long
-  // value does not turn into a server-side 422). The address is hidden
-  // when the shopper copies the delivery address, so its emptiness
-  // does not contribute to the page's `valid()` aggregate.
+  // Billing block. The address is hidden when the shopper copies the
+  // delivery address, so its emptiness does not contribute to the
+  // page's `valid()` aggregate.
   required(path.billingName, { message: 'A számlázási név megadása kötelező.' });
-  validate(path.billingName, ({ value }) => {
-    const trimmed = value().trim();
-    return trimmed.length >= 2 && trimmed.length <= 100
-      ? null
-      : {
-          kind: 'billingNameLength',
-          message: 'A számlázási név 2 és 100 karakter közé eshet.',
-        };
-  });
 
   hidden(path.billingAddress, {
     when: (ctx) => ctx.valueOf(path.billingSameAsDelivery),

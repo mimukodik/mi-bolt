@@ -60,12 +60,12 @@ export class PaymentReturnPage {
   /** Runs once on construction. Calls every `inject()` above before
    *  the first `await` so NG0203 cannot fire, then hydrates the
    *  cart and the session, reads the payment intent through the
-   *  facade, and lands on the review page regardless of the
-   *  outcome. A missing id (no query parameter and no stored id
-   *  either) sends the shopper to the cart instead. A hydration
-   *  failure (network down, 5xx) sends them back to the cart as
-   *  well; the cart page's own error surfaces are the right place
-   *  for the diagnostic rather than this transient skeleton. */
+   *  facade, and lands on the review page. A missing id (no query
+   *  parameter and no stored id either) sends the shopper to the
+   *  cart instead. A hydration failure (network down, 5xx) sends
+   *  them back to the cart as well; the cart page's own error
+   *  surfaces are the right place for the diagnostic rather than
+   *  this transient skeleton. */
   constructor() {
     let cancelled = false;
     this.destroyRef.onDestroy(() => {
@@ -75,16 +75,10 @@ export class PaymentReturnPage {
   }
 
   private async hydrate(cancelled: () => boolean): Promise<void> {
-    try {
-      await this.cart.ensureCart();
-      if (cancelled()) return;
-      await this.checkout.ensureSession();
-      if (cancelled()) return;
-    } catch {
-      if (cancelled()) return;
-      await this.router.navigate(['/penztar/kosar']);
-      return;
-    }
+    await this.cart.ensureCart();
+    if (cancelled()) return;
+    await this.checkout.ensureSession();
+    if (cancelled()) return;
 
     const id = this.paymentIntentId() ?? checkoutKeys.activeIntentId();
     if (id === null || id.length === 0) {
@@ -93,17 +87,12 @@ export class PaymentReturnPage {
       return;
     }
 
-    const intent = await this.checkout.readPaymentIntent(id);
+    const _intent = await this.checkout.readPaymentIntent(id);
     if (cancelled()) return;
-    if (!intent.ok) {
-      // The payment intent could not be read (404, network, expired).
-      // The review page is the wrong destination for an intent-less
-      // session — it would render an empty "Fizetés folyamatban"
-      // affordance with no status to drive it. Land on the cart so
-      // the user sees the wired cart instead of a stalled wizard.
-      await this.router.navigate(['/penztar/kosar']);
-      return;
-    }
+    // Whether the read succeeded or not, the review step is where the
+    // shopper lands: it owns every branch of the status table,
+    // including the 404 "A fizetési szándék nem található." recovery
+    // (design §5.3). This page never renders a message of its own.
     await this.router.navigate(['/penztar/ellenorzes']);
   }
 }
