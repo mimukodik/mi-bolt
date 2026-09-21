@@ -275,6 +275,7 @@ describe('FIX-29 fact 3 — delivery and payment option lists carry role=list', 
       providers: [provideZonelessChangeDetection()],
     });
     const fixture = TestBed.createComponent(PaymentMethodSelector);
+    fixture.componentRef.setInput('options', OPTIONS.paymentMethods);
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const list = root.querySelector('[data-testid="payment-option"]')?.closest('ul');

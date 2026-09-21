@@ -706,8 +706,13 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     fixture.detectChanges();
     const root = getRootElement(fixture);
 
-    expect(root.querySelector('[data-testid="error-state"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="retry-button"]')).not.toBeNull();
+    const errorState = root.querySelector('[data-testid="error-state"]');
+    expect(errorState).not.toBeNull();
+    // The retry control sits inside the error-state block as the only
+    // <button> it renders; no `data-testid="retry-button"` is set on
+    // the `app-button` host, so the test queries the inner button.
+    const retry = errorState?.querySelector<HTMLButtonElement>('button');
+    expect(retry).not.toBeNull();
     expect(root.querySelector('[data-testid="featured-grid"]')).toBeNull();
 
     // First listProducts call has been made.
@@ -716,8 +721,6 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     // Resolve the retry call so the orchestrator does not stay loading.
     api.nextListProductsError = null;
     api.listProductsResponse = () => pageFrom(catalogItemFixtures());
-    const retry = root.querySelector<HTMLButtonElement>('[data-testid="retry-button"]');
-    expect(retry).not.toBeNull();
     retry?.click();
     for (let i = 0; i < 20; i += 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
