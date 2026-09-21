@@ -41,7 +41,7 @@ function capFeatured(items: readonly CatalogEntry[], filter: Filter): readonly C
  *  the panel filter on); the `label` is the brand's display name as it
  *  appears on a product page, so the filter row reads "Apple (17)" and
  *  not "apple (17)" — the demo copy and the API contract both expect
- *  the display name (MIM-210). */
+ *  the display name. */
 function buildBrandFacet(entries: readonly CatalogEntry[], filter: Filter): FacetValue[] {
   const noBrand: Filter = { ...filter, brands: [] };
   const capped = capFeatured(

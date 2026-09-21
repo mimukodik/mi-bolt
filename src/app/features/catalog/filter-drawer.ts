@@ -116,7 +116,7 @@ export class FilterDrawer {
   /** Brand facets, falling back to an empty list when none are present. */
   readonly brandFacets = computed(() => this.facets()?.brands ?? []);
 
-  /** MIM-210: brand list collapses to the first five rows behind a
+  /** The brand list collapses to the first five rows behind a
    *  `Még több gyártó` text link. A brand selected beyond the first
    *  five keeps the list expanded so the chip the user picked stays
    *  visible. */
@@ -184,6 +184,7 @@ export class FilterDrawer {
       this.draftFiveG.set(a.is5g === true);
       this.draftMin.set(a.minPrice === undefined ? '' : String(a.minPrice));
       this.draftMax.set(a.maxPrice === undefined ? '' : String(a.maxPrice));
+      this.brandsExpanded.set(false);
     });
   }
 

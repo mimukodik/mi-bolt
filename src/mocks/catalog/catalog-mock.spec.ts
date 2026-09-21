@@ -69,7 +69,7 @@ const TOTAL_IMAGES = (() => {
 })();
 
 // brand facet for the default list (no filters): 7 brands, counts by entries.
-// Labels are the product page display names (MIM-210: "Apple", not "apple");
+// Labels are the product page display names ("Apple", not "apple");
 // the `value` is the lowercased brand key the URL and the panel filter on.
 const DEFAULT_BRAND_FACET = [
   { value: 'apple', label: 'Apple', count: 17 },

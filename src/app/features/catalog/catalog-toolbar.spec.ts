@@ -147,4 +147,10 @@ describe('CatalogToolbar', () => {
     expect(labels[6]).toBe('Név szerint (A–Z)');
     expect(labels[7]).toBe('Név szerint (Z–A)');
   });
+
+  it('the results line names the filtered count (MIM-210)', () => {
+    const { fixture } = setup();
+    const toolbar = getToolbar(fixture);
+    expect(toolbar.resultCountLabel()).toBe('16 találat a szűrt feltételek szerint');
+  });
 });

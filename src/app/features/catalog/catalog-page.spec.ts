@@ -442,7 +442,7 @@ describe('T13-AC01 catalog layout breakpoints', () => {
   it('>=1024px desktop renders a sidebar + 3-column grid (CSS data-layout=desktop-3col)', () => {
     // FIX-60 moved the grid rules out of CatalogPage into AsyncContent,
     // which now owns the `[data-testid="catalog-grid"]` element.
-    // MIM-210 collapsed the 3-column breakpoint from 1280 to 1024 px
+    // The 3-column breakpoint is 1024 px
     // to match the new filter sidebar width (docs/design/yettel.md §5).
     const css = getComponentStyles(AsyncContent).join('\n');
     expect(css).toMatch(/min-width:\s*1024px/);

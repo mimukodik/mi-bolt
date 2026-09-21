@@ -219,6 +219,13 @@ describe('T13-AC04 ProductCard', () => {
     expect(label.textContent).toContain('Egyszeri');
   });
 
+  it('the price block renders at the md size (MIM-210)', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const priceRoot = queryElement(root, 'app-price-block .root');
+    expect(priceRoot.getAttribute('data-size')).toBe('md');
+  });
+
   it('renders the matching variant color label and storage bucket together', () => {
     const { fixture, host } = setup();
     host.product.set(

@@ -53,7 +53,7 @@ export class CatalogToolbar {
     if (this.status() === 'loading') return 'Keresés a katalógusban…';
     if (this.status() === 'error') return 'A katalógus betöltése nem sikerült.';
     if (this.total() === 0) return 'Nincs találat.';
-    return `${String(this.total())} találat`;
+    return `${String(this.total())} találat a szűrt feltételek szerint`;
   });
 
   /** The filter-trigger button, exposed so `CatalogPage` can pass it as
