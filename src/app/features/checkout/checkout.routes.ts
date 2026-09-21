@@ -45,21 +45,32 @@ import {
   type ContactSubmission,
 } from './contact-step';
 
+import { toContactFieldErrors } from './contact-server-errors';
+
 /**
  * Real `ContactDraftSaver` factory. The 2.0.0 `PATCH /checkout`
  * returns the whole session, so `CheckoutFacade.updateContact()`
  * already returns the new session and no merge step is needed
  * client-side. `error.detail` is an English developer diagnostic
- * (openapi.yaml:1490-1493) and `ContactStep` renders the fixed
- * Hungarian `'A mentés sikertelen.'` for any failure and ignores
- * the message, so the leaked detail is harmless — but no component
- * should render it.
+ * (openapi.yaml:1490-1493); the page renders the fixed Hungarian
+ * banner `'A mentés sikertelen.'` for any non-422 failure and
+ * ignores the message, so a leaked detail is harmless — but no
+ * component should render it. A 422 carries per-field errors
+ * (`CheckoutError.fieldErrors`) the page maps onto the contact
+ * form fields (MIM-212).
  */
 const contactDraftSaverFactory =
   (facade: CheckoutFacade): ContactDraftSaver =>
   async (submission: ContactSubmission) => {
     const result = await facade.updateContact(submission);
-    return result.ok ? { ok: true } : { ok: false, message: result.error.detail };
+    if (result.ok) return { ok: true };
+    return {
+      ok: false,
+      message: result.error.detail,
+      ...(result.error.status === 422
+        ? { fieldErrors: toContactFieldErrors(result.error.fieldErrors) }
+        : {}),
+    };
   };
 
 /**

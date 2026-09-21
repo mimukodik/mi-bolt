@@ -1,5 +1,10 @@
 /**
  * The owning container of the contact step: it holds the `Contact` Signal Forms model seeded from the checkout session, the `CONTACT_DRAFT_SAVER` save call and the post-save navigation to the delivery step.
+ *
+ * MIM-212 — when the saver answers 422 with per-field errors the page
+ * hands them to `ContactStep` together with the `Contact` values that
+ * were saved, so the step can drop a server error the moment the user
+ * edits the field it referred to.
  */
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -7,6 +12,7 @@ import { Router } from '@angular/router';
 import { buildContactForm, normalizeContact } from './contact.schema';
 import { CheckoutFacade } from './checkout.facade';
 import { CONTACT_DRAFT_SAVER, ContactStep } from './contact-step';
+import type { ContactServerErrors } from './contact-server-errors';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
 import type { CheckoutSession } from '../../api/generated/models/checkout-session';
@@ -50,12 +56,32 @@ export class ContactPage {
 
   readonly saveState = signal<AsyncStatus>('idle');
 
+  /**
+   * The per-field errors the saver's 422 last carried, paired with the
+   * `Contact` values that were saved. Cleared at the start of every
+   * `onContinue` so a retry wipes stale messages; set on a 422 so the
+   * step can render the error on each named field.
+   */
+  readonly serverErrors = signal<ContactServerErrors | null>(null);
+
   async onContinue(): Promise<void> {
     this.saveState.set('loading');
+    this.serverErrors.set(null);
     try {
       const normalized = normalizeContact(this.modelWritable());
       const saveResult = await this.saver(normalized);
       if (!saveResult.ok) {
+        if (
+          saveResult.fieldErrors !== undefined &&
+          Object.keys(saveResult.fieldErrors).length > 0
+        ) {
+          this.serverErrors.set({
+            values: this.modelWritable(),
+            errors: saveResult.fieldErrors,
+          });
+          this.saveState.set('idle');
+          return;
+        }
         this.saveState.set('error');
         return;
       }

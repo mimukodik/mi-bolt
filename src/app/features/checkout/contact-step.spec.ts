@@ -588,3 +588,36 @@ describe('T20 contact-step shared wiring', () => {
     expect(emailEntry?.message).toBe('Hibás e-mail');
   });
 });
+
+// ---------------------------------------------------------------------------
+// MIM-212 — Server errors surface in the field-level messages and the
+// submit-time summary, with the wire's `pointer` (e.g. `/phone`).
+// ---------------------------------------------------------------------------
+describe('MIM-212 server errors surface under the field and in the summary', () => {
+  it('server errors appear in the summary with their pointer (MIM-212)', async () => {
+    const { fixture } = createContactStep(VALID_CONTACT);
+
+    // Submit the valid form so `submitted()` is true and the summary
+    // renders. The values the server errors target match the form field
+    // values here, so the step keeps them attached.
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    fixture.componentRef.setInput('serverErrors', {
+      values: VALID_CONTACT,
+      errors: {
+        phone: [{ code: 'PHONE_FORMAT', message: 'm', pointer: '/phone' }],
+      },
+    });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.invalidFields()).toEqual([
+      { field: 'phone', label: 'Telefonszám', message: 'm', pointer: '/phone' },
+    ]);
+
+    const link = getRootElement(fixture).querySelector<HTMLAnchorElement>(
+      '[data-testid="contact-summary"] a',
+    );
+    expect(link?.getAttribute('data-pointer')).toBe('/phone');
+  });
+});

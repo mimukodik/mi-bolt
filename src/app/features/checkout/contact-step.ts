@@ -61,6 +61,7 @@ import type { Contact } from '../../api/generated/models/contact';
 
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';
+import type { ContactFieldErrors, ContactServerErrors } from './contact-server-errors';
 
 /** DOM id of each field's input; the ids are lowercase while the keys are not. */
 const INPUT_IDS: Record<ContactFieldKey, string> = {
@@ -89,7 +90,7 @@ export interface ContactSubmission {
  */
 export interface ContactSaveResult {
   ok: boolean;
-  fieldErrors?: Partial<Record<ContactFieldKey, readonly FieldError[]>>;
+  fieldErrors?: ContactFieldErrors;
   message?: string;
 }
 
@@ -140,6 +141,7 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
 export class ContactStep {
   readonly contactFields = input.required<FieldTree<Contact>>();
   readonly saveState = input<AsyncStatus>('idle');
+  readonly serverErrors = input<ContactServerErrors | null>(null);
 
   readonly continueRequested = output();
 
@@ -171,21 +173,34 @@ export class ContactStep {
 
   // ---- Field state helpers ------------------------------------------
 
-  readonly fullNameErrors = computed<readonly FieldError[]>(() =>
-    toFieldErrors(this.contactFields().fullName().errors()),
-  );
+  /** Server errors for `key` that still apply: the `Contact` value the
+   *  page saved differs from the current form value the moment the user
+   *  edits a field, so the message disappears on edit. */
+  private serverErrorsFor(key: ContactFieldKey): readonly FieldError[] {
+    const s = this.serverErrors();
+    if (s === null) return [];
+    if (s.values[key] !== this.contactFields()[key]().value()) return [];
+    return s.errors[key] ?? [];
+  }
+
+  readonly fullNameErrors = computed<readonly FieldError[]>(() => [
+    ...toFieldErrors(this.contactFields().fullName().errors()),
+    ...this.serverErrorsFor('fullName'),
+  ]);
   readonly fullNameInvalid = computed(() => this.fullNameErrors().length > 0);
   readonly fullNameTouched = computed(() => this.contactFields().fullName().touched());
 
-  readonly emailErrors = computed<readonly FieldError[]>(() =>
-    toFieldErrors(this.contactFields().email().errors()),
-  );
+  readonly emailErrors = computed<readonly FieldError[]>(() => [
+    ...toFieldErrors(this.contactFields().email().errors()),
+    ...this.serverErrorsFor('email'),
+  ]);
   readonly emailInvalid = computed(() => this.emailErrors().length > 0);
   readonly emailTouched = computed(() => this.contactFields().email().touched());
 
-  readonly phoneErrors = computed<readonly FieldError[]>(() =>
-    toFieldErrors(this.contactFields().phone().errors()),
-  );
+  readonly phoneErrors = computed<readonly FieldError[]>(() => [
+    ...toFieldErrors(this.contactFields().phone().errors()),
+    ...this.serverErrorsFor('phone'),
+  ]);
   readonly phoneInvalid = computed(() => this.phoneErrors().length > 0);
   readonly phoneTouched = computed(() => this.contactFields().phone().touched());
 
@@ -207,32 +222,25 @@ export class ContactStep {
       pointer: string | null;
     }[]
   >(() => {
-    const root = this.contactFields();
     const out: {
       field: ContactFieldKey;
       label: string;
       message: string;
       pointer: string | null;
     }[] = [];
-    const collect = (
-      key: ContactFieldKey,
-      label: string,
-      field: { errors: () => readonly ValidationError.WithFieldTree[] },
-    ): void => {
-      const errors = field.errors();
+    const collect = (key: ContactFieldKey, label: string, errors: readonly FieldError[]): void => {
       if (errors.length === 0) return;
       const first = errors[0];
-      const pointer = errorPointer(first) ?? `/${key}`;
       out.push({
         field: key,
         label,
-        message: first.message ?? first.kind,
-        pointer,
+        message: first.message,
+        pointer: first.pointer ?? `/${key}`,
       });
     };
-    collect('fullName', 'Teljes név', root.fullName());
-    collect('email', 'E-mail cím', root.email());
-    collect('phone', 'Telefonszám', root.phone());
+    collect('fullName', 'Teljes név', this.fullNameErrors());
+    collect('email', 'E-mail cím', this.emailErrors());
+    collect('phone', 'Telefonszám', this.phoneErrors());
     return out;
   });
 

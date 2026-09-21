@@ -11,12 +11,13 @@
 
 import { provideZonelessChangeDetection, signal, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CheckoutFacade } from './checkout.facade';
 import { ContactPage } from './contact-page';
-import { CONTACT_DRAFT_SAVER, type ContactDraftSaver } from './contact-step';
+import { CONTACT_DRAFT_SAVER, ContactStep, type ContactDraftSaver } from './contact-step';
 
 import type { CheckoutSession } from '../../api/generated/models/checkout-session';
 
@@ -195,5 +196,87 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     fixture.detectChanges();
 
     expect(navigateSpy).toHaveBeenCalledWith(['/penztar/szallitas']);
+  });
+
+  // -------------------------------------------------------------------------
+  // MIM-212 — A 422 with `fieldErrors` marks the field(s) the wire named,
+  // keeps `saveState` idle (no banner), and does not navigate. Editing the
+  // named field clears the server error.
+  // -------------------------------------------------------------------------
+
+  it('a 422 with field errors marks the fields, keeps saveState idle and does not navigate (MIM-212)', async () => {
+    const saver: ContactDraftSaver = () =>
+      Promise.resolve({
+        ok: false,
+        message: 'x',
+        fieldErrors: {
+          email: [
+            {
+              code: 'EMAIL_FORMAT',
+              message: 'Adj meg egy érvényes e-mail címet.',
+              pointer: '/email',
+            },
+          ],
+        },
+      });
+    const fixture = createContactPage(saver);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+
+    fillModel(fixture);
+    // In the real flow the user presses "Tovább" before the 422 arrives,
+    // so the rendered step's `submitted()` is already true and the
+    // FormFieldMessage knows to surface the error.
+    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
+      .componentInstance as ContactStep;
+    stepInstance.submitted.set(true);
+
+    await fixture.componentInstance.onContinue();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.saveState()).toBe('idle');
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.serverErrors()).not.toBeNull();
+
+    const root = getRootElement(fixture);
+    const message = root.querySelector<HTMLElement>('#contact-email-message');
+    expect(message).not.toBeNull();
+    expect(message?.textContent).toContain('Adj meg egy érvényes e-mail címet.');
+    expect(root.querySelector('[data-testid="contact-save-error"]')).toBeNull();
+  });
+
+  it('editing the field clears its server error (MIM-212)', async () => {
+    const saver: ContactDraftSaver = () =>
+      Promise.resolve({
+        ok: false,
+        message: 'x',
+        fieldErrors: {
+          email: [
+            {
+              code: 'EMAIL_FORMAT',
+              message: 'Adj meg egy érvényes e-mail címet.',
+              pointer: '/email',
+            },
+          ],
+        },
+      });
+    const fixture = createContactPage(saver);
+
+    fillModel(fixture);
+    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
+      .componentInstance as ContactStep;
+    stepInstance.submitted.set(true);
+    await fixture.componentInstance.onContinue();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(root.querySelector('#contact-email-message')).not.toBeNull();
+
+    // Editing the field whose value no longer matches the saved one
+    // drops that field's server error.
+    fixture.componentInstance.contactFields.email().value.set('masik@example.test');
+    fixture.detectChanges();
+
+    expect(root.querySelector('#contact-email-message')).toBeNull();
   });
 });
