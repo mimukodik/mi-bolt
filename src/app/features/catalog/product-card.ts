@@ -59,7 +59,7 @@ export class ProductCard {
     const item = this.product();
     return {
       src: item.image.src,
-      alt: item.image.alt || `${item.name} illusztráció`,
+      alt: item.image.alt !== '' ? item.image.alt : `${item.name} illusztráció`,
       width: item.image.width,
       height: item.image.height,
     };

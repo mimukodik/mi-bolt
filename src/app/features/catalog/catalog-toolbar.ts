@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
+import type { ElementRef } from '@angular/core';
+import { Component, computed, input, output, signal, viewChild } from '@angular/core';
 
 import { isSort, SORT_MODES, type Sort } from './catalog-query';
 import type { AsyncStatus } from '../../shared/types/async-status';

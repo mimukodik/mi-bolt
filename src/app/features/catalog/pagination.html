@@ -1,13 +1,13 @@
 <nav
+  aria-label="Lapozás"
   class="pagination flex items-center justify-center gap-3 pt-4"
   data-testid="catalog-pagination"
-  aria-label="Lapozás"
 >
   <button
-    type="button"
+    aria-label="Előző oldal"
     class="page page--boundary"
     data-testid="pagination-prev"
-    aria-label="Előző oldal"
+    type="button"
     [disabled]="page() <= 1 || disabled()"
     (click)="onBoundary(page() - 1); onPageClick(page() - 1)"
   >
@@ -16,12 +16,12 @@
   @for (n of pageNumbers(); track n) {
     <button
       #pageButton
-      type="button"
       class="page page--number"
-      [class.page--current]="n === page()"
-      [attr.data-testid]="n === page() ? 'pagination-current' : 'pagination-page-' + n"
-      [attr.aria-label]="n + '. oldal'"
+      type="button"
       [attr.aria-current]="n === page() ? 'page' : null"
+      [attr.aria-label]="`${n}. oldal`"
+      [attr.data-testid]="n === page() ? 'pagination-current' : `pagination-page-${n}`"
+      [class.page--current]="n === page()"
       [disabled]="disabled()"
       (click)="onPageClick(n)"
     >
@@ -29,10 +29,10 @@
     </button>
   }
   <button
-    type="button"
+    aria-label="Következő oldal"
     class="page page--boundary"
     data-testid="pagination-next"
-    aria-label="Következő oldal"
+    type="button"
     [disabled]="page() >= totalPages() || disabled()"
     (click)="onBoundary(page() + 1); onPageClick(page() + 1)"
   >

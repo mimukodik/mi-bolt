@@ -1,33 +1,33 @@
 <article class="card flex flex-col gap-3" data-testid="product-card">
   <a
     class="media"
-    [routerLink]="detailsLink()"
-    [queryParams]="detailsQuery()"
     [attr.aria-label]="ariaLabel()"
+    [queryParams]="detailsQuery()"
+    [routerLink]="detailsLink()"
   >
     <span class="tag" data-testid="product-card-tag">DEMÓTERMÉK</span>
     <app-product-image
+      aspectRatio="4 / 3"
       data-testid="product-card-image"
+      [decorative]="true"
       [image]="image()"
       [productName]="product().name"
-      [aspectRatio]="'4 / 3'"
-      [decorative]="true"
-    ></app-product-image>
+    />
   </a>
 
   <div class="body flex flex-col gap-2 flex-1">
     <h3 class="name line-clamp-2">
       <a
         class="name-link"
-        [routerLink]="detailsLink()"
+        [attr.aria-label]="`${product().name} részleteinek megnyitása`"
         [queryParams]="detailsQuery()"
-        [attr.aria-label]="product().name + ' részleteinek megnyitása'"
+        [routerLink]="detailsLink()"
         >{{ product().name }}</a
       >
     </h3>
     <p class="variant">
       <span class="variant__color">{{ colorName() }}</span>
-      <span class="variant__sep" aria-hidden="true">·</span>
+      <span aria-hidden="true" class="variant__sep">·</span>
       <span class="variant__storage">{{ product().storageGb }} GB</span>
     </p>
     @if (visibleHighlights().length > 0) {
@@ -41,12 +41,7 @@
       </p>
     }
     <div class="price-row mt-auto">
-      <app-price-block
-        [money]="price()"
-        label="Egyszeri készülékár"
-        status="success"
-        size="md"
-      ></app-price-block>
+      <app-price-block label="Egyszeri készülékár" size="md" status="success" [money]="price()" />
     </div>
   </div>
 
@@ -54,9 +49,9 @@
     <a
       class="details"
       data-testid="product-card-cta"
-      [routerLink]="detailsLink()"
+      [attr.aria-label]="`${product().name} részleteinek megnyitása`"
       [queryParams]="detailsQuery()"
-      [attr.aria-label]="product().name + ' részleteinek megnyitása'"
+      [routerLink]="detailsLink()"
       >Megnézem</a
     >
   </div>

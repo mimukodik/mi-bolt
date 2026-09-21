@@ -1,17 +1,17 @@
 <section
   class="panel flex flex-col gap-6"
-  [attr.aria-busy]="disabled() ? 'true' : null"
   data-testid="filter-panel"
+  [attr.aria-busy]="disabled() ? 'true' : null"
 >
   <header class="header flex items-center justify-between gap-3">
     <h2 class="title m-0">Szűrők</h2>
     <app-button
-      variant="secondary"
-      label="Szűrők törlése"
       data-testid="filter-reset"
+      label="Szűrők törlése"
+      variant="secondary"
       [disabled]="disabled() || !hasActiveFilters()"
       (pressed)="resetAll()"
-    ></app-button>
+    />
   </header>
 
   <fieldset class="group" data-testid="filter-group-search">
@@ -19,13 +19,13 @@
     <label class="search block">
       <span class="sr-only">Keresés a telefonok között</span>
       <input
-        type="search"
         class="input"
         data-testid="filter-search-input"
+        placeholder="pl. Demo 5G"
+        type="search"
+        [disabled]="disabled()"
         [value]="searchDraft()"
         (input)="onSearchInput($event)"
-        placeholder="pl. Demo 5G"
-        [disabled]="disabled()"
       />
     </label>
   </fieldset>
@@ -36,20 +36,20 @@
       @for (brand of visibleBrandFacets(); track brand.value) {
         <li>
           <button
-            type="button"
             class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
-            [class.is-selected]="isBrandSelected(brand.value)"
-            [attr.data-testid]="'filter-brand-' + brand.value"
+            type="button"
             [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
+            [attr.data-testid]="`filter-brand-${brand.value}`"
+            [class.is-selected]="isBrandSelected(brand.value)"
             [disabled]="disabled() || brand.count === 0"
             (click)="toggleBrand(brand.value)"
           >
-            <span class="check" aria-hidden="true">{{
+            <span aria-hidden="true" class="check">{{
               isBrandSelected(brand.value) ? '✓' : ''
             }}</span>
             <span class="option__label"
               >{{ brand.label
-              }}<span class="option__count" aria-label="találatok száma"
+              }}<span aria-label="találatok száma" class="option__count"
                 >&nbsp;({{ brand.count }})</span
               ></span
             >
@@ -59,9 +59,9 @@
     </ul>
     @if (brandFacets().length > 5) {
       <button
-        type="button"
         class="more"
         data-testid="filter-brand-more"
+        type="button"
         [attr.aria-expanded]="brandsAllVisible() ? 'true' : 'false'"
         (click)="toggleBrandsExpanded()"
       >
@@ -76,22 +76,22 @@
       @for (color of colorFacets(); track color.value) {
         <li>
           <button
-            type="button"
             class="color-chip"
-            [class.is-selected]="isColorSelected(color.value)"
-            [attr.data-testid]="'filter-color-' + color.value"
+            type="button"
             [attr.aria-pressed]="isColorSelected(color.value) ? 'true' : 'false'"
+            [attr.data-testid]="`filter-color-${color.value}`"
+            [class.is-selected]="isColorSelected(color.value)"
             [disabled]="disabled() || color.count === 0"
             (click)="toggleColor(color.value)"
           >
             <span
-              class="color-chip__swatch"
               aria-hidden="true"
+              class="color-chip__swatch"
               [style.background-color]="color.swatchHex"
             ></span>
             <span class="color-chip__label"
               >{{ color.label
-              }}<span class="color-chip__count" aria-label="találatok száma"
+              }}<span aria-label="találatok száma" class="color-chip__count"
                 >&nbsp;({{ color.count }})</span
               ></span
             >
@@ -107,21 +107,21 @@
       @for (bucket of storageFacets(); track bucket.gb) {
         <li>
           <button
-            type="button"
             class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
-            [class.is-selected]="isStorageSelected(bucket.gb)"
-            [attr.data-testid]="'filter-storage-' + bucket.gb"
+            type="button"
             [attr.aria-pressed]="isStorageSelected(bucket.gb) ? 'true' : 'false'"
+            [attr.data-testid]="`filter-storage-${bucket.gb}`"
+            [class.is-selected]="isStorageSelected(bucket.gb)"
             [disabled]="disabled()"
             (click)="toggleStorage(bucket.gb)"
           >
-            <span class="check" aria-hidden="true">{{
+            <span aria-hidden="true" class="check">{{
               isStorageSelected(bucket.gb) ? '✓' : ''
             }}</span>
             <span class="option__label"
               >{{ bucket.label }}
               @if (bucket.count !== null) {
-                <span class="option__count" aria-label="találatok száma"
+                <span aria-label="találatok száma" class="option__count"
                   >&nbsp;({{ bucket.count }})</span
                 >
               }
@@ -138,42 +138,42 @@
       <label class="price__field flex flex-col gap-1">
         <span class="price__label">Min.</span>
         <input
-          type="number"
+          class="input"
+          data-testid="filter-min-price"
           inputmode="numeric"
           min="0"
           step="1000"
-          class="input"
-          data-testid="filter-min-price"
-          [value]="minDraft()"
-          (input)="onMinInput($event)"
+          type="number"
           [attr.placeholder]="priceMinHint()"
           [disabled]="disabled()"
+          [value]="minDraft()"
+          (input)="onMinInput($event)"
         />
       </label>
       <label class="price__field flex flex-col gap-1">
         <span class="price__label">Max.</span>
         <input
-          type="number"
+          class="input"
+          data-testid="filter-max-price"
           inputmode="numeric"
           min="0"
           step="1000"
-          class="input"
-          data-testid="filter-max-price"
-          [value]="maxDraft()"
-          (input)="onMaxInput($event)"
+          type="number"
           [attr.placeholder]="priceMaxHint()"
           [disabled]="disabled()"
+          [value]="maxDraft()"
+          (input)="onMaxInput($event)"
         />
       </label>
     </div>
     @if (priceError()) {
       <app-form-field-message
         data-testid="filter-price-error"
+        fieldId="filter-price"
+        severity="error"
         [errors]="[{ code: 'INVALID_PRICE', message: priceError()!, pointer: 'price' }]"
         [touched]="true"
-        severity="error"
-        fieldId="filter-price"
-      ></app-form-field-message>
+      />
     }
   </fieldset>
 
@@ -182,19 +182,19 @@
     <ul class="options" role="list">
       <li>
         <button
-          type="button"
           class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
-          [class.is-selected]="isInStockSelected()"
           data-testid="filter-inStock"
+          type="button"
           [attr.aria-pressed]="isInStockSelected() ? 'true' : 'false'"
+          [class.is-selected]="isInStockSelected()"
           [disabled]="disabled()"
           (click)="toggleInStock()"
         >
-          <span class="check" aria-hidden="true">{{ isInStockSelected() ? '✓' : '' }}</span>
+          <span aria-hidden="true" class="check">{{ isInStockSelected() ? '✓' : '' }}</span>
           <span class="option__label"
             >Csak raktáron
             @if (inStockCount() !== null) {
-              <span class="option__count" aria-label="találatok száma"
+              <span aria-label="találatok száma" class="option__count"
                 >&nbsp;({{ inStockCount() }})</span
               >
             }
@@ -203,19 +203,19 @@
       </li>
       <li>
         <button
-          type="button"
           class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
-          [class.is-selected]="isFiveGSelected()"
           data-testid="filter-is5g"
+          type="button"
           [attr.aria-pressed]="isFiveGSelected() ? 'true' : 'false'"
+          [class.is-selected]="isFiveGSelected()"
           [disabled]="disabled()"
           (click)="toggleFiveG()"
         >
-          <span class="check" aria-hidden="true">{{ isFiveGSelected() ? '✓' : '' }}</span>
+          <span aria-hidden="true" class="check">{{ isFiveGSelected() ? '✓' : '' }}</span>
           <span class="option__label"
             >Csak 5G
             @if (fiveGCount() !== null) {
-              <span class="option__count" aria-label="találatok száma"
+              <span aria-label="találatok száma" class="option__count"
                 >&nbsp;({{ fiveGCount() }})</span
               >
             }

@@ -1,4 +1,5 @@
-import { Component, computed, ElementRef, input, output, viewChildren } from '@angular/core';
+import type { ElementRef } from '@angular/core';
+import { Component, computed, input, output, viewChildren } from '@angular/core';
 
 /**
  * `Pagination` — `docs/spec/components.md:386`.

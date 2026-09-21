@@ -1,9 +1,9 @@
 <section class="catalog">
   <header class="heading flex flex-col gap-2 pb-6 border-b border-[var(--color-line)]">
-    <nav class="breadcrumbs flex gap-2 items-center" aria-label="Navigáció">
-      <a routerLink="/" class="breadcrumb no-underline">Főoldal</a>
+    <nav aria-label="Navigáció" class="breadcrumbs flex gap-2 items-center">
+      <a class="breadcrumb no-underline" routerLink="/">Főoldal</a>
       <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <span class="breadcrumb is-current" aria-current="page">Mobiltelefonok</span>
+      <span aria-current="page" class="breadcrumb is-current">Mobiltelefonok</span>
     </nav>
     <h1 class="title m-0">Mobiltelefonok</h1>
     <p class="lede m-0 max-w-prose">
@@ -15,57 +15,57 @@
   <div class="layout gap-6">
     <aside class="sidebar" data-testid="filter-sidebar">
       <app-filter-panel
-        [value]="facade.query()"
-        [facets]="facade.vm().facets"
         [disabled]="controlsDisabled()"
+        [facets]="facade.vm().facets"
+        [value]="facade.query()"
         (filtersChanged)="onFiltersChanged($event)"
-      ></app-filter-panel>
+      />
     </aside>
 
     <div class="results flex flex-col gap-5 min-w-0">
       <h2 class="sr-only absolute w-px h-px overflow-hidden">Találatok</h2>
       <app-catalog-toolbar
-        [total]="facade.vm().total"
-        [sort]="currentSort()"
-        [pageSize]="currentPageSize()"
-        [status]="toolbarStatus()"
         [appliedCount]="appliedChipCount()"
-        (sortChanged)="onSortChanged($event)"
-        (pageSizeChanged)="onPageSizeChanged($event)"
+        [pageSize]="currentPageSize()"
+        [sort]="currentSort()"
+        [status]="toolbarStatus()"
+        [total]="facade.vm().total"
         (openFilters)="openDrawer()"
-      ></app-catalog-toolbar>
+        (pageSizeChanged)="onPageSizeChanged($event)"
+        (sortChanged)="onSortChanged($event)"
+      />
 
       <app-applied-filters
         [chips]="appliedChips()"
-        (filterRemoved)="onChipRemoved($event)"
         (cleared)="onClearAll()"
-      ></app-applied-filters>
+        (filterRemoved)="onChipRemoved($event)"
+      />
 
       <app-async-content
-        [status]="asyncStatus()"
-        [problem]="problem()"
         [hasPrevious]="hasPrevious()"
+        [problem]="problem()"
+        [status]="asyncStatus()"
         (retryRequested)="onRetry()"
       >
         @for (item of facade.vm().items; track item.variantId) {
-          <app-product-card [product]="item"></app-product-card>
+          <app-product-card [product]="item" />
         }
         <app-button
           data-async-empty-action
-          variant="primary"
           label="Szűrők törlése"
+          variant="primary"
           (pressed)="onClearAll()"
-        ></app-button>
+        />
       </app-async-content>
 
       @if (shouldShowPagination()) {
         <app-pagination
+          [disabled]="controlsDisabled()"
           [page]="currentPage()"
           [pageSize]="currentPageSize()"
           [total]="facade.vm().total"
-          [disabled]="controlsDisabled()"
           (pageChanged)="onPageChanged($event)"
-        ></app-pagination>
+        />
       }
     </div>
   </div>
@@ -73,11 +73,11 @@
   <app-filter-drawer
     id="filter-drawer"
     [applied]="facade.query()"
+    [disabled]="controlsDisabled()"
     [facets]="facade.vm().facets"
     [opened]="drawerOpened()"
-    [disabled]="controlsDisabled()"
     [restoreEl]="filterTrigger()"
-    (filtersChanged)="onFiltersChanged($event)"
     (closed)="closeDrawer()"
-  ></app-filter-drawer>
+    (filtersChanged)="onFiltersChanged($event)"
+  />
 </section>
