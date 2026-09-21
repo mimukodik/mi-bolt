@@ -1,755 +1,822 @@
-// @vitest-environment jsdom
-import '@angular/compiler';
-
 /**
- * T24 - success page, reload recovery, and closing.
+ * MIM-212 — success page and receipt cases on the 2.0.0 contract.
  *
- * Mapping from the spec to the assertions in this file:
+ * Twenty cases over the receipt the wire now sends and the page that
+ * hydrates it. The first four cases are the presentational
+ * `OrderReceiptComponent`; cases five through fifteen drive the
+ * `SuccessStep` page through its full hydration pipeline
+ * (loading → fetch → render, missing, error, malformed-id,
+ * 500-then-200 retry, no-second-fetch on a forward navigation,
+ * cart reset on receipt, focusable heading, new-shopping
+ * navigate); cases sixteen and seventeen cover the two arms of
+ * `successGuard`. The harness mirrors the 2.0.0 mock spec
+ * (catalog fixture in `beforeAll`, fixed clock, deterministic ids,
+ * per-test `options` and `server.use(...)`).
  *
- *   T24-AC01  receipt content (orderNumber, line items, total, payment
- *             method, simulation notice). Implemented by `order-receipt.ts`.
- *   T24-AC02  refresh restores the same receipt and never POSTs another
- *             order; unknown order ID yields 404 recovery, not a
- *             fabricated success. Implemented by `success-step.ts`.
- *   T24-AC03  cart badge resets; new shopping action creates a fresh
- *             cart, preserving past receipt replay. `CartFacade.resetOrderedCart`
- *             + `success-step.ts`'s "Új vásárlás" CTA.
- *   T24-AC04  browser back to the submitting/review steps cannot
- *             resubmit the committed cart. `CheckoutFacade.order()` is
- *             checked in the contact / delivery / review guards.
- *   T24-AC05  keyboard focus lands on the success heading.
- *
- * The tests inspect the rendered source AND drive the MSW wire path
- * because vitest's esbuild/oxc pipeline strips the Angular signal-input
- * metadata that TestBed's runtime instantiation needs (see
- * `tests/checkout-state.spec.ts` for the runtime pattern). The source-
- * level coverage keeps the gate tight against regressions in template,
- * imports, and wire types; the runtime block confirms the actual end-
- * to-end contract over MSW.
+ * `ActivatedRoute` is supplied through a structural stub rather than
+ * `Router.navigate(...)` because `SuccessStep` is mounted directly via
+ * `TestBed.createComponent(SuccessStep)`, with no `<router-outlet>` to
+ * rewire `route.paramMap` after a navigation. The stub mirrors the
+ * `navigation-reason-banner.spec.ts` pattern: a plain object whose
+ * `paramMap` is an observable and whose `snapshot.paramMap` matches.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { HttpResponse, http, type RequestHandler } from 'msw';
+import '@angular/compiler';
+
+// @vitest-environment jsdom
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HttpResponse, http, type DefaultBodyType } from 'msw';
+import { BehaviorSubject, type Observable } from 'rxjs';
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { of } from 'rxjs';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { TestBed } from '@angular/core/testing';
-import {
-  EnvironmentInjector,
-  provideZonelessChangeDetection,
-  runInInjectionContext,
-} from '@angular/core';
-import {
-  ActivatedRoute,
-  ActivatedRouteSnapshot,
-  RouterStateSnapshot,
-  UrlSegment,
-  UrlTree,
-  convertToParamMap,
-  provideRouter,
-} from '@angular/router';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import type { OrderReceipt } from '../../../app/api/generated/models/order-receipt';
-
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../../../mocks/idempotency';
 import { Repository } from '../../../mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
+import {
+  createDeterministicIds,
+  createFixedClock,
+  DEFAULT_SCENARIO,
+} from '../../../mocks/scenarios';
+import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 
-// Side-effect imports - register cart / checkout / payment / order handlers in the T05 dispatcher registry.
 import '../../../mocks/cart/cart.handlers';
 import '../../../mocks/checkout/checkout.handlers';
 import '../../../mocks/payment/payment.handlers';
 import '../../../mocks/orders/order.handlers';
 
+import type { Address } from '../../../app/api/generated/models/address';
+import type { BillingDetails } from '../../../app/api/generated/models/billing-details';
+import type { Contact } from '../../../app/api/generated/models/contact';
+import type { DeliverySelection } from '../../../app/api/generated/models/delivery-selection';
+import type { PaymentSelection } from '../../../app/api/generated/models/payment-selection';
+import type { OrderReceipt } from '../../../app/api/generated/models/order-receipt';
+import type { HomeDeliverySelection } from '../../../app/api/generated/models/home-delivery-selection';
+
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
-import {
-  contactGuard,
-  deliveryGuard,
-  reviewGuard,
-  successGuard,
-} from '../../../app/features/checkout/checkout.guards';
-import { OrderReceiptComponent } from './order-receipt';
-import { SuccessStep } from './success-step';
-import { SuccessPage } from './success-page';
+import { OrderReceiptComponent } from '../../../app/features/checkout/order-receipt';
+import { PriceBlock } from '../../../app/shared/ui/price-block/price-block';
+import { SuccessStep } from '../../../app/features/checkout/success-step';
+import { successGuard } from '../../../app/features/checkout/checkout.guards';
 
-// The shared MSW server's lifecycle is registered here, in this file, because
-// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
-// process rather than once per file. See `tests/msw-server.ts`.
 useMswServer();
 
-function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
-  const raw: unknown = fixture.nativeElement;
-  if (raw instanceof HTMLElement) return raw;
-  throw new Error('Expected HTMLElement');
-}
-
-function isObjectOrFunction(value: unknown): value is Record<string, unknown> {
-  return (typeof value === 'function' || typeof value === 'object') && value !== null;
-}
-
-function getComponentStyles(comp: unknown): readonly string[] {
-  if (!isObjectOrFunction(comp)) {
-    return [];
-  }
-  const cmp = comp['ɵcmp'];
-  if (!isObjectOrFunction(cmp)) {
-    return [];
-  }
-  const styles = cmp['styles'];
-  if (Array.isArray(styles)) {
-    return styles.filter((s): s is string => typeof s === 'string');
-  }
-  return [];
-}
-
 const BASE_URL = 'http://localhost/api/v1';
-const VARIANT_G256 = 'demo-one-5g-graphite-256';
+const MOTO = 'motorola-edge-50-fusion--zold--256';
+const MOTO_PRODUCT_NAME = 'Motorola Edge 50 Fusion';
+const HOME_ADDRESS: Address = {
+  countryCode: 'HU',
+  postalCode: '1011',
+  city: 'Budapest',
+  line1: 'Fő utca 1.',
+};
+const HOME_DELIVERY: HomeDeliverySelection = {
+  optionId: 'home_delivery',
+  address: HOME_ADDRESS,
+};
+const PICKUP: DeliverySelection = { optionId: 'pickup_point' };
+const VALID_CONTACT: Contact = {
+  fullName: 'Teszt Elek',
+  email: 'Teszt.Elek@Pelda.hu',
+  phone: '+36301234567',
+};
+const VALID_BILLING: BillingDetails = {
+  name: 'Teszt Elek',
+  address: HOME_ADDRESS,
+};
+const COD_PAYMENT: PaymentSelection = { method: 'cash_on_delivery' };
 
-// ---------------------------------------------------------------------------
-// T24-AC01 — receipt content.
-// ---------------------------------------------------------------------------
-
-describe('T24-AC01 receipt content (DEMO order number, line items, total, method, simulation notice)', () => {
-  const mockReceipt: OrderReceipt = {
-    id: 'demo-order-123',
-    orderNumber: 'DEMO-2026-0001',
-    isSimulation: true,
-    status: 'demo_confirmed',
+/** Receipt payload that satisfies every value the receipt template binds. */
+function makeReceipt(overrides: Partial<OrderReceipt> = {}): OrderReceipt {
+  const base: OrderReceipt = {
+    id: 'ord-receipt-1',
+    orderNumber: 'DEMO-000001',
+    status: 'confirmed',
+    createdAt: '2026-09-20T10:00:00.000Z',
+    contactEmail: 'teszt.elek@pelda.hu',
+    notice: 'A demórendelés elkészült. Nem történt valódi fizetés, szimuláció.',
     items: [
       {
-        variantId: 'demo-one-5g-graphite-256',
-        productName: 'Demo One 5G',
-        colorName: 'Grafit',
+        variantId: MOTO,
+        productName: MOTO_PRODUCT_NAME,
+        colorName: 'Zöld',
         storageGb: 256,
         quantity: 1,
-        unitPrice: { amount: 339990, currency: 'HUF' },
-        lineTotal: { amount: 339990, currency: 'HUF' },
+        unitPrice: { amount: 89_990, currency: 'HUF' },
+        lineTotal: { amount: 89_990, currency: 'HUF' },
       },
     ],
-    subtotal: { amount: 339990, currency: 'HUF' },
-    shipping: { amount: 0, currency: 'HUF' },
-    total: { amount: 339990, currency: 'HUF' },
-    paymentMethod: 'demo_cod',
-    deliveryOptionId: 'demo_pickup',
-    notice: 'Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés — ez egy demó folyamat.',
-    createdAt: '2026-09-15T09:00:00.000Z',
+    subtotal: { amount: 89_990, currency: 'HUF' },
+    shippingFee: { amount: 0, currency: 'HUF' },
+    paymentFee: { amount: 490, currency: 'HUF' },
+    total: { amount: 90_480, currency: 'HUF' },
+    paymentMethod: 'cash_on_delivery',
+    delivery: HOME_DELIVERY,
+    billing: VALID_BILLING,
   };
-
-  it('order-receipt renders orderNumber, line items, total and payment method', async () => {
-    TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection()],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(OrderReceiptComponent);
-    fixture.componentRef.setInput('receipt', mockReceipt);
-    fixture.detectChanges();
-    const root = getRootElement(fixture);
-
-    expect(root.querySelector('[data-testid="receipt-order-number"]')?.textContent).toContain(
-      'DEMO-2026-0001',
-    );
-    expect(root.querySelector('[data-testid="receipt-lines"]')?.textContent).toContain(
-      'Demo One 5G',
-    );
-    expect(root.querySelector('[data-testid="receipt-row-total"]')?.textContent).toContain(
-      'Végösszeg',
-    );
-    expect(root.querySelector('[data-testid="receipt-row-payment"]')?.textContent).toContain(
-      'Utánvét (demó)',
-    );
-    expect(root.querySelector('[data-testid="receipt-line"]')?.textContent).toContain('1 db');
-  });
-
-  it('order-receipt surfaces an explicit simulation notice (no real charge / delivery / email)', async () => {
-    TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection()],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(OrderReceiptComponent);
-    fixture.componentRef.setInput('receipt', mockReceipt);
-    fixture.detectChanges();
-    const root = getRootElement(fixture);
-
-    const notice = root.querySelector('[data-testid="receipt-simulation-notice"]');
-    expect(notice).not.toBeNull();
-    const text = notice?.textContent ?? '';
-    expect(text).toContain('Nem történt valódi fizetés');
-
-    const fullText = root.textContent.toLowerCase();
-    expect(fullText.includes('valódi fizetés történt')).toBe(false);
-    expect(fullText.includes('elküldtük az e-mailt')).toBe(false);
-    expect(fullText.includes('kiszállítjuk')).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T24-AC02 — refresh restores the receipt; never POSTs another order.
-// ---------------------------------------------------------------------------
-
-describe('T24-AC02 refresh restores the receipt and never POSTs another order', () => {
-  it('success-step uses getOrder (or its facade wrapper), never createOrder', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([{ path: '**', component: SuccessStep }]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            paramMap: of(convertToParamMap({ orderId: 'test-123' })),
-            snapshot: { paramMap: convertToParamMap({ orderId: 'test-123' }) },
-          },
-        },
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(SuccessStep);
-    expect(fixture.componentInstance.orderId()).toBe('test-123');
-  });
-
-  it('CheckoutFacade exposes a fetchOrder helper that uses getOrder, never createOrder', () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    const facade = TestBed.inject(CheckoutFacade);
-    expect(typeof facade.fetchOrder).toBe('function');
-  });
-
-  it('success-step reads the order ID from the route and renders the 404 recovery when missing', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([{ path: '**', component: SuccessStep }]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            paramMap: of(convertToParamMap({})),
-            snapshot: { paramMap: convertToParamMap({}) },
-          },
-        },
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(SuccessStep);
-    fixture.detectChanges();
-    const root = getRootElement(fixture);
-
-    expect(fixture.componentInstance.orderId()).toBeNull();
-    expect(root.querySelector('app-error-state')).not.toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T24-AC03 — cart badge resets; receipt replay preserved.
-// ---------------------------------------------------------------------------
-
-describe('T24-AC03 cart badge resets and past receipt replay is preserved', () => {
-  it('success-step calls CartFacade.resetOrderedCart after the order is in memory', () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    const cart = TestBed.inject(CartFacade);
-    expect(typeof cart.resetOrderedCart).toBe('function');
-  });
-
-  it('CartFacade owns resetOrderedCart which clears the in-memory cart snapshot', () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    const cart = TestBed.inject(CartFacade);
-    cart.resetOrderedCart();
-    expect(cart.cart()).toBeNull();
-    expect(cart.itemCount()).toBe(0);
-  });
-
-  it('the success page offers a "Új vásárlás" CTA wired to ensureCart, not a synthetic cart', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([{ path: '**', component: SuccessStep }]),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(SuccessStep);
-    expect(typeof fixture.componentInstance.onStartNewShopping).toBe('function');
-  });
-
-  it('receipt replay never reads the cart - the order ID lives in the URL', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([{ path: '**', component: SuccessStep }]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            paramMap: of(convertToParamMap({ orderId: 'replay-order-999' })),
-            snapshot: { paramMap: convertToParamMap({ orderId: 'replay-order-999' }) },
-          },
-        },
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(SuccessStep);
-    expect(fixture.componentInstance.orderId()).toBe('replay-order-999');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T24-AC04 — browser back to the wizard cannot resubmit.
-// ---------------------------------------------------------------------------
-
-describe('T24-AC04 browser back to the wizard cannot resubmit', () => {
-  it('contact, delivery and review guards reject when an order already exists', async () => {
-    await commitHappyPath();
-    const route = {} as Parameters<typeof reviewGuard>[0];
-    const segments = [{ path: 'penztar' }] as UrlSegment[];
-    const dummySnapshot = {} as never;
-    runInInjectionContext(TestBed.inject(EnvironmentInjector), () => {
-      const reviewRes = reviewGuard(route, segments, dummySnapshot);
-      expect(reviewRes).toBeInstanceOf(UrlTree);
-
-      const contactRes = contactGuard(route, segments, dummySnapshot);
-      expect(contactRes).toBeInstanceOf(UrlTree);
-
-      const deliveryRes = deliveryGuard(route, segments, dummySnapshot);
-      expect(deliveryRes).toBeInstanceOf(UrlTree);
-    });
-  });
-
-  it('successGuard allows hydration through fetchOrder when an orderId is on the URL', () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    const route = {
-      paramMap: convertToParamMap({ orderId: 'order-existing-0001' }),
-    } as unknown as ActivatedRouteSnapshot;
-    const state = { url: '/penztar/siker/order-existing-0001' } as RouterStateSnapshot;
-    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
-      successGuard(route, state),
-    );
-    expect(result).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T24-AC05 — keyboard focus on the success heading.
-// ---------------------------------------------------------------------------
-
-describe('T24-AC05 keyboard focus on the success heading', () => {
-  it('the H1 has tabindex=-1 + is rendered at all times', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([{ path: '**', component: SuccessStep }]),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(SuccessStep);
-    fixture.detectChanges();
-    const root = getRootElement(fixture);
-
-    const h1 = root.querySelector('h1');
-    expect(h1).not.toBeNull();
-    expect(h1?.getAttribute('tabindex')).toBe('-1');
-    expect(h1?.textContent).toContain('A rendelés nem található');
-  });
-
-  it('the component explicitly moves focus to the heading (no reliance on a transient toast or animation)', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([{ path: '**', component: SuccessStep }]),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(SuccessStep);
-    fixture.detectChanges();
-    const root = getRootElement(fixture);
-    const h1 = root.querySelector('h1');
-    expect(h1).not.toBeNull();
-    expect(h1?.getAttribute('tabindex')).toBe('-1');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Module wiring + style contract.
-// ---------------------------------------------------------------------------
-
-describe('T24 route + module wiring', () => {
-  it('the checkout route points to the new success-step component and the T11 stub now re-exports it', () => {
-    expect(SuccessPage).toBe(SuccessStep);
-  });
-
-  it('success-step + order-receipt do not import CommonModule', () => {
-    TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection()],
-    });
-    const receiptFixture = TestBed.createComponent(OrderReceiptComponent);
-    expect(receiptFixture.componentInstance).toBeDefined();
-  });
-
-  it('order-receipt is presentational — it takes the receipt as an input and never injects the facade', () => {
-    TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection()],
-    });
-    const fixture = TestBed.createComponent(OrderReceiptComponent);
-    expect(fixture.componentInstance.receipt).toBeDefined();
-    expect(fixture.componentInstance.lineItems).toBeDefined();
-  });
-
-  it('success-step imports the shared primitives it needs', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideRouter([{ path: '**', component: SuccessStep }]),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-      ],
-    });
-    await TestBed.compileComponents();
-    const fixture = TestBed.createComponent(SuccessStep);
-    fixture.detectChanges();
-    const root = getRootElement(fixture);
-
-    expect(
-      root.querySelector('app-error-state') !== null ||
-        root.querySelector('app-loading-state') !== null,
-    ).toBe(true);
-  });
-
-  it('responsive layout: mobile-first stack with a desktop two-column split at >= 1024px', async () => {
-    TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection()],
-    });
-    await TestBed.compileComponents();
-    TestBed.createComponent(SuccessStep).detectChanges();
-    const css = getComponentStyles(SuccessStep).join(' ');
-    expect(css).toMatch(/@media\s*\(min-width:\s*1024px\)/);
-    expect(css).toMatch(/grid-template-columns/);
-  });
-
-  it('prefers-reduced-motion disables any success-only animation', async () => {
-    TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection()],
-    });
-    await TestBed.compileComponents();
-    TestBed.createComponent(SuccessStep).detectChanges();
-    const css = getComponentStyles(SuccessStep).join(' ');
-    expect(css).toMatch(/prefers-reduced-motion/);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Runtime assertions through MSW — drive the success-step hydration path
-// end-to-end against the mock boundary so the wire-level guard rails
-// (no extra POST, 404 recovery on unknown id) actually run, not just the
-// source-pattern check.
-// ---------------------------------------------------------------------------
-
-interface Env {
-  repository: Repository;
-  clock: ReturnType<typeof createFixedClock>;
-  ids: ReturnType<typeof createDeterministicIds>;
-  scenario: { name: string; seed: number; clockOffsetMs: number; isolated: boolean };
+  return { ...base, ...overrides };
 }
 
-function makeEnv(scenarioName = 'success-page-suite'): Env {
-  const clock = createFixedClock(new Date(Date.parse('2026-09-15T09:00:00.000Z')).toISOString());
-  const ids = createDeterministicIds(7);
-  const scenario = {
-    name: scenarioName,
-    seed: 7,
-    clockOffsetMs: 0,
-    isolated: true,
+/** 500 Problem body used by SP-10/SP-12 to stage a wire failure. */
+function fiveHundred(): HttpResponse<DefaultBodyType> {
+  return HttpResponse.json(
+    {
+      type: 'urn:mi-bolt:problem:service-unavailable',
+      title: 'Service unavailable',
+      status: 500,
+      code: 'SERVICE_UNAVAILABLE',
+      detail: 'Mocked 500 for SP-10/SP-12.',
+      traceId: 'mock-success-spec',
+      fieldErrors: [],
+      params: {},
+    },
+    { status: 500, headers: { 'content-type': 'application/problem+json' } },
+  );
+}
+
+/** Returns the first matching `HTMLElement` or null when none is present. */
+function queryHTMLElement(root: ParentNode, selector: string): HTMLElement | null {
+  const element = root.querySelector(selector);
+  return element instanceof HTMLElement ? element : null;
+}
+
+/** Returns every matching `HTMLElement` (filters out non-element nodes
+ *  so the cast-free type holds). */
+function queryAllHTMLElements(root: ParentNode, selector: string): readonly HTMLElement[] {
+  return Array.from(root.querySelectorAll(selector)).filter(
+    (node): node is HTMLElement => node instanceof HTMLElement,
+  );
+}
+
+/** Collapses an element's `textContent` runs (which the Angular
+ *  template emits as separate text nodes around `<br>` and `*ngIf`
+ *  arms) into a single space-trimmed string. */
+function collapsedText(element: HTMLElement | null): string {
+  if (element === null) return '';
+  return element.textContent.replace(/\s+/g, ' ').trim();
+}
+
+/** Stub `ActivatedRoute` shape the page reads from. The `paramMap`
+ *  observable is the live signal the page's `toSignal` subscribes to;
+ *  the snapshot is what the page reads on first render. The
+ *  `snapshot.paramMap` field is intentionally non-readonly so a test
+ *  can seed it after `TestBed.createComponent` has captured the
+ *  initial value. */
+interface ActivatedRouteStub {
+  readonly paramMap: Observable<ReturnType<typeof convertToParamMap>>;
+  readonly snapshot: { paramMap: ReturnType<typeof convertToParamMap> };
+}
+
+/** Shared stub the suite mutates in place. A `BehaviorSubject` lets a
+ *  test seed the order id after the TestBed is already instantiated
+ *  (the order in the brief, e.g. SP-08, comes from a `submitOrder` that
+ *  runs through the real facade); `overrideProvider` would refuse
+ *  because the module is already instantiated. */
+let currentStub: ActivatedRouteStub;
+let paramMapSubject: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+
+function makeStub(): ActivatedRouteStub {
+  paramMapSubject = new BehaviorSubject(convertToParamMap({}));
+  const initialSnapshot = convertToParamMap({});
+  return {
+    paramMap: paramMapSubject.asObservable(),
+    snapshot: { paramMap: initialSnapshot },
   };
-  const repository = new Repository(scenario, ids, clock);
+}
+
+function withOrderId(orderId: string): void {
+  const paramMap = convertToParamMap({ orderId });
+  // Replace the snapshot for any first-render `toSignal` reader.
+  currentStub.snapshot.paramMap = paramMap;
+  // Push through the observable so a page already mounted picks up the
+  // new value via the subject's synchronous emission to new ones and
+  // queued emission to subscribers.
+  paramMapSubject.next(paramMap);
+}
+
+beforeAll(() => {
+  if (!isCatalogFixtureShape(catalogFixture)) {
+    throw new Error('[success-page.spec] committed fixture does not match expected shape');
+  }
+  loadCatalogFixture(catalogFixture);
+});
+
+beforeEach((): void => {
+  const clock = createFixedClock('2026-09-20T10:00:00.000Z');
+  const ids = createDeterministicIds(1);
+  const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
   repository.loadProducts([DEMO_PRODUCT]);
-  new IdempotencyStore(clock);
-  return { repository, clock, ids, scenario };
-}
-
-let currentEnv: Env;
-
-function buildHandlers(): readonly RequestHandler[] {
-  return createHandlers({
-    repository: currentEnv.repository,
-    clock: currentEnv.clock,
-    ids: currentEnv.ids,
-    scenario: currentEnv.scenario,
+  const options = {
+    repository,
+    clock,
+    ids,
+    scenario: DEFAULT_SCENARIO,
     apiRoot: '/api/v1',
-  });
-}
+  };
+  server.use(...createHandlers(options));
+});
+
+afterEach(() => {
+  server.events.removeAllListeners();
+  vi.restoreAllMocks();
+  TestBed.resetTestingModule();
+  sessionStorage.clear();
+});
 
 function configureTestBed(): void {
+  currentStub = makeStub();
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfiguration(BASE_URL),
       provideRouter([]),
+      { provide: ActivatedRoute, useValue: currentStub },
     ],
     teardown: { destroyAfterEach: true },
   });
 }
 
-beforeEach(() => {
-  currentEnv = makeEnv();
-  server.use(...buildHandlers());
-  TestBed.resetTestingModule();
-  configureTestBed();
-});
-
-async function seedCartWithItem(): Promise<string> {
-  return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    await facade.addItem(VARIANT_G256, 1);
-    const id = facade.cartId;
-    if (id === null) throw new Error('cart id missing after seed');
-    return id;
+/** Records every request the MSW server sees as `"<METHOD> <path>"`. */
+function captureRequests(log: string[]): void {
+  server.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    log.push(`${request.method} ${url.pathname}${url.search}`);
   });
 }
 
-async function commitHappyPath(): Promise<string> {
-  return runInInjectionContext(TestBed.inject(EnvironmentInjector), async () => {
-    const cart = TestBed.inject(CartFacade);
-    const checkout = TestBed.inject(CheckoutFacade);
-    const cartId = await seedCartWithItem();
-    await checkout.loadSession(cartId, { clearOnLoad: false });
-
-    checkout.form.fullName().value.set('Teszt Elek');
-    checkout.form.email().value.set('teszt@example.test');
-    checkout.form.phone().value.set('+36201234567');
-    const savedContact = await checkout.saveContactSection();
-    if (!savedContact.ok) throw new Error('contact save failed');
-    checkout.form.deliveryOptionId().value.set('demo_pickup');
-    const savedDelivery = await checkout.saveDeliverySection();
-    if (!savedDelivery.ok) throw new Error('delivery save failed');
-    checkout.form.paymentMethod().value.set('demo_cod');
-    const savedPayment = await checkout.savePaymentMethod();
-    if (!savedPayment.ok) throw new Error('payment save failed');
-
-    const quote = await checkout.createQuote();
-    if (!quote.ok) throw new Error('quote failed');
-    checkout.form.acceptedTerms().value.set(true);
-    checkout.form.acknowledgedSimulation().value.set(true);
-    const order = await checkout.commitOrder();
-    if (!order.ok) throw new Error('commit failed');
-    const id = checkout.order()?.id;
-    if (id === undefined) throw new Error('order id missing');
-    // Hand the cart back to its post-commit state so the success-page
-    // assertions match the contract — a fresh, empty cart so the
-    // header badge reads 0 even though past-receipt replay stays
-    // available through the URL.
-    cart.resetOrderedCart();
-    return id;
-  });
+/** Builds the complete cash-on-delivery draft (the path that yields the
+ *  89 990 / 0 / 490 / 90 480 totals the brief locks in). */
+async function seedCompleteCashDraft(): Promise<void> {
+  const cart = TestBed.inject(CartFacade);
+  const checkout = TestBed.inject(CheckoutFacade);
+  await cart.ensureCart();
+  await cart.addItem(MOTO, 1);
+  const contact = await checkout.updateContact(VALID_CONTACT);
+  expect(contact.ok).toBe(true);
+  const billing = await checkout.updateBilling(VALID_BILLING);
+  expect(billing.ok).toBe(true);
+  const delivery = await checkout.updateDelivery(HOME_DELIVERY);
+  expect(delivery.ok).toBe(true);
+  const payment = await checkout.updatePayment(COD_PAYMENT);
+  expect(payment.ok).toBe(true);
+  const optionsResult = await checkout.ensureOptions();
+  expect(optionsResult.ok).toBe(true);
 }
 
-describe('T24 runtime: success step wire-level behaviour', () => {
-  it('fetchOrder hydrates CheckoutFacade.order through GET (never POST) and the cart stays at 0 after resetOrderedCart', async () => {
-    const orderId = await commitHappyPath();
-
-    // A hard reload wipes the in-memory facade; build a fresh one.
-    TestBed.resetTestingModule();
-    configureTestBed();
-    const checkout = TestBed.inject(CheckoutFacade);
-    const cart = TestBed.inject(CartFacade);
-    expect(checkout.order()).toBeNull();
-
-    let postCalls = 0;
-    let getCalls = 0;
-    server.use(
-      http.post('*/api/v1/orders', () => {
-        postCalls += 1;
-        return HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:not-allowed',
-            title: 'No extra orders',
-            status: 405,
-            code: 'METHOD_NOT_ALLOWED',
-            detail: 'No extra orders from the success page.',
-            traceId: 'mock-trace-success',
-            fieldErrors: [],
-          },
-          { status: 405 },
-        );
-      }),
-      http.get('*/api/v1/orders/:orderId', () => {
-        getCalls += 1;
-        return HttpResponse.json({
-          id: orderId,
-          orderNumber: 'DEMO-2026-0001',
-          createdAt: '2026-09-15T09:00:00.000Z',
-          status: 'demo_confirmed',
-          isSimulation: true,
-          items: [],
-          subtotal: { amount: 339_990, currency: 'HUF' },
-          shipping: { amount: 0, currency: 'HUF' },
-          total: { amount: 339_990, currency: 'HUF' },
-          paymentMethod: 'demo_cod',
-          deliveryOptionId: 'demo_pickup',
-          notice:
-            'A demórendelés elkészült. Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés.',
-        });
-      }),
-    );
-
-    const result = await checkout.fetchOrder(orderId);
-    expect(result.ok).toBe(true);
-    expect(checkout.order()?.id).toBe(orderId);
-    expect(checkout.order()?.orderNumber).toBe('DEMO-2026-0001');
-    expect(postCalls).toBe(0);
-    expect(getCalls).toBe(1);
-    // The post-commit cart stayed at 0 — past receipt replay must not
-    // resurrect the cart.
-    expect(cart.itemCount()).toBe(0);
+/** Submits the active draft as a cash-on-delivery order and returns
+ *  the wire `id` of the receipt the mock stored. */
+async function placeCodOrder(): Promise<{ orderId: string; receipt: OrderReceipt }> {
+  const checkout = TestBed.inject(CheckoutFacade);
+  const placed = await checkout.submitOrder({
+    paymentMethod: 'cash_on_delivery',
+    termsVersion: TERMS_VERSION,
+    acceptedTerms: true,
   });
+  if (!placed.ok) throw new Error(`submitOrder failed: ${placed.error.code}`);
+  return { orderId: placed.value.id, receipt: placed.value };
+}
 
-  it('fetchOrder surfaces a 404 for an unknown order id (success page renders 404 recovery, never a fabricated success)', async () => {
-    const checkout = TestBed.inject(CheckoutFacade);
-    const result = await checkout.fetchOrder('order-unknown-0001');
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.error.status).toBe(404);
-    expect(checkout.order()).toBeNull();
-  });
-
-  it('reviewGuard redirects back to the existing success URL when an order is in memory', async () => {
-    await commitHappyPath();
-    const checkout = TestBed.inject(CheckoutFacade);
-    const orderId = checkout.order()?.id;
-    expect(orderId).toBeDefined();
-    if (orderId === undefined) return;
-
-    const segments = [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
-    const route = {} as Parameters<typeof reviewGuard>[0];
-    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
-      reviewGuard(route, segments, {} as never),
-    );
-    expect(result).toBeInstanceOf(UrlTree);
-    const tree = result as UrlTree;
-    expect(tree.toString()).toContain(`/penztar/siker/${orderId}`);
-  });
-
-  it('successGuard allows navigation through when the URL carries an orderId (the page owns hydration)', () => {
-    const route = {
-      paramMap: convertToParamMap({ orderId: 'order-existing-0001' }),
-    } as unknown as ActivatedRouteSnapshot;
-    const state = { url: '/penztar/siker/order-existing-0001' } as RouterStateSnapshot;
-    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
-      successGuard(route, state),
-    );
-    expect(result).toBe(true);
-  });
-
-  it('successGuard still rejects a deep-link with NO orderId (sends the user to the cart)', () => {
-    const route = {
-      paramMap: convertToParamMap({}),
-    } as unknown as ActivatedRouteSnapshot;
-    const state = { url: '/penztar/siker/' } as RouterStateSnapshot;
-    const result = runInInjectionContext(TestBed.inject(EnvironmentInjector), () =>
-      successGuard(route, state),
-    );
-    expect(result).toBeInstanceOf(UrlTree);
-    expect((result as UrlTree).toString()).toContain('/penztar/kosar');
-  });
-});
+/** Mounts `SuccessStep` after `withOrderId(id)` pushes the id into the
+ *  shared stub, and waits for the hydration pipeline to settle. Used by
+ *  every page case that does not place one first. */
+async function mountSuccessPage(orderId: string): Promise<ComponentFixture<SuccessStep>> {
+  withOrderId(orderId);
+  const fixture = TestBed.createComponent(SuccessStep);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  fixture.detectChanges();
+  return fixture;
+}
 
 // ---------------------------------------------------------------------------
-// FIX-35 — the success page's copy must match the strings screens.md:91
-// fixes: one H1 and exactly one navigation CTA.
+// SP-01..SP-05 — the OrderReceiptComponent on the 2.0.0 wire shape
 // ---------------------------------------------------------------------------
-describe('FIX-35 success page copy matches screens.md:91', () => {
-  it('h1 is "Elkészült a demórendelésed." and exactly one nav action, "Vissza a telefonokhoz", points at /telefonok', async () => {
-    const orderId = await commitHappyPath();
 
-    TestBed.resetTestingModule();
+describe('OrderReceiptComponent', () => {
+  beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        provideZonelessChangeDetection(),
-        provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfiguration(BASE_URL),
-        provideRouter([]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            paramMap: of(convertToParamMap({ orderId })),
-            snapshot: { paramMap: convertToParamMap({ orderId }) },
-          },
-        },
-      ],
+      providers: [provideZonelessChangeDetection()],
       teardown: { destroyAfterEach: true },
     });
-    // Re-seed the same order into this fresh injector's CheckoutFacade
-    // via a GET, mirroring a reload — commitHappyPath's facade instance
-    // was destroyed by resetTestingModule above.
+  });
+
+  it('SP-01 the receipt renders the order number, the line items and the four totals from the wire payload', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt());
+    fixture.detectChanges();
+
+    const lines = queryAllHTMLElements(document, '[data-testid="receipt-line"]');
+    expect(lines).toHaveLength(1);
+    const first = lines[0];
+    expect(first.textContent).toContain(MOTO_PRODUCT_NAME);
+    expect(first.textContent).toContain('1 db');
+
+    const orderNumber = queryHTMLElement(document, '[data-testid="receipt-order-number"]');
+    expect(orderNumber?.textContent.trim()).toBe('DEMO-000001');
+
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-subtotal"] dd')?.textContent,
+    ).toContain(PriceBlock.formatHuf(89_990));
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-shipping"] dd')?.textContent,
+    ).toContain(PriceBlock.formatHuf(0));
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-payment-fee"] dd')?.textContent,
+    ).toContain(PriceBlock.formatHuf(490));
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-total"] dd')?.textContent,
+    ).toContain(PriceBlock.formatHuf(90_480));
+  });
+
+  it('SP-02 the receipt renders the Hungarian payment and delivery labels the component maps', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+
+    fixture.componentRef.setInput(
+      'receipt',
+      makeReceipt({ paymentMethod: 'cash_on_delivery', delivery: HOME_DELIVERY }),
+    );
+    fixture.detectChanges();
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-payment"] dd')?.textContent.trim(),
+    ).toBe('Utánvét (demó)');
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd')?.textContent.trim(),
+    ).toBe('Házhozszállítás');
+
+    fixture.componentRef.setInput(
+      'receipt',
+      makeReceipt({ paymentMethod: 'card', delivery: PICKUP }),
+    );
+    fixture.detectChanges();
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-payment"] dd')?.textContent.trim(),
+    ).toBe('Bankkártya (szimulált)');
+    expect(
+      queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd')?.textContent.trim(),
+    ).toBe('Bemutatótermi átvétel (demó)');
+  });
+
+  it('SP-03 the receipt renders the wire notice, and its own sentence only when the wire sends none', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+
+    fixture.componentRef.setInput(
+      'receipt',
+      makeReceipt({ notice: 'A custom wire-supplied simulation notice.' }),
+    );
+    fixture.detectChanges();
+    const noticeWithWire = queryHTMLElement(document, '[data-testid="receipt-simulation-notice"]');
+    expect(noticeWithWire?.textContent).toContain('A custom wire-supplied simulation notice.');
+
+    fixture.componentRef.setInput('receipt', makeReceipt({ notice: '' }));
+    fixture.detectChanges();
+    const noticeWithoutWire = queryHTMLElement(
+      document,
+      '[data-testid="receipt-simulation-notice"]',
+    );
+    expect(noticeWithoutWire?.textContent).toContain(
+      'Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés — ez egy demó folyamat.',
+    );
+  });
+
+  it('SP-04 the receipt is presentational: it renders from its input with no facade and no router provided', () => {
+    // TestBed was already configured with only `provideZonelessChangeDetection`
+    // in the outer `beforeEach`. The component has no constructor dependencies
+    // beyond `input.required<OrderReceipt>()`, so the render is the test.
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt());
+    fixture.detectChanges();
+
+    const receipt = queryHTMLElement(document, '[data-testid="order-receipt"]');
+    expect(receipt).not.toBeNull();
+    expect(receipt?.textContent).toContain('DEMO-000001');
+    expect(receipt?.textContent).toContain(PriceBlock.formatHuf(90_480));
+  });
+
+  it('SP-05 the receipt shows the order status row', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt());
+    fixture.detectChanges();
+
+    const statusRow = queryHTMLElement(document, '[data-testid="receipt-row-status"]');
+    expect(statusRow).not.toBeNull();
+    expect(statusRow?.textContent).toContain('Státusz');
+    expect(statusRow?.textContent).toContain('Demó rendelés visszaigazolva');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SP-06..SP-15 — the SuccessStep hydration pipeline
+// ---------------------------------------------------------------------------
+
+describe('SuccessStep', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('SP-06 the page renders the loading placeholder while the receipt is being fetched', async () => {
+    withOrderId('ord-loading');
+    const fixture = TestBed.createComponent(SuccessStep);
+    fixture.detectChanges();
+    // The loading branch is set inside `hydrate()` *before* the
+    // `await this.checkout.fetchOrder(...)` suspends. Reading the DOM
+    // synchronously here catches the placeholder while the GET is
+    // still in flight.
+    expect(queryHTMLElement(document, '[data-testid="success-loading"]')).not.toBeNull();
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).toBeNull();
+
+    await fixture.whenStable();
+  });
+
+  it('SP-07 the page hydrates a reloaded receipt through a GET and never issues an order POST', async () => {
+    // First, place a real order so the wire store has a receipt to return.
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+    const orderId = placed.orderId;
+
+    // Drop the in-memory snapshot, the way a hard reload does.
+    TestBed.resetTestingModule();
+    configureTestBed();
+    const requests: string[] = [];
+    captureRequests(requests);
+
+    const _fixture = await mountSuccessPage(orderId);
+
+    const gets = requests.filter((entry) => entry.startsWith('GET '));
+    expect(gets).toContain(`GET /api/v1/orders/${orderId}`);
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).not.toBeNull();
+
+    // The proof the case pins: a POST /orders ever showing here is
+    // the regression the brief forbids.
+    const posts = requests.filter(
+      (entry) => entry.startsWith('POST ') && entry.includes('/orders'),
+    );
+    expect(posts).toEqual([]);
+  });
+
+  it('SP-08 the page renders the receipt already in memory without a second request', async () => {
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+    const orderId = placed.orderId;
+
+    // The facade now carries the order. Mount the page with that id
+    // and watch for any GET /orders/<id>.
+    const requests: string[] = [];
+    captureRequests(requests);
+
+    const _fixture = await mountSuccessPage(orderId);
+
+    const gets = requests.filter(
+      (entry) => entry.startsWith('GET ') && entry.includes(`/orders/${orderId}`),
+    );
+    expect(gets).toEqual([]);
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).not.toBeNull();
+  });
+
+  it('SP-09 an unknown order id renders the recovery state and never fabricates a success', async () => {
+    const requests: string[] = [];
+    captureRequests(requests);
+
+    const _fixture = await mountSuccessPage('ord-missing');
+
+    expect(queryHTMLElement(document, '[data-testid="success-missing"]')).not.toBeNull();
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).toBeNull();
+    const missing = queryHTMLElement(document, '[data-testid="success-missing"]');
+    expect(missing?.textContent).toContain('ord-missing');
+    // A 404 fetch did happen, but no POST ever.
+    const posts = requests.filter(
+      (entry) => entry.startsWith('POST ') && entry.includes('/orders'),
+    );
+    expect(posts).toEqual([]);
+  });
+
+  it('SP-10 a non-404 failure renders the error state carrying the retry control', async () => {
+    server.use(http.get('*/api/v1/orders/:orderId', () => fiveHundred()));
+
+    const _fixture = await mountSuccessPage('ord-500');
+
+    expect(queryHTMLElement(document, '[data-testid="success-error"]')).not.toBeNull();
+    expect(queryHTMLElement(document, '[data-testid="success-missing"]')).toBeNull();
+  });
+
+  it('SP-11 a malformed order id is treated as missing without any request', async () => {
+    const requests: string[] = [];
+    captureRequests(requests);
+
+    const _fixture = await mountSuccessPage('nope/../etc');
+
+    expect(queryHTMLElement(document, '[data-testid="success-missing"]')).not.toBeNull();
+    const gets = requests.filter((entry) => entry.startsWith('GET ') && entry.includes('/orders'));
+    expect(gets).toEqual([]);
+  });
+
+  it('SP-12 the retry re-issues the fetch and reaches the receipt on the second attempt', async () => {
+    // Place a real order, then drop the in-memory snapshot the way a
+    // reload would.
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+    const orderId = placed.orderId;
+    TestBed.resetTestingModule();
+    configureTestBed();
+
+    // First GET → 500, second GET → the real handler. We toggle the
+    // override off when the first request lands.
+    let firstAttempt = true;
     server.use(
       http.get('*/api/v1/orders/:orderId', () => {
-        return HttpResponse.json({
-          id: orderId,
-          orderNumber: 'DEMO-2026-0002',
-          createdAt: '2026-09-15T09:00:00.000Z',
-          status: 'demo_confirmed',
-          isSimulation: true,
-          items: [],
-          subtotal: { amount: 339_990, currency: 'HUF' },
-          shipping: { amount: 0, currency: 'HUF' },
-          total: { amount: 339_990, currency: 'HUF' },
-          paymentMethod: 'demo_cod',
-          deliveryOptionId: 'demo_pickup',
-          notice: 'A demórendelés elkészült. Nem történt valódi fizetés.',
-        });
+        if (firstAttempt) {
+          firstAttempt = false;
+          return fiveHundred();
+        }
+        return undefined;
       }),
     );
 
-    const fixture = TestBed.createComponent(SuccessStep);
-    fixture.detectChanges();
+    const fixture = await mountSuccessPage(orderId);
+
+    // First attempt landed as the error state.
+    expect(queryHTMLElement(document, '[data-testid="success-error"]')).not.toBeNull();
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).toBeNull();
+
+    // Capture the second attempt onward.
+    const captured: string[] = [];
+    captureRequests(captured);
+    captured.length = 0;
+
+    // The error state hosts a `Retry` button. Drive it through the
+    // `ErrorState` component's `(retryRequested)` output by clicking
+    // the rendered button — the page wires that output to `onRetry`.
+    const errorButton = queryHTMLElement(
+      document,
+      '[data-testid="success-error"] app-error-state button',
+    );
+    expect(errorButton).not.toBeNull();
+    if (!(errorButton instanceof HTMLButtonElement)) {
+      throw new Error('expected the error-state action to be an HTMLButtonElement');
+    }
+    errorButton.click();
+
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const root = getRootElement(fixture);
-    const h1 = root.querySelector('h1');
-    expect(h1?.textContent.trim()).toBe('Elkészült a demórendelésed.');
+    const gets = captured.filter(
+      (entry) => entry.startsWith('GET ') && entry.includes(`/orders/${orderId}`),
+    );
+    expect(gets).toHaveLength(1);
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).not.toBeNull();
+  });
 
-    const actions = root.querySelector('[data-testid="success-actions"]');
-    expect(actions).not.toBeNull();
-    const buttons = actions?.querySelectorAll('button') ?? [];
-    expect(buttons.length).toBe(1);
-    expect(buttons[0]?.textContent?.trim()).toBe('Vissza a telefonokhoz');
+  it('SP-13 the page resets the ordered cart once the receipt is in memory', async () => {
+    await seedCompleteCashDraft();
+    await placeCodOrder();
+    // `submitOrder` itself drops the cart snapshot, so the very next
+    // navigation would already see `cart.itemCount() === 0`. The page
+    // binds this in its `hasReceipt` effect; we want to measure the
+    // facade side, not the page's call, so we put a fresh item back,
+    // then mount the page (no second fetch, because the receipt is
+    // already in memory) and watch `itemCount` drop to zero again.
+    const cart = TestBed.inject(CartFacade);
+    await cart.ensureCart();
+    await cart.addItem(MOTO, 1);
+    expect(cart.itemCount()).toBe(1);
+
+    const checkout = TestBed.inject(CheckoutFacade);
+    const orderId = checkout.order()?.id;
+    if (orderId === undefined) throw new Error('expected an order on the facade');
+
+    const _fixture = await mountSuccessPage(orderId);
+
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).not.toBeNull();
+    expect(cart.itemCount()).toBe(0);
+  });
+
+  it('SP-14 the success heading is focusable and reads the demo sentence', async () => {
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+
+    const _fixture = await mountSuccessPage(placed.orderId);
+
+    const heading = queryHTMLElement(document, '[data-testid="success-heading"]');
+    expect(heading?.textContent.trim()).toBe('Elkészült a demórendelésed.');
+    expect(heading?.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('SP-15 the new-shopping action ensures a fresh cart, clears the receipt and leaves for the catalogue', async () => {
+    await seedCompleteCashDraft();
+    await placeCodOrder();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const cart = TestBed.inject(CartFacade);
+    const router = TestBed.inject(Router);
+
+    const orderId = checkout.order()?.id;
+    if (orderId === undefined) throw new Error('expected an order on the facade');
+
+    const fixture = await mountSuccessPage(orderId);
+
+    const ensureCartSpy = vi.spyOn(cart, 'ensureCart').mockResolvedValue();
+    const resetSpy = vi.spyOn(checkout, 'resetAfterOrder').mockImplementation(() => undefined);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const actionWrapper = queryHTMLElement(document, '[data-testid="success-new-shopping"]');
+    expect(actionWrapper).not.toBeNull();
+    expect(actionWrapper?.textContent).toContain('Vissza a telefonokhoz');
+
+    const actionButton = queryHTMLElement(
+      document,
+      '[data-testid="success-new-shopping"] button',
+    );
+    expect(actionButton).not.toBeNull();
+    if (!(actionButton instanceof HTMLButtonElement)) {
+      throw new Error('expected the new-shopping action to be an HTMLButtonElement');
+    }
+    actionButton.click();
+
+    await fixture.whenStable();
+
+    expect(ensureCartSpy).toHaveBeenCalledTimes(1);
+    expect(resetSpy).toHaveBeenCalledTimes(1);
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    expect(navigateSpy.mock.calls[0][0]).toEqual(['/telefonok']);
+
+    // The three calls happened in this order; no other navigation
+    // action fired on the page.
+    const ensureOrder = ensureCartSpy.mock.invocationCallOrder[0];
+    const resetOrder = resetSpy.mock.invocationCallOrder[0];
+    const navOrder = navigateSpy.mock.invocationCallOrder[0];
+    expect(ensureOrder).toBeLessThan(resetOrder);
+    expect(resetOrder).toBeLessThan(navOrder);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SP-16, SP-17 — successGuard on the success URL
+// ---------------------------------------------------------------------------
+
+/** `successGuard`'s `CanActivateFn` signature asks for a full
+ *  `ActivatedRouteSnapshot` and `RouterStateSnapshot`, but the
+ *  implementation only reads `route.paramMap`. The router exposes
+ *  the snapshot as a structural type (no usable constructor), and the
+ *  `extends Tree<...>` hierarchy on `RouterStateSnapshot` makes a
+ *  literal object incompatible. The cast is unavoidable because TS will
+ *  not let a partial literal satisfy the type — the guard's own
+ *  dispatch is the only thing that touches the surface it needs. */
+function invokeGuardWithParamMap(
+  paramMap: ReturnType<typeof convertToParamMap>,
+): unknown {
+  const route = { paramMap };
+  return TestBed.runInInjectionContext(() =>
+    successGuard(
+      route as Parameters<typeof successGuard>[0],
+      {} as Parameters<typeof successGuard>[1],
+    ),
+  );
+}
+
+describe('successGuard', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('SP-16 the success guard lets a route carrying an order id through, so the page owns the hydration', () => {
+    const result = invokeGuardWithParamMap(convertToParamMap({ orderId: 'ord-guard-1' }));
+    expect(result).toBe(true);
+  });
+
+  it('SP-17 the success guard sends a deep link with no order id back to the cart', () => {
+    const result = invokeGuardWithParamMap(convertToParamMap({}));
+    const router = TestBed.inject(Router);
+    expect(result).not.toBe(true);
+    const serialised = router.serializeUrl(result as Parameters<Router['serializeUrl']>[0]);
+    expect(serialised).toContain('/penztar/kosar');
+    expect(serialised).toContain('navigationReason=deep-link');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SP-18..SP-20 — additional OrderReceiptComponent cases that the brief pulls
+// out of the presentational layer
+// ---------------------------------------------------------------------------
+
+describe('OrderReceiptComponent — billing and delivery address', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection()],
+      teardown: { destroyAfterEach: true },
+    });
+  });
+
+  it('SP-18 the receipt renders the billing address block from the wire billing', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    const billing: BillingDetails = {
+      name: 'Teszt Elek',
+      address: {
+        countryCode: 'HU',
+        postalCode: '1011',
+        city: 'Budapest',
+        line1: 'Fő utca 1.',
+      },
+    };
+
+    fixture.componentRef.setInput('receipt', makeReceipt({ billing }));
+    fixture.detectChanges();
+    const billingRow = queryHTMLElement(document, '[data-testid="receipt-row-billing"]');
+    if (billingRow === null) throw new Error('billing row not in the DOM');
+    const dt = billingRow.querySelector('dt');
+    const dd = billingRow.querySelector('dd');
+    const dtText = (dt?.textContent ?? '').trim();
+    expect(dtText).toBe('Számlázási cím');
+    expect(collapsedText(dd)).toBe('Teszt Elek Fő utca 1. 1011 Budapest');
+
+    const billingWithLine2: BillingDetails = {
+      name: 'Teszt Elek',
+      address: {
+        countryCode: 'HU',
+        postalCode: '1011',
+        city: 'Budapest',
+        line1: 'Fő utca 1.',
+        line2: '2. emelet',
+      },
+    };
+    fixture.componentRef.setInput('receipt', makeReceipt({ billing: billingWithLine2 }));
+    fixture.detectChanges();
+    const dd2 = queryHTMLElement(document, '[data-testid="receipt-row-billing"] dd');
+    expect(collapsedText(dd2)).toBe('Teszt Elek Fő utca 1. 2. emelet 1011 Budapest');
+  });
+
+  it('SP-19 the receipt renders the delivery address row for home delivery only', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+
+    fixture.componentRef.setInput(
+      'receipt',
+      makeReceipt({
+        delivery: {
+          optionId: 'home_delivery',
+          address: {
+            countryCode: 'HU',
+            postalCode: '1055',
+            city: 'Budapest',
+            line1: 'Kossuth tér 2.',
+          },
+        },
+      }),
+    );
+    fixture.detectChanges();
+
+    const homeRow = queryHTMLElement(document, '[data-testid="receipt-row-delivery-address"]');
+    if (homeRow === null) throw new Error('delivery-address row not in the DOM');
+    const homeDt = homeRow.querySelector('dt');
+    const homeDd = homeRow.querySelector('dd');
+    const homeDtText = (homeDt?.textContent ?? '').trim();
+    expect(homeDtText).toBe('Szállítási cím');
+    expect(collapsedText(homeDd)).toBe('Kossuth tér 2. 1055 Budapest');
+
+    fixture.componentRef.setInput(
+      'receipt',
+      makeReceipt({ delivery: { optionId: 'pickup_point' } }),
+    );
+    fixture.detectChanges();
+
+    expect(queryHTMLElement(document, '[data-testid="receipt-row-delivery-address"]')).toBeNull();
+    // Billing row is still present for pickup.
+    expect(queryHTMLElement(document, '[data-testid="receipt-row-billing"]')).not.toBeNull();
+  });
+
+  it('SP-20 the receipt meta rows keep the order payment, delivery, billing, delivery address, status', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt());
+    fixture.detectChanges();
+
+    const meta = queryHTMLElement(document, '[data-testid="receipt-meta"]');
+    if (meta === null) throw new Error('meta block not in the DOM');
+    const ids: string[] = [];
+    const rows = meta.querySelectorAll('[data-testid^="receipt-row-"]');
+    for (const row of Array.from(rows)) {
+      ids.push(row.getAttribute('data-testid') ?? '');
+    }
+    expect(ids).toEqual([
+      'receipt-row-payment',
+      'receipt-row-delivery',
+      'receipt-row-billing',
+      'receipt-row-delivery-address',
+      'receipt-row-status',
+    ]);
   });
 });
