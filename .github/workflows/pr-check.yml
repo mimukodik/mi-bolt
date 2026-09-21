@@ -2,7 +2,7 @@ name: PR check
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, eggprojec/mim-210-s1-sdk]
   push:
     branches: [main]
 
