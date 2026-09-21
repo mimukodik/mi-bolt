@@ -16,7 +16,7 @@
  * `resetForOrder` after a successful commit.
  *
  * The two URLs a freshly created intent carries come from the
- * backend, not from the 1.0.0 mock (`PaymentIntentService.java:87`,
+ * backend (`PaymentIntentService.java:87`,
  * `application.properties:40-42`): the redirect points at the demo
  * payment page (`/demo-fizetes/<id>`) and the return URL carries the
  * intent id in a query parameter. The 30-minute lifetime mirrors

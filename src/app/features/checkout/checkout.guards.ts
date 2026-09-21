@@ -16,10 +16,9 @@
  * The guards run as part of route matching so a deep link or hard
  * reload of an unfinished checkout lands the user on the right step
  * with a `navigationReason` query param the page renders as a
- * banner. The cart survives because the `CartFacade` is the source
- * of truth for it; only contact / address / paymentMethod in memory
- * are cleared on hard reload (the facade's `loadSession` does that
- * when the URL contains `?reload=1`).
+ * banner. The cart survives because the `CartFacade` is the source of truth
+ * for it, and the checkout draft is the server's session, re-read on
+ * every guard run, so a hard reload loses nothing.
  */
 
 import { inject } from '@angular/core';
