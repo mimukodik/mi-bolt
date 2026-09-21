@@ -433,6 +433,48 @@ describe('OrderSubmission', () => {
   });
 
   // -------------------------------------------------------------------------
+  // OS-13 — complete draft but options never loaded → unknown NO_OPTIONS
+  // -------------------------------------------------------------------------
+
+  it('OS-13: a complete draft with the options not yet loaded reports unknown NO_OPTIONS and issues no request', async () => {
+    // Seed a complete COD draft the way `seedCompleteDraft` does, but
+    // skip `checkout.ensureOptions()`. The draft cannot be completed
+    // without options; with options() left at its initial null the
+    // `runSubmit` step 2 guard at order-submission.ts:197-199 fires
+    // and returns an `unknown` / `NO_OPTIONS` outcome without touching
+    // the wire.
+    const cart = TestBed.inject(CartFacade);
+    const checkout = TestBed.inject(CheckoutFacade);
+    await cart.ensureCart();
+    await cart.addItem(MOTO, 1);
+    const loaded = await checkout.ensureSession();
+    expect(loaded.ok).toBe(true);
+    const contact = await checkout.updateContact(VALID_CONTACT);
+    expect(contact.ok).toBe(true);
+    const delivery = await checkout.updateDelivery(HOME_DELIVERY);
+    expect(delivery.ok).toBe(true);
+    const payment = await checkout.updatePayment(COD_PAYMENT);
+    expect(payment.ok).toBe(true);
+    const billing = await checkout.updateBilling(VALID_BILLING);
+    expect(billing.ok).toBe(true);
+    // The draft is complete (session().complete === true) but
+    // checkout.options() is still null — the facet that drives
+    // the `NO_OPTIONS` branch.
+    expect(checkout.options()).toBeNull();
+
+    const log: CapturedRequest[] = [];
+    captureRequests(log);
+    const service = TestBed.inject(OrderSubmission);
+    const outcome = await service.submitOrder();
+
+    expect(outcome.kind).toBe('unknown');
+    if (outcome.kind !== 'unknown') throw new Error('expected unknown');
+    expect(outcome.code).toBe('NO_OPTIONS');
+    expect(postsTo(log, '/orders')).toBe(0);
+    expect(postsTo(log, '/payment-intents')).toBe(0);
+  });
+
+  // -------------------------------------------------------------------------
   // OS-08 — complete card draft with no intent → payment-required
   // -------------------------------------------------------------------------
 
@@ -573,10 +615,10 @@ describe('OrderSubmission', () => {
   });
 
   // -------------------------------------------------------------------------
-  // OS-13 — SafeLogger.redact keeps the whitelist, drops the rest
+  // OS-14 — SafeLogger.redact keeps the whitelist, drops the rest
   // -------------------------------------------------------------------------
 
-  it('OS-13: redact keeps only the whitelist fields and drops everything else', () => {
+  it('OS-14: redact keeps only the whitelist fields and drops everything else', () => {
     const money = { amount: 89_990, currency: 'HUF' as const };
     const redacted = SafeLogger.redact({
       paymentIntentId: 'pi-001',
