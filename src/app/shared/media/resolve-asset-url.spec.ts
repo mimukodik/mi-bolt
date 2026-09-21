@@ -55,4 +55,17 @@ describe('resolveAssetUrl', () => {
   ])('rejects %s as AssetUrlError', (path) => {
     expect(() => resolveAssetUrl(path, 'https://example.test/mi-bolt/')).toThrow(AssetUrlError);
   });
+
+  // The application ships `<base href="/">` (`src/index.html:6`), and at a
+  // root base every same-origin pathname starts with the base pathname, so
+  // the base-prefix check cannot reject a traversal. These cases pin the
+  // refusal to the path itself rather than to the deployment's sub-path.
+  it.each([
+    ['/assets/../../etc/passwd'],
+    ['/../etc/passwd'],
+    ['/assets/..\\..\\etc/passwd'],
+    ['/assets/./products/x.webp'],
+  ])('rejects %s at a root base as AssetUrlError', (path) => {
+    expect(() => resolveAssetUrl(path, 'https://example.test/')).toThrow(AssetUrlError);
+  });
 });

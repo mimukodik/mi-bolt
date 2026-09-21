@@ -262,6 +262,89 @@ describe('ProductImage primitive', () => {
     expect(
       getNativeElement(fixture).querySelector('[data-testid="image-skeleton"]'),
     ).not.toBeNull();
+    expect(
+      getNativeElement(fixture)
+        .querySelector<HTMLImageElement>('[data-testid="image-photo"]')
+        ?.getAttribute('src'),
+    ).toBe(new URL('assets/products/silver-front.webp', document.baseURI).href);
+  });
+
+  // The `error` outcome has to be forgotten with the source as well as the
+  // `load` one: without that, a gallery that fails on one variant keeps the
+  // monogram on every later variant. Reverting `phase` to a plain signal
+  // makes this case fail while the `load` case above still passes.
+  it('shows the photo again after an error once the image input changes (MIM-210)', () => {
+    const { fixture, host } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    photo.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="image-fallback"]'),
+    ).not.toBeNull();
+
+    host.image.set({
+      src: '/assets/products/silver-front.webp',
+      alt: 'Másik telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('data-status')).toBe('loading');
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-fallback"]')).toBeNull();
+    expect(
+      getNativeElement(fixture)
+        .querySelector<HTMLImageElement>('[data-testid="image-photo"]')
+        ?.getAttribute('src'),
+    ).toBe(new URL('assets/products/silver-front.webp', document.baseURI).href);
+  });
+
+  // A rejected src in between must not hide the source change from the
+  // linked `phase`: reading it only inside the non-null branch of
+  // `status()` leaves the first image carrying its old failure when the
+  // gallery comes back to it.
+  it('retries an image that failed before a rejected one (MIM-210)', () => {
+    const { fixture, host } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    photo.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+
+    host.image.set({
+      src: 'https://evil.example/x.webp',
+      alt: 'Elutasított kép',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(
+      getNativeElement(fixture).querySelector<HTMLElement>('.root')?.getAttribute('data-status'),
+    ).toBe('error');
+
+    host.image.set({
+      src: '/assets/products/graphite-front.webp',
+      alt: 'Demo telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(
+      getNativeElement(fixture).querySelector<HTMLElement>('.root')?.getAttribute('data-status'),
+    ).toBe('loading');
+    expect(
+      getNativeElement(fixture)
+        .querySelector<HTMLImageElement>('[data-testid="image-photo"]')
+        ?.getAttribute('src'),
+    ).toBe(new URL('assets/products/graphite-front.webp', document.baseURI).href);
   });
 
   it('renders the fallback, not a broken <img>, when the wire src is rejected (FIX-49)', () => {

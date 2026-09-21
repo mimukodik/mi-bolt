@@ -67,23 +67,23 @@ export class ProductImage {
    *  empty-string arm never reaches the DOM. */
   readonly resolvedSrc = computed<string>(() => this.resolution() ?? '');
 
-  /** Set by the `<img>` `load` event. Linked to `resolvedSrc()` so a new
-   *  image starts in `loading` again instead of inheriting the previous
-   *  one's outcome when the gallery switches variant. */
-  private readonly loaded = linkedSignal<string, boolean>({
+  /** What the `<img>` currently in the DOM has reported for
+   *  `resolvedSrc()`. Linked to that URL so a new image starts in
+   *  `loading` again instead of inheriting the previous one's outcome
+   *  when the gallery switches variant. */
+  private readonly phase = linkedSignal<string, 'loading' | 'loaded' | 'error'>({
     source: () => this.resolvedSrc(),
-    computation: () => false,
-  });
-
-  /** Set by the `<img>` `error` event, reset with the same source. */
-  private readonly failed = linkedSignal<string, boolean>({
-    source: () => this.resolvedSrc(),
-    computation: () => false,
+    computation: () => 'loading',
   });
 
   readonly status = computed<'loading' | 'loaded' | 'error'>(() => {
-    if (this.resolution() === null || this.failed()) return 'error';
-    return this.loaded() ? 'loaded' : 'loading';
+    // `phase()` is read before the null check, never inside the branch: a
+    // `linkedSignal` only notices its source moved when it is read, so a
+    // short-circuit that skips it while `resolution()` is null would hide
+    // the intermediate empty source, and an image that failed before a
+    // rejected one would come back still carrying its old failure.
+    const reported = this.phase();
+    return this.resolution() === null ? 'error' : reported;
   });
 
   readonly initial = computed<string>(() => {
@@ -94,12 +94,13 @@ export class ProductImage {
   });
 
   onLoad(): void {
-    this.loaded.set(true);
+    if (this.phase() === 'error') return;
+    this.phase.set('loaded');
   }
 
   onError(): void {
-    if (this.failed()) return;
-    this.failed.set(true);
+    if (this.phase() === 'error') return;
+    this.phase.set('error');
     this.loadFailed.emit();
   }
 }
