@@ -1,37 +1,37 @@
 <div class="page" data-testid="product-page">
-  <nav class="breadcrumbs" aria-label="Navigáció" data-testid="product-breadcrumb">
-    <a routerLink="/" class="breadcrumb">Főoldal</a>
+  <nav aria-label="Navigáció" class="breadcrumbs" data-testid="product-breadcrumb">
+    <a class="breadcrumb" routerLink="/">Főoldal</a>
     <span aria-hidden="true" class="breadcrumb__sep">/</span>
-    <a routerLink="/telefonok" class="breadcrumb">Mobiltelefonok</a>
+    <a class="breadcrumb" routerLink="/telefonok">Mobiltelefonok</a>
     <span aria-hidden="true" class="breadcrumb__sep">/</span>
-    <span class="breadcrumb is-current" aria-current="page">{{ productName() }}</span>
+    <span aria-current="page" class="breadcrumb is-current">{{ productName() }}</span>
   </nav>
   <article class="card">
     @switch (state()) {
       @case ('loading') {
         <div class="loading" data-testid="product-loading">
-          <app-loading-state variant="card" label="Termék betöltése"></app-loading-state>
+          <app-loading-state label="Termék betöltése" variant="card" />
         </div>
       }
       @case ('error') {
         <app-error-state
-          [title]="'A termék nem tölthető be'"
+          retryLabel="Újrapróbálom"
+          title="A termék nem tölthető be"
           [message]="errorMessage()"
-          [retryLabel]="'Újrapróbálom'"
           [pending]="false"
           [preserving]="true"
           (retryRequested)="onRetry()"
-        ></app-error-state>
+        />
       }
       @case ('notfound') {
         <app-error-state
-          [title]="'A termék nem található'"
+          retryLabel="Vissza a telefonokhoz"
+          title="A termék nem található"
           [message]="notFoundMessage()"
-          [retryLabel]="'Vissza a telefonokhoz'"
           [pending]="false"
           [preserving]="true"
           (retryRequested)="onBackToCatalog()"
-        ></app-error-state>
+        />
       }
       @default {
         <header class="page-header">
@@ -192,11 +192,11 @@
 
   @if (showStickyRail()) {
     <app-mobile-buy-rail
-      [money]="devicePrice()"
       [available]="addToCartEnabled()"
-      [pending]="addPending()"
       [error]="addError()"
+      [money]="devicePrice()"
+      [pending]="addPending()"
       (addRequested)="onRailAddRequested()"
-    ></app-mobile-buy-rail>
+    />
   }
 </div>
