@@ -12,11 +12,19 @@
 import '@angular/compiler';
 
 // @vitest-environment jsdom
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  type MockInstance,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpClient, HttpRequest } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
@@ -107,7 +115,8 @@ beforeEach((): void => {
 });
 
 afterEach(() => {
-  server.resetHandlers();
+  server.events.removeAllListeners();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
   sessionStorage.clear();
 });
@@ -125,34 +134,17 @@ function configureTestBed(): void {
 }
 
 /**
- * Wraps `HttpClient.request` so every fired request is appended to the
- * shared log in the form `"<METHOD> <url>"`. The wrapper delegates to
- * the original method via `Reflect.apply`, which sidesteps the
- * `HttpClient.request` overload union at the cost of one `as never`
- * on the call arguments.
- */
-/**
- * `HttpClient.request`'s overload union is too complex to call through
- * the public signature without TS dropping into `any`. `bind` once on
- * the test's instance widens the call to a free function that the spy
- * delegate can invoke with one inline `as never` on the arguments.
+ * Records every request the MSW server sees through its life-cycle
+ * events, in the form `"<METHOD> <pathname[+search?>"`. The listener is
+ * registered by the test that wants it and torn down in `afterEach`,
+ * where `server.events.removeAllListeners()` reverts to the default
+ * handler-less state.
  */
 function captureRequests(log: string[]): void {
-  const http = TestBed.inject(HttpClient);
-  const original = HttpClient.prototype.request.bind(http);
-  const spy = vi.spyOn(http, 'request');
-  spy.mockImplementation((first: unknown, url?: unknown, options?: unknown) => {
-    let method = 'GET';
-    let actualUrl = '';
-    if (typeof first === 'string') {
-      method = first;
-      actualUrl = typeof url === 'string' ? url : '';
-    } else if (first instanceof HttpRequest) {
-      method = first.method;
-      actualUrl = first.urlWithParams;
-    }
-    log.push(`${method} ${actualUrl}`);
-    return Reflect.apply(original, http, [first, url, options] as never);
+  server.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    const line = `${request.method} ${url.pathname}${url.search}`;
+    log.push(line);
   });
 }
 
@@ -186,42 +178,13 @@ async function resolveIntentOutcome(
 }
 
 /**
- * Stands in for `Router.navigate` so a test can read what was
- * navigated to without the unsafe-any rule flagging every
- * `mock.calls[...]` access. The router is mutated to call the tracker
- * directly; `restore` puts the original method back. Type erasure is
- * scoped to the binding and never reaches the assertions.
- */
-interface NavigateTracker {
-  readonly calls: readonly (readonly unknown[])[];
-  readonly restore: () => void;
-}
-
-function trackRouterNavigate(): NavigateTracker {
-  const router = TestBed.inject(Router);
-  const original = router.navigate.bind(router);
-  const calls: unknown[][] = [];
-  const fn = ((...args: unknown[]) => {
-    calls.push(args);
-    return Promise.resolve(true);
-  }) as unknown as typeof original;
-  router.navigate = fn;
-  return {
-    calls,
-    restore: () => {
-      router.navigate = original;
-    },
-  };
-}
-
-/**
- * Waits for `router.navigate` to have been called at least once, by
- * polling the tracker after each microtask drain. Bounded so a bug in
- * the page can never hang the suite; one second is far longer than the
+ * Waits for `Router.navigate` to have been called at least once, by
+ * polling the spy after each microtask drain. Bounded so a bug in the
+ * page can never hang the suite; one second is far longer than the
  * cart + session + intent sequence takes under jsdom.
  */
-async function waitForNavigate(tracker: NavigateTracker): Promise<void> {
-  for (let i = 0; i < 200 && tracker.calls.length === 0; i++) {
+async function waitForNavigate(spy: MockInstance): Promise<void> {
+  for (let i = 0; i < 200 && spy.mock.calls.length === 0; i++) {
     await new Promise<void>((r) => setTimeout(r, 5));
   }
 }
@@ -242,17 +205,16 @@ describe('PaymentReturnPage', () => {
     if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
     const id = created.value.id;
 
-    const tracker = trackRouterNavigate();
+    const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     const fixture = TestBed.createComponent(PaymentReturnPage);
     fixture.componentRef.setInput('paymentIntentId', id);
     fixture.detectChanges();
     await fixture.whenStable();
-    await waitForNavigate(tracker);
+    await waitForNavigate(navigateSpy);
 
     expect(checkout.paymentIntent()?.id).toBe(id);
-    expect(firstNavigateArg(tracker)).toEqual(['/penztar/ellenorzes']);
-    tracker.restore();
+    expect(navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/ellenorzes']);
   });
 
   it('R-02 falls back to the stored intent id when the query parameter is absent', async () => {
@@ -268,19 +230,18 @@ describe('PaymentReturnPage', () => {
 
     const requests: string[] = [];
     captureRequests(requests);
-    const tracker = trackRouterNavigate();
+    const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     const fixture = TestBed.createComponent(PaymentReturnPage);
     fixture.detectChanges();
     await fixture.whenStable();
-    await waitForNavigate(tracker);
+    await waitForNavigate(navigateSpy);
 
     const intentReads = requests.filter(
       (r) => r.startsWith('GET ') && r.includes('/payment-intents/'),
     );
     expect(intentReads).toHaveLength(1);
     expect(intentReads[0]).toContain(`/payment-intents/${id}`);
-    tracker.restore();
   });
 
   it('R-03 navigates to the cart when there is no id at all', async () => {
@@ -288,19 +249,18 @@ describe('PaymentReturnPage', () => {
     // short-circuit before any payment-intent read.
     const requests: string[] = [];
     captureRequests(requests);
-    const tracker = trackRouterNavigate();
+    const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     const fixture = TestBed.createComponent(PaymentReturnPage);
     fixture.detectChanges();
     await fixture.whenStable();
-    await waitForNavigate(tracker);
+    await waitForNavigate(navigateSpy);
 
-    expect(firstNavigateArg(tracker)).toEqual(['/penztar/kosar']);
+    expect(navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/kosar']);
     const intentReads = requests.filter(
       (r) => r.startsWith('GET ') && r.includes('/payment-intents/'),
     );
     expect(intentReads).toHaveLength(0);
-    tracker.restore();
   });
 
   it('R-04 hydrates the cart and the session before reading the intent', async () => {
@@ -320,18 +280,16 @@ describe('PaymentReturnPage', () => {
 
     const requests: string[] = [];
     captureRequests(requests);
-    const tracker = trackRouterNavigate();
+    const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     const fixture = TestBed.createComponent(PaymentReturnPage);
     fixture.componentRef.setInput('paymentIntentId', id);
     fixture.detectChanges();
     await fixture.whenStable();
-    await waitForNavigate(tracker);
+    await waitForNavigate(navigateSpy);
 
-    const cartIdx = requests.findIndex((r) => r.endsWith('GET http://localhost/api/v1/cart'));
-    const checkoutIdx = requests.findIndex((r) =>
-      r.endsWith('GET http://localhost/api/v1/checkout'),
-    );
+    const cartIdx = requests.findIndex((r) => r === 'GET /api/v1/cart');
+    const checkoutIdx = requests.findIndex((r) => r === 'GET /api/v1/checkout');
     const intentIdx = requests.findIndex(
       (r) => r.startsWith('GET ') && r.includes(`/payment-intents/${id}`),
     );
@@ -340,7 +298,6 @@ describe('PaymentReturnPage', () => {
     expect(intentIdx).toBeGreaterThanOrEqual(0);
     expect(cartIdx).toBeLessThan(intentIdx);
     expect(checkoutIdx).toBeLessThan(intentIdx);
-    tracker.restore();
   });
 
   it('R-05 a succeeded intent lands on the review step with the CTA enabled', async () => {
@@ -351,17 +308,16 @@ describe('PaymentReturnPage', () => {
     const id = created.value.id;
     await resolveIntentOutcome(id, 'succeeded');
 
-    const tracker = trackRouterNavigate();
+    const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     const fixture = TestBed.createComponent(PaymentReturnPage);
     fixture.componentRef.setInput('paymentIntentId', id);
     fixture.detectChanges();
     await fixture.whenStable();
-    await waitForNavigate(tracker);
+    await waitForNavigate(navigateSpy);
 
     expect(checkout.paymentIntent()?.status).toBe('succeeded');
-    expect(firstNavigateArg(tracker)).toEqual(['/penztar/ellenorzes']);
-    tracker.restore();
+    expect(navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/ellenorzes']);
   });
 
   it('R-06 a declined intent lands on the review step and the page never resubmits', async () => {
@@ -374,42 +330,31 @@ describe('PaymentReturnPage', () => {
 
     const requests: string[] = [];
     captureRequests(requests);
-    const tracker = trackRouterNavigate();
+    const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     const fixture = TestBed.createComponent(PaymentReturnPage);
     fixture.componentRef.setInput('paymentIntentId', id);
     fixture.detectChanges();
     await fixture.whenStable();
-    await waitForNavigate(tracker);
+    await waitForNavigate(navigateSpy);
 
     expect(checkout.paymentIntent()?.status).toBe('declined');
     const orderPosts = requests.filter((r) => r.startsWith('POST ') && r.includes('/orders'));
     expect(orderPosts).toHaveLength(0);
-    expect(firstNavigateArg(tracker)).toEqual(['/penztar/ellenorzes']);
-    tracker.restore();
+    expect(navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/ellenorzes']);
   });
 
   it('R-07 a 404 intent lands on the review step without setting error()', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
-    const tracker = trackRouterNavigate();
+    const navigateSpy = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     const fixture = TestBed.createComponent(PaymentReturnPage);
     fixture.componentRef.setInput('paymentIntentId', 'pi-missing');
     fixture.detectChanges();
     await fixture.whenStable();
-    await waitForNavigate(tracker);
+    await waitForNavigate(navigateSpy);
 
     expect(checkout.error()).toBeNull();
-    expect(firstNavigateArg(tracker)).toEqual(['/penztar/ellenorzes']);
-    tracker.restore();
+    expect(navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/ellenorzes']);
   });
 });
-
-/**
- * Reads the first navigation command a tracker recorded. The page only
- * ever navigates once on success or once on cart-fallback, so the
- * first call's command array is the one under test.
- */
-function firstNavigateArg(tracker: NavigateTracker): unknown {
-  return tracker.calls[0]?.[0];
-}

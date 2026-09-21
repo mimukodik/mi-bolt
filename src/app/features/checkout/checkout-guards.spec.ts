@@ -19,7 +19,15 @@ import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { Router, UrlSegment, UrlTree, provideRouter } from '@angular/router';
+import {
+  GuardResult,
+  PartialMatchRouteSnapshot,
+  Router,
+  UrlSegment,
+  UrlTree,
+  convertToParamMap,
+  provideRouter,
+} from '@angular/router';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
@@ -124,7 +132,6 @@ beforeEach((): void => {
 });
 
 afterEach(() => {
-  server.resetHandlers();
   TestBed.resetTestingModule();
   sessionStorage.clear();
 });
@@ -173,34 +180,53 @@ async function saveBilling(): Promise<void> {
 }
 
 function contactSegments(): UrlSegment[] {
-  return [{ path: 'penztar' }, { path: 'adatok' }] as UrlSegment[];
+  return [new UrlSegment('penztar', {}), new UrlSegment('adatok', {})];
 }
 
 function deliverySegments(): UrlSegment[] {
-  return [{ path: 'penztar' }, { path: 'szallitas' }] as UrlSegment[];
+  return [new UrlSegment('penztar', {}), new UrlSegment('szallitas', {})];
 }
 
 function reviewSegments(): UrlSegment[] {
-  return [{ path: 'penztar' }, { path: 'ellenorzes' }] as UrlSegment[];
+  return [new UrlSegment('penztar', {}), new UrlSegment('ellenorzes', {})];
 }
+
+/**
+ * `CanMatchFn`'s third parameter is a `PartialMatchRouteSnapshot`, a
+ * narrow `Pick` of `ActivatedRouteSnapshot`. The guards under test
+ * only inspect `params` and `queryParams`, so an empty snapshot is
+ * enough to exercise the redirect branches without a real router.
+ */
+const emptySnapshot: PartialMatchRouteSnapshot = {
+  routeConfig: null,
+  url: [],
+  params: {},
+  queryParams: {},
+  fragment: null,
+  data: {},
+  outlet: 'primary',
+  title: undefined,
+  paramMap: convertToParamMap({}),
+  queryParamMap: convertToParamMap({}),
+};
 
 function runContact(): boolean | UrlTree {
   const result = TestBed.runInInjectionContext(() =>
-    contactGuard({}, contactSegments(), {} as never),
+    contactGuard({}, contactSegments(), emptySnapshot),
   );
   return unwrapGuard(result);
 }
 
 function runDelivery(): boolean | UrlTree {
   const result = TestBed.runInInjectionContext(() =>
-    deliveryGuard({}, deliverySegments(), {} as never),
+    deliveryGuard({}, deliverySegments(), emptySnapshot),
   );
   return unwrapGuard(result);
 }
 
 function runReview(): boolean | UrlTree {
   const result = TestBed.runInInjectionContext(() =>
-    reviewGuard({}, reviewSegments(), {} as never),
+    reviewGuard({}, reviewSegments(), emptySnapshot),
   );
   return unwrapGuard(result);
 }
@@ -216,6 +242,20 @@ function unwrapGuard(result: unknown): boolean | UrlTree {
   if (result instanceof UrlTree) return result;
   if (result === true || result === false) return result;
   throw new Error(`unexpected guard result: ${String(result)}`);
+}
+
+/**
+ * Narrows a `GuardResult` to `UrlTree`. `toBeInstanceOf` does not
+ * narrow the static type, so the assertion alone leaves the call site
+ * with a union and forces a cast; the helper performs both the check
+ * and the narrowing in one place.
+ */
+function expectUrlTree(result: GuardResult): UrlTree {
+  expect(result).toBeInstanceOf(UrlTree);
+  if (result instanceof UrlTree) {
+    return result;
+  }
+  throw new Error('the guard did not return a UrlTree');
 }
 
 function serialise(tree: UrlTree): string {
@@ -235,9 +275,7 @@ describe('contactGuard', () => {
     const cart = TestBed.inject(CartFacade);
     expect(cart.cart()).toBeNull();
 
-    const result = runContact();
-    expect(result).toBeInstanceOf(UrlTree);
-    const tree = result as UrlTree;
+    const tree = expectUrlTree(runContact());
     const url = serialise(tree);
     expect(url).toContain('/penztar/kosar');
     expect(url).toContain('navigationReason=deep-link');
@@ -249,9 +287,8 @@ describe('contactGuard', () => {
     expect(cart.cart()).not.toBeNull();
     expect(cart.cart()?.items.length).toBe(0);
 
-    const result = runContact();
-    expect(result).toBeInstanceOf(UrlTree);
-    const url = serialise(result as UrlTree);
+    const tree = expectUrlTree(runContact());
+    const url = serialise(tree);
     expect(url).toContain('/penztar/kosar');
     expect(url).toContain('navigationReason=empty-cart');
   });
@@ -274,9 +311,8 @@ describe('deliveryGuard', () => {
   it('G-04 deliveryGuard redirects to /penztar/adatok when contact has not been saved', async () => {
     await seedCartWithItem();
 
-    const result = runDelivery();
-    expect(result).toBeInstanceOf(UrlTree);
-    const url = serialise(result as UrlTree);
+    const tree = expectUrlTree(runDelivery());
+    const url = serialise(tree);
     expect(url).toContain('/penztar/adatok');
     expect(url).toContain('navigationReason=incomplete');
   });
@@ -301,9 +337,8 @@ describe('reviewGuard', () => {
   it('G-06 reviewGuard redirects to /penztar/adatok when contact has not been saved', async () => {
     await seedCartWithItem();
 
-    const result = runReview();
-    expect(result).toBeInstanceOf(UrlTree);
-    const url = serialise(result as UrlTree);
+    const tree = expectUrlTree(runReview());
+    const url = serialise(tree);
     expect(url).toContain('/penztar/adatok');
     expect(url).toContain('navigationReason=incomplete');
   });
@@ -312,9 +347,8 @@ describe('reviewGuard', () => {
     await seedCartWithItem();
     await saveContact();
 
-    const result = runReview();
-    expect(result).toBeInstanceOf(UrlTree);
-    const url = serialise(result as UrlTree);
+    const tree = expectUrlTree(runReview());
+    const url = serialise(tree);
     expect(url).toContain('/penztar/szallitas');
     expect(url).toContain('navigationReason=incomplete');
   });
@@ -324,9 +358,8 @@ describe('reviewGuard', () => {
     await saveContact();
     await saveDelivery();
 
-    const result = runReview();
-    expect(result).toBeInstanceOf(UrlTree);
-    const url = serialise(result as UrlTree);
+    const tree = expectUrlTree(runReview());
+    const url = serialise(tree);
     expect(url).toContain('/penztar/szallitas');
     expect(url).toContain('navigationReason=incomplete');
   });
@@ -337,9 +370,8 @@ describe('reviewGuard', () => {
     await saveDelivery();
     await savePayment();
 
-    const result = runReview();
-    expect(result).toBeInstanceOf(UrlTree);
-    const url = serialise(result as UrlTree);
+    const tree = expectUrlTree(runReview());
+    const url = serialise(tree);
     expect(url).toContain('/penztar/szallitas');
     expect(url).toContain('navigationReason=incomplete');
   });
@@ -387,15 +419,14 @@ describe('guards redirect to the success URL once an order exists', () => {
     const orderId = placed.value.id;
     expect(typeof orderId).toBe('string');
 
-    // Production resets the cart locally the moment an order lands; mimic
-    // that here so the guard's `redirectForCartSnapshot` sees a null cart
-    // and reaches the order-already-exists branch.
+    // The success page resets the cart once it renders (`success-step.ts`);
+    // the guard's precondition is reproduced here by calling
+    // `resetOrderedCart()` directly.
     TestBed.inject(CartFacade).resetOrderedCart();
 
     for (const guard of [runContact, runDelivery, runReview] as const) {
-      const result = guard();
-      expect(result).toBeInstanceOf(UrlTree);
-      const url = serialise(result as UrlTree);
+      const tree = expectUrlTree(guard());
+      const url = serialise(tree);
       expect(url).toContain(`/penztar/siker/${orderId}`);
     }
   });
