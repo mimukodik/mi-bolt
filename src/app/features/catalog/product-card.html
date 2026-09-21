@@ -16,6 +16,23 @@
   </a>
 
   <div class="body flex flex-col gap-2 flex-1">
+    @if (product().colors.length > 1) {
+      <div aria-label="Szín" class="swatches" data-testid="product-card-swatches" role="group">
+        @for (c of product().colors; track c.variantId) {
+          <button
+            class="swatch"
+            data-testid="product-card-swatch"
+            type="button"
+            [attr.aria-label]="c.colorName"
+            [attr.aria-pressed]="c.variantId === selectedVariantId()"
+            [class.is-selected]="c.variantId === selectedVariantId()"
+            [style.background-color]="c.swatchHex"
+            [title]="c.colorName"
+            (click)="selectColor(c.variantId)"
+          ></button>
+        }
+      </div>
+    }
     <h3 class="name line-clamp-2">
       <a
         class="name-link"

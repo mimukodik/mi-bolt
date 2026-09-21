@@ -1,7 +1,8 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, linkedSignal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { ColorOption } from '../../api/generated/models/color-option';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
@@ -41,18 +42,29 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
 export class ProductCard {
   readonly product = input.required<CatalogItem>();
 
-  /** Money payload for the PriceBlock — read straight off the item. */
-  readonly price = computed(() => this.product().price);
+  /** Currently selected variant id. `linkedSignal` re-initialises from
+   *  the product's displayed variant whenever the `product` input
+   *  changes, so a card swap resets the selection rather than carrying
+   *  the previous card's choice. */
+  readonly selectedVariantId = linkedSignal(() => this.product().variantId);
 
-  /** The colour option whose variantId matches the displayed entry, or
-   *  `null` when none does (defensive — the 2.0.0 contract says the
-   *  displayed variant is always present in `colors`). The template
-   *  uses `colorName()` and not `variant().colorName`, because there
-   *  is no separate `variant` field any more. */
-  readonly colorName = computed<string>(
-    () =>
-      this.product().colors.find((c) => c.variantId === this.product().variantId)?.colorName ?? '',
+  /** The matching colour option for the selected variant, or `null` when
+   *  none is present (defensive — the 2.0.0 contract says the displayed
+   *  variant is always in `colors`). */
+  readonly selectedColor = computed<ColorOption | null>(
+    () => this.product().colors.find((c) => c.variantId === this.selectedVariantId()) ?? null,
   );
+
+  selectColor(variantId: string): void {
+    this.selectedVariantId.set(variantId);
+  }
+
+  /** Money payload for the PriceBlock — prefers the selected colour's
+   *  price, falls back to the item-level price for single-colour items. */
+  readonly price = computed(() => this.selectedColor()?.price ?? this.product().price);
+
+  /** The colour name currently shown on the card. */
+  readonly colorName = computed<string>(() => this.selectedColor()?.colorName ?? '');
 
   /** First image of the item's gallery. */
   readonly image = computed<ImageLike>(() => {
@@ -77,7 +89,7 @@ export class ProductCard {
   });
 
   /** The selected variant travels as `?variant=`, which the product page reads. */
-  readonly detailsQuery = computed(() => ({ variant: this.product().variantId }));
+  readonly detailsQuery = computed(() => ({ variant: this.selectedVariantId() }));
 
   /** Concatenated accessible name for the image link. */
   readonly ariaLabel = computed(() => {
