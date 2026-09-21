@@ -1,4 +1,4 @@
-/* Legacy token names, each resolving to a yettel theme variable declared in src/styles.css. The mapping, row by row with its yettel source, is docs/design/yettel.md §9. */
+/* Alias token names used by the component styles, each resolving to a yettel theme variable declared in src/styles.css. The mapping, row by row with its yettel source, is docs/design/yettel.md §9. */
 
 :root {
   /* color brand */

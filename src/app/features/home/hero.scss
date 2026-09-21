@@ -1,7 +1,7 @@
 /* hero.scss — the navy hero and the shortcut band under it.
    The box, the flex and grid layout, the spacing and the weights are
    Tailwind utilities on hero.html; this sheet holds what utilities cannot
-   express: the legacy colour and type tokens, the two CTA recipes
+   express: the alias colour and type tokens, the two CTA recipes
    (docs/design/yettel.md §5) and the white focus ring those two take on a
    navy ground (§9). Mobile source order is eyebrow, heading, message, CTA,
    illustration; from 720px the copy and the illustration sit in two grid
