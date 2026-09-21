@@ -1,16 +1,16 @@
 <section
-  class="root"
   aria-roledescription="gallery"
+  class="root"
   data-testid="product-gallery"
   tabindex="-1"
   (keydown)="onKeydown($event)"
 >
-  <div class="frame" data-testid="gallery-main" tabindex="0" aria-label="Termékképek">
+  <div aria-label="Termékképek" class="frame" data-testid="gallery-main" tabindex="0">
     <button
-      type="button"
+      aria-label="Előző kép"
       class="step step--prev"
       data-testid="gallery-prev"
-      aria-label="Előző kép"
+      type="button"
       [disabled]="!canPrev()"
       (click)="prev()"
     >
@@ -18,75 +18,85 @@
     </button>
     @if (activeImage(); as img) {
       <app-product-image
+        aspectRatio="4 / 3"
         [image]="img"
         [productName]="productName()"
-        aspectRatio="4 / 3"
         (loadFailed)="onImageFailed()"
-      ></app-product-image>
+      />
     }
     <button
-      type="button"
+      aria-label="Következő kép"
       class="step step--next"
       data-testid="gallery-next"
-      aria-label="Következő kép"
+      type="button"
       [disabled]="!canNext()"
       (click)="next()"
     >
       ›
     </button>
     <button
-      type="button"
+      aria-label="Kép nagyítása"
       class="zoom"
       data-testid="gallery-zoom-open"
-      aria-label="Kép nagyítása"
+      type="button"
       (click)="openZoom()"
     >
-      Nagyítás
+      <svg aria-hidden="true" focusable="false" height="20" viewBox="0 0 24 24" width="20">
+        <circle cx="11" cy="11" fill="none" r="7" stroke="currentColor" stroke-width="2" />
+        <line
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-width="2"
+          x1="16.5"
+          x2="21"
+          y1="16.5"
+          y2="21"
+        />
+      </svg>
     </button>
-    <p class="count" data-testid="gallery-count" aria-live="polite">
+    <p aria-live="polite" class="count" data-testid="gallery-count">
       {{ activePosition() }} / {{ images().length }}
     </p>
     @if (idUnresolved()) {
-      <p class="image-error" role="status" data-testid="gallery-image-error">
+      <p class="image-error" data-testid="gallery-image-error" role="status">
         A kiválasztott kép nem található; az első kép látható helyette.
       </p>
     }
   </div>
-  <ol class="thumbs" aria-label="Galéria indexképei">
+  <ol aria-label="Galéria indexképei" class="thumbs">
     @for (image of images(); let i = $index; track i) {
       <li>
         <button
-          type="button"
           class="thumb"
-          [attr.data-testid]="'gallery-thumb-' + i"
+          type="button"
           [attr.aria-current]="image.id === selectedImageId() ? 'true' : 'false'"
-          [attr.aria-label]="'Ugrás a(z) ' + (i + 1) + '. képre'"
+          [attr.aria-label]="`Ugrás a(z) ${i + 1}. képre`"
+          [attr.data-testid]="`gallery-thumb-${i}`"
           (click)="goTo(image.id)"
         >
           <app-product-image
+            aspectRatio="1 / 1"
+            data-testid="gallery-thumb-image"
+            [decorative]="true"
             [image]="image"
             [productName]="productName()"
-            aspectRatio="1 / 1"
-            [decorative]="true"
-            data-testid="gallery-thumb-image"
           />
-          <span class="thumb-check" aria-hidden="true">✓</span>
         </button>
       </li>
     }
   </ol>
 </section>
 <app-accessible-dialog
+  [label]="`Nagyított kép: ${productName()}`"
   [opened]="zoomOpen()"
-  [label]="'Nagyított kép: ' + productName()"
   (closed)="closeZoom()"
 >
   @if (activeImage(); as img) {
     <app-product-image
+      aspectRatio="4 / 3"
       [image]="img"
       [productName]="productName()"
-      aspectRatio="4 / 3"
       (loadFailed)="onImageFailed()"
-    ></app-product-image>
+    />
   }
 </app-accessible-dialog>
