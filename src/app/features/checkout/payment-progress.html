@@ -8,12 +8,7 @@
   >
     <h2>{{ heading() }}</h2>
     @if (status() === 'pending') {
-      <p>{{ attemptLabel() }}</p>
-      <progress
-        max="{{ maxAttempts() }}"
-        [value]="pollCount()"
-        aria-label="Fizetési szándék ellenőrzése"
-      ></progress>
+      <p>Folytatáshoz menj vissza a fizetési oldalra.</p>
     } @else if (status() === 'declined') {
       <p>A szimulált fizetés elutasítva.</p>
       <p>A fizetési módot módosíthatod, vagy újra próbálkozhatsz.</p>
