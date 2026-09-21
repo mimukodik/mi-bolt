@@ -69,7 +69,11 @@ describe('FIX-52 skip link', () => {
     expect(click.defaultPrevented).toBe(false);
   });
 
-  it('MIM-220: a modifier-key click keeps the native anchor behaviour', () => {
+  it.each([
+    ['Ctrl', 'ctrlKey'],
+    ['Cmd', 'metaKey'],
+    ['Shift', 'shiftKey'],
+  ] as const)('MIM-220: a %s-key click keeps the native anchor behaviour', (_label, modifier) => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const raw: unknown = fixture.nativeElement;
@@ -80,10 +84,12 @@ describe('FIX-52 skip link', () => {
     document.body.appendChild(main);
     const skip = raw.querySelector('a.skip-link');
     if (!(skip instanceof HTMLAnchorElement)) throw new Error('Expected the skip link');
-    const click = new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true });
+    const init: MouseEventInit = { bubbles: true, cancelable: true };
+    init[modifier] = true;
+    const click = new MouseEvent('click', init);
     skip.dispatchEvent(click);
     expect(click.defaultPrevented).toBe(false);
-    expect(document.activeElement).not.toBe(main);
+    expect(document.activeElement).toBe(document.body);
     main.remove();
   });
 });
