@@ -540,6 +540,52 @@ export class OrderStore {
     return { ok: true, receipt: stored.receipt };
   }
 
+  /**
+   * Seeds the store's intents and orders from a hydrated snapshot.
+   * Called once at handler-construction time when
+   * `options.snapshot.paymentIntents` or `options.snapshot.receipts`
+   * is non-empty. Each record is stamped with `sessionId` so the
+   * same session-scoped 404 checks (`stored?.sessionId !==
+   * sessionId`) continue to gate cross-session access after reload.
+   * The order-number counter is bumped past every restored receipt
+   * so `nextOrderNumber()` cannot collide with one from before.
+   */
+  seedFromSnapshot(
+    sessionId: string,
+    persisted: { intents: readonly PaymentIntent[]; receipts: readonly OrderReceipt[] },
+  ): void {
+    for (const intent of persisted.intents) {
+      this.intents.set(intent.id, { ...intent, sessionId });
+    }
+    for (const receipt of persisted.receipts) {
+      this.orders.set(receipt.id, { receipt, sessionId });
+      const seq = parseOrderSequence(receipt.orderNumber);
+      if (seq !== null) this.orderSequence = Math.max(this.orderSequence, seq);
+    }
+  }
+
+  /**
+   * Returns the intents and receipts owned by the given session in
+   * the shape `MockSnapshot` carries. Wire-shaped, with no
+   * `sessionId` stamp (the snapshot is read back only in the same
+   * tab, and the stamped `StoredIntent.sessionId` round-trips
+   * through `seedFromSnapshot`).
+   */
+  toPersistedOrderState(sessionId: string): {
+    intents: readonly PaymentIntent[];
+    receipts: readonly OrderReceipt[];
+  } {
+    const intents: PaymentIntent[] = [];
+    for (const s of this.intents.values()) {
+      if (s.sessionId === sessionId) intents.push(this.toWireIntent(s));
+    }
+    const receipts: OrderReceipt[] = [];
+    for (const s of this.orders.values()) {
+      if (s.sessionId === sessionId) receipts.push(s.receipt);
+    }
+    return { intents, receipts };
+  }
+
   // ---------------------------------------------------------------------------
   // Internal helpers.
   // ---------------------------------------------------------------------------
@@ -729,4 +775,12 @@ function toOrderLine(item: {
     unitPrice: item.unitPrice,
     lineTotal: item.lineTotal,
   };
+}
+
+/** 'DEMO-000042' -> 42; else null. Keeps a reseeded store's
+ * order-number counter ahead of every restored receipt so
+ * `nextOrderNumber()` cannot collide with one from before reload. */
+function parseOrderSequence(orderNumber: string): number | null {
+  const m = /^DEMO-(\d+)$/.exec(orderNumber);
+  return m ? Number(m[1]) : null;
 }

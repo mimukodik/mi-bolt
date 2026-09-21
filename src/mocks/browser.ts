@@ -43,6 +43,8 @@ import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
 import { isSameOriginNonBusiness } from './business-route-predicates';
 import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
+import { cartStore } from './cart/cart.handlers';
+import { checkoutStore, orderStore } from './checkout/checkout.handlers';
 
 // Force-load the slice handler modules so their module-level
 // registerBusinessHandlers(...) calls populate the create-handlers
@@ -93,9 +95,15 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
     scenario,
     apiRoot: '/api/v1',
     persist: (sessionId: string) => {
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (!cart || !checkout || !order) {
+        throw new Error('[browser] persist called before the three stores were initialised');
+      }
       persistence.save(
         scenario.name,
-        buildSnapshot(repository, sessionId, Date.parse(clock.now())),
+        buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now())),
       );
     },
   };
@@ -196,12 +204,7 @@ export function buildBrowserHandlers(
   snapshot: MockSnapshot | null = null,
 ): ReturnType<typeof createHandlers> {
   const options = resolveBrowserHandlerOptions();
-  if (snapshot?.cart) {
-    options.repository.loadPersistedCart(snapshot.cart, snapshot.simulatedSessionId);
-  }
-  if (snapshot?.receipts) {
-    options.repository.loadPersistedOrders(snapshot.receipts, snapshot.simulatedSessionId);
-  }
+  options.snapshot = snapshot;
   // The demo configuration adds the dispatcher shell so a misrouted
   // curl does not produce a stack trace inside the page.
   return createHandlers(options);
