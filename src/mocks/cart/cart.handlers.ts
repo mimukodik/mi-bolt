@@ -34,8 +34,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { isRecord } from '../is-record';
-import type { Repository } from '../repository';
-import { type Product } from '../repository';
+import type { Product, Repository } from '../repository';
 
 import { CartStore } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';

@@ -86,7 +86,8 @@ export function createHandlers(options: CreateHandlersOptions): RequestHandler[]
   return [...createDispatcherShell(options), ...createStrictHandlers(options)];
 }
 
-function notFoundBody(options: CreateHandlersOptions): {
+/** 404 Problem JSON for any `/api/v1/*` route the business slices did not register. */
+interface NotFoundBody {
   type: string;
   title: string;
   status: number;
@@ -94,7 +95,9 @@ function notFoundBody(options: CreateHandlersOptions): {
   detail: string;
   traceId: string;
   fieldErrors: readonly { path: string; code: string }[];
-} {
+}
+
+function notFoundBody(options: CreateHandlersOptions): NotFoundBody {
   return {
     type: 'urn:mi-bolt:problem:not-found',
     title: 'A kért végpont nem található',
