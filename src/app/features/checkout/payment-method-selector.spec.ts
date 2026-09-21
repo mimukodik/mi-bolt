@@ -161,10 +161,12 @@ describe('PaymentMethodSelector', () => {
     const root = getRootElement(fixture);
 
     const cardRadio = getInputElement(root, '#payment-option-card');
+    const codRadio = getInputElement(root, '#payment-option-cash_on_delivery');
     dispatchChange(cardRadio);
     fixture.detectChanges();
 
     expect(cardRadio.checked).toBe(true);
+    expect(codRadio.checked).toBe(false);
 
     const badges = root.querySelectorAll<HTMLElement>('[data-testid="payment-selected-badge"]');
     expect(badges.length).toBe(1);
@@ -191,6 +193,7 @@ describe('PaymentMethodSelector', () => {
     fixture.detectChanges();
 
     expect(emissions).toEqual(['card']);
+    expect(fixture.componentInstance.value()).toBe('card');
   });
 
   // -------------------------------------------------------------------------
@@ -268,6 +271,7 @@ describe('PaymentMethodSelector', () => {
 
     expect(emissions.length).toBe(0);
     expect(fixture.componentInstance.value()).toBeNull();
+    expect(codRadio.checked).toBe(false);
     expect(
       getRootElement(fixture).querySelectorAll('[data-testid="payment-selected-badge"]').length,
     ).toBe(0);
