@@ -1224,6 +1224,34 @@ describe('orders', () => {
     expect(newKey).not.toBe('');
   });
 
+  it('F-29: startNewPurchase() clears the receipt and the session so the guards see no order', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    await seedMoto();
+    await checkout.ensureOptions();
+    await seedCompleteDraft(checkout, 'cash_on_delivery');
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'cash_on_delivery',
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+
+    // submitOrder stores the receipt and then runs resetAfterOrder,
+    // which drops the session but keeps the receipt for the success
+    // page. The guards see a non-null order and redirect back to the
+    // success URL — that is the loop the new shopping CTA must break.
+    expect(checkout.order()).not.toBeNull();
+    expect(checkout.order()?.id).toBe(placed.value.id);
+
+    checkout.startNewPurchase();
+
+    expect(checkout.order()).toBeNull();
+    expect(checkout.session()).toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
+  });
+
   it('F-28: fetchOrder() hydrates by id through GET and never POSTs', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
     await seedMoto();

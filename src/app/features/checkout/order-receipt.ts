@@ -12,7 +12,7 @@
  *   - Every value rendered comes from the `receipt` input. The order
  *     number is the wire `orderNumber` (e.g. "DEMO-2026-0001"); the
  *     line items come from `items[]`; the totals come from `subtotal`,
- *     `shipping` and `total`; the payment method is mapped from
+ *     `shippingFee` and `total`; the payment method is mapped from
  *     `paymentMethod` to a Hungarian label.
  *   - The simulation notice is rendered as a prominent live region so
  *     keyboard and screen-reader users hear it once the receipt
@@ -84,8 +84,7 @@ export class OrderReceiptComponent {
   /** The simulation notice copy. Pulled from the receipt body when present. */
   readonly simulationNotice = computed<string>(() => {
     const fromWire = this.receipt().notice.trim();
-    if (typeof fromWire === 'string' && fromWire.length > 0) return fromWire;
-    return SIMULATION_NOTICE;
+    return fromWire.length > 0 ? fromWire : SIMULATION_NOTICE;
   });
 
   /** Exported so unit-style assertions and other consumers can count items. */

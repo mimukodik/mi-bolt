@@ -228,6 +228,7 @@ beforeEach((): void => {
 });
 
 afterEach(() => {
+  server.resetHandlers();
   server.events.removeAllListeners();
   vi.restoreAllMocks();
   TestBed.resetTestingModule();
@@ -248,12 +249,21 @@ function configureTestBed(): void {
   });
 }
 
-/** Records every request the MSW server sees as `"<METHOD> <path>"`. */
-function captureRequests(log: string[]): void {
-  server.events.on('request:start', ({ request }) => {
+/** Records every request the MSW server sees as `"<METHOD> <path>"`,
+ *  and returns an unsubscribe function so a case can detach the
+ *  listener when its assertions are done. MSW 2's `server.events`
+ *  expose `removeListener(eventName, listener)`; storing the
+ *  listener in a `const` is what makes the detachment work.
+ */
+function captureRequests(log: string[]): () => void {
+  const listener = ({ request }: { request: Request }): void => {
     const url = new URL(request.url);
     log.push(`${request.method} ${url.pathname}${url.search}`);
-  });
+  };
+  server.events.on('request:start', listener);
+  return (): void => {
+    server.events.removeListener('request:start', listener);
+  };
 }
 
 /** Builds the complete cash-on-delivery draft (the path that yields the
@@ -556,8 +566,7 @@ describe('SuccessStep', () => {
 
     // Capture the second attempt onward.
     const captured: string[] = [];
-    captureRequests(captured);
-    captured.length = 0;
+    const stopCapturing = captureRequests(captured);
 
     // The error state hosts a `Retry` button. Drive it through the
     // `ErrorState` component's `(retryRequested)` output by clicking
@@ -580,6 +589,8 @@ describe('SuccessStep', () => {
     );
     expect(gets).toHaveLength(1);
     expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).not.toBeNull();
+
+    stopCapturing();
   });
 
   it('SP-13 the page resets the ordered cart once the receipt is in memory', async () => {
@@ -630,7 +641,7 @@ describe('SuccessStep', () => {
     const fixture = await mountSuccessPage(orderId);
 
     const ensureCartSpy = vi.spyOn(cart, 'ensureCart').mockResolvedValue();
-    const resetSpy = vi.spyOn(checkout, 'resetAfterOrder').mockImplementation(() => undefined);
+    const startSpy = vi.spyOn(checkout, 'startNewPurchase').mockImplementation(() => undefined);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     const actionWrapper = queryHTMLElement(document, '[data-testid="success-new-shopping"]');
@@ -647,17 +658,45 @@ describe('SuccessStep', () => {
     await fixture.whenStable();
 
     expect(ensureCartSpy).toHaveBeenCalledTimes(1);
-    expect(resetSpy).toHaveBeenCalledTimes(1);
+    expect(startSpy).toHaveBeenCalledTimes(1);
     expect(navigateSpy).toHaveBeenCalledTimes(1);
     expect(navigateSpy.mock.calls[0][0]).toEqual(['/telefonok']);
 
     // The three calls happened in this order; no other navigation
     // action fired on the page.
     const ensureOrder = ensureCartSpy.mock.invocationCallOrder[0];
-    const resetOrder = resetSpy.mock.invocationCallOrder[0];
+    const startOrder = startSpy.mock.invocationCallOrder[0];
     const navOrder = navigateSpy.mock.invocationCallOrder[0];
-    expect(ensureOrder).toBeLessThan(resetOrder);
-    expect(resetOrder).toBeLessThan(navOrder);
+    expect(ensureOrder).toBeLessThan(startOrder);
+    expect(startOrder).toBeLessThan(navOrder);
+  });
+
+  it('SP-18 after the new-shopping action the facade holds no order, so a wizard guard would not redirect to the success URL', async () => {
+    await seedCompleteCashDraft();
+    await placeCodOrder();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const cart = TestBed.inject(CartFacade);
+    const router = TestBed.inject(Router);
+
+    const orderId = checkout.order()?.id;
+    if (orderId === undefined) throw new Error('expected an order on the facade');
+
+    const fixture = await mountSuccessPage(orderId);
+
+    // No spies on the facade here — the assertion is on what the
+    // page's handler chain leaves behind on the real facade.
+    vi.spyOn(cart, 'ensureCart').mockResolvedValue();
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const actionButton = queryHTMLElement(document, '[data-testid="success-new-shopping"] button');
+    if (!(actionButton instanceof HTMLButtonElement)) {
+      throw new Error('expected the new-shopping action to be an HTMLButtonElement');
+    }
+    actionButton.click();
+
+    await fixture.whenStable();
+
+    expect(TestBed.inject(CheckoutFacade).order()).toBeNull();
   });
 });
 

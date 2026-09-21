@@ -544,6 +544,18 @@ export class CheckoutFacade {
     this.clearFailureOverlay();
   }
 
+  /**
+   * Starts a fresh purchase from the success page: everything
+   * `resetAfterOrder` clears, the payment intent and the receipt
+   * with it, so the wizard guards no longer send the shopper back to
+   * the old success URL.
+   */
+  startNewPurchase(): void {
+    this.resetAfterOrder();
+    this.paymentIntentWritable.set(null);
+    this.orderWritable.set(null);
+  }
+
   // -------------------------------------------------------------------------
   // Private serialiser. Mirrors the cart's semantics without its types:
   // every checkout mutation chains onto `tail`, binds `If-Match` to

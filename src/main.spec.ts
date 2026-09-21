@@ -200,20 +200,23 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     expect(existsSync(join(REPO_ROOT, environmentModuleFor('development')))).toBe(true);
   });
 
-  it('starts the mock worker in the artifact `npm run build` produces', () => {
-    // `docs/spec/testing.md:128` calls that artifact the "optimized
-    // mock-only static artifact", and `npm run build` runs
-    // `ng build --configuration production` (`angular.json`'s default
-    // configuration), so it is that artifact. The production
-    // configuration in `angular.json` declares no `fileReplacements`,
-    // so this resolves to the base `environment.ts` module, whose
-    // documented contract (set in commit `fe7aa3f`) is
-    // `production: true, demo: false`. That is what the production
-    // build ships today; an artifact whose flags close these gates
-    // renders an error state on every data-driven screen.
-    const module = environmentModuleFor('production');
-    const flags = parseEnvironmentFlags(readFileSync(join(REPO_ROOT, module), 'utf8'));
-    expect(flags.production).toBe(true);
-    expect(flags.demo).toBe(false);
+  it('the production artifact ships no mock worker; the development configuration starts it', () => {
+    // The build artifact is wired to the real backend at the end of
+    // the project, so only the development (and any e2e) configuration
+    // starts the mock worker: production: true, demo: false in
+    // environment.ts, production: false, demo: true in
+    // environment.development.ts (the owner's rule, 2026-09-21).
+    const productionModule = environmentModuleFor('production');
+    const productionFlags = parseEnvironmentFlags(
+      readFileSync(join(REPO_ROOT, productionModule), 'utf8'),
+    );
+    expect(productionFlags.production).toBe(true);
+    expect(productionFlags.demo).toBe(false);
+
+    const dev = parseEnvironmentFlags(
+      readFileSync(join(REPO_ROOT, environmentModuleFor('development')), 'utf8'),
+    );
+    expect(dev.production).toBe(false);
+    expect(dev.demo).toBe(true);
   });
 });
