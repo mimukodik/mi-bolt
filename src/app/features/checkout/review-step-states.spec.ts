@@ -439,12 +439,16 @@ describe('PC-01 the price-changed state renders both totals side by side', () =>
     const oldBlock = getElement(root, '[data-testid="review-price-change-old"]');
     expect(oldBlock.querySelector('app-price-block')).not.toBeNull();
     expect(oldBlock.querySelector('.label')?.textContent).toBe('Korábban');
-    expect(oldBlock.querySelector('[data-testid="price-amount"]')?.textContent).toBe(' 89 990');
+    expect(oldBlock.querySelector('[data-testid="price-amount"]')?.textContent.trim()).toBe(
+      PriceBlock.formatHuf(89_990),
+    );
 
     const newBlock = getElement(root, '[data-testid="review-price-change-new"]');
     expect(newBlock.querySelector('app-price-block')).not.toBeNull();
     expect(newBlock.querySelector('.label')?.textContent).toBe('Most');
-    expect(newBlock.querySelector('[data-testid="price-amount"]')?.textContent).toBe(' 159 980');
+    expect(newBlock.querySelector('[data-testid="price-amount"]')?.textContent.trim()).toBe(
+      PriceBlock.formatHuf(159_980),
+    );
 
     const banner = getElement(root, '[data-testid="review-price-change"]');
     expect(banner.textContent).toContain('A végösszeg időközben megváltozott.');
