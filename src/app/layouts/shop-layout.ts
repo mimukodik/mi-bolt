@@ -1,9 +1,7 @@
-import { Component, DestroyRef, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { AppShell } from '../shared/shell/app-shell';
-import { RouteFocusService } from '../core/navigation/route-focus';
 
 /**
  * `ShopLayout` is the shell for the Catalogue (S2) and Product (S3)
@@ -25,16 +23,5 @@ import { RouteFocusService } from '../core/navigation/route-focus';
   templateUrl: './shop-layout.html',
   styleUrl: './shop-layout.scss',
 })
-export class ShopLayout {
-  private readonly routeFocus = inject(RouteFocusService);
-  private readonly destroyRef = inject(DestroyRef);
-
-  constructor() {
-    this.routeFocus
-      .pathChangeNavigationEnd$()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.routeFocus.scheduleFocus();
-      });
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+export class ShopLayout {}

@@ -7,7 +7,7 @@
  * `SuccessStep` page through its full hydration pipeline
  * (loading → fetch → render, missing, error, malformed-id,
  * 500-then-200 retry, no-second-fetch on a forward navigation,
- * cart reset on receipt, focusable heading, new-shopping
+ * cart reset on receipt, heading copy, new-shopping
  * navigate); cases sixteen and seventeen cover the two arms of
  * `successGuard`. The harness mirrors the 2.0.0 mock spec
  * (catalog fixture in `beforeAll`, fixed clock, deterministic ids,
@@ -619,7 +619,7 @@ describe('SuccessStep', () => {
     expect(cart.itemCount()).toBe(0);
   });
 
-  it('SP-14 the success heading is focusable and reads the demo sentence', async () => {
+  it('SP-14 the success heading reads the demo sentence', async () => {
     await seedCompleteCashDraft();
     const placed = await placeCodOrder();
 
@@ -627,7 +627,7 @@ describe('SuccessStep', () => {
 
     const heading = queryHTMLElement(document, '[data-testid="success-heading"]');
     expect(heading?.textContent.trim()).toBe('Elkészült a demórendelésed.');
-    expect(heading?.getAttribute('tabindex')).toBe('-1');
+    expect(heading?.hasAttribute('tabindex')).toBe(false);
   });
 
   it('SP-15 the new-shopping action ensures a fresh cart, clears the receipt and leaves for the catalogue', async () => {

@@ -1,9 +1,7 @@
-import { Component, DestroyRef, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { AppShell } from '../shared/shell/app-shell';
-import { RouteFocusService } from '../core/navigation/route-focus';
 
 /**
  * `MarketingLayout` is the shell for the Home route.
@@ -23,22 +21,5 @@ import { RouteFocusService } from '../core/navigation/route-focus';
   templateUrl: './marketing-layout.html',
   styleUrl: './marketing-layout.scss',
 })
-export class MarketingLayout {
-  private readonly routeFocus = inject(RouteFocusService);
-  private readonly destroyRef = inject(DestroyRef);
-
-  constructor() {
-    // Move focus to the new H1 on every route-path change so keyboard and
-    // screen-reader users land on the active page heading rather than
-    // staying on the previous one. A `queueMicrotask` defers the read
-    // until Angular has rendered the lazy chunk's H1. A query-only
-    // navigation does not trigger this — see
-    // `RouteFocusService.pathChangeNavigationEnd$()`.
-    this.routeFocus
-      .pathChangeNavigationEnd$()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.routeFocus.scheduleFocus();
-      });
-  }
-}
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
+export class MarketingLayout {}
