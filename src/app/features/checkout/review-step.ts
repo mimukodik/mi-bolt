@@ -283,6 +283,7 @@ export class ReviewStep {
     const state = this.state();
     if (state === 'submitting') return 'A véglegesítés folyamatban van; kérlek várj.';
     if (state === 'loading') return 'A rendelés adatai még betöltés alatt vannak.';
+    if (state === 'conflict' || state === 'stock-error' || state === 'error') return null;
     if (this.priceChange() !== null) {
       return 'Erősítsd meg az új végösszeget a rendelés leadásához.';
     }
