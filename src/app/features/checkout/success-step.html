@@ -77,7 +77,9 @@
       @if (hasReceipt()) {
         <div class="layout" data-testid="success-layout">
           <div class="column">
-            <app-order-receipt [receipt]="order()!" />
+            @if (order(); as receipt) {
+              <app-order-receipt [receipt]="receipt" />
+            }
           </div>
           <aside class="actions" aria-label="További lépések" data-testid="success-actions">
             <h2 class="actions__title">További lépések</h2>

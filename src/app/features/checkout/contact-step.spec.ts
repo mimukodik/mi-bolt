@@ -40,6 +40,7 @@ import { join } from 'node:path';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { form, validate } from '@angular/forms/signals';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -475,5 +476,45 @@ describe('T20 contact-step shared wiring', () => {
     expect(root.querySelector('app-button')).not.toBeNull();
     expect(root.querySelector('app-form-field-message')).not.toBeNull();
     expect(root.querySelector('app-status-message')).not.toBeNull();
+  });
+
+  it('a field error carrying a pointer keeps it, one without a pointer gets the field path (MIM-212)', async () => {
+    // The harness's submit-driven errors are built-in `required` instances,
+    // which carry no `pointer`. `invalidFields()` falls back to `/${key}`
+    // for those (asserted for fullName below).
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    const fallback = fixture.componentInstance.invalidFields();
+    const fullNameEntry = fallback.find((entry) => entry.field === 'fullName');
+    expect(fullNameEntry).toBeDefined();
+    expect(fullNameEntry?.pointer).toBe('/fullName');
+    expect(fullNameEntry?.message).toBe('A teljes név kötelező.');
+
+    // A second form with a server-style error carrying `pointer` is built
+    // through an inline schema that returns the error from `validate()`.
+    // Signal Forms preserves the returned object's extra properties, so
+    // `errorPointer` reads the `pointer` field rather than falling back
+    // to the field key.
+    const fieldsWithServerError = TestBed.runInInjectionContext(() =>
+      form(signal(EMPTY_CONTACT), (path) => {
+        validate(path.email, () => ({
+          kind: 'server',
+          message: 'Hibás e-mail',
+          pointer: '/email',
+        }));
+      }),
+    );
+    const serverFixture = TestBed.createComponent(ContactStep);
+    serverFixture.componentRef.setInput('contactFields', fieldsWithServerError);
+    serverFixture.componentRef.setInput('saveState', 'idle');
+    serverFixture.detectChanges();
+
+    const emailEntry = serverFixture.componentInstance
+      .invalidFields()
+      .find((entry) => entry.field === 'email');
+    expect(emailEntry?.pointer).toBe('/email');
+    expect(emailEntry?.message).toBe('Hibás e-mail');
   });
 });
