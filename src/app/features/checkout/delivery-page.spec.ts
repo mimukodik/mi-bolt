@@ -197,10 +197,11 @@ function pinEnsureOptionsNever(): void {
 function pinSession(session: CheckoutSession | null): void {
   const facade = TestBed.inject(CheckoutFacade);
   const fakeSignal = computed<CheckoutSession | null>(() => session);
-  // Replace the field-initialised signal property directly. vi's
-  // overload for a class-field signal resolves the type to the
-  // callable's return value rather than the field's declared type,
-  // which trips type checking when we hand it a `Signal<>` value.
+  // `CheckoutFacade.session` is declared `readonly`, so direct
+  // assignment is a TS error. `Object.defineProperty` bypasses the
+  // readonly check; the field is configurable on the instance because
+  // `useDefineForClassFields` is `true` under the project's
+  // `target: ES2022`.
   Object.defineProperty(facade, 'session', {
     configurable: true,
     value: fakeSignal,
@@ -512,7 +513,8 @@ describe('DP-07..DP-09 gated section saves', () => {
   });
 
   it('DP-09 same-as-delivery reuses the delivery address for billing, and unchecking it sends the billing address', async () => {
-    // Subcase A: billingSameAsDelivery = true with home delivery.
+    // Subcase A: `billingSameAsDelivery` stays at the initial-model
+    // default of true, with home delivery.
     const fixtureA = await createReadySettled();
     const facadeA = TestBed.inject(CheckoutFacade);
     const fullSession = buildFullSession();
@@ -530,7 +532,8 @@ describe('DP-07..DP-09 gated section saves', () => {
       fields.address.line1().value.set('Fő utca 1.');
       fields.paymentMethod().value.set('card');
       fields.billingName().value.set('Teszt Elek Billing');
-      fields.billingSameAsDelivery().value.set(true);
+      // `billingSameAsDelivery` stays at the initial-model default
+      // (true) — the literal set would just be noise.
       fixtureA.detectChanges();
 
       await fixtureA.componentInstance.onContinueRequested();
@@ -686,7 +689,13 @@ describe('DP-12 failure banner wording and retry', () => {
     });
     vi.spyOn(facadeA, 'updatePayment');
     vi.spyOn(facadeA, 'updateBilling');
-    const ensureSpyA = vi.spyOn(facadeA, 'ensureOptions');
+    // Pin the options-load response so subcase C's `loadOptions(true)`
+    // reaches a settled result deterministically. Without this the
+    // spy would call through to the original `ensureOptions`, which
+    // would attempt a wire request the harness does not stand up.
+    const ensureSpyA = vi
+      .spyOn(facadeA, 'ensureOptions')
+      .mockResolvedValue({ ok: true, value: OPTIONS });
 
     fillCompleteHomeDelivery(fixtureA);
     await fixtureA.componentInstance.onContinueRequested();
