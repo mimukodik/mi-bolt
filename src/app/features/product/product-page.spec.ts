@@ -312,9 +312,20 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     expect(layout).not.toBeNull();
 
     const galleryCol = layout.querySelector('.gallery');
+    const configCol = layout.querySelector('.config');
     const buyCol = layout.querySelector('.buy');
     expect(galleryCol).not.toBeNull();
+    expect(configCol).not.toBeNull();
     expect(buyCol).not.toBeNull();
+    expect(buyCol?.querySelector('.buy-box')).not.toBeNull();
+  });
+
+  it('the buy box carries the price block in inverse colours (MIM-210)', async () => {
+    const { root } = await createHarness();
+
+    const price = queryElement(root, '.buy-box app-price-block .root');
+    expect(price.hasAttribute('data-inverse')).toBe(true);
+    expect(price.getAttribute('data-size')).toBe('lg');
   });
 
   it('T16-AC01: displays brand and product name matching the loaded product', async () => {
@@ -412,7 +423,7 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     const graphiteBtn = queryButton(root, '[data-testid="variant-color-graphite"]');
     expect(graphiteBtn.getAttribute('aria-pressed')).toBe('false');
 
-    const meta = queryElement(root, '.buy-header .meta');
+    const meta = queryElement(root, '.page-header .meta');
     expect(meta.textContent).toContain('Ezüst');
     expect(meta.textContent).toContain('256 GB');
 
@@ -430,7 +441,7 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
 
     expect(storage512.getAttribute('aria-pressed')).toBe('true');
 
-    const meta = queryElement(root, '.buy-header .meta');
+    const meta = queryElement(root, '.page-header .meta');
     expect(meta.textContent).toContain('512 GB');
 
     const priceSection = queryElement(root, '.prices');
@@ -467,7 +478,7 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
   it('T16-AC03: renders highlights list when product highlights are present', async () => {
     const { root } = await createHarness();
 
-    const highlightsList = queryElement(root, '.highlights');
+    const highlightsList = queryElement(root, '.key-facts');
     expect(highlightsList).not.toBeNull();
     expect(highlightsList.getAttribute('aria-label')).toBe('A termék fő jellemzői');
 

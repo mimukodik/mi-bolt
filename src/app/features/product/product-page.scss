@@ -1,6 +1,3 @@
-/* product-page.scss — extracted from inline styles.
-   Tailwind v4 utility classes live alongside the scoped selectors below. */
-
 :host {
   display: block;
   padding: 0 var(--layout-gutter-mobile);
@@ -26,32 +23,16 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-7);
+  gap: var(--space-8);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.gallery,
-.buy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  min-width: 0;
-}
-
-.buy-header {
+.page-header {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
 .brand {
-  margin: 0;
   font-size: var(--type-helper);
   color: var(--color-text-secondary);
   letter-spacing: 0.04em;
@@ -59,101 +40,103 @@
 }
 
 .name {
-  margin: 0;
-  font-size: var(--type-section-title-mobile);
-  font-weight: var(--weight-bold);
-  line-height: var(--line-height-heading);
-}
-
-@media (min-width: 640px) {
-  .name {
-    font-size: var(--type-section-title);
-  }
+  font-family: var(--font-family-bold);
+  font-size: 32px;
+  line-height: 40px;
+  color: var(--color-primary);
 }
 
 .meta {
-  margin: 0;
+  font-family: var(--font-family-light);
   font-size: var(--type-helper);
-  color: var(--color-text-secondary);
+  line-height: 20px;
+  color: var(--color-primary);
 }
 
-.meta-value {
-  margin-left: var(--space-1);
-  color: var(--color-text-primary);
-  font-weight: var(--weight-medium);
+.meta-label {
+  margin-right: var(--space-1);
 }
 
 .meta-sep {
   margin: 0 var(--space-2);
 }
 
-.highlights {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--space-7);
+  align-items: start;
 }
 
-.highlights li {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-badge);
-  background: var(--color-surface-section);
-  color: var(--color-text-primary);
+.key-facts li {
+  font-family: var(--font-family-bold);
   font-size: var(--type-helper);
+  line-height: 20px;
+  color: var(--color-primary);
 }
 
-.prices {
+.buy-box {
+  background: var(--color-primary);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  color: var(--color-text-inverse);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
-.quantity {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.qty-label {
+.stock {
   font-size: var(--type-helper);
-  color: var(--color-text-secondary);
+  line-height: 20px;
+  color: var(--color-accent);
 }
 
-.cta-desktop {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.stock--out {
+  color: var(--color-status-error);
 }
 
-.spec {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.simulation-note {
+  font-size: var(--type-helper);
+  color: var(--color-text-inverse-muted);
+}
+
+.description {
+  font-family: var(--font-family-light);
+  font-size: var(--type-helper);
+  line-height: 22px;
+  color: var(--color-primary);
+  max-width: 60ch;
 }
 
 .section-title {
-  margin: 0;
-  font-size: var(--type-section-title-mobile);
-  font-weight: var(--weight-bold);
-  line-height: var(--line-height-heading);
+  font-family: var(--font-family-bold);
+  font-size: 32px;
+  line-height: 40px;
+  color: var(--color-primary);
 }
 
-@media (min-width: 640px) {
-  .section-title {
-    font-size: var(--type-section-title);
-  }
+.section-title--sm {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.qty-label {
+  font-family: var(--font-family-bold);
+  font-size: var(--type-helper);
+  color: var(--color-primary);
 }
 
 .hint {
-  margin: 0;
   font-size: var(--type-helper);
   color: var(--color-text-secondary);
 }
 
 .hint--error {
   color: var(--color-status-error);
+}
+
+.buy-box .hint {
+  color: var(--color-text-inverse-muted);
 }
 
 .loading {
@@ -163,27 +146,16 @@
   min-height: 24rem;
 }
 
-/* T16-AC04 — mobile purchase rail clearance.
-         The rail (`<app-mobile-buy-rail>`, FIX-50) sticks to the
-         bottom of the viewport with safe-area padding so the primary
-         CTA stays reachable on iOS / Android notch devices. The page
-         main adds matching padding-bottom so the rail never covers
-         keyboard focus or page content. The rail's own rules live in
-         mobile-buy-rail.scss. */
 @media (max-width: 1023px) {
   .page {
     padding-bottom: calc(env(safe-area-inset-bottom) + 8rem);
   }
 
-  /* Only one responsive primary control is focusable at a time
-     (screens.md S3): the fixed rail carries the CTA below 1024px, so
-     the in-flow desktop CTA is removed from the tab order here. */
   .cta-desktop {
     display: none;
   }
 }
 
-/* T16-AC01 — desktop layout. */
 @media (min-width: 1024px) {
   :host {
     padding: 0 var(--layout-gutter-desktop);
@@ -194,8 +166,18 @@
   }
 
   .layout {
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-    gap: var(--space-6);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr);
+    column-gap: var(--space-8);
+    row-gap: var(--space-8);
+  }
+
+  .buy {
+    position: sticky;
+    top: var(--space-5);
+  }
+
+  .description-section {
+    grid-column: 1 / 3;
   }
 }
 
@@ -229,38 +211,12 @@
 
 .demo-tag {
   align-self: flex-start;
-  margin: 0;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-badge);
   background: var(--color-brand-accent-soft);
   color: var(--color-brand-ink);
   font-size: var(--type-meta);
   font-weight: var(--weight-bold);
-}
-
-.description {
-  margin: 0;
-  max-width: 60ch;
-  font-size: var(--type-body);
-  line-height: var(--line-height-body);
-  color: var(--color-text-secondary);
-}
-
-.stock {
-  margin: 0;
-  font-size: var(--type-helper);
-  font-weight: var(--weight-medium);
-  color: var(--color-status-success);
-}
-
-.stock--out {
-  color: var(--color-status-error);
-}
-
-.simulation-note {
-  margin: 0;
-  font-size: var(--type-helper);
-  color: var(--color-text-secondary);
 }
 
 @media (prefers-reduced-motion: reduce) {

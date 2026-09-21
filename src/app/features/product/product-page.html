@@ -34,126 +34,143 @@
         ></app-error-state>
       }
       @default {
+        <header class="page-header">
+          <p class="demo-tag" data-testid="product-demo-tag">DEMÓTERMÉK</p>
+          <p class="brand m-0">{{ brand() }}</p>
+          <h1 class="name m-0" data-testid="product-name">{{ productName() }}</h1>
+          @if (selectedColorName() !== null) {
+            <p class="meta m-0">
+              <span class="meta-label">Szín:</span>
+              <span class="meta-value">{{ selectedColorName() }}</span>
+              <span aria-hidden="true" class="meta-sep">·</span>
+              <span class="meta-label">Tárhely:</span>
+              <span class="meta-value">{{ selectedStorageLabel() }}</span>
+            </p>
+          }
+        </header>
+
         <div class="layout">
-          <div class="gallery">
+          <div class="gallery flex flex-col min-w-0">
             <app-product-gallery
               [images]="gallery()"
-              [selectedImageId]="selectedImageId()"
               [productName]="productName()"
+              [selectedImageId]="selectedImageId()"
               (imageSelected)="onImageSelected($event)"
               (zoomRequested)="onZoomRequested($event)"
-            ></app-product-gallery>
+            />
+          </div>
+
+          <div class="config flex flex-col gap-5">
             @if (highlights().length > 0) {
-              <ul class="highlights" aria-label="A termék fő jellemzői">
+              <ul
+                aria-label="A termék fő jellemzői"
+                class="key-facts flex flex-wrap gap-5 m-0 p-0 list-none"
+              >
                 @for (item of highlights(); track item) {
                   <li>{{ item }}</li>
                 }
               </ul>
             }
-          </div>
-
-          <div class="buy">
-            <header class="buy-header">
-              <p class="demo-tag" data-testid="product-demo-tag">DEMÓTERMÉK</p>
-              <p class="brand">{{ brand() }}</p>
-              <h1 class="name" data-testid="product-name">{{ productName() }}</h1>
-              @if (selectedColorName() !== null) {
-                <p class="meta">
-                  <span class="meta-label">Szín:</span>
-                  <span class="meta-value">{{ selectedColorName() }}</span>
-                  <span class="meta-sep" aria-hidden="true">·</span>
-                  <span class="meta-label">Tárhely:</span>
-                  <span class="meta-value">{{ selectedStorageLabel() }}</span>
-                </p>
-              }
-              @if (description()) {
-                <p class="description" data-testid="product-description">{{ description() }}</p>
-              }
-            </header>
-
-            @if (stockMessage()) {
-              <p
-                class="stock"
-                [class.stock--out]="selectedAvailability() === 'out_of_stock'"
-                role="status"
-                data-testid="product-stock"
-              >
-                {{ stockMessage() }}
-              </p>
-            }
-
-            <section class="prices" aria-label="Árak">
-              <app-price-block
-                [money]="devicePrice()"
-                [label]="'Készülékár'"
-                [status]="devicePriceStatus()"
-              ></app-price-block>
-            </section>
 
             <app-variant-selector
-              [variants]="variants()"
               [selectedId]="selectedVariant()?.id ?? null"
+              [variants]="variants()"
               (variantSelected)="onVariantSelected($event)"
-            ></app-variant-selector>
+            />
 
-            <div class="quantity">
-              <span class="qty-label" aria-hidden="true">Darabszám</span>
+            <div class="quantity flex flex-col gap-2">
+              <span aria-hidden="true" class="qty-label m-0">Darabszám</span>
               <app-quantity-control
-                [value]="quantity()"
-                [min]="1"
+                label="Darabszám"
                 [max]="maxQuantity()"
-                [label]="'Darabszám'"
+                [min]="1"
+                [value]="quantity()"
                 (quantityChanged)="onQuantityChanged($event)"
-              ></app-quantity-control>
+              />
               @if (quantityOverMax()) {
-                <p class="hint hint--error" role="status">
+                <p class="hint hint--error m-0" role="status">
                   Maximum {{ maxQuantity() }} darab rendelhető ebből a változatból.
                 </p>
               }
             </div>
+          </div>
 
-            <div class="cta-desktop">
-              @if (selectedVariant(); as variant) {
-                <app-add-to-cart
-                  [variant]="addableVariant()"
-                  [quantity]="quantity()"
-                  [pending]="addPending()"
-                  [error]="addError()"
-                  (addRequested)="onAddRequested($event)"
+          <div class="buy flex flex-col min-w-0">
+            <div class="buy-box">
+              @if (stockMessage()) {
+                <p
+                  class="stock m-0"
+                  data-testid="product-stock"
+                  role="status"
+                  [class.stock--out]="selectedAvailability() === 'out_of_stock'"
+                >
+                  {{ stockMessage() }}
+                </p>
+              }
+
+              <section aria-label="Árak" class="prices">
+                <app-price-block
+                  label="Készülékár"
+                  size="lg"
+                  [inverse]="true"
+                  [money]="devicePrice()"
+                  [status]="devicePriceStatus()"
                 />
-              } @else {
-                <app-button
-                  [variant]="'primary'"
-                  [label]="'Kosárba teszem'"
-                  [loadingLabel]="'Hozzáadás…'"
-                  [disabled]="true"
-                ></app-button>
-              }
-              @if (addToCartReason() !== null && !addToCartEnabled()) {
-                <p class="hint" role="status">{{ addToCartReason() }}</p>
-              }
-              @if (addSuccessMessage(); as message) {
-                <app-status-message [message]="message" [severity]="'success'"></app-status-message>
-              }
-              <p class="simulation-note" data-testid="product-simulation-note">
-                A rendelés kipróbálható, de nem jár valódi vásárlással.
-              </p>
+              </section>
+
+              <div class="cta-desktop flex flex-col gap-2">
+                @if (selectedVariant(); as variant) {
+                  <app-add-to-cart
+                    [error]="addError()"
+                    [pending]="addPending()"
+                    [quantity]="quantity()"
+                    [variant]="addableVariant()"
+                    (addRequested)="onAddRequested($event)"
+                  />
+                } @else {
+                  <app-button
+                    label="Kosárba teszem"
+                    loadingLabel="Hozzáadás…"
+                    variant="primary"
+                    [disabled]="true"
+                  />
+                }
+                @if (addToCartReason() !== null && !addToCartEnabled()) {
+                  <p class="hint m-0" role="status">{{ addToCartReason() }}</p>
+                }
+                @if (addSuccessMessage(); as message) {
+                  <app-status-message severity="success" [message]="message" />
+                }
+                <p class="simulation-note m-0" data-testid="product-simulation-note">
+                  A rendelés kipróbálható, de nem jár valódi vásárlással.
+                </p>
+              </div>
             </div>
           </div>
+
+          @if (description()) {
+            <section
+              aria-labelledby="description-heading"
+              class="description-section flex flex-col gap-4"
+            >
+              <h2 class="section-title section-title--sm m-0" id="description-heading">
+                Termékleírás
+              </h2>
+              <p class="description m-0" data-testid="product-description">{{ description() }}</p>
+            </section>
+          }
         </div>
 
-        <section class="spec" aria-label="Műszaki adatok">
-          <h2 class="section-title">Műszaki adatok</h2>
-          <app-specification-accordion [groups]="specGroups()"></app-specification-accordion>
+        <section aria-label="Műszaki adatok" class="spec flex flex-col gap-5">
+          <h2 class="section-title m-0">Műszaki adatok</h2>
+          <app-specification-accordion [groups]="specGroups()" />
         </section>
 
         @if (related().length > 0) {
-          <section class="mt-10" aria-labelledby="related-heading" data-testid="related-products">
-            <h2 id="related-heading" class="m-0 mb-4 text-xl leading-7 font-bold">
-              Hasonló készülékek
-            </h2>
+          <section aria-labelledby="related-heading" data-testid="related-products">
+            <h2 class="section-title m-0 mb-6" id="related-heading">Hasonló készülékek</h2>
             <ul
-              class="m-0 p-0 list-none grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+              class="m-0 p-0 list-none grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
               role="list"
             >
               @for (item of related(); track item.variantId) {
@@ -164,7 +181,7 @@
         }
 
         @if (invalidQuery() !== null) {
-          <p class="hint hint--error" role="status">
+          <p class="hint hint--error m-0" role="status">
             A linkben megadott változat nem található: {{ invalidQuery() }}. Válassz a fenti
             listából.
           </p>
