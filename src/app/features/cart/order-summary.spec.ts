@@ -62,7 +62,6 @@ describe('OrderSummary', () => {
 
   it('renders data-inverse on the card and row price blocks when inverse is set (MIM-211)', () => {
     const { fixture, host } = setup();
-    host.subtotal.set(HUF(339990));
     host.shipping.set(HUF(9990));
     host.paymentFee.set(HUF(990));
     host.serverTotal.set(HUF(350970));

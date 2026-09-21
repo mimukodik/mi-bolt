@@ -12,7 +12,7 @@
         label="Részösszeg"
         size="md"
         [inverse]="inverse()"
-        [layout]="inverse() ? 'row' : 'stack'"
+        [layout]="priceBlockLayout()"
         [money]="subtotal()"
         [status]="subtotalStatus()"
       />
@@ -25,7 +25,7 @@
           size="md"
           status="success"
           [inverse]="inverse()"
-          [layout]="inverse() ? 'row' : 'stack'"
+          [layout]="priceBlockLayout()"
           [money]="fee"
         />
       } @else {
@@ -43,7 +43,7 @@
           size="md"
           status="success"
           [inverse]="inverse()"
-          [layout]="inverse() ? 'row' : 'stack'"
+          [layout]="priceBlockLayout()"
           [money]="fee"
         />
       </div>
@@ -54,7 +54,7 @@
         label="Végösszeg"
         size="lg"
         [inverse]="inverse()"
-        [layout]="inverse() ? 'row' : 'stack'"
+        [layout]="priceBlockLayout()"
         [money]="total()"
         [status]="totalStatus()"
       />

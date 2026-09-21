@@ -275,12 +275,12 @@ describe('Button primitive', () => {
     expect(css).not.toContain('color-brand-accent');
   });
 
-  it('adds is-block to the root when block is set (MIM-211)', () => {
+  it('adds w-full to the root when block is set (MIM-211)', () => {
     const { fixture, host, root } = setup();
     const btn = root.querySelector<HTMLButtonElement>('button');
-    expect(btn?.classList.contains('is-block')).toBe(false);
+    expect(btn?.classList.contains('w-full')).toBe(false);
     host.block.set(true);
     fixture.detectChanges();
-    expect(btn?.classList.contains('is-block')).toBe(true);
+    expect(btn?.classList.contains('w-full')).toBe(true);
   });
 });

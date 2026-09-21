@@ -57,6 +57,11 @@ export class OrderSummary {
   /** Navy card look for the cart page; the review step leaves it off. */
   readonly inverse = input(false);
 
+  /** Inverse forces a row layout (label left, amount right) on every
+   *  PriceBlock the card renders. The default stack layout is the
+   *  right rail's shape. */
+  readonly priceBlockLayout = computed<'stack' | 'row'>(() => (this.inverse() ? 'row' : 'stack'));
+
   /**
    * Final total. When shipping is not yet known, the total is a
    * zero Money so `PriceBlock` does NOT invent an amount (it shows
