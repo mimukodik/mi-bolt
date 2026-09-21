@@ -18,7 +18,7 @@
  *      the project already follows (see product-gallery.spec.ts).
  *   2. Standalone rendering: render the Hero and HowDemoWorks
  *      components directly. `Hero` declares `title`/`subtitle`
- *      (required) and `artwork` (optional) as signal inputs
+ *      (required) as signal inputs
  *      (`docs/spec/components.md:255`, FIX-64); every direct
  *      `TestBed.createComponent(Hero)` site below binds `title` and
  *      `subtitle` with `componentRef.setInput` before `detectChanges`.
@@ -811,12 +811,12 @@ describe('T14-AC04 three explanatory tiles describe browsing/cart/simulated orde
 });
 
 // ---------------------------------------------------------------------------
-// AC05: Mobile content order: heading, message, CTA, illustration,
+// AC05: Mobile content order: heading, message, CTA,
 // shortcuts, product cards. No hero text clipped at 320 px.
 // ---------------------------------------------------------------------------
 
 describe('T14-AC05 mobile content order and 320 px clip safety', () => {
-  it('mobile source order is heading, message, CTA, illustration, shortcuts', async () => {
+  it('mobile source order is heading, message, CTA, shortcuts', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -829,13 +829,7 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const heroSection = raw.querySelector('[data-testid="hero-section"]');
     expect(heroSection).not.toBeNull();
-    const expectedOrder = [
-      'hero-heading',
-      'hero-message',
-      'hero-cta-row',
-      'hero-illustration',
-      'hero-shortcuts',
-    ];
+    const expectedOrder = ['hero-heading', 'hero-message', 'hero-cta-row', 'hero-shortcuts'];
     const elements = expectedOrder.map((id) => raw.querySelector(`[data-testid="${id}"]`));
     elements.forEach((el) => {
       expect(el).not.toBeNull();
