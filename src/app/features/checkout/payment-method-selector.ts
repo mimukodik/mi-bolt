@@ -1,82 +1,74 @@
 /**
- * T21 — PaymentMethodSelector (S4.3).
+ * T21 — PaymentMethodSelector (S4.3), rewritten on the 2.0.0 contract.
  *
- * Renders the two demo-only payment choices:
+ * Renders whatever `PaymentMethodOption[]` the server sends: `label`,
+ * `description` and `fee` are wire data, not hard-coded Hungarian
+ * strings, because a payment method can now carry a real surcharge
+ * (`screens.md:79` — "Defaults must not represent a paid addon"). There
+ * is no default selection: `value` starts `null` and stays that way
+ * until the shopper picks a radio.
  *
- *   - `demo_card` — simulated card flow; the user picks the radio
- *                   and the parent confirms the order. No actual
- *                   card field, no provider redirect, no input for
- *                   a real PAN / expiry / CVC.
- *   - `demo_cod`  — cash on delivery in the simulated order; no
- *                   payment-intent call at all.
- *
- * The radio group is driven by `model('demo_card' | 'demo_cod')`
- * so the parent can read the current selection through a single
- * binding. Selection is not indicated by color alone: every option
- * carries a visible label and a "(Demó)" / "(Szimulált)" suffix,
- * and the selected state is announced through `aria-checked` plus
- * a "Kiválasztva" badge the assistive tech reads as live region.
+ * An `available === false` option renders as a disabled radio carrying
+ * its `unavailableReason` as a readable sentence, the same treatment
+ * `DeliveryStep` gives an unavailable delivery option.
  *
  * The confirm action lives on the parent screen's own CTA
  * (`delivery-step.html`'s `[data-testid="delivery-confirm"]`); this
  * component only reports the selection.
  */
 
-import { Component, model, output } from '@angular/core';
+import { Component, model, output, input } from '@angular/core';
 
-export type PaymentMethod = 'demo_card' | 'demo_cod';
+import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
-interface PaymentOption {
-  readonly id: PaymentMethod;
-  readonly label: string;
-  readonly helper: string;
-  readonly demoTag: string;
-}
-
-const PAYMENT_OPTIONS: readonly PaymentOption[] = [
-  {
-    id: 'demo_card',
-    label: 'Bankkártya (szimulált)',
-    helper: 'A fizetés demó környezetben, valós kártyaadatok megadása nélkül zajlik.',
-    demoTag: 'Demó',
-  },
-  {
-    id: 'demo_cod',
-    label: 'Utánvét (demó)',
-    helper: 'A demó rendelés átvételkor fizetendő; nincs valódi pénzmozgás.',
-    demoTag: 'Demó',
-  },
-];
+import type { PaymentMethodId } from '../../api/generated/models/payment-method-id';
+import type { PaymentMethodOption } from '../../api/generated/models/payment-method-option';
+import type { UnavailableReason } from '../../api/generated/models/unavailable-reason';
 
 @Component({
   selector: 'app-payment-method-selector',
+  imports: [PriceBlock],
   templateUrl: './payment-method-selector.html',
   styleUrl: './payment-method-selector.scss',
 })
 export class PaymentMethodSelector {
-  readonly value = model<PaymentMethod>('demo_card');
+  readonly options = input.required<readonly PaymentMethodOption[]>();
 
-  readonly selectionChanged = model<PaymentMethod | null>(null);
-  readonly paymentChanged = output<PaymentMethod>();
+  readonly value = model<PaymentMethodId | null>(null);
+  readonly paymentChanged = output<PaymentMethodId>();
 
-  readonly options: readonly PaymentOption[] = PAYMENT_OPTIONS;
-
-  isSelected(id: PaymentMethod): boolean {
+  isSelected(id: PaymentMethodId): boolean {
     return this.value() === id;
   }
 
-  optionId(id: PaymentMethod): string {
+  optionId(id: PaymentMethodId): string {
     return `payment-option-${id}`;
   }
 
-  helperId(id: PaymentMethod): string {
+  helperId(id: PaymentMethodId): string {
     return `payment-helper-${id}`;
   }
 
-  onSelected(id: PaymentMethod): void {
+  /** Human-readable sentence for an unavailable option. The mock only
+   *  ever emits `CART_EMPTY` / `CART_VALUE_TOO_HIGH`; the third union
+   *  member and an absent reason both fall back to a generic sentence
+   *  so the radio is never disabled with no explanation at all. */
+  unavailableSentence(reason: UnavailableReason | undefined): string {
+    switch (reason) {
+      case 'CART_EMPTY':
+        return 'A kosarad jelenleg üres.';
+      case 'CART_VALUE_TOO_HIGH':
+        return 'A kosár értéke meghaladja az ennél az opciónál megengedett összeget.';
+      case 'NOT_AVAILABLE_FOR_ITEMS':
+        return 'A kosaradban lévő termékekhez ez az opció nem elérhető.';
+      default:
+        return 'Ez az opció jelenleg nem elérhető.';
+    }
+  }
+
+  onSelected(id: PaymentMethodId): void {
     if (this.value() === id) return;
     this.value.set(id);
-    this.selectionChanged.set(id);
     this.paymentChanged.emit(id);
   }
 }

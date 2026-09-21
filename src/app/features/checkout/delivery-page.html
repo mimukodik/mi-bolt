@@ -27,7 +27,7 @@
     }
     <app-delivery-step
       [options]="readyOptions()!"
-      [fields]="checkoutFacade.form"
+      [fields]="fields"
       [saveState]="saveState()"
       (continueRequested)="onContinueRequested()"
       (retryOptions)="onRetryOptions()"
