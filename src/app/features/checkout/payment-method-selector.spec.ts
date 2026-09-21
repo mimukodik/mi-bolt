@@ -70,6 +70,7 @@ function makeOption(
 function createFixture(
   options: readonly PaymentMethodOption[],
 ): ComponentFixture<PaymentMethodSelector> {
+  TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [provideZonelessChangeDetection(), provideRouter([])],
   });
