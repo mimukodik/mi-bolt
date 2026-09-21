@@ -364,6 +364,7 @@ describe('T16-AC02 product-gallery zoom dialog', () => {
     expect(zoomBtn).not.toBeNull();
     expect(zoomBtn.getAttribute('aria-label')).toBe('Kép nagyítása');
     expect(zoomBtn.querySelector('svg')).not.toBeNull();
+    expect(zoomBtn.textContent.trim()).toBe('');
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
 
     zoomBtn.click();
