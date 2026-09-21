@@ -8,29 +8,45 @@
     <article class="cell" data-testid="showcase-button">
       <h2>Gomb (Button)</h2>
       <div class="row">
-        <app-button label="Részletek" variant="primary" />
-        <app-button label="Kosárba teszem" variant="primary" [loading]="loading()" />
-        <app-button label="Mégse" variant="secondary" />
-        <app-button label="Sötét felületen" variant="secondaryOnDark" />
-        <app-button label="Nem elérhető" variant="primary" [disabled]="true" />
+        <app-button label="Részletek" variant="primary"></app-button>
+        <app-button label="Kosárba teszem" variant="primary" [loading]="loading()"></app-button>
+        <app-button label="Mégse" variant="secondary"></app-button>
+        <app-button label="Sötét felületen" variant="secondaryOnDark"></app-button>
+        <app-button label="Nem elérhető" variant="primary" [disabled]="true"></app-button>
       </div>
     </article>
 
     <article class="cell" data-testid="showcase-priceblock">
       <h2>Ártömb (PriceBlock)</h2>
       <div class="row">
-        <app-price-block label="Készülékár, egyszeri díj" status="success" [money]="ready()" />
-        <app-price-block label="Készülékár, egyszeri díj" status="loading" [money]="null" />
-        <app-price-block label="Készülékár, egyszeri díj" status="error" [money]="null" />
-        <app-button label="Kosárba teszem" variant="primary" />
+        <app-price-block
+          [money]="ready()"
+          label="Készülékár, egyszeri díj"
+          status="success"
+        ></app-price-block>
+        <app-price-block
+          [money]="null"
+          label="Készülékár, egyszeri díj"
+          status="loading"
+        ></app-price-block>
+        <app-price-block
+          [money]="null"
+          label="Készülékár, egyszeri díj"
+          status="error"
+        ></app-price-block>
+        <app-button label="Kosárba teszem" variant="primary"></app-button>
       </div>
     </article>
 
     <article class="cell" data-testid="showcase-productimage">
       <h2>Termékkép (ProductImage)</h2>
       <div class="row">
-        <app-product-image aspectRatio="4 / 3" productName="Demo One 5G" [image]="placeholder" />
-        <app-button label="Nagyítás" variant="secondary" />
+        <app-product-image
+          [image]="placeholder"
+          productName="Demo One 5G"
+          aspectRatio="4 / 3"
+        ></app-product-image>
+        <app-button label="Nagyítás" variant="secondary"></app-button>
       </div>
     </article>
 
@@ -38,18 +54,18 @@
       <h2>Hibaállapot (ErrorState)</h2>
       <div class="row">
         <app-error-state
-          message="A hálózati hiba miatt most nem tudjuk megjeleníteni az adatokat."
           title="Nem sikerült betölteni"
+          message="A hálózati hiba miatt most nem tudjuk megjeleníteni az adatokat."
           [preserving]="true"
-        />
+        ></app-error-state>
       </div>
     </article>
 
     <article class="cell" data-testid="showcase-loadingstate">
       <h2>Betöltés (LoadingState)</h2>
       <div class="row">
-        <app-loading-state variant="card" />
-        <app-loading-state variant="lines" />
+        <app-loading-state variant="card"></app-loading-state>
+        <app-loading-state variant="lines"></app-loading-state>
       </div>
     </article>
 
@@ -57,10 +73,10 @@
       <h2>Üres állapot (EmptyState)</h2>
       <div class="row">
         <app-empty-state
-          actionLabel="Szűrők törlése"
-          message="A jelenlegi szűrőkkel nincs megjeleníthető eszköz."
           title="Nincs találat"
-        />
+          message="A jelenlegi szűrőkkel nincs megjeleníthető eszköz."
+          actionLabel="Szűrők törlése"
+        ></app-empty-state>
       </div>
     </article>
 
@@ -69,13 +85,13 @@
       <div class="row">
         <label class="field">
           <span>E-mail cím</span>
-          <input aria-describedby="email-message" id="email" type="email" />
+          <input id="email" type="email" aria-describedby="email-message" />
           <app-form-field-message
             fieldId="email"
-            severity="error"
             [errors]="errors"
             [touched]="true"
-          />
+            severity="error"
+          ></app-form-field-message>
         </label>
       </div>
     </article>
@@ -84,11 +100,11 @@
       <h2>Mennyiség (QuantityControl)</h2>
       <div class="row">
         <app-quantity-control
-          [max]="9"
-          [min]="1"
           [value]="quantityValue()"
+          [min]="1"
+          [max]="9"
           (quantityChanged)="quantityValue.set($event)"
-        />
+        ></app-quantity-control>
       </div>
     </article>
 
@@ -99,14 +115,18 @@
           label="Dialógus megnyitása"
           variant="primary"
           (pressed)="dialogOpen.set(true)"
-        />
+        ></app-button>
         <app-accessible-dialog
-          label="Megerősítés"
           [opened]="dialogOpen()"
+          label="Megerősítés"
           (closed)="dialogOpen.set(false)"
         >
           <p>A dialógus tárolja a fókuszt és a háttér kizárásra kerül.</p>
-          <app-button label="Rendben" variant="primary" (pressed)="dialogOpen.set(false)" />
+          <app-button
+            label="Rendben"
+            variant="primary"
+            (pressed)="dialogOpen.set(false)"
+          ></app-button>
         </app-accessible-dialog>
       </div>
     </article>
@@ -114,12 +134,15 @@
     <article class="cell" data-testid="showcase-statusmessage">
       <h2>Állapotüzenet (StatusMessage)</h2>
       <div class="row column">
-        <app-status-message message="A művelet sikeres volt." severity="success" />
         <app-status-message
-          message="A fizetési kísérlet nem járt sikerrel."
+          [message]="'A művelet sikeres volt.'"
+          severity="success"
+        ></app-status-message>
+        <app-status-message
+          [message]="'A fizetési kísérlet nem járt sikerrel.'"
           severity="error"
           [persistent]="true"
-        />
+        ></app-status-message>
       </div>
     </article>
   </section>

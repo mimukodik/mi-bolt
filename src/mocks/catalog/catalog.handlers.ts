@@ -1,84 +1,69 @@
 /**
- * T06 — catalog MSW handlers.
+ * MIM-210 — catalogue MSW handlers on the 2.0.0 contract.
  *
- * Wires the three catalog operationIds declared in docs/api/openapi.yaml:
+ * Wires the four catalogue operationIds the contract publishes:
  *
- *   - `getConfig`    → GET  /api/v1/config
- *   - `listProducts` → GET  /api/v1/products
- *   - `getProduct`   → GET  /api/v1/products/{slug}
+ *   - listProducts         → GET  /api/v1/products
+ *   - getProduct           → GET  /api/v1/products/{slug}
+ *   - listRelatedProducts  → GET  /api/v1/products/{slug}/related
+ *   - getMedia             → GET  /api/v1/media/{imageId}
  *
- * `listProducts` validates the query string, applies the AND-across /
- * OR-within filter predicates, sorts by the cheapest matching variant,
- * paginates, and emits:
- *
- *   - 400 Problem JSON on malformed params (T06-AC04)
- *   - 404 Problem JSON on out-of-range page (T06-AC02 / AC04)
- *   - 200 with an empty items array on legitimate empty result sets
- *   - 200 with a ProductPage on success
- *
- * `getProduct` returns 200 with the full Product or 404 Problem JSON.
- *
- * The handlers register themselves with the T05 factory via
- * `registerBusinessHandlers`; tests can also call `buildCatalogHandlers`
- * directly to obtain the handler list without touching the registry.
- *
- * Catalog fixtures are loaded by the bootstrap (browser or node entry)
- * into `options.repository.products`. The handlers stay free of any
- * I/O or Node-only imports so the file type-checks inside the Angular
- * browser bundle.
+ * The handlers live on top of `catalogStore` (this file's module
+ * local). The store is loaded by `src/mocks/browser.ts` from
+ * `docs/api/fixtures/catalog.json`; the spec loads its own copy.
  */
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
 import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
-import type { Product, Variant } from '../repository';
-import { buildFacets, type ProductFacets } from './facets';
+import { isRecord as isPlainRecord } from '../is-record';
 import {
-  filterProducts,
-  paginateMatches,
-  parseCatalogFilter,
+  type CatalogEntry,
+  type CatalogFixture,
+  type CatalogStore,
+  isCatalogFixture,
+  load,
+  toCatalogItem,
+} from './catalog-store';
+import {
   type CatalogFilter,
-  type FilterParseError,
-  type ProductMatch,
-} from './filter-products';
+  type FilterError,
+  paginate,
+  parseListProductsParams,
+  sortEntries,
+  applyFilters,
+  toCatalogItems,
+} from './catalog-filter';
+import { buildFacets } from './catalog-facets';
 
-// ---------------------------------------------------------------------------
-// Shared demo config (compiled-in, no I/O).
-// ---------------------------------------------------------------------------
+const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
 
-/** Mirror of docs/api/fixtures/config.json — kept here so the handlers
- *  have no filesystem dependency. Updated when the fixture changes. */
-export const DEMO_CONFIG = {
-  providerId: 'mi-bolt',
-  displayName: 'MiBolt',
-  currency: 'HUF',
-  isDemo: true,
-  termsVersion: 'demo-1',
-  featuredSlugs: ['demo-one-5g', 'demo-air-5g', 'demo-pro-5g', 'demo-lite-5g'],
-  maximumLineQuantity: 5,
-} as const;
+/** Module-local store. `src/mocks/browser.ts` calls `loadCatalogFixture(store)`. */
+export const catalogStore: { current: CatalogStore | null } = { current: null };
 
-// ---------------------------------------------------------------------------
-// Response shapes
-// ---------------------------------------------------------------------------
-
-interface ProductSummary {
-  id: string;
-  slug: string;
-  brand: string;
-  name: string;
-  highlights: readonly string[];
-  defaultVariant: Variant;
-  is5g: boolean;
-  isDemo: true;
+/** Loads the supplied fixture into the store, replacing any prior load. */
+export function loadCatalogFixture(fixture: CatalogFixture): void {
+  catalogStore.current = load(fixture);
 }
 
-interface ProductPage {
-  items: readonly ProductSummary[];
-  total: number;
-  page: number;
-  pageSize: 12 | 24;
-  facets: ProductFacets;
+/** True when the store has been loaded. The spec uses it as an assertion. */
+export function isCatalogStoreLoaded(): boolean {
+  return catalogStore.current !== null;
+}
+
+/** Returns the current store; throws when none was loaded. */
+function requireStore(): CatalogStore {
+  if (!catalogStore.current) {
+    throw new Error('[catalog.handlers] catalog store has not been loaded');
+  }
+  return catalogStore.current;
+}
+
+/** Build a deterministic 24-char lowercase-hex trace id from the clock. */
+function traceId(options: CreateHandlersOptions): string {
+  const ms = Date.parse(options.clock.now());
+  const hex = (ms >>> 0).toString(16).padStart(8, '0');
+  return (hex + '0000000000000000').slice(0, 24);
 }
 
 interface ProblemBody {
@@ -88,28 +73,22 @@ interface ProblemBody {
   code: string;
   detail: string;
   traceId: string;
-  fieldErrors: readonly { path: string; message: string }[];
+  fieldErrors: readonly { path: string; code: string }[];
+  params?: Readonly<Record<string, unknown>>;
 }
 
-const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
-
-// ---------------------------------------------------------------------------
-// Problem helpers — shape matches the OpenAPI `Problem` schema.
-// ---------------------------------------------------------------------------
-
-function traceId(options: CreateHandlersOptions): string {
-  return `mock-trace-${options.scenario.name}`;
-}
-
-function validationProblem(options: CreateHandlersOptions, error: FilterParseError): Response {
+/** Map a parse-time error onto the 400 Problem. */
+function invalidRequest(options: CreateHandlersOptions, error: FilterError): Response {
+  const detail = error.kind === 'invalid-value' ? error.detail : `${error.parameter} is invalid`;
   const body: ProblemBody = {
-    type: 'urn:mi-bolt:problem:validation-failed',
-    title: 'A kérés nem felel meg az elfogadható formátumnak.',
+    type: 'urn:mi-bolt:problem:invalid-request',
+    title: 'Invalid request',
     status: 400,
-    code: 'VALIDATION_FAILED',
-    detail: error.detail,
+    code: 'INVALID_REQUEST',
+    detail,
     traceId: traceId(options),
-    fieldErrors: [{ path: error.field, message: error.detail }],
+    fieldErrors: [],
+    params: { parameter: error.parameter },
   };
   return HttpResponse.json(body, {
     status: 400,
@@ -120,16 +99,17 @@ function validationProblem(options: CreateHandlersOptions, error: FilterParseErr
 function notFoundProblem(
   options: CreateHandlersOptions,
   detail: string,
-  code: 'NOT_FOUND',
+  params: Readonly<Record<string, unknown>>,
 ): Response {
   const body: ProblemBody = {
     type: 'urn:mi-bolt:problem:not-found',
-    title: 'A kért végpont vagy erőforrás nem található.',
+    title: 'Resource not found',
     status: 404,
-    code,
+    code: 'NOT_FOUND',
     detail,
     traceId: traceId(options),
     fieldErrors: [],
+    params,
   };
   return HttpResponse.json(body, {
     status: 404,
@@ -137,109 +117,211 @@ function notFoundProblem(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Default variant selection + ProductSummary assembly
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a copy of `product` with `defaultVariant` replaced by
- * `replacement`. AC02 requires the returned summary to advertise the
- * CHEAPEST MATCHING variant as its default; the underlying fixture
- * product stays untouched so `getProduct` keeps the original default.
- */
-function withDefaultVariant(product: Product, replacement: Variant): ProductSummary {
-  return {
-    id: product.id,
-    slug: product.slug,
-    brand: product.brand,
-    name: product.name,
-    highlights: product.highlights,
-    defaultVariant: replacement,
-    is5g: product.is5g,
-    isDemo: product.isDemo,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Handler factory
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the catalog products currently held in the repository.
- * The bootstrap (browser or node entry) is responsible for calling
- * `repository.loadProducts(...)` so this file stays free of any I/O
- * or Node-only imports. Tests do the same: each case seeds its own
- * repository before wiring the handlers.
- */
-export function listCatalogProducts(options: CreateHandlersOptions): readonly Product[] {
-  return options.repository.listProducts();
-}
-
-function buildListResponse(
-  options: CreateHandlersOptions,
+/** Apply the filter, sort, featured cap and pagination in one pass. */
+function buildProductPage(
+  store: CatalogStore,
   filter: CatalogFilter,
-  products: readonly Product[],
-  matches: readonly ProductMatch[],
-): Response {
-  const pageSize: 12 | 24 = filter.pageSize;
-  const page = filter.page;
-  const paged = paginateMatches(matches, page, pageSize);
-  if (paged.total > 0 && paged.items.length === 0) {
-    return notFoundProblem(
-      options,
-      'A kért oldal kívül esik az eredmények tartományán.',
-      'NOT_FOUND',
-    );
-  }
-  const facets = buildFacets(products, filter, DEMO_CONFIG.featuredSlugs);
-  const body: ProductPage = {
-    items: paged.items.map(({ product, matchingVariant }) =>
-      withDefaultVariant(product, matchingVariant),
-    ),
-    total: paged.total,
-    page: paged.page,
-    pageSize: paged.pageSize,
-    facets,
+): {
+  items: ReturnType<typeof toCatalogItem>[];
+  total: number;
+  totalPages: number;
+  page: number;
+  pageSize: 12 | 24;
+} {
+  const entries = store.listEntries();
+  const filtered = applyFilters(entries, filter);
+  const sorted = sortEntries(filtered, filter.sort, filter.q);
+  const capped = filter.featured === true ? sorted.slice(0, 4) : sorted;
+  const page = paginate(capped, filter.page, filter.pageSize);
+  return {
+    items: toCatalogItems(page.items),
+    total: page.total,
+    totalPages: page.totalPages,
+    page: filter.page,
+    pageSize: filter.pageSize,
   };
-  return HttpResponse.json(body);
 }
 
-/**
- * Public handler factory. The returned list is what
- * `registerBusinessHandlers` will hand to the T05 dispatcher shell.
- */
-export function buildCatalogHandlers(options: CreateHandlersOptions): readonly RequestHandler[] {
-  // MSW 2.x in the browser resolves relative paths against
-  // `location.href`, so a literal `/api/v1/...` pattern matches
-  // the page's actual origin (e.g. http://127.0.0.1:4204). The
-  // cart / checkout handlers use the same pattern.
-  const products = listCatalogProducts(options);
-
-  const getConfig = http.get(`*/api/v1/config`, () => HttpResponse.json(DEMO_CONFIG));
-
-  const listProducts = http.get(`*/api/v1/products`, ({ request }) => {
+/** Build the `listProducts` handler. */
+function listProductsHandler(options: CreateHandlersOptions) {
+  return http.get('*/api/v1/products', ({ request }) => {
     const url = new URL(request.url);
-    const parsed = parseCatalogFilter(url.searchParams);
-    if (!parsed.ok) {
-      return validationProblem(options, parsed.error);
-    }
-    const matches = filterProducts(products, parsed.value, DEMO_CONFIG.featuredSlugs);
-    return buildListResponse(options, parsed.value, products, matches);
+    const parsed = parseListProductsParams(url.searchParams);
+    if (!parsed.ok) return invalidRequest(options, parsed.error);
+    const store = requireStore();
+    const page = buildProductPage(store, parsed.filter);
+    const facets = buildFacets(store.listEntries(), parsed.filter);
+    const body = {
+      items: page.items,
+      total: page.total,
+      page: page.page,
+      pageSize: page.pageSize,
+      totalPages: page.totalPages,
+      facets,
+    };
+    return HttpResponse.json(body);
   });
+}
 
-  const getProduct = http.get(`*/api/v1/products/:slug`, ({ params }) => {
+/** Build the `getProduct` handler. */
+function getProductHandler(options: CreateHandlersOptions) {
+  return http.get('*/api/v1/products/:slug', ({ params }) => {
     const slug = String(params['slug']);
-    const product = options.repository.getProductBySlug(slug);
-    return product !== undefined
-      ? HttpResponse.json(product)
-      : notFoundProblem(options, `Ismeretlen termék: ${slug}.`, 'NOT_FOUND');
+    const store = requireStore();
+    const product = store.getProduct(slug);
+    if (!product) {
+      return notFoundProblem(options, 'product not found', { slug });
+    }
+    return HttpResponse.json(product);
   });
+}
 
-  return [getConfig, listProducts, getProduct];
+/** Build the `listRelatedProducts` handler. */
+function listRelatedProductsHandler(options: CreateHandlersOptions) {
+  return http.get('*/api/v1/products/:slug/related', ({ params }) => {
+    const slug = String(params['slug']);
+    const store = requireStore();
+    const subject = store.getProduct(slug);
+    if (!subject) {
+      return notFoundProblem(options, 'product not found', { slug });
+    }
+    const items = relatedItems(store, slug);
+    return HttpResponse.json(items);
+  });
+}
+
+/** Pick up to 4 related products for the subject slug. */
+function relatedItems(store: CatalogStore, subjectSlug: string) {
+  const subject = store.getProduct(subjectSlug);
+  if (!subject) return [];
+  const subjectBrand = subject.brand;
+  const subjectStorages = new Set<number>();
+  for (const variant of subject.variants) {
+    subjectStorages.add(variant.storageGb);
+  }
+
+  const candidates = store.listProducts().filter((p) => p.slug !== subjectSlug);
+
+  const rankAndIdSort = (
+    a: (typeof candidates)[number],
+    b: (typeof candidates)[number],
+  ): number => {
+    const ra = store.getRanking(a.slug)?.rank ?? 0;
+    const rb = store.getRanking(b.slug)?.rank ?? 0;
+    if (ra !== rb) return ra - rb;
+    const na = Number(a.id);
+    const nb = Number(b.id);
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+    return a.slug.localeCompare(b.slug);
+  };
+
+  const sameBrand = candidates.filter((p) => p.brand === subjectBrand).sort(rankAndIdSort);
+  const sameStorage = candidates
+    .filter(
+      (p) => p.brand !== subjectBrand && p.variants.some((v) => subjectStorages.has(v.storageGb)),
+    )
+    .sort(rankAndIdSort);
+  const merged = [...sameBrand, ...sameStorage];
+  const out = [];
+  const seen = new Set<string>();
+  for (const product of merged) {
+    if (seen.has(product.slug)) continue;
+    seen.add(product.slug);
+    const entry = pickMinimumEntry(store, product.slug);
+    if (entry) out.push(entry);
+    if (out.length === 4) break;
+  }
+  return out;
+}
+
+/** Pick the (product, min storage) entry with no filters applied. */
+function pickMinimumEntry(store: CatalogStore, slug: string) {
+  const entries = store
+    .listEntries()
+    .filter((e) => e.product.slug === slug)
+    .sort((a, b) => a.storageGb - b.storageGb);
+  const entry = entries.at(0);
+  if (entry === undefined) {
+    return null;
+  }
+  return toCatalogItem(entry);
+}
+
+/** Build the `getMedia` handler. The loader is injected so the spec can stub it. */
+export function buildMediaHandler(
+  options: CreateHandlersOptions,
+  loader: MediaLoader = defaultMediaLoader,
+): RequestHandler {
+  return http.get('*/api/v1/media/:imageId', async ({ params }) => {
+    const imageId = String(params['imageId']);
+    const bytes = await loader(imageId);
+    if (!bytes) {
+      const body: ProblemBody = {
+        type: 'urn:mi-bolt:problem:not-found',
+        title: 'Resource not found',
+        status: 404,
+        code: 'NOT_FOUND',
+        detail: `image not found: ${imageId}`,
+        traceId: traceId(options),
+        fieldErrors: [],
+        params: { imageId },
+      };
+      return HttpResponse.json(body, {
+        status: 404,
+        headers: { 'content-type': PROBLEM_CONTENT_TYPE },
+      });
+    }
+    return new HttpResponse(bytes, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
+  });
+}
+
+/** Loader signature: returns bytes for the supplied media id or undefined. */
+export type MediaLoader = (imageId: string) => Promise<ArrayBuffer | undefined>;
+
+/**
+ * Default loader: asks the current document's origin for the file.
+ * Uses MSW's `bypass()` so the service worker does not intercept its
+ * own request and a loop is impossible.
+ */
+async function defaultMediaLoader(imageId: string): Promise<ArrayBuffer | undefined> {
+  const globalScope: unknown = globalThis;
+  const origin = isPlainRecord(globalScope) ? readOrigin(globalScope) : '';
+  if (origin.length === 0) return undefined;
+  const url = `${origin}/media/${imageId}.png`;
+  const request = new Request(url, { method: 'GET' });
+  const response = await fetch(request);
+  if (!response.ok) return undefined;
+  return response.arrayBuffer();
+}
+
+function readOrigin(scope: Record<string, unknown>): string {
+  const location = scope['location'];
+  if (!isPlainRecord(location)) return '';
+  const origin = location['origin'];
+  return typeof origin === 'string' ? origin : '';
+}
+
+/** Public handler factory. Hands the four handlers back to the registry. */
+export function buildCatalogHandlers(options: CreateHandlersOptions): readonly RequestHandler[] {
+  return [
+    listProductsHandler(options),
+    getProductHandler(options),
+    listRelatedProductsHandler(options),
+    buildMediaHandler(options),
+  ];
 }
 
 registerBusinessHandlers(buildCatalogHandlers);
 
-// Re-export so tests can import the same primitives the handlers use.
+/** Re-export for the spec: pagination helper. */
+export { paginate };
+export type { CatalogEntry, CatalogFixture };
 
-export { DEFAULT_PAGE_SIZE, type SortMode } from './filter-products';
+/** Type guard used by the browser / spec to import the JSON fixture. */
+export const isCatalogFixtureShape = isCatalogFixture;

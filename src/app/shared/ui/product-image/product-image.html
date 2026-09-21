@@ -1,37 +1,38 @@
 <div
   class="root relative block w-full rounded overflow-hidden"
-  [attr.aria-label]="decorative() ? null : image().alt"
+  [style.aspect-ratio]="aspectRatio()"
   [attr.data-status]="status()"
   [attr.role]="decorative() ? null : 'img'"
-  [style.aspect-ratio]="aspectRatio()"
+  [attr.aria-label]="decorative() ? null : image().alt"
 >
-  @switch (status()) {
-    @case ('loading') {
+  @if (status() === 'error') {
+    <div
+      class="fallback absolute inset-0 flex items-center justify-center"
+      aria-hidden="true"
+      data-testid="image-fallback"
+    >
+      <span class="fallback-mark font-bold tracking-wider">{{ initial() }}</span>
+    </div>
+  } @else {
+    <!-- The photo is in the DOM while loading too, because the browser
+         only fetches an `<img>` it can see; the skeleton is laid over it
+         until the `load` event arrives. -->
+    <img
+      class="photo object-contain"
+      [src]="resolvedSrc()"
+      [alt]="decorative() ? '' : image().alt"
+      decoding="async"
+      loading="lazy"
+      data-testid="image-photo"
+      (load)="onLoad()"
+      (error)="onError()"
+    />
+    @if (status() === 'loading') {
       <span
-        aria-hidden="true"
         class="skeleton absolute inset-0"
+        aria-hidden="true"
         data-testid="image-skeleton"
       ></span>
-    }
-    @case ('loaded') {
-      <img
-        class="photo object-contain"
-        data-testid="image-photo"
-        decoding="async"
-        loading="lazy"
-        [alt]="decorative() ? '' : image().alt"
-        [src]="resolvedSrc()"
-        (error)="onError()"
-      />
-    }
-    @case ('error') {
-      <div
-        aria-hidden="true"
-        class="fallback absolute inset-0 flex items-center justify-center"
-        data-testid="image-fallback"
-      >
-        <span class="fallback-mark font-bold tracking-wider">{{ initial() }}</span>
-      </div>
     }
   }
   @if (!decorative()) {

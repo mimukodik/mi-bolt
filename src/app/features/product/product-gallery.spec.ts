@@ -2,8 +2,7 @@
 import '@angular/compiler';
 
 import { Component, signal } from '@angular/core';
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ProductGallery } from './product-gallery';
@@ -69,11 +68,11 @@ const sampleImages: readonly Image[] = [
   template: `
     <app-product-gallery
       [images]="images()"
-      [productName]="productName()"
       [selectedImageId]="selectedImageId()"
+      [productName]="productName()"
       (imageSelected)="onImageSelected($event)"
       (zoomRequested)="onZoomRequested($event)"
-    />
+    ></app-product-gallery>
   `,
 })
 class GalleryTestHost {
@@ -97,33 +96,33 @@ class GalleryTestHost {
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
 
 function queryButton(parent: ParentNode, selector: string): HTMLButtonElement {
-  const element = parent.querySelector(selector);
-  if (!(element instanceof HTMLButtonElement)) {
-    throw new TypeError(`Expected HTMLButtonElement: ${selector}`);
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLButtonElement)) {
+    throw new Error(`Expected HTMLButtonElement: ${selector}`);
   }
-  return element;
+  return el;
 }
 
 function queryElement(parent: ParentNode, selector: string): HTMLElement {
-  const element = parent.querySelector(selector);
-  if (!(element instanceof HTMLElement)) {
-    throw new TypeError(`Expected HTMLElement: ${selector}`);
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLElement)) {
+    throw new Error(`Expected HTMLElement: ${selector}`);
   }
-  return element;
+  return el;
 }
 
 function queryImage(parent: ParentNode, selector: string): HTMLImageElement {
-  const element = parent.querySelector(selector);
-  if (!(element instanceof HTMLImageElement)) {
-    throw new TypeError(`Expected HTMLImageElement: ${selector}`);
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLImageElement)) {
+    throw new Error(`Expected HTMLImageElement: ${selector}`);
   }
-  return element;
+  return el;
 }
 
 /**
@@ -140,14 +139,14 @@ function imagePath(image: HTMLImageElement): string {
 }
 
 beforeEach(() => {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((element) => {
-    element.remove();
+  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
+    el.remove();
   });
 });
 
 afterEach(() => {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((element) => {
-    element.remove();
+  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
+    el.remove();
   });
   TestBed.resetTestingModule();
 });
@@ -179,13 +178,13 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
   it('T16-AC02: renders previous and next buttons that emit imageSelected with the adjacent id', async () => {
     const { fixture, host, root } = await createHarness();
 
-    const previousButton = queryButton(root, '[data-testid="gallery-prev"]');
-    const nextButton = queryButton(root, '[data-testid="gallery-next"]');
-    expect(previousButton).not.toBeNull();
-    expect(nextButton).not.toBeNull();
+    const prevBtn = queryButton(root, '[data-testid="gallery-prev"]');
+    const nextBtn = queryButton(root, '[data-testid="gallery-next"]');
+    expect(prevBtn).not.toBeNull();
+    expect(nextBtn).not.toBeNull();
 
     // At the first image, next button advances to the second
-    nextButton.click();
+    nextBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -196,7 +195,7 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
     expect(imagePath(activePhoto)).toBe('/assets/products/demo-one-back.webp');
 
     // From the second image, prev button returns to the first
-    previousButton.click();
+    prevBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -210,11 +209,11 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
   it('T16-AC02: disables prev button at the first image and does not wrap backward', async () => {
     const { fixture, host, root } = await createHarness();
 
-    const previousButton = queryButton(root, '[data-testid="gallery-prev"]');
-    expect(previousButton.disabled).toBe(true);
+    const prevBtn = queryButton(root, '[data-testid="gallery-prev"]');
+    expect(prevBtn.disabled).toBe(true);
     expect(host.selectedImageId()).toBe('img-front');
 
-    previousButton.click();
+    prevBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -229,10 +228,10 @@ describe('T16-AC02 product-gallery prev/next navigation and boundaries', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const nextButton = queryButton(root, '[data-testid="gallery-next"]');
-    expect(nextButton.disabled).toBe(true);
+    const nextBtn = queryButton(root, '[data-testid="gallery-next"]');
+    expect(nextBtn.disabled).toBe(true);
 
-    nextButton.click();
+    nextBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -257,14 +256,14 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
     expect(thumb2.getAttribute('aria-current')).toBe('false');
     expect(thumb0.getAttribute('aria-label')).toBe('Ugrás a(z) 1. képre');
 
-    for (const [index, image] of sampleImages.entries()) {
+    sampleImages.forEach((image, index) => {
       const thumb = queryButton(root, `[data-testid="gallery-thumb-${String(index)}"]`);
       const img = queryImage(thumb, 'img.thumb-img');
       expect(img.getAttribute('src')).toBe(image.src);
       expect(thumb.querySelector('.thumb-mark')).toBeNull();
       expect(thumb.textContent).not.toContain(String(index + 1));
       expect(thumb.getAttribute('aria-current')).toBe(index === 0 ? 'true' : 'false');
-    }
+    });
   });
 
   it('T16-AC02: renders each thumbnail image with explicit width and height attributes from the model', async () => {
@@ -300,21 +299,21 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
   it('T16-AC02: displays image count formatted in current / total format with polite live region', async () => {
     const { fixture, host, root } = await createHarness();
 
-    const countElement = queryElement(root, '[data-testid="gallery-count"]');
-    expect(countElement.getAttribute('aria-live')).toBe('polite');
-    expect(countElement.textContent.trim()).toBe('1 / 3');
+    const countEl = queryElement(root, '[data-testid="gallery-count"]');
+    expect(countEl.getAttribute('aria-live')).toBe('polite');
+    expect(countEl.textContent.trim()).toBe('1 / 3');
 
     host.selectedImageId.set('img-back');
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(countElement.textContent.trim()).toBe('2 / 3');
+    expect(countEl.textContent.trim()).toBe('2 / 3');
 
     host.selectedImageId.set('img-side');
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(countElement.textContent.trim()).toBe('3 / 3');
+    expect(countEl.textContent.trim()).toBe('3 / 3');
   });
 });
 
@@ -343,11 +342,11 @@ describe('T16-AC02 product-gallery zoom dialog', () => {
   it('T16-AC02: zoom button opens AccessibleDialog with role=dialog, aria-modal=true, and emits zoomRequested with the current id', async () => {
     const { fixture, host, root } = await createHarness();
 
-    const zoomButton = queryButton(root, '[data-testid="gallery-zoom-open"]');
-    expect(zoomButton).not.toBeNull();
+    const zoomBtn = queryButton(root, '[data-testid="gallery-zoom-open"]');
+    expect(zoomBtn).not.toBeNull();
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
 
-    zoomButton.click();
+    zoomBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -362,14 +361,14 @@ describe('T16-AC02 product-gallery zoom dialog', () => {
   it('T16-AC02: dialog close button closes the zoom dialog (closing is internal — no output for it)', async () => {
     const { fixture, host, root } = await createHarness();
 
-    const zoomButton = queryButton(root, '[data-testid="gallery-zoom-open"]');
-    zoomButton.click();
+    const zoomBtn = queryButton(root, '[data-testid="gallery-zoom-open"]');
+    zoomBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
     const dialogClose = document.body.querySelector('[data-testid="dialog-close"]');
     if (!(dialogClose instanceof HTMLButtonElement)) {
-      throw new TypeError('Expected HTMLButtonElement for dialog-close');
+      throw new Error('Expected HTMLButtonElement for dialog-close');
     }
 
     dialogClose.click();
@@ -427,8 +426,8 @@ describe('T16-AC02 product-gallery keyboard navigation', () => {
   it('T16-AC02: Escape key closes the zoom dialog when open', async () => {
     const { fixture, host, root } = await createHarness();
 
-    const zoomButton = queryButton(root, '[data-testid="gallery-zoom-open"]');
-    zoomButton.click();
+    const zoomBtn = queryButton(root, '[data-testid="gallery-zoom-open"]');
+    zoomBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -485,9 +484,9 @@ describe('T16-AC05 product-gallery has no 3D surface', () => {
 
     expect(root.querySelector('canvas')).toBeNull();
     const buttons = root.querySelectorAll('button');
-    buttons.forEach((button) => {
-      const label = (button.getAttribute('aria-label') ?? '').toLowerCase();
-      const text = button.textContent.toLowerCase();
+    buttons.forEach((btn) => {
+      const label = (btn.getAttribute('aria-label') ?? '').toLowerCase();
+      const text = btn.textContent.toLowerCase();
       expect(label).not.toContain('3d');
       expect(text).not.toContain('3d');
     });

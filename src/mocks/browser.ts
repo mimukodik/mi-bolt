@@ -35,12 +35,16 @@ import { environment } from '../environments/environment';
 // so the catalog endpoint returns the demo data instead of an empty
 // items array.
 import productsFixture from '../../docs/api/fixtures/products.json';
+import catalogFixture from '../../docs/api/fixtures/catalog.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
-import { Repository as Repo, type Product } from './repository';
+import { Repository, type Product } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
 import { isSameOriginNonBusiness } from './business-route-predicates';
+import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
+import { cartStore } from './cart/cart.handlers';
+import { checkoutStore, orderStore } from './checkout/checkout.handlers';
 
 // Force-load the slice handler modules so their module-level
 // registerBusinessHandlers(...) calls populate the create-handlers
@@ -61,12 +65,12 @@ export const worker = setupWorker();
  */
 const PRODUCTION_SCENARIO_NAME = 'production';
 
-function loadCatalogFixture(repo: Repo, scenarioName: string): void {
+function loadCatalogProducts(repository: Repository, scenarioName: string): void {
   if (scenarioName === PRODUCTION_SCENARIO_NAME) {
-    repo.loadProducts([]);
+    repository.loadProducts([]);
     return;
   }
-  repo.loadProducts(productsFixture as readonly Product[]);
+  repository.loadProducts(productsFixture as readonly Product[]);
 }
 
 /**
@@ -78,17 +82,29 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const scenario = parseScenarioFromLocation();
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
-  const repo = new Repo(scenario, ids, clock);
-  loadCatalogFixture(repo, scenario.name);
+  const repository = new Repository(scenario, ids, clock);
+  loadCatalogProducts(repository, scenario.name);
+  if (isCatalogFixtureShape(catalogFixture)) {
+    loadCatalogFixture(catalogFixture);
+  }
   const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
   return {
-    repository: repo,
+    repository,
     clock,
     ids,
     scenario,
     apiRoot: '/api/v1',
     persist: (sessionId: string) => {
-      persistence.save(scenario.name, buildSnapshot(repo, sessionId, Date.parse(clock.now())));
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (!cart || !checkout || !order) {
+        throw new Error('[browser] persist called before the three stores were initialised');
+      }
+      persistence.save(
+        scenario.name,
+        buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now())),
+      );
     },
   };
 }
@@ -188,12 +204,7 @@ export function buildBrowserHandlers(
   snapshot: MockSnapshot | null = null,
 ): ReturnType<typeof createHandlers> {
   const options = resolveBrowserHandlerOptions();
-  if (snapshot?.cart !== undefined) {
-    options.repository.loadPersistedCart(snapshot.cart, snapshot.simulatedSessionId);
-  }
-  if (snapshot?.receipts !== undefined) {
-    options.repository.loadPersistedOrders(snapshot.receipts, snapshot.simulatedSessionId);
-  }
+  options.snapshot = snapshot;
   // The demo configuration adds the dispatcher shell so a misrouted
   // curl does not produce a stack trace inside the page.
   return createHandlers(options);

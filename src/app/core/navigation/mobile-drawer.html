@@ -1,10 +1,10 @@
 <app-accessible-dialog
-  [label]="label()"
   [opened]="opened()"
+  [label]="label()"
   [restoreTarget]="triggerEl() ?? null"
   (closed)="closed.emit()"
 >
-  <nav aria-label="Mobil navigáció" class="drawer-nav flex flex-col gap-2">
-    <ng-content />
+  <nav class="drawer-nav flex flex-col gap-2" aria-label="Mobil navigáció">
+    <ng-content></ng-content>
   </nav>
 </app-accessible-dialog>

@@ -10,21 +10,17 @@ import { RequestBuilder } from '../../request-builder';
 import { Cart } from '../../models/cart';
 
 export interface RemoveCartItem$Params {
-  cartId: string;
 
 /**
- * Key scoped to method + path + demo session, retained 24 hours. Same key and normalized body returns original result BEFORE current-version checks. Different body yields 409.
+ * Globally unique variant identifier. A variant is always exactly one cart line, so no separate line identifier exists.
  */
-  'Idempotency-Key': string;
-  itemId: string;
+  variantId: string;
 }
 
 export function removeCartItem(http: HttpClient, rootUrl: string, params: RemoveCartItem$Params, context?: HttpContext): Observable<StrictHttpResponse<Cart>> {
   const rb = new RequestBuilder(rootUrl, removeCartItem.PATH, 'delete');
   if (params) {
-    rb.path('cartId', params.cartId, {});
-    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
-    rb.path('itemId', params.itemId, {});
+    rb.path('variantId', params.variantId, {});
   }
 
   return http.request(
@@ -37,4 +33,4 @@ export function removeCartItem(http: HttpClient, rootUrl: string, params: Remove
   );
 }
 
-removeCartItem.PATH = '/carts/{cartId}/items/{itemId}';
+removeCartItem.PATH = '/cart/items/{variantId}';

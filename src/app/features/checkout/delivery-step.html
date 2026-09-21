@@ -1,5 +1,8 @@
-<section class="delivery" data-testid="delivery-step">
-  <app-checkout-step-header current="Szállítás" [crumbs]="crumbs">
+<section
+  class="delivery flex flex-col gap-(--space-6) text-(color:--color-text-primary)"
+  data-testid="delivery-step"
+>
+  <app-checkout-step-header [crumbs]="crumbs" current="Szállítás">
     <h1
       class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
     >
@@ -12,47 +15,75 @@
     data-testid="delivery-layout"
   >
     <div class="column flex flex-col gap-(--space-5) min-w-0">
-      <fieldset class="options" data-testid="delivery-options">
-        <legend class="legend">Szállítási mód</legend>
+      <fieldset
+        class="options m-0 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card)"
+        data-testid="delivery-options"
+      >
+        <legend
+          class="legend px-(--space-2) text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+        >
+          Szállítási mód
+        </legend>
 
-        <ul class="option-list" role="list">
+        <ul
+          class="option-list m-0 mt-(--space-3) p-0 list-none flex flex-col gap-(--space-3)"
+          role="list"
+        >
           @for (option of options().deliveryOptions; track option.id) {
             <li
-              class="option"
-              data-testid="delivery-option"
+              class="option rounded-(--radius-card) border transition-colors"
               [class.is-active]="option.id === selectedOptionId()"
+              [class.is-unavailable]="!option.available"
+              data-testid="delivery-option"
             >
-              <label class="option-label" [attr.for]="radioId(option.id)">
+              <label
+                class="option-label flex items-start gap-(--space-3) p-(--space-4)"
+                [class.cursor-pointer]="option.available"
+                [attr.for]="radioId(option.id)"
+              >
                 <input
-                  class="radio"
-                  data-testid="delivery-radio"
-                  name="deliveryOption"
                   type="radio"
+                  class="radio w-5 h-5 mt-1 accent-(--color-brand-ink)"
+                  [id]="radioId(option.id)"
+                  name="deliveryOption"
+                  [value]="option.id"
+                  [checked]="option.id === selectedOptionId()"
+                  [disabled]="!option.available"
                   [attr.aria-checked]="option.id === selectedOptionId() ? 'true' : 'false'"
                   [attr.aria-describedby]="optionDescId(option.id)"
-                  [checked]="option.id === selectedOptionId()"
-                  [id]="radioId(option.id)"
-                  [value]="option.id"
-                  (change)="onOptionSelected(option.id)"
+                  (change)="onOptionSelected(option)"
+                  data-testid="delivery-radio"
                 />
-                <span class="option-body">
-                  <span class="option-row">
-                    <span class="option-title">{{ option.label }}</span>
-                    <span class="option-fee">
-                      <app-price-block
-                        label="Szállítási díj"
-                        status="success"
-                        [money]="feeFor(option)"
-                      />
-                    </span>
+                <span class="option-body flex flex-col gap-(--space-2) min-w-0">
+                  <span class="option-row flex items-center justify-between gap-(--space-3)">
+                    <span
+                      class="option-title text-(length:--type-body) [font-weight:var(--weight-medium)]"
+                      >{{ option.label }}</span
+                    >
+                    <app-price-block
+                      [money]="option.fee"
+                      label="Szállítási díj"
+                      status="success"
+                    ></app-price-block>
                   </span>
-                  <span class="option-description" [id]="optionDescId(option.id)">
+                  <span
+                    class="option-description text-(length:--type-helper) text-(color:--color-text-secondary) leading-(--line-height-body)"
+                    [id]="optionDescId(option.id)"
+                  >
                     {{ option.description }}
                   </span>
+                  @if (!option.available) {
+                    <span
+                      class="option-unavailable text-(length:--type-helper) text-(color:--color-status-error)"
+                      data-testid="delivery-unavailable-reason"
+                    >
+                      {{ unavailableSentence(option.unavailableReason) }}
+                    </span>
+                  }
                   @if (option.id === selectedOptionId()) {
                     <span
+                      class="option-badge self-start inline-flex items-center px-(--space-2) py-(--space-1) rounded-full [font-weight:var(--weight-bold)]"
                       aria-live="polite"
-                      class="option-badge"
                       data-testid="delivery-selected-badge"
                     >
                       Kiválasztva
@@ -67,79 +98,166 @@
 
       @if (requiresAddress()) {
         <app-address-form
-          [city]="city()"
-          [line1]="line1()"
-          [line2]="line2()"
           [postalCode]="postalCode()"
-          [(addressChanged)]="addressSnapshot"
-          [(submitted)]="addressSubmitted"
-          (cityChange)="setCity($event)"
-          (line1Change)="setLine1($event)"
-          (line2Change)="setLine2($event)"
           (postalCodeChange)="setPostalCode($event)"
-        />
+          [city]="city()"
+          (cityChange)="setCity($event)"
+          [line1]="line1()"
+          (line1Change)="setLine1($event)"
+          [line2]="line2()"
+          (line2Change)="setLine2($event)"
+          [(submitted)]="addressSubmitted"
+        ></app-address-form>
       } @else {
-        <p class="pickup-notice" data-testid="pickup-notice" role="note">
+        <p
+          class="pickup-notice m-0 p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) text-(length:--type-helper) text-(color:--color-text-secondary) leading-(--line-height-body)"
+          role="note"
+          data-testid="pickup-notice"
+        >
           A virtuális átvétel egy demó szállítási opció: nincs valós üzletcím, a rendelés a pénztár
           demófolyamatán belül készül, valós átvételi pont nélkül.
         </p>
       }
 
       <app-payment-method-selector
+        [options]="options().paymentMethods"
         [value]="paymentMethod()"
-        (paymentChanged)="onPaymentChanged($event)"
         (valueChange)="onPaymentChanged($event)"
-      />
+        (paymentChanged)="onPaymentChanged($event)"
+      ></app-payment-method-selector>
+
+      <fieldset
+        class="billing m-0 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) flex flex-col gap-(--space-4)"
+        data-testid="billing-block"
+      >
+        <legend
+          class="legend px-(--space-2) text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+        >
+          Számlázási adatok
+        </legend>
+
+        @if (showBillingCheckbox()) {
+          <label
+            class="billing-checkbox-label flex items-center gap-(--space-3) cursor-pointer text-(length:--type-body)"
+            data-testid="billing-same-as-delivery-label"
+          >
+            <input
+              type="checkbox"
+              class="checkbox w-5 h-5 accent-(--color-brand-ink)"
+              [checked]="billingSameAsDelivery()"
+              (change)="onBillingSameAsDeliveryChanged($event)"
+              data-testid="billing-same-as-delivery"
+            />
+            A számlázási cím megegyezik a szállítási címmel
+          </label>
+        }
+
+        <label class="field flex flex-col gap-(--space-2) min-w-0" data-testid="billing-name-field">
+          <span class="label">Név</span>
+          <input
+            type="text"
+            autocomplete="name"
+            class="input w-full min-h-10 px-(--space-3) rounded font-inherit border border-(--color-border-control)"
+            [attr.aria-invalid]="billingNameInvalid() ? 'true' : 'false'"
+            [attr.aria-describedby]="'billing-name-message'"
+            [value]="billingName()"
+            (input)="onBillingNameInput($event)"
+            (blur)="markBillingNameTouched()"
+            data-testid="billing-name-input"
+          />
+          <app-form-field-message
+            fieldId="billing-name"
+            [errors]="billingNameErrors()"
+            [touched]="billingNameTouched()"
+          ></app-form-field-message>
+        </label>
+
+        @if (showBillingAddressFields()) {
+          <app-address-form
+            [postalCode]="billingPostalCode()"
+            (postalCodeChange)="setBillingPostalCode($event)"
+            [city]="billingCity()"
+            (cityChange)="setBillingCity($event)"
+            [line1]="billingLine1()"
+            (line1Change)="setBillingLine1($event)"
+            [line2]="billingLine2()"
+            (line2Change)="setBillingLine2($event)"
+            pointerBase="/billing/address"
+            [legend]="null"
+            data-testid="billing-address-form"
+          ></app-address-form>
+        }
+      </fieldset>
     </div>
 
     <aside
+      class="summary flex flex-col gap-(--space-4) p-(--space-5) sm:p-(--space-6) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
       aria-label="Átvételi és fizetési összegzés"
-      class="summary"
       data-testid="delivery-summary"
     >
-      <h2 class="summary-title">Átvétel és fizetés összesítése</h2>
-      <dl class="summary-rows">
-        <div class="summary-row" data-testid="summary-row-fee">
-          <dt>Szállítási díj</dt>
-          <dd>
+      <h2
+        class="summary-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+      >
+        Átvétel és fizetés összesítése
+      </h2>
+      <dl class="summary-rows flex flex-col gap-(--space-3) m-0">
+        <div
+          class="summary-row grid grid-cols-[1fr_auto] gap-(--space-3) items-baseline"
+          data-testid="summary-row-fee"
+        >
+          <dt class="m-0 text-(length:--type-helper) text-(color:--color-text-secondary)">
+            Szállítási díj
+          </dt>
+          <dd class="m-0 text-(length:--type-body)">
             <app-price-block
-              status="success"
-              [label]="deliveryLabel()"
               [money]="currentShippingFee()"
-            />
+              [label]="deliveryLabel()"
+              status="success"
+            ></app-price-block>
           </dd>
         </div>
-        <div class="summary-row" data-testid="summary-row-payment">
-          <dt>Fizetési mód</dt>
-          <dd class="payment-value">{{ paymentLabel() }}</dd>
+        <div
+          class="summary-row grid grid-cols-[1fr_auto] gap-(--space-3) items-baseline"
+          data-testid="summary-row-payment"
+        >
+          <dt class="m-0 text-(length:--type-helper) text-(color:--color-text-secondary)">
+            Fizetési mód
+          </dt>
+          <dd
+            class="payment-value m-0 text-(length:--type-body) [font-weight:var(--weight-medium)]"
+          >
+            {{ paymentLabel() }}
+          </dd>
         </div>
       </dl>
 
       @if (saveState() === 'error') {
         <app-status-message
-          data-testid="delivery-save-failure"
-          severity="error"
           [message]="saveErrorMessage"
+          severity="error"
           [persistent]="true"
-        />
+          data-testid="delivery-save-failure"
+        ></app-status-message>
         <app-button
-          data-testid="delivery-retry"
-          label="Újrapróbálom"
           variant="secondary"
+          label="Újrapróbálom"
           (pressed)="onRetry()"
-        />
+          data-testid="delivery-retry"
+        ></app-button>
       }
 
-      <div class="actions">
+      <div
+        class="actions flex flex-col gap-(--space-3) sm:flex-row sm:flex-wrap sm:justify-between"
+      >
         <app-button
-          data-testid="delivery-confirm"
-          loadingLabel="Mentés…"
           variant="primary"
-          [disabled]="!canConfirm()"
           [label]="confirmLabel()"
+          loadingLabel="Mentés…"
           [loading]="saveState() === 'loading'"
+          [disabled]="!canConfirm()"
           (pressed)="onConfirm()"
-        />
+          data-testid="delivery-confirm"
+        ></app-button>
       </div>
     </aside>
   </div>

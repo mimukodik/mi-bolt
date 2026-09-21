@@ -2,7 +2,7 @@
   <span class="label">{{ label() }}</span>
   @switch (status()) {
     @case ('loading') {
-      <span aria-hidden="true" class="skeleton inline-block" data-testid="price-skeleton"></span>
+      <span class="skeleton inline-block" aria-hidden="true" data-testid="price-skeleton"></span>
       <span class="sr-only absolute w-px h-px overflow-hidden">Ár betöltése…</span>
     }
     @case ('success') {
@@ -11,7 +11,7 @@
           <span class="amount font-bold leading-tight tabular-nums" data-testid="price-amount">{{
             amountText()
           }}</span>
-          <span aria-hidden="true" class="currency ml-1">Ft</span>
+          <span class="currency ml-1" aria-hidden="true">Ft</span>
         </span>
       } @else {
         <span class="amount amount--error font-medium" data-testid="price-empty">—</span>

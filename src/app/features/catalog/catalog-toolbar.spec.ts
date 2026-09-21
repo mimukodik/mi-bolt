@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 
 import { CatalogToolbar } from './catalog-toolbar';
@@ -10,15 +9,15 @@ import type { AsyncStatus } from '../../shared/types/async-status';
   imports: [CatalogToolbar],
   template: `
     <app-catalog-toolbar
-      [appliedCount]="appliedCount()"
-      [pageSize]="pageSize()"
-      [sort]="sort()"
-      [status]="status()"
       [total]="total()"
-      (openFilters)="openCount.set(openCount() + 1)"
-      (pageSizeChanged)="lastPageSize.set($event)"
+      [sort]="sort()"
+      [pageSize]="pageSize()"
+      [status]="status()"
+      [appliedCount]="appliedCount()"
       (sortChanged)="lastSort.set($event)"
-    />
+      (pageSizeChanged)="lastPageSize.set($event)"
+      (openFilters)="openCount.set(openCount() + 1)"
+    ></app-catalog-toolbar>
   `,
 })
 class HostComponent {
@@ -58,7 +57,7 @@ describe('CatalogToolbar', () => {
     const select = getNativeElement(fixture).querySelector<HTMLSelectElement>(
       '[data-testid="catalog-sort"]',
     );
-    if (select === null) throw new Error('Expected select');
+    if (!select) throw new Error('Expected select');
     select.value = 'price_asc';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
@@ -70,7 +69,7 @@ describe('CatalogToolbar', () => {
     const select = getNativeElement(fixture).querySelector<HTMLSelectElement>(
       '[data-testid="catalog-page-size"]',
     );
-    if (select === null) throw new Error('Expected select');
+    if (!select) throw new Error('Expected select');
     select.value = '24';
     select.dispatchEvent(new Event('change'));
     fixture.detectChanges();
@@ -123,5 +122,29 @@ describe('CatalogToolbar', () => {
     toolbar.drawerExpanded.set(true);
     fixture.detectChanges();
     expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('renders eight sort options in SORT_MODES order (MIM-210)', () => {
+    const { fixture } = setup();
+    const options = getNativeElement(fixture).querySelectorAll<HTMLOptionElement>(
+      '[data-testid="catalog-sort"] option',
+    );
+    const values = Array.from(options).map((o) => o.value);
+    expect(values).toEqual([
+      'recommended',
+      'newest',
+      'oldest',
+      'popularity',
+      'price_asc',
+      'price_desc',
+      'name_asc',
+      'name_desc',
+    ]);
+    const labels = Array.from(options).map((o) => o.textContent.trim());
+    expect(labels[0]).toBe('Ajánlott sorrend');
+    expect(labels[2]).toBe('Legrégebbi elöl');
+    expect(labels[3]).toBe('Népszerűség szerint');
+    expect(labels[6]).toBe('Név szerint (A–Z)');
+    expect(labels[7]).toBe('Név szerint (Z–A)');
   });
 });

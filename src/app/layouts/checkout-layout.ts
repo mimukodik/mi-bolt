@@ -38,14 +38,10 @@ export class CheckoutLayout {
   private readonly routeFocus = inject(RouteFocusService);
   private readonly destroyRef = inject(DestroyRef);
 
-  /**
-  Active step in the flow, declared on the route itself (see above).
-  */
+  /** Active step in the flow, declared on the route itself (see above). */
   readonly step = input.required<CheckoutStep>();
 
-  /**
-  Ordered step labels for the indicator.
-  */
+  /** Ordered step labels for the indicator. */
   readonly steps: readonly { key: CheckoutStep; label: string }[] = [
     { key: 'cart', label: 'Kosár' },
     { key: 'contact', label: 'Adatok' },
@@ -63,12 +59,11 @@ export class CheckoutLayout {
     this.steps.findIndex((item) => item.key === this.step()),
   );
 
-  /**
-  True when the step at `index` is behind the active one.
-  */
+  /** True when the step at `index` is behind the active one. */
   isStepComplete(index: number): boolean {
     const current = this.currentIndex();
-    return current === -1 ? true : index < current;
+    if (current === -1) return true;
+    return index < current;
   }
 
   constructor() {

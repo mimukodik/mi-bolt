@@ -15,25 +15,22 @@
 // `Idempotency-Key` is also request-specific and is left to callers because
 // retry-safety requires the same caller to reuse the same key for retries.
 
-import type {
+import {
+  HttpContext,
+  HttpContextToken,
   HttpEvent,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http';
-import { HttpContext, HttpContextToken } from '@angular/common/http';
-import type { Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 
 const DEMO_SESSION_PATTERN = /^[a-zA-Z0-9_-]{8,80}$/;
 
-/**
-sessionStorage key holding the tab-scoped demo session id.
-*/
+/** sessionStorage key holding the tab-scoped demo session id. */
 const DEMO_SESSION_STORAGE_KEY = 'mi-bolt.demo-session';
 
-/**
-Cached id for this page. Resolved on the first intercepted request.
-*/
+/** Cached id for this page. Resolved on the first intercepted request. */
 let cachedSessionId: string | null = null;
 
 /**
@@ -91,14 +88,14 @@ export function withIfMatch(version: string | number): HttpContext {
 }
 
 export const demoSessionInterceptor: HttpInterceptorFn = (
-  request: HttpRequest<unknown>,
+  req: HttpRequest<unknown>,
   next: HttpHandlerFn,
 ): Observable<HttpEvent<unknown>> => {
-  const headers = request.headers.set('X-Demo-Session', currentSessionId());
-  const ifMatch = request.context.get(IF_MATCH_TOKEN);
+  const headers = req.headers.set('X-Demo-Session', currentSessionId());
+  const ifMatch = req.context.get(IF_MATCH_TOKEN);
   const finalHeaders =
     typeof ifMatch === 'string' ? headers.set('If-Match', quoteVersion(ifMatch)) : headers;
-  return next(request.clone({ headers: finalHeaders }));
+  return next(req.clone({ headers: finalHeaders }));
 };
 
 /**

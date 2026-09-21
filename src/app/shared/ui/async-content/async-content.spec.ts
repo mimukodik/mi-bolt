@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 
 import { AsyncContent } from './async-content';
@@ -10,9 +9,9 @@ import type { UiProblem } from '../../types/ui-problem';
   imports: [AsyncContent],
   template: `
     <app-async-content
-      [hasPrevious]="hasPrevious()"
-      [problem]="problem()"
       [status]="status()"
+      [problem]="problem()"
+      [hasPrevious]="hasPrevious()"
       (retryRequested)="retryCount.set(retryCount() + 1)"
     >
       <p data-testid="loaded-content">Loaded content</p>

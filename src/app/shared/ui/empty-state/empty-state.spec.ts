@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { EmptyState } from './empty-state';
 
@@ -7,12 +6,12 @@ import { EmptyState } from './empty-state';
   imports: [EmptyState],
   template: `
     <app-empty-state
+      [title]="title()"
+      [message]="message()"
       [actionLabel]="actionLabel()"
       [actionVariant]="actionVariant()"
-      [message]="message()"
-      [title]="title()"
       (actionRequested)="actionCount.set(actionCount() + 1)"
-    />
+    ></app-empty-state>
   `,
 })
 class HostComponent {
@@ -26,7 +25,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -55,11 +54,11 @@ describe('EmptyState primitive', () => {
 
   it('emits actionRequested when the action button is clicked', () => {
     const { fixture, host } = setup();
-    const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (button === null) {
+    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!btn) {
       throw new Error('Expected button');
     }
-    button.click();
+    btn.click();
     expect(host.actionCount()).toBe(1);
   });
 

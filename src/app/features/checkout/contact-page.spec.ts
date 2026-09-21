@@ -9,14 +9,26 @@
  * orchestration and the navigation on success.
  */
 
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CheckoutFacade } from './checkout.facade';
 import { ContactPage } from './contact-page';
 import { CONTACT_DRAFT_SAVER, type ContactDraftSaver } from './contact-step';
+
+import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+
+const ZERO = { amount: 0, currency: 'HUF' } as const;
+
+/** A draft whose contact section is filled, as `GET /checkout` returns it. */
+const SESSION_WITH_CONTACT: CheckoutSession = {
+  version: 3,
+  complete: false,
+  summary: { subtotal: ZERO, shippingFee: ZERO, paymentFee: ZERO, total: ZERO },
+  contact: { fullName: 'Teszt Elek', email: 'teszt.elek@pelda.hu', phone: '+36301234567' },
+};
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;
@@ -24,12 +36,26 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   throw new Error('Expected HTMLElement');
 }
 
-function createContactPage(saver: ContactDraftSaver): ComponentFixture<ContactPage> {
+/**
+ * `ContactPage` reads one member of the checkout facade, the `session`
+ * signal it seeds the form from, so the spec supplies exactly that
+ * member instead of standing up the real facade and its HTTP stack.
+ * The `satisfies` keeps the stub honest about the member's type.
+ */
+function provideSessionStub(session: CheckoutSession | null): Provider {
+  const stub = {
+    session: signal(session).asReadonly(),
+  } satisfies Pick<CheckoutFacade, 'session'>;
+  return { provide: CheckoutFacade, useValue: stub };
+}
+
+function createContactPage(saver: ContactDraftSaver, session: CheckoutSession | null = null) {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
       provideRouter([{ path: '**', component: ContactPage }]),
       { provide: CONTACT_DRAFT_SAVER, useValue: saver },
+      provideSessionStub(session),
     ],
   });
   const fixture = TestBed.createComponent(ContactPage);
@@ -50,6 +76,37 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     expect(fixture.componentInstance.saveState()).toBe('idle');
     const root = getRootElement(fixture);
     expect(root.querySelector<HTMLInputElement>('#contact-fullname-input')?.value).toBe('');
+  });
+
+  it('renders the contact section the checkout draft already carries, so a reload of /penztar/adatok keeps the saved values', () => {
+    const fixture = createContactPage(() => Promise.resolve({ ok: true }), SESSION_WITH_CONTACT);
+    const root = getRootElement(fixture);
+    expect(root.querySelector<HTMLInputElement>('#contact-fullname-input')?.value).toBe(
+      'Teszt Elek',
+    );
+    expect(root.querySelector<HTMLInputElement>('#contact-email-input')?.value).toBe(
+      'teszt.elek@pelda.hu',
+    );
+    expect(root.querySelector<HTMLInputElement>('#contact-phone-input')?.value).toBe(
+      '+36301234567',
+    );
+  });
+
+  it('opens the breadcrumb trail at Főoldal, the way the delivery and review steps do', () => {
+    const fixture = createContactPage(() => Promise.resolve({ ok: true }));
+    const root = getRootElement(fixture);
+
+    const crumbs = Array.from(root.querySelectorAll('nav.breadcrumbs a.breadcrumb')).map(
+      (anchor) => ({ label: anchor.textContent.trim(), href: anchor.getAttribute('href') }),
+    );
+
+    expect(crumbs).toEqual([
+      { label: 'Főoldal', href: '/' },
+      { label: 'Kosár', href: '/penztar/kosar' },
+    ]);
+    expect(root.querySelector('nav.breadcrumbs .breadcrumb.is-current')?.textContent.trim()).toBe(
+      'Adatok',
+    );
   });
 
   it('calls the injected CONTACT_DRAFT_SAVER with the normalized contact and navigates to /penztar/szallitas on success', async () => {

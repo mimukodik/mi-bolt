@@ -17,7 +17,7 @@ import { HeaderNav, type HeaderVariant } from './header-nav';
 
 describe('FIX-28: mobile search row is available outside the shop variant', () => {
   beforeEach(async () => {
-    document.body.replaceChildren();
+    document.body.innerHTML = '';
     TestBed.configureTestingModule({
       imports: [HeaderNav],
       providers: [provideRouter([]), provideZonelessChangeDetection()],

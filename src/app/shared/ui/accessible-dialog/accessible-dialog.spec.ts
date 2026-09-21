@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import { AccessibleDialog } from './accessible-dialog';
@@ -7,10 +6,10 @@ import { AccessibleDialog } from './accessible-dialog';
 @Component({
   imports: [AccessibleDialog, DialogModule],
   template: `
-    <button #trigger data-testid="dialog-trigger" type="button" (click)="open()">Open</button>
+    <button #trigger type="button" data-testid="dialog-trigger" (click)="open()">Open</button>
     <app-accessible-dialog
-      [label]="label()"
       [opened]="opened()"
+      [label]="label()"
       [restoreTarget]="triggerEl"
       (closed)="closedCount.set(closedCount() + 1)"
     >
@@ -34,10 +33,10 @@ class HostComponent {
 @Component({
   imports: [AccessibleDialog, DialogModule],
   template: `
-    <app-accessible-dialog [label]="label1()" [opened]="opened1()">
+    <app-accessible-dialog [opened]="opened1()" [label]="label1()">
       <p data-testid="dialog-1-body">Első tartalom</p>
     </app-accessible-dialog>
-    <app-accessible-dialog [label]="label2()" [opened]="opened2()">
+    <app-accessible-dialog [opened]="opened2()" [label]="label2()">
       <p data-testid="dialog-2-body">Második tartalom</p>
     </app-accessible-dialog>
   `,
@@ -52,7 +51,7 @@ class TwoDialogsHostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -63,22 +62,23 @@ interface ComponentWithStyles {
   };
 }
 
-function hasStyles(value: unknown): value is ComponentWithStyles {
-  if (typeof value !== 'function' && typeof value !== 'object') {
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
     return false;
   }
-  if (value === null || !('ɵcmp' in value)) {
+  if (val === null || !('ɵcmp' in val)) {
     return false;
   }
-  const cmp = value.ɵcmp;
-  return typeof cmp !== 'object' || cmp === null || !('styles' in cmp)
-    ? false
-    : Array.isArray(cmp.styles);
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
 }
 
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((element) => {
-    element.remove();
+  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
+    el.remove();
   });
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ imports: [HostComponent] });
@@ -95,8 +95,8 @@ function setupTwoDialogs(): {
   fixture: ComponentFixture<TwoDialogsHostComponent>;
   host: TwoDialogsHostComponent;
 } {
-  document.body.querySelectorAll('.cdk-overlay-container').forEach((element) => {
-    element.remove();
+  document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
+    el.remove();
   });
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ imports: [TwoDialogsHostComponent] });
@@ -143,7 +143,7 @@ describe('AccessibleDialog primitive', () => {
     fixture.detectChanges();
     const close = document.body.querySelector<HTMLButtonElement>('[data-testid="dialog-close"]');
     expect(close).not.toBeNull();
-    if (close === null) {
+    if (!close) {
       throw new Error('Expected close button');
     }
     close.click();

@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { PriceBlock } from './price-block';
 import type { AsyncStatus } from '../../types/async-status';
@@ -7,10 +6,12 @@ import type { Money } from './price-block';
 
 @Component({
   imports: [PriceBlock],
-  template: ` <app-price-block [label]="label()" [money]="money()" [status]="status()" /> `,
+  template: `
+    <app-price-block [money]="money()" [label]="label()" [status]="status()"></app-price-block>
+  `,
 })
 class HostComponent {
-  readonly money = signal<Money | null>({ amount: 339_990, currency: 'HUF' });
+  readonly money = signal<Money | null>({ amount: 339990, currency: 'HUF' });
   readonly label = signal('Készülékár, egyszeri díj');
   readonly status = signal<AsyncStatus>('success');
 }
@@ -18,7 +19,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -37,7 +38,7 @@ describe('PriceBlock primitive', () => {
       '[data-testid="price-amount"]',
     );
     expect(amount).not.toBeNull();
-    if (amount === null) {
+    if (!amount) {
       throw new Error('Expected price-amount element');
     }
     expect(amount.textContent.trim()).toBe('339 990');
@@ -53,14 +54,14 @@ describe('PriceBlock primitive', () => {
     const { fixture } = setup();
     const label = getNativeElement(fixture).querySelector<HTMLElement>('.label');
     expect(label).not.toBeNull();
-    if (label === null) {
+    if (!label) {
       throw new Error('Expected label element');
     }
     expect(label.textContent.trim()).toBe('Készülékár, egyszeri díj');
   });
 
   it('formats the example 339 990 / 9 990 amounts from the skill', () => {
-    expect(PriceBlock.formatHuf(339_990)).toBe('339 990');
+    expect(PriceBlock.formatHuf(339990)).toBe('339 990');
     expect(PriceBlock.formatHuf(9990)).toBe('9 990');
   });
 
@@ -82,7 +83,7 @@ describe('PriceBlock primitive', () => {
       '[data-testid="price-error"]',
     );
     expect(error).not.toBeNull();
-    expect(error?.textContent).toContain('\u{2014}');
+    expect(error?.textContent).toContain('\u2014');
     expect(getNativeElement(fixture).querySelector('[data-testid="price-amount"]')).toBeNull();
   });
 

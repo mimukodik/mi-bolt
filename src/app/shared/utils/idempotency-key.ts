@@ -5,7 +5,11 @@
  * key imports this rather than declaring its own copy.
  */
 export function freshIdempotencyKey(): string {
-  return typeof globalThis.crypto.randomUUID === 'function'
-    ? globalThis.crypto.randomUUID()
-    : `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  if (
+    typeof globalThis.crypto !== 'undefined' &&
+    typeof globalThis.crypto.randomUUID === 'function'
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }

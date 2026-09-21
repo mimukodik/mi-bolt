@@ -9,5 +9,5 @@
   "enumStyle": "alias",
   "enumArray": true,
   "ignoreUnusedModels": true,
-  "excludeParameters": ["X-Demo-Session", "If-Match"]
+  "excludeParameters": ["If-Match"]
 }

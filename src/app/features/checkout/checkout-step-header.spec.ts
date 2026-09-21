@@ -18,8 +18,7 @@
  */
 
 import { provideZonelessChangeDetection, Component } from '@angular/core';
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 
@@ -38,10 +37,7 @@ const CRUMBS: readonly CheckoutCrumb[] = [
   { label: 'Kosár', link: '/penztar/kosar' },
 ];
 
-function createHeader(
-  crumbs: readonly CheckoutCrumb[] = CRUMBS,
-  current = 'Adatok',
-): ComponentFixture<CheckoutStepHeader> {
+function createHeader(crumbs: readonly CheckoutCrumb[] = CRUMBS, current = 'Adatok') {
   TestBed.configureTestingModule({
     providers: [provideZonelessChangeDetection(), provideRouter([])],
   });
@@ -56,7 +52,7 @@ function createHeader(
   selector: 'app-host-for-checkout-step-header',
   imports: [CheckoutStepHeader],
   template: `
-    <app-checkout-step-header current="X" [crumbs]="crumbs">
+    <app-checkout-step-header [crumbs]="crumbs" current="X">
       <h1 class="title">T</h1>
     </app-checkout-step-header>
   `,

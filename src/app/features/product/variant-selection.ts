@@ -47,18 +47,14 @@ import type { Variant } from '../../api/generated/models/variant';
  */
 export const MAX_LINE_QUANTITY = 5;
 
-/**
-A (colorCode, storageGb) pair that has no matching variant.
-*/
+/** A (colorCode, storageGb) pair that has no matching variant. */
 export interface DisabledCombination {
   readonly colorCode: string;
   readonly storageGb: number;
   readonly reason: string;
 }
 
-/**
-Variant paired with whether the variant query was usable.
-*/
+/** Variant paired with whether the variant query was usable. */
 export interface InitialVariantSelection {
   /** The variant the page should display. May be the product default
    *  when the `?variant=` query is missing or unknown. */
@@ -69,9 +65,7 @@ export interface InitialVariantSelection {
   readonly invalidQuery: string | null;
 }
 
-/**
-Result of resolving a (color, storage) pair to a concrete variant.
-*/
+/** Result of resolving a (color, storage) pair to a concrete variant. */
 export interface VariantLookup {
   readonly variant: Variant;
   /** False when the pair has no matching variant; the returned
@@ -80,35 +74,23 @@ export interface VariantLookup {
   readonly pairAvailable: boolean;
 }
 
-/**
-Result of resolving an image id inside a single gallery.
-*/
+/** Result of resolving an image id inside a single gallery. */
 export interface ImagePick {
   readonly image: Image | null;
   readonly index: number;
 }
 
-/**
-Quantity validation result — never silently clamps.
-*/
+/** Quantity validation result — never silently clamps. */
 export interface QuantityValidation {
-  /**
-  The user's explicit selection (floored and clamped at zero).
-  */
+  /** The user's explicit selection (floored and clamped at zero). */
   readonly quantity: number;
-  /**
-  True when `quantity` is above the variant's `maxQuantity`.
-  */
+  /** True when `quantity` is above the variant's `maxQuantity`. */
   readonly overMax: boolean;
-  /**
-  True when `quantity` is below one.
-  */
+  /** True when `quantity` is below one. */
   readonly belowMin: boolean;
 }
 
-/**
-Whether the "Add to cart" action is currently usable.
-*/
+/** Whether the "Add to cart" action is currently usable. */
 export interface AddToCartState {
   readonly enabled: boolean;
   readonly reason: string | null;
@@ -119,14 +101,34 @@ export interface AddToCartState {
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns the variant the page falls back to when no explicit
+ * selection is available. The 2.0.0 contract no longer carries a
+ * dedicated `defaultVariant` field, so the first entry of
+ * `product.variants` is the natural fallback — the catalog orders
+ * variants by `id` ascending, which keeps the choice stable across
+ * requests for the same product.
+ *
+ * The contract guarantees at least one variant per product. An empty
+ * `variants` list is treated as a programmer error: it would mean
+ * the backend served a malformed payload, and the facade's
+ * `catchError` converts the resulting `Error` into the error state.
+ */
+export function defaultVariantOf(product: Product): Variant {
+  if (product.variants.length === 0) {
+    throw new Error('Product has no variants');
+  }
+  return product.variants[0];
+}
+
+/**
  * Picks the variant the page should display when the route first
  * lands. The rules:
  *
- *   - missing `variantQuery` → product's `defaultVariant`, no
+ *   - missing `variantQuery` → `defaultVariantOf(product)`, no
  *     invalid flag.
  *   - present and matching an existing `Variant.id` → that variant,
  *     no invalid flag.
- *   - present and matching nothing → product's `defaultVariant`,
+ *   - present and matching nothing → `defaultVariantOf(product)`,
  *     the raw query preserved as `invalidQuery` so the page can
  *     require the user to confirm before add-to-cart.
  */
@@ -136,11 +138,10 @@ export function selectInitialVariant(
 ): InitialVariantSelection {
   if (variantQuery !== null && variantQuery.length > 0) {
     const match = product.variants.find((v) => v.id === variantQuery);
-    return match !== undefined
-      ? { variant: match, invalidQuery: null }
-      : { variant: product.defaultVariant, invalidQuery: variantQuery };
+    if (match) return { variant: match, invalidQuery: null };
+    return { variant: defaultVariantOf(product), invalidQuery: variantQuery };
   }
-  return { variant: product.defaultVariant, invalidQuery: null };
+  return { variant: defaultVariantOf(product), invalidQuery: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -168,10 +169,10 @@ export function computeDisabledCombinations(product: Product): readonly Disabled
   const out: DisabledCombination[] = [];
   for (const colorCode of colorSet) {
     for (const storageGb of storageSet) {
-      const isExists = product.variants.some(
+      const exists = product.variants.some(
         (v) => v.colorCode === colorCode && v.storageGb === storageGb,
       );
-      if (isExists) continue;
+      if (exists) continue;
       const colorName = lookupColorName(product, colorCode);
       out.push({
         colorCode,
@@ -214,9 +215,10 @@ export function selectVariantByPair(
   const match = product.variants.find(
     (v) => v.colorCode === colorCode && v.storageGb === storageGb,
   );
-  if (match !== undefined) return { variant: match, pairAvailable: true };
+  if (match) return { variant: match, pairAvailable: true };
   const fallback = product.variants.find((v) => v.id === currentVariantId);
-  return { variant: fallback ?? product.defaultVariant, pairAvailable: false };
+  if (fallback) return { variant: fallback, pairAvailable: false };
+  return { variant: defaultVariantOf(product), pairAvailable: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -239,8 +241,8 @@ export function selectImageFromGallery(
 ): ImagePick {
   if (gallery.length === 0) return { image: null, index: -1 };
   if (imageId !== null) {
-    const index = gallery.findIndex((index_) => index_.id === imageId);
-    if (index !== -1) return { image: gallery[index], index };
+    const idx = gallery.findIndex((i) => i.id === imageId);
+    if (idx >= 0) return { image: gallery[idx], index: idx };
   }
   return { image: gallery[0], index: 0 };
 }
@@ -329,11 +331,12 @@ export function computeAddToCartState(input: {
  * Empty strings and whitespace-only values are dropped so callers can
  * treat `null` uniformly as "no query".
  */
-export function parseVariantQuery(parameters: URLSearchParams): string | null {
-  const raw = parameters.get('variant');
+export function parseVariantQuery(params: URLSearchParams): string | null {
+  const raw = params.get('variant');
   if (raw === null) return null;
   const trimmed = raw.trim();
-  return trimmed.length === 0 ? null : trimmed;
+  if (trimmed.length === 0) return null;
+  return trimmed;
 }
 
 /**
@@ -342,9 +345,9 @@ export function parseVariantQuery(parameters: URLSearchParams): string | null {
  * can append it without special-casing the absent case.
  */
 export function serializeVariantQuery(variantId: string | null): URLSearchParams {
-  const parameters = new URLSearchParams();
+  const params = new URLSearchParams();
   if (variantId !== null && variantId.length > 0) {
-    parameters.set('variant', variantId);
+    params.set('variant', variantId);
   }
-  return parameters;
+  return params;
 }

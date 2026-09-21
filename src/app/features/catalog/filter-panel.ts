@@ -1,25 +1,32 @@
 import { Component, computed, input, linkedSignal, output } from '@angular/core';
 
 import type { CatalogQuery, Sort } from './catalog-query';
-import { ALLOWED_STORAGE_GB, SORT_MODES } from './catalog-query';
+import { ALLOWED_STORAGE_GB, SORT_MODES, isStorageBucket } from './catalog-query';
+import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
 import type { FacetValue } from '../../api/generated/models/facet-value';
+import type { Facets } from '../../api/generated/models/facets';
 
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
+
+/** What one storage chip needs to render: the size, its label and
+ *  the facet count (null when no `Facets` has loaded yet, so the
+ *  chip still appears in the empty state without a number). */
+interface StorageBucket {
+  readonly gb: 128 | 256 | 512;
+  readonly label: string;
+  readonly count: number | null;
+}
 
 /**
  * What a draft mirrors from the applied query: the one field it shows,
  * plus whether the applied query still carries any filter at all.
  */
 interface DraftSource {
-  /**
-  The applied value of the mirrored field, rendered as input text.
-  */
+  /** The applied value of the mirrored field, rendered as input text. */
   readonly field: string;
-  /**
-  `hasActiveFilters()` — false once every filter has been cleared.
-  */
+  /** `hasActiveFilters()` — false once every filter has been cleared. */
   readonly filtered: boolean;
 }
 
@@ -52,7 +59,8 @@ function keepDraftUnlessAppliedChanged(
 ): string {
   if (previous === undefined) return source.field;
   if (previous.source.field !== source.field) return source.field;
-  return previous.source.filtered && !source.filtered ? source.field : previous.value;
+  if (previous.source.filtered && !source.filtered) return source.field;
+  return previous.value;
 }
 
 /**
@@ -99,38 +107,59 @@ function keepDraftUnlessAppliedChanged(
   styleUrl: './filter-panel.scss',
 })
 export class FilterPanel {
-  /**
-  The current query reflected by the controls.
-  */
+  /** The current query reflected by the controls. */
   readonly value = input.required<CatalogQuery>();
 
-  /**
-  Facet buckets from the latest successful response, if any.
-  */
-  readonly facets = input<{
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  } | null>(null);
+  /** Full `Facets` from the latest successful response, if any. */
+  readonly facets = input<Facets | null>(null);
 
-  /**
-  True when the panel should be inert (loading or error refresh).
-  */
+  /** True when the panel should be inert (loading or error refresh). */
   readonly disabled = input<boolean>(false);
 
-  /**
-  Emits the next complete CatalogQuery when the user changes a control.
-  */
+  /** Emits the next complete CatalogQuery when the user changes a control. */
   readonly filtersChanged = output<CatalogQuery>();
 
-  /**
-  Storage buckets exposed by the documented storage enum.
-  */
-  readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => ALLOWED_STORAGE_GB);
+  /** Storage buckets exposed by the documented storage enum, paired with
+   *  the facet count so the chip can show "128 GB (3)". Falls back to
+   *  the documented enum with `null` counts when no `Facets` is loaded
+   *  yet, so the chips are present on the empty first load. */
+  readonly storageFacets = computed<readonly StorageBucket[]>(() => {
+    const facets = this.facets();
+    if (facets === null) {
+      return ALLOWED_STORAGE_GB.map((gb) => ({ gb, label: `${String(gb)} GB`, count: null }));
+    }
+    const out: StorageBucket[] = [];
+    for (const entry of facets.storageGb) {
+      const bucket = toStorageBucket(entry);
+      if (bucket !== null) out.push(bucket);
+    }
+    return out;
+  });
 
-  /**
-  Brand facets, falling back to an empty list when none are present.
-  */
-  readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
+  /** Stock facet count, or null when the latest response carries none. */
+  readonly inStockCount = computed<number | null>(() => this.facets()?.inStock ?? null);
+
+  /** 5G facet count, or null when the latest response carries none. */
+  readonly fiveGCount = computed<number | null>(() => this.facets()?.is5g ?? null);
+
+  /** Placeholder hint for the min-price input: the lower bound of the
+   *  active result set, so the user can see the floor before they type. */
+  readonly priceMinHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.min.amount);
+  });
+
+  /** Placeholder hint for the max-price input: the upper bound. */
+  readonly priceMaxHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.max.amount);
+  });
+
+  /** Brand facets, falling back to an empty list when none are present. */
+  readonly brandFacets = computed(() => this.facets()?.brands ?? []);
+
+  /** Colour facets, falling back to an empty list when none are present. */
+  readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
 
   // Local drafts for the controls that need an "in progress" copy. Each
   // is a linkedSignal sourced from its applied field plus the "any
@@ -163,30 +192,26 @@ export class FilterPanel {
   readonly hasActiveFilters = computed<boolean>(() => {
     const q = this.value();
     if (q.q !== undefined && q.q.length > 0) return true;
-    if (
-      (q.brands?.length ?? 0) > 0 ||
-      (q.storageGb?.length ?? 0) > 0 ||
-      q.minPrice !== undefined ||
-      q.maxPrice !== undefined ||
-      q.inStock !== undefined ||
-      q.is5g !== undefined ||
-      q.featured === true
-    )
-      return true;
+    if ((q.brands?.length ?? 0) > 0) return true;
+    if ((q.storageGb?.length ?? 0) > 0) return true;
+    if ((q.colors?.length ?? 0) > 0) return true;
+    if (q.minPrice !== undefined) return true;
+    if (q.maxPrice !== undefined) return true;
+    if (q.inStock !== undefined) return true;
+    if (q.is5g !== undefined) return true;
+    if (q.featured === true) return true;
     return false;
   });
 
-  /**
-  Hungarian reason describing the price range problem, or null.
-  */
+  /** Hungarian reason describing the price range problem, or null. */
   readonly priceError = computed<string | null>(() => {
     const min = this.parsePrice(this.minDraft());
     const max = this.parsePrice(this.maxDraft());
     if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
     if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    return min !== null && max !== null && min > max
-      ? 'A minimum nem lehet nagyobb a maximum árnál.'
-      : null;
+    if (min !== null && max !== null && min > max)
+      return 'A minimum nem lehet nagyobb a maximum árnál.';
+    return null;
   });
 
   // ---------------------------------------------------------------------------
@@ -236,6 +261,16 @@ export class FilterPanel {
     this.emit({ storageGb: next.length > 0 ? next : undefined });
   }
 
+  toggleColor(code: string): void {
+    const trimmed = code.trim();
+    if (trimmed.length === 0) return;
+    const current = this.value().colors ?? [];
+    const next = current.includes(trimmed)
+      ? current.filter((c) => c !== trimmed)
+      : [...current, trimmed];
+    this.emit({ colors: next.length > 0 ? next : undefined });
+  }
+
   toggleInStock(): void {
     const current = this.value().inStock;
     this.emit({ inStock: current === true ? undefined : true });
@@ -256,6 +291,7 @@ export class FilterPanel {
       q: undefined,
       brands: undefined,
       storageGb: undefined,
+      colors: undefined,
       minPrice: undefined,
       maxPrice: undefined,
       inStock: undefined,
@@ -276,6 +312,10 @@ export class FilterPanel {
     return (this.value().storageGb ?? []).includes(bucket);
   }
 
+  isColorSelected(code: string): boolean {
+    return (this.value().colors ?? []).includes(code);
+  }
+
   isInStockSelected(): boolean {
     return this.value().inStock === true;
   }
@@ -284,21 +324,30 @@ export class FilterPanel {
     return this.value().is5g === true;
   }
 
-  /**
-  Compose the next query (page resets on filter changes via the facade).
-  */
+  /** Compose the next query (page resets on filter changes via the facade). */
   private emit(partial: Partial<CatalogQuery>): void {
     const next: CatalogQuery = { ...this.value(), ...partial };
     this.filtersChanged.emit(next);
   }
 
-  /**
-  Parse a price input string; returns null when blank, the integer otherwise.
-  */
+  /** Parse a price input string; returns null when blank, the integer otherwise. */
   private parsePrice(raw: string): number | null {
     const trimmed = raw.trim();
-    return trimmed.length === 0 || !/^-?\d+$/.test(trimmed) ? null : Number(trimmed);
+    if (trimmed.length === 0) return null;
+    if (!/^-?\d+$/.test(trimmed)) return null;
+    return Number(trimmed);
   }
+}
+
+/** Narrow a `FacetValue` from `Facets.storageGb` into a `StorageBucket`,
+ *  returning null when the contract publishes a value the documented
+ *  enum does not recognise (forward compatibility: a new size that
+ *  this build does not render would otherwise be silently skipped). */
+function toStorageBucket(entry: FacetValue): StorageBucket | null {
+  const raw = Number(entry.value);
+  if (!Number.isInteger(raw)) return null;
+  if (!isStorageBucket(raw)) return null;
+  return { gb: raw, label: entry.label, count: entry.count };
 }
 
 // Keep `Sort` and `SORT_MODES` imports live so future sort controls can

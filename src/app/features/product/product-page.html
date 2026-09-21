@@ -1,50 +1,50 @@
 <div class="page" data-testid="product-page">
-  <nav aria-label="Navigáció" class="breadcrumbs" data-testid="product-breadcrumb">
-    <a class="breadcrumb" routerLink="/">Főoldal</a>
+  <nav class="breadcrumbs" aria-label="Navigáció" data-testid="product-breadcrumb">
+    <a routerLink="/" class="breadcrumb">Főoldal</a>
     <span aria-hidden="true" class="breadcrumb__sep">/</span>
-    <a class="breadcrumb" routerLink="/telefonok">Mobiltelefonok</a>
+    <a routerLink="/telefonok" class="breadcrumb">Mobiltelefonok</a>
     <span aria-hidden="true" class="breadcrumb__sep">/</span>
-    <span aria-current="page" class="breadcrumb is-current">{{ productName() }}</span>
+    <span class="breadcrumb is-current" aria-current="page">{{ productName() }}</span>
   </nav>
   <article class="card">
     @switch (state()) {
       @case ('loading') {
         <div class="loading" data-testid="product-loading">
-          <app-loading-state label="Termék betöltése" variant="card" />
+          <app-loading-state variant="card" label="Termék betöltése"></app-loading-state>
         </div>
       }
       @case ('error') {
         <app-error-state
-          retryLabel="Újrapróbálom"
-          title="A termék nem tölthető be"
+          [title]="'A termék nem tölthető be'"
           [message]="errorMessage()"
+          [retryLabel]="'Újrapróbálom'"
           [pending]="false"
           [preserving]="true"
           (retryRequested)="onRetry()"
-        />
+        ></app-error-state>
       }
       @case ('notfound') {
         <app-error-state
-          retryLabel="Vissza a telefonokhoz"
-          title="A termék nem található"
+          [title]="'A termék nem található'"
           [message]="notFoundMessage()"
+          [retryLabel]="'Vissza a telefonokhoz'"
           [pending]="false"
           [preserving]="true"
           (retryRequested)="onBackToCatalog()"
-        />
+        ></app-error-state>
       }
       @default {
         <div class="layout">
           <div class="gallery">
             <app-product-gallery
               [images]="gallery()"
-              [productName]="productName()"
               [selectedImageId]="selectedImageId()"
+              [productName]="productName()"
               (imageSelected)="onImageSelected($event)"
               (zoomRequested)="onZoomRequested($event)"
-            />
+            ></app-product-gallery>
             @if (highlights().length > 0) {
-              <ul aria-label="A termék fő jellemzői" class="highlights">
+              <ul class="highlights" aria-label="A termék fő jellemzői">
                 @for (item of highlights(); track item) {
                   <li>{{ item }}</li>
                 }
@@ -61,7 +61,7 @@
                 <p class="meta">
                   <span class="meta-label">Szín:</span>
                   <span class="meta-value">{{ selectedColorName() }}</span>
-                  <span aria-hidden="true" class="meta-sep">·</span>
+                  <span class="meta-sep" aria-hidden="true">·</span>
                   <span class="meta-label">Tárhely:</span>
                   <span class="meta-value">{{ selectedStorageLabel() }}</span>
                 </p>
@@ -74,37 +74,37 @@
             @if (stockMessage()) {
               <p
                 class="stock"
-                data-testid="product-stock"
-                role="status"
                 [class.stock--out]="selectedAvailability() === 'out_of_stock'"
+                role="status"
+                data-testid="product-stock"
               >
                 {{ stockMessage() }}
               </p>
             }
 
-            <section aria-label="Árak" class="prices">
+            <section class="prices" aria-label="Árak">
               <app-price-block
-                label="Készülékár"
                 [money]="devicePrice()"
+                [label]="'Készülékár'"
                 [status]="devicePriceStatus()"
-              />
+              ></app-price-block>
             </section>
 
             <app-variant-selector
-              [selectedId]="selectedVariant()?.id ?? null"
               [variants]="variants()"
+              [selectedId]="selectedVariant()?.id ?? null"
               (variantSelected)="onVariantSelected($event)"
-            />
+            ></app-variant-selector>
 
             <div class="quantity">
-              <span aria-hidden="true" class="qty-label">Darabszám</span>
+              <span class="qty-label" aria-hidden="true">Darabszám</span>
               <app-quantity-control
-                label="Darabszám"
-                [max]="maxQuantity()"
-                [min]="1"
                 [value]="quantity()"
+                [min]="1"
+                [max]="maxQuantity()"
+                [label]="'Darabszám'"
                 (quantityChanged)="onQuantityChanged($event)"
-              />
+              ></app-quantity-control>
               @if (quantityOverMax()) {
                 <p class="hint hint--error" role="status">
                   Maximum {{ maxQuantity() }} darab rendelhető ebből a változatból.
@@ -115,25 +115,25 @@
             <div class="cta-desktop">
               @if (selectedVariant(); as variant) {
                 <app-add-to-cart
-                  [error]="addError()"
-                  [pending]="addPending()"
-                  [quantity]="quantity()"
                   [variant]="addableVariant()"
+                  [quantity]="quantity()"
+                  [pending]="addPending()"
+                  [error]="addError()"
                   (addRequested)="onAddRequested($event)"
                 />
               } @else {
                 <app-button
-                  label="Kosárba teszem"
-                  loadingLabel="Hozzáadás…"
-                  variant="primary"
+                  [variant]="'primary'"
+                  [label]="'Kosárba teszem'"
+                  [loadingLabel]="'Hozzáadás…'"
                   [disabled]="true"
-                />
+                ></app-button>
               }
               @if (addToCartReason() !== null && !addToCartEnabled()) {
                 <p class="hint" role="status">{{ addToCartReason() }}</p>
               }
               @if (addSuccessMessage(); as message) {
-                <app-status-message severity="success" [message]="message" />
+                <app-status-message [message]="message" [severity]="'success'"></app-status-message>
               }
               <p class="simulation-note" data-testid="product-simulation-note">
                 A rendelés kipróbálható, de nem jár valódi vásárlással.
@@ -142,10 +142,26 @@
           </div>
         </div>
 
-        <section aria-label="Műszaki adatok" class="spec">
+        <section class="spec" aria-label="Műszaki adatok">
           <h2 class="section-title">Műszaki adatok</h2>
-          <app-specification-accordion [groups]="specGroups()" />
+          <app-specification-accordion [groups]="specGroups()"></app-specification-accordion>
         </section>
+
+        @if (related().length > 0) {
+          <section class="mt-10" aria-labelledby="related-heading" data-testid="related-products">
+            <h2 id="related-heading" class="m-0 mb-4 text-xl leading-7 font-bold">
+              Hasonló készülékek
+            </h2>
+            <ul
+              class="m-0 p-0 list-none grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+              role="list"
+            >
+              @for (item of related(); track item.id) {
+                <li><app-product-card [product]="item" /></li>
+              }
+            </ul>
+          </section>
+        }
 
         @if (invalidQuery() !== null) {
           <p class="hint hint--error" role="status">
@@ -159,11 +175,11 @@
 
   @if (showStickyRail()) {
     <app-mobile-buy-rail
-      [available]="addToCartEnabled()"
-      [error]="addError()"
       [money]="devicePrice()"
+      [available]="addToCartEnabled()"
       [pending]="addPending()"
+      [error]="addError()"
       (addRequested)="onRailAddRequested()"
-    />
+    ></app-mobile-buy-rail>
   }
 </div>

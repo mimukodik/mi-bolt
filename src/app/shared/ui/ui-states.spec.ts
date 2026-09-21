@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import {
@@ -25,7 +24,11 @@ import {
 
 @Component({
   imports: [Button],
-  template: `<app-button [disabled]="disabled()" [label]="label()" [loading]="loading()" />`,
+  template: `<app-button
+    [label]="label()"
+    [disabled]="disabled()"
+    [loading]="loading()"
+  ></app-button>`,
 })
 class ButtonHost {
   readonly label = signal('Művelet');
@@ -35,10 +38,10 @@ class ButtonHost {
 
 @Component({
   imports: [PriceBlock],
-  template: `<app-price-block label="Ár" [money]="money()" [status]="status()" />`,
+  template: `<app-price-block [money]="money()" label="Ár" [status]="status()"></app-price-block>`,
 })
 class PriceHost {
-  readonly money = signal<Money | null>({ amount: 339_990, currency: 'HUF' });
+  readonly money = signal<Money | null>({ amount: 339990, currency: 'HUF' });
   readonly status = signal<'idle' | 'loading' | 'success' | 'empty' | 'error'>('success');
 }
 
@@ -46,10 +49,10 @@ class PriceHost {
   imports: [ProductImage],
   template: `
     <app-product-image
-      productName="Demo One 5G"
       [image]="image()"
+      productName="Demo One 5G"
       (loadFailed)="failedCount.set(failedCount() + 1)"
-    />
+    ></app-product-image>
   `,
 })
 class ImageHost {
@@ -66,11 +69,11 @@ class ImageHost {
   imports: [ErrorState],
   template: `
     <app-error-state
-      message="Most nem sikerül."
-      title="Hiba"
+      [title]="'Hiba'"
+      [message]="'Most nem sikerül.'"
       [pending]="pending()"
       [preserving]="true"
-    />
+    ></app-error-state>
   `,
 })
 class ErrorHost {
@@ -79,7 +82,10 @@ class ErrorHost {
 
 @Component({
   imports: [LoadingState],
-  template: `<app-loading-state label="Adatok betöltése" [variant]="variant()" />`,
+  template: `<app-loading-state
+    [variant]="variant()"
+    label="Adatok betöltése"
+  ></app-loading-state>`,
 })
 class LoadingHost {
   readonly variant = signal<'block' | 'lines' | 'card'>('block');
@@ -89,10 +95,10 @@ class LoadingHost {
   imports: [EmptyState],
   template: `
     <app-empty-state
-      actionLabel="Szűrők törlése"
-      message="Próbáld meg kevesebb szűrővel."
       [title]="title()"
-    />
+      [message]="'Próbáld meg kevesebb szűrővel.'"
+      [actionLabel]="'Szűrők törlése'"
+    ></app-empty-state>
   `,
 })
 class EmptyHost {
@@ -104,10 +110,10 @@ class EmptyHost {
   template: `
     <app-form-field-message
       fieldId="email"
-      severity="error"
       [errors]="errors()"
       [touched]="touched()"
-    />
+      [severity]="'error'"
+    ></app-form-field-message>
   `,
 })
 class FormHost {
@@ -118,7 +124,12 @@ class FormHost {
 @Component({
   imports: [QuantityControl],
   template: `
-    <app-quantity-control [disabled]="disabled()" [max]="5" [min]="1" [value]="value()" />
+    <app-quantity-control
+      [value]="value()"
+      [min]="1"
+      [max]="5"
+      [disabled]="disabled()"
+    ></app-quantity-control>
   `,
 })
 class QuantityHost {
@@ -130,8 +141,8 @@ class QuantityHost {
   imports: [AccessibleDialog, DialogModule],
   template: `
     <app-accessible-dialog
-      [label]="label()"
       [opened]="opened()"
+      [label]="label()"
       [restoreTarget]="triggerEl"
       (closed)="closedCount.set(closedCount() + 1)"
     >
@@ -152,7 +163,11 @@ class DialogHost {
 @Component({
   imports: [StatusMessage],
   template: `
-    <app-status-message [message]="message()" [persistent]="persistent()" [severity]="severity()" />
+    <app-status-message
+      [message]="message()"
+      [severity]="severity()"
+      [persistent]="persistent()"
+    ></app-status-message>
   `,
 })
 class StatusHost {
@@ -164,7 +179,7 @@ class StatusHost {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -175,17 +190,18 @@ interface ComponentWithStyles {
   };
 }
 
-function hasStyles(value: unknown): value is ComponentWithStyles {
-  if (typeof value !== 'function' && typeof value !== 'object') {
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
     return false;
   }
-  if (value === null || !('ɵcmp' in value)) {
+  if (val === null || !('ɵcmp' in val)) {
     return false;
   }
-  const cmp = value.ɵcmp;
-  return typeof cmp !== 'object' || cmp === null || !('styles' in cmp)
-    ? false
-    : Array.isArray(cmp.styles);
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
 }
 
 /**
@@ -199,8 +215,8 @@ function hasStyles(value: unknown): value is ComponentWithStyles {
 describe('MiBolt primitives: Required State Contract', () => {
   beforeEach(() => {
     // Clear any CDK overlays left over from a previous spec file.
-    document.body.querySelectorAll('.cdk-overlay-container').forEach((element) => {
-      element.remove();
+    document.body.querySelectorAll('.cdk-overlay-container').forEach((el) => {
+      el.remove();
     });
   });
 
@@ -209,11 +225,11 @@ describe('MiBolt primitives: Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [ButtonHost] });
       const f = TestBed.createComponent(ButtonHost);
       f.detectChanges();
-      const button = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (button === null) {
+      const btn = getNativeElement(f).querySelector<HTMLButtonElement>('button');
+      if (!btn) {
         throw new Error('Expected button');
       }
-      expect(button.disabled).toBe(false);
+      expect(btn.disabled).toBe(false);
 
       f.componentInstance.disabled.set(true);
       f.detectChanges();
@@ -223,7 +239,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.loading.set(true);
       f.detectChanges();
       const lb = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (lb === null) {
+      if (!lb) {
         throw new Error('Expected button');
       }
       expect(lb.getAttribute('aria-busy')).toBe('true');
@@ -279,7 +295,7 @@ describe('MiBolt primitives: Required State Contract', () => {
         '[data-testid="image-photo"]',
       );
       expect(photo).not.toBeNull();
-      if (photo === null) {
+      if (!photo) {
         throw new Error('Expected photo');
       }
       photo.dispatchEvent(new Event('error'));
@@ -300,12 +316,12 @@ describe('MiBolt primitives: Required State Contract', () => {
 
       f.componentInstance.pending.set(true);
       f.detectChanges();
-      const button = getNativeElement(f).querySelector<HTMLButtonElement>('button');
-      if (button === null) {
+      const btn = getNativeElement(f).querySelector<HTMLButtonElement>('button');
+      if (!btn) {
         throw new Error('Expected button');
       }
-      expect(button.disabled).toBe(true);
-      expect(button.getAttribute('aria-busy')).toBe('true');
+      expect(btn.disabled).toBe(true);
+      expect(btn.getAttribute('aria-busy')).toBe('true');
     });
   });
 
@@ -344,11 +360,11 @@ describe('MiBolt primitives: Required State Contract', () => {
       f.componentInstance.errors.set([{ code: 'required', message: 'Kötelező', pointer: '/a' }]);
       f.componentInstance.touched.set(true);
       f.detectChanges();
-      const message = getNativeElement(f).querySelector<HTMLElement>(
+      const msg = getNativeElement(f).querySelector<HTMLElement>(
         '[data-testid="form-field-message"]',
       );
-      expect(message).not.toBeNull();
-      expect(message?.getAttribute('data-pointer')).toBe('/a');
+      expect(msg).not.toBeNull();
+      expect(msg?.getAttribute('data-pointer')).toBe('/a');
     });
   });
 
@@ -365,7 +381,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const dec = getNativeElement(f).querySelector<HTMLButtonElement>(
         '[data-testid="quantity-decrement"]',
       );
-      if (dec === null) {
+      if (!dec) {
         throw new Error('Expected decrement button');
       }
       expect(dec.disabled).toBe(true);
@@ -376,7 +392,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       const input = getNativeElement(f).querySelector<HTMLInputElement>(
         '[data-testid="quantity-input"]',
       );
-      if (input === null) {
+      if (!input) {
         throw new Error('Expected quantity input');
       }
       input.value = '99';

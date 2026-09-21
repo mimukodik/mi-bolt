@@ -1,5 +1,5 @@
 <section class="contact flex flex-col gap-6" data-testid="contact-page">
-  <app-checkout-step-header current="Adatok" [crumbs]="crumbs">
+  <app-checkout-step-header [crumbs]="crumbs" current="Adatok">
     <h1
       class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
     >
@@ -16,17 +16,23 @@
     </p>
   </app-checkout-step-header>
 
+  <app-navigation-reason-banner></app-navigation-reason-banner>
+
   @if (saveState() === 'error') {
     <div class="save-error block" data-testid="contact-save-error">
-      <app-status-message severity="error" [message]="saveErrorMessage" [persistent]="true" />
+      <app-status-message
+        [message]="saveErrorMessage"
+        severity="error"
+        [persistent]="true"
+      ></app-status-message>
     </div>
   }
 
   <form
     class="form flex flex-col gap-5 max-w-xl lg:max-w-3xl"
-    data-testid="contact-form"
     novalidate
     (submit)="onSubmit($event)"
+    data-testid="contact-form"
   >
     <p class="form-hint m-0" id="contact-form-hint">
       A csillaggal jelölt mezők kitöltése kötelező.
@@ -37,24 +43,24 @@
         Teljes név <span aria-hidden="true" class="required-mark ml-1">*</span>
       </span>
       <input
-        aria-describedby="contact-fullname-message"
-        autocomplete="name"
-        class="min-h-10 p-2 px-3 font-inherit rounded"
-        data-testid="contact-fullname-input"
         id="contact-fullname-input"
-        inputmode="text"
-        placeholder="Teszt Elek"
         type="text"
-        [attr.aria-invalid]="fullNameInvalid() ? 'true' : null"
+        autocomplete="name"
+        inputmode="text"
+        class="min-h-10 p-2 px-3 font-inherit rounded"
+        placeholder="Teszt Elek"
         [formField]="contactFields().fullName"
+        [attr.aria-invalid]="fullNameInvalid() ? 'true' : null"
+        aria-describedby="contact-fullname-message"
+        data-testid="contact-fullname-input"
       />
       <app-form-field-message
-        fieldId="contact-fullname"
-        helpText="A számlán is ez a név fog megjelenni."
+        [fieldId]="'contact-fullname'"
         [errors]="fullNameErrors()"
-        [submitted]="submitted()"
         [touched]="fullNameTouched()"
-      />
+        [submitted]="submitted()"
+        [helpText]="'A számlán is ez a név fog megjelenni.'"
+      ></app-form-field-message>
     </label>
 
     <label class="field flex flex-col gap-2" [attr.data-state]="emailFieldState()">
@@ -62,24 +68,24 @@
         E-mail cím <span aria-hidden="true" class="required-mark ml-1">*</span>
       </span>
       <input
-        aria-describedby="contact-email-message"
-        autocomplete="email"
-        class="min-h-10 p-2 px-3 font-inherit rounded"
-        data-testid="contact-email-input"
         id="contact-email-input"
-        inputmode="email"
-        placeholder="teszt@example.test"
         type="email"
-        [attr.aria-invalid]="emailInvalid() ? 'true' : null"
+        autocomplete="email"
+        inputmode="email"
+        class="min-h-10 p-2 px-3 font-inherit rounded"
+        placeholder="teszt@example.test"
         [formField]="contactFields().email"
+        [attr.aria-invalid]="emailInvalid() ? 'true' : null"
+        aria-describedby="contact-email-message"
+        data-testid="contact-email-input"
       />
       <app-form-field-message
-        fieldId="contact-email"
-        helpText="Ide küldjük a demó visszaigazolást."
+        [fieldId]="'contact-email'"
         [errors]="emailErrors()"
-        [submitted]="submitted()"
         [touched]="emailTouched()"
-      />
+        [submitted]="submitted()"
+        [helpText]="'Ide küldjük a demó visszaigazolást.'"
+      ></app-form-field-message>
     </label>
 
     <label class="field flex flex-col gap-2" [attr.data-state]="phoneFieldState()">
@@ -87,34 +93,34 @@
         Telefonszám <span aria-hidden="true" class="required-mark ml-1">*</span>
       </span>
       <input
-        aria-describedby="contact-phone-message"
-        autocomplete="tel"
-        class="min-h-10 p-2 px-3 font-inherit rounded"
-        data-testid="contact-phone-input"
         id="contact-phone-input"
-        inputmode="tel"
-        placeholder="+36201234567"
         type="tel"
-        [attr.aria-invalid]="phoneInvalid() ? 'true' : null"
+        autocomplete="tel"
+        inputmode="tel"
+        class="min-h-10 p-2 px-3 font-inherit rounded"
+        placeholder="+36201234567"
         [formField]="contactFields().phone"
+        [attr.aria-invalid]="phoneInvalid() ? 'true' : null"
+        aria-describedby="contact-phone-message"
+        data-testid="contact-phone-input"
       />
       <app-form-field-message
-        fieldId="contact-phone"
-        helpText="Formátum: +36 30 123 4567 vagy +36-1-234-5678."
+        [fieldId]="'contact-phone'"
         [errors]="phoneErrors()"
-        [submitted]="submitted()"
         [touched]="phoneTouched()"
-      />
+        [submitted]="submitted()"
+        [helpText]="'Formátum: +36 30 123 4567 vagy +36-1-234-5678.'"
+      ></app-form-field-message>
     </label>
 
     @if (submitted() && invalidFields().length > 0) {
       <div
-        #summary
-        aria-labelledby="contact-summary-title"
         class="form-summary p-4 rounded"
-        data-testid="contact-summary"
-        role="alert"
         tabindex="-1"
+        #summary
+        role="alert"
+        aria-labelledby="contact-summary-title"
+        data-testid="contact-summary"
       >
         <p class="form-summary__title m-0 mb-2 font-bold" id="contact-summary-title">
           Kérlek, javítsd a következő mezőket a folytatás előtt:
@@ -123,9 +129,9 @@
           @for (item of invalidFields(); track item.field) {
             <li>
               <a
-                [attr.data-pointer]="item.pointer ?? null"
-                [href]="`#contact-${item.field}-input`"
+                [href]="'#contact-' + item.field + '-input'"
                 (click)="focusField(item.field, $event)"
+                [attr.data-pointer]="item.pointer ?? null"
               >
                 {{ item.label }}: {{ item.message }}
               </a>
@@ -139,14 +145,14 @@
       class="form-actions flex flex-col-reverse gap-3 lg:flex-row lg:justify-between lg:items-center"
     >
       <app-button
-        data-testid="contact-submit"
+        variant="primary"
         label="Tovább a szállításhoz"
         loadingLabel="Mentés…"
-        variant="primary"
-        [disabled]="!canSubmit()"
         [loading]="saveState() === 'loading'"
+        [disabled]="!canSubmit()"
         (pressed)="onSubmit()"
-      />
+        data-testid="contact-submit"
+      ></app-button>
     </div>
   </form>
 </section>

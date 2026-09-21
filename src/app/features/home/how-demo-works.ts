@@ -45,9 +45,7 @@ const TILES: readonly TileCopy[] = [
 export class HowDemoWorks {
   readonly tiles = TILES;
 
-  /**
-  Zero-padded step number ("01", "02", "03") for the tile at `index`.
-  */
+  /** Zero-padded step number ("01", "02", "03") for the tile at `index`. */
   numberLabel(index: number): string {
     return String(index + 1).padStart(2, '0');
   }

@@ -1,10 +1,15 @@
-import type { ApplicationConfig, EnvironmentProviders, Provider } from '@angular/core';
-import { provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  EnvironmentProviders,
+  Provider,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
-import { provideApiConfiguration as provideApiConfig } from './api/generated/api-configuration';
+import { provideApiConfiguration } from './api/generated/api-configuration';
 import { resolveApiRoot } from './core/api/api-root';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
 
@@ -25,7 +30,7 @@ const _provideRouter = provideRouter(
     scrollPositionRestoration: 'enabled',
   }),
 );
-const _provideApi: Provider = provideApiConfig(resolveApiRoot());
+const _provideApi: Provider = provideApiConfiguration(resolveApiRoot());
 
 /**
  * `appConfig` is the provider list passed to `bootstrapApplication`

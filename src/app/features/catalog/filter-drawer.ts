@@ -1,12 +1,23 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
+import { ALLOWED_STORAGE_GB, isStorageBucket } from './catalog-query';
+import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
 import type { FacetValue } from '../../api/generated/models/facet-value';
+import type { Facets } from '../../api/generated/models/facets';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
+
+/** What one storage chip needs to render: the size, its label and
+ *  the facet count (null when no `Facets` has loaded yet). */
+interface StorageBucket {
+  readonly gb: 128 | 256 | 512;
+  readonly label: string;
+  readonly count: number | null;
+}
 
 /**
  * T13 — mobile filter drawer (FilterDrawer).
@@ -37,37 +48,23 @@ import { isHTMLInputElement } from '../../shared/utils/event-target';
   styleUrl: './filter-drawer.scss',
 })
 export class FilterDrawer {
-  /**
-  Applied filters (the source of truth).
-  */
+  /** Applied filters (the source of truth). */
   readonly applied = input.required<CatalogQuery>();
 
-  /**
-  Live facets.
-  */
-  readonly facets = input<{
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  } | null>(null);
+  /** Live facets — full `Facets` object so the colour group can read
+   *  `colors` straight off the generated model. */
+  readonly facets = input<Facets | null>(null);
 
-  /**
-  Whether the drawer is mounted.
-  */
+  /** Whether the drawer is mounted. */
   readonly opened = input<boolean>(false);
 
-  /**
-  Whether the controls are inert (loading / error).
-  */
+  /** Whether the controls are inert (loading / error). */
   readonly disabled = input<boolean>(false);
 
-  /**
-  Emits the committed draft exactly once per Apply press.
-  */
+  /** Emits the committed draft exactly once per Apply press. */
   readonly filtersChanged = output<CatalogQuery>();
 
-  /**
-  Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop).
-  */
+  /** Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop). */
   readonly closed = output();
 
   // -------------------------------------------------------------------------
@@ -76,20 +73,51 @@ export class FilterDrawer {
 
   private readonly draftBrands = signal<readonly string[]>([]);
   private readonly draftStorage = signal<readonly (128 | 256 | 512)[]>([]);
+  private readonly draftColors = signal<readonly string[]>([]);
   private readonly draftInStock = signal<boolean>(false);
   private readonly draftFiveG = signal<boolean>(false);
   private readonly draftMin = signal<string>('');
   private readonly draftMax = signal<string>('');
 
-  /**
-  Storage buckets exposed by the documented storage enum.
-  */
-  readonly storageBuckets = computed<readonly (128 | 256 | 512)[]>(() => [128, 256, 512]);
+  /** Storage buckets exposed by the documented storage enum, paired with
+   *  the facet count so the chip can show "128 GB (3)". Falls back to
+   *  the documented enum with `null` counts when no `Facets` is loaded. */
+  readonly storageFacets = computed<readonly StorageBucket[]>(() => {
+    const facets = this.facets();
+    if (facets === null) {
+      return ALLOWED_STORAGE_GB.map((gb) => ({ gb, label: `${String(gb)} GB`, count: null }));
+    }
+    const out: StorageBucket[] = [];
+    for (const entry of facets.storageGb) {
+      const bucket = toStorageBucket(entry);
+      if (bucket !== null) out.push(bucket);
+    }
+    return out;
+  });
 
-  /**
-  Brand facets, falling back to an empty list when none are present.
-  */
-  readonly brandFacets = computed<readonly FacetValue[]>(() => this.facets()?.brands ?? []);
+  /** Stock facet count, or null when the latest response carries none. */
+  readonly inStockCount = computed<number | null>(() => this.facets()?.inStock ?? null);
+
+  /** 5G facet count, or null when the latest response carries none. */
+  readonly fiveGCount = computed<number | null>(() => this.facets()?.is5g ?? null);
+
+  /** Placeholder hint for the min-price input: the lower bound. */
+  readonly priceMinHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.min.amount);
+  });
+
+  /** Placeholder hint for the max-price input: the upper bound. */
+  readonly priceMaxHint = computed<string | null>(() => {
+    const range = this.facets()?.priceRange;
+    return range === undefined ? null : String(range.max.amount);
+  });
+
+  /** Brand facets, falling back to an empty list when none are present. */
+  readonly brandFacets = computed(() => this.facets()?.brands ?? []);
+
+  /** Colour facets, falling back to an empty list when none are present. */
+  readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
 
   /** Element that should regain focus when the dialog closes. The parent
    *  passes its own trigger button through this input so WCAG focus
@@ -105,9 +133,9 @@ export class FilterDrawer {
     const max = this.parsePrice(this.draftMax());
     if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
     if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    return min !== null && max !== null && min > max
-      ? 'A minimum nem lehet nagyobb a maximum árnál.'
-      : null;
+    if (min !== null && max !== null && min > max)
+      return 'A minimum nem lehet nagyobb a maximum árnál.';
+    return null;
   });
 
   readonly canApply = computed<boolean>(() => !this.disabled() && this.priceError() === null);
@@ -126,6 +154,7 @@ export class FilterDrawer {
       const a = this.applied();
       this.draftBrands.set([...(a.brands ?? [])]);
       this.draftStorage.set([...(a.storageGb ?? [])]);
+      this.draftColors.set([...(a.colors ?? [])]);
       this.draftInStock.set(a.inStock === true);
       this.draftFiveG.set(a.is5g === true);
       this.draftMin.set(a.minPrice === undefined ? '' : String(a.minPrice));
@@ -149,6 +178,16 @@ export class FilterDrawer {
       ? current.filter((b) => b !== bucket)
       : [...current, bucket];
     this.draftStorage.set(next);
+  }
+
+  toggleColor(code: string): void {
+    const trimmed = code.trim();
+    if (trimmed.length === 0) return;
+    const current = this.draftColors();
+    const next = current.includes(trimmed)
+      ? current.filter((c) => c !== trimmed)
+      : [...current, trimmed];
+    this.draftColors.set(next);
   }
 
   toggleInStock(): void {
@@ -177,6 +216,7 @@ export class FilterDrawer {
       ...this.applied(),
       brands: this.draftBrands().length > 0 ? this.draftBrands() : undefined,
       storageGb: this.draftStorage().length > 0 ? this.draftStorage() : undefined,
+      colors: this.draftColors().length > 0 ? this.draftColors() : undefined,
       inStock: this.draftInStock() ? true : undefined,
       is5g: this.draftFiveG() ? true : undefined,
       minPrice: min ?? undefined,
@@ -210,6 +250,10 @@ export class FilterDrawer {
     return this.draftStorage().includes(bucket);
   }
 
+  isColorSelected(code: string): boolean {
+    return this.draftColors().includes(code);
+  }
+
   isInStockSelected(): boolean {
     return this.draftInStock();
   }
@@ -220,6 +264,18 @@ export class FilterDrawer {
 
   private parsePrice(raw: string): number | null {
     const trimmed = raw.trim();
-    return trimmed.length === 0 || !/^-?\d+$/.test(trimmed) ? null : Number(trimmed);
+    if (trimmed.length === 0) return null;
+    if (!/^-?\d+$/.test(trimmed)) return null;
+    return Number(trimmed);
   }
+}
+
+/** Narrow a `FacetValue` from `Facets.storageGb` into a `StorageBucket`,
+ *  returning null when the contract publishes a value the documented
+ *  enum does not recognise. */
+function toStorageBucket(entry: FacetValue): StorageBucket | null {
+  const raw = Number(entry.value);
+  if (!Number.isInteger(raw)) return null;
+  if (!isStorageBucket(raw)) return null;
+  return { gb: raw, label: entry.label, count: entry.count };
 }

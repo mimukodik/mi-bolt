@@ -4,7 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "start:payment": "ng serve demo-payment",
+    "build": "ng build mi-bolt",
+    "build:payment": "ng build demo-payment",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
@@ -12,7 +14,9 @@
     "format:check": "prettier --check .",
     "api:generate": "ng-openapi-gen --config ng-openapi-gen.json",
     "api:drift": "npm run api:generate && git diff --exit-code -- src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- src/app/api/generated)\"",
-    "api:sync": "node scripts/api-sync.mjs"
+    "api:sync": "node scripts/api-sync.mjs",
+    "fixtures:catalog": "node scripts/build-catalog-fixture.mjs",
+    "fixtures:catalog:check": "node scripts/build-catalog-fixture.mjs --check"
   },
   "private": true,
   "packageManager": "npm@11.17.0",

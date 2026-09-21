@@ -22,23 +22,15 @@ import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-d
   styleUrl: './mobile-drawer.scss',
 })
 export class MobileDrawer {
-  /**
-  Whether the drawer is open. The dialog is mounted only when true.
-  */
+  /** Whether the drawer is open. The dialog is mounted only when true. */
   readonly opened = input<boolean>(false);
 
-  /**
-  Accessible name of the dialog. Defaults to "Menü".
-  */
+  /** Accessible name of the dialog. Defaults to "Menü". */
   readonly label = input<string>('Menü');
 
-  /**
-  Element to refocus when the drawer closes.
-  */
+  /** Element to refocus when the drawer closes. */
   readonly triggerEl = input<HTMLElement | null>(null);
 
-  /**
-  Emitted whenever the drawer closes by any path (button, Escape, backdrop).
-  */
+  /** Emitted whenever the drawer closes by any path (button, Escape, backdrop). */
   readonly closed = output();
 }

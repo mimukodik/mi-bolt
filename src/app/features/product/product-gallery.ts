@@ -1,5 +1,13 @@
-import type { ElementRef } from '@angular/core';
-import { Component, computed, effect, input, output, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { ProductImage } from '../../shared/ui/product-image/product-image';
@@ -65,26 +73,29 @@ export class ProductGallery {
    *  substituting a different photo silently. */
   readonly idUnresolved = computed<boolean>(() => {
     const list = this.images();
-    return list.length === 0 ? false : list.every((img) => img.id !== this.selectedImageId());
+    if (list.length === 0) return false;
+    return !list.some((img) => img.id === this.selectedImageId());
   });
 
   private readonly effectiveIndex = computed<number>(() => {
     const list = this.images();
     if (list.length === 0) return 0;
-    const index = list.findIndex((img) => img.id === this.selectedImageId());
-    return Math.max(index, 0);
+    const idx = list.findIndex((img) => img.id === this.selectedImageId());
+    return idx >= 0 ? idx : 0;
   });
 
   readonly activeImage = computed<Image | null>(() => {
     const list = this.images();
-    return list.length === 0 ? null : (list[this.effectiveIndex()] ?? null);
+    if (list.length === 0) return null;
+    return list[this.effectiveIndex()] ?? null;
   });
 
   /** 1-based position of the active image, for the "current / total"
    *  counter. 0 while the gallery has no images. */
-  readonly activePosition = computed<number>(() =>
-    this.images().length === 0 ? 0 : this.effectiveIndex() + 1,
-  );
+  readonly activePosition = computed<number>(() => {
+    if (this.images().length === 0) return 0;
+    return this.effectiveIndex() + 1;
+  });
 
   readonly canPrev = computed(() => this.effectiveIndex() > 0);
   readonly canNext = computed(() => {
@@ -115,8 +126,8 @@ export class ProductGallery {
   }
 
   goTo(imageId: string): void {
-    const isExists = this.images().some((img) => img.id === imageId);
-    if (!isExists) return;
+    const exists = this.images().some((img) => img.id === imageId);
+    if (!exists) return;
     this.imageSelected.emit(imageId);
   }
 
@@ -167,9 +178,9 @@ export class ProductGallery {
    */
   onDocumentKeydown(event: KeyboardEvent): void {
     const frame = this.frame()?.nativeElement;
-    if (frame === undefined) return;
+    if (!frame) return;
     const target = event.target instanceof Node ? event.target : null;
-    if (target === null || !frame.contains(target)) return;
+    if (!target || !frame.contains(target)) return;
     this.onKeydown(event);
   }
 

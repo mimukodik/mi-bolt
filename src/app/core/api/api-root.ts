@@ -15,7 +15,7 @@
 const API_PATH = '/api/v1';
 
 export function resolveApiRoot(documentLike?: Document): string {
-  if (documentLike === undefined && typeof document === 'undefined') {
+  if (typeof documentLike === 'undefined' && typeof document === 'undefined') {
     throw new Error(
       '[mi-bolt] resolveApiRoot(): document is missing; SDK cannot derive a same-origin root.',
     );
@@ -24,10 +24,10 @@ export function resolveApiRoot(documentLike?: Document): string {
   let origin: string;
   try {
     origin = new URL(baseUri).origin;
-  } catch (error) {
+  } catch (err) {
     throw new Error(
-      `[mi-bolt] resolveApiRoot(): cannot parse document.baseURI "${baseUri}" as a URL (${String(error)})`,
-      { cause: error },
+      `[mi-bolt] resolveApiRoot(): cannot parse document.baseURI "${baseUri}" as a URL (${String(err)})`,
+      { cause: err },
     );
   }
   return `${origin}${API_PATH}`;

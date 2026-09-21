@@ -1,11 +1,11 @@
 <aside
-  class="demo-notice"
-  data-testid="demo-notice"
   id="demo"
-  role="status"
+  class="demo-notice"
   [class.demo-notice--memory]="persistenceMode() === 'memory'"
+  role="status"
+  data-testid="demo-notice"
 >
-  <span aria-hidden="true" class="demo-notice__badge">DEMÓ</span>
+  <span class="demo-notice__badge" aria-hidden="true">DEMÓ</span>
   @if (persistenceMode() === 'memory') {
     <span class="demo-notice__text" data-testid="demo-notice-memory-text">
       A böngésződ nem engedi a mentést, ezért az oldal frissítésekor a kosarad tartalma elveszik.

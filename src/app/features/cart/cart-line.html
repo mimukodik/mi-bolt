@@ -1,10 +1,10 @@
 <article
   class="line grid gap-4 p-4 rounded"
-  data-testid="cart-line"
   [attr.aria-busy]="pending() ? 'true' : null"
+  data-testid="cart-line"
 >
   <div class="media flex items-start justify-center min-w-0">
-    <app-product-image [image]="imageLike()" [productName]="line().productName" />
+    <app-product-image [image]="imageLike()" [productName]="line().productName"></app-product-image>
   </div>
 
   <div class="body flex flex-col gap-3 min-w-0">
@@ -12,38 +12,46 @@
       <h3 class="name m-0 font-bold" data-testid="cart-line-name">{{ line().productName }}</h3>
       <p class="variant m-0">
         <span class="variant-color">{{ line().colorName }}</span>
-        <span aria-hidden="true" class="variant-sep mx-2">·</span>
+        <span class="variant-sep mx-2" aria-hidden="true">·</span>
         <span class="variant-storage">{{ line().storageGb }} GB</span>
       </p>
     </header>
 
     <div class="prices flex items-center">
-      <app-price-block label="Egységár" status="success" [money]="line().unitPrice" />
+      <app-price-block
+        [money]="line().unitPrice"
+        [label]="'Egységár'"
+        [status]="'success'"
+      ></app-price-block>
     </div>
 
     <div class="quantity-row flex flex-col gap-2">
-      <span aria-hidden="true" class="qty-label">Darabszám</span>
+      <span class="qty-label" aria-hidden="true">Darabszám</span>
       <app-quantity-control
-        label="Darabszám"
-        [disabled]="pending()"
-        [max]="maxQuantity()"
-        [min]="1"
-        [pending]="pending()"
         [value]="line().quantity"
+        [min]="1"
+        [max]="maxQuantity()"
+        [disabled]="pending()"
+        [pending]="pending()"
+        [label]="'Darabszám'"
         (quantityChanged)="onQuantityChanged($event)"
-      />
+      ></app-quantity-control>
     </div>
   </div>
 
   <div class="totals hidden lg:flex flex-col items-end justify-between gap-3 min-w-45">
-    <app-price-block label="Részösszeg" status="success" [money]="line().lineTotal" />
+    <app-price-block
+      [money]="line().lineTotal"
+      [label]="'Részösszeg'"
+      [status]="'success'"
+    ></app-price-block>
     <button
-      class="remove inline-flex items-center justify-center min-w-10 h-10 px-4 rounded font-medium cursor-pointer"
-      data-testid="cart-line-remove"
       type="button"
-      [attr.aria-label]="`Törlés: ${line().productName}`"
+      class="remove inline-flex items-center justify-center min-w-10 h-10 px-4 rounded font-medium cursor-pointer"
+      [attr.aria-label]="'Törlés: ' + line().productName"
       [disabled]="pending()"
       (click)="onRemoveRequested()"
+      data-testid="cart-line-remove"
     >
       Törlés
     </button>

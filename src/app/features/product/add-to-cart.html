@@ -1,17 +1,17 @@
-<div class="root" data-testid="add-to-cart" [attr.aria-busy]="pending() ? 'true' : null">
+<div class="root" [attr.aria-busy]="pending() ? 'true' : null" data-testid="add-to-cart">
   <app-button
-    data-testid="add-to-cart-button"
-    label="Kosárba teszem"
-    loadingLabel="Hozzáadás…"
-    variant="primary"
+    [variant]="'primary'"
+    [label]="'Kosárba teszem'"
+    [loadingLabel]="'Hozzáadás…'"
     [disabled]="disabled()"
     [loading]="pending()"
     (pressed)="onAdd()"
-  />
+    data-testid="add-to-cart-button"
+  ></app-button>
 
   @if (statusBanner(); as banner) {
     <div class="status">
-      <app-status-message [message]="banner.text" [severity]="severity()" />
+      <app-status-message [message]="banner.text" [severity]="severity()"></app-status-message>
     </div>
   }
 </div>

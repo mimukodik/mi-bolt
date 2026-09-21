@@ -1,18 +1,18 @@
 <div class="toolbar flex flex-wrap items-center justify-between gap-3">
-  <div #resultCount class="result-count" data-testid="result-count" tabindex="-1">
+  <div class="result-count" data-testid="result-count" #resultCount tabindex="-1">
     {{ resultCountLabel() }}
   </div>
   <div class="toolbar__controls flex items-center gap-3 flex-wrap">
     <button
-      #filterTrigger
+      type="button"
       class="trigger hidden lg:inline-flex items-center min-h-10 px-4 rounded font-medium cursor-pointer"
       data-testid="filter-trigger"
-      type="button"
-      [attr.aria-controls]="'filter-drawer'"
+      #filterTrigger
       [attr.aria-expanded]="drawerExpanded() ? 'true' : 'false'"
+      [attr.aria-controls]="'filter-drawer'"
       (click)="openFilters.emit()"
     >
-      Szűrők{{ appliedCount() > 0 ? ` (${appliedCount()})` : '' }}
+      Szűrők{{ appliedCount() > 0 ? ' (' + appliedCount() + ')' : '' }}
     </button>
     <label class="sort inline-flex items-center gap-2">
       <span class="sort__label">Rendezés</span>
@@ -23,7 +23,7 @@
         (change)="onSortChange($event)"
       >
         @for (mode of sortModes; track mode) {
-          <option [selected]="mode === sort()" [value]="mode">
+          <option [value]="mode" [selected]="mode === sort()">
             {{ sortLabel(mode) }}
           </option>
         }
@@ -34,8 +34,8 @@
       <select
         class="select min-h-10 px-3 rounded font-inherit cursor-pointer"
         data-testid="catalog-page-size"
-        [disabled]="status() === 'loading'"
         [value]="pageSize()"
+        [disabled]="status() === 'loading'"
         (change)="onPageSizeChange($event)"
       >
         <option value="12">12 / oldal</option>

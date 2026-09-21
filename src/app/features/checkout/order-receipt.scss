@@ -207,6 +207,12 @@
   font-size: var(--type-helper);
 }
 
+/* `.meta__row` above centres its two cells, and a component rule beats
+   a utility class, so the wrapping address rows top-align here. */
+.meta__row--block {
+  align-items: flex-start;
+}
+
 .receipt__notice {
   margin: 0;
   padding: var(--space-3) var(--space-4);

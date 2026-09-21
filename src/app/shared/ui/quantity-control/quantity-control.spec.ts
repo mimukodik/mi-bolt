@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { QuantityControl } from './quantity-control';
 
@@ -7,14 +6,14 @@ import { QuantityControl } from './quantity-control';
   imports: [QuantityControl],
   template: `
     <app-quantity-control
-      [disabled]="disabled()"
-      [label]="label()"
-      [max]="max()"
-      [min]="min()"
-      [pending]="pending()"
       [value]="value()"
+      [min]="min()"
+      [max]="max()"
+      [disabled]="disabled()"
+      [pending]="pending()"
+      [label]="label()"
       (quantityChanged)="changes.set([...changes(), $event])"
-    />
+    ></app-quantity-control>
   `,
 })
 class HostComponent {
@@ -30,7 +29,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -41,17 +40,18 @@ interface ComponentWithStyles {
   };
 }
 
-function hasStyles(value: unknown): value is ComponentWithStyles {
-  if (typeof value !== 'function' && typeof value !== 'object') {
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
     return false;
   }
-  if (value === null || !('ɵcmp' in value)) {
+  if (val === null || !('ɵcmp' in val)) {
     return false;
   }
-  const cmp = value.ɵcmp;
-  return typeof cmp !== 'object' || cmp === null || !('styles' in cmp)
-    ? false
-    : Array.isArray(cmp.styles);
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
 }
 
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
@@ -89,7 +89,7 @@ describe('QuantityControl primitive', () => {
     const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="quantity-increment"]',
     );
-    if (inc === null) {
+    if (!inc) {
       throw new Error('Expected increment button');
     }
     inc.click();
@@ -101,7 +101,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (input === null) {
+    if (!input) {
       throw new Error('Expected quantity input');
     }
     input.value = '99';
@@ -119,7 +119,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (input === null) {
+    if (!input) {
       throw new Error('Expected quantity input');
     }
     input.value = '0';
@@ -138,7 +138,7 @@ describe('QuantityControl primitive', () => {
     const dec = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="quantity-decrement"]',
     );
-    if (dec === null) {
+    if (!dec) {
       throw new Error('Expected decrement button');
     }
     expect(dec.disabled).toBe(true);
@@ -151,7 +151,7 @@ describe('QuantityControl primitive', () => {
     const inc = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="quantity-increment"]',
     );
-    if (inc === null) {
+    if (!inc) {
       throw new Error('Expected increment button');
     }
     expect(inc.disabled).toBe(true);
@@ -170,7 +170,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (dec === null || inc === null || input === null) {
+    if (!dec || !inc || !input) {
       throw new Error('Expected controls to exist');
     }
     expect(dec.disabled).toBe(true);
@@ -187,7 +187,7 @@ describe('QuantityControl primitive', () => {
     const input = root.querySelector('[data-testid="quantity-input"]');
     const inc = root.querySelector('[data-testid="quantity-increment"]');
     const message = root.querySelector('[data-testid="quantity-message"]');
-    if (dec === null || input === null || inc === null) {
+    if (!dec || !input || !inc) {
       throw new Error('Expected the three step controls to exist');
     }
     const row = dec.parentElement;
@@ -204,7 +204,7 @@ describe('QuantityControl primitive', () => {
     const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
       '[data-testid="quantity-input"]',
     );
-    if (input === null) {
+    if (!input) {
       throw new Error('Expected quantity input');
     }
     input.value = '3';

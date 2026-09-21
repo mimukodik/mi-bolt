@@ -46,21 +46,18 @@ export class PriceBlock {
     const m = this.money();
     if (m === null) return null;
     const currency: unknown = m.currency;
-    return currency !== 'HUF' ||
-      !Number.isFinite(m.amount) ||
-      !Number.isInteger(m.amount) ||
-      m.amount < 0
-      ? null
-      : PriceBlock.formatHuf(m.amount);
+    if (currency !== 'HUF') return null;
+    if (!Number.isFinite(m.amount)) return null;
+    if (!Number.isInteger(m.amount)) return null;
+    if (m.amount < 0) return null;
+    return PriceBlock.formatHuf(m.amount);
   });
 
-  /**
-  Hungarian integer HUF formatter. Non-breaking space U+00A0 separators.
-  */
+  /** Hungarian integer HUF formatter. Non-breaking space U+00A0 separators. */
   static formatHuf(amount: number): string {
     const value = Math.trunc(Math.abs(amount));
-    const isNegative = amount < 0;
-    const grouped = value.toString().replaceAll(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    return `${isNegative ? '−' : ''}${grouped}`;
+    const negative = amount < 0;
+    const grouped = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return `${negative ? '−' : ''}${grouped}`;
   }
 }

@@ -91,10 +91,10 @@ describe('T11-AC01 layouts and route table', () => {
   it('every leaf route uses loadComponent as a lazy boundary', () => {
     let count = 0;
     routes.forEach((r) => {
-      if (typeof r.loadComponent === 'function') count += 1;
-      if (r.children !== undefined) {
+      if (typeof r.loadComponent === 'function') count = count + 1;
+      if (r.children) {
         r.children.forEach((c) => {
-          if (typeof c.loadComponent === 'function') count += 1;
+          if (typeof c.loadComponent === 'function') count = count + 1;
         });
       }
     });
@@ -106,7 +106,7 @@ describe('T11-AC01 layouts and route table', () => {
     let found = false;
     routes.forEach((r) => {
       if (r.path !== 'telefonok') return;
-      if (r.children === undefined) return;
+      if (!r.children) return;
       r.children.forEach((c) => {
         if (c.path === ':slug') found = true;
       });
@@ -127,7 +127,7 @@ describe('T11-AC01 layouts and route table', () => {
     let foundCount = 0;
     checkoutRoutes.forEach((c) => {
       expected.forEach((e) => {
-        if (c.path === e) foundCount += 1;
+        if (c.path === e) foundCount = foundCount + 1;
       });
     });
     const ok = foundCount - 3;
@@ -231,10 +231,9 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(raw.textContent).toContain('Vissza a shopba');
     const checkoutHeader = raw.querySelector('[data-testid="checkout-header"]');
     expect(checkoutHeader).not.toBeNull();
-    const search =
-      checkoutHeader !== null
-        ? checkoutHeader.querySelector('[data-testid="header-search"]')
-        : null;
+    const search = checkoutHeader
+      ? checkoutHeader.querySelector('[data-testid="header-search"]')
+      : null;
     expect(search).toBeNull();
   });
 
@@ -330,7 +329,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const skip = raw.querySelector('a.skip-link');
     expect(skip).not.toBeNull();
-    const href = skip !== null ? skip.getAttribute('href') : '';
+    const href = skip ? skip.getAttribute('href') : '';
     expect(href).toBe('#main-content');
   });
 
@@ -577,9 +576,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
   }
 
   async function flushMutations(): Promise<void> {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   function freshRouteFocus(): RouteFocusService {
@@ -685,9 +682,7 @@ describe('T11-AC03 skip link, single H1, route title, route-change focus, histor
     const p2 = location.path();
     expect(p2.includes('demo-one')).toBe(true);
     location.back();
-    await new Promise((r) => {
-      setTimeout(r, 0);
-    });
+    await new Promise((r) => setTimeout(r, 0));
     const p3 = location.path();
     expect(p3.includes('brand=demo-one')).toBe(true);
   });
@@ -720,7 +715,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     f.detectChanges();
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
-    const modal = dialog !== null ? dialog.getAttribute('aria-modal') : '';
+    const modal = dialog ? dialog.getAttribute('aria-modal') : '';
     expect(modal).toBe('true');
     const links = document.body.querySelectorAll('[role="dialog"] a');
     expect(links.length).toBe(2);
@@ -737,7 +732,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     f.detectChanges();
     const dialog = document.body.querySelector('[role="dialog"]');
     expect(dialog).not.toBeNull();
-    const closest = dialog !== null ? dialog.closest('header') : 'x';
+    const closest = dialog ? dialog.closest('header') : 'x';
     expect(closest).toBeNull();
   });
 
@@ -790,7 +785,7 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const badge = raw.querySelector('[data-testid="cart-badge"]');
-    const text = (badge?.textContent ?? '').trim();
+    const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('0');
   });
 
@@ -803,12 +798,12 @@ describe('T11-AC05 demo notice and cart badge wiring', () => {
     // authoritative cart snapshot: `_seedCart` is the test seam that
     // points the facade at a known cart id.
     const facade = TestBed.inject(CartCountFacade);
-    facade._seedCart({ id: 'cart-test-001', itemCount: 3 });
+    facade._seedCart({ id: 'cart-test-001', totalQuantity: 3 });
     f.detectChanges();
     const raw: unknown = f.nativeElement;
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const badge = raw.querySelector('[data-testid="cart-badge"]');
-    const text = (badge?.textContent ?? '').trim();
+    const text = badge?.textContent ? badge.textContent.trim() : '';
     expect(text).toBe('3');
   });
 
@@ -881,9 +876,7 @@ describe('T11-AC03 each layout moves focus on a real path change', () => {
 
     await TestBed.inject(Router).navigateByUrl(url);
     fixture.detectChanges();
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     const active = document.activeElement;
     if (active === heading) return 'h1';

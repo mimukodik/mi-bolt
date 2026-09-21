@@ -1,6 +1,6 @@
-import type { TemplateRef } from '@angular/core';
 import {
   Component,
+  TemplateRef,
   ViewContainerRef,
   effect,
   inject,
@@ -8,8 +8,7 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import type { DialogRef } from '@angular/cdk/dialog';
-import { Dialog, DialogModule } from '@angular/cdk/dialog';
+import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
 
 /**
  * MiBolt AccessibleDialog primitive.
@@ -45,14 +44,10 @@ export class AccessibleDialog {
   private readonly dialog = inject(Dialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
 
-  /**
-  Whether the dialog is open. Driven by the parent.
-  */
+  /** Whether the dialog is open. Driven by the parent. */
   readonly opened = input<boolean>(false);
 
-  /**
-  Required labelled name. Becomes the dialog's accessible name.
-  */
+  /** Required labelled name. Becomes the dialog's accessible name. */
   readonly label = input.required<string>();
 
   /**
@@ -76,9 +71,7 @@ export class AccessibleDialog {
    */
   readonly initialFocus = input<'first-tabbable' | 'first-heading'>('first-tabbable');
 
-  /**
-  Emits when the dialog closes by any mechanism (button, Escape, backdrop).
-  */
+  /** Emits when the dialog closes by any mechanism (button, Escape, backdrop). */
   readonly closed = output();
 
   readonly body = viewChild.required<TemplateRef<unknown>>('body');
@@ -87,10 +80,10 @@ export class AccessibleDialog {
 
   constructor() {
     effect(() => {
-      const isOpen = this.opened();
-      if (isOpen && this.ref === null) {
+      const open = this.opened();
+      if (open && !this.ref) {
         this.openInternal();
-      } else if (!isOpen && this.ref !== null) {
+      } else if (!open && this.ref) {
         this.closeInternal();
       }
     });
@@ -132,11 +125,11 @@ export class AccessibleDialog {
   }
 
   private closeInternal(): void {
-    if (this.ref === null) return;
-    const reference = this.ref;
+    if (!this.ref) return;
+    const ref = this.ref;
     // Setting ref = null first so the effect does not loop on the next
     // tick when the parent observes `closed` and sets `opened` back to false.
     this.ref = null;
-    reference.close();
+    ref.close();
   }
 }

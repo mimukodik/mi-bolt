@@ -1,153 +1,145 @@
 /**
- * T17: global cart signal facade.
+ * T17: cart facade on the 2.0.0 contract.
  *
- * Each acceptance criterion has at least one named failing test. The
- * suite wires the real SDK over MSW (T07 cart handlers) so the
- * `If-Match`, `Idempotency-Key` and `X-Demo-Session` headers go
- * through the same code paths the browser uses, and the facade's
- * signals (cart / itemCount / subtotal / pending / error / conflict
- * / cartGone / cartExpired) are observed through the public surface.
- *
- * Vitest's esbuild/oxc parser is fragile on chained `??` / `||`
- * patterns. The test bodies use plain ternary / explicit branches so
- * the build does not regress on T11-style parser workarounds.
+ * Drives the facade through the 2.0.0 cart mock (GET /cart auto-create,
+ * If-Match per dispatch, 412 conflict with background refetch and explicit
+ * retry, 410 expiry, 404 and 409 on the error signal with params, clear(),
+ * CART_NOT_LOADED before boot) and asserts exact versions, counts and
+ * headers on captured requests.
  */
 
 // @vitest-environment jsdom
 import '@angular/compiler';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { http, HttpResponse, type RequestHandler } from 'msw';
+import { HttpResponse, http } from 'msw';
+
 import { server, useMswServer } from '../../../../tests/msw-server';
 
-import { provideApiConfiguration as provideApiConfig } from '../../../app/api/generated/api-configuration';
+import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 import type { Cart } from '../../../app/api/generated/models/cart';
 
-import { DEMO_PRODUCT, cartHandlersEntry } from '../../../mocks/cart/cart.handlers';
-import { CART_DURATION_MS, CartDomain } from '../../../mocks/cart/cart-domain';
-import { IdempotencyStore } from '../../../mocks/idempotency';
-import { Repository as Repo } from '../../../mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../../../mocks/scenarios';
-
-import { CartFacade } from '../../../app/features/cart/cart.facade';
-import { CartCountFacade } from '../../../app/core/navigation/cart-count-facade';
+import { createHandlers } from '../../../mocks/create-handlers';
+import { CART_TTL_MS } from '../../../mocks/cart/cart-store';
+import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import { loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
+import { isCatalogFixtureShape } from '../../../mocks/catalog/catalog.handlers';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
 import {
-  CartMutationQueue,
-  settleQueue,
-  type MutationIntent,
-  type DispatchResult,
-} from '../../../app/features/cart/cart-mutation-queue';
+  createDeterministicIds,
+  createFixedClock,
+  DEFAULT_SCENARIO,
+} from '../../../mocks/scenarios';
+import { Repository } from '../../../mocks/repository';
 
-// The shared MSW server's lifecycle is registered here, in this file, because
-// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
-// process rather than once per file. See `tests/msw-server.ts`.
+import { CartFacade } from './cart.facade';
+import { CartCountFacade } from '../../core/navigation/cart-count-facade';
+import { CartMutationQueue, type DispatchResult, type MutationIntent } from './cart-mutation-queue';
+
 useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
-const VARIANT_G256 = 'demo-one-5g-graphite-256';
-const VARIANT_G512 = 'demo-one-5g-graphite-512';
-const VARIANT_S256 = 'demo-one-5g-silver-256';
+const VARIANT_MOTO_256 = 'motorola-edge-50-fusion--zold--256';
+const VARIANT_HONOR_128 = 'honor-x7d--fekete--128';
+const VARIANT_IPHONE_OOS = 'apple-iphone-17e--halvany-rozsaszin--256';
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
 
 function getQueue(target: unknown): CartMutationQueue | null {
-  if (typeof target !== 'object' || target === null || !('queue' in target)) return null;
-  const q = target.queue;
-  return q instanceof CartMutationQueue ? q : null;
+  if (typeof target !== 'object' || target === null) return null;
+  if (!('queue' in target)) return null;
+  // eslint-disable-next-line @typescript-eslint/dot-notation
+  const q = target['queue'];
+  if (q instanceof CartMutationQueue) return q;
+  return null;
 }
 
-// ---------------------------------------------------------------------------
-// Capture every outgoing request so AC02 can assert header values.
-// ---------------------------------------------------------------------------
+/** Waits for every queued dispatch and the facade's own `then` continuations. */
+async function settled(facade: CartFacade): Promise<void> {
+  const queue = getQueue(facade);
+  if (queue !== null) await queue.settle();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
 interface CapturedRequest {
   readonly method: string;
   readonly url: string;
   readonly headers: Record<string, string | undefined>;
-  readonly body: string;
 }
 const captures: CapturedRequest[] = [];
 
-function captureRequest(request: Request, body: string): void {
-  const headers: Record<string, string | undefined> = {};
-  request.headers.forEach((value, key) => {
-    headers[key] = value;
-  });
-  captures.push({
-    method: request.method,
-    url: request.url,
-    headers,
-    body,
-  });
+function requestsTo(method: string, path: string): CapturedRequest[] {
+  return captures.filter((c) => c.method === method && c.url === `${BASE_URL}${path}`);
 }
 
-let currentDomain: CartDomain;
-let currentEnvironment: {
-  repository: Repo;
-  clock: { now(): string; advanceMs(n: number): void };
-  ids: { uuid(): string };
-  scenario: { name: string; seed: number; clockOffsetMs: number; isolated: boolean };
+/** A 2.0.0 cart literal for the queue tests, no server involved. */
+function cartLiteral(version: number): Cart {
+  return {
+    id: 'cart-literal',
+    version,
+    items: [],
+    lineCount: 0,
+    totalQuantity: 0,
+    subtotal: { amount: 0, currency: 'HUF' },
+    expiresAt: '2026-09-21T10:00:00.000Z',
+    notices: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Capture setup
+// ---------------------------------------------------------------------------
+
+let clock: ReturnType<typeof createFixedClock>;
+let ids: ReturnType<typeof createDeterministicIds>;
+let options: {
+  repository: Repository;
+  clock: ReturnType<typeof createFixedClock>;
+  ids: ReturnType<typeof createDeterministicIds>;
+  scenario: typeof DEFAULT_SCENARIO;
+  apiRoot: string;
 };
 
-function makeEnvironment(): typeof currentEnvironment {
-  const clock = createFixedClock(new Date(Date.parse('2026-09-14T10:00:00.000Z')).toISOString());
-  const ids = createDeterministicIds(7);
-  const scenario = {
-    name: 'cart-facade-suite',
-    seed: 7,
-    clockOffsetMs: 0,
-    isolated: true,
-  };
-  const repo = new Repo(scenario, ids, clock);
-  repo.loadProducts([DEMO_PRODUCT]);
-  currentDomain = new CartDomain(repo, clock, ids, new IdempotencyStore(clock));
-  return { repository: repo, clock, ids, scenario };
-}
-
-function buildHandlers(): RequestHandler[] {
-  const environment = currentEnvironment;
-  return [
-    ...cartHandlersEntry({
-      repository: environment.repository,
-      clock: environment.clock,
-      ids: environment.ids,
-      scenario: environment.scenario,
-      apiRoot: '/api/v1',
-    }),
-  ];
-}
-
-/**
- * Attaches a request capture handler directly to the MSW server
- * events so we can assert on actual headers (including `If-Match`)
- * without monkey-patching each cart handler's `run`.
- */
-function attachRequestCapture(serverInstance: typeof server): () => void {
-  const handler = async ({ request }: { request: Request }): Promise<void> => {
-    const cloned = request.clone();
-    const bodyText = await cloned.text().catch(() => '');
-    captureRequest(request, bodyText);
-  };
-  serverInstance.events.on('request:start', handler);
-  return () => {
-    serverInstance.events.removeListener('request:start', handler);
-  };
-}
-
-let detachCapture: (() => void) | null = null;
+beforeAll(() => {
+  if (!isCatalogFixtureShape(catalogFixture)) {
+    throw new Error('[cart.facade.spec] committed fixture does not match expected shape');
+  }
+  loadCatalogFixture(catalogFixture);
+});
 
 beforeEach(() => {
   captures.length = 0;
-  currentEnvironment = makeEnvironment();
-  server.use(...buildHandlers());
-  detachCapture = attachRequestCapture(server);
+  clock = createFixedClock('2026-09-20T10:00:00.000Z');
+  ids = createDeterministicIds(1);
+  options = {
+    repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+    clock,
+    ids,
+    scenario: DEFAULT_SCENARIO,
+    apiRoot: '/api/v1',
+  };
+  options.repository.loadProducts([DEMO_PRODUCT]);
+  server.use(...createHandlers(options));
+
+  const handler = ({ request }: { request: Request }): void => {
+    const headers: Record<string, string | undefined> = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    captures.push({ method: request.method, url: request.url, headers });
+  };
+  server.events.on('request:start', handler);
 });
 
 afterEach(() => {
-  if (detachCapture !== null) detachCapture();
-  detachCapture = null;
+  server.events.removeAllListeners('request:start');
   server.resetHandlers();
   captures.length = 0;
 });
@@ -162,39 +154,14 @@ function configureTestBed(): void {
     providers: [
       provideZonelessChangeDetection(),
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfig(BASE_URL),
+      provideApiConfiguration(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
 }
 
-function patchesTo(cartId: string, itemId: string): CapturedRequest[] {
-  return captures.filter(
-    (c) => c.method === 'PATCH' && c.url.endsWith(`/carts/${cartId}/items/${itemId}`),
-  );
-}
-
-function addsTo(cartId: string): CapturedRequest[] {
-  return captures.filter((c) => c.method === 'POST' && c.url.endsWith(`/carts/${cartId}/items`));
-}
-
-/**
- * Reads the X-Demo-Session header that the interceptor set on the
- * most recent cart-bound request. The cart-domain uses this id to
- * namespace carts, so OOB operations must match it exactly.
- */
-function readDemoSessionId(): string {
-  for (let index = captures.length - 1; index >= 0; index--) {
-    const value = captures[index]?.headers['x-demo-session'];
-    if (typeof value === 'string') return value;
-  }
-  throw new Error('No captured request found: call facade.ensureCart() first.');
-}
-
 // ---------------------------------------------------------------------------
-// T17-AC01: Header (T11), product add (T18/T15), and checkout (T19+)
-// read the same root-scoped CartFacade. No sibling event bus. No
-// duplicate totals.
+// T17-AC01: root-scoped CartFacade is the single owner
 // ---------------------------------------------------------------------------
 describe('T17-AC01: root-scoped CartFacade is the single owner', () => {
   beforeEach(() => {
@@ -207,79 +174,71 @@ describe('T17-AC01: root-scoped CartFacade is the single owner', () => {
     expect(a).toBe(b);
   });
 
-  it('re-exports the real CartFacade under the CartCountFacade name so T11 header still binds', () => {
+  it('re-exports the real CartFacade under the CartCountFacade name so the header binds to it', () => {
     const header = TestBed.inject(CartCountFacade);
     const real = TestBed.inject(CartFacade);
     expect(header).toBe(real);
-    expect(typeof header.addItem).toBe('function');
-    expect(typeof header.setQuantity).toBe('function');
-    expect(typeof header.removeItem).toBe('function');
-    expect(typeof header.ensureCart).toBe('function');
-    expect(typeof header.retry).toBe('function');
   });
 
-  it('starts with itemCount=0, subtotal=0 HUF, no error, and the boot restore already pending', () => {
+  it('boots by fetching the session cart: version 1, no items, itemCount 0, subtotal 0 HUF', async () => {
+    configureTestBed();
     const facade = TestBed.inject(CartFacade);
+    await settled(facade);
+
+    expect(requestsTo('GET', '/cart')).toHaveLength(1);
+    const [firstGet] = requestsTo('GET', '/cart');
+    expect(firstGet.headers['if-match']).toBeUndefined();
+
+    expect(facade.cart()?.version).toBe(1);
+    expect(facade.cart()?.items).toEqual([]);
     expect(facade.itemCount()).toBe(0);
     expect(facade.subtotal()).toEqual({ amount: 0, currency: 'HUF' });
-    // The facade issues its own boot restore on construction (see the
-    // constructor's `void this.ensureCart()`), so `pending()` is already
-    // 1 the instant injection returns — nothing has been asked of it by
-    // a caller, but the facade has already asked of itself.
-    expect(facade.pending()).toBeGreaterThan(0);
     expect(facade.error()).toBeNull();
-    expect(facade.conflict()).toBeNull();
-    expect(facade.cartGone()).toBe(false);
-    expect(facade.cartExpired()).toBe(false);
+    expect(facade.pending()).toBe(0);
   });
 });
 
 // ---------------------------------------------------------------------------
-// T17-AC02: serialize mutations and bind expected version at dispatch.
-// Fresh idempotency key per intent, same key only on retry.
+// T17-AC02: serialized mutations bind If-Match to the previous response
 // ---------------------------------------------------------------------------
-describe('T17-AC02: serialized mutations, If-Match at dispatch, fresh idempotency per intent', () => {
+describe('T17-AC02: serialized mutations bind If-Match to the previous response', () => {
   beforeEach(() => {
     configureTestBed();
   });
 
-  it('queues two addCartItem intents serially; the second uses the version returned by the first', async () => {
+  it('queues two addItem intents serially; the second carries the version the first returned', async () => {
     const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    const cartId = facade.cartId;
+    await Promise.all([facade.addItem(VARIANT_MOTO_256, 1), facade.addItem(VARIANT_HONOR_128, 1)]);
 
-    const p1 = facade.addItem(VARIANT_G256, 1);
-    const p2 = facade.addItem(VARIANT_G512, 1);
-    await Promise.all([p1, p2]);
-
-    const adds = addsTo(cartId ?? '');
-    expect(adds.length).toBe(2);
-    const ifMatch1 = adds[0]?.headers['if-match'];
-    const ifMatch2 = adds[1]?.headers['if-match'];
-    expect(ifMatch1).toBe('"1"');
-    expect(ifMatch2).toBe('"2"');
-    expect(ifMatch2).not.toBe(ifMatch1);
+    const adds = requestsTo('POST', '/cart/items');
+    expect(adds).toHaveLength(2);
+    expect(adds[0]?.headers['if-match']).toBe('"1"');
+    expect(adds[1]?.headers['if-match']).toBe('"2"');
+    expect(facade.cart()?.version).toBe(3);
+    expect(facade.cart()?.lineCount).toBe(2);
+    expect(facade.cart()?.totalQuantity).toBe(2);
+    expect(facade.itemCount()).toBe(2);
   });
 
-  it('issues a fresh Idempotency-Key for each new intent', async () => {
+  it('sends no If-Match on the boot fetch and on refetch()', async () => {
     const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    await facade.addItem(VARIANT_G256, 1);
-    await facade.addItem(VARIANT_G512, 2);
+    await settled(facade);
 
-    const idemKeys = captures
-      .filter((c) => c.method === 'POST' && c.url.endsWith('/items'))
-      .map((c) => c.headers['idempotency-key']);
-    expect(idemKeys.length).toBe(2);
-    expect(idemKeys[0]).toBeTruthy();
-    expect(idemKeys[1]).toBeTruthy();
-    expect(idemKeys[0]).not.toBe(idemKeys[1]);
+    const bootGets = requestsTo('GET', '/cart');
+    expect(bootGets).toHaveLength(1);
+    expect(bootGets[0]?.headers['if-match']).toBeUndefined();
+
+    await facade.refetch();
+
+    const gets = requestsTo('GET', '/cart');
+    expect(gets).toHaveLength(2);
+    expect(gets[0]?.headers['if-match']).toBeUndefined();
+    expect(gets[1]?.headers['if-match']).toBeUndefined();
   });
 });
 
 // ---------------------------------------------------------------------------
-// T17-AC03: Wait for authoritative response; pending controls prevent
-// contradictory writes.
+// T17-AC03: pending controls and authoritative totals
 // ---------------------------------------------------------------------------
 describe('T17-AC03: pending controls and authoritative totals', () => {
   beforeEach(() => {
@@ -288,314 +247,262 @@ describe('T17-AC03: pending controls and authoritative totals', () => {
 
   it('reports pending>0 while an intent is queued, then drops to 0', async () => {
     const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
+    await settled(facade);
 
-    const promise = facade.addItem(VARIANT_G256, 1);
-    await Promise.resolve();
-    expect(facade.pending()).toBeGreaterThan(0);
-    await promise;
+    const p = facade.addItem(VARIANT_MOTO_256, 1);
+
+    expect(facade.pending()).toBe(1);
+    expect(facade.itemCount()).toBe(0);
+
+    await p;
+    await settled(facade);
+
     expect(facade.pending()).toBe(0);
+    expect(facade.itemCount()).toBe(1);
   });
 
   it('serializes setQuantity(5) then setQuantity(2); the second If-Match binds to the first response version', async () => {
     const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    await facade.addItem(VARIANT_G256, 1);
-    const itemId = facade.cart()?.items[0]?.id ?? '';
+    await facade.addItem(VARIANT_MOTO_256, 1);
 
-    const p1 = facade.setQuantity(itemId, 5);
-    const p2 = facade.setQuantity(itemId, 2);
-    await Promise.all([p1, p2]);
+    await Promise.all([
+      facade.setQuantity(VARIANT_MOTO_256, 5),
+      facade.setQuantity(VARIANT_MOTO_256, 2),
+    ]);
 
-    const patches = patchesTo(facade.cartId ?? '', itemId);
-    expect(patches.length).toBe(2);
+    const patches = requestsTo('PATCH', '/cart/items/' + VARIANT_MOTO_256);
+    expect(patches).toHaveLength(2);
     expect(patches[0]?.headers['if-match']).toBe('"2"');
     expect(patches[1]?.headers['if-match']).toBe('"3"');
-    expect(facade.itemCount()).toBe(2);
-    expect(facade.cart()?.version).toBe(4);
-  });
 
-  it('only mutates itemCount after the server confirms the change', async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    const before = facade.itemCount();
-    await facade.addItem(VARIANT_G256, 3);
-    expect(facade.itemCount()).toBe(before + 3);
+    expect(facade.cart()?.items[0]?.quantity).toBe(2);
+    expect(facade.cart()?.version).toBe(4);
+    expect(facade.subtotal()).toEqual({ amount: 179980, currency: 'HUF' });
   });
 });
 
 // ---------------------------------------------------------------------------
-// T17-AC04: 409 requires refetch + explicit user correction. No blind
-// replay of an absolute quantity.
+// T17-AC04: 412 conflict surfaces a recovery signal and defers replay
 // ---------------------------------------------------------------------------
-describe('T17-AC04: 409 conflict surfaces a recovery signal and defers replay', () => {
-  beforeEach(() => {
+describe('T17-AC04: 412 conflict surfaces a recovery signal and defers replay', () => {
+  let facade: CartFacade;
+
+  beforeEach(async () => {
     configureTestBed();
+    facade = TestBed.inject(CartFacade);
+    await facade.addItem(VARIANT_MOTO_256, 1);
+    const current = facade.cart();
+    if (current === null) throw new Error('no cart');
+    facade._seedCart({ ...current, version: 1 });
   });
 
-  it('surfaces the conflict on the conflict signal and refetches the cart', async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    const cartId = facade.cartId ?? '';
+  it('surfaces the conflict on the conflict signal, then refetches in the background', async () => {
+    await facade.addItem(VARIANT_HONOR_128, 1);
 
-    // Advance the server-side cart out-of-band while the facade
-    // still believes version is 1. The next facade mutation will
-    // dispatch If-Match: "1" and receive a 409 CART_VERSION_CONFLICT.
-    const facadeCart = facade.cart();
-    expect(facadeCart).not.toBeNull();
-    // Use the cart-domain directly to seed the next version. The
-    // facade never sees this; its local cart snapshot stays at v1.
-    const sessionId = readDemoSessionId();
-    const seed = currentDomain.addCartItem({
-      sessionId,
-      cartId,
-      ifMatch: '"1"',
-      idempotencyKey: 'oob-seed',
-      variantId: VARIANT_S256,
-      quantity: 1,
+    expect(facade.conflict()).toEqual({
+      code: 'CART_VERSION_CONFLICT',
+      status: 412,
+      detail: 'The cart changed since the version supplied in If-Match',
+      intentKind: 'addItem',
+      serverVersion: 1,
     });
-    expect(seed.ok).toBe(true);
+    expect(facade.cart()?.lineCount).toBe(1);
 
-    captures.length = 0;
-    await facade.addItem(VARIANT_G256, 1).catch(() => undefined);
+    await settled(facade);
 
-    expect(facade.conflict()).not.toBeNull();
-    expect(facade.conflict()?.code).toBe('CART_VERSION_CONFLICT');
-
-    // The refetch is fire-and-forget; wait for the queue to drain
-    // so the GET request lands before the assertion runs.
-    const queue = getQueue(facade);
-    if (queue === null) throw new Error('Expected CartMutationQueue');
-    await settleQueue(queue);
-
-    // The facade must have refetched the cart via GET after the 409.
-    const refetchCalls = captures.filter(
-      (c) => c.method === 'GET' && c.url.endsWith(`/carts/${cartId}`),
-    );
-    expect(refetchCalls.length).toBeGreaterThan(0);
-    // The local cart snapshot must now reflect the post-OOB version.
     expect(facade.cart()?.version).toBe(2);
+    expect(facade.conflict()).toBeNull();
+    expect(facade.cart()?.lineCount).toBe(1);
   });
 
-  it('retry() re-submits the failed intent with the same Idempotency-Key and the new version', async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    await facade.addItem(VARIANT_G256, 1);
-    const cartId = facade.cartId ?? '';
-    const itemId = facade.cart()?.items[0]?.id ?? '';
-
-    // Seed an OOB version bump so the next setQuantity on the facade
-    // sees a 409.
-    const sessionId = readDemoSessionId();
-    const oob = currentDomain.addCartItem({
-      sessionId,
-      cartId,
-      ifMatch: '"2"',
-      idempotencyKey: 'oob-retry',
-      variantId: VARIANT_S256,
-      quantity: 1,
-    });
-    expect(oob.ok).toBe(true);
-
-    captures.length = 0;
-    await facade.setQuantity(itemId, 4).catch(() => undefined);
-    expect(facade.conflict()).not.toBeNull();
-
-    const conflictKey = captures
-      .filter((c) => c.method === 'PATCH')
-      .map((c) => c.headers['idempotency-key'])
-      .pop();
+  it('retry() re-submits the failed intent with the refreshed version', async () => {
+    await facade.addItem(VARIANT_HONOR_128, 1);
+    await settled(facade);
 
     captures.length = 0;
     await facade.retry();
 
-    const retryPatch = captures.find((c) => c.method === 'PATCH');
-    expect(retryPatch).toBeDefined();
-    expect(retryPatch?.headers['idempotency-key']).toBe(conflictKey);
-    // The retry must bind the new server-side version (v3), not the
-    // stale v2 used by the failed intent.
-    expect(retryPatch?.headers['if-match']).toBe('"3"');
-  });
-
-  it('does not auto-replay: a 409 leaves the visible cart at the pre-conflict version', async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    await facade.addItem(VARIANT_G256, 1);
-
-    const beforeVersion = facade.cart()?.version;
-
-    const sessionId = readDemoSessionId();
-    const cartId = facade.cartId ?? '';
-    const oob = currentDomain.addCartItem({
-      sessionId,
-      cartId,
-      ifMatch: `"${String(facade.cart()?.version ?? 0)}"`,
-      idempotencyKey: 'oob-no-replay',
-      variantId: VARIANT_S256,
-      quantity: 1,
-    });
-    expect(oob.ok).toBe(true);
-
-    // Fire a second intent that will 409.
-    await facade.addItem(VARIANT_G512, 1).catch(() => undefined);
-    const queue = getQueue(facade);
-    if (queue === null) throw new Error('Expected CartMutationQueue');
-    await settleQueue(queue);
-    // After the conflict + refetch, the version reflects the server,
-    // but the line quantities that the facade displays match the
-    // server's authoritative state (NOT a replayed intent).
-    expect(facade.cart()?.items.length).toBe(2);
-    expect(facade.cart()?.version).toBeGreaterThan(beforeVersion ?? 0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// T17-AC05: 401 is never invented for the unauthenticated demo. The
-// documented 404/410/storage-loss paths surface as explicit signals.
-// ---------------------------------------------------------------------------
-describe('T17-AC05: 404/410/explicit recovery; no 401 path', () => {
-  beforeEach(() => {
-    configureTestBed();
-  });
-
-  it('404 NOT_FOUND flips the cartGone signal so the UI can offer a fresh start', async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    // Drive the facade into the missing-cart branch by triggering an
-    // addItem against a forced-missing cart via the test seam.
-    facade._seedMissingCart();
-    await facade.addItem(VARIANT_G256, 1).catch(() => undefined);
-    expect(facade.cartGone()).toBe(true);
-  });
-
-  it('410 CART_EXPIRED flips the cartExpired signal so the UI can offer a fresh cart', async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    const cartId = facade.cartId;
-    // Advance the deterministic clock past the cart expiry.
-    currentEnvironment.clock.advanceMs(CART_DURATION_MS + 1);
-
-    await facade.addItem(VARIANT_G256, 1).catch(() => undefined);
-    expect(facade.cartExpired()).toBe(true);
-    // The local snapshot is dropped on 410 so the next ensureCart()
-    // actually creates a fresh cart instead of seeing an "active"
-    // status the server will reject.
-    expect(facade.cart()).toBeNull();
-    expect(cartId).not.toBeNull();
-  });
-
-  it('does not invent a 401 signal: there is no auth surface in this demo', () => {
-    const facade = TestBed.inject(CartFacade);
-    // The signal surface intentionally has no `unauthorized` / `401`
-    // member. This test pins the contract: any future addition must
-    // be a deliberate decision, not a derived assertion.
-    const names = Object.keys(facade);
-    expect(names.some((k) => k.toLowerCase().includes('unauthor'))).toBe(false);
-    expect(names.some((k) => k.toLowerCase().includes('auth'))).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// FIX-10: the facade acquires the session's cart on construction, with
-// no caller invoking ensureCart(), so a reload restores the header
-// badge and every other screen instead of only the cart page.
-// ---------------------------------------------------------------------------
-describe('FIX-10: CartFacade acquires its cart on construction', () => {
-  beforeEach(() => {
-    configureTestBed();
-  });
-
-  it('issues the cart-acquisition request on injection and fills cart()/itemCount() from a successful boot restore', async () => {
-    const restoredCart: Cart = {
-      id: 'cart-boot-restore-1',
-      version: 1,
-      status: 'active',
-      items: [
-        {
-          id: 'item-boot-1',
-          variantId: VARIANT_G256,
-          productId: 'demo-one-5g',
-          productName: 'Demo One 5G',
-          productSlug: 'demo-one-5g',
-          colorName: 'Grafit',
-          storageGb: 256,
-          quantity: 1,
-          maxQuantity: 5,
-          availability: 'in_stock',
-          image: {
-            id: 'img-1',
-            src: '/assets/products/graphite-front.webp',
-            alt: 'Demo One 5G Grafit',
-            width: 320,
-            height: 400,
-          },
-          unitPrice: { amount: 339_990, currency: 'HUF' },
-          lineTotal: { amount: 339_990, currency: 'HUF' },
-        },
-      ],
-      itemCount: 1,
-      subtotal: { amount: 339_990, currency: 'HUF' },
-      expiresAt: '2026-12-31T23:59:59.000Z',
-    } satisfies Cart;
-    // Override the default createCart handler so the boot restore
-    // resolves against a cart that already carries an item, the way a
-    // returning tab's session would.
-    server.use(
-      http.post(`${BASE_URL}/carts`, () => HttpResponse.json(restoredCart, { status: 201 })),
-    );
-
-    const facade = TestBed.inject(CartFacade);
-    // Nobody called ensureCart(): the constructor already queued it.
-    expect(facade.pending()).toBeGreaterThan(0);
-
-    const queue = getQueue(facade);
-    if (queue === null) throw new Error('Expected CartMutationQueue');
-    await settleQueue(queue);
-
-    expect(facade.cart()?.id).toBe('cart-boot-restore-1');
-    expect(facade.itemCount()).toBe(1);
-    expect(facade.subtotal()).toEqual({ amount: 339_990, currency: 'HUF' });
+    const adds = requestsTo('POST', '/cart/items');
+    expect(adds).toHaveLength(1);
+    expect(adds[0]?.headers['if-match']).toBe('"2"');
+    expect(facade.cart()?.version).toBe(3);
+    expect(facade.cart()?.lineCount).toBe(2);
+    expect(facade.conflict()).toBeNull();
     expect(facade.error()).toBeNull();
   });
 
-  it('lands a failing boot restore on the error signal without throwing', async () => {
+  it('retry() is a no-op when nothing failed', async () => {
+    configureTestBed();
+    const fresh = TestBed.inject(CartFacade);
+    await settled(fresh);
+
+    captures.length = 0;
+    await fresh.retry();
+
+    expect(captures).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T17-AC05: 410 / 404 / 409 recovery; no 401 path
+// ---------------------------------------------------------------------------
+describe('T17-AC05: 410 / 404 / 409 recovery; no 401 path', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('410 CART_EXPIRED flips cartExpired, drops the snapshot, and refetch() starts a fresh cart', async () => {
+    const facade = TestBed.inject(CartFacade);
+    await facade.addItem(VARIANT_MOTO_256, 1);
+    clock.advanceMs(CART_TTL_MS);
+    await facade.addItem(VARIANT_HONOR_128, 1);
+
+    expect(facade.cartExpired()).toBe(true);
+    expect(facade.cart()).toBeNull();
+    expect(facade.error()).toBeNull();
+
+    await facade.refetch();
+
+    expect(facade.cart()?.version).toBe(1);
+    expect(facade.cart()?.items).toEqual([]);
+    expect(facade.cartExpired()).toBe(false);
+  });
+
+  it('404 NOT_FOUND on an unknown variant lands on error and keeps the cart', async () => {
+    configureTestBed();
+    const facade = TestBed.inject(CartFacade);
+    await settled(facade);
+
+    await facade.addItem('nope', 1);
+
+    expect(facade.error()).toEqual({
+      code: 'NOT_FOUND',
+      status: 404,
+      detail: 'Unknown variant',
+      params: { variantId: 'nope' },
+    });
+    expect(facade.cart()?.version).toBe(1);
+    expect(facade.cartExpired()).toBe(false);
+    expect(facade.conflict()).toBeNull();
+  });
+
+  it('409 QUANTITY_LIMIT carries max and the merged requested quantity', async () => {
+    const facade = TestBed.inject(CartFacade);
+    await facade.addItem(VARIANT_MOTO_256, 5);
+    await facade.addItem(VARIANT_MOTO_256, 1);
+
+    expect(facade.error()?.code).toBe('QUANTITY_LIMIT');
+    expect(facade.error()?.status).toBe(409);
+    expect(facade.error()?.params).toEqual({ max: 5, requested: 6 });
+    expect(facade.cart()?.version).toBe(2);
+    expect(facade.itemCount()).toBe(5);
+  });
+
+  it('409 OUT_OF_STOCK lands on error', async () => {
+    const facade = TestBed.inject(CartFacade);
+    await facade.addItem(VARIANT_IPHONE_OOS, 1);
+
+    expect(facade.error()?.code).toBe('OUT_OF_STOCK');
+    expect(facade.error()?.status).toBe(409);
+    expect(facade.cart()?.version).toBe(1);
+  });
+
+  it('a write before the cart is loaded fails locally with CART_NOT_LOADED and sends nothing', async () => {
     server.use(
-      http.post(`${BASE_URL}/carts`, () =>
+      http.get('*/api/v1/cart', () =>
         HttpResponse.json(
           {
-            type: 'urn:problem:service-unavailable',
-            title: 'Service Unavailable',
+            type: 'urn:mi-bolt:problem:service-unavailable',
+            title: 'Service unavailable',
             status: 503,
             code: 'SERVICE_UNAVAILABLE',
-            detail: 'Mock service unavailable during boot restore.',
+            detail: 'down',
+            traceId: 't',
+            fieldErrors: [],
           },
           { status: 503 },
         ),
       ),
     );
 
-    // Construction must not throw even though the boot restore fails.
+    configureTestBed();
     const facade = TestBed.inject(CartFacade);
-    const queue = getQueue(facade);
-    if (queue === null) throw new Error('Expected CartMutationQueue');
-    await settleQueue(queue);
+    await settled(facade);
+
+    expect(facade.error()?.code).toBe('SERVICE_UNAVAILABLE');
+    expect(facade.error()?.status).toBe(503);
+    expect(facade.error()?.detail).toBe('down');
+
+    captures.length = 0;
+    await facade.addItem(VARIANT_MOTO_256, 1);
+
+    expect(facade.error()?.code).toBe('CART_NOT_LOADED');
+    expect(facade.error()?.status).toBe(0);
+    expect(requestsTo('POST', '/cart/items')).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// clear()
+// ---------------------------------------------------------------------------
+describe('clear()', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('empties the cart with If-Match and bumps the version once', async () => {
+    const facade = TestBed.inject(CartFacade);
+    await facade.addItem(VARIANT_MOTO_256, 1);
+    await facade.addItem(VARIANT_HONOR_128, 1);
+    await facade.clear();
+
+    const dels = requestsTo('DELETE', '/cart/items');
+    expect(dels).toHaveLength(1);
+    expect(dels[0]?.headers['if-match']).toBe('"3"');
+
+    expect(facade.cart()?.items).toEqual([]);
+    expect(facade.cart()?.version).toBe(4);
+    expect(facade.itemCount()).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX-10: CartFacade acquires its cart on construction
+// ---------------------------------------------------------------------------
+describe('FIX-10: CartFacade acquires its cart on construction', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('lands a failing boot fetch on the error signal without throwing', async () => {
+    server.use(
+      http.get('*/api/v1/cart', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:service-unavailable',
+            title: 'Service unavailable',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'down',
+            traceId: 't',
+            fieldErrors: [],
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+
+    configureTestBed();
+    const facade = TestBed.inject(CartFacade);
+    await settled(facade);
 
     expect(facade.cart()).toBeNull();
-    expect(facade.itemCount()).toBe(0);
-    expect(facade.error()).not.toBeNull();
-    expect(facade.error()?.code).toBe('SERVICE_UNAVAILABLE');
     expect(facade.error()?.status).toBe(503);
   });
 });
 
 // ---------------------------------------------------------------------------
-// T24-AC03 regression: in-flight mutations against the just-ordered
-// cart must not resurrect the cleared snapshot. A click on "Kosárba
-// teszem" immediately before pressing "Demórendelés véglegesítése"
-// can land an `addItem` intent in the queue at the exact moment the
-// success page calls `resetOrderedCart()`; without a token gate the
-// dispatch's successful resolution would call `applySuccess(...)` and
-// the header would show the items the user already ordered.
+// T24-AC03: in-flight mutation results are dropped after resetOrderedCart
 // ---------------------------------------------------------------------------
 describe('T24-AC03: in-flight mutation results are dropped after resetOrderedCart', () => {
   beforeEach(() => {
@@ -604,201 +511,165 @@ describe('T24-AC03: in-flight mutation results are dropped after resetOrderedCar
 
   it('does not resurrect the cart when an addItem resolves after resetOrderedCart', async () => {
     const facade = TestBed.inject(CartFacade);
-    await facade.ensureCart();
-    const cartIdBefore = facade.cartId;
-    expect(cartIdBefore).not.toBeNull();
-
-    // Kick the in-flight addItem but do NOT await it yet: we want to
-    // call `resetOrderedCart()` while the dispatch is in flight, so
-    // the `applySuccess(...)` path is exercised AFTER the reset.
-    const inFlight = facade.addItem(VARIANT_G256, 1);
-    const ordered = currentEnvironment.repository.getCart(cartIdBefore ?? '');
-    if (ordered !== undefined) {
-      currentEnvironment.repository.updateCart({ ...ordered, status: 'ordered' });
-    }
+    const p = facade.addItem(VARIANT_MOTO_256, 1);
     facade.resetOrderedCart();
-    await inFlight;
+    await p;
+    await settled(facade);
 
-    // The cart snapshot stays cleared; the header badge reads 0.
     expect(facade.cart()).toBeNull();
     expect(facade.itemCount()).toBe(0);
-    // A fresh ensureCart() rebuilds the cart with a different id so
-    // the post-reset purchase does not collide with the ordered one.
-    await facade.ensureCart();
-    expect(facade.cartId).not.toBe(cartIdBefore);
-    expect(facade.itemCount()).toBe(0);
+    expect(facade.pending()).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// CartMutationQueue: serialized dispatch + pending count
+// ---------------------------------------------------------------------------
 describe('CartMutationQueue: serialized dispatch + pending count', () => {
-  it('runs intents strictly in order and binds the version provided at dispatch time', async () => {
+  it('dispatches intents in order and hands each the version the provider returns at dispatch time', async () => {
     const queue = new CartMutationQueue();
-    let currentVersion = 1;
-    const seenVersions: number[] = [];
-    const seenKeys: string[] = [];
+    const versions = [1, 2];
+    let vi = 0;
+    const expectedVersionObserved: number[] = [];
+    const kindObserved: string[] = [];
 
     const dispatcher = (inputs: {
       intent: MutationIntent;
       expectedVersion: number | null;
     }): Promise<DispatchResult> => {
-      const version = inputs.expectedVersion;
-      seenVersions.push(version ?? -1);
-      seenKeys.push(inputs.intent.idempotencyKey);
-      const next = (version ?? 0) + 1;
-      currentVersion = next;
+      expectedVersionObserved.push(inputs.expectedVersion ?? -1);
+      kindObserved.push(inputs.intent.kind);
       return Promise.resolve({
         ok: true,
-        cart: {
-          id: 'cart-1',
-          version: next,
-          items: [],
-          itemCount: 0,
-          subtotal: { amount: 0, currency: 'HUF' },
-          status: 'active',
-          expiresAt: '2026-09-15T10:00:00.000Z',
-        },
-        replayed: false,
+        cart: cartLiteral(versions[vi++] ?? 3),
       });
     };
 
-    queue.setVersionProvider(() => currentVersion);
+    let pi = 0;
+    queue.setVersionProvider(() => versions[pi++] ?? null);
 
-    const p1 = queue.enqueue(
-      { kind: 'addItem', idempotencyKey: 'k1', retry: false, payload: {} },
+    await queue.enqueue(
+      { kind: 'addItem', retry: false, variantId: VARIANT_MOTO_256, quantity: 1 },
       dispatcher,
     );
-    const p2 = queue.enqueue(
-      { kind: 'addItem', idempotencyKey: 'k2', retry: false, payload: {} },
-      dispatcher,
-    );
-    await Promise.all([p1, p2]);
+    await queue.enqueue({ kind: 'clear', retry: false }, dispatcher);
 
-    expect(seenVersions).toEqual([1, 2]);
-    expect(seenKeys).toEqual(['k1', 'k2']);
+    expect(expectedVersionObserved).toEqual([1, 2]);
+    expect(kindObserved).toEqual(['addItem', 'clear']);
   });
 
-  it('pendingCount signal reflects the queue depth', async () => {
+  it('pendingCount rises per enqueue and falls per settled dispatch', async () => {
     const queue = new CartMutationQueue();
     queue.setVersionProvider(() => 1);
-    let resolveDispatch: () => void = () => {
-      // noop
-    };
-    const dispatcher = (): Promise<DispatchResult> =>
-      new Promise<DispatchResult>((resolve) => {
-        resolveDispatch = () => {
-          resolve({
-            ok: true,
-            cart: {
-              id: 'cart-1',
-              version: 1,
-              items: [],
-              itemCount: 0,
-              subtotal: { amount: 0, currency: 'HUF' },
-              status: 'active',
-              expiresAt: '2026-09-15T10:00:00.000Z',
-            },
-            replayed: false,
-          });
-        };
-      });
 
-    const p = queue.enqueue(
-      { kind: 'addItem', idempotencyKey: 'k', retry: false, payload: {} },
-      dispatcher,
+    expect(queue.pendingCount()).toBe(0);
+
+    const first = queue.enqueue(
+      { kind: 'addItem', retry: false, variantId: 'x', quantity: 1 },
+      () => Promise.resolve({ ok: true, cart: cartLiteral(1) }),
     );
-    await Promise.resolve();
-    expect(queue.pendingCount()).toBe(1);
-    resolveDispatch();
-    await p;
+    const second = queue.enqueue(
+      { kind: 'addItem', retry: false, variantId: 'y', quantity: 1 },
+      () => Promise.resolve({ ok: true, cart: cartLiteral(2) }),
+    );
+
+    expect(queue.pendingCount()).toBe(2);
+
+    await Promise.all([first, second]);
+    await settledQueue(queue);
+
     expect(queue.pendingCount()).toBe(0);
   });
 
-  it('serialize=true is the default: parallel dispatch would race', async () => {
+  it('a destroyed queue answers SERVICE_UNAVAILABLE without dispatching', async () => {
     const queue = new CartMutationQueue();
-    queue.setVersionProvider(() => 1);
-    const order: string[] = [];
-    const make = (label: string): Promise<DispatchResult> =>
-      new Promise<DispatchResult>((resolve) => {
-        setTimeout(() => {
-          order.push(label);
-          resolve({
-            ok: true,
-            cart: {
-              id: 'cart-1',
-              version: 1,
-              items: [],
-              itemCount: 0,
-              subtotal: { amount: 0, currency: 'HUF' },
-              status: 'active',
-              expiresAt: '2026-09-15T10:00:00.000Z',
-            },
-            replayed: false,
-          });
-        }, 10);
-      });
-    const a = queue.enqueue(
-      { kind: 'addItem', idempotencyKey: 'a', retry: false, payload: {} },
-      () => make('a'),
+    let dispatched = false;
+
+    queue.destroy();
+
+    const result = await queue.enqueue(
+      { kind: 'addItem', retry: false, variantId: 'x', quantity: 1 },
+      () => {
+        dispatched = true;
+        return Promise.resolve({ ok: true, cart: cartLiteral(1) });
+      },
     );
-    const b = queue.enqueue(
-      { kind: 'addItem', idempotencyKey: 'b', retry: false, payload: {} },
-      () => make('b'),
-    );
-    await Promise.all([a, b]);
-    expect(order).toEqual(['a', 'b']);
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'SERVICE_UNAVAILABLE',
+      status: 0,
+      detail: 'queue destroyed',
+    });
+    expect(dispatched).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// mapError narrows the HttpErrorResponse body with typeof and the in
-// operator rather than asserting it. Three exact-value cases pin each
-// branch of the narrowing: a coded body is passed through verbatim, a
-// null body substitutes the `'UNKNOWN'` sentinel, and a string body
-// (which the old `as` cast silently mishandled via `body?.code` on a
-// non-object) does the same.
+// mapError: HttpErrorResponse body narrowing
 // ---------------------------------------------------------------------------
 describe('mapError: HttpErrorResponse body narrowing', () => {
   beforeEach(() => {
     configureTestBed();
   });
 
-  it('passes a coded body through verbatim: code and detail land exactly', async () => {
+  it('substitutes UNKNOWN when the body is null', async () => {
+    server.use(http.get('*/api/v1/cart', () => new HttpResponse(null, { status: 500 })));
+
+    configureTestBed();
+    const facade = TestBed.inject(CartFacade);
+    await settled(facade);
+
+    expect(facade.error()?.code).toBe('UNKNOWN');
+    expect(facade.error()?.status).toBe(500);
+  });
+
+  it('substitutes UNKNOWN when the body is a non-object string', async () => {
+    server.use(http.get('*/api/v1/cart', () => HttpResponse.text('boom', { status: 502 })));
+
+    configureTestBed();
+    const facade = TestBed.inject(CartFacade);
+    await settled(facade);
+
+    expect(facade.error()?.code).toBe('UNKNOWN');
+    expect(facade.error()?.status).toBe(502);
+  });
+
+  it('passes a coded body through verbatim with its params', async () => {
     server.use(
-      http.post(`${BASE_URL}/carts`, () =>
-        HttpResponse.json({ code: 'OUT_OF_STOCK', detail: 'nincs raktáron' }, { status: 409 }),
+      http.post('*/api/v1/cart/items', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:quantity-limit',
+            title: 'Conflict',
+            status: 409,
+            code: 'QUANTITY_LIMIT',
+            detail: 'x',
+            traceId: 't',
+            fieldErrors: [],
+            params: { max: 5, requested: 6 },
+          },
+          { status: 409 },
+        ),
       ),
     );
 
     const facade = TestBed.inject(CartFacade);
-    const queue = getQueue(facade);
-    if (queue === null) throw new Error('Expected CartMutationQueue');
-    await settleQueue(queue);
+    await facade.addItem(VARIANT_MOTO_256, 1);
 
-    expect(facade.error()).not.toBeNull();
-    expect(facade.error()?.code).toBe('OUT_OF_STOCK');
-    expect(facade.error()?.detail).toBe('nincs raktáron');
-  });
-
-  it('substitutes UNKNOWN when the body is null', async () => {
-    server.use(http.post(`${BASE_URL}/carts`, () => HttpResponse.json(null, { status: 500 })));
-
-    const facade = TestBed.inject(CartFacade);
-    const queue = getQueue(facade);
-    if (queue === null) throw new Error('Expected CartMutationQueue');
-    await settleQueue(queue);
-
-    expect(facade.error()).not.toBeNull();
-    expect(facade.error()?.code).toBe('UNKNOWN');
-  });
-
-  it('substitutes UNKNOWN when the body is a non-object string', async () => {
-    server.use(http.post(`${BASE_URL}/carts`, () => HttpResponse.json('boom', { status: 500 })));
-
-    const facade = TestBed.inject(CartFacade);
-    const queue = getQueue(facade);
-    if (queue === null) throw new Error('Expected CartMutationQueue');
-    await settleQueue(queue);
-
-    expect(facade.error()).not.toBeNull();
-    expect(facade.error()?.code).toBe('UNKNOWN');
+    expect(facade.error()).toEqual({
+      code: 'QUANTITY_LIMIT',
+      status: 409,
+      detail: 'x',
+      params: { max: 5, requested: 6 },
+    });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Queue helper: settle the tail chain
+// ---------------------------------------------------------------------------
+async function settledQueue(queue: CartMutationQueue): Promise<void> {
+  await queue.settle();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}

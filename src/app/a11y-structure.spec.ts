@@ -16,8 +16,7 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter, type Params } from '@angular/router';
 import { http, HttpResponse } from 'msw';
@@ -26,13 +25,10 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../tests/msw-server';
 import { Api } from './api/generated/api';
-import {
-  ApiConfiguration as ApiConfig,
-  provideApiConfiguration as provideApiConfig,
-} from './api/generated/api-configuration';
+import { ApiConfiguration, provideApiConfiguration } from './api/generated/api-configuration';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
+import type { CatalogItem } from './api/generated/models/catalog-item';
 import type { ProductPage as ProductPageDTO } from './api/generated/models/product-page';
-import type { ProductSummary } from './api/generated/models/product-summary';
 import type { Variant } from './api/generated/models/variant';
 import type { Money } from './shared/ui/price-block/price-block';
 import type { CheckoutOptions } from './api/generated/models/checkout-options';
@@ -73,7 +69,7 @@ function money(amount: number): Money {
 describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
   @Component({
     imports: [ProductPage],
-    template: `<app-product-page [slug]="slug()" />`,
+    template: `<app-product-page [slug]="slug()"></app-product-page>`,
   })
   class ProductPageHost {
     readonly slug = signal('demo-one-5g');
@@ -102,7 +98,7 @@ describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
       imports: [ProductPageHost],
       providers: [
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfig(BASE_URL),
+        provideApiConfiguration(BASE_URL),
         provideRouter([]),
       ],
       teardown: { destroyAfterEach: true },
@@ -124,13 +120,14 @@ describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
 // ---------------------------------------------------------------------------
 
 describe('FIX-29 fact 2 — ProductCard image is decorative', () => {
-  function makeImage(id: string, source: string, alt: string): Variant['images'][number] {
-    return { id, src: source, alt, width: 320, height: 400 };
+  function makeImage(id: string, src: string, alt: string): Variant['images'][number] {
+    return { id, src, alt, width: 320, height: 400 };
   }
 
-  function makeSummary(): ProductSummary {
+  function makeItem(): CatalogItem {
     const variant: Variant = {
       id: 'p-01-256-graphite',
+      slug: 'demo-one-5g-graphite-256',
       colorCode: 'graphite',
       colorName: 'Grafit',
       swatchHex: '#343B43',
@@ -146,15 +143,33 @@ describe('FIX-29 fact 2 — ProductCard image is decorative', () => {
         ),
       ],
     };
+    const price = money(339_990);
     return {
       id: 'p-01',
       slug: 'demo-one-5g',
       brand: 'MiBolt Demo',
       name: 'Demo One 5G',
       highlights: ['6,7" kijelző'],
-      defaultVariant: variant,
       is5g: true,
-      isDemo: true,
+      releasedAt: '2026-01-01',
+      storageGb: 256,
+      variantId: variant.id,
+      variantSlug: variant.slug,
+      price,
+      availability: variant.availability,
+      maxQuantity: variant.maxQuantity,
+      image: variant.images[0],
+      colors: [
+        {
+          colorCode: variant.colorCode,
+          colorName: variant.colorName,
+          swatchHex: variant.swatchHex,
+          variantId: variant.id,
+          variantSlug: variant.slug,
+          price,
+          availability: variant.availability,
+        },
+      ],
     };
   }
 
@@ -163,7 +178,7 @@ describe('FIX-29 fact 2 — ProductCard image is decorative', () => {
     template: `<app-product-card [product]="product()" />`,
   })
   class HostComponent {
-    readonly product = signal<ProductSummary>(makeSummary());
+    readonly product = signal<CatalogItem>(makeItem());
   }
 
   afterEach(() => {
@@ -269,13 +284,13 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
         colorName: 'Grafit',
         storageGb: 256,
         quantity: 1,
-        unitPrice: money(339_990),
-        lineTotal: money(339_990),
+        unitPrice: money(339990),
+        lineTotal: money(339990),
       },
     ],
-    subtotal: money(339_990),
+    subtotal: money(339990),
     shipping: money(0),
-    total: money(339_990),
+    total: money(339990),
     paymentMethod: 'demo_cod',
     deliveryOptionId: 'demo_pickup',
     notice: 'Nem történt valódi fizetés, rendelésküldés vagy e-mail-küldés — ez egy demó folyamat.',
@@ -295,8 +310,8 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const meta = root.querySelector('[data-testid="receipt-meta"]');
-    if (meta === null) throw new Error('Expected receipt-meta section');
-    const pairs = [...meta.querySelectorAll('dt, dd')];
+    if (!meta) throw new Error('Expected receipt-meta section');
+    const pairs = Array.from(meta.querySelectorAll('dt, dd'));
     expect(pairs.length).toBeGreaterThan(0);
     expect(pairs.every((n) => n.closest('dl') !== null)).toBe(true);
   });
@@ -316,9 +331,9 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
   class StaticMediaQueryList extends EventTarget implements MediaQueryList {
     readonly matches: boolean = true;
     readonly media: string;
-    onchange: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null = null;
-    private readonly legacyListeners = new Map<
-      (this: MediaQueryList, event: MediaQueryListEvent) => unknown,
+    onchange: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null = null;
+    private readonly wrappedListeners = new Map<
+      (this: MediaQueryList, ev: MediaQueryListEvent) => unknown,
       EventListener
     >();
 
@@ -328,30 +343,30 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     }
 
     addListener(
-      callback: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null,
+      callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
     ): void {
       if (callback === null) return;
       const wrapped: EventListener = (event) => {
         if (isMediaQueryListEvent(event)) callback.call(this, event);
       };
-      this.legacyListeners.set(callback, wrapped);
+      this.wrappedListeners.set(callback, wrapped);
       this.addEventListener('change', wrapped);
     }
 
     removeListener(
-      callback: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null,
+      callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
     ): void {
       if (callback === null) return;
-      const wrapped = this.legacyListeners.get(callback);
+      const wrapped = this.wrappedListeners.get(callback);
       if (wrapped === undefined) return;
       this.removeEventListener('change', wrapped);
-      this.legacyListeners.delete(callback);
+      this.wrappedListeners.delete(callback);
     }
   }
 
   function installMatchMediaStub(): void {
-    if (typeof globalThis.matchMedia === 'function') return;
-    globalThis.matchMedia = (query: string): MediaQueryList => new StaticMediaQueryList(query);
+    if (typeof window.matchMedia === 'function') return;
+    window.matchMedia = (query: string): MediaQueryList => new StaticMediaQueryList(query);
   }
 
   beforeAll(() => {
@@ -364,6 +379,27 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
   });
 
   async function renderWithOneResult(): Promise<ComponentFixture<CatalogPage>> {
+    const price = money(339990);
+    const variant: Variant = {
+      id: 'p-01-256',
+      slug: 'demo-one-5g-graphite-256',
+      colorCode: 'graphite',
+      colorName: 'Grafit',
+      swatchHex: '#343B43',
+      storageGb: 256,
+      price,
+      availability: 'in_stock',
+      maxQuantity: 5,
+      images: [
+        {
+          id: 'p-01-front',
+          src: '/assets/products/graphite-front.webp',
+          alt: 'Demo One 5G front',
+          width: 320,
+          height: 400,
+        },
+      ],
+    };
     const page: ProductPageDTO = {
       items: [
         {
@@ -372,34 +408,38 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
           brand: 'MiBolt Demo',
           name: 'Demo One 5G',
           highlights: ['6,7" kijelző'],
-          defaultVariant: {
-            id: 'p-01-256',
-            colorCode: 'graphite',
-            colorName: 'Grafit',
-            swatchHex: '#343B43',
-            storageGb: 256,
-            price: money(339_990),
-            availability: 'in_stock',
-            maxQuantity: 5,
-            images: [
-              {
-                id: 'p-01-front',
-                src: '/assets/products/graphite-front.webp',
-                alt: 'Demo One 5G front',
-                width: 320,
-                height: 400,
-              },
-            ],
-          },
           is5g: true,
-          isDemo: true,
+          releasedAt: '2026-01-01',
+          storageGb: 256,
+          variantId: variant.id,
+          variantSlug: variant.slug,
+          price,
+          availability: variant.availability,
+          maxQuantity: variant.maxQuantity,
+          image: variant.images[0],
+          colors: [
+            {
+              colorCode: variant.colorCode,
+              colorName: variant.colorName,
+              swatchHex: variant.swatchHex,
+              variantId: variant.id,
+              variantSlug: variant.slug,
+              price,
+              availability: variant.availability,
+            },
+          ],
         },
       ],
       total: 1,
       page: 1,
       pageSize: 12,
+      totalPages: 1,
       facets: {
         brands: [{ value: 'MiBolt Demo', label: 'MiBolt Demo', count: 1 }],
+        colors: [{ value: 'graphite', label: 'Grafit', count: 1, swatchHex: '#343B43' }],
+        inStock: 1,
+        is5g: 1,
+        priceRange: { min: price, max: price },
         storageGb: [{ value: '256', label: '256 GB', count: 1 }],
       },
     };
@@ -410,11 +450,11 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
       imports: [CatalogPage],
       providers: [
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfig(BASE_URL),
+        provideApiConfiguration(BASE_URL),
         {
           provide: Api,
-          useFactory: (config: ApiConfig, http: HttpClient) => new Api(config, http),
-          deps: [ApiConfig, HttpClient],
+          useFactory: (config: ApiConfiguration, http: HttpClient) => new Api(config, http),
+          deps: [ApiConfiguration, HttpClient],
         },
         provideRouter([]),
         {
@@ -433,10 +473,8 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     const fixture = TestBed.createComponent(CatalogPage);
     fixture.detectChanges();
 
-    for (let index = 0; index < 20 && facade.vm().status !== 'success'; index += 1) {
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0);
-      });
+    for (let i = 0; i < 20 && facade.vm().status !== 'success'; i += 1) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
       fixture.detectChanges();
     }
     return fixture;
@@ -445,7 +483,7 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
   it('renders an h2 before its first h3 in document order (FIX-29-AC02)', async () => {
     const fixture = await renderWithOneResult();
     const root = getRootElement(fixture);
-    const headings = [...root.querySelectorAll('h1, h2, h3')];
+    const headings = Array.from(root.querySelectorAll('h1, h2, h3'));
     const firstH2Index = headings.findIndex((h) => h.tagName === 'H2');
     const firstH3Index = headings.findIndex((h) => h.tagName === 'H3');
     expect(firstH2Index).toBeGreaterThanOrEqual(0);

@@ -1,30 +1,12 @@
 .featured {
   background: var(--color-surface-light);
   color: var(--color-text-primary);
-  padding: var(--space-9) var(--layout-gutter-mobile);
   border-top: 1px solid var(--color-border-subtle);
 }
 
-.featured__inner,
-.featured__header,
-.featured__card,
-.featured__body,
-.featured__loading,
-.featured__error,
-.featured__grid-error {
-  display: flex;
-  flex-direction: column;
-}
-
 .featured__inner {
-  gap: var(--space-6);
   max-width: var(--layout-container-max);
   margin: 0 auto;
-}
-
-.featured__header,
-.featured__body {
-  gap: var(--space-2);
 }
 
 .featured__title {
@@ -57,15 +39,6 @@
   outline-offset: 2px;
 }
 
-.featured__grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-6);
-}
-
 .featured__card,
 .featured__grid-error {
   border: 1px solid var(--color-border-subtle);
@@ -74,7 +47,6 @@
 
 .featured__card {
   background: var(--color-surface-light);
-  overflow: hidden;
 }
 
 .featured__media {
@@ -98,24 +70,6 @@
   background: var(--color-surface-light);
   border: 1px solid var(--color-brand-ink);
   border-radius: var(--radius-badge);
-}
-
-.featured__image {
-  display: block;
-  aspect-ratio: 4 / 5;
-  position: relative;
-  overflow: hidden;
-}
-
-.featured__image img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.featured__body {
-  padding: var(--space-5);
 }
 
 .featured__brand {
@@ -151,24 +105,17 @@
 }
 
 /* .btn-outline-navy — the yettel 48px .btn box with 1px off each padding
-   edge for the hairline (docs/design/yettel.md §5). */
+   edge for the hairline (docs/design/yettel.md §5). The box itself is
+   utilities on the element: inline-flex, min-h-12, min-w-12. */
 .featured__details {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--button-height);
-  min-width: var(--button-height);
   padding: 11px 23px;
   background: transparent;
   color: var(--color-brand-ink);
   font-family: var(--font-family-bold);
   font-size: var(--type-body);
   line-height: 24px;
-  text-decoration: none;
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-brand-ink);
-  align-self: flex-start;
-  margin-top: var(--space-2);
 }
 
 .featured__details:hover {
@@ -176,13 +123,13 @@
 }
 
 .featured__loading,
-.featured__error,
 .featured__grid-error {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
-.featured__loading,
-.featured__error {
+.featured__loading {
   padding: var(--space-5);
   min-height: 220px;
 }
@@ -208,7 +155,6 @@
   width: 40%;
 }
 
-.featured__error,
 .featured__grid-error {
   background: var(--color-surface-section);
 }
@@ -229,39 +175,12 @@
   color: var(--color-text-secondary);
 }
 
-@media (min-width: 640px) {
-  .featured {
-    padding-left: var(--layout-gutter-tablet);
-    padding-right: var(--layout-gutter-tablet);
-  }
-
-  .featured__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (min-width: 720px) {
   .featured__title {
     font-size: var(--type-section-title);
   }
 
-  .featured__header {
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-  }
-
   .featured__all-link {
     align-self: auto;
-  }
-}
-
-@media (min-width: 1024px) {
-  .featured {
-    padding: var(--space-10) var(--layout-gutter-desktop);
-  }
-
-  .featured__grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

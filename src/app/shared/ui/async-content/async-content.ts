@@ -48,9 +48,7 @@ export class AsyncContent {
 
   readonly retryRequested = output();
 
-  /**
-  `loading` with previous content to preserve — the refreshing case.
-  */
+  /** `loading` with previous content to preserve — the refreshing case. */
   protected readonly isRefreshing = computed<boolean>(
     () => this.status() === 'loading' && this.hasPrevious(),
   );

@@ -1,7 +1,7 @@
 /**
  * T13: ProductCard atomic view-model (AC04).
  *
- * The card is purely presentational. It receives one ProductSummary and
+ * The card is purely presentational. It receives one CatalogItem and
  * renders the catalog atomic view: image (4:3, no crop), product name,
  * up to two highlights, the matching variant's color/storage label,
  * the whole-HUF one-time price and an outlined "Részletek" link that
@@ -26,8 +26,8 @@ import { provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import type { ProductSummary } from '../../api/generated/models/product-summary';
-import type { Variant } from '../../api/generated/models/variant';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { ColorOption } from '../../api/generated/models/color-option';
 import type { Money } from '../../shared/ui/price-block/price-block';
 
 import { ProductCard } from './product-card';
@@ -53,7 +53,10 @@ function getComponentStyles(comp: unknown): readonly string[] {
     return [];
   }
   const styles = cmp['styles'];
-  return Array.isArray(styles) ? styles.filter((s): s is string => typeof s === 'string') : [];
+  if (Array.isArray(styles)) {
+    return styles.filter((s): s is string => typeof s === 'string');
+  }
+  return [];
 }
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
@@ -63,23 +66,22 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function queryElement(parent: Element, selector: string): HTMLElement {
-  const element = parent.querySelector(selector);
-  if (!(element instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
-  return element;
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLElement)) throw new Error(`Expected HTMLElement: ${selector}`);
+  return el;
 }
 
 function queryAnchor(parent: Element, selector: string): HTMLAnchorElement {
-  const element = parent.querySelector(selector);
-  if (!(element instanceof HTMLAnchorElement))
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLAnchorElement))
     throw new Error(`Expected HTMLAnchorElement: ${selector}`);
-  return element;
+  return el;
 }
 
 function queryImage(parent: Element, selector: string): HTMLImageElement {
-  const element = parent.querySelector(selector);
-  if (!(element instanceof HTMLImageElement))
-    throw new Error(`Expected HTMLImageElement: ${selector}`);
-  return element;
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLImageElement)) throw new Error(`Expected HTMLImageElement: ${selector}`);
+  return el;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,11 +92,7 @@ function money(amount: number): Money {
   return { amount, currency: 'HUF' };
 }
 
-function makeImage(id: string, source: string, alt: string): Variant['images'][number] {
-  return { id, src: source, alt, width: 320, height: 400 };
-}
-
-function makeSummary(options: {
+function makeItem(opts: {
   readonly id: string;
   readonly slug: string;
   readonly brand?: string;
@@ -106,37 +104,44 @@ function makeSummary(options: {
   readonly availability?: 'in_stock' | 'out_of_stock';
   readonly imageSrc?: string;
   readonly is5g?: boolean;
-}): ProductSummary {
-  const colorCode = options.colorName !== undefined ? options.colorName.toLowerCase() : 'graphite';
-  const imageId = `${options.id}-front`;
-  const storageValue = options.storageGb ?? 256;
-  const variant: Variant = {
-    id: `${options.id}-${String(storageValue)}-${colorCode}`,
+}): CatalogItem {
+  const colorCode = opts.colorName ? opts.colorName.toLowerCase() : 'graphite';
+  const imageId = `${opts.id}-front`;
+  const storageVal = opts.storageGb ?? 256;
+  const variantId = `${opts.id}-${String(storageVal)}-${colorCode}`;
+  const variantSlug = `${opts.slug}-${colorCode}-${String(storageVal)}`;
+  const price = money(opts.price ?? 339_990);
+  const displayedColor: ColorOption = {
     colorCode,
-    colorName: options.colorName ?? 'Grafit',
+    colorName: opts.colorName ?? 'Grafit',
     swatchHex: '#343B43',
-    storageGb: storageValue,
-    price: money(options.price ?? 339_990),
-    availability: options.availability ?? 'in_stock',
-    maxQuantity: 5,
-    images: [
-      makeImage(
-        imageId,
-        options.imageSrc ?? `/assets/products/${colorCode}-front.webp`,
-        `${options.name}, ${options.colorName ?? 'Grafit'}, ${String(storageValue)} GB`,
-      ),
-    ],
+    variantId,
+    variantSlug,
+    price,
+    availability: opts.availability ?? 'in_stock',
   };
   return {
-    id: options.id,
-    slug: options.slug,
-    brand: options.brand ?? 'MiBolt Demo',
-    name: options.name,
-    highlights:
-      options.highlights !== undefined ? [...options.highlights] : ['6,7″ kijelző', '50 MP kamera'],
-    defaultVariant: variant,
-    is5g: options.is5g ?? true,
-    isDemo: true,
+    id: opts.id,
+    slug: opts.slug,
+    brand: opts.brand ?? 'MiBolt Demo',
+    name: opts.name,
+    highlights: opts.highlights ? [...opts.highlights] : ['6,7″ kijelző', '50 MP kamera'],
+    is5g: opts.is5g ?? true,
+    releasedAt: '2026-01-01',
+    storageGb: storageVal,
+    variantId,
+    variantSlug,
+    price,
+    availability: opts.availability ?? 'in_stock',
+    maxQuantity: 5,
+    image: {
+      id: imageId,
+      src: opts.imageSrc ?? `/assets/products/${colorCode}-front.webp`,
+      alt: `${opts.name}, ${opts.colorName ?? 'Grafit'}, ${String(storageVal)} GB`,
+      width: 320,
+      height: 400,
+    },
+    colors: [displayedColor],
   };
 }
 
@@ -145,8 +150,8 @@ function makeSummary(options: {
   template: `<app-product-card [product]="product()" />`,
 })
 class HostComponent {
-  readonly product = signal<ProductSummary>(
-    makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G' }),
+  readonly product = signal<CatalogItem>(
+    makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G' }),
   );
 }
 
@@ -178,7 +183,7 @@ describe('T13-AC04 ProductCard', () => {
     // (product-image.html), not on the app-product-image host, so read
     // it from where it actually lands.
     const mediaRoot = queryElement(frame, '.root');
-    expect(mediaRoot.style.aspectRatio.replaceAll(/\s+/g, '')).toBe('4/3');
+    expect(mediaRoot.style.aspectRatio.replace(/\s+/g, '')).toBe('4/3');
     // FIX-29 item 3 (axe image-redundant-alt): the card passes
     // [decorative]="true" because the name, colour and storage already
     // render as visible text below the image (product-card.html:17-28),
@@ -203,13 +208,13 @@ describe('T13-AC04 ProductCard', () => {
   it('renders the whole-HUF one-time price and the explicit one-time label', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339_990 }),
+      makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', price: 339990 }),
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const priceElement = queryElement(root, '[data-testid="price-amount"]');
+    const priceEl = queryElement(root, '[data-testid="price-amount"]');
     // 339 990: non-breaking space U+00A0 separator, integer HUF.
-    expect(priceElement.textContent.replaceAll(/\s+/g, ' ').trim()).toBe('339 990');
+    expect(priceEl.textContent.replace(/\s+/g, ' ').trim()).toBe('339 990');
     const label = queryElement(root, '.label');
     expect(label.textContent).toContain('Egyszeri');
   });
@@ -217,7 +222,7 @@ describe('T13-AC04 ProductCard', () => {
   it('renders the matching variant color label and storage bucket together', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({
+      makeItem({
         id: 'p-02',
         slug: 'demo-air-5g',
         name: 'Demo Air 5G',
@@ -227,7 +232,7 @@ describe('T13-AC04 ProductCard', () => {
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const text = root.textContent.replaceAll(/\s+/g, ' ');
+    const text = root.textContent.replace(/\s+/g, ' ');
     expect(text).toContain('Ezüst');
     expect(text).toContain('128 GB');
   });
@@ -240,11 +245,61 @@ describe('T13-AC04 ProductCard', () => {
     expect(css).toContain('border'); // outlined look: border on the CTA
   });
 
-  it('navigates to the product detail route with the default variant id', () => {
-    const { fixture } = setup();
+  it('navigates to the product detail route with the matching variant id', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-01',
+        slug: 'demo-one-5g',
+        name: 'Demo One 5G',
+        colorName: 'Grafit',
+        storageGb: 256,
+      }),
+    );
+    fixture.detectChanges();
     const link = queryAnchor(getRootElement(fixture), '[data-testid="product-card-cta"]');
-    expect(link.getAttribute('href')).toContain('/telefonok/demo-one-5g');
-    expect(link.getAttribute('href')).toContain('variant=');
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toBe('/telefonok/demo-one-5g?variant=p-01-256-grafit');
+  });
+
+  it("the details link carries the item's variantId as the variant query parameter (MIM-210)", () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-07',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Arany',
+        storageGb: 512,
+      }),
+    );
+    fixture.detectChanges();
+    const item = host.product();
+    const link = queryAnchor(getRootElement(fixture), '[data-testid="product-card-cta"]');
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toBe(`/telefonok/${item.slug}?variant=${item.variantId}`);
+  });
+
+  it('the image and name links carry the same variant query as the CTA', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-07',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Arany',
+        storageGb: 512,
+      }),
+    );
+    fixture.detectChanges();
+    const item = host.product();
+    const root = getRootElement(fixture);
+    const anchors = Array.from(root.querySelectorAll('a[href]'));
+    expect(anchors.length).toBe(3);
+    const expected = `/telefonok/${item.slug}?variant=${item.variantId}`;
+    for (const anchor of anchors) {
+      expect(anchor.getAttribute('href')).toBe(expected);
+    }
   });
 
   it('falls back to the named image-fallback when the photo errors (no invented device)', () => {
@@ -261,7 +316,7 @@ describe('T13-AC04 ProductCard', () => {
   it('limits the rendered highlights to at most two', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({
+      makeItem({
         id: 'p-03',
         slug: 'demo-pro-5g',
         name: 'Demo Pro 5G',
@@ -280,7 +335,7 @@ describe('T13-AC04 ProductCard', () => {
   it('FIX-35: carries a DEMÓTERMÉK tag and never renders the brand name', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeSummary({ id: 'p-04', slug: 'demo-lite-5g', name: 'Demo Lite 5G', brand: 'MiBolt Demo' }),
+      makeItem({ id: 'p-04', slug: 'demo-lite-5g', name: 'Demo Lite 5G', brand: 'MiBolt Demo' }),
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);

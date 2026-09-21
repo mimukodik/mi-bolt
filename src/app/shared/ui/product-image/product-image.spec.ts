@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { ProductImage } from './product-image';
 import type { ImageLike } from './product-image';
@@ -8,12 +7,12 @@ import type { ImageLike } from './product-image';
   imports: [ProductImage],
   template: `
     <app-product-image
-      [aspectRatio]="aspectRatio()"
-      [decorative]="decorative()"
       [image]="image()"
       [productName]="productName()"
+      [aspectRatio]="aspectRatio()"
+      [decorative]="decorative()"
       (loadFailed)="failedCount.set(failedCount() + 1)"
-    />
+    ></app-product-image>
   `,
 })
 class HostComponent {
@@ -32,7 +31,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -43,17 +42,18 @@ interface ComponentWithStyles {
   };
 }
 
-function hasStyles(value: unknown): value is ComponentWithStyles {
-  if (typeof value !== 'function' && typeof value !== 'object') {
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
     return false;
   }
-  if (value === null || !('ɵcmp' in value)) {
+  if (val === null || !('ɵcmp' in val)) {
     return false;
   }
-  const cmp = value.ɵcmp;
-  return typeof cmp !== 'object' || cmp === null || !('styles' in cmp)
-    ? false
-    : Array.isArray(cmp.styles);
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
 }
 
 function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponent } {
@@ -119,7 +119,7 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (photo === null) {
+    if (!photo) {
       throw new Error('Expected image photo');
     }
     photo.dispatchEvent(new Event('error'));
@@ -136,7 +136,7 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (photo === null) {
+    if (!photo) {
       throw new Error('Expected image photo');
     }
     photo.dispatchEvent(new Event('error'));
@@ -150,14 +150,14 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (photo === null) {
+    if (!photo) {
       throw new Error('Expected image photo');
     }
     photo.dispatchEvent(new Event('error'));
     fixture.detectChanges();
     const mark1 = getNativeElement(fixture).querySelector<HTMLElement>('.fallback-mark');
     expect(mark1).not.toBeNull();
-    if (mark1 === null) {
+    if (!mark1) {
       throw new Error('Expected fallback mark');
     }
     expect(mark1.textContent.trim()).toBe('D');
@@ -165,7 +165,7 @@ describe('ProductImage primitive', () => {
     fixture.detectChanges();
     const mark2 = getNativeElement(fixture).querySelector<HTMLElement>('.fallback-mark');
     expect(mark2).not.toBeNull();
-    if (mark2 === null) {
+    if (!mark2) {
       throw new Error('Expected fallback mark');
     }
     expect(mark2.textContent.trim()).toBe('A');
@@ -176,7 +176,7 @@ describe('ProductImage primitive', () => {
     const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
       '[data-testid="image-photo"]',
     );
-    if (photo === null) {
+    if (!photo) {
       throw new Error('Expected image photo');
     }
     expect(photo.getAttribute('src')).toBe(
@@ -184,10 +184,197 @@ describe('ProductImage primitive', () => {
     );
   });
 
+  // MIM-210: `Image.src` is a ready-to-use URL the server decides
+  // (`docs/api/openapi.yaml:1126`); the catalogue serves it as
+  // `/api/v1/media/<imageId>`. Rejecting that shape rendered the
+  // monogram fallback on the gallery, the cart line and the card.
+  it('renders the photo for a contract /api/v1/media/<imageId> src (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.image.set({
+      src: '/api/v1/media/849997cd0d4d4ff9a1f0e4e1a1c4d9b1b7ab8d0ad2e0c3b7e0b8d4b5b8c5e7a1',
+      alt: 'Demo telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-fallback"]')).toBeNull();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    expect(photo?.getAttribute('src')).toBe(
+      new URL(
+        'api/v1/media/849997cd0d4d4ff9a1f0e4e1a1c4d9b1b7ab8d0ad2e0c3b7e0b8d4b5b8c5e7a1',
+        document.baseURI,
+      ).href,
+    );
+  });
+
+  it('renders the photo for an absolute https src', () => {
+    const { fixture, host } = setup();
+    host.image.set({
+      src: 'https://cdn.example/products/a.webp',
+      alt: 'Demo telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-fallback"]')).toBeNull();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    expect(photo?.getAttribute('src')).toBe('https://cdn.example/products/a.webp');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('data-status')).toBe('loading');
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    photo.dispatchEvent(new Event('load'));
+    fixture.detectChanges();
+    expect(root?.getAttribute('data-status')).toBe('loaded');
+  });
+
+  it('lays the skeleton over the photo until the image loads (MIM-210)', () => {
+    const { fixture } = setup();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('data-status')).toBe('loading');
+    // The `<img>` has to be in the DOM while loading or the browser
+    // never fetches it, so both the photo and the skeleton are present.
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-photo"]')).not.toBeNull();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="image-skeleton"]'),
+    ).not.toBeNull();
+  });
+
+  it('switches to loaded and drops the skeleton when the <img> fires load (MIM-210)', () => {
+    const { fixture } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="image-skeleton"]'),
+    ).not.toBeNull();
+    photo.dispatchEvent(new Event('load'));
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('data-status')).toBe('loaded');
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-skeleton"]')).toBeNull();
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-photo"]')).not.toBeNull();
+  });
+
+  it('returns to loading when the image input changes (MIM-210)', () => {
+    const { fixture, host } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    photo.dispatchEvent(new Event('load'));
+    fixture.detectChanges();
+    host.image.set({
+      src: '/assets/products/silver-front.webp',
+      alt: 'Másik telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('data-status')).toBe('loading');
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="image-skeleton"]'),
+    ).not.toBeNull();
+    expect(
+      getNativeElement(fixture)
+        .querySelector<HTMLImageElement>('[data-testid="image-photo"]')
+        ?.getAttribute('src'),
+    ).toBe(new URL('assets/products/silver-front.webp', document.baseURI).href);
+  });
+
+  // The `error` outcome has to be forgotten with the source as well as the
+  // `load` one: without that, a gallery that fails on one variant keeps the
+  // monogram on every later variant. Reverting `phase` to a plain signal
+  // makes this case fail while the `load` case above still passes.
+  it('shows the photo again after an error once the image input changes (MIM-210)', () => {
+    const { fixture, host } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    photo.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(
+      getNativeElement(fixture).querySelector('[data-testid="image-fallback"]'),
+    ).not.toBeNull();
+
+    host.image.set({
+      src: '/assets/products/silver-front.webp',
+      alt: 'Másik telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('data-status')).toBe('loading');
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-fallback"]')).toBeNull();
+    expect(
+      getNativeElement(fixture)
+        .querySelector<HTMLImageElement>('[data-testid="image-photo"]')
+        ?.getAttribute('src'),
+    ).toBe(new URL('assets/products/silver-front.webp', document.baseURI).href);
+  });
+
+  // A rejected src in between must not hide the source change from the
+  // linked `phase`: reading it only inside the non-null branch of
+  // `status()` leaves the first image carrying its old failure when the
+  // gallery comes back to it.
+  it('retries an image that failed before a rejected one (MIM-210)', () => {
+    const { fixture, host } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    photo.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+
+    host.image.set({
+      src: '//evil.example/x.webp',
+      alt: 'Elutasított kép',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(
+      getNativeElement(fixture).querySelector<HTMLElement>('.root')?.getAttribute('data-status'),
+    ).toBe('error');
+
+    host.image.set({
+      src: '/assets/products/graphite-front.webp',
+      alt: 'Demo telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(
+      getNativeElement(fixture).querySelector<HTMLElement>('.root')?.getAttribute('data-status'),
+    ).toBe('loading');
+    expect(
+      getNativeElement(fixture)
+        .querySelector<HTMLImageElement>('[data-testid="image-photo"]')
+        ?.getAttribute('src'),
+    ).toBe(new URL('assets/products/graphite-front.webp', document.baseURI).href);
+  });
+
   it('renders the fallback, not a broken <img>, when the wire src is rejected (FIX-49)', () => {
     const { fixture, host } = setup();
     host.image.set({
-      src: 'https://evil.example/x.webp',
+      src: '//evil.example/x.webp',
       alt: 'Demo telefon fotó',
       width: 800,
       height: 600,

@@ -1,52 +1,47 @@
 @if (status() !== 'idle') {
   <section
-    aria-live="polite"
     class="payment-progress flex flex-col gap-2 p-4 rounded"
-    data-testid="payment-progress"
     role="status"
+    aria-live="polite"
     [attr.data-state]="status()"
+    data-testid="payment-progress"
   >
     <h2>{{ heading() }}</h2>
     @if (status() === 'pending') {
-      <p>{{ attemptLabel() }}</p>
-      <progress
-        aria-label="Fizetési szándék ellenőrzése"
-        [max]="maxAttempts()"
-        [value]="pollCount()"
-      ></progress>
+      <p>Folytatáshoz menj vissza a fizetési oldalra.</p>
     } @else if (status() === 'declined') {
       <p>A szimulált fizetés elutasítva.</p>
       <p>A fizetési módot módosíthatod, vagy újra próbálkozhatsz.</p>
       <div class="progress-actions flex gap-3">
         <app-button
-          data-testid="payment-progress-change-method"
-          label="Fizetési mód módosítása"
           variant="secondary"
+          label="Fizetési mód módosítása"
           (pressed)="onChangeMethod()"
-        />
+          data-testid="payment-progress-change-method"
+        ></app-button>
         <app-button
-          data-testid="payment-progress-retry"
-          label="Újrapróbálom"
           variant="primary"
+          label="Újrapróbálom"
           (pressed)="onRetry()"
-        />
+          data-testid="payment-progress-retry"
+        ></app-button>
       </div>
     } @else if (status() === 'unknown') {
       <p>Nem kaptunk egyértelmű választ a fizetési szándékról.</p>
       <p>Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.</p>
       <div class="progress-actions flex gap-3">
         <app-button
-          data-testid="payment-progress-change-method"
-          label="Fizetési mód módosítása"
           variant="secondary"
+          label="Fizetési mód módosítása"
           (pressed)="onChangeMethod()"
-        />
+          data-testid="payment-progress-change-method"
+        ></app-button>
         <app-button
-          data-testid="payment-progress-retry"
-          label="Újrapróbálom"
           variant="primary"
+          label="Újrapróbálom"
           (pressed)="onRetry()"
-        />
+          data-testid="payment-progress-retry"
+        ></app-button>
       </div>
     } @else if (status() === 'succeeded') {
       <p>A fizetés sikeres.</p>

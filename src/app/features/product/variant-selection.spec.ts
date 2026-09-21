@@ -33,8 +33,8 @@ import { server, useMswServer } from '../../../../tests/msw-server';
 
 import { Api } from '../../../app/api/generated/api';
 import {
-  ApiConfiguration as ApiConfig,
-  provideApiConfiguration as provideApiConfig,
+  ApiConfiguration,
+  provideApiConfiguration,
 } from '../../../app/api/generated/api-configuration';
 import type { Image } from '../../../app/api/generated/models/image';
 import type { Product } from '../../../app/api/generated/models/product';
@@ -45,6 +45,7 @@ import { ProductFacade } from '../../../app/features/product/product.facade';
 import {
   computeAddToCartState,
   computeDisabledCombinations,
+  defaultVariantOf,
   parseVariantQuery,
   selectImageFromGallery,
   selectInitialVariant,
@@ -90,6 +91,7 @@ function makeVariant(
 ): Variant {
   return {
     id,
+    slug: `${id}-variant`,
     colorCode,
     colorName,
     swatchHex: '#343B43',
@@ -97,7 +99,7 @@ function makeVariant(
     price: money(price),
     availability,
     maxQuantity,
-    images: images !== undefined ? [...images] : [makeImage(`${id}-front`)],
+    images: images ? [...images] : [makeImage(`${id}-front`)],
   };
 }
 
@@ -109,7 +111,7 @@ function makeProduct(): Product {
     name: 'Demo One 5G',
     highlights: ['6,7" kijelző'],
     is5g: true,
-    isDemo: true,
+    releasedAt: '2026-01-01',
     description: 'demo',
     specGroups: [],
     variants: [
@@ -118,7 +120,6 @@ function makeProduct(): Product {
       makeVariant('demo-one-5g-silver-256', 'silver', 'Ezüst', 256, 344_990),
       makeVariant('demo-one-5g-silver-128', 'silver', 'Ezüst', 128, 299_990),
     ],
-    defaultVariant: makeVariant('demo-one-5g-graphite-256', 'graphite', 'Grafit', 256, 339_990),
   };
 }
 
@@ -129,9 +130,12 @@ function makeProduct(): Product {
 describe('T15 selectInitialVariant (AC01)', () => {
   const product = makeProduct();
 
-  it('returns the product default when no variant query is provided', () => {
+  it('falls back to variants[0] when no variant query is provided', () => {
+    const product = makeProduct();
     const result = selectInitialVariant(product, null);
-    expect(result.variant.id).toBe('demo-one-5g-graphite-256');
+    const first = product.variants[0];
+    expect(first).toBeDefined();
+    expect(result.variant.id).toBe(first.id);
     expect(result.invalidQuery).toBeNull();
   });
 
@@ -143,14 +147,31 @@ describe('T15 selectInitialVariant (AC01)', () => {
 
   it('falls back to the default and surfaces the invalid id when the query is unknown', () => {
     const result = selectInitialVariant(product, 'demo-one-5g-does-not-exist');
-    expect(result.variant.id).toBe('demo-one-5g-graphite-256');
+    expect(result.variant.id).toBe(product.variants[0].id);
     expect(result.invalidQuery).toBe('demo-one-5g-does-not-exist');
   });
 
   it('treats an empty string the same as a missing query', () => {
     const result = selectInitialVariant(product, '');
-    expect(result.variant.id).toBe('demo-one-5g-graphite-256');
+    const first = product.variants[0];
+    expect(first).toBeDefined();
+    expect(result.variant.id).toBe(first.id);
     expect(result.invalidQuery).toBeNull();
+  });
+});
+
+describe('defaultVariantOf', () => {
+  it('returns variants[0] when the product has at least one variant', () => {
+    const product = makeProduct();
+    const result = defaultVariantOf(product);
+    const first = product.variants[0];
+    expect(first).toBeDefined();
+    expect(result.id).toBe(first.id);
+  });
+
+  it('throws on an empty variants list so the facade surfaces the error state', () => {
+    const product: Product = { ...makeProduct(), variants: [] };
+    expect(() => defaultVariantOf(product)).toThrow(/no variants/i);
   });
 });
 
@@ -403,7 +424,7 @@ beforeAll(() => {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfig(BASE_URL),
+      provideApiConfiguration(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
   });
@@ -418,22 +439,11 @@ beforeEach(() => {
   delayedHandlers.length = 0;
 
   server.use(
-    http.get(`${BASE_URL}/config`, () =>
-      HttpResponse.json({
-        providerId: 'mi-bolt',
-        displayName: 'MiBolt',
-        currency: 'HUF',
-        isDemo: true,
-        termsVersion: 'demo-1',
-        featuredSlugs: [],
-        maximumLineQuantity: 5,
-      }),
-    ),
     http.get(`${BASE_URL}/products/:slug`, ({ params, request }) => {
       const slug = String(params['slug']);
       captures.push({ method: request.method, url: request.url, slug });
       const delayed = delayedHandlers.find((h) => h.slug === slug);
-      if (delayed !== undefined) {
+      if (delayed) {
         return new Promise<Response>((resolve) => {
           delayed.resolve = () => {
             resolve(HttpResponse.json(delayed.payload));
@@ -473,7 +483,10 @@ function payloadForSlug(slug: string): Product | null {
       id: 'p-02',
       slug: 'demo-pro-5g',
       name: 'Demo Pro 5G',
-      defaultVariant: makeVariant('demo-pro-5g-graphite-256', 'graphite', 'Grafit', 256, 499_990),
+      variants: [
+        makeVariant('demo-pro-5g-graphite-256', 'graphite', 'Grafit', 256, 499_990),
+        ...makeProduct().variants.slice(1),
+      ],
     };
   }
   return null;
@@ -484,7 +497,7 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([demoSessionInterceptor])),
-      provideApiConfig(BASE_URL),
+      provideApiConfiguration(BASE_URL),
       // The generated Api class is partially compiled; vitest's esbuild
       // pipeline does not emit constructor metadata so TestBed cannot
       // read its `(config, http)` signature. An explicit factory makes
@@ -492,8 +505,8 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
       // wiring (the Angular CLI build emits the metadata normally).
       {
         provide: Api,
-        useFactory: (config: ApiConfig, http: HttpClient) => new Api(config, http),
-        deps: [ApiConfig, HttpClient],
+        useFactory: (config: ApiConfiguration, http: HttpClient) => new Api(config, http),
+        deps: [ApiConfiguration, HttpClient],
       },
       ProductFacade,
     ],
@@ -507,10 +520,8 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
       // task boundaries (Subject emission, RxJS subscription, fetch
       // Promise resolution, MSW interceptor). Yield enough ticks for
       // every link in the chain to complete.
-      for (let index = 0; index < 20; index += 1) {
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, 0);
-        });
+      for (let i = 0; i < 20; i += 1) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
       }
     },
   };
@@ -592,7 +603,6 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     const firstVariant = product.variants[0];
     // Give the variant two distinct images so the gallery reset is observable.
     firstVariant.images = [makeImage('g-front'), makeImage('g-side')];
-    product.defaultVariant = firstVariant;
     server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
@@ -607,7 +617,7 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     facade.selectVariant('demo-one-5g-silver-256');
     const vm = facade.vm();
     expect(vm.selectedVariant?.id).toBe('demo-one-5g-silver-256');
-    expect(vm.gallery.map((index) => index.id)).toEqual(['demo-one-5g-silver-256-front']);
+    expect(vm.gallery.map((i) => i.id)).toEqual(['demo-one-5g-silver-256-front']);
     expect(vm.galleryIndex).toBe(0);
     expect(vm.selectedImage?.id).toBe('demo-one-5g-silver-256-front');
   });
@@ -665,7 +675,6 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     const product = makeProduct();
     const firstVariant = product.variants[0];
     firstVariant.images = [makeImage('img-1'), makeImage('img-2'), makeImage('img-3')];
-    product.defaultVariant = firstVariant;
     server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
@@ -711,9 +720,9 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
 
   it('out-of-stock selection disables add-to-cart (AC04)', async () => {
     const product = makeProduct();
-    const firstVariant = product.variants[0];
-    product.variants[1].availability = 'out_of_stock';
-    product.defaultVariant = firstVariant;
+    const secondVariant = product.variants[1];
+    expect(secondVariant).toBeDefined();
+    secondVariant.availability = 'out_of_stock';
     server.use(http.get(`${BASE_URL}/products/:slug`, () => HttpResponse.json(product)));
 
     const { facade, flushMicrotasks } = buildFacade();
@@ -758,7 +767,7 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
       resolve: () => undefined,
     });
     const proPayload = payloadForSlug('demo-pro-5g');
-    if (proPayload === null) throw new Error('Expected payload for demo-pro-5g');
+    if (!proPayload) throw new Error('Expected payload for demo-pro-5g');
     delayedHandlers.push({
       slug: 'demo-pro-5g',
       payload: proPayload,
@@ -769,23 +778,17 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
 
     facade.load('demo-one-5g', new URLSearchParams());
     // Yield so the first request is in flight before we issue the second.
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     facade.load('demo-pro-5g', new URLSearchParams());
     // Yield so the second request is in flight before we resolve it.
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     // Resolve only the second request: the first must be cancelled
     // by switchMap and never reach the product signal.
     const second = delayedHandlers.find((h) => h.slug === 'demo-pro-5g');
-    if (second === undefined) throw new Error('Expected second handler');
+    if (!second) throw new Error('Expected second handler');
     second.resolve();
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     // expect.poll retries the assertion until it holds, covering the
     // MSW -> fetch -> SDK -> RxJS -> signal chain in whatever order the
@@ -798,11 +801,9 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
     // Resolving the first handler after cancellation must NOT swap the
     // product back to demo-one-5g.
     const first = delayedHandlers.find((h) => h.slug === 'demo-one-5g');
-    if (first === undefined) throw new Error('Expected first handler');
+    if (!first) throw new Error('Expected first handler');
     first.resolve();
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
     expect(facade.vm().product?.slug).toBe('demo-pro-5g');
   });
 
@@ -825,13 +826,13 @@ describe('T15 ProductFacade — currentVariantParams round-trips through the URL
     facade.load('demo-one-5g', new URLSearchParams());
     await flushMicrotasks();
     facade.selectVariant('demo-one-5g-silver-128');
-    const parameters = facade.currentVariantParams();
-    expect(parameters.get('variant')).toBe('demo-one-5g-silver-128');
+    const params = facade.currentVariantParams();
+    expect(params.get('variant')).toBe('demo-one-5g-silver-128');
   });
 
   it('produces an empty params when the product is still loading', () => {
     const { facade } = buildFacade();
-    const parameters = facade.currentVariantParams();
-    expect(parameters.toString()).toBe('');
+    const params = facade.currentVariantParams();
+    expect(params.toString()).toBe('');
   });
 });

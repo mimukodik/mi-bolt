@@ -29,22 +29,16 @@ import { DemoNotice } from './demo-notice';
   styleUrl: './app-shell.scss',
 })
 export class AppShell {
-  /**
-  Header variant — drives which chrome appears.
-  */
+  /** Header variant — drives which chrome appears. */
   readonly variant = input.required<HeaderVariant>();
 
-  /**
-  Cart count source-of-truth. Injected here so the shell owns the wiring.
-  */
+  /** Cart count source-of-truth. Injected here so the shell owns the wiring. */
 
   private readonly cart = inject(CartCountFacade);
 
   private readonly router = inject(Router);
 
-  /**
-  Drives `DemoNotice`'s `'memory'` state (FIX-70-AC05) — see `PERSISTENCE_MODE`.
-  */
+  /** Drives `DemoNotice`'s `'memory'` state (FIX-70-AC05) — see `PERSISTENCE_MODE`. */
   readonly persistenceMode = inject(PERSISTENCE_MODE);
 
   /** Whether the footer renders in its compact form. The checkout layout is
@@ -61,9 +55,7 @@ export class AppShell {
     void this.router.navigate(['/'], { fragment: 'how' });
   }
 
-  /**
-  Make the variant easy to set from the parent.
-  */
+  /** Make the variant easy to set from the parent. */
   asVariant(v: HeaderVariant): HeaderVariant {
     return v;
   }

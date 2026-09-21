@@ -8,9 +8,7 @@ import { Component, computed, input } from '@angular/core';
 export interface FieldError {
   readonly code: string;
   readonly message: string;
-  /**
-  Optional JSON-pointer into the parent payload (server contract).
-  */
+  /** Optional JSON-pointer into the parent payload (server contract). */
   readonly pointer?: string;
 }
 
@@ -55,7 +53,8 @@ export class FormFieldMessage {
       return help !== null && help.length > 0;
     }
     const errs = this.errors();
-    return errs.length === 0 ? false : this.touched() || this.submitted();
+    if (errs.length === 0) return false;
+    return this.touched() || this.submitted();
   });
 
   readonly visibleText = computed<string>(() => {
@@ -63,12 +62,14 @@ export class FormFieldMessage {
       return this.helpText() ?? '';
     }
     const errs = this.errors();
-    return errs.length === 0 ? '' : (errs[0]?.message ?? '');
+    if (errs.length === 0) return '';
+    return errs[0]?.message ?? '';
   });
 
   readonly dataPointer = computed<string | null>(() => {
     if (this.severity() !== 'error') return null;
     const errs = this.errors();
-    return errs.length === 0 ? null : (errs[0]?.pointer ?? null);
+    if (errs.length === 0) return null;
+    return errs[0]?.pointer ?? null;
   });
 }

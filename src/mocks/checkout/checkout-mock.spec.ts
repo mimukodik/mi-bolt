@@ -1,1374 +1,1818 @@
 /**
- * T08 - checkout draft, shipping and quote mock focused unit suite.
+ * MIM-212 — checkout, payment intent and order mock spec on the
+ * 2.0.0 contract.
  *
- * Each acceptance criterion has at least one named assertion in the
- * file. The suite exercises every line of `validate-checkout.ts`,
- * `quote-domain.ts` and the checkout handler dispatch path so the
- * coverage gate stays green on the owned runtime surface.
+ * 76 cases over `/checkout/options`, `/checkout`, `/payment-intents`
+ * and `/orders` (31 + 17 + 28), measured against the configured backend values the
+ * addendum of `/tmp/s3-a-design.md` (2026-09-20 ~21:25Z) locks in.
+ * Every case asserts an exact wire value, never `.exists()`-style
+ * coverage; the spec is the independent measurement of the mock
+ * layer, not a guide to what it should answer.
+ *
+ * Header shape and helpers are copied from
+ * `src/mocks/cart/cart-mock.spec.ts:1-105`. The shared `server` and
+ * the per-file MSW lifecycle come from `tests/msw-server.ts`.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createHandlers } from '../../mocks/create-handlers';
-// Side-effect import - registers cart handlers in the T05 registry so the
-// checkout wire tests can drive `addCartItem` between quote attempts.
-import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
-import { CartDomain } from '../../mocks/cart/cart-domain';
-import { deriveIdempotencyKey, hashPayload, IdempotencyStore } from '../../mocks/idempotency';
-import type { Product, Variant } from '../../mocks/repository';
-import { type Cart, Repository as Repo } from '../../mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
-import { CHECKOUT_OPTIONS } from '../../mocks/checkout/checkout.handlers';
-import { QUOTE_TTL_MS, QuoteDomain } from '../../mocks/checkout/quote-domain';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 import {
-  normalizeAddressCity,
-  normalizeAddressLine1,
-  normalizeAddressLine2,
-  normalizeAddressPostalCode,
-  normalizeContactEmail,
-  normalizeContactFullName,
-  normalizeContactPhone,
-} from '../../mocks/checkout/validate-checkout';
+  catalogStore,
+  isCatalogFixtureShape,
+  loadCatalogFixture,
+} from '../../mocks/catalog/catalog.handlers';
+import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
+import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/cart-store';
+import { CheckoutStore, TERMS_VERSION } from '../../mocks/checkout/checkout-store';
+import { IDEMPOTENCY_WINDOW_MS } from '../../mocks/idempotency';
+import '../../mocks/checkout/checkout.handlers';
+import '../../mocks/payment/payment.handlers';
+import '../../mocks/orders/order.handlers';
+import { IdempotencyStore } from '../../mocks/idempotency';
+import {
+  PAYMENT_INTENT_TTL_MS,
+  OrderStore,
+  SIMULATION_NOTICE,
+} from '../../mocks/orders/order-store';
+import { Repository } from '../../mocks/repository';
+import {
+  createDeterministicIds,
+  createFixedClock,
+  DEFAULT_SCENARIO,
+  type Clock,
+  type Ids,
+} from '../../mocks/scenarios';
 import { server, useMswServer } from '../../../tests/msw-server';
+import { isRecord } from '../../mocks/is-record';
+import { createHandlers } from '../../mocks/create-handlers';
 
-// The shared MSW server's lifecycle is registered here, in this file, because
-// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
-// process rather than once per file. See `tests/msw-server.ts`.
 useMswServer();
 
-const SESSION_A = 'session-aaaaaaaaaaaa';
-const VARIANT_G256 = 'demo-one-5g-graphite-256';
-const VARIANT_G512 = 'demo-one-5g-graphite-512';
-const IDEMPOTENCY_KEY_BASE = 'idem-key-12345678';
+const SESSION_1 = 'spec-session-0001';
+const SESSION_2 = 'spec-session-0002';
+const MOTO = 'motorola-edge-50-fusion--zold--256';
+const HONOR = 'honor-x7d--fekete--128';
+const MOTO_PRODUCT_NAME = 'Motorola Edge 50 Fusion';
 
-interface Environment {
-  clock: ReturnType<typeof createFixedClock>;
-  ids: ReturnType<typeof createDeterministicIds>;
-  repository: Repo;
-  idempotency: IdempotencyStore;
-  cartDomain: CartDomain;
-  quoteDomain: QuoteDomain;
-}
+const VALID_CONTACT = {
+  fullName: 'Teszt Elek',
+  email: 'Teszt.Elek@Pelda.hu',
+  phone: '+36301234567',
+};
+const VALID_BILLING = {
+  name: 'Teszt Elek',
+  address: {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  },
+};
+const VALID_DELIVERY_ADDRESS = {
+  countryCode: 'HU',
+  postalCode: '1052',
+  city: 'Budapest',
+  line1: 'Petőfi utca 1.',
+};
 
-function makeEnvironment(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')): Environment {
-  const clock = createFixedClock(new Date(initialClockMs).toISOString());
-  const ids = createDeterministicIds(7);
-  const scenario = {
-    name: 'checkout-mock-suite',
-    seed: 7,
-    clockOffsetMs: 0,
-    isolated: true,
+let clock: Clock;
+let ids: Ids;
+let options: {
+  repository: Repository;
+  clock: Clock;
+  ids: Ids;
+  scenario: ReturnType<Repository['getScenario']>;
+  apiRoot: string;
+};
+
+beforeAll(() => {
+  if (!isCatalogFixtureShape(catalogFixture)) {
+    throw new Error('[checkout-mock.spec] committed fixture does not match expected shape');
+  }
+  loadCatalogFixture(catalogFixture);
+});
+
+beforeEach(() => {
+  clock = createFixedClock('2026-09-20T10:00:00.000Z');
+  ids = createDeterministicIds(1);
+  options = {
+    repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+    clock,
+    ids,
+    scenario: DEFAULT_SCENARIO,
+    apiRoot: '/api/v1',
   };
-  const repo = new Repo(scenario, ids, clock);
-  repo.loadProducts([DEMO_PRODUCT]);
-  const idempotency = new IdempotencyStore(clock);
-  const cartDomain = new CartDomain(repo, clock, ids, idempotency);
-  const quoteDomain = new QuoteDomain(repo, clock, ids, idempotency);
-  return { clock, ids, repository: repo, idempotency, cartDomain, quoteDomain };
+  options.repository.loadProducts([DEMO_PRODUCT]);
+  server.use(...createHandlers(options));
+});
+
+function session1Headers(): Record<string, string> {
+  return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
 }
 
-function asProductFixture(environment: Environment): Product {
-  const product = environment.repository.getProductById(DEMO_PRODUCT.id);
-  if (product === undefined) throw new Error('demo product missing');
-  return product;
+function session2Headers(): Record<string, string> {
+  return { 'X-Demo-Session': SESSION_2, 'Content-Type': 'application/json' };
 }
 
-async function seedCart(
-  environment: Environment,
-  sessionId = SESSION_A,
-  variantId = VARIANT_G256,
-  quantity = 1,
-): Promise<Cart> {
-  await Promise.resolve();
-  const created = environment.cartDomain.createCart({
-    sessionId,
-    idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-seed-${sessionId}-${variantId}`,
-  });
-  if (!created.ok) throw new Error('createCart failed');
-  const added = environment.cartDomain.addCartItem({
-    sessionId,
-    cartId: created.value.id,
-    ifMatch: `"${String(created.value.version)}"`,
-    idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add-${sessionId}-${variantId}`,
-    variantId,
-    quantity,
-  });
-  if (!added.ok) throw new Error('addCartItem failed');
-  return added.value;
+function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+  expect(isRecord(value)).toBe(true);
 }
 
-function completeValidContact(): { fullName: string; email: string; phone: string } {
-  return { fullName: '  Teszt Elek  ', email: ' Teszt@Example.test ', phone: ' +36201234567 ' };
+function readString(body: Record<string, unknown>, key: string): string {
+  const value = body[key];
+  expect(typeof value).toBe('string');
+  if (typeof value !== 'string') throw new Error(`${key} is not a string`);
+  return value;
 }
 
-function completeValidDelivery(optionId: 'home_delivery' | 'demo_pickup' = 'home_delivery'):
-  | {
-      optionId: 'home_delivery';
-      address: { countryCode: string; postalCode: string; city: string; line1: string };
-    }
-  | { optionId: 'demo_pickup' } {
-  if (optionId === 'home_delivery') {
+function readNumber(body: Record<string, unknown>, key: string): number {
+  const value = body[key];
+  expect(typeof value).toBe('number');
+  if (typeof value !== 'number') throw new Error(`${key} is not a number`);
+  return value;
+}
+
+function readAmount(body: Record<string, unknown>, key: string): number {
+  const value = body[key];
+  expectRecord(value);
+  return readNumber(value, 'amount');
+}
+
+function readFieldErrors(body: Record<string, unknown>): { path: string; code: string }[] {
+  const errors = body['fieldErrors'];
+  expect(Array.isArray(errors)).toBe(true);
+  if (!Array.isArray(errors)) throw new Error('fieldErrors not an array');
+  return errors.map((entry: unknown) => {
+    expectRecord(entry);
     return {
-      optionId,
-      address: {
-        countryCode: 'HU',
-        postalCode: '1111',
-        city: '  Demóváros  ',
-        line1: '  Példa utca 1.  ',
-      },
-    } as const;
-  }
-  return { optionId } as const;
+      path: readString(entry, 'path'),
+      code: readString(entry, 'code'),
+    };
+  });
 }
-
-describe('T08-AC01 contact normalization and partial-merge safety', () => {
-  it('normalizes whitespace, case-folds email and validates the +36 phone prefix', () => {
-    expect(normalizeContactFullName('  Teszt   Elek  ')).toBe('Teszt Elek');
-    expect(normalizeContactFullName('ÁRVÍZTŰRŐ'.normalize('NFC'))).toBe(
-      'ÁRVÍZTŰRŐ'.normalize('NFC'),
-    );
-    expect(normalizeContactEmail('  Teszt@Example.test ')).toBe('teszt@example.test');
-    expect(normalizeContactPhone(' +36 20 123 4567 ')).toBe('+36201234567');
-    expect(normalizeContactPhone('+36201234567')).toBe('+36201234567');
-    expect(normalizeContactPhone('+3630123456')).toBe('+3630123456');
-  });
-
-  it('rejects contact sections outside the JSON schema with field errors', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const result = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-contact-bad`,
-      body: {
-        contact: { fullName: 'X', email: 'not-email', phone: '+361' },
-      },
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.status).toBe(422);
-    expect(result.problem.code).toBe('VALIDATION_ERROR');
-    const paths = result.problem.fieldErrors.map((f) => f.path).sort();
-    expect(paths).toEqual(
-      expect.arrayContaining(['/contact/fullName', '/contact/email', '/contact/phone']),
-    );
-  });
-
-  it('merges only the supplied sections and never erases prior values', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const first = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-merge-1`,
-      body: { contact: completeValidContact(), paymentMethod: 'demo_card' },
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected merge');
-    expect(first.value.draft.contact?.fullName).toBe('Teszt Elek');
-    expect(first.value.draft.contact?.email).toBe('teszt@example.test');
-    expect(first.value.draft.paymentMethod).toBe('demo_card');
-    const second = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: first.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-merge-2`,
-      body: { delivery: completeValidDelivery('home_delivery') },
-    });
-    expect(second.ok).toBe(true);
-    if (!second.ok) throw new Error('expected merge');
-    // Contact is preserved.
-    expect(second.value.draft.contact?.fullName).toBe('Teszt Elek');
-    expect(second.value.draft.paymentMethod).toBe('demo_card');
-    expect(second.value.draft.delivery?.optionId).toBe('home_delivery');
-    // Cart version unchanged.
-    expect(second.value.cartVersion).toBe(seeded.version);
-  });
-
-  it('returns field errors without erasing previously-merged sections', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const first = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-preserve-1`,
-      body: { contact: completeValidContact(), paymentMethod: 'demo_card' },
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected merge');
-    const invalid = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: first.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-preserve-2`,
-      body: {
-        delivery: {
-          optionId: 'demo_pickup',
-          address: {
-            countryCode: 'HU',
-            postalCode: '1111',
-            city: 'Demóváros',
-            line1: 'Példa utca 1.',
-          },
-        },
-      },
-    });
-    expect(invalid.ok).toBe(false);
-    if (invalid.ok) throw new Error('expected rejection');
-    expect(invalid.problem.status).toBe(422);
-    expect(invalid.problem.fieldErrors[0]?.path).toBe('/delivery');
-    // Re-read the session: previously merged contact + paymentMethod survive.
-    const next = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: first.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-preserve-3`,
-      body: { contact: completeValidContact() },
-    });
-    expect(next.ok).toBe(true);
-    if (!next.ok) throw new Error('expected still-merged state');
-    expect(next.value.draft.contact?.fullName).toBe('Teszt Elek');
-    expect(next.value.draft.paymentMethod).toBe('demo_card');
-  });
-});
-
-describe('T08-AC02 delivery rules and shipping fee', () => {
-  it('accepts HU address for home_delivery and rejects non-HU country code', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const bad = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-country`,
-      body: {
-        delivery: {
-          optionId: 'home_delivery',
-          address: {
-            countryCode: 'AT',
-            postalCode: '1111',
-            city: 'Bécs',
-            line1: 'Ringstraße 1.',
-          },
-        },
-      },
-    });
-    expect(bad.ok).toBe(false);
-    if (bad.ok) throw new Error('expected rejection');
-    expect(bad.problem.status).toBe(422);
-    expect(bad.problem.fieldErrors[0]?.path).toBe('/delivery/address/countryCode');
-  });
-
-  it('rejects home_delivery without an address and pickup with an address', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const missing = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-missing-address`,
-      body: { delivery: { optionId: 'home_delivery' } },
-    });
-    expect(missing.ok).toBe(false);
-    if (missing.ok) throw new Error('expected rejection');
-    expect(missing.problem.code).toBe('VALIDATION_ERROR');
-    expect(missing.problem.fieldErrors[0]?.path).toBe('/delivery/address');
-
-    const pickupWithAddress = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-pickup-bad`,
-      body: {
-        delivery: {
-          optionId: 'demo_pickup',
-          address: {
-            countryCode: 'HU',
-            postalCode: '1111',
-            city: 'Demóváros',
-            line1: 'Példa utca 1.',
-          },
-        },
-      },
-    });
-    expect(pickupWithAddress.ok).toBe(false);
-    if (pickupWithAddress.ok) throw new Error('expected rejection');
-    expect(pickupWithAddress.problem.fieldErrors[0]?.path).toBe('/delivery');
-  });
-
-  it('rejects malformed address fields with the matching JSON pointer', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const bad = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-bad-address`,
-      body: {
-        delivery: {
-          optionId: 'home_delivery',
-          address: {
-            countryCode: 'HU',
-            postalCode: '0123',
-            city: 'x',
-            line1: 'ab',
-          },
-        },
-      },
-    });
-    expect(bad.ok).toBe(false);
-    if (bad.ok) throw new Error('expected rejection');
-    const paths = bad.problem.fieldErrors.map((f) => f.path).sort();
-    expect(paths).toEqual(
-      expect.arrayContaining([
-        '/delivery/address/postalCode',
-        '/delivery/address/city',
-        '/delivery/address/line1',
-      ]),
-    );
-  });
-
-  it('quotes home_delivery at 1990 HUF and demo_pickup at 0 HUF, never client-supplied', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const updated = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-fee-home`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(updated.ok).toBe(true);
-    if (!updated.ok) throw new Error('expected merge');
-    const home = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: updated.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-quote-home`,
-    });
-    expect(home.ok).toBe(true);
-    if (!home.ok) throw new Error('expected quote');
-    expect(home.value.quote.shipping).toEqual({ amount: 1990, currency: 'HUF' });
-    expect(home.value.quote.subtotal).toEqual({ amount: 339_990, currency: 'HUF' });
-    expect(home.value.quote.total).toEqual({ amount: 341_980, currency: 'HUF' });
-
-    const updatedPickup = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-fee-pickup`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('demo_pickup'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(updatedPickup.ok).toBe(true);
-    if (!updatedPickup.ok) throw new Error('expected merge');
-    const pickup = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: updatedPickup.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-quote-pickup`,
-    });
-    expect(pickup.ok).toBe(true);
-    if (!pickup.ok) throw new Error('expected quote');
-    expect(pickup.value.quote.shipping).toEqual({ amount: 0, currency: 'HUF' });
-    expect(pickup.value.quote.total).toEqual({ amount: 339_990, currency: 'HUF' });
-  });
-
-  it('exposes a static checkout options payload that drives the shipping fee', () => {
-    expect(CHECKOUT_OPTIONS.deliveryOptions.find((o) => o.id === 'home_delivery')?.fee).toEqual({
-      amount: 1990,
-      currency: 'HUF',
-    });
-    expect(CHECKOUT_OPTIONS.deliveryOptions.find((o) => o.id === 'demo_pickup')?.fee).toEqual({
-      amount: 0,
-      currency: 'HUF',
-    });
-  });
-});
-
-describe('T08-AC03 quote guards (empty cart, incomplete sections, stock)', () => {
-  it('rejects a quote for an empty cart with CHECKOUT_INCOMPLETE /cart pointer', () => {
-    const environment = makeEnvironment();
-    const created = environment.cartDomain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-empty-cart`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      cartVersion: created.value.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-empty-merge`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-    const quote = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-empty-quote`,
-    });
-    expect(quote.ok).toBe(false);
-    if (quote.ok) throw new Error('expected rejection');
-    expect(quote.problem.status).toBe(422);
-    expect(quote.problem.code).toBe('CHECKOUT_INCOMPLETE');
-    expect(quote.problem.fieldErrors[0]?.path).toBe('/cart');
-  });
-
-  it('rejects a quote when any of contact/delivery/payment is missing', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const noContact = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-no-contact`,
-    });
-    expect(noContact.ok).toBe(false);
-    if (noContact.ok) throw new Error('expected rejection');
-    expect(noContact.problem.status).toBe(422);
-    expect(noContact.problem.code).toBe('CHECKOUT_INCOMPLETE');
-    const noContactPaths = noContact.problem.fieldErrors.map((f) => f.path).sort();
-    expect(noContactPaths).toEqual(
-      expect.arrayContaining(['/contact', '/delivery', '/paymentMethod']),
-    );
-
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-incomplete-merge`,
-      body: { contact: completeValidContact() },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-    const noDelivery = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-no-delivery`,
-    });
-    expect(noDelivery.ok).toBe(false);
-    if (noDelivery.ok) throw new Error('expected rejection');
-    expect(noDelivery.problem.code).toBe('CHECKOUT_INCOMPLETE');
-    expect(noDelivery.problem.fieldErrors.map((f) => f.path)).toEqual(
-      expect.arrayContaining(['/delivery', '/paymentMethod']),
-    );
-  });
-
-  it('returns 409 OUT_OF_STOCK when a variant is exhausted at quote time', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment, SESSION_A, VARIANT_G256, 1);
-    // Flip the catalogue to out_of_stock before the quote runs.
-    const product = asProductFixture(environment);
-    const oos = cloneProduct(
-      product,
-      product.variants.map((v) =>
-        v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v,
-      ),
-    );
-    environment.repository.loadProducts([oos]);
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-oos-merge`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-    const quote = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-oos-quote`,
-    });
-    expect(quote.ok).toBe(false);
-    if (quote.ok) throw new Error('expected rejection');
-    expect(quote.problem.status).toBe(409);
-    expect(quote.problem.code).toBe('OUT_OF_STOCK');
-  });
-});
-
-describe('T08-AC04 quote TTL, cart-version and draft invalidation', () => {
-  it('exposes the 5-minute TTL constant and keeps an active quote inside the window', async () => {
-    expect(QUOTE_TTL_MS).toBe(5 * 60 * 1000);
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-ttl-merge`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-    const first = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-ttl-first`,
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected quote');
-    const initialExpiresAt = first.value.quote.expiresAt;
-    environment.clock.advanceMs(QUOTE_TTL_MS - 1);
-    expect(environment.quoteDomain.getActiveQuote(seeded.id, seeded.version)?.expiresAt).toBe(
-      initialExpiresAt,
-    );
-  });
-
-  it('expires the quote after exactly 5 mock-clock minutes', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-ttl-expire-merge`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-    const first = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-ttl-expire-first`,
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected quote');
-    environment.clock.advanceMs(QUOTE_TTL_MS);
-    expect(environment.quoteDomain.getActiveQuote(seeded.id, seeded.version)).toBeNull();
-  });
-
-  it('invalidates the active quote when the cart version bumps (cart mutation)', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-mut-merge`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-    const first = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-mut-first`,
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected quote');
-    const bumped = environment.cartDomain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      ifMatch: `"${String(seeded.version)}"`,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-mut-bump`,
-      variantId: VARIANT_G512,
-      quantity: 1,
-    });
-    expect(bumped.ok).toBe(true);
-    if (!bumped.ok) throw new Error('expected bump');
-    // Old quote (cartVersion < current) is treated as invalidated.
-    expect(environment.quoteDomain.getActiveQuote(seeded.id, bumped.value.version)).toBeNull();
-
-    // Advance the clock by a millisecond so the fresh quote carries a
-    // distinct expiresAt timestamp deterministically.
-    environment.clock.advanceMs(1);
-    const next = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: bumped.value.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-mut-second`,
-    });
-    expect(next.ok).toBe(true);
-    if (!next.ok) throw new Error('expected fresh quote');
-    expect(next.value.quote.id).not.toBe(first.value.quote.id);
-    expect(next.value.quote.expiresAt).not.toBe(first.value.quote.expiresAt);
-    expect(next.value.quote.cartVersion).toBe(bumped.value.version);
-  });
-
-  it('invalidates the active quote when a draft update succeeds and replaces it on the next call', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const first = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-draft-merge-1`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected merge');
-    const quote = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: first.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-draft-quote-1`,
-    });
-    expect(quote.ok).toBe(true);
-    if (!quote.ok) throw new Error('expected quote');
-    const id1 = quote.value.quote.id;
-
-    const draftUpdate = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: first.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-draft-merge-2`,
-      body: { contact: { ...completeValidContact(), fullName: 'Más Név' } },
-    });
-    expect(draftUpdate.ok).toBe(true);
-    if (!draftUpdate.ok) throw new Error('expected merge');
-
-    // Old quote is gone (treated as invalidated).
-    expect(environment.quoteDomain.getActiveQuote(seeded.id, seeded.version)).toBeNull();
-
-    const replacement = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-draft-quote-2`,
-    });
-    expect(replacement.ok).toBe(true);
-    if (!replacement.ok) throw new Error('expected replacement');
-    expect(replacement.value.quote.id).not.toBe(id1);
-  });
-});
-
-describe('T08-AC05 PRICE_CHANGED atomic update', () => {
-  it('atomically updates cart line prices, bumps version, and returns PRICE_CHANGED', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-price-merge`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-
-    // Mutate the catalogue price for the variant while the cart still
-    // carries the old snapshot.
-    const product = asProductFixture(environment);
-    const mutated = cloneProduct(
-      product,
-      product.variants.map((v) =>
-        v.id === VARIANT_G256 ? { ...v, price: { amount: 359_990, currency: 'HUF' } } : v,
-      ),
-    );
-    environment.repository.loadProducts([mutated]);
-
-    const result = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-price-quote`,
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected PRICE_CHANGED');
-    expect(result.problem.status).toBe(409);
-    expect(result.problem.code).toBe('PRICE_CHANGED');
-    // Cart version bumped by exactly one and price reflects the catalogue.
-    const stored = environment.repository.getCart(seeded.id);
-    expect(stored?.version).toBe(seeded.version + 1);
-    expect(stored?.items[0]?.unitPrice).toEqual({ amount: 359_990, currency: 'HUF' });
-    expect(stored?.items[0]?.lineTotal).toEqual({ amount: 359_990, currency: 'HUF' });
-  });
-
-  it('keeps PRICE_CHANGED distinct from QUOTE_EXPIRED and OUT_OF_STOCK', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const merged = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-dist-merge`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      },
-    });
-    expect(merged.ok).toBe(true);
-    if (!merged.ok) throw new Error('expected merge');
-
-    // Quote once -> advance clock past TTL -> quote is gone but cart is intact.
-    const first = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: merged.value.cartVersion,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-dist-quote-1`,
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected quote');
-
-    environment.clock.advanceMs(QUOTE_TTL_MS + 1);
-
-    // Same cart, same draft, same stock, same prices - strictly expiry.
-    const expired = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-dist-quote-2`,
-    });
-    expect(expired.ok).toBe(true);
-    if (!expired.ok) throw new Error('expected fresh quote (no PRICE_CHANGED)');
-    expect(expired.value.quote.id).not.toBe(first.value.quote.id);
-
-    // Now flip a variant to out_of_stock at quote time; PRICE_CHANGED must
-    // not be returned because the existing-prices branch is satisfied.
-    const product = asProductFixture(environment);
-    const oos = cloneProduct(
-      product,
-      product.variants.map((v) =>
-        v.id === VARIANT_G256 ? { ...v, availability: 'out_of_stock' as const, maxQuantity: 0 } : v,
-      ),
-    );
-    environment.repository.loadProducts([oos]);
-    const stock = environment.quoteDomain.createQuote({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-dist-quote-3`,
-    });
-    expect(stock.ok).toBe(false);
-    if (stock.ok) throw new Error('expected OUT_OF_STOCK');
-    expect(stock.problem.code).toBe('OUT_OF_STOCK');
-    expect(stock.problem.code).not.toBe('PRICE_CHANGED');
-  });
-});
-
-describe('address and contact normalization helpers', () => {
-  it('normalizes HU address fields while enforcing the schema-length rules', () => {
-    expect(normalizeAddressCity('  Demóváros  ')).toBe('Demóváros');
-    expect(normalizeAddressLine1('  Példa utca 1.  ')).toBe('Példa utca 1.');
-    expect(normalizeAddressLine2('  Emelet 2  ')).toBe('Emelet 2');
-    // Acceptable postal codes (1xxx, 9xxx, 1000-9999 inclusive).
-    expect(normalizeAddressPostalCode('1111')).toBe('1111');
-    expect(normalizeAddressPostalCode('9999')).toBe('9999');
-    // Leading-zero 0123 must be rejected.
-    expect(normalizeAddressPostalCode('0123')).toBeNull();
-    expect(normalizeAddressPostalCode('0')).toBeNull();
-    // Too-short city.
-    expect(normalizeAddressCity('x')).toBeNull();
-    // Too-long line1.
-    expect(normalizeAddressLine1('a'.repeat(121))).toBeNull();
-    // Too-long line2.
-    expect(normalizeAddressLine2('a'.repeat(121))).toBeNull();
-  });
-
-  it('rejects non-string, empty and out-of-range inputs across every normalizer', () => {
-    // Non-string inputs.
-    expect(normalizeContactFullName(123)).toBeNull();
-    expect(normalizeContactEmail(null)).toBeNull();
-    expect(normalizeContactPhone(undefined)).toBeNull();
-    expect(normalizeAddressPostalCode(false)).toBeNull();
-    expect(normalizeAddressCity({})).toBeNull();
-    expect(normalizeAddressLine1([])).toBeNull();
-    expect(normalizeAddressLine2(42)).toBeNull();
-    // Empty strings.
-    expect(normalizeContactFullName(' '.repeat(3))).toBeNull();
-    expect(normalizeContactEmail('')).toBeNull();
-    expect(normalizeAddressCity('')).toBeNull();
-    expect(normalizeAddressLine1('  ')).toBeNull();
-    // Out-of-range lengths.
-    expect(normalizeContactFullName('a'.repeat(101))).toBeNull();
-    expect(normalizeContactEmail('a'.repeat(255))).toBeNull();
-    expect(normalizeAddressCity('a'.repeat(81))).toBeNull();
-    // Invalid email patterns.
-    expect(normalizeContactEmail('not-an-email')).toBeNull();
-    expect(normalizeContactEmail('no@dot')).toBeNull();
-    expect(normalizeContactEmail('@example.com')).toBeNull();
-    // Phone numbers not matching the +36 prefix.
-    expect(normalizeContactPhone('06201234567')).toBeNull();
-    expect(normalizeContactPhone('+363012')).toBeNull();
-    expect(normalizeContactPhone('+362012345')).toBeNull();
-    // Address line2 above 120 chars returns null; exactly 120 stays valid.
-    expect(normalizeAddressLine2('a'.repeat(120))).toBe('a'.repeat(120));
-    // Line2 undefined/null becomes undefined; too-long string returns null.
-    expect(normalizeAddressLine2(undefined)).toBeUndefined();
-    expect(normalizeAddressLine2(null)).toBeUndefined();
-  });
-});
-
-describe('QuoteDomain error paths and session guards', () => {
-  it('rejects malformed X-Demo-Session headers with 400 VALIDATION_FAILED', () => {
-    const environment = makeEnvironment();
-    const result = environment.quoteDomain.updateDraft({
-      sessionId: 'short',
-      cartId: 'cart-anything',
-      cartVersion: 1,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-bad-session`,
-      body: { contact: completeValidContact() },
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.status).toBe(400);
-    expect(result.problem.code).toBe('VALIDATION_FAILED');
-  });
-
-  it('rejects missing If-Match with 400 VALIDATION_FAILED', () => {
-    const environment = makeEnvironment();
-    const result = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: 'cart-anything',
-      cartVersion: null,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-no-if`,
-      body: { contact: completeValidContact() },
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.status).toBe(400);
-    expect(result.problem.fieldErrors[0]?.path).toBe('/If-Match');
-  });
-
-  it('rejects missing Idempotency-Key with 400 VALIDATION_FAILED', () => {
-    const environment = makeEnvironment();
-    const result = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: 'cart-anything',
-      cartVersion: 1,
-      idempotencyKey: null,
-      body: { contact: completeValidContact() },
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.status).toBe(400);
-    expect(result.problem.fieldErrors[0]?.path).toBe('/Idempotency-Key');
-  });
-
-  it('returns 404 NOT_FOUND when the cart does not belong to the session', () => {
-    const environment = makeEnvironment();
-    const result = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: 'cart-unknown',
-      cartVersion: 1,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-no-cart`,
-      body: { contact: completeValidContact() },
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.status).toBe(404);
-    expect(result.problem.code).toBe('NOT_FOUND');
-  });
-
-  it('returns 409 IDEMPOTENCY_CONFLICT on a same-key + different-body replay', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const key = `${IDEMPOTENCY_KEY_BASE}-conflicting-key`;
-    const first = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: key,
-      body: { contact: completeValidContact() },
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('expected first');
-    const conflict = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: first.value.cartVersion,
-      idempotencyKey: key,
-      body: { paymentMethod: 'demo_card' },
-    });
-    expect(conflict.ok).toBe(false);
-    if (conflict.ok) throw new Error('expected conflict');
-    expect(conflict.problem.status).toBe(409);
-    expect(conflict.problem.code).toBe('IDEMPOTENCY_CONFLICT');
-  });
-
-  it('rejects update with no recognized sections as 422 VALIDATION_ERROR', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const empty = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-empty-body`,
-      body: {},
-    });
-    expect(empty.ok).toBe(false);
-    if (empty.ok) throw new Error('expected rejection');
-    expect(empty.problem.status).toBe(422);
-    expect(empty.problem.code).toBe('VALIDATION_ERROR');
-  });
-
-  it('rejects unknown delivery option ids with the optionId pointer', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const result = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-unknown-delivery`,
-      body: { delivery: { optionId: 'teleport' } },
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.fieldErrors[0]?.path).toBe('/delivery/optionId');
-  });
-
-  it('rejects unknown payment methods with the paymentMethod pointer', async () => {
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const result = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-unknown-payment`,
-      body: { paymentMethod: 'bitcoin' },
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.fieldErrors[0]?.path).toBe('/paymentMethod');
-  });
-});
-
-describe('QuoteDomain replay guards (isCheckoutSessionSnapshot / isQuoteReplayResult reject arm)', () => {
-  it('throws when a cached updateDraft replay body does not match CheckoutSessionSnapshot', async () => {
-    // Reject arm of `isCheckoutSessionSnapshot` (src/mocks/checkout/quote-domain.ts):
-    // the idempotency cache is seeded directly with a body that is not a
-    // valid CheckoutSessionSnapshot, at the exact key/hash `updateDraft`
-    // will look up.
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const idempotencyKey = `${IDEMPOTENCY_KEY_BASE}-corrupt-draft-replay`;
-    const body = { contact: completeValidContact() };
-    const idemKey = deriveIdempotencyKey(
-      'PUT',
-      `/checkout/${seeded.id}`,
-      SESSION_A,
-      idempotencyKey,
-    );
-    const payloadHash = hashPayload(body);
-    environment.idempotency.record(idemKey, payloadHash, {
-      status: 200,
-      body: { not: 'a-snapshot' },
-    });
-    expect(() =>
-      environment.quoteDomain.updateDraft({
-        sessionId: SESSION_A,
-        cartId: seeded.id,
-        cartVersion: seeded.version,
-        idempotencyKey,
-        body,
-      }),
-    ).toThrow(/not a valid CheckoutSessionSnapshot/);
-  });
-
-  it('throws when a cached createQuote replay body does not match the quote/cart pair', async () => {
-    // Reject arm of `isQuoteReplayResult`: same technique, on the
-    // `createQuote` path (`POST /checkout/{cartId}/quote`, hash of `{}`).
-    const environment = makeEnvironment();
-    const seeded = await seedCart(environment);
-    const draft = environment.quoteDomain.updateDraft({
-      sessionId: SESSION_A,
-      cartId: seeded.id,
-      cartVersion: seeded.version,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-corrupt-quote-draft`,
-      body: {
-        contact: completeValidContact(),
-        delivery: completeValidDelivery(),
-        paymentMethod: 'demo_cod',
-      },
-    });
-    if (!draft.ok) throw new Error('expected draft update to succeed');
-    const idempotencyKey = `${IDEMPOTENCY_KEY_BASE}-corrupt-quote-replay`;
-    const idemKey = deriveIdempotencyKey(
-      'POST',
-      `/checkout/${seeded.id}/quote`,
-      SESSION_A,
-      idempotencyKey,
-    );
-    const payloadHash = hashPayload({});
-    environment.idempotency.record(idemKey, payloadHash, {
-      status: 200,
-      body: { not: 'a-quote-pair' },
-    });
-    expect(() =>
-      environment.quoteDomain.createQuote({
-        sessionId: SESSION_A,
-        cartId: seeded.id,
-        cartVersion: draft.value.cartVersion,
-        idempotencyKey,
-      }),
-    ).toThrow(/not a valid quote\/cart pair/);
-  });
-});
-
-describe('checkout handler dispatch path (MSW + SDK wire)', () => {
-  let environment: ReturnType<typeof makeEnvironment>;
-
-  beforeEach(() => {
-    environment = makeEnvironment();
-    const handlers = createHandlers({
-      repository: environment.repository,
-      clock: environment.clock,
-      ids: environment.ids,
-      scenario: environment.repository.getScenario(),
-      apiRoot: '/api/v1',
-    });
-    server.use(...handlers);
-  });
-
-  afterEach(() => {
-    server.resetHandlers();
-  });
-
-  function url(path: string): string {
-    return `http://127.0.0.1/api/v1${path}`;
-  }
-
-  function commonHeaders(idempotencyKey: string, ifMatch = '"1"'): Record<string, string> {
-    return {
-      'X-Demo-Session': SESSION_A,
-      'Idempotency-Key': idempotencyKey,
-      'If-Match': ifMatch,
-      'Content-Type': 'application/json',
-    };
-  }
-
-  async function postCart(): Promise<{ id: string; version: number }> {
-    const response = await fetch(url('/carts'), {
-      method: 'POST',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'Idempotency-Key': `${IDEMPOTENCY_KEY_BASE}-wire-cart`,
-        'Content-Type': 'application/json',
-      },
-    });
-    expect(response.status).toBe(201);
-    return (await response.json()) as { id: string; version: number };
-  }
-
-  async function addItem(
-    cart: { id: string; version: number },
-    variantId: string,
-    quantity: number,
-  ): Promise<{ id: string; version: number }> {
-    const response = await fetch(url(`/carts/${cart.id}/items`), {
-      method: 'POST',
-      headers: commonHeaders(
-        `${IDEMPOTENCY_KEY_BASE}-wire-add-${variantId}-${String(cart.version)}`,
-        `"${String(cart.version)}"`,
-      ),
-      body: JSON.stringify({ variantId, quantity }),
-    });
-    expect(response.status).toBe(200);
-    return (await response.json()) as { id: string; version: number };
-  }
-
-  it('exposes the static checkout options payload', async () => {
-    const response = await fetch(url('/checkout/options'));
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as { deliveryOptions: { id: string }[] };
-    expect(body.deliveryOptions.map((o) => o.id)).toEqual(['home_delivery', 'demo_pickup']);
-  });
-
-  it('returns CHECKOUT_INCOMPLETE on the wire when the cart is empty', async () => {
-    const cart = await postCart();
-    const response = await fetch(url(`/checkout/${cart.id}/quote`), {
-      method: 'POST',
-      headers: commonHeaders(
-        `${IDEMPOTENCY_KEY_BASE}-wire-empty-quote-${String(cart.version)}`,
-        `"${String(cart.version)}"`,
-      ),
-    });
-    expect(response.status).toBe(422);
-    const body = (await response.json()) as { code: string };
-    expect(body.code).toBe('CHECKOUT_INCOMPLETE');
-  });
-
-  it('runs a full update → quote → mutation → re-quote flow on the wire', async () => {
-    const cart = await postCart();
-    const withItem = await addItem(cart, VARIANT_G256, 1);
-
-    // Update draft with home delivery
-    const updateResponse = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: commonHeaders(
-        `${IDEMPOTENCY_KEY_BASE}-wire-update-1`,
-        `"${String(withItem.version)}"`,
-      ),
-      body: JSON.stringify({
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      }),
-    });
-    expect(updateResponse.status).toBe(200);
-
-    // First quote
-    const firstQuoteResponse = await fetch(url(`/checkout/${cart.id}/quote`), {
-      method: 'POST',
-      headers: commonHeaders(
-        `${IDEMPOTENCY_KEY_BASE}-wire-quote-1`,
-        `"${String(withItem.version)}"`,
-      ),
-    });
-    expect(firstQuoteResponse.status).toBe(200);
-    const firstQuote = (await firstQuoteResponse.json()) as {
-      id: string;
-      total: { amount: number };
-      shipping: { amount: number };
-      cartVersion: number;
-    };
-    expect(firstQuote.total).toEqual({ amount: 341_980, currency: 'HUF' });
-    expect(firstQuote.shipping).toEqual({ amount: 1990, currency: 'HUF' });
-    expect(firstQuote.cartVersion).toBe(withItem.version);
-
-    // Mutate cart -> bumps version. The previous call returned `withItem`
-    // and we use its version as the If-Match so addItem accepts it and
-    // returns the freshly bumped version.
-    const bumped = await addItem({ id: cart.id, version: withItem.version }, VARIANT_G512, 1);
-
-    // Subsequent quote uses the bumped version and produces a fresh quote id
-    const refreshedResponse = await fetch(url(`/checkout/${cart.id}/quote`), {
-      method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-quote-2`, `"${String(bumped.version)}"`),
-    });
-    expect(refreshedResponse.status).toBe(200);
-    const refreshed = (await refreshedResponse.json()) as { id: string; cartVersion: number };
-    expect(refreshed.id).not.toBe(firstQuote.id);
-    expect(refreshed.cartVersion).toBe(bumped.version);
-  });
-
-  it('returns 422 with field errors for a missing address and a same-key conflict on retry', async () => {
-    const cart = await postCart();
-    const withItem = await addItem(cart, VARIANT_G256, 1);
-
-    const badResponse = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: commonHeaders(
-        `${IDEMPOTENCY_KEY_BASE}-wire-missing-address`,
-        `"${String(withItem.version)}"`,
-      ),
-      body: JSON.stringify({
-        contact: completeValidContact(),
-        delivery: { optionId: 'home_delivery' },
-        paymentMethod: 'demo_card',
-      }),
-    });
-    expect(badResponse.status).toBe(422);
-    const badBody = (await badResponse.json()) as {
-      code: string;
-      fieldErrors: { path: string; message: string }[];
-    };
-    expect(badBody.code).toBe('VALIDATION_ERROR');
-    expect(badBody.fieldErrors[0]?.path).toBe('/delivery/address');
-
-    // Same Idempotency-Key + different body -> IDEMPOTENCY_CONFLICT
-    const key = `${IDEMPOTENCY_KEY_BASE}-wire-conflict`;
-    const first = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: commonHeaders(key, `"${String(withItem.version)}"`),
-      body: JSON.stringify({
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('home_delivery'),
-        paymentMethod: 'demo_card',
-      }),
-    });
-    expect(first.status).toBe(200);
-    const conflict = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: commonHeaders(key, `"${String(withItem.version)}"`),
-      body: JSON.stringify({
-        contact: completeValidContact(),
-        delivery: completeValidDelivery('demo_pickup'),
-        paymentMethod: 'demo_card',
-      }),
-    });
-    expect(conflict.status).toBe(409);
-    const conflictBody = (await conflict.json()) as { code: string };
-    expect(conflictBody.code).toBe('IDEMPOTENCY_CONFLICT');
-  });
-
-  it('returns 400 for missing X-Demo-Session, Idempotency-Key and If-Match headers on update', async () => {
-    const cart = await postCart();
-    const noSession = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: {
-        'Idempotency-Key': `${IDEMPOTENCY_KEY_BASE}-wire-no-session`,
-        'If-Match': '"1"',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contact: completeValidContact() }),
-    });
-    expect(noSession.status).toBe(400);
-
-    const noKey = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'If-Match': '"1"',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contact: completeValidContact() }),
-    });
-    expect(noKey.status).toBe(400);
-
-    const noIfMatch = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'Idempotency-Key': `${IDEMPOTENCY_KEY_BASE}-wire-no-if`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contact: completeValidContact() }),
-    });
-    expect(noIfMatch.status).toBe(400);
-  });
-
-  it('returns 400 for malformed If-Match, short Idempotency-Key and malformed body on update', async () => {
-    const cart = await postCart();
-    const badIf = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'Idempotency-Key': `${IDEMPOTENCY_KEY_BASE}-wire-bad-if`,
-        'If-Match': 'not-quoted',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contact: completeValidContact() }),
-    });
-    expect(badIf.status).toBe(400);
-
-    const shortKey = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'Idempotency-Key': 'x',
-        'If-Match': '"1"',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ contact: completeValidContact() }),
-    });
-    expect(shortKey.status).toBe(400);
-
-    const malformedBody = await fetch(url(`/checkout/${cart.id}`), {
-      method: 'PUT',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'Idempotency-Key': `${IDEMPOTENCY_KEY_BASE}-wire-malformed-body`,
-        'If-Match': '"1"',
-        'Content-Type': 'application/json',
-      },
-      body: 'not-json',
-    });
-    expect(malformedBody.status).toBe(400);
-  });
-
-  it('returns 404 from getCheckoutSession for unknown or cross-session carts', async () => {
-    const response = await fetch(url('/checkout/cart-unknown'), {
-      headers: { 'X-Demo-Session': SESSION_A },
-    });
-    expect(response.status).toBe(404);
-
-    const cart = await postCart();
-    const cross = await fetch(url(`/checkout/${cart.id}`), {
-      headers: { 'X-Demo-Session': 'session-cccccccccccc' },
-    });
-    expect(cross.status).toBe(404);
-  });
-
-  it('returns 400 from getCheckoutSession when X-Demo-Session is missing or short', async () => {
-    const noSession = await fetch(url('/checkout/cart-anything'));
-    expect(noSession.status).toBe(400);
-    const shortSession = await fetch(url('/checkout/cart-anything'), {
-      headers: { 'X-Demo-Session': 'short' },
-    });
-    expect(shortSession.status).toBe(400);
-  });
-
-  it('returns 400 from createCheckoutQuote for missing headers and malformed If-Match', async () => {
-    const cart = await postCart();
-    const noKey = await fetch(url(`/checkout/${cart.id}/quote`), {
-      method: 'POST',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'If-Match': '"1"',
-        'Content-Type': 'application/json',
-      },
-    });
-    expect(noKey.status).toBe(400);
-
-    const badIf = await fetch(url(`/checkout/${cart.id}/quote`), {
-      method: 'POST',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'Idempotency-Key': `${IDEMPOTENCY_KEY_BASE}-wire-bad-if-quote`,
-        'If-Match': 'not-quoted',
-        'Content-Type': 'application/json',
-      },
-    });
-    expect(badIf.status).toBe(400);
-
-    const shortKey = await fetch(url(`/checkout/${cart.id}/quote`), {
-      method: 'POST',
-      headers: {
-        'X-Demo-Session': SESSION_A,
-        'Idempotency-Key': 'x',
-        'If-Match': '"1"',
-        'Content-Type': 'application/json',
-      },
-    });
-    expect(shortKey.status).toBe(400);
-  });
-});
 
 /**
-Test-only helpers below - small utilities used by the suite.
-*/
-
-function cloneProduct(product: Product, variants: readonly Variant[]): Product {
-  return {
-    ...product,
-    variants,
-    defaultVariant: variants[0] ?? product.defaultVariant,
-  };
+ * Walk an unknown-typed array and return the first entry whose `id`
+ * matches. The mock never carries a `null` here and the array
+ * narrows through `Array.isArray` upstream; this helper keeps the
+ * result typed as `Record<string, unknown>` without `as` so the
+ * unsafe-any lint rule stays green.
+ */
+function findOptionById(arr: readonly unknown[], id: string): Record<string, unknown> | undefined {
+  for (const candidate of arr) {
+    if (isRecord(candidate) && candidate['id'] === id) return candidate;
+  }
+  return undefined;
 }
+
+/** First record of an unknown-typed array, asserted and narrowed. */
+function firstRecord(arr: readonly unknown[]): Record<string, unknown> {
+  for (const candidate of arr) {
+    if (isRecord(candidate)) return candidate;
+  }
+  throw new Error('array has no record entry');
+}
+
+async function seedMotoOnce(headers: Record<string, string>): Promise<void> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...headers, 'If-Match': '"1"' },
+    body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function seedMotoQuantity(
+  quantity: number,
+  ifMatch: string,
+): Promise<Record<string, unknown>> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...session1Headers(), 'If-Match': ifMatch },
+    body: JSON.stringify({ variantId: MOTO, quantity }),
+  });
+  expect(res.status).toBe(200);
+  const body: unknown = await res.json();
+  expectRecord(body);
+  return body;
+}
+
+async function patchCheckout(
+  body: unknown,
+  ifMatch: string,
+  headers: Record<string, string> = session1Headers(),
+): Promise<Response> {
+  return fetch('http://localhost/api/v1/checkout', {
+    method: 'PATCH',
+    headers: { ...headers, 'If-Match': ifMatch },
+    body: JSON.stringify(body),
+  });
+}
+
+async function seedCompleteDraft(): Promise<void> {
+  await seedMotoOnce(session1Headers());
+  const patch = await patchCheckout(
+    {
+      contact: VALID_CONTACT,
+      billing: VALID_BILLING,
+      delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+      payment: { method: 'card' },
+    },
+    '"2"',
+  );
+  expect(patch.status).toBe(200);
+}
+
+function expectedIsoPlus(seconds: number): string {
+  return new Date(Date.parse('2026-09-20T10:00:00.000Z') + seconds * 1000).toISOString();
+}
+
+// ===========================================================================
+// C. Options and draft — 31 cases
+// ===========================================================================
+
+describe('GET /checkout/options', () => {
+  it('C-01: on an empty cart returns both delivery and both payment entries unavailable with CART_EMPTY and base fees', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout/options', {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBeNull();
+
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readString(body, 'termsVersion')).toBe(TERMS_VERSION);
+
+    const delivery = body['deliveryOptions'];
+    expect(Array.isArray(delivery)).toBe(true);
+    if (!Array.isArray(delivery)) throw new Error('deliveryOptions not an array');
+    expect(delivery).toHaveLength(2);
+    const home = findOptionById(delivery, 'home_delivery');
+    const pickup = findOptionById(delivery, 'pickup_point');
+    expectRecord(home);
+    expectRecord(pickup);
+    expect(home['fee']).toEqual({ amount: 1490, currency: 'HUF' });
+    expect(home['available']).toBe(false);
+    expect(readString(home, 'unavailableReason')).toBe('CART_EMPTY');
+    expect(pickup['fee']).toEqual({ amount: 990, currency: 'HUF' });
+    expect(pickup['available']).toBe(false);
+    expect(readString(pickup, 'unavailableReason')).toBe('CART_EMPTY');
+
+    const payment = body['paymentMethods'];
+    expect(Array.isArray(payment)).toBe(true);
+    if (!Array.isArray(payment)) throw new Error('paymentMethods not an array');
+    expect(payment).toHaveLength(2);
+    const card = findOptionById(payment, 'card');
+    const cod = findOptionById(payment, 'cash_on_delivery');
+    expectRecord(card);
+    expectRecord(cod);
+    expect(card['available']).toBe(false);
+    expect(readString(card, 'unavailableReason')).toBe('CART_EMPTY');
+    expect(cod['available']).toBe(false);
+    expect(readString(cod, 'unavailableReason')).toBe('CART_EMPTY');
+  });
+
+  it('C-02: after one MOTO is added all four options are available with the free-shipping fees', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await fetch('http://localhost/api/v1/checkout/options', {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+
+    const delivery = body['deliveryOptions'];
+    expect(Array.isArray(delivery)).toBe(true);
+    if (!Array.isArray(delivery)) throw new Error('deliveryOptions not an array');
+    const home = findOptionById(delivery, 'home_delivery');
+    const pickup = findOptionById(delivery, 'pickup_point');
+    expectRecord(home);
+    expectRecord(pickup);
+    expect(home['available']).toBe(true);
+    expect(home['fee']).toEqual({ amount: 0, currency: 'HUF' });
+    expect(home).not.toHaveProperty('unavailableReason');
+    expect(pickup['available']).toBe(true);
+    expect(pickup['fee']).toEqual({ amount: 0, currency: 'HUF' });
+    expect(pickup).not.toHaveProperty('unavailableReason');
+
+    const payment = body['paymentMethods'];
+    expect(Array.isArray(payment)).toBe(true);
+    if (!Array.isArray(payment)) throw new Error('paymentMethods not an array');
+    const card = findOptionById(payment, 'card');
+    const cod = findOptionById(payment, 'cash_on_delivery');
+    expectRecord(card);
+    expectRecord(cod);
+    expect(card['available']).toBe(true);
+    expect(card['fee']).toEqual({ amount: 0, currency: 'HUF' });
+    expect(card).not.toHaveProperty('unavailableReason');
+    expect(cod['available']).toBe(true);
+    expect(cod['fee']).toEqual({ amount: 490, currency: 'HUF' });
+    expect(cod).not.toHaveProperty('unavailableReason');
+  });
+
+  it('C-27: cash_on_delivery flips to CART_VALUE_TOO_HIGH once the cart subtotal exceeds 300 000 HUF', async () => {
+    await seedMotoOnce(session1Headers());
+    await seedMotoQuantity(3, '"2"');
+    // Cart now: 4 × MOTO = 359 960 HUF.
+    const res = await fetch('http://localhost/api/v1/checkout/options', {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+
+    const delivery = body['deliveryOptions'];
+    expect(Array.isArray(delivery)).toBe(true);
+    if (!Array.isArray(delivery)) throw new Error('deliveryOptions not an array');
+    const home = findOptionById(delivery, 'home_delivery');
+    const pickup = findOptionById(delivery, 'pickup_point');
+    expectRecord(home);
+    expectRecord(pickup);
+    expect(home['available']).toBe(true);
+    expect(home['fee']).toEqual({ amount: 0, currency: 'HUF' });
+    expect(pickup['available']).toBe(true);
+    expect(pickup['fee']).toEqual({ amount: 0, currency: 'HUF' });
+
+    const payment = body['paymentMethods'];
+    expect(Array.isArray(payment)).toBe(true);
+    if (!Array.isArray(payment)) throw new Error('paymentMethods not an array');
+    const card = findOptionById(payment, 'card');
+    const cod = findOptionById(payment, 'cash_on_delivery');
+    expectRecord(card);
+    expect(card['available']).toBe(true);
+    expectRecord(cod);
+    expect(cod['available']).toBe(false);
+    expect(readString(cod, 'unavailableReason')).toBe('CART_VALUE_TOO_HIGH');
+  });
+
+  it('C-24b: a missing X-Demo-Session header on /checkout/options returns 400 INVALID_REQUEST', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout/options');
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+});
+
+describe('GET /checkout', () => {
+  it('C-03: a fresh session returns ETag "1" with an empty draft and a zero summary', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBe('"1"');
+
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(1);
+    expect(body['complete']).toBe(false);
+    expect(body['contact']).toBeUndefined();
+    expect(body['billing']).toBeUndefined();
+    expect(body['delivery']).toBeUndefined();
+    expect(body['payment']).toBeUndefined();
+    expect(body['summary']).toEqual({
+      subtotal: { amount: 0, currency: 'HUF' },
+      shippingFee: { amount: 0, currency: 'HUF' },
+      paymentFee: { amount: 0, currency: 'HUF' },
+      total: { amount: 0, currency: 'HUF' },
+    });
+  });
+
+  it('C-04: two reads in a row return ETag "1" — a read does not move the version', async () => {
+    const first = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(first.headers.get('ETag')).toBe('"1"');
+    const second = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(second.headers.get('ETag')).toBe('"1"');
+  });
+
+  it('C-05: after MOTO x1 the GET returns ETag "2" with subtotal/total 89 990', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBe('"2"');
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(2);
+    expect(body['complete']).toBe(false);
+    const summary = body['summary'];
+    expectRecord(summary);
+    expect(readAmount(summary, 'subtotal')).toBe(89_990);
+    expect(readAmount(summary, 'shippingFee')).toBe(0);
+    expect(readAmount(summary, 'paymentFee')).toBe(0);
+    expect(readAmount(summary, 'total')).toBe(89_990);
+  });
+
+  it('C-26: a second session sees no draft from the first session', async () => {
+    await seedMotoOnce(session1Headers());
+    await patchCheckout(
+      {
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'card' },
+      },
+      '"2"',
+    );
+
+    const res = await fetch('http://localhost/api/v1/checkout', { headers: session2Headers() });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(1);
+    expect(body['contact']).toBeUndefined();
+    expect(body['billing']).toBeUndefined();
+    expect(body['delivery']).toBeUndefined();
+    expect(body['payment']).toBeUndefined();
+    expect(body['complete']).toBe(false);
+  });
+
+  it('C-24: a missing X-Demo-Session header returns 400 INVALID_REQUEST', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout');
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+});
+
+describe('PATCH /checkout', () => {
+  it('C-06: a valid contact patch at v2 returns v3 with a trimmed, lower-cased email', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ contact: VALID_CONTACT }, '"2"');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBe('"3"');
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(3);
+    const contact = body['contact'];
+    expectRecord(contact);
+    expect(readString(contact, 'email')).toBe('teszt.elek@pelda.hu');
+    expect(readString(contact, 'fullName')).toBe('Teszt Elek');
+    expect(readString(contact, 'phone')).toBe('+36301234567');
+    expect(body['complete']).toBe(false);
+  });
+
+  it('C-07: a home_delivery selection keeps the total at 89 990 above the free-shipping threshold', async () => {
+    await seedMotoOnce(session1Headers());
+    await patchCheckout({ contact: VALID_CONTACT }, '"2"');
+    const res = await patchCheckout(
+      { delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS } },
+      '"3"',
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBe('"4"');
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const summary = body['summary'];
+    expectRecord(summary);
+    expect(readAmount(summary, 'shippingFee')).toBe(0);
+    expect(readAmount(summary, 'total')).toBe(89_990);
+  });
+
+  it('C-08: a pickup_point selection stores no address and keeps the total at 89 990', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ delivery: { optionId: 'pickup_point' } }, '"2"');
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const summary = body['summary'];
+    expectRecord(summary);
+    expect(readAmount(summary, 'shippingFee')).toBe(0);
+    expect(readAmount(summary, 'total')).toBe(89_990);
+    const delivery = body['delivery'];
+    expectRecord(delivery);
+    expect(readString(delivery, 'optionId')).toBe('pickup_point');
+    expect(delivery).not.toHaveProperty('address');
+  });
+
+  it('C-09: a cash_on_delivery selection on the MOTO cart adds a 490 HUF payment fee', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ payment: { method: 'cash_on_delivery' } }, '"2"');
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const summary = body['summary'];
+    expectRecord(summary);
+    expect(readAmount(summary, 'paymentFee')).toBe(490);
+    expect(readAmount(summary, 'total')).toBe(90_480);
+  });
+
+  it('C-10: seedCompleteDraft lands the draft at v3 with the all-sections-complete summary', async () => {
+    await seedCompleteDraft();
+    const res = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBe('"3"');
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(3);
+    expect(body['complete']).toBe(true);
+    const summary = body['summary'];
+    expectRecord(summary);
+    expect(readAmount(summary, 'subtotal')).toBe(89_990);
+    expect(readAmount(summary, 'shippingFee')).toBe(0);
+    expect(readAmount(summary, 'paymentFee')).toBe(0);
+    expect(readAmount(summary, 'total')).toBe(89_990);
+  });
+
+  it('C-11: a partial PATCH leaves absent sections untouched', async () => {
+    await seedCompleteDraft();
+    const res = await patchCheckout(
+      {
+        contact: {
+          fullName: 'Mas Nev',
+          email: 'mas@pelda.hu',
+          phone: '+3630765432',
+        },
+      },
+      '"3"',
+    );
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['billing']).toBeDefined();
+    expect(body['delivery']).toBeDefined();
+    expect(body['payment']).toBeDefined();
+    expect(body['complete']).toBe(true);
+  });
+
+  it('C-12: a PATCH without If-Match returns 412 with received null', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: session1Headers(),
+      body: JSON.stringify({ contact: VALID_CONTACT }),
+    });
+    expect(res.status).toBe(412);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('CART_VERSION_CONFLICT');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params['received']).toBeNull();
+  });
+
+  it('C-13: a PATCH with a stale If-Match returns 412 with the real version and the quoted received value', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ contact: VALID_CONTACT }, '"99"');
+    expect(res.status).toBe(412);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const params = body['params'];
+    expectRecord(params);
+    expect(params['received']).toBe('"99"');
+    expect(params['expected']).toBe(2);
+  });
+
+  it('C-24c: a PATCH /checkout without X-Demo-Session returns 400 INVALID_REQUEST', async () => {
+    const res = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'If-Match': '"1"' },
+      body: JSON.stringify({ contact: VALID_CONTACT }),
+    });
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+
+  it('C-14: a PATCH with body {} returns 400 INVALID_REQUEST', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({}, '"2"');
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+
+  it('C-15: a PATCH with an unknown section key returns 400 INVALID_REQUEST', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ nope: 1 }, '"2"');
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+
+  it('C-16: a PATCH with a non-object section returns 400 INVALID_REQUEST naming the section', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ contact: 'x' }, '"2"');
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params['section']).toBe('contact');
+  });
+
+  it('C-17: a contact with three bad fields returns 422 with the three contact field errors', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout(
+      { contact: { fullName: 'A', email: 'nope', phone: '123' } },
+      '"2"',
+    );
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        { path: '/contact/fullName', code: 'FULL_NAME_LENGTH' },
+        { path: '/contact/email', code: 'EMAIL_FORMAT' },
+        { path: '/contact/phone', code: 'PHONE_FORMAT' },
+      ]),
+    );
+    expect(errors).toHaveLength(3);
+  });
+
+  it('C-18: a billing with an unsupported country, a leading-zero postal, and too-short city and line1 returns four field errors', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout(
+      {
+        billing: {
+          name: 'Teszt Elek',
+          address: { countryCode: 'DE', postalCode: '0123', city: 'A', line1: 'ab' },
+        },
+      },
+      '"2"',
+    );
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        { path: '/billing/address/countryCode', code: 'COUNTRY_NOT_SUPPORTED' },
+        { path: '/billing/address/postalCode', code: 'POSTAL_CODE_FORMAT' },
+        { path: '/billing/address/city', code: 'CITY_LENGTH' },
+        { path: '/billing/address/line1', code: 'LINE1_LENGTH' },
+      ]),
+    );
+    expect(errors).toHaveLength(4);
+  });
+
+  it('C-19: home_delivery without an address returns 422 SECTION_MISSING on /delivery/address', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ delivery: { optionId: 'home_delivery' } }, '"2"');
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([{ path: '/delivery/address', code: 'SECTION_MISSING' }]),
+    );
+    expect(errors).toHaveLength(1);
+  });
+
+  it('C-20: pickup_point with an address returns 422 ADDRESS_NOT_ALLOWED on /delivery/address', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout(
+      {
+        delivery: {
+          optionId: 'pickup_point',
+          address: VALID_DELIVERY_ADDRESS,
+        },
+      },
+      '"2"',
+    );
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([{ path: '/delivery/address', code: 'ADDRESS_NOT_ALLOWED' }]),
+    );
+    expect(errors).toHaveLength(1);
+  });
+
+  it('C-21: an unknown delivery option returns 422 on /delivery/optionId', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ delivery: { optionId: 'demo_pickup' } }, '"2"');
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([{ path: '/delivery/optionId', code: 'DELIVERY_OPTION_UNAVAILABLE' }]),
+    );
+    expect(errors).toHaveLength(1);
+  });
+
+  it('C-22: an unknown payment method returns 422 on /payment/method', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout({ payment: { method: 'demo_card' } }, '"2"');
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([{ path: '/payment/method', code: 'PAYMENT_METHOD_UNAVAILABLE' }]),
+    );
+    expect(errors).toHaveLength(1);
+  });
+
+  it('C-23: a body with two bad sections collects the field errors from both', async () => {
+    await seedMotoOnce(session1Headers());
+    const res = await patchCheckout(
+      {
+        contact: { fullName: 'A', email: 'nope', phone: '123' },
+        billing: {
+          name: 'X',
+          address: { countryCode: 'DE', postalCode: '0123', city: 'A', line1: 'ab' },
+        },
+      },
+      '"2"',
+    );
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        { path: '/contact/fullName', code: 'FULL_NAME_LENGTH' },
+        { path: '/contact/email', code: 'EMAIL_FORMAT' },
+        { path: '/contact/phone', code: 'PHONE_FORMAT' },
+        { path: '/billing/name', code: 'NAME_LENGTH' },
+        { path: '/billing/address/countryCode', code: 'COUNTRY_NOT_SUPPORTED' },
+        { path: '/billing/address/postalCode', code: 'POSTAL_CODE_FORMAT' },
+        { path: '/billing/address/city', code: 'CITY_LENGTH' },
+        { path: '/billing/address/line1', code: 'LINE1_LENGTH' },
+      ]),
+    );
+    expect(errors).toHaveLength(8);
+  });
+
+  it('C-25: an expired cart returns 410 CART_EXPIRED on the next GET', async () => {
+    await seedMotoOnce(session1Headers());
+    clock.advanceMs(CART_TTL_MS);
+    const res = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(res.status).toBe(410);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('CART_EXPIRED');
+  });
+
+  it('C-28: PATCH cash_on_delivery on an oversize cart returns PAYMENT_METHOD_UNAVAILABLE with CART_VALUE_TOO_HIGH', async () => {
+    await seedMotoOnce(session1Headers());
+    await seedMotoQuantity(3, '"2"');
+    // Cart now: 4 × MOTO = 359 960 HUF.
+    const res = await patchCheckout({ payment: { method: 'cash_on_delivery' } }, '"3"');
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([{ path: '/payment/method', code: 'PAYMENT_METHOD_UNAVAILABLE' }]),
+    );
+    expect(errors).toHaveLength(1);
+    const params = body['params'];
+    expectRecord(params);
+    expect(params['reason']).toBe('CART_VALUE_TOO_HIGH');
+  });
+
+  it('C-29: PATCH delivery on an empty cart returns DELIVERY_OPTION_UNAVAILABLE with CART_EMPTY', async () => {
+    const res = await patchCheckout(
+      { delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS } },
+      '"1"',
+    );
+    expect(res.status).toBe(422);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual(
+      expect.arrayContaining([{ path: '/delivery/optionId', code: 'DELIVERY_OPTION_UNAVAILABLE' }]),
+    );
+    expect(errors).toHaveLength(1);
+    const params = body['params'];
+    expectRecord(params);
+    expect(params['reason']).toBe('CART_EMPTY');
+  });
+});
+
+// ===========================================================================
+// D. Payment intents — 17 cases
+// ===========================================================================
+
+async function createCardIntent(
+  ifMatch: string,
+  idempotencyKey: string,
+): Promise<{ status: number; body: unknown; headers: Headers }> {
+  const res = await fetch('http://localhost/api/v1/payment-intents', {
+    method: 'POST',
+    headers: { ...session1Headers(), 'If-Match': ifMatch, 'Idempotency-Key': idempotencyKey },
+    body: '',
+  });
+  const body: unknown = await res.json();
+  return { status: res.status, body, headers: res.headers };
+}
+
+async function resolveIntent(
+  intentId: string,
+  outcome: string,
+  headers: Record<string, string> = session1Headers(),
+): Promise<{ status: number; body: unknown }> {
+  const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ outcome }),
+  });
+  const body: unknown = await res.json();
+  return { status: res.status, body };
+}
+
+describe('POST /payment-intents', () => {
+  it('I-01: on a complete card draft returns 201 with the expected wire shape and no ETag', async () => {
+    await seedCompleteDraft();
+    const { status, body, headers } = await createCardIntent('"3"', 'idem-int-0001');
+    expect(status).toBe(201);
+    expect(headers.get('ETag')).toBeNull();
+    const location = headers.get('Location');
+    expect(location).not.toBeNull();
+    expectRecord(body);
+    expect(body['status']).toBe('requires_action');
+    expect(body['amount']).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(readString(body, 'createdAt')).toBe('2026-09-20T10:00:00.000Z');
+    expect(readString(body, 'expiresAt')).toBe(expectedIsoPlus(PAYMENT_INTENT_TTL_MS / 1000));
+    const id = readString(body, 'id');
+    expect(readString(body, 'redirectUrl')).toBe(`/demo-fizetes/${id}`);
+    expect(readString(body, 'returnUrl')).toBe(`/penztar?paymentIntentId=${id}`);
+    expect(location).toBe(`/api/v1/payment-intents/${id}`);
+  });
+
+  it('I-02: the same call with the same Idempotency-Key returns a byte-identical body', async () => {
+    await seedCompleteDraft();
+    const first = await createCardIntent('"3"', 'idem-int-0002');
+    expect(first.status).toBe(201);
+    const second = await createCardIntent('"3"', 'idem-int-0002');
+    expect(second.status).toBe(201);
+    expect(JSON.stringify(second.body)).toBe(JSON.stringify(first.body));
+  });
+
+  it('I-03: creating an intent does not bump the checkout version', async () => {
+    await seedCompleteDraft();
+    await createCardIntent('"3"', 'idem-int-0003');
+    const res = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(res.headers.get('ETag')).toBe('"3"');
+  });
+
+  it('I-04: the same key with a different If-Match returns 409 IDEMPOTENCY_CONFLICT', async () => {
+    await seedCompleteDraft();
+    await createCardIntent('"3"', 'idem-int-0004');
+    const res = await fetch('http://localhost/api/v1/payment-intents', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"2"', 'Idempotency-Key': 'idem-int-0004' },
+      body: '',
+    });
+    expect(res.status).toBe(409);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
+  it('I-05: a draft with cash_on_delivery payment returns 422 CHECKOUT_INCOMPLETE with PAYMENT_METHOD_NOT_CARD', async () => {
+    await seedMotoOnce(session1Headers());
+    await patchCheckout({ payment: { method: 'cash_on_delivery' }, contact: VALID_CONTACT }, '"2"');
+    await patchCheckout({ billing: VALID_BILLING }, '"3"');
+    await patchCheckout({ delivery: { optionId: 'pickup_point' } }, '"4"');
+    const { status, body } = await createCardIntent('"5"', 'idem-int-0005');
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('CHECKOUT_INCOMPLETE');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual([{ path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD' }]);
+  });
+
+  it('I-06: a draft with only contact set returns 422 CHECKOUT_INCOMPLETE with three SECTION_MISSING errors', async () => {
+    await seedMotoOnce(session1Headers());
+    await patchCheckout({ contact: VALID_CONTACT }, '"2"');
+    const { status, body } = await createCardIntent('"3"', 'idem-int-0006');
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('CHECKOUT_INCOMPLETE');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual([
+      { path: '/billing', code: 'SECTION_MISSING' },
+      { path: '/delivery', code: 'SECTION_MISSING' },
+      { path: '/payment', code: 'SECTION_MISSING' },
+    ]);
+  });
+
+  it('I-07: a complete draft on an empty cart returns 422 CHECKOUT_INCOMPLETE with detail "The cart is empty."', async () => {
+    // Build the complete draft while the cart still has items, then
+    // empty the cart so the draft is complete but the cart is empty.
+    await seedCompleteDraft();
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"3"' },
+    });
+    const { status, body } = await createCardIntent('"4"', 'idem-int-0007');
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('CHECKOUT_INCOMPLETE');
+    expect(readString(body, 'detail')).toBe('The cart is empty.');
+    expect(readFieldErrors(body)).toEqual([]);
+  });
+
+  it('I-08: a stale If-Match against a v3 cart returns 412 CART_VERSION_CONFLICT', async () => {
+    await seedCompleteDraft();
+    const { status, body } = await createCardIntent('"1"', 'idem-int-0008');
+    expect(status).toBe(412);
+    expectRecord(body);
+    expect(body['code']).toBe('CART_VERSION_CONFLICT');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params).toEqual({ expected: 3, received: '"1"' });
+  });
+
+  it('I-09: a too-short Idempotency-Key returns 400 INVALID_REQUEST', async () => {
+    const res = await fetch('http://localhost/api/v1/payment-intents', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"', 'Idempotency-Key': 'short' },
+      body: '',
+    });
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params).toEqual({ received: 'short' });
+  });
+});
+
+describe('GET /payment-intents/:id', () => {
+  it('I-10: the owning session can read its own intent', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0010');
+    expectRecord(created.body);
+    const id = readString(created.body, 'id');
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${id}`, {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expect(JSON.stringify(body)).toBe(JSON.stringify(created.body));
+  });
+
+  it('I-11: a different session gets 404 NOT_FOUND', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0011');
+    expectRecord(created.body);
+    const id = readString(created.body, 'id');
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${id}`, {
+      headers: session2Headers(),
+    });
+    expect(res.status).toBe(404);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('NOT_FOUND');
+  });
+
+  it('I-12: an unknown intent id returns 404', async () => {
+    const res = await fetch('http://localhost/api/v1/payment-intents/does-not-exist', {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(404);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('NOT_FOUND');
+  });
+});
+
+describe('POST /payment-intents/:id/outcome', () => {
+  it('I-13: {outcome:succeeded} returns 200 with status succeeded', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0013');
+    expectRecord(created.body);
+    const id = readString(created.body, 'id');
+    const { status, body } = await resolveIntent(id, 'succeeded');
+    expect(status).toBe(200);
+    expectRecord(body);
+    expect(body['status']).toBe('succeeded');
+  });
+
+  it('I-14: the second resolve on a terminal intent returns 409 PAYMENT_ALREADY_RESOLVED', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0014');
+    expectRecord(created.body);
+    const id = readString(created.body, 'id');
+    await resolveIntent(id, 'succeeded');
+    const { status, body } = await resolveIntent(id, 'succeeded');
+    expect(status).toBe(409);
+    expectRecord(body);
+    expect(body['code']).toBe('PAYMENT_ALREADY_RESOLVED');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params['status']).toBe('succeeded');
+  });
+
+  it('I-15: pending is not terminal — a follow-up declined is accepted', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0015');
+    expectRecord(created.body);
+    const id = readString(created.body, 'id');
+    const first = await resolveIntent(id, 'pending');
+    expect(first.status).toBe(200);
+    expectRecord(first.body);
+    expect(first.body['status']).toBe('pending');
+    const second = await resolveIntent(id, 'declined');
+    expect(second.status).toBe(200);
+    expectRecord(second.body);
+    expect(second.body['status']).toBe('declined');
+  });
+
+  it('I-16: {outcome:cancelled} returns 400 INVALID_REQUEST', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0016');
+    expectRecord(created.body);
+    const id = readString(created.body, 'id');
+    const { status, body } = await resolveIntent(id, 'cancelled');
+    expect(status).toBe(400);
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+
+  it('I-17: a different session cannot resolve the intent', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0017');
+    expectRecord(created.body);
+    const id = readString(created.body, 'id');
+    const { status, body } = await resolveIntent(id, 'succeeded', session2Headers());
+    expect(status).toBe(404);
+    expectRecord(body);
+    expect(body['code']).toBe('NOT_FOUND');
+  });
+});
+
+// ===========================================================================
+// E. Orders — 27 cases
+// ===========================================================================
+
+async function placeOrder(
+  body: unknown,
+  ifMatch: string,
+  idempotencyKey: string,
+  headers: Record<string, string> = session1Headers(),
+): Promise<{ status: number; body: unknown; headers: Headers }> {
+  const res = await fetch('http://localhost/api/v1/orders', {
+    method: 'POST',
+    headers: { ...headers, 'If-Match': ifMatch, 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(body),
+  });
+  const responseBody: unknown = await res.json();
+  return { status: res.status, body: responseBody, headers: res.headers };
+}
+
+async function seedCompleteCardDraftWithSucceededIntent(): Promise<{ paymentIntentId: string }> {
+  await seedCompleteDraft();
+  const created = await createCardIntent('"3"', 'idem-int-order-1');
+  expectRecord(created.body);
+  const paymentIntentId = readString(created.body, 'id');
+  const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+  expect(resolved.status).toBe(200);
+  return { paymentIntentId };
+}
+
+describe('POST /orders', () => {
+  it('O-01: a card order on a complete draft returns 201 with the receipt shape', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const { status, body, headers } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0001',
+    );
+    expect(status).toBe(201);
+    const location = headers.get('Location');
+    expect(location).not.toBeNull();
+    expectRecord(body);
+    expect(readString(body, 'orderNumber')).toBe('DEMO-000001');
+    expect(body['status']).toBe('confirmed');
+    expect(body['paymentMethod']).toBe('card');
+    const items = body['items'];
+    expect(Array.isArray(items)).toBe(true);
+    if (!Array.isArray(items)) throw new Error('items not an array');
+    expect(items).toHaveLength(1);
+    const item = firstRecord(items);
+    expect(readString(item, 'productName')).toBe(MOTO_PRODUCT_NAME);
+    expect(readString(item, 'variantId')).toBe(MOTO);
+    expect(readString(item, 'colorName')).toBe('Zöld');
+    expect(readNumber(item, 'storageGb')).toBe(256);
+    expect(readNumber(item, 'quantity')).toBe(1);
+    expect(item['unitPrice']).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(item['lineTotal']).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(body['subtotal']).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(body['shippingFee']).toEqual({ amount: 0, currency: 'HUF' });
+    expect(body['paymentFee']).toEqual({ amount: 0, currency: 'HUF' });
+    expect(body['total']).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(body['notice']).toBe(SIMULATION_NOTICE);
+    expect(body['delivery']).toEqual({
+      optionId: 'home_delivery',
+      address: VALID_DELIVERY_ADDRESS,
+    });
+    expect(body['billing']).toEqual(VALID_BILLING);
+    expect(readString(body, 'contactEmail')).toBe('teszt.elek@pelda.hu');
+    const id = readString(body, 'id');
+    expect(location).toBe(`/api/v1/orders/${id}`);
+  });
+
+  it('O-02: the same key replays the same body', async () => {
+    // O-02 is the case that proves the contract's headline rule: a
+    // replay is answered before the cart state is examined. After the
+    // first order, `resetForOrder` (`cart-store.ts:216`, called from
+    // `order-store.ts:526`) leaves a fresh v1 cart while the replay
+    // still carries `If-Match: "3"`, so without the idempotency
+    // short-circuit (`order-store.ts:367-373`, which runs before
+    // `checkIfMatch` at `:391-392`) the second call would answer 412
+    // rather than 201.
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const first = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0002',
+    );
+    expect(first.status).toBe(201);
+    const second = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0002',
+    );
+    expect(second.status).toBe(201);
+    expect(JSON.stringify(second.body)).toBe(JSON.stringify(first.body));
+    expectRecord(second.body);
+    expect(readString(second.body, 'orderNumber')).toBe('DEMO-000001');
+    expect(second.headers.get('Location')).toBe(first.headers.get('Location'));
+  });
+
+  it('O-03: after a successful order the cart is reset to a new v1 empty cart', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const cartBefore = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const cartBeforeBody: unknown = await cartBefore.json();
+    expectRecord(cartBeforeBody);
+    const oldId = readString(cartBeforeBody, 'id');
+
+    await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0003',
+    );
+
+    const cartAfter = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(cartAfter.headers.get('ETag')).toBe('"1"');
+    const cartAfterBody: unknown = await cartAfter.json();
+    expectRecord(cartAfterBody);
+    expect(cartAfterBody['items']).toEqual([]);
+    expect(readString(cartAfterBody, 'id')).not.toBe(oldId);
+  });
+
+  it('O-04: after a successful order the checkout draft is reset to v1 and complete:false', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0004',
+    );
+
+    const res = await fetch('http://localhost/api/v1/checkout', { headers: session1Headers() });
+    expect(res.headers.get('ETag')).toBe('"1"');
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['contact']).toBeUndefined();
+    expect(body['billing']).toBeUndefined();
+    expect(body['delivery']).toBeUndefined();
+    expect(body['payment']).toBeUndefined();
+    expect(body['complete']).toBe(false);
+  });
+
+  it('O-05: after a successful card order the consumed intent is gone', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0005',
+    );
+
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${paymentIntentId}`, {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('O-06: a second order in the same session gets DEMO-000002', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0006',
+    );
+
+    // Second order in the same session — seed again, intent again, order.
+    await seedMotoOnce(session1Headers());
+    await patchCheckout({ contact: VALID_CONTACT }, '"2"');
+    await patchCheckout({ billing: VALID_BILLING }, '"3"');
+    await patchCheckout(
+      { delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS } },
+      '"4"',
+    );
+    await patchCheckout({ payment: { method: 'card' } }, '"5"');
+    const intent = await createCardIntent('"6"', 'idem-int-order-6');
+    expectRecord(intent.body);
+    const intentId = readString(intent.body, 'id');
+    await resolveIntent(intentId, 'succeeded');
+
+    const second = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: intentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"6"',
+      'idem-ord-0006b',
+    );
+    expect(second.status).toBe(201);
+    expectRecord(second.body);
+    expect(readString(second.body, 'orderNumber')).toBe('DEMO-000002');
+  });
+
+  it('O-07: acceptedTerms:false returns 422 with TERMS_NOT_ACCEPTED and stores no order', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: false,
+      },
+      '"3"',
+      'idem-ord-0007',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual([{ path: '/acceptedTerms', code: 'TERMS_NOT_ACCEPTED' }]);
+
+    // The order did not happen: the next call with a fresh key on the
+    // same draft still succeeds.
+    const retry = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0007b',
+    );
+    expect(retry.status).toBe(201);
+    expectRecord(retry.body);
+    expect(readString(retry.body, 'orderNumber')).toBe('DEMO-000001');
+  });
+
+  it('O-08: a wrong termsVersion returns 422 with TERMS_VERSION_MISMATCH', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-terms');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+    await resolveIntent(paymentIntentId, 'succeeded');
+
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: '2025-01',
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0008',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual([{ path: '/termsVersion', code: 'TERMS_VERSION_MISMATCH' }]);
+  });
+
+  it('O-09: both consent fields wrong return both field errors in one response', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-consent');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+    await resolveIntent(paymentIntentId, 'succeeded');
+
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: '2025-01',
+        acceptedTerms: false,
+      },
+      '"3"',
+      'idem-ord-0009',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual([
+      { path: '/termsVersion', code: 'TERMS_VERSION_MISMATCH' },
+      { path: '/acceptedTerms', code: 'TERMS_NOT_ACCEPTED' },
+    ]);
+  });
+
+  it('O-10: an incomplete draft returns 422 CHECKOUT_INCOMPLETE with the SECTION_MISSING list', async () => {
+    await seedMotoOnce(session1Headers());
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"2"',
+      'idem-ord-0010',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('CHECKOUT_INCOMPLETE');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual([
+      { path: '/contact', code: 'SECTION_MISSING' },
+      { path: '/billing', code: 'SECTION_MISSING' },
+      { path: '/delivery', code: 'SECTION_MISSING' },
+      { path: '/payment', code: 'SECTION_MISSING' },
+    ]);
+  });
+
+  it('O-11: store-level — a CartStore with a stub lookup that returns out_of_stock surfaces OUT_OF_STOCK at createOrder', () => {
+    const stubLookup: VariantLookupFn = (id) => {
+      const hit = catalogStore.current?.getVariant(id);
+      if (!hit) return undefined;
+      return {
+        product: hit.product,
+        variant: { ...hit.variant, availability: 'out_of_stock', maxQuantity: 2 },
+      };
+    };
+    const cart = new CartStore(options, stubLookup);
+    const checkout = new CheckoutStore(options, () => cart);
+    const idempotency = new IdempotencyStore(options.clock);
+    const order = new OrderStore(options, checkout, idempotency, () => cart);
+
+    const add = cart.add(SESSION_1, '"1"', MOTO, 1);
+    if (!add.ok) throw new Error('seed add failed');
+    const draft = checkout.update(SESSION_1, '"2"', {
+      contact: VALID_CONTACT,
+      billing: VALID_BILLING,
+      delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+      payment: { method: 'cash_on_delivery' },
+    });
+    if (!draft.ok) throw new Error('seed draft failed');
+
+    const placed = order.createOrder(SESSION_1, 'idem-ord-0011', '"3"', {
+      paymentMethod: 'cash_on_delivery',
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) throw new Error('expected OUT_OF_STOCK');
+    expect(placed.problem.code).toBe('OUT_OF_STOCK');
+    expect(placed.problem.status).toBe(409);
+    const params = placed.problem.params;
+    expectRecord(params);
+    expect(params['variantId']).toBe(MOTO);
+  });
+
+  it('O-12: an intent in requires_action returns 422 PAYMENT_REQUIRED', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0012');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0012',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('PAYMENT_REQUIRED');
+  });
+
+  it('O-13: an intent in pending returns 422 PAYMENT_PENDING', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0013');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+    await resolveIntent(paymentIntentId, 'pending');
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0013',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('PAYMENT_PENDING');
+  });
+
+  it('O-14: an intent in declined returns 422 PAYMENT_DECLINED', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0014');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+    await resolveIntent(paymentIntentId, 'declined');
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0014',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('PAYMENT_DECLINED');
+  });
+
+  it('O-15: a price change after the intent was created returns 409 PRICE_CHANGED', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0015');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+    await resolveIntent(paymentIntentId, 'succeeded');
+
+    // Add HONOR (cart -> v4, subtotal 89 990 + 69 990 = 159 980).
+    const honorAdd = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"3"' },
+      body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
+    });
+    expect(honorAdd.status).toBe(200);
+
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"4"',
+      'idem-ord-0015',
+    );
+    expect(status).toBe(409);
+    expectRecord(body);
+    expect(body['code']).toBe('PRICE_CHANGED');
+    const params = body['params'];
+    expectRecord(params);
+    expect(params['intentAmount']).toBe(89_990);
+    expect(params['total']).toBe(159_980);
+  });
+
+  it('O-16: a paymentIntentId that does not exist returns 404 NOT_FOUND', async () => {
+    await seedCompleteDraft();
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: 'no-such-intent',
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0016',
+    );
+    expect(status).toBe(404);
+    expectRecord(body);
+    expect(body['code']).toBe('NOT_FOUND');
+  });
+
+  it("O-17: another session's paymentIntentId returns 404 NOT_FOUND", async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0017');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+
+    // SESSION_2's cart is independent; place an order through SESSION_2
+    // referencing SESSION_1's intent.
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session2Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    await patchCheckout(
+      {
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'card' },
+      },
+      '"2"',
+      session2Headers(),
+    );
+    const res = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: { ...session2Headers(), 'If-Match': '"3"', 'Idempotency-Key': 'idem-ord-0017' },
+      body: JSON.stringify({
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      }),
+    });
+    expect(res.status).toBe(404);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('NOT_FOUND');
+  });
+
+  it('O-18: a cash-on-delivery draft orders without an intent and includes the 490 HUF fee', async () => {
+    await seedMotoOnce(session1Headers());
+    await patchCheckout({ contact: VALID_CONTACT }, '"2"');
+    await patchCheckout({ billing: VALID_BILLING }, '"3"');
+    await patchCheckout(
+      { delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS } },
+      '"4"',
+    );
+    await patchCheckout({ payment: { method: 'cash_on_delivery' } }, '"5"');
+
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"6"',
+      'idem-ord-0018',
+    );
+    expect(status).toBe(201);
+    expectRecord(body);
+    expect(body['paymentMethod']).toBe('cash_on_delivery');
+    expect(body['paymentFee']).toEqual({ amount: 490, currency: 'HUF' });
+    expect(body['total']).toEqual({ amount: 90_480, currency: 'HUF' });
+  });
+
+  it('O-19: requesting a different payment method than the draft returns PAYMENT_METHOD_MISMATCH', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0019',
+    );
+    expect(status).toBe(422);
+    expectRecord(body);
+    expect(body['code']).toBe('VALIDATION_FAILED');
+    const errors = readFieldErrors(body);
+    expect(errors).toEqual([{ path: '/paymentMethod', code: 'PAYMENT_METHOD_MISMATCH' }]);
+    // Intent is untouched — verify by reading it back.
+    expect(paymentIntentId).toBeDefined();
+  });
+
+  it('O-20: a stale If-Match against a v3 cart returns 412 CART_VERSION_CONFLICT', async () => {
+    await seedCompleteDraft();
+    const created = await createCardIntent('"3"', 'idem-int-0020');
+    expectRecord(created.body);
+    const paymentIntentId = readString(created.body, 'id');
+    await resolveIntent(paymentIntentId, 'succeeded');
+
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"1"',
+      'idem-ord-0020',
+    );
+    expect(status).toBe(412);
+    expectRecord(body);
+    expect(body['code']).toBe('CART_VERSION_CONFLICT');
+  });
+
+  it('O-21: an order on an expired cart returns 410 CART_EXPIRED', async () => {
+    await seedMotoOnce(session1Headers());
+    clock.advanceMs(CART_TTL_MS);
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"2"',
+      'idem-ord-0021',
+    );
+    expect(status).toBe(410);
+    expectRecord(body);
+    expect(body['code']).toBe('CART_EXPIRED');
+  });
+
+  it('O-22: the same key with a different body returns 409 IDEMPOTENCY_CONFLICT', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0022',
+    );
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: false,
+      },
+      '"3"',
+      'idem-ord-0022',
+    );
+    expect(status).toBe(409);
+    expectRecord(body);
+    expect(body['code']).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
+  it('O-23: a key replay inside the retention window, after the order consumed the cart, returns the original receipt', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const first = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0023',
+    );
+    expect(first.status).toBe(201);
+    expectRecord(first.body);
+    const firstReceipt = first.body;
+
+    clock.advanceMs(IDEMPOTENCY_WINDOW_MS - 60_000);
+    const replay = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0023',
+    );
+    expect(replay.status).toBe(201);
+    expect(JSON.stringify(replay.body)).toBe(JSON.stringify(firstReceipt));
+  });
+
+  it('O-23b: a key replay after the retention window falls through to the cart state and returns 412', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const first = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0023b',
+    );
+    expect(first.status).toBe(201);
+    expectRecord(first.body);
+    const firstReceipt = first.body;
+
+    clock.advanceMs(IDEMPOTENCY_WINDOW_MS);
+    const replay = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0023b',
+    );
+    expect(replay.status).toBe(412);
+    expectRecord(replay.body);
+    expect(replay.body['code']).toBe('CART_VERSION_CONFLICT');
+    expect(JSON.stringify(replay.body)).not.toBe(JSON.stringify(firstReceipt));
+  });
+
+  it('O-24: an unknown payment method returns 400 INVALID_REQUEST', async () => {
+    await seedCompleteDraft();
+    const { status, body } = await placeOrder(
+      {
+        paymentMethod: 'paypal',
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0024',
+    );
+    expect(status).toBe(400);
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+  });
+});
+
+describe('GET /orders/:id', () => {
+  it('O-25: the owning session can read its own order', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const placed = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0025',
+    );
+    expectRecord(placed.body);
+    const orderId = readString(placed.body, 'id');
+    const res = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expect(JSON.stringify(body)).toBe(JSON.stringify(placed.body));
+  });
+
+  it('O-26: a different session gets 404 NOT_FOUND', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const placed = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0026',
+    );
+    expectRecord(placed.body);
+    const orderId = readString(placed.body, 'id');
+    const res = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session2Headers(),
+    });
+    expect(res.status).toBe(404);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('NOT_FOUND');
+  });
+
+  it('O-27: an unknown order id returns 404', async () => {
+    const res = await fetch('http://localhost/api/v1/orders/nope', {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(404);
+  });
+});

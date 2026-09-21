@@ -1,21 +1,25 @@
-<aside aria-label="Kosárba helyezés" class="rail" data-testid="purchase-rail">
+<aside class="rail" data-testid="purchase-rail" aria-label="Kosárba helyezés">
   <div class="rail-price">
-    <app-price-block label="Készülékár" [money]="money()" [status]="priceStatus()" />
+    <app-price-block
+      [money]="money()"
+      [label]="'Készülékár'"
+      [status]="priceStatus()"
+    ></app-price-block>
   </div>
   <div class="rail-cta">
     <app-button
       data-testid="purchase-cta"
-      label="Kosárba teszem"
-      loadingLabel="Hozzáadás…"
-      variant="primary"
+      [variant]="'primary'"
+      [label]="'Kosárba teszem'"
+      [loadingLabel]="'Hozzáadás…'"
       [disabled]="!available() || pending()"
       [loading]="pending()"
       (pressed)="onPress()"
-    />
+    ></app-button>
   </div>
   @if (error(); as problem) {
     <div class="rail-status">
-      <app-status-message severity="error" [message]="problem.message" />
+      <app-status-message [message]="problem.message" [severity]="'error'"></app-status-message>
     </div>
   }
 </aside>

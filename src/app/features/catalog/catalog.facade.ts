@@ -46,8 +46,8 @@ import {
 
 import { Api } from '../../api/generated/api';
 import { listProducts } from '../../api/generated/fn/catalog/list-products';
-import type { FacetValue } from '../../api/generated/models/facet-value';
-import type { ProductSummary } from '../../api/generated/models/product-summary';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { Facets } from '../../api/generated/models/facets';
 import {
   DEFAULT_CATALOG_QUERY,
   parseCatalogQuery,
@@ -57,46 +57,31 @@ import {
   type Sort,
 } from './catalog-query';
 
-/**
-Status of the most recent `vm` snapshot.
-*/
+/** Status of the most recent `vm` snapshot. */
 export type CatalogStatus = 'loading' | 'refreshing' | 'success' | 'empty' | 'error';
 
-/**
-A point-in-time view of the catalogue, derived from the live signals.
-*/
+/** A point-in-time view of the catalogue, derived from the live signals. */
 export interface CatalogVm {
   readonly status: CatalogStatus;
   readonly query: CatalogQuery;
-  readonly items: readonly ProductSummary[];
+  readonly items: readonly CatalogItem[];
   readonly total: number;
   readonly page: number;
   readonly pageSize: 12 | 24;
-  /** Brand and storage facet buckets kept separate so the UI can
-   *  render them under their own headings without inferring the kind
-   *  from each value. `null` until the first successful response. */
-  readonly facets: {
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  } | null;
+  /** The full `Facets` from the latest successful response, or `null`
+   *  until the first response lands. The page renders every facet the
+   *  contract exposes from this object directly. */
+  readonly facets: Facets | null;
   readonly error: string | null;
 }
 
-/**
-Coarse shape of the catalogue response — only what the VM exposes.
-*/
+/** Coarse shape of the catalogue response — only what the VM exposes. */
 interface CatalogResult {
-  readonly items: readonly ProductSummary[];
+  readonly items: readonly CatalogItem[];
   readonly total: number;
   readonly page: number;
   readonly pageSize: 12 | 24;
-  /** Brand and storage facet counts live in separate buckets so the UI
-   *  can render them under their own headings without guessing which
-   *  bucket a flattened `FacetValue` came from. */
-  readonly facets: {
-    readonly brands: readonly FacetValue[];
-    readonly storageGb: readonly FacetValue[];
-  };
+  readonly facets: Facets;
 }
 
 /**
@@ -106,62 +91,60 @@ interface CatalogResult {
  * keystroke through the debounced search pipeline.
  */
 function queryEquals(a: CatalogQuery, b: CatalogQuery): boolean {
-  return (
-    !(
-      a.q !== b.q ||
-      !arrayShallowEqual(a.brands, b.brands) ||
-      !arrayShallowEqual(a.storageGb, b.storageGb) ||
-      a.minPrice !== b.minPrice ||
-      a.maxPrice !== b.maxPrice ||
-      a.inStock !== b.inStock
-    ) &&
-    a.is5g === b.is5g &&
-    a.featured === b.featured &&
-    a.sort === b.sort &&
-    a.page === b.page &&
-    a.pageSize === b.pageSize
-  );
+  if (a.q !== b.q) return false;
+  if (!arrayShallowEqual(a.brands, b.brands)) return false;
+  if (!arrayShallowEqual(a.storageGb, b.storageGb)) return false;
+  if (!arrayShallowEqual(a.colors, b.colors)) return false;
+  if (a.minPrice !== b.minPrice) return false;
+  if (a.maxPrice !== b.maxPrice) return false;
+  if (a.inStock !== b.inStock) return false;
+  if (a.is5g !== b.is5g) return false;
+  if (a.featured !== b.featured) return false;
+  if (a.sort !== b.sort) return false;
+  if (a.page !== b.page) return false;
+  if (a.pageSize !== b.pageSize) return false;
+  return true;
 }
 
 function arrayShallowEqual<T>(a: readonly T[] | undefined, b: readonly T[] | undefined): boolean {
   if (a === b) return true;
-  if (a === undefined || b === undefined) return a === b;
+  if (a === undefined || b === undefined) return false;
   if (a.length !== b.length) return false;
-  for (const [index, element] of a.entries()) {
-    if (element !== b[index]) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
   }
   return true;
 }
 
-/**
-Translate a `CatalogQuery` into the SDK's `ListProducts$Params`.
-*/
-function toSdkParameters(q: CatalogQuery): Parameters<typeof listProducts>[2] {
-  const parameters: Parameters<typeof listProducts>[2] = {};
-  if (q.q !== undefined) parameters.q = q.q;
+/** Translate a `CatalogQuery` into the SDK's `ListProducts$Params`. */
+function toSdkParams(q: CatalogQuery): Parameters<typeof listProducts>[2] {
+  const params: Parameters<typeof listProducts>[2] = {};
+  if (q.q !== undefined) params.q = q.q;
   if (q.brands !== undefined && q.brands.length > 0) {
-    parameters.brand = [...q.brands];
+    params.brand = q.brands.slice();
   }
   if (q.storageGb !== undefined && q.storageGb.length > 0) {
-    parameters.storageGb = [...q.storageGb];
+    params.storageGb = q.storageGb.slice();
   }
-  if (q.minPrice !== undefined) parameters.minPrice = q.minPrice;
-  if (q.maxPrice !== undefined) parameters.maxPrice = q.maxPrice;
-  if (q.inStock !== undefined) parameters.inStock = q.inStock;
-  if (q.is5g !== undefined) parameters.is5g = q.is5g;
-  if (q.featured !== undefined) parameters.featured = q.featured;
-  if (q.sort !== undefined) parameters.sort = q.sort;
-  parameters.page = q.page;
-  parameters.pageSize = q.pageSize;
-  return parameters;
+  if (q.colors !== undefined && q.colors.length > 0) {
+    params.color = q.colors.slice();
+  }
+  if (q.minPrice !== undefined) params.minPrice = q.minPrice;
+  if (q.maxPrice !== undefined) params.maxPrice = q.maxPrice;
+  if (q.inStock !== undefined) params.inStock = q.inStock;
+  if (q.is5g !== undefined) params.is5g = q.is5g;
+  if (q.featured !== undefined) params.featured = q.featured;
+  if (q.sort !== undefined) params.sort = q.sort;
+  params.page = q.page;
+  params.pageSize = q.pageSize;
+  return params;
 }
 
-/**
-Best-effort error message extraction for the `error` field.
-*/
-function describeError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return typeof error === 'string' ? error : 'Ismeretlen hiba a katalógus betöltése közben.';
+/** Best-effort error message extraction for the `error` field. */
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return 'Ismeretlen hiba a katalógus betöltése közben.';
 }
 
 /**
@@ -184,34 +167,22 @@ export class CatalogFacade {
    */
   private readonly retry$ = new Subject<void>();
 
-  /**
-  Live URL-derived query state — single source of truth.
-  */
+  /** Live URL-derived query state — single source of truth. */
   private readonly querySignal = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
 
-  /**
-  Last successful `ProductPage` from the SDK, if any.
-  */
+  /** Last successful `ProductPage` from the SDK, if any. */
   private readonly resultSignal = signal<CatalogResult | null>(null);
 
-  /**
-  True while a request is in flight (drives `loading` / `refreshing`).
-  */
+  /** True while a request is in flight (drives `loading` / `refreshing`). */
   private readonly inFlightSignal = signal<boolean>(false);
 
-  /**
-  Error from the most recent failed request, if any.
-  */
+  /** Error from the most recent failed request, if any. */
   private readonly errorSignal = signal<string | null>(null);
 
-  /**
-  Read-only view of the canonical query — UI binds to this.
-  */
+  /** Read-only view of the canonical query — UI binds to this. */
   readonly query = this.querySignal.asReadonly();
 
-  /**
-  Read-only view of the current `vm` — UI binds to this.
-  */
+  /** Read-only view of the current `vm` — UI binds to this. */
   readonly vm = computed<CatalogVm>(() => this.buildVm());
 
   constructor() {
@@ -228,7 +199,7 @@ export class CatalogFacade {
       const current = this.querySignal();
       const next: CatalogQuery = {
         ...current,
-        q: q.length > 0 ? q : undefined,
+        ...(q.length > 0 ? { q } : { q: undefined }),
         page: 1,
       };
       if (queryEquals(next, current)) return;
@@ -249,10 +220,10 @@ export class CatalogFacade {
           this.inFlightSignal.set(true);
         }),
         switchMap((q) =>
-          this.api.invoke(listProducts, toSdkParameters(q)).pipe(
+          this.api.invoke(listProducts, toSdkParams(q)).pipe(
             map((page) => ({ kind: 'ok' as const, query: q, page })),
-            catchError((error: unknown) =>
-              of({ kind: 'err' as const, query: q, error: describeError(error) }),
+            catchError((err: unknown) =>
+              of({ kind: 'err' as const, query: q, error: describeError(err) }),
             ),
           ),
         ),
@@ -265,10 +236,7 @@ export class CatalogFacade {
             total: event.page.total,
             page: event.page.page,
             pageSize: event.page.pageSize,
-            facets: {
-              brands: event.page.facets.brands,
-              storageGb: event.page.facets.storageGb,
-            },
+            facets: event.page.facets,
           });
         } else {
           this.errorSignal.set(event.error);
@@ -311,86 +279,76 @@ export class CatalogFacade {
     this.queryChange$.next(next);
   }
 
-  /**
-  Apply a sort mode and reset the page to 1.
-  */
+  /** Apply a sort mode and reset the page to 1. */
   setSort(value: Sort): void {
     const current = this.querySignal();
     const next: CatalogQuery = { ...current, sort: value, page: 1 };
     this.queryChange$.next(next);
   }
 
-  /**
-  Move to an explicit page — does not reset other filters.
-  */
+  /** Move to an explicit page — does not reset other filters. */
   setPage(page: number): void {
     const current = this.querySignal();
     const next: CatalogQuery = { ...current, page };
     this.queryChange$.next(next);
   }
 
-  /**
-  Change page size and reset the page to 1.
-  */
+  /** Change page size and reset the page to 1. */
   setPageSize(pageSize: 12 | 24): void {
     const current = this.querySignal();
     const next: CatalogQuery = { ...current, pageSize, page: 1 };
     this.queryChange$.next(next);
   }
 
-  /**
-  Add or remove a brand from the active filter set.
-  */
+  /** Add or remove a brand from the active filter set. */
   toggleBrand(brand: string): void {
     const trimmed = brand.trim();
     if (trimmed.length === 0) return;
     const current = this.querySignal().brands ?? [];
-    const isPresent = current.includes(trimmed);
-    const next = isPresent ? current.filter((b) => b !== trimmed) : [...current, trimmed];
+    const present = current.includes(trimmed);
+    const next = present ? current.filter((b) => b !== trimmed) : [...current, trimmed];
     this.setFilters({ brands: next.length > 0 ? next : undefined });
   }
 
-  /**
-  Add or remove a storage bucket from the active filter set.
-  */
+  /** Add or remove a storage bucket from the active filter set. */
   toggleStorage(storageGb: 128 | 256 | 512): void {
     const current = this.querySignal().storageGb ?? [];
-    const isPresent = current.includes(storageGb);
-    const next = isPresent ? current.filter((s) => s !== storageGb) : [...current, storageGb];
+    const present = current.includes(storageGb);
+    const next = present ? current.filter((s) => s !== storageGb) : [...current, storageGb];
     this.setFilters({ storageGb: next.length > 0 ? next : undefined });
   }
 
-  /**
-  Replace the inclusive price range; `undefined` clears the bound.
-  */
+  /** Add or remove a colour code from the active filter set. */
+  toggleColor(colorCode: string): void {
+    const trimmed = colorCode.trim();
+    if (trimmed.length === 0) return;
+    const current = this.querySignal().colors ?? [];
+    const present = current.includes(trimmed);
+    const next = present ? current.filter((c) => c !== trimmed) : [...current, trimmed];
+    this.setFilters({ colors: next.length > 0 ? next : undefined });
+  }
+
+  /** Replace the inclusive price range; `undefined` clears the bound. */
   setPriceRange(min: number | undefined, max: number | undefined): void {
     this.setFilters({ minPrice: min, maxPrice: max });
   }
 
-  /**
-  Set the `inStock` flag; pass `undefined` to clear the filter.
-  */
+  /** Set the `inStock` flag; pass `undefined` to clear the filter. */
   setInStock(value: boolean | undefined): void {
     this.setFilters({ inStock: value });
   }
 
-  /**
-  Set the `is5g` flag; pass `undefined` to clear the filter.
-  */
+  /** Set the `is5g` flag; pass `undefined` to clear the filter. */
   setIs5g(value: boolean | undefined): void {
     this.setFilters({ is5g: value });
   }
 
-  /**
-  Set the `featured` flag; pass `undefined` to clear the filter.
-  */
+  /** Set the `featured` flag; pass `undefined` to clear the filter. */
   setFeatured(value: boolean | undefined): void {
     this.setFilters({ featured: value });
   }
 
-  /**
-  Reset every filter back to the documented defaults.
-  */
+  /** Reset every filter back to the documented defaults. */
   reset(): void {
     this.queryChange$.next({ ...DEFAULT_CATALOG_QUERY });
   }
@@ -412,14 +370,12 @@ export class CatalogFacade {
    * empty / default / unknown values so the page never inherits
    * garbage from the URL.
    */
-  loadFromParams(parameters: URLSearchParams): void {
-    const next = parseCatalogQuery(parameters);
+  loadFromParams(params: URLSearchParams): void {
+    const next = parseCatalogQuery(params);
     this.queryChange$.next(next);
   }
 
-  /**
-  Canonical query string for the current state — push to the router.
-  */
+  /** Canonical query string for the current state — push to the router. */
   currentParams(): URLSearchParams {
     return serializeCatalogQuery(this.querySignal());
   }
@@ -431,7 +387,7 @@ export class CatalogFacade {
   private buildVm(): CatalogVm {
     const query = this.querySignal();
     const result = this.resultSignal();
-    const isInFlight = this.inFlightSignal();
+    const inFlight = this.inFlightSignal();
     const error = this.errorSignal();
 
     // Error wins over everything else so a failed retry never shows
@@ -467,7 +423,7 @@ export class CatalogFacade {
     // We have a result; the current request either completed
     // (`success` / `empty`) or is still in flight (`refreshing`,
     // showing the previous useful content rather than a blank screen).
-    if (isInFlight) {
+    if (inFlight) {
       return {
         status: 'refreshing',
         query,

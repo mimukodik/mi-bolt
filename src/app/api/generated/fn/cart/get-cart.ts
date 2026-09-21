@@ -10,13 +10,11 @@ import { RequestBuilder } from '../../request-builder';
 import { Cart } from '../../models/cart';
 
 export interface GetCart$Params {
-  cartId: string;
 }
 
-export function getCart(http: HttpClient, rootUrl: string, params: GetCart$Params, context?: HttpContext): Observable<StrictHttpResponse<Cart>> {
+export function getCart(http: HttpClient, rootUrl: string, params?: GetCart$Params, context?: HttpContext): Observable<StrictHttpResponse<Cart>> {
   const rb = new RequestBuilder(rootUrl, getCart.PATH, 'get');
   if (params) {
-    rb.path('cartId', params.cartId, {});
   }
 
   return http.request(
@@ -29,4 +27,4 @@ export function getCart(http: HttpClient, rootUrl: string, params: GetCart$Param
   );
 }
 
-getCart.PATH = '/carts/{cartId}';
+getCart.PATH = '/cart';

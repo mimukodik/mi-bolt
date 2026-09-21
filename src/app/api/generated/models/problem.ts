@@ -3,16 +3,19 @@
 
 import { FieldError } from '../models/field-error';
 import { ProblemCode } from '../models/problem-code';
+
+/**
+ * Problem details. title and detail are English developer diagnostics and are never shown to shoppers; the user interface composes its text from code, params and fieldErrors.
+ */
 export interface Problem {
   code: ProblemCode;
   detail: string;
   fieldErrors: Array<FieldError>;
+  params?: {
+[key: string]: any;
+};
   status: number;
   title: string;
   traceId: string;
-
-  /**
-   * URN such as urn:mi-bolt:problem:validation-failed
-   */
   type: string;
 }

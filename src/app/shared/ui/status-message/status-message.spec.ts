@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { StatusMessage } from './status-message';
 import type { StatusSeverity } from './status-message';
@@ -9,10 +8,10 @@ import type { StatusSeverity } from './status-message';
   template: `
     <app-status-message
       [message]="message()"
-      [persistent]="persistent()"
       [severity]="severity()"
+      [persistent]="persistent()"
       (dismissed)="dismissCount.set(dismissCount() + 1)"
-    />
+    ></app-status-message>
   `,
 })
 class HostComponent {
@@ -73,7 +72,7 @@ describe('StatusMessage primitive', () => {
   it('emits dismissed when the close button is clicked', () => {
     const { fixture, host } = setup();
     const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (btn === null) {
+    if (!btn) {
       throw new Error('Expected button');
     }
     btn.click();
@@ -94,7 +93,7 @@ describe('StatusMessage primitive', () => {
       host.severity.set(severity);
       fixture.detectChanges();
       const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-      if (btn === null) {
+      if (!btn) {
         throw new Error('Expected button');
       }
       // jsdom's computed-style engine (cssstyle) does not resolve CSS custom

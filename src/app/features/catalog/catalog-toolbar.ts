@@ -1,5 +1,4 @@
-import type { ElementRef } from '@angular/core';
-import { Component, computed, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
 
 import { isSort, SORT_MODES, type Sort } from './catalog-query';
 import type { AsyncStatus } from '../../shared/types/async-status';
@@ -53,7 +52,8 @@ export class CatalogToolbar {
   readonly resultCountLabel = computed<string>(() => {
     if (this.status() === 'loading') return 'Keresés a katalógusban…';
     if (this.status() === 'error') return 'A katalógus betöltése nem sikerült.';
-    return this.total() === 0 ? 'Nincs találat.' : `Találatok: ${String(this.total())}`;
+    if (this.total() === 0) return 'Nincs találat.';
+    return `Találatok: ${String(this.total())}`;
   });
 
   /** The filter-trigger button, exposed so `CatalogPage` can pass it as
@@ -89,18 +89,22 @@ export class CatalogToolbar {
 
   sortLabel(mode: Sort): string {
     switch (mode) {
-      case 'recommended': {
+      case 'recommended':
         return 'Ajánlott sorrend';
-      }
-      case 'price_asc': {
+      case 'newest':
+        return 'Legújabb elöl';
+      case 'oldest':
+        return 'Legrégebbi elöl';
+      case 'popularity':
+        return 'Népszerűség szerint';
+      case 'price_asc':
         return 'Ár szerint növekvő';
-      }
-      case 'price_desc': {
+      case 'price_desc':
         return 'Ár szerint csökkenő';
-      }
-      case 'name_asc': {
-        return 'Név szerint';
-      }
+      case 'name_asc':
+        return 'Név szerint (A–Z)';
+      case 'name_desc':
+        return 'Név szerint (Z–A)';
     }
   }
 

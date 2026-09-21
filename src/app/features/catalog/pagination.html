@@ -1,12 +1,12 @@
 <nav
-  aria-label="Lapozás"
   class="pagination flex items-center justify-center gap-3 pt-4"
   data-testid="catalog-pagination"
+  aria-label="Lapozás"
 >
   <button
+    type="button"
     class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
     data-testid="pagination-prev"
-    type="button"
     [disabled]="page() <= 1 || disabled()"
     (click)="onBoundary(page() - 1); onPageClick(page() - 1)"
   >
@@ -15,12 +15,12 @@
   @for (n of pageNumbers(); track n) {
     <button
       #pageButton
-      class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
       type="button"
-      [attr.aria-current]="n === page() ? 'page' : null"
-      [attr.aria-label]="`${n}. oldal`"
-      [attr.data-testid]="n === page() ? 'pagination-current' : `pagination-page-${n}`"
+      class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
       [class.page--current]="n === page()"
+      [attr.data-testid]="n === page() ? 'pagination-current' : 'pagination-page-' + n"
+      [attr.aria-label]="n + '. oldal'"
+      [attr.aria-current]="n === page() ? 'page' : null"
       [disabled]="disabled()"
       (click)="onPageClick(n)"
     >
@@ -28,9 +28,9 @@
     </button>
   }
   <button
+    type="button"
     class="page min-h-10 min-w-10 px-4 rounded font-inherit cursor-pointer"
     data-testid="pagination-next"
-    type="button"
     [disabled]="page() >= totalPages() || disabled()"
     (click)="onBoundary(page() + 1); onPageClick(page() + 1)"
   >

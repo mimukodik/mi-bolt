@@ -16,16 +16,14 @@
  */
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
-import type { Problem } from './checkout/quote-domain';
 
-import type { Repository as Repo } from './repository';
+import { Repository } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
+import type { MockSnapshot } from './persistence';
 
-/**
-Inputs passed by both `setupWorker` and `setupServer` paths.
-*/
+/** Inputs passed by both `setupWorker` and `setupServer` paths. */
 export interface CreateHandlersOptions {
-  repository: Repo;
+  repository: Repository;
   clock: Clock;
   ids: Ids;
   scenario: ScenarioDescriptor;
@@ -37,6 +35,13 @@ export interface CreateHandlersOptions {
    * the module header promises.
    */
   persist?: (sessionId: string) => void;
+  /**
+   * When set, each entry factory reads the matching fields at
+   * construction time and seeds its store with the hydrated
+   * snapshot. The Node and unit paths pass `undefined`; the browser
+   * bootstrap passes the value `Persistence.hydrate(...)` returned.
+   */
+  snapshot?: MockSnapshot | null;
 }
 
 /**
@@ -46,14 +51,10 @@ export interface CreateHandlersOptions {
  */
 export type BusinessHandlerEntry = (options: CreateHandlersOptions) => readonly RequestHandler[];
 
-/**
-Module-local registry; append-only, ordered by registration time.
-*/
+/** Module-local registry; append-only, ordered by registration time. */
 const registry: BusinessHandlerEntry[] = [];
 
-/**
-Append a business handler entry. Called by T06–T09 slice files.
-*/
+/** Append a business handler entry. Called by T06–T09 slice files. */
 export function registerBusinessHandlers(entry: BusinessHandlerEntry): void {
   registry.push(entry);
 }
@@ -84,9 +85,7 @@ export function createHandlers(options: CreateHandlersOptions): RequestHandler[]
   return [...createDispatcherShell(options), ...createStrictHandlers(options)];
 }
 
-function notFoundBody(
-  options: CreateHandlersOptions,
-): Problem & { type: string; title: string; traceId: string } {
+function notFoundBody(options: CreateHandlersOptions) {
   return {
     type: 'urn:mi-bolt:problem:not-found',
     title: 'A kért végpont nem található',

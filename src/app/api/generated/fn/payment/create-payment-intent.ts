@@ -8,22 +8,19 @@ import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
 import { PaymentIntent } from '../../models/payment-intent';
-import { PaymentIntentRequest } from '../../models/payment-intent-request';
 
 export interface CreatePaymentIntent$Params {
 
 /**
- * Key scoped to method + path + demo session, retained 24 hours. Same key and normalized body returns original result BEFORE current-version checks. Different body yields 409.
+ * Scoped to method, path and session, retained for 24 hours. The same key with the same normalised body replays the original result before any state check. The same key with a different body returns 409.
  */
   'Idempotency-Key': string;
-      body: PaymentIntentRequest
 }
 
 export function createPaymentIntent(http: HttpClient, rootUrl: string, params: CreatePaymentIntent$Params, context?: HttpContext): Observable<StrictHttpResponse<PaymentIntent>> {
   const rb = new RequestBuilder(rootUrl, createPaymentIntent.PATH, 'post');
   if (params) {
     rb.header('Idempotency-Key', params['Idempotency-Key'], {});
-    rb.body(params.body, 'application/json');
   }
 
   return http.request(

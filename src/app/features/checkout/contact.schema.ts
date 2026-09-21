@@ -17,11 +17,7 @@
  * The schema also owns the JSONpointer → field mapping the
  * checkout facade (T19) will reuse when it surfaces 422 server errors.
  *
- * `contactFormSchema`/`buildContactForm` (FIX-63) are the Signal Forms
- * wiring `ContactPage` (the owning container) uses to build the
- * `contactFields` field tree it passes down to `ContactStep` — the same
- * schema `ContactStep` used to build inline before FIX-63 moved
- * responsibility for the SDK/save call up to the container. Mirrors
+ * `contactFormSchema`/`buildContactForm` are the Signal Forms wiring `ContactPage` uses to build the `contactFields` field tree it passes down to `ContactStep`. Mirrors
  * `checkoutFormSchema`/`buildCheckoutForm` in `checkout-form.model.ts`.
  */
 
@@ -74,24 +70,26 @@ export const PHONE_INTERNATIONAL = /^\+36\d{8,9}$/;
 export function pointerToFieldKey(pointer: string): ContactFieldKey | null {
   if (pointer === '/fullName') return 'fullName';
   if (pointer === '/email') return 'email';
-  return pointer === '/phone' ? 'phone' : null;
+  if (pointer === '/phone') return 'phone';
+  return null;
 }
 
 export function normalizeContact(input: ContactInput): NormalizedContact {
-  const fullName = input.fullName.trim().replaceAll(/\s+/g, ' ');
+  const fullName = input.fullName.trim().replace(/\s+/g, ' ');
   const email = input.email.trim();
   const phone = normalizePhone(input.phone);
   return { fullName, email, phone };
 }
 
 export function normalizePhone(raw: string): string {
-  const stripped = raw.trim().replaceAll(/[\s\-()]/g, '');
+  const stripped = raw.trim().replace(/[\s\-()]/g, '');
   if (stripped.length === 0) return '';
   if (stripped.startsWith('+36')) return stripped;
   if (stripped.startsWith('0036')) return '+36' + stripped.slice(4);
   if (stripped.startsWith('06')) return '+36' + stripped.slice(2);
   if (/^0\d+$/.test(stripped)) return '+36' + stripped.slice(1);
-  return /^36\d+$/.test(stripped) ? '+' + stripped : stripped;
+  if (/^36\d+$/.test(stripped)) return '+' + stripped;
+  return stripped;
 }
 
 export function validateContact(input: ContactInput): ContactValidationResult {
@@ -160,10 +158,7 @@ export function validateContact(input: ContactInput): ContactValidationResult {
 /**
  * Signal Forms schema for `Contact`. Mirrors `validateContact` above —
  * the same trim-aware bounds and the same normalized-phone check — so
- * the live form and the pure validator never drift. Moved here from
- * `ContactStep`'s inline `form(this.model, (path) => {...})` by FIX-63,
- * which gave `ContactStep` a declared `contactFields` input instead of
- * building its own field tree.
+ * the live form and the pure validator never drift.
  */
 export const contactFormSchema: SchemaFn<Contact> = (path) => {
   required(path.fullName, {

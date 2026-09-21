@@ -1,35 +1,33 @@
 import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { Product } from '../../api/generated/models/product';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Money } from '../../api/generated/models/money';
 import { Button } from '../../shared/ui/button/button';
 
-/**
-Status of a single featured-product slot in the home grid.
-*/
-export type FeaturedSlotStatus = 'loading' | 'success' | 'error';
+/** Status of the whole featured grid in the home page. */
+export type FeaturedStatus = 'loading' | 'success' | 'error';
 
 /**
- * One slot in the featured grid. The orchestrator owns the request
- * lifecycle and threads these down to the presentation layer; the
- * presentation layer never sees the SDK.
+ * Whole-grid state for the home featured section. The orchestrator owns
+ * the request lifecycle and threads this down to the presentation layer;
+ * the presentation layer never sees the SDK.
  */
-export interface FeaturedSlot {
-  readonly slug: string;
-  readonly status: FeaturedSlotStatus;
-  readonly product: Product | null;
+export interface FeaturedState {
+  readonly status: FeaturedStatus;
+  readonly items: readonly CatalogItem[];
   readonly error: string | null;
 }
 
 /**
- * `FeaturedProducts` — four product cards rendered from the live
- * `getProduct` responses (T14-AC03).
+ * `FeaturedProducts` — up to four product cards rendered from the live
+ * `listProducts({ featured: true })` response (T14-AC03).
  *
- * The component consumes pre-shaped `FeaturedSlot` values; loading
- * and error states never substitute invented figures for a missing
- * price (R14, R25). The "Részletek" link points at the catalogue
- * detail route with the documented slug (T14-AC02).
+ * The component consumes a single pre-shaped `FeaturedState` value;
+ * loading and error states never substitute invented figures for a
+ * missing price (R14, R25). The "Részletek" link points at the
+ * catalogue detail route with the documented slug and variant id
+ * (T14-AC02).
  *
  * The home page renders its own price block / image element rather
  * than the shared `PriceBlock` / `ProductImage` primitives (FIX-33
@@ -52,56 +50,35 @@ export interface FeaturedSlot {
   styleUrl: './featured-products.scss',
 })
 export class FeaturedProducts {
-  /**
-  Slots from the orchestrator.
-  */
-  readonly slots = input<readonly FeaturedSlot[]>([]);
+  /** Whole-grid state from the orchestrator. */
+  readonly state = input.required<FeaturedState>();
 
   /** Re-fire signal — surfaced when the user clicks "Újrapróbálom"
-   *  on the whole-grid error state. Per-card errors don't surface a
-   *  retry CTA on their own; the whole-grid state does. */
+   *  on the whole-grid error state. */
   readonly retryRequested = output();
 
-  /**
-  True when every slot is in error state (the grid-level error UI).
-  */
-  readonly allErrored = computed(() => {
-    const list = this.slots();
-    return list.length === 0 ? false : list.every((s) => s.status === 'error');
-  });
+  /** True when the grid is in error state. */
+  readonly allErrored = computed(() => this.state().status === 'error');
 
-  /**
-  Joined error messages for the whole-grid error state.
-  */
+  /** Joined error message for the whole-grid error state. */
   readonly errorMessage = computed(() => {
-    const list = this.slots();
-    const messages = list.map((s) => s.error).filter((m): m is string => m !== null);
-    return messages.length === 0 ? 'A kiemelt termékek jelenleg nem érhetők el.' : messages[0];
+    const err = this.state().error;
+    return err && err.length > 0 ? err : 'A kiemelt termékek jelenleg nem érhetők el.';
   });
 
-  /**
-  Returns the first image src for the product, or null if absent.
-  */
-  firstImageSrc(product: Product): string | null {
-    const images = product.defaultVariant.images;
-    return images.length === 0 ? null : images[0].src;
+  /** True while the grid is loading. */
+  readonly loading = computed(() => this.state().status === 'loading');
+
+  /** Items for the success branch. */
+  readonly items = computed(() => this.state().items);
+
+  /** Returns the image alt text for the item, falling back to the name. */
+  firstImageAlt(item: CatalogItem): string {
+    const alt = item.image.alt;
+    return alt.length > 0 ? alt : item.name;
   }
 
-  firstImageAlt(product: Product): string {
-    const images = product.defaultVariant.images;
-    if (images.length === 0) return product.name;
-    const alt = images[0].alt;
-    return alt.length > 0 ? alt : product.name;
-  }
-
-  initialFor(name: string): string {
-    const trimmed = name.trim();
-    return trimmed.length === 0 ? '·' : trimmed.charAt(0).toUpperCase();
-  }
-
-  /**
-  Hungarian integer HUF formatter. Non-breaking space thousands separator.
-  */
+  /** Hungarian integer HUF formatter. Non-breaking space thousands separator. */
   formatPrice(money: Money): string {
     const amount = money.amount;
     if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
@@ -109,7 +86,7 @@ export class FeaturedProducts {
     }
     const grouped = Math.trunc(Math.abs(amount))
       .toString()
-      .replaceAll(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     return grouped;
   }
 }

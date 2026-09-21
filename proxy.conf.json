@@ -1,0 +1,7 @@
+{
+  "/demo-fizetes": {
+    "target": "http://localhost:4210",
+    "secure": false,
+    "ws": true
+  }
+}

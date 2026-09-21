@@ -2,7 +2,7 @@ name: PR check
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, eggprojec/mim-210-s1-sdk]
   push:
     branches: [main]
 
@@ -51,12 +51,17 @@ jobs:
       - name: Coverage summary
         if: always()
         run: node scripts/coverage-summary.mjs coverage/unit/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Coverage summary (demo-payment)
+        if: always()
+        run: node scripts/coverage-summary.mjs coverage/demo-payment/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
-          path: coverage/unit/
+          path: |
+            coverage/unit/
+            coverage/demo-payment/
           if-no-files-found: error
           overwrite: true
 
@@ -74,6 +79,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm run build:payment
 
   api-drift:
     name: API client drift

@@ -6,25 +6,25 @@
     <div class="options">
       @for (option of colorOptions(); track option.colorCode) {
         <button
-          class="option"
           type="button"
-          [attr.aria-describedby]="colorDisabledReasonId(option.colorCode)"
+          class="option"
+          [class.is-selected]="option.colorCode === selectedColorCode()"
+          [attr.data-testid]="'variant-color-' + option.colorCode"
+          [attr.aria-pressed]="option.colorCode === selectedColorCode() ? 'true' : 'false'"
           [attr.aria-label]="
             ariaLabelForColor(option.colorName, option.colorCode === selectedColorCode())
           "
-          [attr.aria-pressed]="option.colorCode === selectedColorCode() ? 'true' : 'false'"
-          [attr.data-testid]="`variant-color-${option.colorCode}`"
-          [class.is-selected]="option.colorCode === selectedColorCode()"
+          [attr.aria-describedby]="colorDisabledReasonId(option.colorCode)"
           [disabled]="isColorDisabled(option.colorCode)"
           (click)="selectColor(option.colorCode)"
         >
           <span
-            aria-hidden="true"
             class="swatch"
+            aria-hidden="true"
             [style.background-color]="option.swatchHex"
           ></span>
           <span class="label">{{ option.colorName }}</span>
-          <span aria-hidden="true" class="check">✓</span>
+          <span class="check" aria-hidden="true">✓</span>
         </button>
       }
     </div>
@@ -42,20 +42,20 @@
     <div class="options">
       @for (option of storageOptions(); track option.storageGb) {
         <button
-          class="option option--storage"
           type="button"
-          [attr.aria-describedby]="storageDisabledReasonId(option.storageGb)"
+          class="option option--storage"
+          [class.is-selected]="option.storageGb === selectedStorageGb()"
+          [attr.data-testid]="'variant-storage-' + option.storageGb"
+          [attr.aria-pressed]="option.storageGb === selectedStorageGb() ? 'true' : 'false'"
           [attr.aria-label]="
             ariaLabelForStorage(option.storageGb, option.storageGb === selectedStorageGb())
           "
-          [attr.aria-pressed]="option.storageGb === selectedStorageGb() ? 'true' : 'false'"
-          [attr.data-testid]="`variant-storage-${option.storageGb}`"
-          [class.is-selected]="option.storageGb === selectedStorageGb()"
+          [attr.aria-describedby]="storageDisabledReasonId(option.storageGb)"
           [disabled]="isStorageDisabled(option.storageGb)"
           (click)="selectStorage(option.storageGb)"
         >
           <span class="label">{{ option.storageGb }} GB</span>
-          <span aria-hidden="true" class="check">✓</span>
+          <span class="check" aria-hidden="true">✓</span>
         </button>
       }
     </div>

@@ -36,9 +36,9 @@
  *                        form actions.
  */
 
-import type { ElementRef } from '@angular/core';
 import {
   Component,
+  ElementRef,
   InjectionToken,
   computed,
   input,
@@ -54,6 +54,7 @@ import {
   type FieldError,
 } from '../../shared/ui/form-field-message/form-field-message';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import { NavigationReasonBanner } from './navigation-reason-banner';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
 import type { Contact } from '../../api/generated/models/contact';
@@ -102,7 +103,7 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
     out.push({
       code: error.kind,
       message: error.message ?? error.kind,
-      ...(pointer !== undefined && { pointer }),
+      ...(pointer !== undefined ? { pointer } : {}),
     });
   }
   return out;
@@ -110,7 +111,14 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
 
 @Component({
   selector: 'app-contact-step',
-  imports: [Button, CheckoutStepHeader, FormField, FormFieldMessage, StatusMessage],
+  imports: [
+    Button,
+    CheckoutStepHeader,
+    FormField,
+    FormFieldMessage,
+    NavigationReasonBanner,
+    StatusMessage,
+  ],
   templateUrl: './contact-step.html',
   styleUrl: './contact-step.scss',
 })
@@ -124,10 +132,12 @@ export class ContactStep {
    *  invalid submission. */
   private readonly summaryRef = viewChild<ElementRef<HTMLElement>>('summary');
 
-  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
-   *  the previous template: Kosár, with this step (`Adatok`) as the
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`: the same
+   *  trail `delivery-step.ts` and `review-step.ts` open with, so every
+   *  checkout step starts at `Főoldal`. This step (`Adatok`) is the
    *  trailing non-link. */
   protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Főoldal', link: '/' },
     { label: 'Kosár', link: '/penztar/kosar' },
   ];
 
@@ -215,7 +225,7 @@ export class ContactStep {
   // ---- Actions ------------------------------------------------------
 
   async onSubmit(event?: Event): Promise<void> {
-    if (event !== undefined && typeof event.preventDefault === 'function') {
+    if (event && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
     if (this.saveState() === 'loading') return;
@@ -223,18 +233,19 @@ export class ContactStep {
     this.submitted.set(true);
 
     const contactFields = this.contactFields();
-    const isOk = await submit(contactFields, {
-      action: () =>
+    const ok = await submit(contactFields, {
+      action: () => {
         // No network call from inside the field tree's own submit flow —
         // the container performs the save when `continueRequested` fires.
-        Promise.resolve(undefined),
+        return Promise.resolve(undefined);
+      },
       onInvalid: () => {
         this.focusSummary();
         this.focusFirstInvalidField();
       },
     });
 
-    if (!isOk) {
+    if (!ok) {
       if (this.contactFields()().invalid()) {
         this.focusSummary();
         this.focusFirstInvalidField();
@@ -247,9 +258,9 @@ export class ContactStep {
 
   focusSummary(): void {
     queueMicrotask(() => {
-      const reference = this.summaryRef();
-      if (reference === undefined) return;
-      reference.nativeElement.focus();
+      const ref = this.summaryRef();
+      if (ref === undefined) return;
+      ref.nativeElement.focus();
     });
   }
 
@@ -275,7 +286,8 @@ export class ContactStep {
     if (this.saveState() === 'error') return 'server-error';
     if (this.saveState() === 'loading') return 'loading';
     if (invalid && this.submitted()) return 'submitted-invalid';
-    return invalid && touched ? 'touched-invalid' : 'default';
+    if (invalid && touched) return 'touched-invalid';
+    return 'default';
   }
 
   resolvePointer(pointer: string): ContactFieldKey | null {

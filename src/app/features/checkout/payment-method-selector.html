@@ -1,48 +1,67 @@
-<fieldset class="payment m-0 p-5 rounded" data-testid="payment-selector">
-  <legend class="legend px-2 font-bold">Fizetési mód</legend>
-  <p class="hint my-2 mb-4 leading-relaxed" data-testid="payment-demo-notice">
-    Csak demó fizetési módok érhetők el; nincs valódi kártyaadat vagy átirányítás.
-  </p>
+<fieldset
+  class="payment m-0 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) text-(color:--color-text-primary)"
+  data-testid="payment-selector"
+>
+  <legend
+    class="legend px-(--space-2) text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+  >
+    Fizetési mód
+  </legend>
 
-  <ul class="options m-0 p-0 list-none flex flex-col gap-3" role="list">
-    @for (option of options; track option.id) {
+  <ul class="options m-0 mt-(--space-3) p-0 list-none flex flex-col gap-(--space-3)" role="list">
+    @for (option of options(); track option.id) {
       <li
-        class="option border rounded transition-colors"
-        data-testid="payment-option"
+        class="option rounded-(--radius-card) border transition-colors"
         [class.is-active]="isSelected(option.id)"
+        [class.is-unavailable]="!option.available"
+        data-testid="payment-option"
       >
         <label
-          class="option-label flex items-start gap-3 p-4 cursor-pointer min-h-10"
+          class="option-label flex items-start gap-(--space-3) p-(--space-4)"
+          [class.cursor-pointer]="option.available"
           [attr.for]="optionId(option.id)"
         >
           <input
-            class="radio w-5 h-5 mt-1"
-            data-testid="payment-radio"
-            name="paymentMethod"
             type="radio"
+            class="radio w-5 h-5 mt-1 accent-(--color-brand-ink)"
+            [id]="optionId(option.id)"
+            name="paymentMethod"
+            [value]="option.id"
+            [checked]="isSelected(option.id)"
+            [disabled]="!option.available"
             [attr.aria-checked]="isSelected(option.id) ? 'true' : 'false'"
             [attr.aria-describedby]="helperId(option.id)"
-            [checked]="isSelected(option.id)"
-            [id]="optionId(option.id)"
-            [value]="option.id"
             (change)="onSelected(option.id)"
+            data-testid="payment-radio"
           />
-          <span class="option-body flex flex-col gap-1 min-w-0">
-            <span class="option-row inline-flex items-baseline gap-2">
-              <span class="option-title font-medium">{{ option.label }}</span>
-              <span
-                aria-hidden="true"
-                class="option-tag inline-flex items-center px-2 rounded-full font-bold uppercase tracking-wider"
-                >{{ option.demoTag }}</span
-              >
+          <span class="option-body flex flex-col gap-(--space-1) min-w-0">
+            <span class="option-row inline-flex items-baseline gap-(--space-2) flex-wrap">
+              <span class="option-title [font-weight:var(--weight-medium)]">{{
+                option.label
+              }}</span>
+              <app-price-block
+                [money]="option.fee"
+                label="Fizetési díj"
+                status="success"
+              ></app-price-block>
             </span>
-            <span class="option-helper leading-relaxed" [id]="helperId(option.id)">{{
-              option.helper
-            }}</span>
+            <span
+              class="option-helper leading-(--line-height-body) text-(length:--type-helper) text-(color:--color-text-secondary)"
+              [id]="helperId(option.id)"
+              >{{ option.description }}</span
+            >
+            @if (!option.available) {
+              <span
+                class="option-unavailable text-(length:--type-helper) text-(color:--color-status-error)"
+                data-testid="payment-unavailable-reason"
+              >
+                {{ unavailableSentence(option.unavailableReason) }}
+              </span>
+            }
             @if (isSelected(option.id)) {
               <span
+                class="option-badge mt-(--space-1) inline-flex items-center self-start px-(--space-2) py-(--space-1) rounded-full [font-weight:var(--weight-bold)]"
                 aria-live="polite"
-                class="option-badge mt-1 inline-flex items-center px-2 py-1 rounded-full font-bold"
                 data-testid="payment-selected-badge"
               >
                 Kiválasztva

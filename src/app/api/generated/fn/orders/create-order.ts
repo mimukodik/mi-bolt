@@ -13,7 +13,7 @@ import { OrderRequest } from '../../models/order-request';
 export interface CreateOrder$Params {
 
 /**
- * Key scoped to method + path + demo session, retained 24 hours. Same key and normalized body returns original result BEFORE current-version checks. Different body yields 409.
+ * Scoped to method, path and session, retained for 24 hours. The same key with the same normalised body replays the original result before any state check. The same key with a different body returns 409.
  */
   'Idempotency-Key': string;
       body: OrderRequest

@@ -15,19 +15,23 @@
  *   - `address.line2` is optional on the wire but always present in
  *     the model; `normalizeCheckoutForm` (T08's helpers) handles the
  *     "undefined vs empty string" distinction.
- *   - The two consent booleans (`acceptedTerms`,
- *     `acknowledgedSimulation`) live in the same model so the review
- *     step can disable the final submit button until both are true.
+ *   - The billing block mirrors the delivery address shape so a single
+ *     set of address rules applies to both, and `billingSameAsDelivery`
+ *     hides the billing address when the shopper picked the same
+ *     address for both.
  *
- * Hidden fields (`address` when the delivery option is `demo_pickup`)
- * are excluded from the parent's `valid`/`invalid` aggregate, which
- * keeps the delivery page responsive without a separate "is pickup?"
- * branch in every validator.
+ * Hidden fields (`address` when the delivery option is `pickup_point`,
+ * and `billingAddress` when `billingSameAsDelivery` is true) are
+ * excluded from the parent's `valid`/`invalid` aggregate, which keeps
+ * the page responsive without a separate "is pickup?" branch in every
+ * validator.
  */
 
 import {
   type FieldTree,
   type SchemaFn,
+  type SchemaPathTree,
+  PathKind,
   email,
   form,
   pattern,
@@ -36,18 +40,18 @@ import {
   hidden,
 } from '@angular/forms/signals';
 import type { WritableSignal } from '@angular/core';
+import type { DeliveryOptionId as GeneratedDeliveryOptionId } from '../../api/generated/models/delivery-option-id';
+import type { PaymentMethodId as GeneratedPaymentMethodId } from '../../api/generated/models/payment-method-id';
 import type { CheckoutSession } from '../../api/generated/models/checkout-session';
 import { PHONE_INTERNATIONAL } from './contact.schema';
 
-/**
-Allowed delivery option ids (matches OpenAPI `optionId` enum).
-*/
-export type DeliveryOptionId = 'home_delivery' | 'demo_pickup' | '';
+/** Allowed delivery option ids (matches the generated OpenAPI union plus
+ *  the empty initial value). */
+export type DeliveryOptionId = GeneratedDeliveryOptionId | '';
 
-/**
-Allowed payment method ids (matches OpenAPI `paymentMethod` enum).
-*/
-export type PaymentMethod = 'demo_card' | 'demo_cod' | '';
+/** Allowed payment method ids (matches the generated OpenAPI union plus
+ *  the empty initial value). */
+export type PaymentMethod = GeneratedPaymentMethodId | '';
 
 /**
  * Address section model. Only `countryCode: 'HU'` is accepted per
@@ -74,18 +78,15 @@ export interface CheckoutFormModel {
   deliveryOptionId: DeliveryOptionId;
   address: CheckoutFormAddress;
   paymentMethod: PaymentMethod;
-  acceptedTerms: boolean;
-  acknowledgedSimulation: boolean;
+  billingName: string;
+  billingSameAsDelivery: boolean;
+  billingAddress: CheckoutFormAddress;
 }
 
-/**
-Re-exported under the historical name; the rule itself lives in contact.schema.ts.
-*/
+/** Re-exported under the historical name; the rule itself lives in contact.schema.ts. */
 export const PHONE_PATTERN = PHONE_INTERNATIONAL;
 
-/**
-HU postal code regex shared between the schema and the tests.
-*/
+/** HU postal code regex shared between the schema and the tests. */
 export const POSTAL_CODE_PATTERN = /^[1-9][0-9]{3}$/;
 
 /**
@@ -106,90 +107,24 @@ export function createInitialCheckoutFormModel(): CheckoutFormModel {
       line2: '',
     },
     paymentMethod: '',
-    acceptedTerms: false,
-    acknowledgedSimulation: false,
+    billingName: '',
+    billingSameAsDelivery: true,
+    billingAddress: {
+      countryCode: 'HU',
+      postalCode: '',
+      city: '',
+      line1: '',
+      line2: '',
+    },
   };
-}
-
-/**
- * Hydrates the in-memory form model from the persisted
- * CheckoutSession snapshot returned by `getCheckoutSession`. The
- * facade calls this after a successful `loadSession(cartId)` so
- * the user lands on a step with their previously entered values
- * visible — except when they explicitly reload, in which case the
- * `CheckoutFacade.resetDraft()` path runs first and clears them
- * (privacy rule from the spec).
- *
- * Sections (delivery, paymentMethod) absent from the snapshot are
- * preserved from `base` rather than reset to ''. The `updateDraft`
- * mock merges only the supplied sections, so a save that PUTs one
- * section returns a session that omits the others — wiping those
- * fields would force the user to retype values the previous
- * selection already set. The same rule covers sub-fields inside a
- * present section: `paymentMethod` on the wire is a scalar so
- * `undefined`/`null` mean "not present in this response" and the
- * base value is kept.
- */
-export function hydrateCheckoutFormModel(
-  base: CheckoutFormModel,
-  snapshot: {
-    contact?: { fullName?: string; email?: string; phone?: string };
-    delivery?: {
-      optionId?: 'home_delivery' | 'demo_pickup';
-      address?: {
-        countryCode?: 'HU';
-        postalCode?: string;
-        city?: string;
-        line1?: string;
-        line2?: string;
-      };
-    };
-    paymentMethod?: 'demo_card' | 'demo_cod' | null;
-  },
-): CheckoutFormModel {
-  const next: CheckoutFormModel = { ...base };
-  if (snapshot.delivery !== undefined) {
-    if (snapshot.delivery.optionId !== undefined) {
-      next.deliveryOptionId = snapshot.delivery.optionId;
-    }
-    if (snapshot.delivery.address !== undefined) {
-      next.address = {
-        countryCode: 'HU',
-        postalCode: snapshot.delivery.address.postalCode ?? '',
-        city: snapshot.delivery.address.city ?? '',
-        line1: snapshot.delivery.address.line1 ?? '',
-        line2: snapshot.delivery.address.line2 ?? '',
-      };
-    }
-  }
-  if (snapshot.paymentMethod !== undefined && snapshot.paymentMethod !== null) {
-    next.paymentMethod = snapshot.paymentMethod;
-  }
-  if (snapshot.contact !== undefined) {
-    // Sub-fields inside a present `contact` follow the same
-    // "preserve base on absence" rule the delivery / paymentMethod
-    // branches apply. A PUT that round-trips only one field (e.g.
-    // phone) returns a session whose other contact sub-fields are
-    // absent; wiping them would force the user to retype values
-    // they already entered.
-    if (snapshot.contact.fullName !== undefined) {
-      next.fullName = snapshot.contact.fullName;
-    }
-    if (snapshot.contact.email !== undefined) {
-      next.email = snapshot.contact.email;
-    }
-    if (snapshot.contact.phone !== undefined) {
-      next.phone = snapshot.contact.phone;
-    }
-  }
-  return next;
 }
 
 /**
  * Schema bound to the form model. The rules below mirror the wire
  * constraints in `src/mocks/checkout/validate-checkout.ts` so the
  * client never advertises a value the mock would reject. Hidden
- * fields (the address when `deliveryOptionId === 'demo_pickup'`) are
+ * fields (the address when `deliveryOptionId === 'pickup_point'`, and
+ * the billing address when `billingSameAsDelivery` is true) are
  * automatically excluded from validity aggregation.
  *
  * Custom `validate` calls back into pure helpers rather than
@@ -210,43 +145,74 @@ export const checkoutFormSchema: SchemaFn<CheckoutFormModel> = (path) => {
   });
 
   // Address is required when the user picked `home_delivery`; hidden
-  // when `demo_pickup` so its emptiness does not contribute to the
+  // when `pickup_point` so its emptiness does not contribute to the
   // page's `valid()` aggregate. The `when` callback receives the
   // child field's context, so `value` is the address signal — we
   // must read the sibling `deliveryOptionId` via `valueOf`.
   hidden(path.address, {
-    when: (context) => context.valueOf(path.deliveryOptionId) !== 'home_delivery',
+    when: (ctx) => ctx.valueOf(path.deliveryOptionId) !== 'home_delivery',
+  });
+  applyAddressRules(path.address);
+
+  required(path.paymentMethod, {
+    message: 'Válassz fizetési módot.',
   });
 
-  required(path.address.postalCode, {
+  // Billing block. The address is hidden when the shopper copies the
+  // delivery address, so its emptiness does not contribute to the
+  // page's `valid()` aggregate.
+  required(path.billingName, { message: 'A számlázási név megadása kötelező.' });
+
+  hidden(path.billingAddress, {
+    when: (ctx) => ctx.valueOf(path.billingSameAsDelivery),
+  });
+  applyAddressRules(path.billingAddress);
+};
+
+/**
+ * Applies the seven shared address rules to a path. Both the delivery
+ * address (`path.address`) and the billing address
+ * (`path.billingAddress`) use the same wire-level constraints
+ * (`Address` in openapi.yaml: `postalCode` 1-9 + 3 digits, `city`
+ * 2..80, `line1` 3..120, `line2` optional up to 120), so the rules
+ * live in one place and stay in lock-step when the contract moves.
+ *
+ * The path type is inferred at the call site so the generic child
+ * `PathKind` parameter that `SchemaPath` requires stays correct
+ * without a hand-written annotation.
+ */
+function applyAddressRules(path: SchemaPathTree<CheckoutFormAddress, PathKind.Child>): void {
+  required(path.postalCode, {
     message: 'Az irányítószám megadása kötelező.',
   });
-  pattern(path.address.postalCode, POSTAL_CODE_PATTERN, {
+  pattern(path.postalCode, POSTAL_CODE_PATTERN, {
     message: 'Az irányítószám formátuma 1-9 kezdetű négyjegyű szám.',
   });
-  required(path.address.city, {
+  required(path.city, {
     message: 'A település megadása kötelező.',
   });
-  validate(path.address.city, ({ value }) =>
-    value().trim().length >= 2 && value().trim().length <= 80
+  validate(path.city, ({ value }) => {
+    const trimmed = value().trim();
+    return trimmed.length >= 2 && trimmed.length <= 80
       ? null
       : {
           kind: 'addressCity',
           message: 'A település 2 és 80 karakter közé eshet.',
-        },
-  );
-  required(path.address.line1, {
+        };
+  });
+  required(path.line1, {
     message: 'A cím első sora kötelező.',
   });
-  validate(path.address.line1, ({ value }) =>
-    value().trim().length >= 3 && value().trim().length <= 120
+  validate(path.line1, ({ value }) => {
+    const trimmed = value().trim();
+    return trimmed.length >= 3 && trimmed.length <= 120
       ? null
       : {
           kind: 'addressLine1',
           message: 'A cím első sora 3 és 120 karakter közé eshet.',
-        },
-  );
-  validate(path.address.line2, ({ value }) => {
+        };
+  });
+  validate(path.line2, ({ value }) => {
     const v = value();
     if (v.length === 0) return null;
     return v.trim().length <= 120
@@ -256,28 +222,7 @@ export const checkoutFormSchema: SchemaFn<CheckoutFormModel> = (path) => {
           message: 'A cím második sora legfeljebb 120 karakter lehet.',
         };
   });
-
-  required(path.paymentMethod, {
-    message: 'Válassz fizetési módot.',
-  });
-
-  validate(path.acceptedTerms, ({ value }) =>
-    value()
-      ? null
-      : {
-          kind: 'mustAcceptTerms',
-          message: 'A demo feltételek elfogadása kötelező.',
-        },
-  );
-  validate(path.acknowledgedSimulation, ({ value }) =>
-    value()
-      ? null
-      : {
-          kind: 'mustAcknowledgeSimulation',
-          message: 'A szimuláció tudomásulvétele kötelező.',
-        },
-  );
-};
+}
 
 /**
  * Builds the Signal Forms FieldTree from a writable model signal.
@@ -295,9 +240,9 @@ export function buildCheckoutForm(
  *  `buildCheckoutForm` under the name the specification uses. */
 export type CheckoutFieldTree = FieldTree<CheckoutFormModel>;
 
-/** The spec's own shape (components.md:7 — "Shared types"): the three
+/** The spec's own shape (components.md:7 — "Shared types"): the four
  *  optional draft fields out of the six `CheckoutFacade.session()`
  *  carries. Structural typing lets a full `CheckoutSession` bind
  *  directly to a `[draft]` input typed this way — the extra fields on
  *  the wider type are simply ignored. */
-export type CheckoutDraft = Pick<CheckoutSession, 'contact' | 'delivery' | 'paymentMethod'>;
+export type CheckoutDraft = Pick<CheckoutSession, 'contact' | 'billing' | 'delivery' | 'payment'>;

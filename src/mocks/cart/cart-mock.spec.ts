@@ -1,930 +1,574 @@
 /**
- * T07 - cart mock focused unit suite.
+ * MIM-211 — cart mock focused unit suite.
  *
  * Each acceptance criterion has at least one named assertion in the
- * file. The suite exercises every line of `cart-domain.ts` and
- * `idempotency.ts` and the cart handler dispatch path so the
- * coverage gate stays green on the owned runtime surface.
+ * file. The suite exercises every line of `cart-store.ts` and the
+ * cart handler dispatch path so the coverage gate stays green on
+ * the owned runtime surface.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 import { createHandlers } from '../../mocks/create-handlers';
-// Side-effect import - registers cart handlers in the T05 registry.
-import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
-import { CART_DURATION_MS, CartDomain, MAX_LINE_QUANTITY } from '../../mocks/cart/cart-domain';
 import {
-  IDEMPOTENCY_WINDOW_MS,
-  IdempotencyStore,
-  deriveIdempotencyKey,
-  hashPayload,
-} from '../../mocks/idempotency';
-import { Repository as Repo } from '../../mocks/repository';
-import { createDeterministicIds, createFixedClock } from '../../mocks/scenarios';
+  catalogStore,
+  isCatalogFixtureShape,
+  loadCatalogFixture,
+} from '../../mocks/catalog/catalog.handlers';
+import { type VariantLookup } from '../../mocks/catalog/catalog-store';
+import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/cart-store';
+import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
+import { Repository } from '../../mocks/repository';
+import {
+  createDeterministicIds,
+  createFixedClock,
+  DEFAULT_SCENARIO,
+  type Clock,
+  type Ids,
+} from '../../mocks/scenarios';
 import { server, useMswServer } from '../../../tests/msw-server';
+import { isRecord } from '../../mocks/is-record';
 
-// The shared MSW server's lifecycle is registered here, in this file, because
-// the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
-// process rather than once per file. See `tests/msw-server.ts`.
 useMswServer();
 
-const SESSION_A = 'session-aaaaaaaaaaaa';
-const SESSION_B = 'session-bbbbbbbbbbbb';
-const VARIANT_G256 = 'demo-one-5g-graphite-256';
-const VARIANT_G512 = 'demo-one-5g-graphite-512';
-const VARIANT_S256 = 'demo-one-5g-silver-256';
-const IDEMPOTENCY_KEY_BASE = 'idem-key-12345678';
+const SESSION_1 = 'spec-session-0001';
+const SESSION_2 = 'spec-session-0002';
+const VARIANT_MOTO_256 = 'motorola-edge-50-fusion--zold--256';
+const VARIANT_HONOR_128 = 'honor-x7d--fekete--128';
+const VARIANT_IPHONE_OOS = 'apple-iphone-17e--halvany-rozsaszin--256';
+const VARIANT_IPHONE_BURGUNDI = 'apple-iphone-18-pro-max--burgundi--256';
 
-function quoteEtag(version: number): string {
-  return `"${String(version)}"`;
-}
+let clock: Clock;
+let ids: Ids;
+let options: {
+  repository: Repository;
+  clock: Clock;
+  ids: Ids;
+  scenario: ReturnType<Repository['getScenario']>;
+  apiRoot: string;
+};
 
-function makeEnvironment(initialClockMs = Date.parse('2026-09-14T10:00:00.000Z')): {
-  clock: ReturnType<typeof createFixedClock>;
-  ids: ReturnType<typeof createDeterministicIds>;
-  repository: Repo;
-  idempotency: IdempotencyStore;
-  domain: CartDomain;
-} {
-  const clock = createFixedClock(new Date(initialClockMs).toISOString());
-  const ids = createDeterministicIds(7);
-  const scenario = {
-    name: 'cart-mock-suite',
-    seed: 7,
-    clockOffsetMs: 0,
-    isolated: true,
+beforeAll(() => {
+  if (!isCatalogFixtureShape(catalogFixture)) {
+    throw new Error('[cart-mock.spec] committed fixture does not match expected shape');
+  }
+  loadCatalogFixture(catalogFixture);
+});
+
+beforeEach(() => {
+  clock = createFixedClock('2026-09-20T10:00:00.000Z');
+  ids = createDeterministicIds(1);
+  options = {
+    repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+    clock,
+    ids,
+    scenario: DEFAULT_SCENARIO,
+    apiRoot: '/api/v1',
   };
-  const repo = new Repo(scenario, ids, clock);
-  repo.loadProducts([DEMO_PRODUCT]);
-  const idempotency = new IdempotencyStore(clock);
-  const domain = new CartDomain(repo, clock, ids, idempotency);
-  return { clock, ids, repository: repo, idempotency, domain };
+  // Seed the catalogue-derived repository product so the checkout,
+  // payment and order mocks keep reading the same product fixture
+  // they always have, even though the cart store does not consult
+  // it.
+  options.repository.loadProducts([DEMO_PRODUCT]);
+  server.use(...createHandlers(options));
+});
+
+function session1Headers(): Record<string, string> {
+  return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
 }
 
-describe('T07-AC01: variant merging and quantity boundary', () => {
-  it('merges repeated adds of the same variant into one line and accumulates quantity', () => {
-    const environment = makeEnvironment();
-    const cart = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-1`,
-    });
-    expect(cart.ok).toBe(true);
-    if (!cart.ok) throw new Error('createCart failed');
-    const cartId = cart.value.id;
-    const ifMatch1 = quoteEtag(cart.value.version);
-    const first = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId,
-      ifMatch: ifMatch1,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-2`,
-      variantId: VARIANT_G256,
-      quantity: 3,
-    });
-    expect(first.ok).toBe(true);
-    if (!first.ok) throw new Error('first add failed');
-    const ifMatch2 = quoteEtag(first.value.version);
-    const second = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId,
-      ifMatch: ifMatch2,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-3`,
-      variantId: VARIANT_G256,
-      quantity: 2,
-    });
-    expect(second.ok).toBe(true);
-    if (!second.ok) throw new Error('second add failed');
-    expect(second.value.items).toHaveLength(1);
-    expect(second.value.items[0]?.quantity).toBe(5);
-    expect(second.value.version).toBe(3);
-    expect(second.value.items[0]?.lineTotal).toEqual({ amount: 339_990 * 5, currency: 'HUF' });
-    expect(second.value.items[0]?.unitPrice).toEqual({ amount: 339_990, currency: 'HUF' });
+function session2Headers(): Record<string, string> {
+  return { 'X-Demo-Session': SESSION_2, 'Content-Type': 'application/json' };
+}
+
+function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+  expect(isRecord(value)).toBe(true);
+}
+
+function readString(body: Record<string, unknown>, key: string): string {
+  const value = body[key];
+  expect(typeof value).toBe('string');
+  if (typeof value !== 'string') throw new Error(`${key} is not a string`);
+  return value;
+}
+
+function readNumber(body: Record<string, unknown>, key: string): number {
+  const value = body[key];
+  expect(typeof value).toBe('number');
+  if (typeof value !== 'number') throw new Error(`${key} is not a number`);
+  return value;
+}
+
+describe('GET /cart on a fresh session', () => {
+  it('returns the session cart with ETag "1", empty items, and an expiresAt 30 days later', async () => {
+    const res = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBe('"1"');
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['items']).toEqual([]);
+    expect(readNumber(body, 'lineCount')).toBe(0);
+    expect(readNumber(body, 'totalQuantity')).toBe(0);
+    expect(body['subtotal']).toEqual({ amount: 0, currency: 'HUF' });
+    expect(body['notices']).toEqual([]);
+    expect(readNumber(body, 'version')).toBe(1);
+    expect(readString(body, 'expiresAt')).toBe('2026-10-20T10:00:00.000Z');
+    const id = readString(body, 'id');
+    expect(id.length).toBeGreaterThan(0);
+    // Second GET returns the same id.
+    const second = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(second.status).toBe(200);
+    const secondBody: unknown = await second.json();
+    expectRecord(secondBody);
+    expect(readString(secondBody, 'id')).toBe(id);
   });
 
-  it('keeps different variants on separate lines and computes subtotals per line', () => {
-    const environment = makeEnvironment();
-    const cart = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-4`,
-    });
-    if (!cart.ok) throw new Error('createCart failed');
-    const ifMatch1 = quoteEtag(cart.value.version);
-    const a = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: cart.value.id,
-      ifMatch: ifMatch1,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-5`,
-      variantId: VARIANT_G256,
-      quantity: 2,
-    });
-    if (!a.ok) throw new Error('add G256 failed');
-    const ifMatch2 = quoteEtag(a.value.version);
-    const b = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: cart.value.id,
-      ifMatch: ifMatch2,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-6`,
-      variantId: VARIANT_S256,
-      quantity: 1,
-    });
-    expect(b.ok).toBe(true);
-    if (!b.ok) throw new Error('add S256 failed');
-    expect(b.value.items).toHaveLength(2);
-    const graphite = b.value.items.find((line) => line.variantId === VARIANT_G256);
-    const silver = b.value.items.find((line) => line.variantId === VARIANT_S256);
-    expect(graphite?.quantity).toBe(2);
-    expect(graphite?.lineTotal).toEqual({ amount: 339_990 * 2, currency: 'HUF' });
-    expect(silver?.quantity).toBe(1);
-    expect(silver?.lineTotal).toEqual({ amount: 344_990, currency: 'HUF' });
-  });
-
-  it('rejects quantity above max (5) with 422 QUANTITY_LIMIT and never silently clamps', () => {
-    const environment = makeEnvironment();
-    const cart = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-7`,
-    });
-    if (!cart.ok) throw new Error('createCart failed');
-    const tooHigh = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: cart.value.id,
-      ifMatch: quoteEtag(cart.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-8`,
-      variantId: VARIANT_G256,
-      quantity: MAX_LINE_QUANTITY + 1,
-    });
-    expect(tooHigh.ok).toBe(false);
-    if (tooHigh.ok) throw new Error('expected rejection');
-    expect(tooHigh.problem.status).toBe(422);
-    expect(tooHigh.problem.code).toBe('QUANTITY_LIMIT');
-    // Cart unchanged.
-    expect(environment.repository.getCart(cart.value.id)?.items).toHaveLength(0);
-    expect(environment.repository.getCart(cart.value.id)?.version).toBe(1);
-  });
-
-  it('rejects quantity below 1 with 422 QUANTITY_LIMIT', () => {
-    const environment = makeEnvironment();
-    const cart = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-9`,
-    });
-    if (!cart.ok) throw new Error('createCart failed');
-    const tooLow = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: cart.value.id,
-      ifMatch: quoteEtag(cart.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-10`,
-      variantId: VARIANT_G256,
-      quantity: 0,
-    });
-    expect(tooLow.ok).toBe(false);
-    if (tooLow.ok) throw new Error('expected rejection');
-    expect(tooLow.problem.status).toBe(422);
-    expect(tooLow.problem.code).toBe('QUANTITY_LIMIT');
-  });
-
-  it('rejects merged total above variant maxQuantity with 422 QUANTITY_LIMIT', () => {
-    const environment = makeEnvironment();
-    const cart = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-11`,
-    });
-    if (!cart.ok) throw new Error('createCart failed');
-    const first = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: cart.value.id,
-      ifMatch: quoteEtag(cart.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-12`,
-      variantId: VARIANT_G256,
-      quantity: 4,
-    });
-    if (!first.ok) throw new Error('first add failed');
-    const tooMuch = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: cart.value.id,
-      ifMatch: quoteEtag(first.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-13`,
-      variantId: VARIANT_G256,
-      quantity: 2,
-    });
-    expect(tooMuch.ok).toBe(false);
-    if (tooMuch.ok) throw new Error('expected rejection');
-    expect(tooMuch.problem.status).toBe(422);
-    expect(tooMuch.problem.code).toBe('QUANTITY_LIMIT');
-    // Cart preserved.
-    const stored = environment.repository.getCart(cart.value.id);
-    expect(stored?.items[0]?.quantity).toBe(4);
-    expect(stored?.version).toBe(2);
-  });
-
-  it('rejects unknown variant ids with 404 NOT_FOUND', () => {
-    const environment = makeEnvironment();
-    const cart = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-14`,
-    });
-    if (!cart.ok) throw new Error('createCart failed');
-    const missing = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: cart.value.id,
-      ifMatch: quoteEtag(cart.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-15`,
-      variantId: 'demo-one-5g-graphite-9999',
-      quantity: 1,
-    });
-    expect(missing.ok).toBe(false);
-    if (missing.ok) throw new Error('expected rejection');
-    expect(missing.problem.status).toBe(404);
-    expect(missing.problem.code).toBe('NOT_FOUND');
+  it('returns 400 INVALID_REQUEST when the X-Demo-Session header is missing', async () => {
+    const res = await fetch('http://localhost/api/v1/cart');
+    expect(res.status).toBe(400);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['code']).toBe('INVALID_REQUEST');
+    expect(body['type']).toBe('urn:mi-bolt:problem:invalid-request');
   });
 });
 
-describe('T07-AC02: version increments and stale-version guard', () => {
-  it('increments cart version by exactly one on every successful mutation', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-16`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    expect(created.value.version).toBe(1);
-    const firstAdd = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add1`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    if (!firstAdd.ok) throw new Error('first add failed');
-    expect(firstAdd.value.version).toBe(2);
-    const secondAdd = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(firstAdd.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-add2`,
-      variantId: VARIANT_S256,
-      quantity: 1,
-    });
-    if (!secondAdd.ok) throw new Error('second add failed');
-    expect(secondAdd.value.version).toBe(3);
-    const itemId = secondAdd.value.items[0]?.id ?? '';
-    const set = environment.domain.setCartItemQuantity({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      itemId,
-      ifMatch: quoteEtag(secondAdd.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-set1`,
-      quantity: 3,
-    });
-    if (!set.ok) throw new Error('set failed');
-    expect(set.value.version).toBe(4);
-    const removed = environment.domain.removeCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      itemId,
-      ifMatch: quoteEtag(set.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-rm1`,
-    });
-    if (!removed.ok) throw new Error('remove failed');
-    expect(removed.value.version).toBe(5);
-  });
-
-  it('returns 409 CART_VERSION_CONFLICT on stale If-Match without mutating the cart', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-17`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    // First successful add -> v2.
-    const first = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-18`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    if (!first.ok) throw new Error('first add failed');
-    // Second attempt uses the stale (initial) version -> conflict.
-    const stale = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-19`,
-      variantId: VARIANT_G512,
-      quantity: 2,
-    });
-    expect(stale.ok).toBe(false);
-    if (stale.ok) throw new Error('expected rejection');
-    expect(stale.problem.status).toBe(409);
-    expect(stale.problem.code).toBe('CART_VERSION_CONFLICT');
-    const stored = environment.repository.getCart(created.value.id);
-    expect(stored?.version).toBe(2);
-    expect(stored?.items).toHaveLength(1);
-    expect(stored?.items[0]?.variantId).toBe(VARIANT_G256);
-  });
-
-  it('totals are whole HUF derived from catalogue prices', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-20`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const result = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-21`,
-      variantId: VARIANT_G256,
-      quantity: 3,
-    });
-    if (!result.ok) throw new Error('add failed');
-    expect(result.value.items[0]?.unitPrice).toEqual({ amount: 339_990, currency: 'HUF' });
-    expect(result.value.items[0]?.lineTotal).toEqual({ amount: 339_990 * 3, currency: 'HUF' });
-    expect(Number.isInteger(result.value.items[0]?.unitPrice.amount)).toBe(true);
-    expect(Number.isInteger(result.value.items[0]?.lineTotal.amount)).toBe(true);
-  });
-});
-
-describe('T07-AC03: idempotency replay and conflict', () => {
-  it('replays the cached response before the version check', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-22`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const initialAdd = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-23`,
-      variantId: VARIANT_G256,
-      quantity: 2,
-    });
-    if (!initialAdd.ok) throw new Error('add failed');
-    // Replay uses a stale If-Match - replay must win over the version
-    // check, returning the original cart body without mutating.
-    const replay = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: '"1"',
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-23`,
-      variantId: VARIANT_G256,
-      quantity: 2,
-    });
-    expect(replay.ok).toBe(true);
-    if (!replay.ok) throw new Error('expected replay');
-    expect(replay.value.version).toBe(initialAdd.value.version);
-    expect(environment.repository.getCart(created.value.id)?.version).toBe(2);
-  });
-
-  it('returns 409 IDEMPOTENCY_CONFLICT when the same key carries a different payload', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-24`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const first = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-25`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    if (!first.ok) throw new Error('first add failed');
-    const conflict = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(first.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-25`,
-      variantId: VARIANT_G512,
-      quantity: 2,
-    });
-    expect(conflict.ok).toBe(false);
-    if (conflict.ok) throw new Error('expected conflict');
-    expect(conflict.problem.status).toBe(409);
-    expect(conflict.problem.code).toBe('IDEMPOTENCY_CONFLICT');
-    expect(environment.repository.getCart(created.value.id)?.version).toBe(2);
-  });
-
-  it('expires idempotency cache entries after the 24-hour window', () => {
-    const environment = makeEnvironment();
-    // We exercise the cache boundary by clearing the entry directly so
-    // the cart and idempotency expiry timelines (both 24h) do not
-    // collapse into a 410. The IdempotencyStore's expiry logic is
-    // covered by the next test; this one proves the cart-domain wires
-    // a missing replay into a fresh execution path.
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-26`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const first = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-27`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    if (!first.ok) throw new Error('first add failed');
-    environment.idempotency.clear();
-    const after = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(first.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-27`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(after.ok).toBe(true);
-    if (!after.ok) throw new Error('expected success after expiry');
-    expect(after.value.version).toBe(first.value.version + 1);
-  });
-
-  it('keeps the replay inside the 24-hour window when the clock advances partially', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-26b`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const first = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-27b`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    if (!first.ok) throw new Error('first add failed');
-    environment.clock.advanceMs(IDEMPOTENCY_WINDOW_MS - 1);
-    const replay = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: '"99"',
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-27b`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(replay.ok).toBe(true);
-    if (!replay.ok) throw new Error('expected replay');
-    expect(replay.value.version).toBe(first.value.version);
-  });
-
-  it('hashPayload canonicalizes object property order', () => {
-    expect(hashPayload({ b: 1, a: 2 })).toBe(hashPayload({ a: 2, b: 1 }));
-    expect(hashPayload({ a: [3, 1, 2] })).not.toBe(hashPayload({ a: [1, 2, 3] }));
-    expect(hashPayload({ nested: { b: 2, a: 1 } })).toBe(hashPayload({ nested: { a: 1, b: 2 } }));
-  });
-
-  it('deriveIdempotencyKey normalizes method casing', () => {
-    expect(deriveIdempotencyKey('POST', '/x', 's', 'k')).toBe(
-      deriveIdempotencyKey('post', '/x', 's', 'k'),
-    );
-    expect(deriveIdempotencyKey('POST', '/x', 's', 'k')).not.toBe(
-      deriveIdempotencyKey('POST', '/x', 't', 'k'),
-    );
-  });
-
-  it('IdempotencyStore returns cached outcomes and clears expired entries', () => {
-    const environment = makeEnvironment();
-    environment.idempotency.record('k', 'hash-a', { status: 201, body: { hello: 'world' } });
-    expect(environment.idempotency.find('k', 'hash-a')).toEqual({
-      status: 201,
-      body: { hello: 'world' },
-    });
-    expect(environment.idempotency.find('k', 'hash-b')).toBeNull();
-    expect(environment.idempotency.hasConflictingPayload('k', 'hash-b')).toBe(true);
-    environment.clock.advanceMs(IDEMPOTENCY_WINDOW_MS + 1);
-    expect(environment.idempotency.find('k', 'hash-a')).toBeNull();
-    expect(environment.idempotency.hasConflictingPayload('k', 'hash-b')).toBe(false);
-  });
-
-  it('IdempotencyStore.clear and size expose the test-only contract', () => {
-    const environment = makeEnvironment();
-    expect(environment.idempotency.size()).toBe(0);
-    environment.idempotency.record('k', 'hash', { status: 200, body: null });
-    expect(environment.idempotency.size()).toBe(1);
-    environment.idempotency.clear();
-    expect(environment.idempotency.size()).toBe(0);
-  });
-});
-
-describe('T07-AC04: 410 expiry and 409 cart preservation', () => {
-  it('returns 410 CART_EXPIRED once now >= expiresAt and preserves cart content', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-28`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const initialAdd = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-29`,
-      variantId: VARIANT_G256,
-      quantity: 2,
-    });
-    if (!initialAdd.ok) throw new Error('add failed');
-    environment.clock.advanceMs(CART_DURATION_MS);
-    const get = environment.domain.getCart({ sessionId: SESSION_A, cartId: created.value.id });
-    expect(get.ok).toBe(false);
-    if (get.ok) throw new Error('expected expiry');
-    expect(get.problem.status).toBe(410);
-    expect(get.problem.code).toBe('CART_EXPIRED');
-    const addAfterExpiry = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(initialAdd.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-30`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(addAfterExpiry.ok).toBe(false);
-    if (addAfterExpiry.ok) throw new Error('expected expiry');
-    expect(addAfterExpiry.problem.status).toBe(410);
-    // Visible cart content unchanged on 410 (still v2 with two units).
-    const stored = environment.repository.getCart(created.value.id);
-    expect(stored?.version).toBe(2);
-    expect(stored?.items[0]?.quantity).toBe(2);
-  });
-
-  it('keeps cart content + version unchanged when a 409 CART_VERSION_CONFLICT is raised', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-31`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const first = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-32`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    if (!first.ok) throw new Error('first add failed');
-    const stale = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-33`,
-      variantId: VARIANT_S256,
-      quantity: 2,
-    });
-    expect(stale.ok).toBe(false);
-    const stored = environment.repository.getCart(created.value.id);
-    expect(stored?.version).toBe(2);
-    expect(stored?.items).toHaveLength(1);
-    expect(stored?.items[0]?.variantId).toBe(VARIANT_G256);
-    expect(stored?.items[0]?.quantity).toBe(1);
-  });
-});
-
-describe('T07-AC05: session isolation', () => {
-  it('rejects cross-session reads with 404 NOT_FOUND', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-34`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const wrongSession = environment.domain.getCart({
-      sessionId: SESSION_B,
-      cartId: created.value.id,
-    });
-    expect(wrongSession.ok).toBe(false);
-    if (wrongSession.ok) throw new Error('expected 404');
-    expect(wrongSession.problem.status).toBe(404);
-    expect(wrongSession.problem.code).toBe('NOT_FOUND');
-  });
-
-  it('rejects cross-session mutations with 404 NOT_FOUND', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-35`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const wrongSession = environment.domain.addCartItem({
-      sessionId: SESSION_B,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-36`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(wrongSession.ok).toBe(false);
-    if (wrongSession.ok) throw new Error('expected 404');
-    expect(wrongSession.problem.status).toBe(404);
-    expect(wrongSession.problem.code).toBe('NOT_FOUND');
-    // Visible cart unchanged.
-    const stored = environment.repository.getCart(created.value.id);
-    expect(stored?.items).toHaveLength(0);
-    expect(stored?.version).toBe(1);
-  });
-
-  it('treats idempotency keys as session-scoped', () => {
-    const environment = makeEnvironment();
-    // Session A creates a cart and records an idempotent create result.
-    const a = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-37`,
-    });
-    if (!a.ok) throw new Error('a failed');
-    // Session B uses the same Idempotency-Key and gets a fresh cart.
-    const b = environment.domain.createCart({
-      sessionId: SESSION_B,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-37`,
-    });
-    expect(b.ok).toBe(true);
-    if (!b.ok) throw new Error('b failed');
-    expect(b.value.id).not.toBe(a.value.id);
-  });
-});
-
-describe('CartDomain header validation', () => {
-  it('rejects malformed session, If-Match, and Idempotency-Key with 400', () => {
-    const environment = makeEnvironment();
-    const badSession = environment.domain.createCart({
-      sessionId: 'short',
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-38`,
-    });
-    expect(badSession.ok).toBe(false);
-    if (badSession.ok) throw new Error('expected rejection');
-    expect(badSession.problem.status).toBe(400);
-    expect(badSession.problem.code).toBe('VALIDATION_FAILED');
-
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-39`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const missingKey = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: '"1"',
-      idempotencyKey: null,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(missingKey.ok).toBe(false);
-    if (missingKey.ok) throw new Error('expected rejection');
-    expect(missingKey.problem.status).toBe(400);
-
-    const shortKey = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: '"1"',
-      idempotencyKey: 'short',
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(shortKey.ok).toBe(false);
-    if (shortKey.ok) throw new Error('expected rejection');
-    expect(shortKey.problem.status).toBe(400);
-
-    const badIfMatch = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: 'not-quoted',
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-40`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(badIfMatch.ok).toBe(false);
-    if (badIfMatch.ok) throw new Error('expected rejection');
-    expect(badIfMatch.problem.status).toBe(400);
-
-    const missingIfMatch = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: null,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-41`,
-      variantId: VARIANT_G256,
-      quantity: 1,
-    });
-    expect(missingIfMatch.ok).toBe(false);
-    if (missingIfMatch.ok) throw new Error('expected rejection');
-    expect(missingIfMatch.problem.status).toBe(400);
-  });
-
-  it('rejects non-integer quantity with 422', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-42`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const fractional = environment.domain.addCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-43`,
-      variantId: VARIANT_G256,
-      quantity: 1.5,
-    });
-    expect(fractional.ok).toBe(false);
-    if (fractional.ok) throw new Error('expected rejection');
-    expect(fractional.problem.status).toBe(422);
-    expect(fractional.problem.code).toBe('QUANTITY_LIMIT');
-  });
-
-  it('rejects setCartItemQuantity on unknown itemId with 404', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-44`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const result = environment.domain.setCartItemQuantity({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      itemId: 'missing-line-id',
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-45`,
-      quantity: 1,
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.status).toBe(404);
-  });
-
-  it('rejects removeCartItem on unknown itemId with 404', () => {
-    const environment = makeEnvironment();
-    const created = environment.domain.createCart({
-      sessionId: SESSION_A,
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-46`,
-    });
-    if (!created.ok) throw new Error('createCart failed');
-    const result = environment.domain.removeCartItem({
-      sessionId: SESSION_A,
-      cartId: created.value.id,
-      itemId: 'missing-line-id',
-      ifMatch: quoteEtag(created.value.version),
-      idempotencyKey: `${IDEMPOTENCY_KEY_BASE}-47`,
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected rejection');
-    expect(result.problem.status).toBe(404);
-  });
-});
-
-describe('cart handler dispatch path (MSW + SDK wire)', () => {
-  let environment: ReturnType<typeof makeEnvironment>;
-
-  beforeEach(() => {
-    environment = makeEnvironment();
-    const handlers = createHandlers({
-      repository: environment.repository,
-      clock: environment.clock,
-      ids: environment.ids,
-      scenario: environment.repository.getScenario(),
-      apiRoot: '/api/v1',
-    });
-    server.use(...handlers);
-  });
-
-  afterEach(() => {
-    server.resetHandlers();
-  });
-
-  function url(path: string): string {
-    return `http://127.0.0.1/api/v1${path}`;
-  }
-
-  function commonHeaders(idempotencyKey: string): Record<string, string> {
-    return {
-      'X-Demo-Session': SESSION_A,
-      'Idempotency-Key': idempotencyKey,
-      'Content-Type': 'application/json',
-    };
-  }
-
-  async function postCart(): Promise<{ id: string; version: number }> {
-    const response = await fetch(url('/carts'), {
+describe('POST /cart/items', () => {
+  it('adds a variant with the merged line shape, ETag bumped to "2"', async () => {
+    const res = await fetch('http://localhost/api/v1/cart/items', {
       method: 'POST',
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-create`),
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 2 }),
     });
-    expect(response.status).toBe(201);
-    const body = (await response.json()) as { id: string; version: number };
-    return body;
-  }
-
-  it('creates a cart via the wire contract and returns the canonical Cart shape', async () => {
-    const body = await postCart();
-    expect(body.id).toMatch(/^cart-cart-mock-suite-/);
-    expect(body.version).toBe(1);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('ETag')).toBe('"2"');
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const items = body['items'];
+    expect(Array.isArray(items)).toBe(true);
+    if (!Array.isArray(items)) throw new Error('items not an array');
+    expect(items).toHaveLength(1);
+    const item: unknown = items[0];
+    expectRecord(item);
+    expect(item['productSlug']).toBe('motorola-edge-50-fusion');
+    expect(item['variantSlug']).toBe('zold-256gb');
+    expect(item['colorName']).toBe('Zöld');
+    expect(item['storageGb']).toBe(256);
+    expect(item['unitPrice']).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(item['lineTotal']).toEqual({ amount: 179_980, currency: 'HUF' });
+    expect(item['maxQuantity']).toBe(5);
+    expect(item['availability']).toBe('in_stock');
+    expect(item['quantity']).toBe(2);
+    expect(readNumber(body, 'lineCount')).toBe(1);
+    expect(readNumber(body, 'totalQuantity')).toBe(2);
+    expect(body['subtotal']).toEqual({ amount: 179_980, currency: 'HUF' });
   });
 
-  it('runs an add → set → remove flow over MSW with the expected cart version chain', async () => {
-    const cart = await postCart();
-    const add = await fetch(url(`/carts/${cart.id}/items`), {
+  it('merges a second add into the same line and clamps at the variant cap with QUANTITY_LIMIT', async () => {
+    const first = await fetch('http://localhost/api/v1/cart/items', {
       method: 'POST',
-      headers: {
-        ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-add`),
-        'If-Match': quoteEtag(cart.version),
-      },
-      body: JSON.stringify({ variantId: VARIANT_G256, quantity: 1 }),
-    });
-    expect(add.status).toBe(200);
-    const afterAdd = (await add.json()) as {
-      version: number;
-      items: { id: string; quantity: number }[];
-    };
-    expect(afterAdd.version).toBe(2);
-    expect(afterAdd.items).toHaveLength(1);
-    const itemId = afterAdd.items[0].id;
-    const patch = await fetch(url(`/carts/${cart.id}/items/${itemId}`), {
-      method: 'PATCH',
-      headers: {
-        ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-set`),
-        'If-Match': quoteEtag(afterAdd.version),
-      },
-      body: JSON.stringify({ quantity: 3 }),
-    });
-    expect(patch.status).toBe(200);
-    const afterSet = (await patch.json()) as { version: number; items: { quantity: number }[] };
-    expect(afterSet.version).toBe(3);
-    expect(afterSet.items[0]?.quantity).toBe(3);
-    const del = await fetch(url(`/carts/${cart.id}/items/${itemId}`), {
-      method: 'DELETE',
-      headers: {
-        ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-del`),
-        'If-Match': quoteEtag(afterSet.version),
-      },
-    });
-    expect(del.status).toBe(200);
-    const afterDel = (await del.json()) as { version: number; items: unknown[] };
-    expect(afterDel.version).toBe(4);
-    expect(afterDel.items).toHaveLength(0);
-  });
-
-  it('returns 409 CART_VERSION_CONFLICT when the wire If-Match is stale', async () => {
-    const cart = await postCart();
-    const response = await fetch(url(`/carts/${cart.id}/items`), {
-      method: 'POST',
-      headers: { ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-stale`), 'If-Match': '"99"' },
-      body: JSON.stringify({ variantId: VARIANT_G256, quantity: 1 }),
-    });
-    expect(response.status).toBe(409);
-    const body = (await response.json()) as { code: string };
-    expect(body.code).toBe('CART_VERSION_CONFLICT');
-  });
-
-  it('returns 410 CART_EXPIRED after the clock advances past the cart expiry', async () => {
-    const cart = await postCart();
-    environment.clock.advanceMs(CART_DURATION_MS + 1);
-    const response = await fetch(url(`/carts/${cart.id}`), {
-      headers: commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-expired`),
-    });
-    expect(response.status).toBe(410);
-    const body = (await response.json()) as { code: string };
-    expect(body.code).toBe('CART_EXPIRED');
-  });
-
-  it('returns 404 when a different session reads the cart', async () => {
-    const cart = await postCart();
-    const response = await fetch(url(`/carts/${cart.id}`), {
-      headers: {
-        ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-other`),
-        'X-Demo-Session': SESSION_B,
-      },
-    });
-    expect(response.status).toBe(404);
-    const body = (await response.json()) as { code: string };
-    expect(body.code).toBe('NOT_FOUND');
-  });
-
-  it('returns 409 IDEMPOTENCY_CONFLICT on a same-key + different-body wire request', async () => {
-    const cart = await postCart();
-    const first = await fetch(url(`/carts/${cart.id}/items`), {
-      method: 'POST',
-      headers: {
-        ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-conflict`),
-        'If-Match': quoteEtag(cart.version),
-      },
-      body: JSON.stringify({ variantId: VARIANT_G256, quantity: 1 }),
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 2 }),
     });
     expect(first.status).toBe(200);
-    const after = (await first.json()) as { version: number };
-    const conflict = await fetch(url(`/carts/${cart.id}/items`), {
+    const second = await fetch('http://localhost/api/v1/cart/items', {
       method: 'POST',
-      headers: {
-        ...commonHeaders(`${IDEMPOTENCY_KEY_BASE}-wire-conflict`),
-        'If-Match': quoteEtag(after.version),
-      },
-      body: JSON.stringify({ variantId: VARIANT_G512, quantity: 2 }),
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 3 }),
     });
-    expect(conflict.status).toBe(409);
-    const body = (await conflict.json()) as { code: string };
-    expect(body.code).toBe('IDEMPOTENCY_CONFLICT');
+    expect(second.status).toBe(200);
+    expect(second.headers.get('ETag')).toBe('"3"');
+    const body: unknown = await second.json();
+    expectRecord(body);
+    const items = body['items'];
+    expect(Array.isArray(items)).toBe(true);
+    if (!Array.isArray(items)) throw new Error('items not an array');
+    expect(items).toHaveLength(1);
+    const merged: unknown = items[0];
+    expectRecord(merged);
+    expect(readNumber(merged, 'quantity')).toBe(5);
+
+    const over = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"3"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    expect(over.status).toBe(409);
+    const overBody: unknown = await over.json();
+    expectRecord(overBody);
+    expect(overBody['code']).toBe('QUANTITY_LIMIT');
+    expect(overBody['type']).toBe('urn:mi-bolt:problem:quantity-limit');
+    expect(overBody['params']).toEqual({ max: 5, requested: 6 });
+
+    // The following GET still shows version 3 (the rejection did not mutate).
+    const get = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(get.status).toBe(200);
+    const getBody: unknown = await get.json();
+    expectRecord(getBody);
+    expect(readNumber(getBody, 'version')).toBe(3);
+  });
+
+  it('returns 412 CART_VERSION_CONFLICT when If-Match is stale, missing, or malformed', async () => {
+    // First bring the cart to version 3.
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+
+    const stale = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    expect(stale.status).toBe(412);
+    const staleBody: unknown = await stale.json();
+    expectRecord(staleBody);
+    expect(staleBody['code']).toBe('CART_VERSION_CONFLICT');
+    expect(staleBody['params']).toEqual({ expected: 3, received: '"1"' });
+
+    const missing = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: session1Headers(),
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    expect(missing.status).toBe(412);
+    const missingBody: unknown = await missing.json();
+    expectRecord(missingBody);
+    expect(missingBody['params']).toEqual({ expected: 3, received: null });
+
+    const malformed = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '3' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    expect(malformed.status).toBe(412);
+  });
+
+  it('returns 409 OUT_OF_STOCK, 404 NOT_FOUND, and 400 for invalid bodies', async () => {
+    const oos = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_IPHONE_OOS, quantity: 1 }),
+    });
+    expect(oos.status).toBe(409);
+    const oosBody: unknown = await oos.json();
+    expectRecord(oosBody);
+    expect(oosBody['code']).toBe('OUT_OF_STOCK');
+
+    const unknown = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: 'nope', quantity: 1 }),
+    });
+    expect(unknown.status).toBe(404);
+    const unknownBody: unknown = await unknown.json();
+    expectRecord(unknownBody);
+    expect(unknownBody['code']).toBe('NOT_FOUND');
+
+    const zero = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 0 }),
+    });
+    expect(zero.status).toBe(400);
+
+    const eleven = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 11 }),
+    });
+    expect(eleven.status).toBe(400);
+
+    const fractional = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1.5 }),
+    });
+    expect(fractional.status).toBe(400);
+
+    const missingVariant = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ quantity: 1 }),
+    });
+    expect(missingVariant.status).toBe(400);
+  });
+});
+
+describe('PATCH /cart/items/:variantId', () => {
+  it('updates the line, bumps version, and rejects above-cap with QUANTITY_LIMIT', async () => {
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 2 }),
+    });
+
+    const ok = await fetch(`http://localhost/api/v1/cart/items/${VARIANT_MOTO_256}`, {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({ quantity: 1 }),
+    });
+    expect(ok.status).toBe(200);
+    const okBody: unknown = await ok.json();
+    expectRecord(okBody);
+    const items = okBody['items'];
+    expect(Array.isArray(items)).toBe(true);
+    if (!Array.isArray(items)) throw new Error('items not an array');
+    expect(items).toHaveLength(1);
+    const line: unknown = items[0];
+    expectRecord(line);
+    expect(readNumber(line, 'quantity')).toBe(1);
+    expect(readNumber(okBody, 'totalQuantity')).toBe(1);
+    expect(readNumber(okBody, 'version')).toBe(3);
+
+    const over = await fetch(`http://localhost/api/v1/cart/items/${VARIANT_MOTO_256}`, {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"3"' },
+      body: JSON.stringify({ quantity: 6 }),
+    });
+    expect(over.status).toBe(409);
+    const overBody: unknown = await over.json();
+    expectRecord(overBody);
+    expect(overBody['code']).toBe('QUANTITY_LIMIT');
+    expect(overBody['params']).toEqual({ max: 5, requested: 6 });
+
+    const missing = await fetch(`http://localhost/api/v1/cart/items/${VARIANT_HONOR_128}`, {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"3"' },
+      body: JSON.stringify({ quantity: 1 }),
+    });
+    expect(missing.status).toBe(404);
+  });
+});
+
+describe('DELETE /cart/items/:variantId', () => {
+  it('drops an absent-but-known variant with 200 and unchanged version', async () => {
+    const res = await fetch(`http://localhost/api/v1/cart/items/${VARIANT_HONOR_128}`, {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(1);
+    expect(body['items']).toEqual([]);
+  });
+
+  it('returns 404 NOT_FOUND for an unknown variant id', async () => {
+    const res = await fetch('http://localhost/api/v1/cart/items/nope', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('drops an in-cart variant and bumps the version', async () => {
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    const res = await fetch(`http://localhost/api/v1/cart/items/${VARIANT_MOTO_256}`, {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['items']).toEqual([]);
+    expect(readNumber(body, 'version')).toBe(3);
+  });
+
+  it('checks If-Match and expiry before the variant lookup', async () => {
+    await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+
+    const stale = await fetch('http://localhost/api/v1/cart/items/nope', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"9"' },
+    });
+    expect(stale.status).toBe(412);
+    const staleBody: unknown = await stale.json();
+    expectRecord(staleBody);
+    expect(staleBody['code']).toBe('CART_VERSION_CONFLICT');
+
+    clock.advanceMs(CART_TTL_MS);
+    const expired = await fetch('http://localhost/api/v1/cart/items/nope', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+    });
+    expect(expired.status).toBe(410);
+    const expiredBody: unknown = await expired.json();
+    expectRecord(expiredBody);
+    expect(expiredBody['code']).toBe('CART_EXPIRED');
+  });
+});
+
+describe('DELETE /cart/items (clear)', () => {
+  it('empties two different lines and bumps the version by one', async () => {
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({ variantId: VARIANT_HONOR_128, quantity: 1 }),
+    });
+    const res = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"3"' },
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(body['items']).toEqual([]);
+    expect(readNumber(body, 'lineCount')).toBe(0);
+    expect(readNumber(body, 'version')).toBe(4);
+  });
+
+  it('keeps the version when the cart is already empty', async () => {
+    const res = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(1);
+  });
+});
+
+describe('expiry', () => {
+  it('returns 410 CART_EXPIRED and forgets the cart; the next GET starts a new one', async () => {
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    clock.advanceMs(CART_TTL_MS);
+
+    const expired = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(expired.status).toBe(410);
+    const expiredBody: unknown = await expired.json();
+    expectRecord(expiredBody);
+    expect(expiredBody['code']).toBe('CART_EXPIRED');
+    expect(expiredBody['type']).toBe('urn:mi-bolt:problem:cart-expired');
+
+    const fresh = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(fresh.status).toBe(200);
+    const freshBody: unknown = await fresh.json();
+    expectRecord(freshBody);
+    expect(readNumber(freshBody, 'version')).toBe(1);
+    expect(readString(freshBody, 'id').length).toBeGreaterThan(0);
+  });
+
+  it('pushes expiresAt forward on a mutation and leaves it alone on a read', async () => {
+    const created = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const createdBody: unknown = await created.json();
+    expectRecord(createdBody);
+    expect(readString(createdBody, 'expiresAt')).toBe('2026-10-20T10:00:00.000Z');
+
+    clock.advanceMs(60_000);
+    const added = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    expect(added.status).toBe(200);
+    const addedBody: unknown = await added.json();
+    expectRecord(addedBody);
+    expect(readString(addedBody, 'expiresAt')).toBe('2026-10-20T10:01:00.000Z');
+
+    clock.advanceMs(60_000);
+    const read = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const readBody: unknown = await read.json();
+    expectRecord(readBody);
+    expect(readString(readBody, 'expiresAt')).toBe('2026-10-20T10:01:00.000Z');
+  });
+});
+
+describe('reconcile', () => {
+  function lookupForVariant(variantId: string, maxQuantity: number): VariantLookup {
+    const hit = catalogStore.current?.getVariant(variantId);
+    if (!hit) throw new Error(`variant ${variantId} missing from fixture`);
+    return {
+      product: hit.product,
+      variant: { ...hit.variant, maxQuantity },
+    };
+  }
+
+  it('emits QUANTITY_REDUCED with from/to when reconcile clamps to a lower maxQuantity', () => {
+    let cap = 4;
+    const lookup: VariantLookupFn = (id) =>
+      id === VARIANT_IPHONE_BURGUNDI ? lookupForVariant(id, cap) : undefined;
+    const store = new CartStore(options, lookup);
+    const added = store.add(SESSION_1, '"1"', VARIANT_IPHONE_BURGUNDI, 4);
+    if (!added.ok) throw new Error('add failed');
+    expect(added.cart.version).toBe(2);
+    expect(added.cart.notices).toEqual([]);
+
+    cap = 2;
+    const result = store.get(SESSION_1);
+    if (!result.ok) throw new Error('get failed');
+    expect(result.cart.version).toBe(3);
+    expect(result.cart.items).toHaveLength(1);
+    expect(result.cart.items[0]?.quantity).toBe(2);
+    expect(result.cart.notices).toEqual([
+      {
+        code: 'QUANTITY_REDUCED',
+        variantId: VARIANT_IPHONE_BURGUNDI,
+        params: { from: 4, to: 2 },
+      },
+    ]);
+  });
+
+  it('emits ITEM_REMOVED when reconcile cannot resolve the variant id', () => {
+    let known = true;
+    const lookup: VariantLookupFn = (id) =>
+      known && id === VARIANT_IPHONE_BURGUNDI ? lookupForVariant(id, 4) : undefined;
+    const store = new CartStore(options, lookup);
+    const added = store.add(SESSION_1, '"1"', VARIANT_IPHONE_BURGUNDI, 4);
+    if (!added.ok) throw new Error('add failed');
+    expect(added.cart.version).toBe(2);
+
+    known = false;
+    const result = store.get(SESSION_1);
+    if (!result.ok) throw new Error('get failed');
+    expect(result.cart.version).toBe(3);
+    expect(result.cart.items).toEqual([]);
+    expect(result.cart.notices).toEqual([
+      { code: 'ITEM_REMOVED', variantId: VARIANT_IPHONE_BURGUNDI },
+    ]);
+  });
+});
+
+describe('session isolation', () => {
+  it('keeps two sessions on independent versions and item lists', async () => {
+    // Session 1: add one line, version 2.
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+
+    const other = await fetch('http://localhost/api/v1/cart', { headers: session2Headers() });
+    expect(other.status).toBe(200);
+    const body: unknown = await other.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(1);
+    expect(body['items']).toEqual([]);
+    // Different id from session 1's cart.
+    const session1 = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const session1Body: unknown = await session1.json();
+    expectRecord(session1Body);
+    expect(readString(session1Body, 'id')).not.toBe(readString(body, 'id'));
   });
 });

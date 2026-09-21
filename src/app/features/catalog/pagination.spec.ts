@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 
 import { Pagination } from './pagination';
@@ -8,12 +7,12 @@ import { Pagination } from './pagination';
   imports: [Pagination],
   template: `
     <app-pagination
-      [disabled]="disabled()"
       [page]="page()"
       [pageSize]="pageSize()"
       [total]="total()"
+      [disabled]="disabled()"
       (pageChanged)="lastPage.set($event); page.set($event)"
-    />
+    ></app-pagination>
   `,
 })
 class HostComponent {
@@ -68,10 +67,10 @@ describe('Pagination', () => {
     const { fixture, host } = setup();
     host.page.set(2);
     fixture.detectChanges();
-    const previous = getNativeElement(fixture).querySelector<HTMLButtonElement>(
+    const prev = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="pagination-prev"]',
     );
-    previous?.click();
+    prev?.click();
     expect(host.lastPage()).toBe(1);
   });
 

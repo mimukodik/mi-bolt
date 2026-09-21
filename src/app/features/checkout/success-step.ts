@@ -38,8 +38,16 @@
  * never talks to the SDK directly.
  */
 
-import type { ElementRef } from '@angular/core';
-import { Component, DestroyRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -83,7 +91,9 @@ export class SuccessStep {
     const raw = this.orderIdFromRoute().get('orderId');
     if (raw === null) return null;
     const trimmed = raw.trim();
-    return trimmed.length === 0 || !ORDER_ID_PATTERN.test(trimmed) ? null : trimmed;
+    if (trimmed.length === 0) return null;
+    if (!ORDER_ID_PATTERN.test(trimmed)) return null;
+    return trimmed;
   });
 
   /** Read-only view of the receipt from the facade (null until loaded). */
@@ -195,8 +205,7 @@ export class SuccessStep {
     }
     this.loadState.set({
       kind: 'error',
-      detail:
-        result.error.detail !== '' ? result.error.detail : 'A rendelés visszatöltése sikertelen.',
+      detail: result.error.detail || 'A rendelés visszatöltése sikertelen.',
     });
   }
 
@@ -210,9 +219,9 @@ export class SuccessStep {
         // chunk mount) and the layout's main-element focus has already
         // happened.
         queueMicrotask(() => {
-          const element = heading.nativeElement;
-          element.setAttribute('tabindex', '-1');
-          element.focus({ preventScroll: false });
+          const el = heading.nativeElement;
+          el.setAttribute('tabindex', '-1');
+          el.focus({ preventScroll: false });
         });
       });
     // Also schedule one immediately so a direct mount focuses too.
@@ -256,12 +265,25 @@ export class SuccessStep {
     void this.cart
       .ensureCart()
       .then(() => {
-        this.checkout.resetDraft();
+        this.checkout.resetAfterOrder();
       })
       .then(() => this.router.navigate(['/telefonok']))
       .catch(() => this.router.navigate(['/penztar/kosar']))
       .finally(() => {
         this.startingNewCart.set(false);
       });
+  }
+
+  // -------------------------------------------------------------------------
+  // Test seams — exposed only so spec files can drive the page
+  // without standing up the full component tree.
+  // -------------------------------------------------------------------------
+
+  __testForceState(next: LoadState): void {
+    this.loadState.set(next);
+  }
+
+  __testOrderId(): string | null {
+    return this.orderId();
   }
 }

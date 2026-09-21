@@ -17,6 +17,7 @@ import {
   CATALOG_QUERY_KEYS,
   isStorageBucket,
   serializeCatalogQuery,
+  type AppliedChip,
   type CatalogQuery,
   type Sort,
 } from './catalog-query';
@@ -95,9 +96,7 @@ export class CatalogPage {
     () => this.toolbar()?.filterTriggerEl() ?? null,
   );
 
-  /**
-  Local UI flags that do NOT live in the URL.
-  */
+  /** Local UI flags that do NOT live in the URL. */
   readonly drawerOpened = signal<boolean>(false);
 
   /** True while the filter, sort, page-size and pagination controls are
@@ -135,9 +134,8 @@ export class CatalogPage {
    *  status. */
   readonly problem = computed<UiProblem | null>(() => {
     const message = this.facade.vm().error;
-    return message === null
-      ? null
-      : { code: 'catalog-error', message, fieldErrors: [], retryable: true };
+    if (message === null) return null;
+    return { code: 'catalog-error', message, fieldErrors: [], retryable: true };
   });
 
   /** `CatalogToolbar`'s `status` — the toolbar's own wording branches on
@@ -150,32 +148,50 @@ export class CatalogPage {
   readonly toolbarStatus = computed<AsyncStatus>(() => {
     const status = this.facade.vm().status;
     if (this.controlsDisabled()) return 'loading';
-    return status === 'error' ? 'error' : 'success';
+    if (status === 'error') return 'error';
+    return 'success';
   });
 
-  /**
-  Snapshot of the current sort option (defaults to 'recommended').
-  */
+  /** Snapshot of the current sort option (defaults to 'recommended'). */
   readonly currentSort = computed<Sort>(() => this.facade.query().sort ?? 'recommended');
 
-  /**
-  Snapshot of the current page size.
-  */
+  /** Snapshot of the current page size. */
   readonly currentPageSize = computed<12 | 24>(() => this.facade.query().pageSize);
 
-  /**
-  Snapshot of the current page (1-based).
-  */
+  /** Snapshot of the current page (1-based). */
   readonly currentPage = computed<number>(() => this.facade.query().page);
 
   readonly shouldShowPagination = computed<boolean>(
     () => this.facade.vm().total > this.currentPageSize(),
   );
 
+  /** Removable chip row the `AppliedFilters` component renders.
+   *  `buildChips` is codec-owned and stays colour-name-agnostic (the
+   *  URL only carries the colour code); this wrapper swaps a `colors`
+   *  chip's label for the matching facet label when the live facets
+   *  have one, and falls back to the code otherwise. The query itself
+   *  never carries the colour name. */
+  readonly appliedChips = computed<readonly AppliedChip[]>(() => {
+    const base = buildChips(this.facade.query());
+    const facets = this.facade.vm().facets;
+    if (facets === null) return base;
+    const colorLabels = new Map<string, string>();
+    for (const facet of facets.colors) {
+      colorLabels.set(facet.value, facet.label);
+    }
+    if (colorLabels.size === 0) return base;
+    return base.map((chip) => {
+      if (chip.name !== 'colors' || typeof chip.value !== 'string') return chip;
+      const humanLabel = colorLabels.get(chip.value);
+      if (humanLabel === undefined) return chip;
+      return { ...chip, label: humanLabel };
+    });
+  });
+
   /** `CatalogToolbar`'s `appliedCount` — the mobile filter trigger's
    *  selected-count cue, derived the same way `AppliedFilters` derives
    *  its own chip row. */
-  readonly appliedChipCount = computed<number>(() => buildChips(this.facade.query()).length);
+  readonly appliedChipCount = computed<number>(() => this.appliedChips().length);
 
   constructor() {
     // Mirror the URL query into the facade on every navigation. The
@@ -184,11 +200,11 @@ export class CatalogPage {
     // canonical state. We subscribe to the route's reactive
     // queryParamMap (not the snapshot) so back / forward, deep links
     // and manual URL edits all reach the facade.
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((parameters) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const search = new URLSearchParams();
-      for (const key of parameters.keys) {
-        for (const v of parameters.getAll(key)) search.append(key, v);
-      }
+      params.keys.forEach((key) => {
+        for (const v of params.getAll(key)) search.append(key, v);
+      });
       this.facade.loadFromParams(search);
     });
 
@@ -196,11 +212,11 @@ export class CatalogPage {
     // query changes (filter writes, sort, page). We use merge so we
     // never drop a sibling param the URL might carry in a different
     // route, and we skip the very first read so we do not bounce.
-    let isFirst = true;
+    let first = true;
     effect(() => {
       const q = this.facade.query();
-      if (isFirst) {
-        isFirst = false;
+      if (first) {
+        first = false;
         return;
       }
       void this.router.navigate([], {
@@ -249,40 +265,35 @@ export class CatalogPage {
   onChipRemoved(identity: FilterIdentity): void {
     this.focusResultCount();
     switch (identity.name) {
-      case 'q': {
+      case 'q':
         this.facade.setSearch('');
         break;
-      }
-      case 'brands': {
+      case 'brands':
         if (typeof identity.value === 'string') this.facade.toggleBrand(identity.value);
         break;
-      }
-      case 'storageGb': {
+      case 'storageGb':
         if (typeof identity.value === 'number' && isStorageBucket(identity.value)) {
           this.facade.toggleStorage(identity.value);
         }
         break;
-      }
-      case 'inStock': {
+      case 'colors':
+        if (typeof identity.value === 'string') this.facade.toggleColor(identity.value);
+        break;
+      case 'inStock':
         this.facade.setInStock(undefined);
         break;
-      }
-      case 'is5g': {
+      case 'is5g':
         this.facade.setIs5g(undefined);
         break;
-      }
-      case 'minPrice': {
+      case 'minPrice':
         this.facade.setPriceRange(undefined, this.facade.query().maxPrice);
         break;
-      }
-      case 'maxPrice': {
+      case 'maxPrice':
         this.facade.setPriceRange(this.facade.query().minPrice, undefined);
         break;
-      }
-      case 'featured': {
+      case 'featured':
         this.facade.setFeatured(undefined);
         break;
-      }
     }
   }
 
@@ -336,7 +347,7 @@ export class CatalogPage {
    */
   private applyLayoutMode(): void {
     if (typeof window === 'undefined') return;
-    const mql = globalThis.matchMedia('(min-width: 1024px)');
+    const mql = window.matchMedia('(min-width: 1024px)');
     const apply = (): void => {
       const host: unknown = this.host.nativeElement;
       if (host instanceof HTMLElement) {
@@ -361,10 +372,10 @@ export class CatalogPage {
  * key left out of this object would survive a reset undisturbed.
  */
 function serializeForRouter(q: CatalogQuery): Record<string, string | string[] | null> {
-  const parameters = serializeCatalogQuery(q);
+  const params = serializeCatalogQuery(q);
   const out: Record<string, string | string[] | null> = {};
   for (const key of CATALOG_QUERY_KEYS) {
-    const all = parameters.getAll(key);
+    const all = params.getAll(key);
     out[key] = all.length === 0 ? null : all.length > 1 ? all : (all[0] ?? null);
   }
   return out;

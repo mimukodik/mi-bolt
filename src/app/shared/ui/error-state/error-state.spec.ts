@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { ErrorState } from './error-state';
 
@@ -7,13 +6,13 @@ import { ErrorState } from './error-state';
   imports: [ErrorState],
   template: `
     <app-error-state
+      [title]="title()"
       [message]="message()"
+      [retryLabel]="retryLabel()"
       [pending]="pending()"
       [preserving]="preserving()"
-      [retryLabel]="retryLabel()"
-      [title]="title()"
       (retryRequested)="retryCount.set(retryCount() + 1)"
-    />
+    ></app-error-state>
   `,
 })
 class HostComponent {
@@ -28,7 +27,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -69,11 +68,11 @@ describe('ErrorState primitive', () => {
 
   it('emits retryRequested when the retry button is clicked', () => {
     const { fixture, host } = setup();
-    const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (button === null) {
+    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!btn) {
       throw new Error('Expected button');
     }
-    button.click();
+    btn.click();
     expect(host.retryCount()).toBe(1);
   });
 
@@ -81,13 +80,13 @@ describe('ErrorState primitive', () => {
     const { fixture, host } = setup();
     host.pending.set(true);
     fixture.detectChanges();
-    const button = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (button === null) {
+    const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
+    if (!btn) {
       throw new Error('Expected button');
     }
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute('aria-busy')).toBe('true');
-    expect(button.textContent).toContain('Újrapróbálom…');
+    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute('aria-busy')).toBe('true');
+    expect(btn.textContent).toContain('Újrapróbálom…');
   });
 
   it('never invents stock, payment or warranty text inside the primitive', () => {

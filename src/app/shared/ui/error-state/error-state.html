@@ -1,8 +1,8 @@
 <section
-  aria-live="polite"
   class="root flex flex-col items-start gap-3 p-6 rounded"
-  data-testid="error-state"
   role="alert"
+  aria-live="polite"
+  data-testid="error-state"
 >
   <h2 class="title m-0 font-bold">{{ title() }}</h2>
   <p class="message m-0">{{ message() }}</p>
@@ -11,11 +11,11 @@
   }
   <div class="actions mt-2">
     <app-button
-      loadingLabel="Újrapróbálom…"
       variant="primary"
       [label]="pending() ? 'Újrapróbálom…' : retryLabel()"
       [loading]="pending()"
+      [loadingLabel]="'Újrapróbálom…'"
       (pressed)="retryRequested.emit()"
-    />
+    ></app-button>
   </div>
 </section>

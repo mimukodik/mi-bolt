@@ -30,18 +30,22 @@ import { Component, computed, input } from '@angular/core';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
+import type { Address } from '../../api/generated/models/address';
 import type { OrderLine } from '../../api/generated/models/order-line';
 import type { OrderReceipt } from '../../api/generated/models/order-receipt';
 
 const PAYMENT_LABELS: Readonly<Record<OrderReceipt['paymentMethod'], string>> = {
-  demo_card: 'Bankkártya (szimulált)',
-  demo_cod: 'Utánvét (demó)',
+  card: 'Bankkártya (szimulált)',
+  cash_on_delivery: 'Utánvét (demó)',
 };
 
-const DELIVERY_LABELS: Readonly<Record<OrderReceipt['deliveryOptionId'], string>> = {
-  home_delivery: 'Házhozszállítás',
-  demo_pickup: 'Bemutatótermi átvétel (demó)',
-};
+/** Labels keyed on `DeliverySelection` discriminator (`optionId`), since the
+ *  wire carries a `DeliverySelection`, not a top-level delivery id. */
+const DELIVERY_LABELS: Readonly<Record<NonNullable<OrderReceipt['delivery']>['optionId'], string>> =
+  {
+    home_delivery: 'Házhozszállítás',
+    pickup_point: 'Bemutatótermi átvétel (demó)',
+  };
 
 /**
  * Notice string rendered under the totals. Hungarian copy that makes
@@ -57,31 +61,33 @@ const SIMULATION_NOTICE =
   styleUrl: './order-receipt.scss',
 })
 export class OrderReceiptComponent {
-  /**
-  The wire-shaped receipt payload. Required.
-  */
+  /** The wire-shaped receipt payload. Required. */
   readonly receipt = input.required<OrderReceipt>();
 
-  /**
-  Friendly Hungarian label for the payment method.
-  */
+  /** Friendly Hungarian label for the payment method. */
   readonly paymentLabel = computed<string>(() => PAYMENT_LABELS[this.receipt().paymentMethod]);
 
-  /**
-  Friendly Hungarian label for the delivery option.
-  */
-  readonly deliveryLabel = computed<string>(() => DELIVERY_LABELS[this.receipt().deliveryOptionId]);
+  /** Friendly Hungarian label for the delivery option. */
+  readonly deliveryLabel = computed<string>(
+    () => DELIVERY_LABELS[this.receipt().delivery.optionId],
+  );
 
-  /**
-  The simulation notice copy. Pulled from the receipt body when present.
-  */
-  readonly simulationNotice = computed<string>(() => {
-    const fromWire = this.receipt().notice.trim();
-    return typeof fromWire === 'string' && fromWire.length > 0 ? fromWire : SIMULATION_NOTICE;
+  /** The delivery address, or null for pickup: the pickup arm of
+   *  `DeliverySelection` has no address member at all, so narrowing on
+   *  `optionId` is what reaches `address` without a cast. */
+  readonly deliveryAddress = computed<Address | null>(() => {
+    const delivery = this.receipt().delivery;
+    if (delivery.optionId !== 'home_delivery') return null;
+    return delivery.address;
   });
 
-  /**
-  Exported so unit-style assertions and other consumers can count items.
-  */
+  /** The simulation notice copy. Pulled from the receipt body when present. */
+  readonly simulationNotice = computed<string>(() => {
+    const fromWire = this.receipt().notice.trim();
+    if (typeof fromWire === 'string' && fromWire.length > 0) return fromWire;
+    return SIMULATION_NOTICE;
+  });
+
+  /** Exported so unit-style assertions and other consumers can count items. */
   readonly lineItems = computed<readonly OrderLine[]>(() => this.receipt().items);
 }

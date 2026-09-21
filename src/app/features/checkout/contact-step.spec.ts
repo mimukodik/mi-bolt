@@ -39,7 +39,6 @@ import { join } from 'node:path';
 
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 
@@ -83,10 +82,7 @@ const TEST_PROVIDERS = [provideZonelessChangeDetection(), provideRouter([])];
  * it in the other order throws "Cannot configure the test module when the
  * test module has already been instantiated").
  */
-function createContactStep(
-  initial: Contact = EMPTY_CONTACT,
-  saveState: AsyncStatus = 'idle',
-): { fixture: ComponentFixture<ContactStep>; fields: ReturnType<typeof buildContactForm> } {
+function createContactStep(initial: Contact = EMPTY_CONTACT, saveState: AsyncStatus = 'idle') {
   TestBed.configureTestingModule({ providers: TEST_PROVIDERS });
   const fields = TestBed.runInInjectionContext(() => buildContactForm(signal(initial)));
   const fixture = TestBed.createComponent(ContactStep);
@@ -225,7 +221,7 @@ describe('T20-AC01 contact schema validation and normalization', () => {
   });
 
   it('reports the required error for an empty name, email, or phone', () => {
-    const blank: ContactInput = { fullName: ' '.repeat(3), email: '', phone: ' ' };
+    const blank: ContactInput = { fullName: '   ', email: '', phone: ' ' };
     const result = validateContact(blank);
     const codes = result.errors.map((e) => `${e.field}:${e.code}`).sort();
     expect(codes).toContain('fullName:required');
@@ -435,7 +431,7 @@ describe('T20-AC05 visual states', () => {
 
     const fields = root.querySelectorAll('.field');
     expect(fields.length).toBe(3);
-    for (const f of fields) {
+    for (const f of Array.from(fields)) {
       expect(f.getAttribute('data-state')).toBe('default');
     }
 

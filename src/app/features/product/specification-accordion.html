@@ -1,27 +1,27 @@
-<section aria-label="Műszaki adatok" class="root" data-testid="spec-accordion">
+<section class="root" aria-label="Műszaki adatok" data-testid="spec-accordion">
   @for (group of groups(); track group.id) {
-    <div class="group" [attr.data-testid]="`spec-group-${group.id}`">
+    <div class="group" [attr.data-testid]="'spec-group-' + group.id">
       <h3 class="heading">
         <button
-          class="trigger"
           type="button"
-          [attr.aria-controls]="`spec-panel-${group.id}`"
+          class="trigger"
+          [id]="'spec-trigger-' + group.id"
           [attr.aria-expanded]="isOpen(group.id)"
-          [attr.data-testid]="`spec-disclosure-${group.id}`"
-          [id]="`spec-trigger-${group.id}`"
+          [attr.aria-controls]="'spec-panel-' + group.id"
+          [attr.data-testid]="'spec-disclosure-' + group.id"
           (click)="toggle(group.id)"
         >
           <span class="title">{{ group.title }}</span>
-          <span aria-hidden="true" class="caret">{{ isOpen(group.id) ? '−' : '+' }}</span>
+          <span class="caret" aria-hidden="true">{{ isOpen(group.id) ? '−' : '+' }}</span>
         </button>
       </h3>
       @if (isOpen(group.id)) {
         <div
           class="panel"
           role="region"
-          [attr.aria-labelledby]="`spec-trigger-${group.id}`"
-          [attr.data-testid]="`spec-panel-${group.id}`"
-          [id]="`spec-panel-${group.id}`"
+          [id]="'spec-panel-' + group.id"
+          [attr.aria-labelledby]="'spec-trigger-' + group.id"
+          [attr.data-testid]="'spec-panel-' + group.id"
         >
           <dl class="rows">
             @for (row of group.rows; track row.label) {

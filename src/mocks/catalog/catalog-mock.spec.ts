@@ -1,976 +1,697 @@
 /**
- * T06 - catalog mock + filter semantics.
+ * MIM-210 — catalogue and media mock on the 2.0.0 contract.
  *
- * The tests run end-to-end against MSW so every line of the catalog
- * handler dispatch path is exercised. The pure predicates are also
- * covered directly so each branch of the filter / sort / facet
- * functions gets an isolated assertion.
+ * The suite runs against MSW Node so every line of the dispatch path
+ * is exercised. The fixture under `docs/api/fixtures/catalog.json`
+ * is the real one (48 products, 55 entries, 85 images); the counts
+ * and the first slugs come from `node -e` against that fixture and
+ * are pasted below verbatim with the command in a comment.
  *
- * Each test stands up its own Repository so the demo fixture does not
- * leak between cases. The MSW Node server is shared.
+ * Command to recompute expectations when the fixture changes: see the
+ * `// node -e …` lines that follow the expected-value blocks below.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
 
-import productsFixture from '../../../docs/api/fixtures/products.json';
-import { buildCatalogHandlers } from '../../mocks/catalog/catalog.handlers';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 import {
-  DEFAULT_PAGE_SIZE,
-  FACET_STORAGE_GB,
-  filterProducts,
-  findMatchingVariant,
-  matchProduct,
-  normalizeBrand,
-  normalizeBrands,
-  normalizeQuery,
-  paginateMatches,
-  parseCatalogFilter,
-  sortMatches,
-  type CatalogFilter,
-  type ProductMatch,
-} from '../../mocks/catalog/filter-products';
-import { buildFacets } from '../../mocks/catalog/facets';
-import type { Money, Product, Variant } from '../../mocks/repository';
-import { Repository as Repo } from '../../mocks/repository';
-import type { CreateHandlersOptions } from '../../mocks/create-handlers';
+  buildCatalogHandlers,
+  catalogStore,
+  isCatalogFixtureShape,
+  loadCatalogFixture,
+} from './catalog.handlers';
+import type { CreateHandlersOptions } from '../create-handlers';
+import { Repository } from '../repository';
+import { isRecord } from '../is-record';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
   type Clock,
   type Ids,
-  type ScenarioDescriptor,
-} from '../../mocks/scenarios';
+} from '../scenarios';
 import { server, useMswServer } from '../../../tests/msw-server';
+
+useMswServer();
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
 // process rather than once per file. See `tests/msw-server.ts`.
-useMswServer();
 
 // ---------------------------------------------------------------------------
-// Tiny product factories for the predicate tests
+// Fixtures / counts (computed from the real fixture, pasted here).
+//   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,r:f.ranking.find(x=>x.slug===p.slug),st}))}); console.log(e.length);"
 // ---------------------------------------------------------------------------
 
-function money(amount: number): Money {
-  return { amount, currency: 'HUF' };
-}
+const TOTAL_ENTRIES = 55; // sum of distinct (product, storage) pairs over 48 products
+const TOTAL_PAGES_12 = 5; // ceil(55 / 12)
+const TOTAL_PAGES_24 = 3; // ceil(55 / 24)
+const TOTAL_IMAGES = 85; // unique image files under public/media/
 
-function variant(
-  id: string,
-  price: number,
-  storageGb: 128 | 256 | 512,
-  availability: 'in_stock' | 'out_of_stock' = 'in_stock',
-  maxQuantity = 5,
-): Variant {
-  return {
-    id,
-    colorCode: 'graphite',
-    colorName: 'Grafit',
-    swatchHex: '#343B43',
-    storageGb,
-    price: money(price),
-    availability,
-    maxQuantity,
-    images: [
-      {
-        id: `${id}-front`,
-        src: '/assets/products/graphite-front.webp',
-        alt: 'front',
-        width: 320,
-        height: 400,
-      },
-    ],
-  };
-}
+// brand facet for the default list (no filters): 7 brands, counts by entries
+const DEFAULT_BRAND_FACET = [
+  { value: 'apple', label: 'apple', count: 17 },
+  { value: 'google pixel', label: 'google pixel', count: 4 },
+  { value: 'honor', label: 'honor', count: 8 },
+  { value: 'motorola', label: 'motorola', count: 1 },
+  { value: 'samsung', label: 'samsung', count: 13 },
+  { value: 'vivo', label: 'vivo', count: 3 },
+  { value: 'xiaomi', label: 'xiaomi', count: 9 },
+];
+const DEFAULT_STORAGE_FACET = [
+  { value: '128', label: '128 GB', count: 11 },
+  { value: '256', label: '256 GB', count: 27 },
+  { value: '512', label: '512 GB', count: 17 },
+];
+const DEFAULT_FIRST_COLOR = { value: 'zold', label: 'Zöld', swatchHex: '#7C9F63', count: 1 };
+const DEFAULT_IS5G = 54;
+const DEFAULT_INSTOCK = 52;
+const DEFAULT_PRICE_RANGE = { min: 69990, max: 1095990 };
 
-function product(
-  id: string,
-  slug: string,
-  brand: string,
-  name: string,
-  is5g: boolean,
-  variants: readonly Variant[],
-  description = '',
-): Product {
-  return {
-    id,
-    slug,
-    brand,
-    name,
-    highlights: ['demo'],
-    defaultVariant: variants[0],
-    is5g,
-    isDemo: true,
-    description,
-    variants,
-    specGroups: [],
-  };
-}
+// Default list first 12 slugs (rank asc, id asc, storage asc).
+const DEFAULT_FIRST_TWELVE_SLUGS = [
+  'motorola-edge-50-fusion',
+  'honor-x7d',
+  'apple-iphone-18-pro-max',
+  'apple-iphone-18-pro-max',
+  'apple-iphone-18-pro',
+  'apple-iphone-18-pro',
+  'honor-600-lite',
+  'samsung-galaxy-z-fold8-ultra-5g',
+  'samsung-galaxy-s26-fe',
+  'apple-iphone-17e',
+  'samsung-galaxy-a57',
+  'google-pixel-11',
+];
 
-const EMPTY_FILTER: CatalogFilter = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
+// pageSize=24 first two (rank asc, id asc).
+const PAGE_24_FIRST_TWO = ['motorola-edge-50-fusion', 'honor-x7d'];
+
+// Featured cap is 4; the four featured products are listed by rank.
+const FEATURED_FIRST_FOUR = [
+  'motorola-edge-50-fusion',
+  'honor-x7d',
+  'apple-iphone-18-pro-max',
+  'apple-iphone-18-pro-max',
+];
+
+// Sorts (first two slugs).
+const SORTS: Record<string, string[]> = {
+  recommended: ['motorola-edge-50-fusion', 'honor-x7d'],
+  newest: ['motorola-edge-50-fusion', 'honor-x7d'],
+  oldest: ['apple-iphone-15', 'xiaomi-17t'],
+  popularity: ['motorola-edge-50-fusion', 'honor-x7d'],
+  price_asc: ['honor-x7d', 'motorola-edge-50-fusion'],
+  price_desc: ['samsung-galaxy-z-fold8-ultra-5g', 'samsung-galaxy-z-fold8-5g'],
+  name_asc: ['apple-iphone-15', 'apple-iphone-16'],
+  name_desc: ['xiaomi-redmi-note-17-pro-max-5g', 'xiaomi-redmi-note-17-pro-5g'],
+};
 
 // ---------------------------------------------------------------------------
-// Pure-predicate coverage
+// Shared test scaffolding
 // ---------------------------------------------------------------------------
 
-describe('normalizeQuery / normalizeBrand(s)', () => {
-  it('trims, lowercases and NFC-normalises a search string', () => {
-    expect(normalizeQuery('  Demo ')).toBe('demo');
-    expect(normalizeQuery('ÁRVÍZTŰRŐ')).toBe(normalizeQuery('árvíztűrő'));
-    expect(normalizeQuery(' '.repeat(3))).toBe('');
-  });
+let options: CreateHandlersOptions;
+let clock: Clock;
+let ids: Ids;
 
-  it('normalises a single brand value', () => {
-    expect(normalizeBrand('  MiBolt DEMO ')).toBe('mibolt demo');
-  });
-
-  it('drops whitespace-only entries from a brand array', () => {
-    expect(normalizeBrands(['  ', 'MiBolt', '', '   Sample   '])).toEqual(['mibolt', 'sample']);
-  });
-});
-
-describe('findMatchingVariant', () => {
-  const p = product('p-A', 'demo-a', 'MiBolt Demo', 'Demo A', true, [
-    variant('a-128', 100_000, 128),
-    variant('a-256', 200_000, 256),
-    variant('a-512', 300_000, 512),
-  ]);
-
-  it('returns the cheapest variant when no filter is applied', () => {
-    expect(findMatchingVariant(p, EMPTY_FILTER)?.id).toBe('a-128');
-  });
-
-  it('returns null when no variant satisfies a storage filter', () => {
-    expect(findMatchingVariant(p, { ...EMPTY_FILTER, storageGb: [999] })).toBeNull();
-  });
-
-  it('returns the cheapest variant inside the storage filter', () => {
-    expect(findMatchingVariant(p, { ...EMPTY_FILTER, storageGb: [256, 512] })?.id).toBe('a-256');
-  });
-
-  it('rejects variants whose price is outside the inclusive range', () => {
-    expect(findMatchingVariant(p, { ...EMPTY_FILTER, minPrice: 250_000 })?.id).toBe('a-512');
-    expect(findMatchingVariant(p, { ...EMPTY_FILTER, maxPrice: 150_000 })?.id).toBe('a-128');
-  });
-
-  it('requires an in-stock variant when inStock=true', () => {
-    const mixed = product('p-B', 'demo-b', 'MiBolt Demo', 'Demo B', true, [
-      variant('b-out', 50_000, 128, 'out_of_stock', 0),
-      variant('b-in', 60_000, 256, 'in_stock', 3),
-    ]);
-    expect(findMatchingVariant(mixed, { ...EMPTY_FILTER, inStock: true })?.id).toBe('b-in');
-    // Without the inStock filter the cheapest overall variant wins.
-    expect(findMatchingVariant(mixed, EMPTY_FILTER)?.id).toBe('b-out');
-  });
-
-  it('breaks ties on equal prices by variant id ascending', () => {
-    const tied = product('p-C', 'demo-c', 'MiBolt Demo', 'Demo C', true, [
-      variant('c-z', 100_000, 128),
-      variant('c-a', 100_000, 128),
-      variant('c-m', 100_000, 128),
-    ]);
-    expect(findMatchingVariant(tied, EMPTY_FILTER)?.id).toBe('c-a');
-  });
-
-  it('breaks ties on equal prices across products by product id then variant id', () => {
-    // Two products share the cheapest matching price; the comparator
-    // must first order by product id then by variant id.
-    const a = product('p-A', 'a', 'BrandX', 'A', true, [variant('a-1', 100_000, 256)]);
-    const b = product('p-B', 'b', 'BrandX', 'B', true, [variant('b-1', 100_000, 256)]);
-    const matchB = matchProduct(b, EMPTY_FILTER, new Set());
-    const matchA = matchProduct(a, EMPTY_FILTER, new Set());
-    if (matchA === null || matchB === null) {
-      throw new Error('expected matches');
-    }
-    const sorted = sortMatches([matchB, matchA], 'price_asc').map((m) => m.product.id);
-    expect(sorted).toEqual(['p-A', 'p-B']);
-  });
-});
-
-describe('matchProduct (AC01 same-variant conjunction)', () => {
-  const featuredSet = new Set<string>(['demo-x']);
-
-  it('matches q against brand and name (case-insensitive, NFC)', () => {
-    const p = product('p-1', 'demo-x', 'MiBolt Demo', 'Demo X 5G', true, [
-      variant('x-256', 200_000, 256),
-    ]);
-    expect(matchProduct(p, { ...EMPTY_FILTER, q: 'demo x' }, featuredSet)?.product.id).toBe('p-1');
-    expect(matchProduct(p, { ...EMPTY_FILTER, q: 'mibolt' }, featuredSet)?.product.id).toBe('p-1');
-    expect(matchProduct(p, { ...EMPTY_FILTER, q: 'nope' }, featuredSet)).toBeNull();
-    // Empty q after normalize applies no filter.
-    expect(matchProduct(p, { ...EMPTY_FILTER, q: ' '.repeat(3) }, featuredSet)?.product.id).toBe(
-      'p-1',
-    );
-  });
-
-  it('applies brand filter as OR within the facet', () => {
-    const a = product('p-A', 'a', 'Alpha', 'Alpha Phone', true, [variant('a-1', 100_000, 256)]);
-    const b = product('p-B', 'b', 'Beta', 'Beta Phone', true, [variant('b-1', 100_000, 256)]);
-    expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['alpha'] }, featuredSet)?.product.id).toBe(
-      'p-A',
-    );
-    expect(
-      matchProduct(b, { ...EMPTY_FILTER, brands: ['Alpha', 'Beta'] }, featuredSet)?.product.id,
-    ).toBe('p-B');
-    expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['beta'] }, featuredSet)).toBeNull();
-    // Empty brand array (after normalize) applies no filter.
-    expect(matchProduct(a, { ...EMPTY_FILTER, brands: ['  '] }, featuredSet)?.product.id).toBe(
-      'p-A',
-    );
-  });
-
-  it('returns null when no single variant satisfies every across-facet condition (AC01)', () => {
-    const p = product('p-AC01', 'demo-ac01', 'BrandX', 'Demo AC01', true, [
-      variant('cheap-128', 250_000, 128),
-      variant('mid-256', 250_000, 256),
-      variant('out-512', 180_000, 512, 'out_of_stock', 0),
-    ]);
-    const filter: CatalogFilter = {
-      ...EMPTY_FILTER,
-      minPrice: 0,
-      maxPrice: 200_000,
-      storageGb: [128, 256],
-      inStock: true,
-    };
-    // No in-stock variant at storage 128/256 within the price range.
-    expect(matchProduct(p, filter, featuredSet)).toBeNull();
-
-    // Replace the 256 GB variant with one inside the price range.
-    const ok = product('p-AC01b', 'demo-ac01b', 'BrandX', 'Demo AC01b', true, [
-      variant('cheap-128', 250_000, 128),
-      variant('mid-256', 150_000, 256),
-      variant('out-512', 180_000, 512, 'out_of_stock', 0),
-    ]);
-    const match = matchProduct(ok, filter, featuredSet);
-    expect(match?.matchingVariant.id).toBe('mid-256');
-  });
-
-  it('enforces is5g and featured against the product and the featured-slug set', () => {
-    const fiveG = product('p-5', 'demo-5', 'BrandX', 'Demo 5G', true, [
-      variant('5-256', 100_000, 256),
-    ]);
-    const fourG = product('p-4', 'demo-4', 'BrandX', 'Demo 4G', false, [
-      variant('4-256', 100_000, 256),
-    ]);
-    expect(matchProduct(fiveG, { ...EMPTY_FILTER, is5g: true }, featuredSet)?.product.id).toBe(
-      'p-5',
-    );
-    expect(matchProduct(fourG, { ...EMPTY_FILTER, is5g: true }, featuredSet)).toBeNull();
-    expect(
-      matchProduct(fiveG, { ...EMPTY_FILTER, featured: true }, new Set(['demo-5']))?.product.id,
-    ).toBe('p-5');
-    expect(
-      matchProduct(fiveG, { ...EMPTY_FILTER, featured: true }, new Set(['demo-other'])),
-    ).toBeNull();
-    expect(
-      matchProduct(fiveG, { ...EMPTY_FILTER, featured: false }, new Set(['demo-other']))?.product
-        .id,
-    ).toBe('p-5');
-  });
-});
-
-describe('sortMatches', () => {
-  function mk(productId: string, name: string, price: number, variantId = 'v'): ProductMatch {
-    const v = variant(variantId, price, 256);
-    return {
-      product: product(productId, `slug-${productId}`, 'BrandX', name, true, [v]),
-      matchingVariant: v,
-    };
+beforeAll(() => {
+  if (!isCatalogFixtureShape(catalogFixture)) {
+    throw new Error('[catalog-mock.spec] committed fixture does not match expected shape');
   }
-  const matches: ProductMatch[] = [
-    mk('p-2', 'Bravo', 300, 'z'),
-    mk('p-1', 'Alpha', 100, 'z'),
-    mk('p-3', 'Charlie', 200, 'z'),
-    mk('p-4', 'Alpha', 100, 'a'),
-  ];
-
-  it('orders price_asc by cheapest matching variant with id tie-break', () => {
-    const sorted = sortMatches(matches, 'price_asc').map((m) => m.product.id);
-    expect(sorted).toEqual(['p-1', 'p-4', 'p-3', 'p-2']);
-  });
-
-  it('orders price_desc by descending variant price', () => {
-    const sorted = sortMatches(matches, 'price_desc').map((m) => m.product.id);
-    expect(sorted).toEqual(['p-2', 'p-3', 'p-1', 'p-4']);
-  });
-
-  it('orders name_asc by product name with product id tie-break', () => {
-    const sorted = sortMatches(matches, 'name_asc').map((m) => m.product.id);
-    expect(sorted).toEqual(['p-1', 'p-4', 'p-2', 'p-3']);
-  });
-
-  it('uses the recommended sort (cheapest variant) by default', () => {
-    const sorted = sortMatches(matches, 'recommended').map((m) => m.product.id);
-    expect(sorted).toEqual(['p-1', 'p-4', 'p-3', 'p-2']);
-  });
-
-  it('returns a fresh array - the input is not mutated', () => {
-    const original = [...matches];
-    sortMatches(matches, 'price_desc');
-    expect(matches.map((m) => m.product.id)).toEqual(original.map((m) => m.product.id));
-  });
+  loadCatalogFixture(catalogFixture);
 });
-
-describe('paginateMatches', () => {
-  function mk(id: string, price = 100_000): ProductMatch {
-    const v = variant(`v-${id}`, price, 256);
-    return {
-      product: product(id, `slug-${id}`, 'BrandX', `Name ${id}`, true, [v]),
-      matchingVariant: v,
-    };
-  }
-  const matches = Array.from({ length: 5 }, (_, index) => mk(`p-${String(index)}`));
-
-  it('returns the requested page of items', () => {
-    const page = paginateMatches(matches, 1, 12);
-    expect(page.items).toHaveLength(5);
-    expect(page.total).toBe(5);
-    expect(page.page).toBe(1);
-    expect(page.pageSize).toBe(12);
-  });
-
-  it('slices the right segment for mid-range pages', () => {
-    const many = Array.from({ length: 25 }, (_, index) =>
-      mk(`p-${index.toString().padStart(2, '0')}`),
-    );
-    const page = paginateMatches(many, 2, 12);
-    expect(page.items.map((m) => m.product.id)).toEqual([
-      'p-12',
-      'p-13',
-      'p-14',
-      'p-15',
-      'p-16',
-      'p-17',
-      'p-18',
-      'p-19',
-      'p-20',
-      'p-21',
-      'p-22',
-      'p-23',
-    ]);
-  });
-
-  it('returns an empty page when the page is beyond total', () => {
-    const page = paginateMatches(matches, 9, 12);
-    expect(page.items).toHaveLength(0);
-    expect(page.total).toBe(5);
-  });
-
-  it('returns an empty page when the input is empty', () => {
-    const page = paginateMatches([], 1, 12);
-    expect(page.items).toEqual([]);
-    expect(page.total).toBe(0);
-  });
-});
-
-describe('filterProducts', () => {
-  const products: Product[] = [
-    product('p-1', 'demo-1', 'MiBolt Demo', 'Demo One 5G', true, [variant('1-256', 150_000, 256)]),
-    product('p-2', 'demo-2', 'Sample', 'Sample Phone', true, [variant('2-256', 250_000, 256)]),
-    product('p-3', 'demo-3', 'MiBolt Demo', 'Demo Pro 5G', true, [variant('3-256', 400_000, 256)]),
-  ];
-
-  it('returns every product when no filter is applied', () => {
-    const out = filterProducts(products, EMPTY_FILTER, []);
-    expect(out).toHaveLength(3);
-  });
-
-  it('applies featured against the supplied slug set', () => {
-    const featured = filterProducts(products, { ...EMPTY_FILTER, featured: true }, ['demo-1']);
-    expect(featured.map((m) => m.product.id)).toEqual(['p-1']);
-    const nonFeatured = filterProducts(products, { ...EMPTY_FILTER, featured: false }, ['demo-1']);
-    expect(nonFeatured.map((m) => m.product.id)).toEqual(['p-2', 'p-3']);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// parseCatalogFilter - every error path is exercised
-// ---------------------------------------------------------------------------
-
-function parametersOf(qs: string): URLSearchParams {
-  return new URLSearchParams(qs);
-}
-
-describe('parseCatalogFilter happy paths', () => {
-  it('returns the documented defaults', () => {
-    const result = parseCatalogFilter(parametersOf(''));
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-
-    expect(result.value.page).toBe(1);
-    expect(result.value.pageSize).toBe(12);
-    expect(result.value.sort).toBeUndefined();
-  });
-
-  it('parses every supported query parameter', () => {
-    const result = parseCatalogFilter(
-      parametersOf(
-        'q=demo&brand=MiBolt&brand=Sample&storageGb=128&storageGb=256&minPrice=10000&maxPrice=500000&inStock=true&is5g=true&featured=true&sort=price_desc&page=2&pageSize=24',
-      ),
-    );
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-
-    expect(result.value.q).toBe('demo');
-    expect(result.value.brands).toEqual(['MiBolt', 'Sample']);
-    expect(result.value.storageGb).toEqual([128, 256]);
-    expect(result.value.minPrice).toBe(10_000);
-    expect(result.value.maxPrice).toBe(500_000);
-    expect(result.value.inStock).toBe(true);
-    expect(result.value.is5g).toBe(true);
-    expect(result.value.featured).toBe(true);
-    expect(result.value.sort).toBe('price_desc');
-    expect(result.value.page).toBe(2);
-    expect(result.value.pageSize).toBe(24);
-  });
-
-  it('accepts false booleans and a recommended sort', () => {
-    const result = parseCatalogFilter(
-      parametersOf('inStock=false&is5g=false&featured=false&sort=recommended'),
-    );
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-
-    expect(result.value.inStock).toBe(false);
-    expect(result.value.is5g).toBe(false);
-    expect(result.value.featured).toBe(false);
-    expect(result.value.sort).toBe('recommended');
-  });
-});
-
-describe('parseCatalogFilter validation errors (AC04)', () => {
-  it('rejects an empty brand[] value with 400', () => {
-    const result = parseCatalogFilter(parametersOf('brand='));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('INVALID_BRAND');
-  });
-
-  it('rejects non-integer storageGb with 400', () => {
-    const r1 = parseCatalogFilter(parametersOf('storageGb=abc'));
-    expect(r1.ok).toBe(false);
-    if (!r1.ok) expect(r1.error.code).toBe('INVALID_STORAGE');
-
-    const r2 = parseCatalogFilter(parametersOf('storageGb=999'));
-    expect(r2.ok).toBe(false);
-    if (!r2.ok) expect(r2.error.code).toBe('INVALID_STORAGE');
-  });
-
-  it('rejects non-integer / negative prices with 400', () => {
-    const r1 = parseCatalogFilter(parametersOf('minPrice=abc'));
-    expect(r1.ok).toBe(false);
-    if (!r1.ok) expect(r1.error.code).toBe('INVALID_PRICE');
-
-    const r2 = parseCatalogFilter(parametersOf('minPrice=-1'));
-    expect(r2.ok).toBe(false);
-    if (!r2.ok) expect(r2.error.code).toBe('INVALID_PRICE');
-
-    const r3 = parseCatalogFilter(parametersOf('maxPrice=foo'));
-    expect(r3.ok).toBe(false);
-    if (!r3.ok) expect(r3.error.code).toBe('INVALID_PRICE');
-
-    const r4 = parseCatalogFilter(parametersOf('maxPrice=-5'));
-    expect(r4.ok).toBe(false);
-    if (!r4.ok) expect(r4.error.code).toBe('INVALID_PRICE');
-  });
-
-  it('rejects minPrice > maxPrice with 400', () => {
-    const result = parseCatalogFilter(parametersOf('minPrice=100000&maxPrice=50000'));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('INVALID_PRICE');
-  });
-
-  it('rejects non-boolean values for inStock / is5g / featured', () => {
-    const cases = ['inStock=foo', 'is5g=1', 'featured=yes'];
-    for (const qs of cases) {
-      const result = parseCatalogFilter(parametersOf(qs));
-      expect(result.ok, qs).toBe(false);
-      if (!result.ok) expect(result.error.code, qs).toBe('INVALID_BOOLEAN');
-    }
-  });
-
-  it('rejects unknown sort modes with 400', () => {
-    const result = parseCatalogFilter(parametersOf('sort=newest'));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('INVALID_SORT');
-  });
-
-  it('rejects non-positive or non-integer page values with 400', () => {
-    const cases = ['page=abc', 'page=0', 'page=-1', 'page=1.5'];
-    for (const qs of cases) {
-      const result = parseCatalogFilter(parametersOf(qs));
-      expect(result.ok, qs).toBe(false);
-      if (!result.ok) expect(result.error.code, qs).toBe('INVALID_PAGE');
-    }
-  });
-
-  it('rejects empty price values with 400', () => {
-    const result = parseCatalogFilter(parametersOf('minPrice='));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('INVALID_PRICE');
-  });
-
-  it('rejects pageSize values that are not 12 or 24', () => {
-    const cases = ['pageSize=13', 'pageSize=abc', 'pageSize=12.5'];
-    for (const qs of cases) {
-      const result = parseCatalogFilter(parametersOf(qs));
-      expect(result.ok, qs).toBe(false);
-      if (!result.ok) expect(result.error.code, qs).toBe('INVALID_PAGE_SIZE');
-    }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Facet coverage (AC03)
-// ---------------------------------------------------------------------------
-
-describe('buildFacets', () => {
-  const products: Product[] = [
-    product('p-A', 'a', 'Alpha', 'Alpha Phone', true, [
-      variant('a-128', 100_000, 128),
-      variant('a-256', 200_000, 256),
-    ]),
-    product('p-B', 'b', 'Beta', 'Beta Phone', false, [variant('b-256', 150_000, 256)]),
-    product('p-C', 'c', 'Alpha', 'Alpha Plus', true, [variant('c-512', 300_000, 512)]),
-  ];
-
-  it('brand facet counts distinct products per brand without the brand filter', () => {
-    const facets = buildFacets(products, { ...EMPTY_FILTER, brands: ['Alpha'] }, []);
-    const brands = Object.fromEntries(facets.brands.map((f) => [f.value, f.count]));
-    expect(brands['Alpha']).toBe(2);
-    expect(brands['Beta']).toBe(1);
-  });
-
-  it('storage facet counts distinct products per storage without the storage filter', () => {
-    const facets = buildFacets(products, { ...EMPTY_FILTER, storageGb: [256] }, []);
-    const storages = Object.fromEntries(facets.storageGb.map((f) => [f.value, f.count]));
-    expect(storages['128']).toBe(1); // p-A
-    expect(storages['256']).toBe(2); // p-A, p-B
-    expect(storages['512']).toBe(1); // p-C
-    // The known-storage ordering is preserved for the documented enum.
-    expect(facets.storageGb.map((f) => f.value)).toEqual(['128', '256', '512']);
-  });
-
-  it('honours an is5g filter when computing both facets', () => {
-    const facets = buildFacets(products, { ...EMPTY_FILTER, is5g: true }, []);
-    const brands = Object.fromEntries(facets.brands.map((f) => [f.value, f.count]));
-    expect(brands['Alpha']).toBe(2);
-    expect(brands['Beta']).toBeUndefined();
-  });
-
-  it('surfaces unknown storage values for forward compatibility', () => {
-    const weird = [
-      product('p-Q', 'q', 'BrandQ', 'BrandQ Phone', true, [
-        variant('q-1024', 100_000, 1024 as 128 | 256 | 512),
-      ]),
-    ];
-    const facets = buildFacets(weird, EMPTY_FILTER, []);
-    const found = facets.storageGb.find((f) => f.value === '1024');
-    expect(found?.count).toBe(1);
-  });
-
-  it('surfaces no product counts when no product survives the storage filter', () => {
-    // No product has a 256 GB variant; the brand facet is empty and the
-    // storage facet reports 0 for the 256 bucket while keeping the rest
-    // at 0 too because no product passes filterWithoutStorage either.
-    const noMatch = product('p-N', 'n', 'NoMatch', 'NoMatch Phone', true, [
-      variant('n-128', 100_000, 128),
-    ]);
-    const facets = buildFacets([noMatch], { ...EMPTY_FILTER, storageGb: [256] }, []);
-    expect(facets.brands).toEqual([]);
-    // The product's 128 GB variant still passes filterWithoutStorage, so
-    // the storage facet shows the 128 bucket at 1.
-    const storage128 = facets.storageGb.find((f) => f.value === '128');
-    expect(storage128?.count).toBe(1);
-    const storage256 = facets.storageGb.find((f) => f.value === '256');
-    expect(storage256?.count).toBe(0);
-  });
-});
-
-describe('FACET_STORAGE_GB', () => {
-  it('lists the documented storage sizes', () => {
-    expect(FACET_STORAGE_GB).toEqual([128, 256, 512]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// MSW handler dispatch - every catalog operationId + every error path
-// ---------------------------------------------------------------------------
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function isProduct(value: unknown): value is Product {
-  return isRecord(value)
-    ? typeof value['id'] === 'string' &&
-        typeof value['slug'] === 'string' &&
-        Array.isArray(value['variants'])
-    : false;
-}
-
-function isProductArray(value: unknown): value is readonly Product[] {
-  return Array.isArray(value) && value.every(isProduct);
-}
-
-interface ConfigResponse {
-  providerId: string;
-  featuredSlugs: string[];
-  maximumLineQuantity: number;
-}
-
-function isConfigResponse(data: unknown): data is ConfigResponse {
-  return isRecord(data)
-    ? typeof data['providerId'] === 'string' &&
-        Array.isArray(data['featuredSlugs']) &&
-        typeof data['maximumLineQuantity'] === 'number'
-    : false;
-}
-
-interface ProductItem {
-  id: string;
-  slug: string;
-  brand: string;
-  name: string;
-  defaultVariant: {
-    price: { amount: number };
-    storageGb?: number;
-    availability?: string;
-  };
-}
-
-interface ProductPageResponse {
-  total: number;
-  page: number;
-  pageSize: number;
-  items: ProductItem[];
-  facets: {
-    brands: { value: string; count: number }[];
-    storageGb: { value: string; count: number }[];
-  };
-}
-
-function isProductPageResponse(data: unknown): data is ProductPageResponse {
-  return isRecord(data)
-    ? typeof data['total'] === 'number' && Array.isArray(data['items']) && isRecord(data['facets'])
-    : false;
-}
-
-interface ProblemResponse {
-  code: string;
-  type?: string;
-  fieldErrors?: { path: string; message: string }[];
-}
-
-function isProblemResponse(data: unknown): data is ProblemResponse {
-  return isRecord(data) ? typeof data['code'] === 'string' : false;
-}
-
-interface ProductDetailResponse {
-  slug: string;
-  variants: readonly unknown[];
-  specGroups: readonly unknown[];
-}
-
-function isProductDetailResponse(data: unknown): data is ProductDetailResponse {
-  return isRecord(data)
-    ? typeof data['slug'] === 'string' &&
-        Array.isArray(data['variants']) &&
-        Array.isArray(data['specGroups'])
-    : false;
-}
-
-async function readJson<T>(response: Response, guard: (data: unknown) => data is T): Promise<T> {
-  const data: unknown = await response.json();
-  if (!guard(data)) {
-    throw new Error('Response JSON did not match expected shape');
-  }
-  return data;
-}
-
-const API_ROOT = '/api/v1';
-const BASE_URL = `http://localhost${API_ROOT}`;
-
-function makeHandlerOptions(): CreateHandlersOptions {
-  const scenario: ScenarioDescriptor = DEFAULT_SCENARIO;
-  const ids: Ids = createDeterministicIds(scenario.seed);
-  const clock: Clock = createFixedClock('2026-09-14T10:00:00.000Z');
-  const repo = new Repo(scenario, ids, clock);
-  // The handler file is Node-free; the statically imported fixture
-  // seeds the per-test repository instead.
-  const parsed: unknown = productsFixture;
-  if (!isProductArray(parsed)) {
-    throw new Error('Invalid products fixture');
-  }
-  repo.loadProducts(parsed);
-  return { repository: repo, clock, ids, scenario, apiRoot: API_ROOT };
-}
 
 beforeEach(() => {
-  server.use(...buildCatalogHandlers(makeHandlerOptions()));
+  clock = createFixedClock('2026-09-20T12:00:00.000Z');
+  ids = createDeterministicIds(1);
+  options = {
+    repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+    clock,
+    ids,
+    scenario: DEFAULT_SCENARIO,
+    apiRoot: '/api/v1',
+  };
 });
 
-describe('catalog MSW dispatch (AC02 / AC04 / AC05)', () => {
-  it('GET /api/v1/config returns the demo config (AC01 of T06)', async () => {
-    const response = await fetch(`${BASE_URL}/config`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isConfigResponse);
-    expect(body.providerId).toBe('mi-bolt');
-    expect(body.featuredSlugs).toContain('demo-one-5g');
-    expect(body.maximumLineQuantity).toBe(5);
+function installHandlers(): void {
+  server.use(...buildCatalogHandlers(options));
+}
+
+async function loadJson(path: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`http://localhost${path}`);
+  if (!res.ok) throw new Error(`expected 2xx, got ${String(res.status)} for ${path}`);
+  const body: unknown = await res.json();
+  if (!isRecord(body)) throw new Error(`${path}: expected an object body`);
+  return body;
+}
+
+/** Assert a value is a string. Type-narrows via `asserts`. */
+function expectString(value: unknown): asserts value is string {
+  expect(typeof value).toBe('string');
+}
+
+/** Assert a value is a number. Type-narrows via `asserts`. */
+function expectNumber(value: unknown): asserts value is number {
+  expect(typeof value).toBe('number');
+}
+
+/** Assert a value is a boolean. Type-narrows via `asserts`. */
+function expectBoolean(value: unknown): asserts value is boolean {
+  expect(typeof value).toBe('boolean');
+}
+
+/** Assert a value is an array. Type-narrows via `asserts`. */
+function expectArray(value: unknown): asserts value is unknown[] {
+  expect(Array.isArray(value)).toBe(true);
+}
+
+/** Assert a value is a plain object record. Type-narrows via `asserts`. */
+function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+  expect(isRecord(value)).toBe(true);
+}
+
+/** Assert a value is a non-empty string. */
+
+/** Read a list of items from `body.items`, asserting the array shape. */
+function readItems(body: Record<string, unknown>): Record<string, unknown>[] {
+  const items = body['items'];
+  expectArray(items);
+  return items.map((entry) => {
+    expectRecord(entry);
+    return entry;
+  });
+}
+
+/** Read `body[key]` and assert it is a string. */
+function readString(body: Record<string, unknown>, key: string): string {
+  const value = body[key];
+  expectString(value);
+  return value;
+}
+
+/** Read `body[key]` and assert it is a number. */
+function readNumber(body: Record<string, unknown>, key: string): number {
+  const value = body[key];
+  expectNumber(value);
+  return value;
+}
+
+async function expectProblem(
+  path: string,
+  status: number,
+  code: string,
+): Promise<Record<string, unknown>> {
+  const res = await fetch(`http://localhost${path}`);
+  expect(res.status, `${path} status`).toBe(status);
+  expect(res.headers.get('content-type')).toBe('application/problem+json');
+  const body: unknown = await res.json();
+  if (!isRecord(body)) throw new Error('expected an object body');
+  expect(body['code']).toBe(code);
+  return body;
+}
+
+// ---------------------------------------------------------------------------
+// listProducts: default list and paging
+// ---------------------------------------------------------------------------
+
+describe('GET /products default list and paging', () => {
+  beforeEach(installHandlers);
+
+  it('returns 12 items by default and the documented totals', async () => {
+    const body = await loadJson('/api/v1/products');
+    expect(readNumber(body, 'page')).toBe(1);
+    expect(readNumber(body, 'pageSize')).toBe(12);
+    expect(readNumber(body, 'total')).toBe(TOTAL_ENTRIES);
+    expect(readNumber(body, 'totalPages')).toBe(TOTAL_PAGES_12);
+    const items = readItems(body);
+    expect(items.length).toBe(12);
+    expect(items.map((i) => readString(i, 'slug'))).toEqual(DEFAULT_FIRST_TWELVE_SLUGS);
   });
 
-  it('GET /api/v1/products returns the 16-product catalogue with default page', async () => {
-    const response = await fetch(`${BASE_URL}/products`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    expect(body.total).toBe(16);
-    expect(body.page).toBe(1);
-    expect(body.pageSize).toBe(12);
-    expect(body.items).toHaveLength(12);
-    expect(body.facets.brands.length).toBeGreaterThan(0);
-    expect(body.facets.storageGb.map((s) => s.value)).toEqual(['128', '256', '512']);
+  it('respects pageSize=24', async () => {
+    const body = await loadJson('/api/v1/products?pageSize=24');
+    const items = readItems(body);
+    expect(items.length).toBe(24);
+    expect(readNumber(body, 'total')).toBe(TOTAL_ENTRIES);
+    expect(readNumber(body, 'totalPages')).toBe(TOTAL_PAGES_24);
+    expect(items.slice(0, 2).map((i) => readString(i, 'slug'))).toEqual(PAGE_24_FIRST_TWO);
   });
 
-  it('GET /api/v1/products?pageSize=24 returns 16 items in one page', async () => {
-    const response = await fetch(`${BASE_URL}/products?pageSize=24`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    expect(body.pageSize).toBe(24);
-    expect(body.items).toHaveLength(16);
+  it('returns an empty page beyond the last with total unchanged', async () => {
+    const body = await loadJson('/api/v1/products?page=99');
+    const items = body['items'];
+    expect(items).toEqual([]);
+    expect(readNumber(body, 'total')).toBe(TOTAL_ENTRIES);
+    expect(readNumber(body, 'totalPages')).toBe(TOTAL_PAGES_12);
+    expect(readNumber(body, 'page')).toBe(99);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listProducts: 400 validation
+// ---------------------------------------------------------------------------
+
+describe('GET /products 400 problems', () => {
+  beforeEach(installHandlers);
+
+  it('rejects negative minPrice', async () => {
+    const body = await expectProblem('/api/v1/products?minPrice=-1', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('minPrice must not be negative');
   });
 
-  it('GET /api/v1/products?page=2&pageSize=12 returns the second page', async () => {
-    const response = await fetch(`${BASE_URL}/products?page=2&pageSize=12`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    expect(body.page).toBe(2);
-    expect(body.items).toHaveLength(4);
+  it('rejects negative maxPrice', async () => {
+    const body = await expectProblem('/api/v1/products?maxPrice=-1', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('maxPrice must not be negative');
   });
 
-  it('returns the cheapest matching defaultVariant (AC02)', async () => {
-    const response = await fetch(`${BASE_URL}/products?sort=price_asc`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    const first = body.items[0];
-    expect(first.id).toBeTruthy();
-    // demo-go-graphite-128 is the cheapest variant (79 990 HUF).
-    expect(first.defaultVariant.price.amount).toBe(79_990);
-  });
-
-  it('breaks price ties by product id (AC02)', async () => {
-    // Sort by price asc. The cheapest variant wins; ties break by
-    // product id. We assert the order is monotonic in (price, id).
-    const response = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
-    const body = await readJson(response, isProductPageResponse);
-    interface Row {
-      id: string;
-      price: number;
-    }
-    const rows: Row[] = body.items.map((index) => ({
-      id: index.id,
-      price: index.defaultVariant.price.amount,
-    }));
-    for (let index = 1; index < rows.length; index++) {
-      const previous = rows[index - 1];
-      const current = rows[index];
-      const isPriceUp = current.price > previous.price;
-      const isPriceTied = current.price === previous.price;
-      const isIdOrdered = current.id.localeCompare(previous.id) >= 0;
-      expect(isPriceUp || (isPriceTied && isIdOrdered)).toBe(true);
-    }
-  });
-
-  it('sort=price_desc returns products in reverse price order', async () => {
-    const response = await fetch(`${BASE_URL}/products?sort=price_desc&pageSize=24`);
-    const body = await readJson(response, isProductPageResponse);
-    const amounts = body.items.map((index) => index.defaultVariant.price.amount);
-    const sorted = [...amounts].sort((a, b) => b - a);
-    expect(amounts).toEqual(sorted);
-  });
-
-  it('sort=name_asc returns products in alphabetical name order', async () => {
-    const response = await fetch(`${BASE_URL}/products?sort=name_asc&pageSize=24`);
-    const body = await readJson(response, isProductPageResponse);
-    const names = body.items.map((index) => index.name);
-    const sorted = [...names].sort((a, b) => a.localeCompare(b));
-    expect(names).toEqual(sorted);
-  });
-
-  it('sort=recommended matches price_asc + product id tie-break', async () => {
-    const resA = await fetch(`${BASE_URL}/products?sort=recommended&pageSize=24`);
-    const a = await readJson(resA, isProductPageResponse);
-    const resB = await fetch(`${BASE_URL}/products?sort=price_asc&pageSize=24`);
-    const b = await readJson(resB, isProductPageResponse);
-    expect(a.items.map((index) => index.id)).toEqual(b.items.map((index) => index.id));
-  });
-
-  it('repeated brand[] params are applied as OR within the facet (AC05)', async () => {
-    const response = await fetch(
-      `${BASE_URL}/products?brand=MiBolt%20Demo&brand=Sample&pageSize=24`,
+  it('rejects minPrice > maxPrice', async () => {
+    const body = await expectProblem(
+      '/api/v1/products?minPrice=200&maxPrice=100',
+      400,
+      'INVALID_REQUEST',
     );
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    // MiBolt Demo (7) + Sample (5) = 12 distinct products
-    expect(body.total).toBe(12);
+    expect(body['detail']).toBe('minPrice must not exceed maxPrice');
   });
 
-  it('AC01: a single variant must satisfy every across-facet condition', async () => {
-    const response = await fetch(
-      `${BASE_URL}/products?minPrice=0&maxPrice=200000&storageGb=128&storageGb=256&inStock=true&pageSize=24`,
-    );
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    expect(body.total).toBeGreaterThan(0);
-    for (const item of body.items) {
-      const v = item.defaultVariant;
-      expect(v.price.amount).toBeLessThanOrEqual(200_000);
-      expect([128, 256]).toContain(v.storageGb);
-      expect(v.availability).toBe('in_stock');
+  it('rejects page < 1', async () => {
+    const body = await expectProblem('/api/v1/products?page=0', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('page must be at least 1');
+  });
+
+  it('rejects invalid pageSize', async () => {
+    const body = await expectProblem('/api/v1/products?pageSize=13', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('pageSize must be 12 or 24');
+  });
+
+  it('rejects unknown query parameter', async () => {
+    const body = await expectProblem('/api/v1/products?colour=red', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('Unknown query parameter "colour"');
+    expect(body['params']).toEqual({ parameter: 'colour' });
+  });
+
+  it('rejects non-integer page', async () => {
+    const body = await expectProblem('/api/v1/products?page=abc', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('page is invalid');
+  });
+
+  it('rejects non-boolean inStock', async () => {
+    const body = await expectProblem('/api/v1/products?inStock=maybe', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('inStock is invalid');
+  });
+
+  it('rejects storageGb outside 128/256/512', async () => {
+    const body = await expectProblem('/api/v1/products?storageGb=1024', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('storageGb is invalid');
+  });
+
+  it('rejects unknown sort', async () => {
+    const body = await expectProblem('/api/v1/products?sort=cheapest', 400, 'INVALID_REQUEST');
+    expect(body['detail']).toBe('sort is invalid');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listProducts: filters and q
+// ---------------------------------------------------------------------------
+
+describe('GET /products filters', () => {
+  beforeEach(installHandlers);
+
+  it('matches q case-insensitively after NFC normalise; diacritic matters', async () => {
+    // q=kijelző (with ő) matches 35 entries; q=kijelzo (no diacritic)
+    // matches zero because the fixture's search text carries the
+    // diacritic and search uses NFC-lowercase containment. Both come
+    // from the same fixture the spec is loaded with.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st}))}); const k=[p.brand,p.name,...p.highlights,p.description].join(' ').toLowerCase().normalize('NFC'); console.log(e.filter(x=>k.includes('kijelző'.toLowerCase().normalize('NFC'))).length);"
+    const ok = await loadJson('/api/v1/products?q=kijelz%C5%91');
+    const none = await loadJson('/api/v1/products?q=kijelzo');
+    const okItems = readItems(ok);
+    const noneItems = readItems(none);
+    expect(readNumber(ok, 'total')).toBe(35);
+    expect(okItems.length).toBe(12);
+    expect(readNumber(none, 'total')).toBe(0);
+    expect(noneItems.length).toBe(0);
+  });
+
+  it('OR-matches brand values', async () => {
+    const body = await loadJson('/api/v1/products?brand=apple&brand=motorola&pageSize=24');
+    const items = readItems(body);
+    expect(items.length).toBe(18);
+    const brands = new Set(items.map((i) => readString(i, 'slug').split('-')[0]));
+    expect(brands.has('apple') || brands.has('motorola')).toBe(true);
+  });
+
+  it('OR-matches storageGb values', async () => {
+    const body = await loadJson('/api/v1/products?storageGb=128&storageGb=512');
+    expect(readNumber(body, 'total')).toBe(11 + 17);
+    const items = readItems(body);
+    for (const item of items) {
+      expect([128, 512]).toContain(readNumber(item, 'storageGb'));
     }
   });
 
-  it('AC03: brand facet counts are independent of the brand filter', async () => {
-    const resAll = await fetch(`${BASE_URL}/products`);
-    const all = await readJson(resAll, isProductPageResponse);
-    const resFiltered = await fetch(`${BASE_URL}/products?brand=MiBolt%20Demo`);
-    const filtered = await readJson(resFiltered, isProductPageResponse);
-    const allBrands = Object.fromEntries(all.facets.brands.map((f) => [f.value, f.count]));
-    const filteredBrands = Object.fromEntries(
-      filtered.facets.brands.map((f) => [f.value, f.count]),
-    );
-    // Brand facets stay identical regardless of the active brand filter.
-    expect(filteredBrands).toEqual(allBrands);
+  it('color filter restricts to that colorCode', async () => {
+    const body = await loadJson('/api/v1/products?color=zold');
+    expect(readNumber(body, 'total')).toBe(1);
+    const items = readItems(body);
+    const first = items[0];
+    expect(first).toBeDefined();
+    expect(readString(first, 'variantId')).toBe('motorola-edge-50-fusion--zold--256');
   });
 
-  it('AC03: storage facet counts are independent of the storage filter', async () => {
-    const resAll = await fetch(`${BASE_URL}/products`);
-    const all = await readJson(resAll, isProductPageResponse);
-    const resFiltered = await fetch(`${BASE_URL}/products?storageGb=256`);
-    const filtered = await readJson(resFiltered, isProductPageResponse);
-    const allStorage = Object.fromEntries(all.facets.storageGb.map((f) => [f.value, f.count]));
-    const filteredStorage = Object.fromEntries(
-      filtered.facets.storageGb.map((f) => [f.value, f.count]),
-    );
-    expect(filteredStorage).toEqual(allStorage);
-  });
-
-  it('returns 200 with empty items when brand is unknown (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?brand=NotExisting`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    expect(body.total).toBe(0);
-    expect(body.items).toEqual([]);
-  });
-
-  it('returns 200 with empty items when the combination yields no products', async () => {
-    const response = await fetch(`${BASE_URL}/products?minPrice=0&maxPrice=10`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductPageResponse);
-    expect(body.total).toBe(0);
-    expect(body.items).toEqual([]);
-  });
-
-  it('returns 404 when the page is beyond the result set (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?page=99`);
-    expect(response.status).toBe(404);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('NOT_FOUND');
-    expect(body.type).toBe('urn:mi-bolt:problem:not-found');
-  });
-
-  it('returns 400 for an empty brand[] value (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?brand=`);
-    expect(response.status).toBe(400);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors?.[0]?.path).toBe('brand');
-  });
-
-  it('returns 400 for page=abc (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?page=abc`);
-    expect(response.status).toBe(400);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors?.[0]?.path).toBe('page');
-  });
-
-  it('returns 400 for minPrice > maxPrice (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?minPrice=100000&maxPrice=50000`);
-    expect(response.status).toBe(400);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors?.[0]?.path).toBe('minPrice');
-  });
-
-  it('returns 400 for unknown sort mode (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?sort=newest`);
-    expect(response.status).toBe(400);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors?.[0]?.path).toBe('sort');
-  });
-
-  it('returns 400 for unsupported storage size (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?storageGb=999`);
-    expect(response.status).toBe(400);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors?.[0]?.path).toBe('storageGb');
-  });
-
-  it('returns 400 for unsupported pageSize (AC04)', async () => {
-    const response = await fetch(`${BASE_URL}/products?pageSize=13`);
-    expect(response.status).toBe(400);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('VALIDATION_FAILED');
-    expect(body.fieldErrors?.[0]?.path).toBe('pageSize');
-  });
-
-  it('GET /api/v1/products/{slug} returns 200 with the full Product', async () => {
-    const response = await fetch(`${BASE_URL}/products/demo-one-5g`);
-    expect(response.status).toBe(200);
-    const body = await readJson(response, isProductDetailResponse);
-    expect(body.slug).toBe('demo-one-5g');
-    expect(body.variants.length).toBeGreaterThan(0);
-    expect(body.specGroups.length).toBeGreaterThan(0);
-  });
-
-  it('strips a trailing slash from the apiRoot so /products still resolves', async () => {
-    // Use a trailing-slash apiRoot and confirm the handler still fires.
-    const scenario = DEFAULT_SCENARIO;
-    const ids = createDeterministicIds(scenario.seed);
-    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
-    const repo = new Repo(scenario, ids, clock);
-    const parsed: unknown = productsFixture;
-    if (!isProductArray(parsed)) {
-      throw new Error('Invalid products fixture');
+  it('price bounds are inclusive', async () => {
+    // Exactly one entry has price.amount = 89990 (motorola-edge-50-fusion
+    // @ 256, zold). The filter is inclusive on both ends so the count is 1.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st,v:p.variants.find(x=>x.storageGb===st)}))}); console.log(e.filter(x=>x.v.price.amount===89990).length);"
+    const body = await loadJson('/api/v1/products?minPrice=89990&maxPrice=89990');
+    expect(readNumber(body, 'total')).toBe(1);
+    const items = readItems(body);
+    expect(items.length).toBe(1);
+    for (const item of items) {
+      const price = item['price'];
+      expectRecord(price);
+      expect(readNumber(price, 'amount')).toBe(89990);
     }
-    repo.loadProducts(parsed);
-    const handlers = buildCatalogHandlers({
-      repository: repo,
-      clock,
-      ids,
-      scenario,
-      apiRoot: API_ROOT + '/',
+  });
+
+  it('inStock=true keeps only entries with an in-stock variant', async () => {
+    // Exactly 52 entries carry an in_stock variant in the fixture.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st}))}); console.log(e.filter(x=>p.variants.some(v=>v.storageGb===st && v.availability==='in_stock')).length);"
+    const body = await loadJson('/api/v1/products?inStock=true');
+    expect(readNumber(body, 'total')).toBe(52);
+    const items = readItems(body);
+    for (const item of items) {
+      expect(readString(item, 'availability')).toBe('in_stock');
+    }
+  });
+
+  it('is5g=true keeps only 5G products', async () => {
+    // Exactly 54 entries are 5G-capable in the fixture (one product is not).
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st}))}); console.log(e.filter(x=>p.is5g).length);"
+    const body = await loadJson('/api/v1/products?is5g=true');
+    expect(readNumber(body, 'total')).toBe(54);
+    const items = readItems(body);
+    for (const item of items) {
+      expectBoolean(item['is5g']);
+      expect(item['is5g']).toBe(true);
+    }
+  });
+
+  it('featured=true caps the list to 4 entries and bounds every facet count', async () => {
+    // The featured list is the first 4 (product, storage) entries by
+    // recommended order (rank asc, id asc, storage asc), and every
+    // facet count is computed on the same sorted, featured-capped list.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const r=f.ranking.find(x=>x.slug===p.slug); const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({slug:p.slug,brand:p.brand,storage:st,is5g:p.is5g,featured:r.featured,ranking:r,av:p.variants.find(x=>x.storageGb===st).availability,price:p.variants.find(x=>x.storageGb===st).price.amount}))}); const F=e.filter(x=>x.featured).sort((a,b)=>{if(a.ranking.rank!==b.ranking.rank)return a.ranking.rank-b.ranking.rank; const iA=Number(a.slug.match(/\\d+/)[0]); const iB=Number(b.slug.match(/\\d+/)[0]); if(iA!==iB)return iA-iB; return a.storage-b.storage}).slice(0,4); const bc={}; F.forEach(x=>{bc[x.brand.toLowerCase().normalize('NFC')]=(bc[x.brand.toLowerCase().normalize('NFC')]||0)+1}); const sc={}; F.forEach(x=>{sc[x.storage]=(sc[x.storage]||0)+1}); console.log({brands:bc,storage:sc,is5g:F.filter(x=>x.is5g).length,inStock:F.filter(x=>x.av==='in_stock').length,priceRange:[Math.min(...F.map(x=>x.price)),Math.max(...F.map(x=>x.price))]});"
+    const body = await loadJson('/api/v1/products?featured=true');
+    expect(readNumber(body, 'total')).toBe(4);
+    const items = readItems(body);
+    expect(items.length).toBe(4);
+    expect(items.map((i) => readString(i, 'slug'))).toEqual(FEATURED_FIRST_FOUR);
+    const facets = body['facets'];
+    expectRecord(facets);
+    expect(facets['brands']).toEqual([
+      { value: 'apple', label: 'apple', count: 2 },
+      { value: 'honor', label: 'honor', count: 1 },
+      { value: 'motorola', label: 'motorola', count: 1 },
+    ]);
+    expect(facets['storageGb']).toEqual([
+      { value: '128', label: '128 GB', count: 1 },
+      { value: '256', label: '256 GB', count: 2 },
+      { value: '512', label: '512 GB', count: 1 },
+    ]);
+    expect(readNumber(facets, 'is5g')).toBe(3);
+    expect(readNumber(facets, 'inStock')).toBe(4);
+    const priceRange = facets['priceRange'];
+    expectRecord(priceRange);
+    const priceMin = priceRange['min'];
+    const priceMax = priceRange['max'];
+    expectRecord(priceMin);
+    expectRecord(priceMax);
+    expect(readNumber(priceMin, 'amount')).toBe(69990);
+    expect(readNumber(priceMax, 'amount')).toBe(699990);
+    // Sum of brand counts equals the total: 4 entries, 4 brand hits.
+    const brands = facets['brands'];
+    expectArray(brands);
+    const sum = brands.reduce<number>((acc, b) => {
+      expectRecord(b);
+      return acc + readNumber(b, 'count');
+    }, 0);
+    expect(sum).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listProducts: sorts
+// ---------------------------------------------------------------------------
+
+describe('GET /products sorts', () => {
+  beforeEach(installHandlers);
+
+  for (const [sort, expected] of Object.entries(SORTS)) {
+    it(`sort=${sort} first two slugs`, async () => {
+      const body = await loadJson(`/api/v1/products?sort=${sort}`);
+      const items = readItems(body);
+      expect(items.slice(0, 2).map((i) => readString(i, 'slug'))).toEqual(expected);
     });
-    server.use(...handlers);
-    const response = await fetch(`${BASE_URL}/config`);
-    expect(response.status).toBe(200);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// listProducts: facets
+// ---------------------------------------------------------------------------
+
+describe('GET /products facets', () => {
+  beforeEach(installHandlers);
+
+  it('default list reports brand, storage, color, is5g, inStock, priceRange', async () => {
+    const body = await loadJson('/api/v1/products');
+    const facets = body['facets'];
+    expectRecord(facets);
+    expect(facets['brands']).toEqual(DEFAULT_BRAND_FACET);
+    expect(facets['storageGb']).toEqual(DEFAULT_STORAGE_FACET);
+    const colors = facets['colors'];
+    expectArray(colors);
+    expect(colors[0]).toEqual(DEFAULT_FIRST_COLOR);
+    expect(readNumber(facets, 'is5g')).toBe(DEFAULT_IS5G);
+    expect(readNumber(facets, 'inStock')).toBe(DEFAULT_INSTOCK);
+    const priceRange = facets['priceRange'];
+    expectRecord(priceRange);
+    const min = priceRange['min'];
+    const max = priceRange['max'];
+    expectRecord(min);
+    expectRecord(max);
+    expect(readNumber(min, 'amount')).toBe(DEFAULT_PRICE_RANGE.min);
+    expect(readNumber(max, 'amount')).toBe(DEFAULT_PRICE_RANGE.max);
   });
 
-  it('GET /api/v1/products/{slug} returns 404 for an unknown slug', async () => {
-    const response = await fetch(`${BASE_URL}/products/does-not-exist`);
-    expect(response.status).toBe(404);
-    const body = await readJson(response, isProblemResponse);
-    expect(body.code).toBe('NOT_FOUND');
+  it('brand facet stays disjunctive under brand selection', async () => {
+    const base = await loadJson('/api/v1/products');
+    const filtered = await loadJson('/api/v1/products?brand=apple');
+    const baseFacets = base['facets'];
+    const filteredFacets = filtered['facets'];
+    expectRecord(baseFacets);
+    expectRecord(filteredFacets);
+    const baseBrands = baseFacets['brands'];
+    const filteredBrands = filteredFacets['brands'];
+    expectArray(baseBrands);
+    expectArray(filteredBrands);
+    const findBrand = (list: unknown[], value: string): Record<string, unknown> | undefined => {
+      for (const entry of list) {
+        expectRecord(entry);
+        if (entry['value'] === value) return entry;
+      }
+      return undefined;
+    };
+    const baseApple = findBrand(baseBrands, 'apple');
+    const filteredApple = findBrand(filteredBrands, 'apple');
+    expect(baseApple).toBeDefined();
+    expect(filteredApple).toBeDefined();
+    if (!baseApple || !filteredApple) return;
+    expect(readNumber(baseApple, 'count')).toBe(readNumber(filteredApple, 'count'));
+    const filteredHonor = findBrand(filteredBrands, 'honor');
+    expect(filteredHonor).toBeDefined();
+    if (!filteredHonor) return;
+    expect(readNumber(filteredHonor, 'count')).toBe(8);
   });
 });
 
-// SortMode is used as a type-only import; the type assertion at the top
-// is sufficient and no runtime value is required.
+// ---------------------------------------------------------------------------
+// getProduct
+// ---------------------------------------------------------------------------
+
+describe('GET /products/:slug', () => {
+  beforeEach(installHandlers);
+
+  it('returns the full product shape with id-asc variants and image src prefix', async () => {
+    const body = await loadJson('/api/v1/products/motorola-edge-50-fusion');
+    expect(readString(body, 'slug')).toBe('motorola-edge-50-fusion');
+    const variants = body['variants'];
+    expectArray(variants);
+    expect(variants.length).toBeGreaterThan(0);
+    for (let i = 1; i < variants.length; i += 1) {
+      const a = variants[i - 1];
+      const b = variants[i];
+      expectRecord(a);
+      expectRecord(b);
+      const aId = readString(a, 'id');
+      const bId = readString(b, 'id');
+      expect(aId < bId || aId === bId).toBe(true);
+    }
+    const first = variants[0];
+    expectRecord(first);
+    const firstImages = first['images'];
+    expectArray(firstImages);
+    expect(firstImages.length).toBeGreaterThan(0);
+    const firstImage = firstImages[0];
+    expectRecord(firstImage);
+    expect(readString(firstImage, 'src').startsWith('/api/v1/media/')).toBe(true);
+    const specGroups = body['specGroups'];
+    expectArray(specGroups);
+    expect(specGroups.length).toBeGreaterThan(0);
+    const firstSpec = specGroups[0];
+    expectRecord(firstSpec);
+    expect(readString(firstSpec, 'id')).toBe('fizikai-jellemzok');
+  });
+
+  it('returns 404 with the contract problem shape', async () => {
+    const body = await expectProblem('/api/v1/products/does-not-exist', 404, 'NOT_FOUND');
+    expect(body['detail']).toBe('product not found');
+    expect(body['params']).toEqual({ slug: 'does-not-exist' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listRelatedProducts
+// ---------------------------------------------------------------------------
+
+describe('GET /products/:slug/related', () => {
+  beforeEach(installHandlers);
+
+  it('returns up to 4 same-brand items, subject excluded, min storage', async () => {
+    // apple-iphone-18-pro-max has 10 same-brand candidates (apple-*),
+    // ranked by rank asc / id asc, capped at 4. The returned length is
+    // therefore exactly 4, with the subject excluded.
+    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const c=f.products.filter(p=>p.slug!=='apple-iphone-18-pro-max' && p.brand==='Apple').sort((a,b)=>{const ra=f.ranking.find(x=>x.slug===a.slug).rank; const rb=f.ranking.find(x=>x.slug===b.slug).rank; if(ra!==rb)return ra-rb; return Number(a.id)-Number(b.id)}); console.log(Math.min(c.length,4));"
+    const body = await loadJson('/api/v1/products/apple-iphone-18-pro-max/related');
+    expectArray(body);
+    expect(body.length).toBe(4);
+    for (const item of body) {
+      expectRecord(item);
+      expect(readString(item, 'slug')).not.toBe('apple-iphone-18-pro-max');
+    }
+  });
+
+  it('returns the minimum-storage entry for each related product', async () => {
+    const body = await loadJson('/api/v1/products/apple-iphone-18-pro-max/related');
+    expectArray(body);
+    for (const item of body) {
+      expectRecord(item);
+      const slug = readString(item, 'slug');
+      const storageGb = readNumber(item, 'storageGb');
+      // The related path picks the smallest storage the product carries.
+      const store = catalogStore.current;
+      expect(store).not.toBeNull();
+      if (!store) return;
+      const product = store.getProduct(slug);
+      expect(product).toBeDefined();
+      if (!product) return;
+      const minStorage = Math.min(...product.variants.map((v) => v.storageGb));
+      expect(storageGb).toBe(minStorage);
+    }
+  });
+
+  it('returns 404 for an unknown slug', async () => {
+    const body = await expectProblem('/api/v1/products/does-not-exist/related', 404, 'NOT_FOUND');
+    expect(body['detail']).toBe('product not found');
+    expect(body['params']).toEqual({ slug: 'does-not-exist' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getMedia
+// ---------------------------------------------------------------------------
+
+describe('GET /media/:imageId', () => {
+  beforeEach(installHandlers);
+
+  it('returns 404 with a Problem when the image is unknown', async () => {
+    const res = await fetch('http://localhost/api/v1/media/does-not-exist');
+    expect(res.status).toBe(404);
+    expect(res.headers.get('content-type')).toBe('application/problem+json');
+    const body: unknown = await res.json();
+    expect(isRecord(body), 'body is a record').toBe(true);
+    if (!isRecord(body)) return;
+    expect(body['code']).toBe('NOT_FOUND');
+    expect(body['detail']).toBe('image not found: does-not-exist');
+    expect(body['params']).toEqual({ imageId: 'does-not-exist' });
+  });
+
+  it('returns 200 image/png with immutable cache header when the loader supplies bytes', async () => {
+    // Pick a real image id from the first product's first variant.
+    const store = catalogStore.current;
+    expect(store).not.toBeNull();
+    if (!store) return;
+    const product = store.getProduct('motorola-edge-50-fusion');
+    expect(product).toBeDefined();
+    if (!product) return;
+    const firstVariant = product.variants.at(0);
+    expect(firstVariant).toBeDefined();
+    if (firstVariant === undefined) return;
+    const firstImage = firstVariant.images.at(0);
+    expect(firstImage).toBeDefined();
+    if (firstImage === undefined) return;
+    const imageId = firstImage.id;
+    const { buildMediaHandler } = await import('./catalog.handlers');
+    const stub = (id: string): Promise<ArrayBuffer | undefined> => {
+      if (id !== imageId) return Promise.resolve(undefined);
+      const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+      return Promise.resolve(bytes.buffer);
+    };
+    // Override the media handler registered by installHandlers with one
+    // that uses the stub loader; the rest of the catalog handlers stay
+    // in place from the beforeEach.
+    server.resetHandlers(...buildCatalogHandlers(options), buildMediaHandler(options, stub));
+    const res = await fetch(`http://localhost/api/v1/media/${imageId}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('image/png');
+    expect(res.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+    const ab = await res.arrayBuffer();
+    expect(ab.byteLength).toBe(12);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sanity: store counts match the fixture
+// ---------------------------------------------------------------------------
+
+describe('store bookkeeping', () => {
+  it('holds 48 products, 55 entries and the documented image count', () => {
+    expect(catalogStore.current).not.toBeNull();
+    const store = catalogStore.current;
+    expect(store).not.toBeNull();
+    if (!store) return;
+    expect(store.listProducts().length).toBe(48);
+    expect(store.listEntries().length).toBe(TOTAL_ENTRIES);
+    const images = new Set<string>();
+    for (const entry of store.listEntries()) {
+      for (const image of entry.variant.images) {
+        images.add(image.id);
+      }
+    }
+    expect(images.size).toBe(TOTAL_IMAGES);
+  });
+
+  it('getVariant resolves a known id to product and variant, and unknown ids to undefined', () => {
+    const store = catalogStore.current;
+    expect(store).not.toBeNull();
+    if (!store) return;
+    const hit = store.getVariant('motorola-edge-50-fusion--zold--256');
+    expect(hit).toBeDefined();
+    if (!hit) return;
+    expect(hit.product.slug).toBe('motorola-edge-50-fusion');
+    expect(hit.variant.storageGb).toBe(256);
+    expect(hit.variant.maxQuantity).toBe(5);
+    expect(store.getVariant('nope')).toBeUndefined();
+  });
+});

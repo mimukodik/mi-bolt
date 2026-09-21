@@ -11,20 +11,12 @@ import { AddCartItemRequest } from '../../models/add-cart-item-request';
 import { Cart } from '../../models/cart';
 
 export interface AddCartItem$Params {
-  cartId: string;
-
-/**
- * Key scoped to method + path + demo session, retained 24 hours. Same key and normalized body returns original result BEFORE current-version checks. Different body yields 409.
- */
-  'Idempotency-Key': string;
       body: AddCartItemRequest
 }
 
 export function addCartItem(http: HttpClient, rootUrl: string, params: AddCartItem$Params, context?: HttpContext): Observable<StrictHttpResponse<Cart>> {
   const rb = new RequestBuilder(rootUrl, addCartItem.PATH, 'post');
   if (params) {
-    rb.path('cartId', params.cartId, {});
-    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
     rb.body(params.body, 'application/json');
   }
 
@@ -38,4 +30,4 @@ export function addCartItem(http: HttpClient, rootUrl: string, params: AddCartIt
   );
 }
 
-addCartItem.PATH = '/carts/{cartId}/items';
+addCartItem.PATH = '/cart/items';

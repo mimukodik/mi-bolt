@@ -1,43 +1,17 @@
-/* delivery-step.scss — extracted from inline styles.
-   Tailwind v4 utility classes live alongside the scoped selectors below. */
+/* Tailwind utility classes in delivery-step.html carry layout, spacing,
+   colour and typography (the central @theme / tokens.css values, via the
+   utility-(--token) shorthand). This sheet only holds the stateful and
+   conditional rules utilities cannot express: radio-group selection,
+   the disabled/unavailable dimming, the focus ring, the billing-name
+   field (mirrors address-form.scss's `.field`/`.label`/`.input` so the
+   two fields in the billing block read as one form), and reduced motion. */
 
 :host {
   display: block;
 }
 
-.delivery {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  color: var(--color-text-primary);
-}
-
-.options {
-  margin: 0;
-  padding: var(--space-5);
-  background: var(--color-surface-light);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-}
-
-.legend {
-  padding: 0 var(--space-2);
-  font-size: var(--type-card-title);
-  font-weight: var(--weight-bold);
-}
-
-.option-list {
-  list-style: none;
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 .option {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
+  border-color: var(--color-border-subtle);
   background: var(--color-surface-section);
   transition:
     border-color var(--motion-fast) ease,
@@ -49,20 +23,8 @@
   background: var(--color-brand-accent-soft);
 }
 
-.option-label {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  cursor: pointer;
-  min-height: var(--size-control);
-}
-
-.radio {
-  margin-top: var(--space-1);
-  width: 20px;
-  height: 20px;
-  accent-color: var(--color-brand-ink);
+.option.is-unavailable {
+  opacity: 0.6;
 }
 
 .radio:focus-visible {
@@ -70,156 +32,36 @@
   outline-offset: 2px;
 }
 
-.option-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.option-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.option-title {
-  font-size: var(--type-body);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-primary);
-}
-
-.option-description {
-  font-size: var(--type-helper);
-  color: var(--color-text-secondary);
-  line-height: var(--line-height-body);
-}
-
 .option-badge {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-badge);
   background: var(--color-brand-accent);
   color: var(--color-text-primary);
-  font-size: var(--type-meta);
-  font-weight: var(--weight-bold);
 }
 
-.pickup-notice {
-  margin: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  background: var(--color-surface-section);
-  color: var(--color-text-secondary);
+.field .label {
   font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+}
+
+.field .input {
+  min-height: var(--size-control);
+  border-color: var(--color-border-control);
+  background: var(--color-surface-light);
+  color: var(--color-text-primary);
+  font-size: var(--type-body);
   line-height: var(--line-height-body);
 }
 
-.summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  background: var(--color-surface-section);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
+.field .input:focus-visible {
+  outline: 2px solid var(--color-focus-light);
+  outline-offset: 2px;
 }
 
-.summary-title {
-  margin: 0;
-  font-size: var(--type-card-title);
-  font-weight: var(--weight-bold);
-  line-height: var(--line-height-heading);
-}
-
-.summary-rows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-}
-
-.summary-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-3);
-  align-items: baseline;
-}
-
-.summary-row dt {
-  margin: 0;
-  font-size: var(--type-helper);
-  color: var(--color-text-secondary);
-}
-
-.summary-row dd {
-  margin: 0;
-  font-size: var(--type-body);
-  color: var(--color-text-primary);
-}
-
-.payment-value {
-  font-weight: var(--weight-medium);
-}
-
-.fresh-value {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-1);
-}
-
-.fresh-flag {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-badge);
-  background: var(--color-status-warning);
-  color: var(--color-status-warning-text);
-  font-size: var(--type-meta);
-  font-weight: var(--weight-bold);
-}
-
-.fresh-ok {
-  font-size: var(--type-meta);
-  color: var(--color-text-secondary);
-}
-
-.fresh-hint {
-  font-size: var(--type-meta);
-  color: var(--color-text-secondary);
-  max-width: 22ch;
-  text-align: right;
-}
-
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-@media (min-width: 640px) {
-  .options,
-  .summary {
-    padding: var(--space-6);
-  }
-
-  /* Row items cannot shrink (button.scss white-space: nowrap), so the
-     row must be allowed to wrap. */
-  .actions {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
-  }
+.field .input[aria-invalid='true'] {
+  border-color: var(--color-status-error);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .option,
-  .summary {
+  .option {
     transition: none;
   }
 }

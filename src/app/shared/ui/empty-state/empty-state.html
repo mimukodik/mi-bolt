@@ -1,18 +1,18 @@
 <section
-  aria-live="polite"
   class="root flex flex-col items-center text-center p-6"
-  data-testid="empty-state"
   role="status"
+  aria-live="polite"
+  data-testid="empty-state"
 >
   <h2 class="title m-0 font-bold">{{ title() }}</h2>
   <p class="message m-0 leading-relaxed">{{ message() }}</p>
   @if (actionLabel()) {
     <div class="actions mt-4 flex items-center justify-center">
       <app-button
-        [label]="actionLabel()!"
         [variant]="actionVariant()"
+        [label]="actionLabel()!"
         (pressed)="actionRequested.emit()"
-      />
+      ></app-button>
     </div>
   }
 </section>

@@ -1,28 +1,50 @@
 <aside
-  aria-label="Rendelés összesítése"
   class="summary flex flex-col gap-4 p-5 rounded"
+  aria-label="Rendelés összesítése"
   data-testid="order-summary"
 >
   <h2 class="title m-0 font-bold">Rendelés összesítése</h2>
 
   <div class="rows flex flex-col gap-3">
     <div class="row row--subtotal flex flex-col gap-1" data-testid="order-summary-subtotal">
-      <app-price-block label="Részösszeg" [money]="subtotal()" [status]="subtotalStatus()" />
+      <app-price-block
+        [money]="subtotal()"
+        [label]="'Részösszeg'"
+        [status]="subtotalStatus()"
+      ></app-price-block>
     </div>
 
     <div class="row row--shipping flex flex-col gap-1" data-testid="order-summary-shipping">
-      <span class="label">Szállítás</span>
-      @if (shipping()) {
-        <app-price-block label="Szállítási díj" status="success" [money]="shipping()!" />
+      @if (shipping(); as fee) {
+        <app-price-block
+          [money]="fee"
+          [label]="'Szállítási díj'"
+          [status]="'success'"
+        ></app-price-block>
       } @else {
+        <span class="label">Szállítás</span>
         <span class="placeholder" data-testid="shipping-placeholder">
           A következő lépésben választod ki.
         </span>
       }
     </div>
 
+    @if (paymentFee(); as fee) {
+      <div class="row flex flex-col gap-0" data-testid="order-summary-payment-fee">
+        <app-price-block
+          [money]="fee"
+          [label]="'Fizetési díj'"
+          [status]="'success'"
+        ></app-price-block>
+      </div>
+    }
+
     <div class="row row--total flex flex-col gap-0" data-testid="order-summary-total">
-      <app-price-block label="Végösszeg" [money]="total()" [status]="totalStatus()" />
+      <app-price-block
+        [money]="total()"
+        [label]="'Végösszeg'"
+        [status]="totalStatus()"
+      ></app-price-block>
     </div>
   </div>
 

@@ -1,5 +1,4 @@
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { FormFieldMessage, type FieldError } from './form-field-message';
 
@@ -7,13 +6,13 @@ import { FormFieldMessage, type FieldError } from './form-field-message';
   imports: [FormFieldMessage],
   template: `
     <app-form-field-message
-      [errors]="errors()"
       [fieldId]="fieldId()"
+      [errors]="errors()"
+      [touched]="touched()"
+      [submitted]="submitted()"
       [helpText]="helpText()"
       [severity]="severity()"
-      [submitted]="submitted()"
-      [touched]="touched()"
-    />
+    ></app-form-field-message>
   `,
 })
 class HostComponent {
@@ -30,7 +29,7 @@ class HostComponent {
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -47,11 +46,11 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.touched.set(true);
     fixture.detectChanges();
-    const message = getNativeElement(fixture).querySelector<HTMLElement>(
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
       '[data-testid="form-field-message"]',
     );
-    expect(message).not.toBeNull();
-    expect(message?.id).toBe('email-message');
+    expect(msg).not.toBeNull();
+    expect(msg?.id).toBe('email-message');
   });
 
   it('hides error text while the field is untouched and the form un-submitted', () => {
@@ -65,11 +64,11 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.touched.set(true);
     fixture.detectChanges();
-    const message = getNativeElement(fixture).querySelector<HTMLElement>(
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
       '[data-testid="form-field-message"]',
     );
-    expect(message?.textContent).toContain('Az e-mail cím megadása kötelező.');
-    expect(message?.classList.contains('is-error')).toBe(true);
+    expect(msg?.textContent).toContain('Az e-mail cím megadása kötelező.');
+    expect(msg?.classList.contains('is-error')).toBe(true);
   });
 
   it('shows the error when the form has been submitted regardless of touched', () => {
@@ -85,10 +84,10 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.touched.set(true);
     fixture.detectChanges();
-    const message = getNativeElement(fixture).querySelector<HTMLElement>(
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
       '[data-testid="form-field-message"]',
     );
-    expect(message?.getAttribute('data-pointer')).toBe('/contact/email');
+    expect(msg?.getAttribute('data-pointer')).toBe('/contact/email');
   });
 
   it('renders the help text without error styling when severity is help', () => {
@@ -96,16 +95,16 @@ describe('FormFieldMessage primitive', () => {
     host.helpText.set('Formátum: nev@példa.hu');
     host.severity.set('help');
     fixture.detectChanges();
-    const message = getNativeElement(fixture).querySelector<HTMLElement>(
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
       '[data-testid="form-field-message"]',
     );
-    expect(message).not.toBeNull();
-    if (message === null) {
+    expect(msg).not.toBeNull();
+    if (!msg) {
       throw new Error('Expected form-field-message');
     }
-    expect(message.textContent.trim()).toBe('Formátum: nev@példa.hu');
-    expect(message.classList.contains('is-help')).toBe(true);
-    expect(message.classList.contains('is-error')).toBe(false);
+    expect(msg.textContent.trim()).toBe('Formátum: nev@példa.hu');
+    expect(msg.classList.contains('is-help')).toBe(true);
+    expect(msg.classList.contains('is-error')).toBe(false);
   });
 
   it('does not show any message when there are no errors and no help text', () => {

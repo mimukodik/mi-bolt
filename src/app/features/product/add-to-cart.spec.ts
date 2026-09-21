@@ -11,14 +11,12 @@
 import '@angular/compiler';
 
 import { Component, Input, Output, provideZonelessChangeDetection, signal } from '@angular/core';
-import type { ComponentFixture } from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { readFile } from 'node:fs/promises';
 import { resolve as pathResolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { Button } from '../../shared/ui/button/button';
-import { isRecord } from '../../../mocks/is-record';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import type { UiProblem } from '../../shared/types/ui-problem';
 import { AddToCart } from './add-to-cart';
@@ -27,11 +25,12 @@ import type { Variant } from '../../api/generated/models/variant';
 
 const sampleVariant: Variant = {
   id: 'demo-one-5g-graphite-256',
+  slug: 'demo-one-5g-graphite-256-variant',
   colorCode: 'graphite',
   colorName: 'Grafit',
   swatchHex: '#343B43',
   storageGb: 256,
-  price: { amount: 339_990, currency: 'HUF' },
+  price: { amount: 339990, currency: 'HUF' },
   availability: 'in_stock',
   maxQuantity: 5,
   images: [],
@@ -43,27 +42,27 @@ function registerComponentMetadata(
 ): void {
   if (typeof componentClass !== 'function') return;
   const raw: unknown = Reflect.get(componentClass, 'propDecorators');
-  const propertyDecorators: Record<string, unknown[]> = {};
-  if (isRecord(raw)) {
+  const propDecorators: Record<string, unknown[]> = {};
+  if (typeof raw === 'object' && raw !== null) {
     for (const [key, value] of Object.entries(raw)) {
-      if (!Array.isArray(value)) {
-        continue;
+      if (Array.isArray(value)) {
+        const arr: unknown[] = [];
+        for (const item of value) arr.push(item);
+        propDecorators[key] = arr;
       }
-
-      propertyDecorators[key] = value;
     }
   }
   for (const name of config.inputs ?? []) {
-    const array = propertyDecorators[name] ?? [];
-    array.push({ type: Input, args: [{ isSignal: true }] });
-    propertyDecorators[name] = array;
+    const arr = propDecorators[name] ?? [];
+    arr.push({ type: Input, args: [{ isSignal: true }] });
+    propDecorators[name] = arr;
   }
   for (const name of config.outputs ?? []) {
-    const array = propertyDecorators[name] ?? [];
-    array.push({ type: Output, args: [] });
-    propertyDecorators[name] = array;
+    const arr = propDecorators[name] ?? [];
+    arr.push({ type: Output, args: [] });
+    propDecorators[name] = arr;
   }
-  Reflect.set(componentClass, 'propDecorators', propertyDecorators);
+  Reflect.set(componentClass, 'propDecorators', propDecorators);
 }
 
 registerComponentMetadata(AddToCart, {
@@ -102,12 +101,12 @@ beforeAll(async () => {
   imports: [AddToCart],
   template: `
     <app-add-to-cart
-      [error]="error()"
-      [pending]="pending()"
-      [quantity]="quantity()"
       [variant]="variant()"
+      [quantity]="quantity()"
+      [pending]="pending()"
+      [error]="error()"
       (addRequested)="onAddRequested($event)"
-    />
+    ></app-add-to-cart>
   `,
 })
 class TestHostComponent {
@@ -129,10 +128,10 @@ function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
 }
 
 function queryButton(parent: ParentNode, selector: string): HTMLButtonElement {
-  const element = parent.querySelector(selector);
-  if (!(element instanceof HTMLButtonElement))
+  const el = parent.querySelector(selector);
+  if (!(el instanceof HTMLButtonElement))
     throw new Error(`Expected HTMLButtonElement: ${selector}`);
-  return element;
+  return el;
 }
 
 async function createHarness(): Promise<{
@@ -205,8 +204,8 @@ describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
     await fixture.whenStable();
     expect(host.requests.length).toBe(0);
 
-    const statusElement = root.querySelector('[data-testid="status-message"]');
-    expect(statusElement?.textContent).toContain('A termék hozzáadása a kosárhoz…');
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    expect(statusEl?.textContent).toContain('A termék hozzáadása a kosárhoz…');
   });
 
   it('with an error the error banner renders its message', async () => {
@@ -220,10 +219,10 @@ describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const statusElement = root.querySelector('[data-testid="status-message"]');
-    expect(statusElement).not.toBeNull();
-    expect(statusElement?.classList.contains('is-error')).toBe(true);
-    expect(statusElement?.textContent).toContain(
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    expect(statusEl).not.toBeNull();
+    expect(statusEl?.classList.contains('is-error')).toBe(true);
+    expect(statusEl?.textContent).toContain(
       'A termék hozzáadása nem sikerült; a kosár változatlan.',
     );
   });
@@ -240,9 +239,9 @@ describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const statusElement = root.querySelector('[data-testid="status-message"]');
-    expect(statusElement?.textContent).toContain('A termék hozzáadása a kosárhoz…');
-    expect(statusElement?.textContent).not.toContain('stale error');
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    expect(statusEl?.textContent).toContain('A termék hozzáadása a kosárhoz…');
+    expect(statusEl?.textContent).not.toContain('stale error');
   });
 
   it('with neither pending nor error, no status banner renders', async () => {

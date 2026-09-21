@@ -39,10 +39,10 @@ import {
   type CatalogQuery,
   type Sort,
 } from '../../../app/features/catalog/catalog-query';
-import type { FacetValue } from '../../../app/api/generated/models/facet-value';
+import type { CatalogItem } from '../../../app/api/generated/models/catalog-item';
+import type { Facets } from '../../../app/api/generated/models/facets';
+import type { ColorFacetValue } from '../../../app/api/generated/models/color-facet-value';
 import type { ProductPage } from '../../../app/api/generated/models/product-page';
-import type { ProductSummary } from '../../../app/api/generated/models/product-summary';
-import type { Variant } from '../../../app/api/generated/models/variant';
 
 beforeAll(async () => {
   await TestBed.compileComponents();
@@ -55,30 +55,23 @@ beforeAll(async () => {
 // captured request params via `lastCall()`.
 // ---------------------------------------------------------------------------
 
-type ListProductsParameters = Parameters<typeof listProducts>[2];
+type ListProductsParams = Parameters<typeof listProducts>[2];
 
 @Injectable({ providedIn: 'root' })
 class StubApi {
-  /**
-  Latest params passed to `invoke(listProducts, ...)`.
-  */
-  readonly calls: ListProductsParameters[] = [];
+  /** Latest params passed to `invoke(listProducts, ...)`. */
+  readonly calls: ListProductsParams[] = [];
   /** Active response stream: replaced per call so a previous error
    * or completion does not poison the next subscriber. */
   private current$: Subject<ProductPage> = new Subject<ProductPage>();
-  /**
-  Optional pre-recorded error for the next call.
-  */
+  /** Optional pre-recorded error for the next call. */
   nextError: unknown = null;
 
-  invoke(
-    function_: typeof listProducts,
-    parameters: ListProductsParameters,
-  ): Observable<ProductPage> {
-    if (function_ !== listProducts) {
+  invoke(fn: typeof listProducts, params: ListProductsParams): Observable<ProductPage> {
+    if (fn !== listProducts) {
       throw new Error('StubApi only handles listProducts in this spec.');
     }
-    this.calls.push(parameters);
+    this.calls.push(params);
     // A fresh Subject per call so a Subject error / complete from
     // a previous call does not short-circuit the new subscription.
     const stream$ = new Subject<ProductPage>();
@@ -90,8 +83,8 @@ class StubApi {
         next: (page) => {
           subscriber.next(page);
         },
-        error: (error_) => {
-          subscriber.error(error_);
+        error: (err) => {
+          subscriber.error(err);
         },
         complete: () => {
           subscriber.complete();
@@ -108,16 +101,12 @@ class StubApi {
     });
   }
 
-  /**
-  Resolve the most recently issued call with `response`.
-  */
+  /** Resolve the most recently issued call with `response`. */
   resolve(response: ProductPage): void {
     this.current$.next(response);
   }
 
-  /**
-  Reject the most recently issued call with `error`.
-  */
+  /** Reject the most recently issued call with `error`. */
   reject(error: unknown): void {
     this.current$.error(error);
   }
@@ -127,40 +116,69 @@ class StubApi {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-function makeVariant(id: string, storageGb: 128 | 256 | 512, price: number): Variant {
-  return {
-    id,
-    availability: 'in_stock',
-    colorCode: 'graphite',
-    colorName: 'Grafit',
-    images: [{ id: `${id}-img`, src: '/assets/x.webp', alt: '', width: 320, height: 400 }],
-    maxQuantity: 5,
-    price: { amount: price, currency: 'HUF' },
-    storageGb,
-    swatchHex: '#343B43',
-  };
+function money(amount: number): { amount: number; currency: 'HUF' } {
+  return { amount, currency: 'HUF' };
 }
 
-function makeSummary(id: string, brand: string, name: string, price: number): ProductSummary {
-  const variant = makeVariant(`${id}-256`, 256, price);
+function makeItem(id: string, brand: string, name: string, price: number): CatalogItem {
+  const slug = id;
+  const variantId = `${id}-256-graphite`;
   return {
     id,
-    slug: id,
+    slug,
     brand,
     name,
     highlights: [],
-    defaultVariant: variant,
     is5g: true,
-    isDemo: true,
+    releasedAt: '2026-01-01',
+    storageGb: 256,
+    variantId,
+    variantSlug: `${slug}-graphite-256`,
+    price: money(price),
+    availability: 'in_stock',
+    maxQuantity: 5,
+    image: {
+      id: `${id}-front`,
+      src: '/assets/x.webp',
+      alt: '',
+      width: 320,
+      height: 400,
+    },
+    colors: [
+      {
+        colorCode: 'graphite',
+        colorName: 'Grafit',
+        swatchHex: '#343B43',
+        variantId,
+        variantSlug: `${slug}-graphite-256`,
+        price: money(price),
+        availability: 'in_stock',
+      },
+    ],
   };
 }
 
-function makeFacet(value: string, count: number): FacetValue {
+function makeFacet(value: string, count: number): { value: string; label: string; count: number } {
   return { value, label: value, count };
 }
 
+function makeColorFacet(value: string, count: number): ColorFacetValue {
+  return { value, label: value, count, swatchHex: '#343B43' };
+}
+
+function makeFacets(): Facets {
+  return {
+    brands: [makeFacet('Alpha', 0), makeFacet('Beta', 0)],
+    colors: [makeColorFacet('graphite', 1), makeColorFacet('zold', 0)],
+    inStock: 10,
+    is5g: 9,
+    priceRange: { min: money(0), max: money(1_000_000) },
+    storageGb: ALLOWED_STORAGE_GB.map((s) => makeFacet(String(s), 0)),
+  };
+}
+
 function makePage(
-  items: ProductSummary[],
+  items: CatalogItem[],
   total: number,
   page = 1,
   pageSize: 12 | 24 = 12,
@@ -170,10 +188,8 @@ function makePage(
     total,
     page,
     pageSize,
-    facets: {
-      brands: [makeFacet('Alpha', 0), makeFacet('Beta', 0)],
-      storageGb: ALLOWED_STORAGE_GB.map((s) => makeFacet(String(s), 0)),
-    },
+    totalPages: Math.ceil(total / pageSize),
+    facets: makeFacets(),
   };
 }
 
@@ -195,11 +211,12 @@ describe('T12-AC01 catalog-query codec', () => {
     expect(q.q).toBeUndefined();
     expect(q.brands).toBeUndefined();
     expect(q.storageGb).toBeUndefined();
+    expect(q.colors).toBeUndefined();
   });
 
   it('round-trips brand[] without duplicates (AC01)', () => {
-    const parameters = new URLSearchParams('brand=Apple&brand=Apple&brand=MiBolt');
-    const parsed = parseCatalogQuery(parameters);
+    const params = new URLSearchParams('brand=Apple&brand=Apple&brand=MiBolt');
+    const parsed = parseCatalogQuery(params);
     expect(parsed.brands).toEqual(['Apple', 'MiBolt']);
     const serialised = serializeCatalogQuery(parsed);
     expect(serialised.getAll('brand')).toEqual(['Apple', 'MiBolt']);
@@ -207,26 +224,24 @@ describe('T12-AC01 catalog-query codec', () => {
   });
 
   it('round-trips storageGb[] without duplicates (AC01)', () => {
-    const parameters = new URLSearchParams(
-      'storageGb=128&storageGb=128&storageGb=256&storageGb=512',
-    );
-    const parsed = parseCatalogQuery(parameters);
+    const params = new URLSearchParams('storageGb=128&storageGb=128&storageGb=256&storageGb=512');
+    const parsed = parseCatalogQuery(params);
     expect(parsed.storageGb).toEqual([128, 256, 512]);
     const serialised = serializeCatalogQuery(parsed);
     expect(serialised.getAll('storageGb')).toEqual(['128', '256', '512']);
   });
 
   it('drops empty / whitespace-only brand values', () => {
-    const parameters = new URLSearchParams('brand=&brand=%20%20&brand=MiBolt');
-    const parsed = parseCatalogQuery(parameters);
+    const params = new URLSearchParams('brand=&brand=%20%20&brand=MiBolt');
+    const parsed = parseCatalogQuery(params);
     expect(parsed.brands).toEqual(['MiBolt']);
     const serialised = serializeCatalogQuery(parsed);
     expect(serialised.getAll('brand')).toEqual(['MiBolt']);
   });
 
   it('drops unknown storage values and empty / invalid sort modes', () => {
-    const parameters = new URLSearchParams('storageGb=999&storageGb=128&sort=newest&sort=');
-    const parsed = parseCatalogQuery(parameters);
+    const params = new URLSearchParams('storageGb=999&storageGb=128&sort=foo&sort=');
+    const parsed = parseCatalogQuery(params);
     expect(parsed.storageGb).toEqual([128]);
     expect(parsed.sort).toBeUndefined();
   });
@@ -278,6 +293,7 @@ describe('T12-AC01 catalog-query codec', () => {
       q: 'demo',
       brands: ['Apple', 'MiBolt'],
       storageGb: [256, 128],
+      colors: ['zold', 'feher'],
       minPrice: 10_000,
       maxPrice: 500_000,
       inStock: true,
@@ -293,7 +309,16 @@ describe('T12-AC01 catalog-query codec', () => {
   });
 
   it('exports the documented sort modes, page sizes and storage buckets', () => {
-    expect(SORT_MODES).toEqual(['recommended', 'price_asc', 'price_desc', 'name_asc']);
+    expect(SORT_MODES).toEqual([
+      'recommended',
+      'newest',
+      'oldest',
+      'popularity',
+      'price_asc',
+      'price_desc',
+      'name_asc',
+      'name_desc',
+    ]);
     expect(ALLOWED_PAGE_SIZES).toEqual([12, 24]);
     expect(ALLOWED_STORAGE_GB).toEqual([128, 256, 512]);
   });
@@ -316,6 +341,7 @@ describe('T12-AC01 catalog-query codec', () => {
       q: 'demo',
       brands: ['Apple', 'MiBolt'],
       storageGb: [128, 256, 512],
+      colors: ['zold'],
       minPrice: 10_000,
       maxPrice: 999_999,
       inStock: true,
@@ -344,21 +370,13 @@ describe('T12-AC01 catalog-query codec', () => {
 interface SetupHandle {
   facade: CatalogFacade;
   api: StubApi;
-  /**
-  Resolve the most recently issued call with `response`.
-  */
+  /** Resolve the most recently issued call with `response`. */
   respond: (response: ProductPage) => void;
-  /**
-  Reject the most recently issued call with `error`.
-  */
+  /** Reject the most recently issued call with `error`. */
   reject: (error: unknown) => void;
-  /**
-  Drain pending microtasks / macrotasks.
-  */
+  /** Drain pending microtasks / macrotasks. */
   tick: () => Promise<void>;
-  /**
-  Wait for the search debounce (300 ms) to elapse.
-  */
+  /** Wait for the search debounce (300 ms) to elapse. */
   waitDebounce: () => Promise<void>;
 }
 
@@ -370,14 +388,9 @@ function setupFacade(): SetupHandle {
   });
   const facade = TestBed.inject(CatalogFacade);
 
-  const tick = (): Promise<void> =>
-    new Promise((r) => {
-      setTimeout(r, 0);
-    });
+  const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
   const waitDebounce = async (): Promise<void> => {
-    await new Promise((r) => {
-      setTimeout(r, SEARCH_DEBOUNCE_MS + 20);
-    });
+    await new Promise((r) => setTimeout(r, SEARCH_DEBOUNCE_MS + 20));
   };
 
   return {
@@ -408,13 +421,9 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     expect(SEARCH_DEBOUNCE_MS).toBe(300);
 
     facade.setSearch('a');
-    await new Promise((r) => {
-      setTimeout(r, 50);
-    });
+    await new Promise((r) => setTimeout(r, 50));
     facade.setSearch('ap');
-    await new Promise((r) => {
-      setTimeout(r, 50);
-    });
+    await new Promise((r) => setTimeout(r, 50));
     facade.setSearch('app');
     // Still inside the 300 ms window from the last setSearch.
     expect(api.calls.length).toBe(0);
@@ -454,7 +463,7 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     await tick();
     expect(api.calls.length).toBe(1);
 
-    facade.setSearch(' '.repeat(3));
+    facade.setSearch('   ');
     await waitDebounce();
     await tick();
     expect(api.calls.length).toBe(2);
@@ -546,14 +555,14 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     const { facade } = setupFacade();
     facade.toggleBrand('Apple');
     facade.toggleBrand('MiBolt');
-    const parameters = facade.currentParams();
-    expect(parameters.getAll('brand')).toEqual(['Apple', 'MiBolt']);
-    expect(parameters.has('page')).toBe(false);
+    const params = facade.currentParams();
+    expect(params.getAll('brand')).toEqual(['Apple', 'MiBolt']);
+    expect(params.has('page')).toBe(false);
   });
 
   it('toggleBrand with an empty string is a no-op', async () => {
     const { facade, api, tick } = setupFacade();
-    facade.toggleBrand(' '.repeat(3));
+    facade.toggleBrand('   ');
     await tick();
     expect(api.calls.length).toBe(0);
   });
@@ -568,9 +577,41 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
 
     facade.toggleStorage(256);
     await tick();
-    expect(api.calls.at(-1)?.storageGb).toBeUndefined();
+    expect(api.calls[api.calls.length - 1]?.storageGb).toBeUndefined();
     api.resolve(emptyPage());
     await tick();
+  });
+
+  it('toggleColor adds and removes a colour and resets the page', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.setPage(3);
+    await tick();
+    expect(api.calls[0]?.page).toBe(3);
+    api.resolve(emptyPage());
+    await tick();
+
+    facade.toggleColor('zold');
+    await tick();
+    expect(api.calls[1]?.color).toEqual(['zold']);
+    expect(api.calls[1]?.page).toBe(1);
+    api.resolve(emptyPage());
+    await tick();
+
+    facade.toggleColor('zold');
+    await tick();
+    expect(api.calls[api.calls.length - 1]?.color).toBeUndefined();
+    api.resolve(emptyPage());
+    await tick();
+  });
+
+  it('toSdkParams carries color[] (MIM-210)', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.setFilters({ colors: ['zold', 'feher'] });
+    await tick();
+    api.resolve(emptyPage());
+    await tick();
+    const last = api.calls[api.calls.length - 1];
+    expect(last?.color).toEqual(['zold', 'feher']);
   });
 
   it('setPriceRange / setInStock / setIs5g / setFeatured round-trip', async () => {
@@ -583,7 +624,7 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     api.resolve(emptyPage());
     await tick();
 
-    const last = api.calls.at(-1);
+    const last = api.calls[api.calls.length - 1];
     expect(last?.minPrice).toBe(10_000);
     expect(last?.maxPrice).toBe(200_000);
     expect(last?.inStock).toBe(true);
@@ -626,10 +667,10 @@ describe('T12-AC03 race + duplicate request suppression', () => {
 
     // A stale response for the first request must not overwrite the
     // VM state derived from the newer request.
-    const stale = makePage([makeSummary('old', 'Old', 'Old', 1)], 1);
+    const stale = makePage([makeItem('old', 'Old', 'Old', 1)], 1);
     api.resolve(stale);
     await tick();
-    const fresh = makePage([makeSummary('new', 'New', 'New', 2)], 1);
+    const fresh = makePage([makeItem('new', 'New', 'New', 2)], 1);
     api.resolve(fresh);
     await tick();
 
@@ -642,7 +683,7 @@ describe('T12-AC03 race + duplicate request suppression', () => {
     const { facade, api, tick } = setupFacade();
     facade.setFilters({ brands: ['Apple'] });
     await tick();
-    api.resolve(makePage([makeSummary('p1', 'Apple', 'Apple', 100)], 1));
+    api.resolve(makePage([makeItem('p1', 'Apple', 'Apple One', 100)], 1));
     await tick();
 
     facade.setFilters({ brands: ['Apple'] });
@@ -676,7 +717,7 @@ describe('T12-AC03 race + duplicate request suppression', () => {
     facade.retry();
     await tick();
     expect(api.calls.length).toBe(2);
-    const items = [makeSummary('p1', 'Apple', 'Apple One', 100_000)];
+    const items = [makeItem('p1', 'Apple', 'Apple One', 100_000)];
     api.resolve(makePage(items, 1));
     await tick();
     expect(facade.vm().status).toBe('success');
@@ -719,9 +760,9 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
     expect(vm.error).toBeNull();
   });
 
-  it('emits `success` and exposes items + facets when results exist (AC04)', async () => {
+  it('emits `success` and exposes items + full facets when results exist (AC04)', async () => {
     const { facade, api, waitDebounce, tick } = setupFacade();
-    const items = [makeSummary('p1', 'Apple', 'Apple One', 100_000)];
+    const items = [makeItem('p1', 'Apple', 'Apple One', 100_000)];
     facade.setSearch('apple');
     await waitDebounce();
     await tick();
@@ -734,7 +775,18 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
     expect(vm.total).toBe(1);
     expect(vm.facets).not.toBeNull();
     expect(vm.facets?.storageGb.some((f) => f.value === '128')).toBe(true);
+    expect(vm.facets?.colors.some((c) => c.value === 'zold')).toBe(true);
+    expect(vm.facets?.priceRange).toBeDefined();
     expect(vm.error).toBeNull();
+  });
+
+  it('facets reach the vm whole (MIM-210)', async () => {
+    const { facade, api, tick } = setupFacade();
+    const page = makePage([], 0);
+    api.resolve(page);
+    await tick();
+    const vm = facade.vm();
+    expect(vm.facets).toEqual(page.facets);
   });
 
   it('emits `empty` when the catalogue returns zero items (AC04)', async () => {
@@ -754,7 +806,7 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
 
   it('emits `refreshing` with the previous items while a new request is in flight (AC04)', async () => {
     const { facade, api, waitDebounce, tick } = setupFacade();
-    const firstItems = [makeSummary('p1', 'Apple', 'Apple One', 100_000)];
+    const firstItems = [makeItem('p1', 'Apple', 'Apple One', 100_000)];
     facade.setSearch('apple');
     await waitDebounce();
     await tick();
@@ -771,7 +823,7 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
     expect(facade.vm().items).toEqual(firstItems);
     expect(facade.vm().total).toBe(1);
 
-    const secondItems = [makeSummary('p2', 'Apricot', 'Apricot Phone', 200_000)];
+    const secondItems = [makeItem('p2', 'Apricot', 'Apricot Phone', 200_000)];
     api.resolve(makePage(secondItems, 1));
     await tick();
     expect(facade.vm().status).toBe('success');
@@ -780,7 +832,7 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
 
   it('emits `error` on request failure and preserves the last useful payload (AC04)', async () => {
     const { facade, api, waitDebounce, tick } = setupFacade();
-    const items = [makeSummary('p1', 'Apple', 'Apple One', 100_000)];
+    const items = [makeItem('p1', 'Apple', 'Apple One', 100_000)];
     facade.setSearch('apple');
     await waitDebounce();
     await tick();
@@ -826,7 +878,7 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
 
     facade.retry();
     await tick();
-    const items = [makeSummary('p1', 'Apple', 'Apple One', 100_000)];
+    const items = [makeItem('p1', 'Apple', 'Apple One', 100_000)];
     api.resolve(makePage(items, 1));
     await tick();
     expect(facade.vm().status).toBe('success');
@@ -841,10 +893,10 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
 describe('T12-AC05 URL round-trip + direct-link restore', () => {
   it('loadFromParams restores search + filters + page + sort (AC05)', async () => {
     const { facade, api, tick } = setupFacade();
-    const parameters = new URLSearchParams(
-      'q=apple&brand=Apple&brand=MiBolt&storageGb=256&minPrice=10000&maxPrice=200000&inStock=true&is5g=true&sort=price_desc&page=2&pageSize=24',
+    const params = new URLSearchParams(
+      'q=apple&brand=Apple&brand=MiBolt&storageGb=256&color=zold&minPrice=10000&maxPrice=200000&inStock=true&is5g=true&sort=price_desc&page=2&pageSize=24',
     );
-    facade.loadFromParams(parameters);
+    facade.loadFromParams(params);
     await tick();
     expect(api.calls.length).toBe(1);
 
@@ -852,6 +904,7 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     expect(call?.q).toBe('apple');
     expect(call?.brand).toEqual(['Apple', 'MiBolt']);
     expect(call?.storageGb).toEqual([256]);
+    expect(call?.color).toEqual(['zold']);
     expect(call?.minPrice).toBe(10_000);
     expect(call?.maxPrice).toBe(200_000);
     expect(call?.inStock).toBe(true);
@@ -866,8 +919,8 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
 
   it('loadFromParams canonicalises unknown / malformed values rather than rejecting (AC05)', async () => {
     const { facade, api, tick } = setupFacade();
-    const parameters = new URLSearchParams('sort=newest&storageGb=999&page=abc&inStock=foo');
-    facade.loadFromParams(parameters);
+    const params = new URLSearchParams('sort=foo&storageGb=999&page=abc&inStock=foo');
+    facade.loadFromParams(params);
     await tick();
     const call = api.calls[0];
     expect(call?.sort).toBeUndefined();
@@ -888,12 +941,12 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     api.resolve(emptyPage());
     await tick();
 
-    const parameters = facade.currentParams();
-    expect(parameters.getAll('brand')).toEqual(['Apple', 'MiBolt']);
-    expect(parameters.get('sort')).toBe('name_asc');
-    expect(parameters.get('page')).toBe('2');
-    expect(parameters.has('pageSize')).toBe(false);
-    expect(parameters.has('q')).toBe(false);
+    const params = facade.currentParams();
+    expect(params.getAll('brand')).toEqual(['Apple', 'MiBolt']);
+    expect(params.get('sort')).toBe('name_asc');
+    expect(params.get('page')).toBe('2');
+    expect(params.has('pageSize')).toBe(false);
+    expect(params.has('q')).toBe(false);
   });
 
   it('reset() restores the documented defaults (AC05)', async () => {
@@ -908,7 +961,7 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     facade.reset();
     await tick();
     // toggleBrand + setSort + setPage + reset = 4 calls in total.
-    const resetCall = api.calls.at(-1);
+    const resetCall = api.calls[api.calls.length - 1];
     expect(resetCall?.brand).toBeUndefined();
     expect(resetCall?.sort).toBeUndefined();
     expect(resetCall?.page).toBe(DEFAULT_PAGE);
@@ -923,7 +976,8 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
       q: 'demo',
       brands: ['Apple', 'MiBolt'],
       storageGb: [128, 256],
-      minPrice: 1000,
+      colors: ['zold', 'feher'],
+      minPrice: 1_000,
       maxPrice: 999_999,
       inStock: true,
       is5g: false,

@@ -23,7 +23,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { provideApiConfiguration as provideApiConfig } from '../../api/generated/api-configuration';
+import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
@@ -34,7 +34,7 @@ const BASE_URL = 'http://localhost/api/v1';
 
 @Component({
   imports: [ProductPage],
-  template: `<app-product-page [slug]="slug()" />`,
+  template: `<app-product-page [slug]="slug()"></app-product-page>`,
 })
 class ProductPageHost {
   readonly slug = signal<string>('demo-one-5g');
@@ -43,7 +43,7 @@ class ProductPageHost {
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
-    throw new TypeError('Expected HTMLElement');
+    throw new Error('Expected HTMLElement');
   }
   return raw;
 }
@@ -60,7 +60,7 @@ describe('FIX-26 product-page-responsive: one rail, one in-flow CTA', () => {
       imports: [ProductPageHost],
       providers: [
         provideHttpClient(withInterceptors([demoSessionInterceptor])),
-        provideApiConfig(BASE_URL),
+        provideApiConfiguration(BASE_URL),
         provideRouter([]),
       ],
       teardown: { destroyAfterEach: true },
@@ -69,7 +69,7 @@ describe('FIX-26 product-page-responsive: one rail, one in-flow CTA', () => {
     const fixture = TestBed.createComponent(ProductPageHost);
     fixture.detectChanges();
     await fixture.whenStable();
-    for (let index = 0; index < 8; index += 1) {
+    for (let i = 0; i < 8; i += 1) {
       await new Promise<void>((resolve) => {
         setTimeout(resolve, 15);
       });

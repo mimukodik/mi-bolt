@@ -4,7 +4,7 @@
 export interface Money {
 
   /**
-   * Whole Hungarian forints, NOT ISO minor units; no floating point or monthly fees.
+   * Whole Hungarian forints, not ISO minor units.
    */
   amount: number;
   currency: 'HUF';

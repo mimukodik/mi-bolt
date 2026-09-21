@@ -13,28 +13,23 @@
  * (e.g. T09 may validate an `OrderRequest` contact echo).
  */
 
-/**
-Collapses internal whitespace runs, trims edges, and NFC-normalizes.
-*/
+/** Collapses internal whitespace runs, trims edges, and NFC-normalizes. */
 export function normalizeWhitespace(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const trimmed = value.trim().replaceAll(/\s+/g, ' ');
-  return trimmed.length === 0 ? null : trimmed.normalize('NFC');
+  const trimmed = value.trim().replace(/\s+/g, ' ');
+  if (trimmed.length === 0) return null;
+  return trimmed.normalize('NFC');
 }
 
-/**
-Normalize a contact full name: trim + collapse + NFC, length 2..100.
-*/
+/** Normalize a contact full name: trim + collapse + NFC, length 2..100. */
 export function normalizeContactFullName(value: unknown): string | null {
   const normalized = normalizeWhitespace(value);
-  return normalized === null || normalized.length < 2 || normalized.length > 100
-    ? null
-    : normalized;
+  if (normalized === null) return null;
+  if (normalized.length < 2 || normalized.length > 100) return null;
+  return normalized;
 }
 
-/**
-Normalize an email: trim + lowercase, must match a basic RFC 5322 shape.
-*/
+/** Normalize an email: trim + lowercase, must match a basic RFC 5322 shape. */
 export function normalizeContactEmail(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const candidate = value.trim().toLowerCase().normalize('NFC');
@@ -45,56 +40,52 @@ export function normalizeContactEmail(value: unknown): string | null {
   // contract meaningful, while still accepting every well-formed input.
   const emailPattern =
     /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
-  return emailPattern.test(candidate) ? candidate : null;
+  if (!emailPattern.test(candidate)) return null;
+  return candidate;
 }
 
-/**
-Normalize a phone number to the +36 prefix and 8 or 9 trailing digits.
-*/
+/** Normalize a phone number to the +36 prefix and 8 or 9 trailing digits. */
 export function normalizeContactPhone(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const trimmed = value.replaceAll(/\s+/g, '');
-  return /^\+36[0-9]{8,9}$/.test(trimmed) ? trimmed : null;
+  const trimmed = value.replace(/\s+/g, '');
+  if (!/^\+36[0-9]{8,9}$/.test(trimmed)) return null;
+  return trimmed;
 }
 
-/**
-Normalize an HU country code: the schema only allows HU.
-*/
+/** Normalize an HU country code: the schema only allows HU. */
 export function normalizeAddressCountryCode(value: unknown): 'HU' | null {
   return value === 'HU' ? 'HU' : null;
 }
 
-/**
-Normalize an HU postal code: 4 digits, first in 1..9 (rejects 0123).
-*/
+/** Normalize an HU postal code: 4 digits, first in 1..9 (rejects 0123). */
 export function normalizeAddressPostalCode(value: unknown): string | null {
-  return typeof value !== 'string' || !/^[1-9][0-9]{3}$/.test(value) ? null : value;
+  if (typeof value !== 'string') return null;
+  if (!/^[1-9][0-9]{3}$/.test(value)) return null;
+  return value;
 }
 
-/**
-Normalize an HU city: trim + collapse + NFC, length 2..80.
-*/
+/** Normalize an HU city: trim + collapse + NFC, length 2..80. */
 export function normalizeAddressCity(value: unknown): string | null {
   const normalized = normalizeWhitespace(value);
-  return normalized === null || normalized.length < 2 || normalized.length > 80 ? null : normalized;
+  if (normalized === null) return null;
+  if (normalized.length < 2 || normalized.length > 80) return null;
+  return normalized;
 }
 
-/**
-Normalize address line1: trim + NFC, length 3..120.
-*/
+/** Normalize address line1: trim + NFC, length 3..120. */
 export function normalizeAddressLine1(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim().normalize('NFC');
-  return trimmed.length < 3 || trimmed.length > 120 ? null : trimmed;
+  if (trimmed.length < 3 || trimmed.length > 120) return null;
+  return trimmed;
 }
 
-/**
-Normalize optional address line2: trim + NFC, length 1..120, undefined allowed.
-*/
+/** Normalize optional address line2: trim + NFC, length 1..120, undefined allowed. */
 export function normalizeAddressLine2(value: unknown): string | null | undefined {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== 'string') return null;
   const trimmed = value.trim().normalize('NFC');
   if (trimmed.length === 0) return undefined;
-  return trimmed.length > 120 ? null : trimmed;
+  if (trimmed.length > 120) return null;
+  return trimmed;
 }
