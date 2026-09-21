@@ -1,7 +1,6 @@
 .featured {
-  background: var(--color-surface-light);
+  background: var(--color-surface-section);
   color: var(--color-text-primary);
-  border-top: 1px solid var(--color-border-subtle);
 }
 
 .featured__inner {
@@ -17,109 +16,39 @@
   overflow-wrap: anywhere;
 }
 
-.featured__all-link {
-  align-self: flex-start;
-  font-size: var(--type-body);
-  font-weight: var(--weight-medium);
-  color: var(--color-brand-ink);
-  text-decoration: none;
-  min-height: var(--size-control);
-  display: inline-flex;
-  align-items: center;
-}
-
-.featured__all-link:hover {
-  text-decoration: underline;
-}
-
-.featured__all-link:focus-visible,
-.featured__media:focus-visible,
-.featured__details:focus-visible {
-  outline: 3px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
-.featured__card,
-.featured__grid-error {
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-}
-
-.featured__card {
-  background: var(--color-surface-light);
-}
-
-.featured__media {
-  display: block;
-  position: relative;
-  background: var(--color-surface-section);
-  text-decoration: none;
-  color: inherit;
-}
-
-.featured__tag {
-  position: absolute;
-  top: var(--space-2);
-  left: var(--space-2);
-  z-index: 1;
-  padding: 2px var(--space-2);
-  font-size: var(--type-meta);
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.02em;
-  color: var(--color-brand-ink);
-  background: var(--color-surface-light);
-  border: 1px solid var(--color-brand-ink);
-  border-radius: var(--radius-badge);
-}
-
-.featured__brand {
+.featured__lead {
+  margin: 0;
   font-size: var(--type-helper);
-  color: var(--color-text-secondary);
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.featured__name,
-.featured__price-amount {
-  font-size: var(--type-card-title);
-  font-weight: var(--weight-bold);
-  margin: 0;
-}
-
-.featured__name {
-  overflow-wrap: anywhere;
-}
-
-.featured__price {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-1);
-  margin: 0;
-  font-weight: var(--weight-bold);
-}
-
-.featured__price-currency {
-  font-size: var(--type-body);
   color: var(--color-text-secondary);
 }
 
 /* .btn-outline-navy — the yettel 48px .btn box with 1px off each padding
    edge for the hairline (docs/design/yettel.md §5). The box itself is
    utilities on the element: inline-flex, min-h-12, min-w-12. */
-.featured__details {
+.featured__all-link {
   padding: 11px 23px;
   background: transparent;
   color: var(--color-brand-ink);
   font-family: var(--font-family-bold);
   font-size: var(--type-body);
   line-height: 24px;
+  text-decoration: none;
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-brand-ink);
 }
 
-.featured__details:hover {
+.featured__all-link:hover {
   background: var(--color-brand-accent-soft);
+}
+
+.featured__all-link:focus-visible {
+  outline: 3px solid var(--color-focus-light);
+  outline-offset: 2px;
+}
+
+.featured__grid-error {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
 }
 
 .featured__loading,
@@ -157,9 +86,6 @@
 
 .featured__grid-error {
   background: var(--color-surface-section);
-}
-
-.featured__grid-error {
   padding: var(--space-6);
 }
 
