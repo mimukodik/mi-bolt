@@ -462,6 +462,34 @@ describe('T20-AC04 pending save gates duplicate advance; failure retains fields'
 
     expect(count).toBe(1);
   });
+
+  it('the continue button is the form submit button (MIM-212)', () => {
+    const { fixture } = createContactStep({
+      fullName: 'Teszt Elek',
+      email: 'teszt@example.test',
+      phone: '+36301234567',
+    });
+    const button = getRootElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="contact-submit"] button',
+    );
+    expect(button?.getAttribute('type')).toBe('submit');
+  });
+
+  it('a click on the continue button emits continueRequested exactly once (MIM-212)', async () => {
+    const { fixture } = createContactStep({
+      fullName: 'Teszt Elek',
+      email: 'teszt@example.test',
+      phone: '+36301234567',
+    });
+    let count = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => (count += 1));
+    const button = getRootElement(fixture).querySelector<HTMLButtonElement>(
+      '[data-testid="contact-submit"] button',
+    );
+    button?.click();
+    await fixture.whenStable();
+    expect(count).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

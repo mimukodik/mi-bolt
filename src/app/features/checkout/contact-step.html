@@ -150,7 +150,7 @@
         loadingLabel="Mentés…"
         [loading]="saveState() === 'loading'"
         [disabled]="!canSubmit()"
-        (pressed)="onSubmit()"
+        type="submit"
         data-testid="contact-submit"
       ></app-button>
     </div>
