@@ -87,8 +87,8 @@ function fireInput(el: HTMLInputElement, value: string): void {
 @Component({
   imports: [FilterPanel],
   template: `<app-filter-panel
-    [value]="query()"
     [facets]="facets()"
+    [value]="query()"
     (filtersChanged)="onFiltersChanged($event)"
   />`,
 })

@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, computed, signal } from '@angular/core';
 
 import { AppliedFilters } from './applied-filters';
@@ -25,9 +26,9 @@ const ALL_FILTERS: CatalogQuery = {
   template: `
     <app-applied-filters
       [chips]="chips()"
-      (filterRemoved)="lastRemoved.set($event)"
       (cleared)="clearedCount.set(clearedCount() + 1)"
-    ></app-applied-filters>
+      (filterRemoved)="lastRemoved.set($event)"
+    />
   `,
 })
 class HostComponent {
