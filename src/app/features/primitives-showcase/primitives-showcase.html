@@ -8,45 +8,29 @@
     <article class="cell" data-testid="showcase-button">
       <h2>Gomb (Button)</h2>
       <div class="row">
-        <app-button label="Részletek" variant="primary"></app-button>
-        <app-button label="Kosárba teszem" variant="primary" [loading]="loading()"></app-button>
-        <app-button label="Mégse" variant="secondary"></app-button>
-        <app-button label="Sötét felületen" variant="secondaryOnDark"></app-button>
-        <app-button label="Nem elérhető" variant="primary" [disabled]="true"></app-button>
+        <app-button label="Részletek" variant="primary" />
+        <app-button label="Kosárba teszem" variant="primary" [loading]="loading()" />
+        <app-button label="Mégse" variant="secondary" />
+        <app-button label="Sötét felületen" variant="secondaryOnDark" />
+        <app-button label="Nem elérhető" variant="primary" [disabled]="true" />
       </div>
     </article>
 
     <article class="cell" data-testid="showcase-priceblock">
       <h2>Ártömb (PriceBlock)</h2>
       <div class="row">
-        <app-price-block
-          [money]="ready()"
-          label="Készülékár, egyszeri díj"
-          status="success"
-        ></app-price-block>
-        <app-price-block
-          [money]="null"
-          label="Készülékár, egyszeri díj"
-          status="loading"
-        ></app-price-block>
-        <app-price-block
-          [money]="null"
-          label="Készülékár, egyszeri díj"
-          status="error"
-        ></app-price-block>
-        <app-button label="Kosárba teszem" variant="primary"></app-button>
+        <app-price-block label="Készülékár, egyszeri díj" status="success" [money]="ready()" />
+        <app-price-block label="Készülékár, egyszeri díj" status="loading" [money]="null" />
+        <app-price-block label="Készülékár, egyszeri díj" status="error" [money]="null" />
+        <app-button label="Kosárba teszem" variant="primary" />
       </div>
     </article>
 
     <article class="cell" data-testid="showcase-productimage">
       <h2>Termékkép (ProductImage)</h2>
       <div class="row">
-        <app-product-image
-          [image]="placeholder"
-          productName="Demo One 5G"
-          aspectRatio="4 / 3"
-        ></app-product-image>
-        <app-button label="Nagyítás" variant="secondary"></app-button>
+        <app-product-image aspectRatio="4 / 3" productName="Demo One 5G" [image]="placeholder" />
+        <app-button label="Nagyítás" variant="secondary" />
       </div>
     </article>
 
@@ -54,18 +38,18 @@
       <h2>Hibaállapot (ErrorState)</h2>
       <div class="row">
         <app-error-state
-          title="Nem sikerült betölteni"
           message="A hálózati hiba miatt most nem tudjuk megjeleníteni az adatokat."
+          title="Nem sikerült betölteni"
           [preserving]="true"
-        ></app-error-state>
+        />
       </div>
     </article>
 
     <article class="cell" data-testid="showcase-loadingstate">
       <h2>Betöltés (LoadingState)</h2>
       <div class="row">
-        <app-loading-state variant="card"></app-loading-state>
-        <app-loading-state variant="lines"></app-loading-state>
+        <app-loading-state variant="card" />
+        <app-loading-state variant="lines" />
       </div>
     </article>
 
@@ -73,10 +57,10 @@
       <h2>Üres állapot (EmptyState)</h2>
       <div class="row">
         <app-empty-state
-          title="Nincs találat"
-          message="A jelenlegi szűrőkkel nincs megjeleníthető eszköz."
           actionLabel="Szűrők törlése"
-        ></app-empty-state>
+          message="A jelenlegi szűrőkkel nincs megjeleníthető eszköz."
+          title="Nincs találat"
+        />
       </div>
     </article>
 
@@ -85,13 +69,13 @@
       <div class="row">
         <label class="field">
           <span>E-mail cím</span>
-          <input id="email" type="email" aria-describedby="email-message" />
+          <input aria-describedby="email-message" id="email" type="email" />
           <app-form-field-message
             fieldId="email"
+            severity="error"
             [errors]="errors"
             [touched]="true"
-            severity="error"
-          ></app-form-field-message>
+          />
         </label>
       </div>
     </article>
@@ -100,11 +84,11 @@
       <h2>Mennyiség (QuantityControl)</h2>
       <div class="row">
         <app-quantity-control
-          [value]="quantityValue()"
-          [min]="1"
           [max]="9"
+          [min]="1"
+          [value]="quantityValue()"
           (quantityChanged)="quantityValue.set($event)"
-        ></app-quantity-control>
+        />
       </div>
     </article>
 
@@ -115,18 +99,14 @@
           label="Dialógus megnyitása"
           variant="primary"
           (pressed)="dialogOpen.set(true)"
-        ></app-button>
+        />
         <app-accessible-dialog
-          [opened]="dialogOpen()"
           label="Megerősítés"
+          [opened]="dialogOpen()"
           (closed)="dialogOpen.set(false)"
         >
           <p>A dialógus tárolja a fókuszt és a háttér kizárásra kerül.</p>
-          <app-button
-            label="Rendben"
-            variant="primary"
-            (pressed)="dialogOpen.set(false)"
-          ></app-button>
+          <app-button label="Rendben" variant="primary" (pressed)="dialogOpen.set(false)" />
         </app-accessible-dialog>
       </div>
     </article>
@@ -134,15 +114,12 @@
     <article class="cell" data-testid="showcase-statusmessage">
       <h2>Állapotüzenet (StatusMessage)</h2>
       <div class="row column">
+        <app-status-message message="A művelet sikeres volt." severity="success" />
         <app-status-message
-          [message]="'A művelet sikeres volt.'"
-          severity="success"
-        ></app-status-message>
-        <app-status-message
-          [message]="'A fizetési kísérlet nem járt sikerrel.'"
+          message="A fizetési kísérlet nem járt sikerrel."
           severity="error"
           [persistent]="true"
-        ></app-status-message>
+        />
       </div>
     </article>
   </section>

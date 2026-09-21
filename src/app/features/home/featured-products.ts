@@ -66,7 +66,7 @@ export class FeaturedProducts {
   /** Joined error message for the whole-grid error state. */
   readonly errorMessage = computed(() => {
     const err = this.state().error;
-    return err && err.length > 0 ? err : 'A kiemelt termékek jelenleg nem érhetők el.';
+    return err !== null && err.length > 0 ? err : 'A kiemelt termékek jelenleg nem érhetők el.';
   });
 
   /** True while the grid is loading. */
@@ -81,9 +81,14 @@ export class FeaturedProducts {
     if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
       return '—';
     }
-    const grouped = Math.trunc(Math.abs(amount))
-      .toString()
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const digits = Math.trunc(Math.abs(amount)).toString();
+    let grouped = '';
+    for (let i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 === 0) {
+        grouped += ' ';
+      }
+      grouped += digits.charAt(i);
+    }
     return grouped;
   }
 }
