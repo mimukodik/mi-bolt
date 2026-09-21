@@ -265,7 +265,7 @@ export class SuccessStep {
     void this.cart
       .ensureCart()
       .then(() => {
-        this.checkout.resetDraft();
+        this.checkout.resetAfterOrder();
       })
       .then(() => this.router.navigate(['/telefonok']))
       .catch(() => this.router.navigate(['/penztar/kosar']))

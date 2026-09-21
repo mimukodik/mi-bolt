@@ -77,6 +77,19 @@
         </dd>
       </div>
       <div
+        class="totals__row flex items-center justify-between gap-3 py-2 border-b border-dashed"
+        data-testid="receipt-row-payment-fee"
+      >
+        <dt class="m-0">Fizetési díj</dt>
+        <dd class="m-0">
+          <app-price-block
+            [money]="receipt().paymentFee"
+            [label]="'Fizetési díj'"
+            [status]="'success'"
+          ></app-price-block>
+        </dd>
+      </div>
+      <div
         class="totals__row totals__row--strong flex items-center justify-between gap-3 py-2"
         data-testid="receipt-row-total"
       >
