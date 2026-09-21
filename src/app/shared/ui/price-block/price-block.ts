@@ -63,7 +63,15 @@ export class PriceBlock {
   static formatHuf(amount: number): string {
     const value = Math.trunc(Math.abs(amount));
     const negative = amount < 0;
-    const grouped = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const digits = value.toString();
+    const chunks: string[] = [];
+    let head = digits;
+    while (head.length > 3) {
+      chunks.unshift(head.slice(-3));
+      head = head.slice(0, -3);
+    }
+    chunks.unshift(head);
+    const grouped = chunks.join(' ');
     return `${negative ? '−' : ''}${grouped}`;
   }
 }

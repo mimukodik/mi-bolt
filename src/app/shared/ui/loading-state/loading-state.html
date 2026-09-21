@@ -1,25 +1,25 @@
 <div
   class="root flex flex-col gap-3"
-  [class.is-lines]="variant() === 'lines'"
-  [class.is-card]="variant() === 'card'"
-  [attr.aria-busy]="true"
-  [attr.role]="role()"
-  [attr.aria-label]="label()"
   data-testid="loading-state"
+  [attr.aria-busy]="true"
+  [attr.aria-label]="label()"
+  [attr.role]="role()"
+  [class.is-card]="variant() === 'card'"
+  [class.is-lines]="variant() === 'lines'"
 >
   @switch (variant()) {
     @case ('lines') {
-      <span class="line line--wide block" aria-hidden="true"></span>
-      <span class="line line--medium block" aria-hidden="true"></span>
-      <span class="line line--narrow block" aria-hidden="true"></span>
+      <span aria-hidden="true" class="line line--wide block"></span>
+      <span aria-hidden="true" class="line line--medium block"></span>
+      <span aria-hidden="true" class="line line--narrow block"></span>
     }
     @case ('card') {
-      <span class="block block--image block" aria-hidden="true"></span>
-      <span class="block block--title block" aria-hidden="true"></span>
-      <span class="block block--price block" aria-hidden="true"></span>
+      <span aria-hidden="true" class="block block--image block"></span>
+      <span aria-hidden="true" class="block block--title block"></span>
+      <span aria-hidden="true" class="block block--price block"></span>
     }
     @default {
-      <span class="block block--single block" aria-hidden="true"></span>
+      <span aria-hidden="true" class="block block--single block"></span>
     }
   }
   <span class="sr-only absolute w-px h-px overflow-hidden">{{ label() }}</span>

@@ -1,11 +1,11 @@
-<div class="grid" [class.grid--refreshing]="isRefreshing()" data-testid="catalog-grid">
+<div class="grid" data-testid="catalog-grid" [class.grid--refreshing]="isRefreshing()">
   @if (status() === 'empty') {
     <div class="state state--empty" data-testid="catalog-empty">
       <app-empty-state
-        title="Nincs a szűrőknek megfelelő készülék."
         message="Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket."
-      ></app-empty-state>
-      <ng-content select="[data-async-empty-action]"></ng-content>
+        title="Nincs a szűrőknek megfelelő készülék."
+      />
+      <ng-content select="[data-async-empty-action]" />
     </div>
   } @else if (status() === 'error') {
     <div class="state state--error" data-testid="catalog-error">
@@ -14,11 +14,11 @@
         [message]="errorMessage()"
         [preserving]="hasPrevious()"
         (retryRequested)="retryRequested.emit()"
-      ></app-error-state>
+      />
     </div>
   } @else if (status() === 'loading' && !hasPrevious()) {
     <div class="state state--loading" data-testid="catalog-loading">
-      <app-loading-state variant="card" label="Katalógus betöltése"></app-loading-state>
+      <app-loading-state label="Katalógus betöltése" variant="card" />
     </div>
   } @else {
     <!-- success, or loading with hasPrevious (refreshing): the caller's
@@ -29,6 +29,6 @@
     @if (isRefreshing()) {
       <span class="sr-only" role="status">Frissítés folyamatban…</span>
     }
-    <ng-content></ng-content>
+    <ng-content />
   }
 </div>
