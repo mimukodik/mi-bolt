@@ -31,7 +31,7 @@ import type { CreateHandlersOptions } from '../create-handlers';
 import type { VariantLookup } from '../catalog/catalog-store';
 import type { PersistedCart } from '../persistence';
 
-export const CART_TTL_MS = 24 * 60 * 60 * 1000;
+export const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** A single line as the store keeps it: no pricing, no product info. */
 interface StoredLine {
@@ -293,7 +293,7 @@ export class CartStore {
     };
   }
 
-  /** `now + CART_TTL_MS` as an ISO string, from the scenario clock. */
+  /** `now + CART_TTL_MS` as an ISO string, from the scenario clock. CART_TTL_MS mirrors the backend's `mibolt.session.lifetime` (30 days). */
   private expiryFromNow(): string {
     return new Date(Date.parse(this.options.clock.now()) + CART_TTL_MS).toISOString();
   }

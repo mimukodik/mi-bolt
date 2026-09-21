@@ -101,7 +101,7 @@ function readNumber(body: Record<string, unknown>, key: string): number {
 }
 
 describe('GET /cart on a fresh session', () => {
-  it('returns the session cart with ETag "1", empty items, and an expiresAt 24h later', async () => {
+  it('returns the session cart with ETag "1", empty items, and an expiresAt 30 days later', async () => {
     const res = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
     expect(res.status).toBe(200);
     expect(res.headers.get('ETag')).toBe('"1"');
@@ -113,7 +113,7 @@ describe('GET /cart on a fresh session', () => {
     expect(body['subtotal']).toEqual({ amount: 0, currency: 'HUF' });
     expect(body['notices']).toEqual([]);
     expect(readNumber(body, 'version')).toBe(1);
-    expect(readString(body, 'expiresAt')).toBe('2026-09-21T10:00:00.000Z');
+    expect(readString(body, 'expiresAt')).toBe('2026-10-20T10:00:00.000Z');
     const id = readString(body, 'id');
     expect(id.length).toBeGreaterThan(0);
     // Second GET returns the same id.
@@ -474,7 +474,7 @@ describe('expiry', () => {
     const created = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
     const createdBody: unknown = await created.json();
     expectRecord(createdBody);
-    expect(readString(createdBody, 'expiresAt')).toBe('2026-09-21T10:00:00.000Z');
+    expect(readString(createdBody, 'expiresAt')).toBe('2026-10-20T10:00:00.000Z');
 
     clock.advanceMs(60_000);
     const added = await fetch('http://localhost/api/v1/cart/items', {
@@ -485,13 +485,13 @@ describe('expiry', () => {
     expect(added.status).toBe(200);
     const addedBody: unknown = await added.json();
     expectRecord(addedBody);
-    expect(readString(addedBody, 'expiresAt')).toBe('2026-09-21T10:01:00.000Z');
+    expect(readString(addedBody, 'expiresAt')).toBe('2026-10-20T10:01:00.000Z');
 
     clock.advanceMs(60_000);
     const read = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
     const readBody: unknown = await read.json();
     expectRecord(readBody);
-    expect(readString(readBody, 'expiresAt')).toBe('2026-09-21T10:01:00.000Z');
+    expect(readString(readBody, 'expiresAt')).toBe('2026-10-20T10:01:00.000Z');
   });
 });
 

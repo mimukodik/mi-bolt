@@ -224,6 +224,9 @@ export class OrderStore {
     const versionCheck = this.checkIfMatch(ifMatch, cart.version);
     if (!versionCheck.ok) return { ok: false, problem: versionCheck.problem };
 
+    const completeness = this.checkCompleteness(cart, draft);
+    if (!completeness.ok) return { ok: false, problem: completeness.problem };
+
     if (draft.payment?.method !== 'card') {
       const method = draft.payment?.method;
       return {
@@ -237,9 +240,6 @@ export class OrderStore {
         ),
       };
     }
-
-    const completeness = this.checkCompleteness(cart, draft);
-    if (!completeness.ok) return { ok: false, problem: completeness.problem };
 
     const id = this.options.ids.uuid();
     const createdAt = this.options.clock.now();
