@@ -29,33 +29,21 @@
  *   T24-AC04   The wizard guards now refuse to re-open the contact /
  *              delivery / review steps when an order exists, and
  *              redirect back to the existing success URL.
- *   T24-AC05   The success H1 carries `tabindex="-1"`; the page
- *              schedules a focus move onto it through
- *              `RouteFocusService` so keyboard / screen-reader users
- *              land on it after navigation.
+ *   T24-AC05   Retired 2026-09-22 (MIM-220): the success H1 is no longer
+ *              focused after navigation; the route-change heading focus
+ *              was removed app-wide.
  *
  * The page is a consumer of `CheckoutFacade` and `CartFacade`. It
  * never talks to the SDK directly.
  */
 
-import type { ElementRef } from '@angular/core';
-import {
-  Component,
-  DestroyRef,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-  viewChild,
-} from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { Button } from '../../shared/ui/button/button';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
-import { RouteFocusService } from '../../core/navigation/route-focus';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
@@ -79,8 +67,6 @@ export class SuccessStep {
   private readonly cart = inject(CartFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly routeFocus = inject(RouteFocusService);
 
   /** Raw order id from the URL. Lazily resolved through `paramMap`. */
   private readonly orderIdFromRoute = toSignal(this.route.paramMap, {
@@ -117,9 +103,6 @@ export class SuccessStep {
 
   /** True while the "Új vásárlás" CTA is creating a fresh cart. */
   readonly startingNewCart = signal<boolean>(false);
-
-  /** Reference to the H1 so the focus move lands on it. */
-  private readonly headingRef = viewChild<ElementRef<HTMLElement>>('successHeading');
 
   /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
    *  the previous template: Főoldal → Kosár, with this step (`Siker`) as
@@ -179,16 +162,6 @@ export class SuccessStep {
         this.cart.resetOrderedCart();
       }
     });
-
-    // Move focus onto the success heading when the page is rendered.
-    // `RouteFocusService.scheduleFocus()` queues a focus on the next
-    // render; the explicit heading reference here guarantees the
-    // focus lands on the H1 (not the generic layout `main` element).
-    effect(() => {
-      const heading = this.headingRef();
-      if (heading === undefined) return;
-      this.scheduleHeadingFocus(heading);
-    });
   }
 
   // -------------------------------------------------------------------------
@@ -217,25 +190,6 @@ export class SuccessStep {
       detail:
         result.error.detail !== '' ? result.error.detail : 'A rendelés visszatöltése sikertelen.',
     });
-  }
-
-  /** Moves focus to the success heading after each navigation end, until the component is destroyed. */
-  private scheduleHeadingFocus(heading: ElementRef<HTMLElement>): void {
-    this.routeFocus
-      .navigationEnd$()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        // Defer the focus one tick so the H1 is connected (lazy
-        // chunk mount) and the layout's main-element focus has already
-        // happened.
-        queueMicrotask(() => {
-          const el = heading.nativeElement;
-          el.setAttribute('tabindex', '-1');
-          el.focus({ preventScroll: false });
-        });
-      });
-    // Also schedule one immediately so a direct mount focuses too.
-    this.routeFocus.scheduleFocus();
   }
 
   // -------------------------------------------------------------------------

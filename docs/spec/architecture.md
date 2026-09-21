@@ -80,7 +80,7 @@ src/app/app.config.ts           locale/router/http/config providers
 src/app/app.routes.ts           lazy page/layout boundaries
 src/app/api/generated/          ng-openapi-gen output, no manual edits
 src/app/core/api/               API root and demo-session interceptor
-src/app/core/navigation/        title and route-focus behavior
+src/app/core/navigation/        header, footer, mobile drawer, cart count
 src/app/layouts/                MarketingLayout, ShopLayout, CheckoutLayout
 src/app/shared/ui/              primitives only, no business injection
 src/app/shared/shell/           Header, Footer, DemoNotice, Menu

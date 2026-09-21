@@ -1407,8 +1407,7 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
   it('a page change that disables neither button leaves focus on the button pressed', async () => {
     // 30 results over three 12-item pages: page 1 -> page 2 reaches no
     // boundary, so the hand-off must not fire. Moving focus off a
-    // control that is still live is the WCAG 3.2.2 (On Input) steal
-    // `RouteFocusService` refuses to make.
+    // control that is still live is a WCAG 3.2.2 (On Input) steal.
     const harness = await setupHarness();
     harness.respond(
       successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 30),

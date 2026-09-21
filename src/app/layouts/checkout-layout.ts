@@ -1,9 +1,7 @@
-import { Component, DestroyRef, computed, inject, input } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, input } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { AppShell } from '../shared/shell/app-shell';
-import { RouteFocusService } from '../core/navigation/route-focus';
 
 /**
  * `CheckoutLayout` is the shell for the purchase-flow routes
@@ -35,9 +33,6 @@ export type CheckoutStep = 'cart' | 'contact' | 'delivery' | 'review' | 'success
   styleUrl: './checkout-layout.scss',
 })
 export class CheckoutLayout {
-  private readonly routeFocus = inject(RouteFocusService);
-  private readonly destroyRef = inject(DestroyRef);
-
   /** Active step in the flow, declared on the route itself (see above). */
   readonly step = input.required<CheckoutStep>();
 
@@ -64,14 +59,5 @@ export class CheckoutLayout {
     const current = this.currentIndex();
     if (current === -1) return true;
     return index < current;
-  }
-
-  constructor() {
-    this.routeFocus
-      .pathChangeNavigationEnd$()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.routeFocus.scheduleFocus();
-      });
   }
 }
