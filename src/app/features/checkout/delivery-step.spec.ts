@@ -399,15 +399,20 @@ describe('DS-10 an unavailable reason the component does not name falls back to 
 
 describe('DS-11 home delivery renders the address form and pickup renders the pickup notice instead', () => {
   it('home_delivery shows one address-form and zero pickup-notice; pickup_point flips them', () => {
+    // The billing address form also renders an inner [data-testid="address-form"] fieldset once pickup clears "same as delivery", so the delivery-side host is what is counted.
     const fixture = createFixture();
     selectDelivery(fixture, 'home_delivery');
     let root = getRootElement(fixture);
-    expect(root.querySelectorAll('[data-testid="address-form"]').length).toBe(1);
+    expect(
+      root.querySelectorAll('app-address-form:not([data-testid="billing-address-form"])').length,
+    ).toBe(1);
     expect(root.querySelectorAll('[data-testid="pickup-notice"]').length).toBe(0);
 
     selectDelivery(fixture, 'pickup_point');
     root = getRootElement(fixture);
-    expect(root.querySelectorAll('[data-testid="address-form"]').length).toBe(0);
+    expect(
+      root.querySelectorAll('app-address-form:not([data-testid="billing-address-form"])').length,
+    ).toBe(0);
     expect(root.querySelectorAll('[data-testid="pickup-notice"]').length).toBe(1);
   });
 });
