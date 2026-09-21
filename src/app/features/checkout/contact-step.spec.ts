@@ -518,4 +518,31 @@ describe('T20 contact-step shared wiring', () => {
     expect(emailEntry?.pointer).toBe('/server-error');
     expect(emailEntry?.message).toBe('Hibás e-mail');
   });
+
+  it('a field error whose pointer is not a string falls back to the field path (MIM-212)', () => {
+    // A malformed server-style error: `pointer` present but a number.
+    // `errorPointer` must reject it (`typeof pointer === 'string'`), so
+    // `invalidFields()` lands on the `/${key}` fallback, `/email`.
+    TestBed.configureTestingModule({ providers: TEST_PROVIDERS });
+    const malformed: { kind: string; message: string; pointer: number } = {
+      kind: 'server',
+      message: 'Hibás e-mail',
+      pointer: 42,
+    };
+    const fieldsWithMalformedError = TestBed.runInInjectionContext(() =>
+      form(signal(EMPTY_CONTACT), (path) => {
+        validate(path.email, () => malformed);
+      }),
+    );
+    const malformedFixture = TestBed.createComponent(ContactStep);
+    malformedFixture.componentRef.setInput('contactFields', fieldsWithMalformedError);
+    malformedFixture.componentRef.setInput('saveState', 'idle');
+    malformedFixture.detectChanges();
+
+    const emailEntry = malformedFixture.componentInstance
+      .invalidFields()
+      .find((entry) => entry.field === 'email');
+    expect(emailEntry?.pointer).toBe('/email');
+    expect(emailEntry?.message).toBe('Hibás e-mail');
+  });
 });
