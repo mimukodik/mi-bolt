@@ -117,7 +117,7 @@ export class CartStore {
     const versionCheck = this.checkIfMatch(ifMatch, cart.cart.version);
     if (!versionCheck.ok) return versionCheck;
     const hit = this.lookup(variantId);
-    if (!hit) {
+    if (hit === undefined) {
       return this.problem(404, 'NOT_FOUND', 'Unknown variant', { variantId });
     }
     if (hit.variant.maxQuantity === 0) {
@@ -131,7 +131,7 @@ export class CartStore {
         requested: merged,
       });
     }
-    if (existing) {
+    if (existing !== undefined) {
       existing.quantity = merged;
     } else {
       cart.cart.lines.push({ variantId, quantity });
@@ -151,11 +151,11 @@ export class CartStore {
     const versionCheck = this.checkIfMatch(ifMatch, cart.cart.version);
     if (!versionCheck.ok) return versionCheck;
     const line = cart.cart.lines.find((entry) => entry.variantId === variantId);
-    if (!line) {
+    if (line === undefined) {
       return this.problem(404, 'NOT_FOUND', 'Line not in cart', { variantId });
     }
     const hit = this.lookup(variantId);
-    if (hit && quantity > hit.variant.maxQuantity) {
+    if (hit !== undefined && quantity > hit.variant.maxQuantity) {
       return this.problem(409, 'QUANTITY_LIMIT', 'Merged quantity would exceed the line maximum', {
         max: hit.variant.maxQuantity,
         requested: quantity,
@@ -172,7 +172,7 @@ export class CartStore {
     const versionCheck = this.checkIfMatch(ifMatch, cart.cart.version);
     if (!versionCheck.ok) return versionCheck;
     const hit = this.lookup(variantId);
-    if (!hit) {
+    if (hit === undefined) {
       return this.problem(404, 'NOT_FOUND', 'Unknown variant', { variantId });
     }
     const before = cart.cart.lines.length;
@@ -241,7 +241,7 @@ export class CartStore {
    */
   toPersistedCart(sessionId: string): PersistedCart | undefined {
     const cart = this.carts.get(sessionId);
-    if (!cart) return undefined;
+    if (cart === undefined) return undefined;
     return {
       id: cart.id,
       version: cart.version,
@@ -265,7 +265,7 @@ export class CartStore {
     sessionId: string,
   ): { ok: true; cart: StoredCart } | Extract<CartOutcome, { ok: false }> {
     let cart = this.carts.get(sessionId);
-    if (!cart) {
+    if (cart === undefined) {
       cart = this.createStoredCart();
       this.carts.set(sessionId, cart);
       return { ok: true, cart };
@@ -322,7 +322,7 @@ export class CartStore {
   /** Bump version, then build the view. */
   private bumpAndView(sessionId: string): CartOutcome {
     const cart = this.carts.get(sessionId);
-    if (!cart) {
+    if (cart === undefined) {
       // No cart should be unreachable because callers go through
       // ensureFreshCart first; the guard exists so a future refactor
       // cannot surface a half-built stored state to the wire.
@@ -351,7 +351,7 @@ export class CartStore {
    */
   private view(sessionId: string, bumpForMutation: boolean): CartOutcome {
     const cart = this.carts.get(sessionId);
-    if (!cart) {
+    if (cart === undefined) {
       throw new Error('[cart-store] view called without a stored cart');
     }
     const notices: CartNotice[] = [];
@@ -360,7 +360,7 @@ export class CartStore {
     let changed = false;
     for (const line of cart.lines) {
       const hit = this.lookup(line.variantId);
-      if (!hit || hit.variant.maxQuantity === 0) {
+      if (hit === undefined || hit.variant.maxQuantity === 0) {
         notices.push({ code: 'ITEM_REMOVED', variantId: line.variantId });
         changed = true;
         continue;

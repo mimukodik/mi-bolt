@@ -52,7 +52,7 @@ export function isCatalogStoreLoaded(): boolean {
 
 /** Returns the current store; throws when none was loaded. */
 function requireStore(): CatalogStore {
-  if (!catalogStore.current) {
+  if (catalogStore.current === null) {
     throw new Error('[catalog.handlers] catalog store has not been loaded');
   }
   return catalogStore.current;
@@ -142,7 +142,7 @@ function buildProductPage(
 }
 
 /** Build the `listProducts` handler. */
-function listProductsHandler(options: CreateHandlersOptions) {
+function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products', ({ request }) => {
     const url = new URL(request.url);
     const parsed = parseListProductsParams(url.searchParams);
@@ -163,12 +163,12 @@ function listProductsHandler(options: CreateHandlersOptions) {
 }
 
 /** Build the `getProduct` handler. */
-function getProductHandler(options: CreateHandlersOptions) {
+function getProductHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products/:slug', ({ params }) => {
     const slug = String(params['slug']);
     const store = requireStore();
     const product = store.getProduct(slug);
-    if (!product) {
+    if (product === undefined) {
       return notFoundProblem(options, 'product not found', { slug });
     }
     return HttpResponse.json(product);
@@ -176,12 +176,12 @@ function getProductHandler(options: CreateHandlersOptions) {
 }
 
 /** Build the `listRelatedProducts` handler. */
-function listRelatedProductsHandler(options: CreateHandlersOptions) {
+function listRelatedProductsHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products/:slug/related', ({ params }) => {
     const slug = String(params['slug']);
     const store = requireStore();
     const subject = store.getProduct(slug);
-    if (!subject) {
+    if (subject === undefined) {
       return notFoundProblem(options, 'product not found', { slug });
     }
     const items = relatedItems(store, slug);
@@ -190,9 +190,12 @@ function listRelatedProductsHandler(options: CreateHandlersOptions) {
 }
 
 /** Pick up to 4 related products for the subject slug. */
-function relatedItems(store: CatalogStore, subjectSlug: string) {
+function relatedItems(
+  store: CatalogStore,
+  subjectSlug: string,
+): ReturnType<typeof toCatalogItem>[] {
   const subject = store.getProduct(subjectSlug);
-  if (!subject) return [];
+  if (subject === undefined) return [];
   const subjectBrand = subject.brand;
   const subjectStorages = new Set<number>();
   for (const variant of subject.variants) {
@@ -227,14 +230,17 @@ function relatedItems(store: CatalogStore, subjectSlug: string) {
     if (seen.has(product.slug)) continue;
     seen.add(product.slug);
     const entry = pickMinimumEntry(store, product.slug);
-    if (entry) out.push(entry);
+    if (entry !== null) out.push(entry);
     if (out.length === 4) break;
   }
   return out;
 }
 
 /** Pick the (product, min storage) entry with no filters applied. */
-function pickMinimumEntry(store: CatalogStore, slug: string) {
+function pickMinimumEntry(
+  store: CatalogStore,
+  slug: string,
+): ReturnType<typeof toCatalogItem> | null {
   const entries = store
     .listEntries()
     .filter((e) => e.product.slug === slug)
@@ -254,7 +260,7 @@ export function buildMediaHandler(
   return http.get('*/api/v1/media/:imageId', async ({ params }) => {
     const imageId = String(params['imageId']);
     const bytes = await loader(imageId);
-    if (!bytes) {
+    if (bytes === undefined) {
       const body: ProblemBody = {
         type: 'urn:mi-bolt:problem:not-found',
         title: 'Resource not found',

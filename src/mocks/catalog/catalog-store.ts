@@ -113,7 +113,7 @@ function colorOptionFor(
   storageGb: StorageGb,
 ): ColorOption | null {
   const v = variants.find((x) => x.colorCode === colorCode && x.storageGb === storageGb);
-  if (!v) return null;
+  if (v === undefined) return null;
   return {
     colorCode: v.colorCode,
     colorName: v.colorName,
@@ -212,13 +212,13 @@ export function load(fixture: CatalogFixture): CatalogStore {
     const sortedStorages = [...productStorages].sort((a, b) => a - b);
     for (const storageGb of sortedStorages) {
       const variant = product.variants.find((v) => v.storageGb === storageGb);
-      if (!variant) continue;
+      if (variant === undefined) continue;
       // colors in source `colors[]` order; only those that have a
       // variant at this storage.
       const colors: ColorOption[] = [];
       for (const code of ranking.colorOrder) {
         const option = colorOptionFor(product.variants, code, storageGb);
-        if (option) colors.push(option);
+        if (option !== null) colors.push(option);
       }
       const searchKey = [product.brand, product.name, ...product.highlights, product.description]
         .join(' ')

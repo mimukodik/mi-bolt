@@ -17,7 +17,7 @@
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
-import { Repository } from './repository';
+import type { Repository } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 import type { MockSnapshot } from './persistence';
 import { PROBLEM_CONTENT_TYPE } from './problem-response';
@@ -86,7 +86,15 @@ export function createHandlers(options: CreateHandlersOptions): RequestHandler[]
   return [...createDispatcherShell(options), ...createStrictHandlers(options)];
 }
 
-function notFoundBody(options: CreateHandlersOptions) {
+function notFoundBody(options: CreateHandlersOptions): {
+  type: string;
+  title: string;
+  status: number;
+  code: string;
+  detail: string;
+  traceId: string;
+  fieldErrors: readonly { path: string; code: string }[];
+} {
   return {
     type: 'urn:mi-bolt:problem:not-found',
     title: 'A kért végpont nem található',

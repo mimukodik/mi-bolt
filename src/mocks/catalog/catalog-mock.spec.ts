@@ -773,7 +773,7 @@ describe('GET /products facets', () => {
     };
     const apple = findBrand(brands, 'apple');
     expect(apple).toBeDefined();
-    if (!apple) return;
+    if (apple === undefined) return;
     expect(readString(apple, 'label')).toBe('Apple');
     expect(readString(apple, 'value')).toBe('apple');
   });

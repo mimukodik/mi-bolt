@@ -41,14 +41,14 @@ export const checkoutStore: { current: CheckoutStore | null } = { current: null 
 export const orderStore: { current: OrderStore | null } = { current: null };
 
 function requireCartStore(): NonNullable<typeof cartStore.current> {
-  if (!cartStore.current) {
+  if (cartStore.current === null) {
     throw new Error('[checkout.handlers] cart handlers not initialised');
   }
   return cartStore.current;
 }
 
 function requireCheckoutStore(): NonNullable<typeof checkoutStore.current> {
-  if (!checkoutStore.current) {
+  if (checkoutStore.current === null) {
     throw new Error('[checkout.handlers] checkout store has not been loaded');
   }
   return checkoutStore.current;
@@ -104,8 +104,8 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
   checkoutStore.current = checkout;
   orderStore.current = order;
 
-  if (options.snapshot) {
-    if (options.snapshot.checkoutDraft) {
+  if (options.snapshot !== null && options.snapshot !== undefined) {
+    if (options.snapshot.checkoutDraft !== undefined) {
       checkout.seedFromSnapshot(
         options.snapshot.simulatedSessionId,
         options.snapshot.checkoutDraft,
