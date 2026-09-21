@@ -1,381 +1,621 @@
 /**
- * T22 — final review step (S4.4), rewritten for FIX-63.
+ * S3-F2-5 — the review step on the 2.0.0 contract.
  *
- * FIX-63 gave `ReviewStep` the fixed signature `components.md:611-617`
- * declares: `quote`/`cart`/`draft`/`state` inputs, `editRequested`/
- * `refreshQuote`/`submitRequested` outputs. The component injects no
- * facade, no SDK and no `Router` — `review-page.ts` owns `CartFacade`,
- * `CheckoutFacade`, `QuoteController`, `OrderSubmission` and the
- * `Router`, and renders `PaymentProgress` plus the generic-error retry
- * banner beside `<app-review-step>` (their orchestration is covered by
- * `review-page.spec.ts`).
- *
- *   FIX-63-AC08 — a test that renders ReviewStep with all four inputs
- *                 set directly and no CartFacade, CheckoutFacade or
- *                 QuoteController provided, asserting it renders the
- *                 given cart lines and quote totals; a test per state
- *                 kind — including error, the seventh member this task
- *                 newly wires up — asserting a rendered difference;
- *                 and a test that each of the three outputs emits from
- *                 its triggering control.
+ * Twenty-six cases over the rendered review surface. The component is
+ * purely presentational: it injects nothing and calls no network.
+ * `review-page.ts` (S3-F2) owns the facades and the navigation, and
+ * drives this component through its nine declared inputs. The seven
+ * view states and the payment-return branch belong to the sibling
+ * states spec.
  */
 
 import { provideZonelessChangeDetection } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { describe, expect, it } from 'vitest';
 
-import { ReviewStep } from './review-step';
+import { ReviewStep, type CheckoutViewState } from './review-step';
+import { TermsDialog } from './terms-dialog';
+import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
+import type { Address } from '../../api/generated/models/address';
+import type { BillingDetails } from '../../api/generated/models/billing-details';
 import type { Cart } from '../../api/generated/models/cart';
 import type { CartItem } from '../../api/generated/models/cart-item';
-import type { Quote } from '../../api/generated/models/quote';
-import type { CheckoutDraft } from './checkout-form.model';
-import type { ReviewState } from './quote-state';
+import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
+import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
+import type { Contact } from '../../api/generated/models/contact';
+import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
+import type { PaymentSelection } from '../../api/generated/models/payment-selection';
+import type { PaymentIntent } from '../../api/generated/models/payment-intent';
 
-function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
+import type { PriceChange } from './checkout.facade';
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+const ADDRESS: Address = {
+  countryCode: 'HU',
+  postalCode: '1051',
+  city: 'Budapest',
+  line1: 'Fő utca 1.',
+};
+
+const CONTACT: Contact = {
+  fullName: 'Teszt Elek',
+  email: 'teszt@example.com',
+  phone: '+36301234567',
+};
+
+const PADDED_CONTACT: Contact = {
+  fullName: '  Teszt Elek  ',
+  email: '  teszt@example.com  ',
+  phone: '  +36301234567  ',
+};
+
+const BILLING: BillingDetails = {
+  name: 'Teszt Elek',
+  address: ADDRESS,
+};
+
+const CART_ITEM: CartItem = {
+  variantId: 'motorola-edge-50-fusion--zold--256',
+  productId: 'motorola-edge-50-fusion',
+  productSlug: 'motorola-edge-50-fusion',
+  productName: 'Motorola Edge 50 Fusion',
+  variantSlug: 'motorola-edge-50-fusion--zold--256',
+  colorName: 'Zöld',
+  storageGb: 256,
+  quantity: 1,
+  unitPrice: { amount: 89990, currency: 'HUF' },
+  lineTotal: { amount: 89990, currency: 'HUF' },
+  maxQuantity: 5,
+  availability: 'in_stock',
+  image: { id: 'img-1', src: '/img.png', alt: '', width: 10, height: 10 },
+};
+
+const CART: Cart = {
+  id: 'cart-1',
+  expiresAt: '2026-01-01T00:00:00.000Z',
+  items: [CART_ITEM],
+  lineCount: 1,
+  notices: [],
+  subtotal: { amount: 89990, currency: 'HUF' },
+  totalQuantity: 1,
+  version: 1,
+};
+
+const EMPTY_CART: Cart = {
+  ...CART,
+  items: [],
+  lineCount: 0,
+  totalQuantity: 0,
+};
+
+const SUMMARY: CheckoutSummary = {
+  subtotal: { amount: 89990, currency: 'HUF' },
+  shippingFee: { amount: 0, currency: 'HUF' },
+  paymentFee: { amount: 490, currency: 'HUF' },
+  total: { amount: 90480, currency: 'HUF' },
+};
+
+const HOME_DELIVERY: DeliverySelection = {
+  optionId: 'home_delivery',
+  address: ADDRESS,
+};
+
+const PICKUP: DeliverySelection = {
+  optionId: 'pickup_point',
+};
+
+const CASH_PAYMENT: PaymentSelection = {
+  method: 'cash_on_delivery',
+};
+
+const CARD_PAYMENT: PaymentSelection = {
+  method: 'card',
+};
+
+const CARD_DRAFT_COMPLETE: CheckoutSession = {
+  contact: CONTACT,
+  billing: BILLING,
+  delivery: HOME_DELIVERY,
+  payment: CARD_PAYMENT,
+  complete: true,
+  summary: SUMMARY,
+  version: 1,
+};
+
+const CASH_DRAFT_COMPLETE: CheckoutSession = {
+  ...CARD_DRAFT_COMPLETE,
+  payment: CASH_PAYMENT,
+};
+
+const INCOMPLETE_DRAFT: CheckoutSession = {
+  ...CARD_DRAFT_COMPLETE,
+  complete: false,
+};
+
+const PICKUP_DRAFT: CheckoutSession = {
+  ...CARD_DRAFT_COMPLETE,
+  delivery: PICKUP,
+};
+
+const NO_BILLING_DRAFT: CheckoutSession = {
+  ...CARD_DRAFT_COMPLETE,
+  billing: undefined,
+};
+
+const PADDED_DRAFT: CheckoutSession = {
+  ...CARD_DRAFT_COMPLETE,
+  contact: PADDED_CONTACT,
+};
+
+const OPTIONS: CheckoutOptions = {
+  deliveryOptions: [
+    {
+      id: 'home_delivery',
+      label: 'Házhoz szállítás',
+      fee: { amount: 0, currency: 'HUF' },
+      requiresAddress: true,
+      available: true,
+      description: 'Házhoz szállítás.',
+    },
+    {
+      id: 'pickup_point',
+      label: 'Átvételi pont',
+      fee: { amount: 0, currency: 'HUF' },
+      requiresAddress: false,
+      available: true,
+      description: 'Átvételi pont.',
+    },
+  ],
+  paymentMethods: [
+    {
+      id: 'card',
+      label: 'Bankkártya',
+      fee: { amount: 0, currency: 'HUF' },
+      available: true,
+      description: 'Bankkártyás fizetés.',
+    },
+    {
+      id: 'cash_on_delivery',
+      label: 'Utánvét',
+      fee: { amount: 490, currency: 'HUF' },
+      available: true,
+      description: 'Utánvétes fizetés.',
+    },
+  ],
+  termsVersion: '2026-09',
+};
+
+const SUCCEEDED_INTENT: PaymentIntent = {
+  id: 'pi-1',
+  amount: { amount: 90480, currency: 'HUF' },
+  status: 'succeeded',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  expiresAt: '2026-01-01T00:05:00.000Z',
+  redirectUrl: '/demo-fizetes/?next=review',
+  returnUrl: '/penztar/ellenorzes',
+};
+
+const PRICE_CHANGE: PriceChange = {
+  shownTotal: { amount: 90480, currency: 'HUF' },
+  currentTotal: { amount: 91990, currency: 'HUF' },
+  awaitingConfirmation: true,
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getRoot(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;
-  if (raw instanceof HTMLElement) return raw;
-  throw new Error('Expected HTMLElement');
+  if (!(raw instanceof HTMLElement)) {
+    throw new Error('Expected fixture.nativeElement to be HTMLElement');
+  }
+  return raw;
+}
+
+function getByTestId(root: ParentNode, testId: string): HTMLElement {
+  const el = root.querySelector(`[data-testid="${testId}"]`);
+  if (!(el instanceof HTMLElement)) {
+    throw new Error(`Expected element with data-testid="${testId}"`);
+  }
+  return el;
 }
 
 function getButton(root: HTMLElement, testId: string): HTMLButtonElement {
   const host = root.querySelector(`[data-testid="${testId}"]`);
-  if (host === null) throw new Error(`missing ${testId}`);
-  const button = host.tagName === 'BUTTON' ? host : host.querySelector('button');
-  if (!(button instanceof HTMLButtonElement)) throw new Error(`no <button> inside ${testId}`);
-  return button;
+  if (host === null) throw new Error(`missing host ${testId}`);
+  if (host.tagName === 'BUTTON') {
+    if (!(host instanceof HTMLButtonElement)) {
+      throw new Error(`expected HTMLButtonElement for ${testId}`);
+    }
+    return host;
+  }
+  const inner = host.querySelector('button');
+  if (!(inner instanceof HTMLButtonElement)) {
+    throw new Error(`expected inner <button> for ${testId}`);
+  }
+  return inner;
 }
 
-const ITEM: CartItem = {
-  availability: 'in_stock',
-  colorName: 'Éjfekete',
-  id: 'item-1',
-  image: { alt: '', height: 10, id: 'img-1', src: '/img.png', width: 10 },
-  lineTotal: { amount: 339990, currency: 'HUF' },
-  maxQuantity: 5,
-  productId: 'prod-1',
-  productName: 'Teszt Telefon',
-  productSlug: 'teszt-telefon',
-  quantity: 1,
-  storageGb: 128,
-  unitPrice: { amount: 339990, currency: 'HUF' },
-  variantId: 'variant-1',
-};
+function getCheckbox(root: HTMLElement, testId: string): HTMLInputElement {
+  const el = root.querySelector(`[data-testid="${testId}"]`);
+  if (!(el instanceof HTMLInputElement)) {
+    throw new Error(`expected HTMLInputElement for ${testId}`);
+  }
+  return el;
+}
 
-const CART: Cart = {
-  expiresAt: '2026-01-01T00:00:00.000Z',
-  id: 'cart-1',
-  itemCount: 1,
-  items: [ITEM],
-  status: 'active',
-  subtotal: { amount: 339990, currency: 'HUF' },
-  version: 1,
-};
-
-const QUOTE: Quote = {
-  cartId: 'cart-1',
-  cartVersion: 1,
-  expiresAt: '2026-01-01T00:05:00.000Z',
-  id: 'quote-1',
-  shipping: { amount: 1990, currency: 'HUF' },
-  subtotal: { amount: 339990, currency: 'HUF' },
-  total: { amount: 341980, currency: 'HUF' },
-};
-
-const DRAFT_COMPLETE: CheckoutDraft = {
-  contact: { fullName: 'Teszt Elek', email: 'teszt@example.test', phone: '+36301234567' },
-  delivery: {
-    optionId: 'home_delivery',
-    address: { city: 'Budapest', countryCode: 'HU', line1: 'Fő utca 1.', postalCode: '1011' },
-  },
-  paymentMethod: 'demo_card',
-};
-
-// A wildcard route (rather than an empty list) so a routerLink click
-// resolves instead of rejecting NG04002 "Cannot match any routes" as an
-// unhandled rejection — the edit-link tests below click the anchors.
-const TEST_PROVIDERS = [
-  provideZonelessChangeDetection(),
-  provideRouter([{ path: '**', component: ReviewStep }]),
-];
+function getTermsDialog(fixture: ComponentFixture<ReviewStep>): TermsDialog {
+  const debugEl = fixture.debugElement.query(By.directive(TermsDialog));
+  const instance: unknown = debugEl.componentInstance;
+  if (!(instance instanceof TermsDialog)) {
+    throw new Error('expected TermsDialog component instance');
+  }
+  return instance;
+}
 
 interface ReviewStepInputs {
-  readonly quote: Quote | null;
-  readonly cart: Cart;
-  readonly draft: CheckoutDraft;
-  readonly state: ReviewState;
+  readonly summary?: CheckoutSummary | null;
+  readonly cart?: Cart;
+  readonly draft?: CheckoutSession;
+  readonly options?: CheckoutOptions | null;
+  readonly state?: CheckoutViewState;
+  readonly paymentIntent?: PaymentIntent | null;
+  readonly priceChange?: PriceChange | null;
+  readonly paymentIntentMissing?: boolean;
+  readonly paymentStarted?: boolean;
 }
 
-function createReviewStep(overrides: Partial<ReviewStepInputs> = {}) {
-  TestBed.configureTestingModule({ providers: TEST_PROVIDERS });
+function createFixture(overrides: ReviewStepInputs = {}): ComponentFixture<ReviewStep> {
+  TestBed.configureTestingModule({
+    providers: [provideZonelessChangeDetection(), provideRouter([])],
+  });
   const fixture = TestBed.createComponent(ReviewStep);
-  // `quote` legitimately overrides to `null`, so a plain `??` default would
-  // collapse an explicit `null` back to `QUOTE`; check for the key instead.
-  const quote = 'quote' in overrides ? (overrides.quote ?? null) : QUOTE;
-  fixture.componentRef.setInput('quote', quote);
+  fixture.componentRef.setInput(
+    'summary',
+    overrides.summary !== undefined ? overrides.summary : SUMMARY,
+  );
   fixture.componentRef.setInput('cart', overrides.cart ?? CART);
-  fixture.componentRef.setInput('draft', overrides.draft ?? DRAFT_COMPLETE);
+  fixture.componentRef.setInput('draft', overrides.draft ?? CARD_DRAFT_COMPLETE);
+  fixture.componentRef.setInput(
+    'options',
+    overrides.options !== undefined ? overrides.options : OPTIONS,
+  );
   fixture.componentRef.setInput('state', overrides.state ?? 'ready');
+  fixture.componentRef.setInput(
+    'paymentIntent',
+    overrides.paymentIntent !== undefined ? overrides.paymentIntent : null,
+  );
+  fixture.componentRef.setInput(
+    'priceChange',
+    overrides.priceChange !== undefined ? overrides.priceChange : null,
+  );
+  fixture.componentRef.setInput('paymentIntentMissing', overrides.paymentIntentMissing ?? false);
+  fixture.componentRef.setInput('paymentStarted', overrides.paymentStarted ?? false);
   fixture.detectChanges();
   return fixture;
 }
 
-function checkBothConsents(fixture: ReturnType<typeof createReviewStep>): void {
-  const root = getRootElement(fixture);
-  const terms = root.querySelector<HTMLInputElement>('#review-consent-terms-input');
-  const simulation = root.querySelector<HTMLInputElement>('#review-consent-simulation-input');
-  if (terms === null || simulation === null) throw new Error('consent checkboxes missing');
-  terms.checked = true;
-  terms.dispatchEvent(new Event('change'));
-  simulation.checked = true;
-  simulation.dispatchEvent(new Event('change'));
+function checkTermsConsent(fixture: ComponentFixture<ReviewStep>): void {
+  const root = getRoot(fixture);
+  const checkbox = getCheckbox(root, 'review-consent-terms-input');
+  checkbox.checked = true;
+  checkbox.dispatchEvent(new Event('change'));
   fixture.detectChanges();
 }
 
 // ---------------------------------------------------------------------------
-// FIX-63-AC08 — renders with no facade/service dependency, given cart lines
-// and quote totals directly.
+// RS-01 — renders from its inputs alone
 // ---------------------------------------------------------------------------
-describe('FIX-63-AC08 ReviewStep renders from its four inputs with no injected service', () => {
-  it('renders the given cart lines and quote totals with no CartFacade, CheckoutFacade or QuoteController provided', () => {
-    // TEST_PROVIDERS carries only zoneless change detection and an empty
-    // router — no CartFacade, CheckoutFacade, QuoteController or SDK/HTTP
-    // provider is registered. The component still renders: proof it
-    // reads only its declared inputs.
-    const fixture = createReviewStep();
-    const root = getRootElement(fixture);
 
-    const lines = root.querySelectorAll('[data-testid="review-line"]');
-    expect(lines.length).toBe(1);
-    expect(lines[0].textContent).toContain('Teszt Telefon');
-    expect(lines[0].textContent).toContain('Éjfekete');
-
-    const summary = root.querySelector('[data-testid="review-summary"]');
-    expect(summary?.querySelector('app-order-summary')).not.toBeNull();
-    expect(summary?.textContent).toContain('Bankkártya (szimulált)');
-    expect(summary?.textContent).toContain('Házhoz szállítás (1990 Ft)');
+describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
+  it('RS-01 renders from its inputs alone with no facade, no router call and no HttpClient provided', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const pages = root.querySelectorAll('[data-testid="review-page"]');
+    expect(pages.length).toBe(1);
   });
 
-  it('renders an empty-cart message when the cart has no items', () => {
-    const fixture = createReviewStep({ cart: { ...CART, items: [], itemCount: 0 } });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-items-empty"]')).not.toBeNull();
-    expect(root.querySelectorAll('[data-testid="review-line"]').length).toBe(0);
+  // ---------------------------------------------------------------------------
+  // RS-02..RS-05 — the contact and billing snapshot
+  // ---------------------------------------------------------------------------
+
+  it('RS-02 renders the contact name, email and phone from the server-confirmed draft', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const contact = getByTestId(root, 'review-contact');
+    expect(contact.textContent).toContain('Teszt Elek');
+    expect(contact.textContent).toContain('teszt@example.com');
+    expect(contact.textContent).toContain('+36301234567');
   });
 
-  it('renders the contact and delivery snapshot from draft(), not from a live form', () => {
-    const fixture = createReviewStep();
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-contact"]')?.textContent).toContain(
-      'Teszt Elek',
-    );
-    expect(root.querySelector('[data-testid="review-contact"]')?.textContent).toContain(
-      'teszt@example.test',
-    );
-    expect(root.querySelector('[data-testid="review-delivery-address"]')?.textContent).toContain(
-      'Fő utca 1.',
-    );
+  it('RS-03 trims the contact values it renders', () => {
+    const fixture = createFixture({ draft: PADDED_DRAFT });
+    const root = getRoot(fixture);
+    const contact = getByTestId(root, 'review-contact');
+    expect(contact.textContent).toContain('Teszt Elek');
+    expect(contact.textContent).toContain('teszt@example.com');
+    expect(contact.textContent).toContain('+36301234567');
+    expect(contact.textContent).not.toContain('  Teszt Elek  ');
+    expect(contact.textContent).not.toContain('  teszt@example.com  ');
+    expect(contact.textContent).not.toContain('  +36301234567  ');
   });
 
-  it('FIX-35: the page heading is "Minden rendben?"', () => {
-    const fixture = createReviewStep();
-    const root = getRootElement(fixture);
-    expect(root.querySelector('h1')?.textContent.trim()).toBe('Minden rendben?');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// One test per ReviewState member — each asserts a rendered difference.
-// ---------------------------------------------------------------------------
-describe('FIX-63-AC08 one rendered difference per ReviewState member', () => {
-  it('quoting: shows the quote-loading skeleton and no order summary yet', () => {
-    const fixture = createReviewStep({ quote: null, state: 'quoting' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-summary-loading"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
-      'Árajánlat frissítése',
-    );
+  it('RS-04 renders the billing name and address from the draft', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const billing = getByTestId(root, 'review-billing');
+    const billingAddress = getByTestId(root, 'review-billing-address');
+    expect(billing.textContent).toContain('Teszt Elek');
+    expect(billingAddress.textContent).toContain('1051');
+    expect(billingAddress.textContent).toContain('Budapest');
+    expect(billingAddress.textContent).toContain('Fő utca 1.');
   });
 
-  it('ready: shows the order summary totals and no status banner', () => {
-    const fixture = createReviewStep({ state: 'ready' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-summary-loading"]')).toBeNull();
-    expect(root.querySelector('app-order-summary')).not.toBeNull();
-    expect(root.querySelector('[data-testid="review-status"]')?.textContent.trim()).toBe('');
+  it('RS-05 renders the em dash for a billing name the draft does not carry', () => {
+    const fixture = createFixture({ draft: NO_BILLING_DRAFT });
+    const root = getRoot(fixture);
+    const billing = getByTestId(root, 'review-billing');
+    expect(billing.textContent).toContain('—');
   });
 
-  it('expired: shows the quote-expired status message', () => {
-    const fixture = createReviewStep({ state: 'expired' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
-      'Az árajánlat lejárt.',
-    );
+  // ---------------------------------------------------------------------------
+  // RS-06..RS-10 — the delivery and payment labels
+  // ---------------------------------------------------------------------------
+
+  it('RS-06 renders the delivery address for a home delivery draft', () => {
+    const fixture = createFixture({ draft: CARD_DRAFT_COMPLETE });
+    const root = getRoot(fixture);
+    const addresses = root.querySelectorAll('[data-testid="review-delivery-address"]');
+    expect(addresses.length).toBe(1);
+    const text = addresses[0].textContent;
+    expect(text).toContain('Fő utca 1.');
+    expect(text).toContain('1051');
+    expect(text).toContain('Budapest');
   });
 
-  it('price-changed: shows the price-changed status message', () => {
-    const fixture = createReviewStep({ state: 'price-changed' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
-      'A katalógus ára megváltozott.',
-    );
+  it('RS-07 renders no delivery address row for a pickup draft', () => {
+    const fixture = createFixture({ draft: PICKUP_DRAFT });
+    const root = getRoot(fixture);
+    expect(root.querySelectorAll('[data-testid="review-delivery-address"]').length).toBe(0);
   });
 
-  it('stock-error: shows the out-of-stock status message', () => {
-    const fixture = createReviewStep({ state: 'stock-error' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
-      'Egy vagy több változat elfogyott.',
-    );
+  it('RS-08 renders the delivery and payment labels from the options input', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const delivery = getByTestId(root, 'review-delivery');
+    expect(delivery.textContent).toContain('Házhoz szállítás');
+    const payment = getByTestId(root, 'review-payment');
+    expect(payment.textContent.trim()).toBe('Bankkártya');
   });
 
-  it('submitting: shows the submitting skeleton and a loading submit button', () => {
-    const fixture = createReviewStep({ state: 'submitting' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
-      'Véglegesítés…',
-    );
-    expect(getButton(root, 'review-submit').disabled).toBe(true);
+  it('RS-09 renders the em dash when the options have not loaded', () => {
+    const fixture = createFixture({ options: null });
+    const root = getRoot(fixture);
+    const delivery = getByTestId(root, 'review-delivery');
+    const payment = getByTestId(root, 'review-payment');
+    expect(delivery.textContent).toContain('—');
+    expect(payment.textContent.trim()).toBe('—');
   });
 
-  it('error: shows the generic submit-failed status message (the seventh member this task wires up)', () => {
-    const fixture = createReviewStep({ state: 'error' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-status"]')?.textContent).toContain(
-      'A rendelés leadása nem sikerült.',
-    );
+  it('RS-10 renders the em dash when the wire has no entry for the saved option id', () => {
+    const fixture = createFixture({
+      options: { ...OPTIONS, deliveryOptions: [] },
+    });
+    const root = getRoot(fixture);
+    const delivery = getByTestId(root, 'review-delivery');
+    expect(delivery.textContent).toContain('—');
   });
 
-  it('reflects the current state on the root element via data-status', () => {
-    const fixture = createReviewStep({ state: 'expired' });
-    const root = getRootElement(fixture);
-    expect(root.querySelector('[data-testid="review-page"]')?.getAttribute('data-status')).toBe(
-      'expired',
-    );
-  });
-});
+  // ---------------------------------------------------------------------------
+  // RS-11..RS-13 — the three edit controls
+  // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Each of the three outputs emits from its triggering control.
-// ---------------------------------------------------------------------------
-describe('FIX-63-AC08 each output emits from its triggering control', () => {
-  it('editRequested emits "contact" from the contact section edit link', () => {
-    const fixture = createReviewStep();
-    const root = getRootElement(fixture);
+  it('RS-11 the contact edit control emits editRequested with contact', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
     const emitted: ('contact' | 'delivery')[] = [];
-    fixture.componentInstance.editRequested.subscribe((v) => emitted.push(v));
-
-    root.querySelector<HTMLAnchorElement>('[data-testid="review-edit-contact"]')?.click();
+    const sub = fixture.componentInstance.editRequested.subscribe((v) => emitted.push(v));
+    getButton(root, 'review-edit-contact').click();
     fixture.detectChanges();
-
+    sub.unsubscribe();
     expect(emitted).toEqual(['contact']);
   });
 
-  it('editRequested emits "delivery" from the delivery section edit link', () => {
-    const fixture = createReviewStep();
-    const root = getRootElement(fixture);
+  it('RS-12 the delivery edit control emits editRequested with delivery', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
     const emitted: ('contact' | 'delivery')[] = [];
-    fixture.componentInstance.editRequested.subscribe((v) => emitted.push(v));
-
-    root.querySelector<HTMLAnchorElement>('[data-testid="review-edit-delivery"]')?.click();
+    const sub = fixture.componentInstance.editRequested.subscribe((v) => emitted.push(v));
+    getButton(root, 'review-edit-delivery').click();
     fixture.detectChanges();
-
+    sub.unsubscribe();
     expect(emitted).toEqual(['delivery']);
   });
 
-  it('refreshQuote emits from the "Árajánlat frissítése" control', () => {
-    const fixture = createReviewStep({ state: 'expired', quote: null });
-    const root = getRootElement(fixture);
-    let count = 0;
-    fixture.componentInstance.refreshQuote.subscribe(() => (count += 1));
-
-    root.querySelector<HTMLButtonElement>('[data-testid="review-refresh"]')?.click();
+  it('RS-13 the billing edit control also asks for the delivery step, because billing is entered there', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const emitted: ('contact' | 'delivery')[] = [];
+    const sub = fixture.componentInstance.editRequested.subscribe((v) => emitted.push(v));
+    getButton(root, 'review-edit-billing').click();
     fixture.detectChanges();
-
-    expect(count).toBe(1);
+    sub.unsubscribe();
+    expect(emitted).toEqual(['delivery']);
   });
 
-  it('submitRequested emits from the primary CTA once both consents are checked and the state is ready', () => {
-    const fixture = createReviewStep({ state: 'ready' });
-    let count = 0;
-    fixture.componentInstance.submitRequested.subscribe(() => (count += 1));
+  // ---------------------------------------------------------------------------
+  // RS-14..RS-18 — the cart lines and the four-row summary
+  // ---------------------------------------------------------------------------
 
-    checkBothConsents(fixture);
-    const root = getRootElement(fixture);
-    getButton(root, 'review-submit').click();
-    fixture.detectChanges();
-
-    expect(count).toBe(1);
+  it('RS-14 renders one line per cart item with its name, variant label, quantity and totals', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const lines = root.querySelectorAll('[data-testid="review-line"]');
+    expect(lines.length).toBe(1);
+    const text = lines[0].textContent;
+    expect(text).toContain('Motorola Edge 50 Fusion');
+    expect(text).toContain('Zöld · 256 GB');
+    expect(text).toContain('1 ×');
+    expect(text).toContain(PriceBlock.formatHuf(89990));
   });
 
-  it('does not emit submitRequested while a consent is unchecked; the CTA stays disabled with an explanation', () => {
-    const fixture = createReviewStep({ state: 'ready' });
-    let count = 0;
-    fixture.componentInstance.submitRequested.subscribe(() => (count += 1));
-
-    const root = getRootElement(fixture);
-    expect(getButton(root, 'review-submit').disabled).toBe(true);
-    getButton(root, 'review-submit').click();
-    fixture.detectChanges();
-
-    expect(count).toBe(0);
-    expect(root.querySelector('[data-testid="review-cta-explanation"]')).not.toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Consent + terms dialog wiring (T22-AC02), kept from the pre-FIX-63 suite
-// but as plain checkbox/local-state assertions now that neither consent is
-// backed by a shared field tree (components.md:615 declares no such input).
-// ---------------------------------------------------------------------------
-describe('T22-AC02 demo terms + simulation acknowledgement', () => {
-  it('renders two unchecked consent checkboxes', () => {
-    const fixture = createReviewStep();
-    const root = getRootElement(fixture);
-    const checkboxes = root.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    expect(checkboxes.length).toBe(2);
-    for (const box of Array.from(checkboxes)) {
-      expect(box.checked).toBe(false);
-    }
+  it('RS-15 renders the empty placeholder when the cart carries no items', () => {
+    const fixture = createFixture({ cart: EMPTY_CART });
+    const root = getRoot(fixture);
+    expect(root.querySelectorAll('[data-testid="review-items-empty"]').length).toBe(1);
+    expect(root.querySelectorAll('[data-testid="review-line"]').length).toBe(0);
   });
 
-  it("opens and closes the terms dialog via the demo-terms link and the dialog's own close event", () => {
-    const fixture = createReviewStep();
-    expect(fixture.componentInstance.termsOpened()).toBe(false);
-
-    fixture.componentInstance.openTerms();
-    fixture.detectChanges();
-    expect(fixture.componentInstance.termsOpened()).toBe(true);
-
-    fixture.componentInstance.closeTerms();
-    fixture.detectChanges();
-    expect(fixture.componentInstance.termsOpened()).toBe(false);
+  it("RS-16 the four summary rows carry the server's own subtotal, shipping fee, payment fee and total", () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const subtotal = getByTestId(root, 'order-summary-subtotal');
+    const shipping = getByTestId(root, 'order-summary-shipping');
+    const paymentFee = getByTestId(root, 'order-summary-payment-fee');
+    const total = getByTestId(root, 'order-summary-total');
+    expect(subtotal.textContent).toContain(PriceBlock.formatHuf(89990));
+    expect(shipping.textContent).toContain(PriceBlock.formatHuf(0));
+    expect(paymentFee.textContent).toContain(PriceBlock.formatHuf(490));
+    expect(total.textContent).toContain(PriceBlock.formatHuf(90480));
   });
-});
 
-// ---------------------------------------------------------------------------
-// CTA gating on an incomplete draft — the container is not required to
-// resolve every branch before rendering the review step.
-// ---------------------------------------------------------------------------
-describe('FIX-63-AC08 CTA also gates on an incomplete draft', () => {
-  it('disables the CTA when the draft has no chosen payment method', () => {
-    const fixture = createReviewStep({
-      state: 'ready',
-      draft: { ...DRAFT_COMPLETE, paymentMethod: undefined },
+  it('RS-17 renders the summary loading placeholder while the summary is null', () => {
+    const fixture = createFixture({ summary: null });
+    const root = getRoot(fixture);
+    expect(root.querySelectorAll('[data-testid="review-summary-loading"]').length).toBe(1);
+    expect(root.querySelectorAll('app-order-summary').length).toBe(0);
+  });
+
+  it('RS-18 the right-rail rows repeat the payment and delivery labels and carry the demo badge', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const summary = getByTestId(root, 'review-summary');
+    expect(summary.textContent).toContain('Bankkártya');
+    expect(summary.textContent).toContain('Házhoz szállítás');
+    const badge = getByTestId(root, 'review-demo-badge');
+    expect(badge.textContent.trim()).toBe('Demó');
+  });
+
+  // ---------------------------------------------------------------------------
+  // RS-19..RS-26 — the terms consent, the CTA gating, and the dialog
+  // ---------------------------------------------------------------------------
+
+  it('RS-19 the terms checkbox starts unchecked, in the default state, with no message', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const checkbox = getCheckbox(root, 'review-consent-terms-input');
+    expect(checkbox.checked).toBe(false);
+    const terms = getByTestId(root, 'review-consent-terms');
+    expect(terms.getAttribute('data-state')).toBe('default');
+    expect(root.querySelectorAll('[data-testid="review-consent-terms-message"]').length).toBe(0);
+  });
+
+  it('RS-20 blurring the unchecked checkbox moves it to the touched-invalid state and shows the message', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const checkbox = getCheckbox(root, 'review-consent-terms-input');
+    checkbox.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    const terms = getByTestId(root, 'review-consent-terms');
+    expect(terms.getAttribute('data-state')).toBe('touched-invalid');
+    const message = getByTestId(root, 'review-consent-terms-message');
+    expect(message.textContent.trim()).toBe('A demó feltételek elfogadása kötelező.');
+  });
+
+  it('RS-21 pressing the CTA without consent moves it to the submitted-invalid state and emits nothing', () => {
+    const fixture = createFixture();
+    let emitted = 0;
+    const sub = fixture.componentInstance.submitRequested.subscribe(() => (emitted += 1));
+    fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+    sub.unsubscribe();
+    const root = getRoot(fixture);
+    const terms = getByTestId(root, 'review-consent-terms');
+    expect(terms.getAttribute('data-state')).toBe('submitted-invalid');
+    expect(emitted).toBe(0);
+  });
+
+  it('RS-22 a complete cash on delivery draft with the terms accepted enables the CTA and emits once', () => {
+    const fixture = createFixture({ draft: CASH_DRAFT_COMPLETE });
+    let emitted = 0;
+    const sub = fixture.componentInstance.submitRequested.subscribe(() => (emitted += 1));
+    checkTermsConsent(fixture);
+    const root = getRoot(fixture);
+    const button = getButton(root, 'review-submit');
+    expect(button.disabled).toBe(false);
+    button.click();
+    fixture.detectChanges();
+    sub.unsubscribe();
+    expect(emitted).toBe(1);
+  });
+
+  it('RS-23 an incomplete draft keeps the CTA disabled and says which condition is unmet', () => {
+    const fixture = createFixture({ draft: INCOMPLETE_DRAFT });
+    checkTermsConsent(fixture);
+    const root = getRoot(fixture);
+    const button = getButton(root, 'review-submit');
+    expect(button.disabled).toBe(true);
+    const explanation = getByTestId(root, 'review-cta-explanation');
+    expect(explanation.textContent.trim()).toBe(
+      'Hiányzó adatok: egészítsd ki a korábbi lépéseket a rendelés leadásához.',
+    );
+  });
+
+  it('RS-24 a card draft is only submittable once the intent has succeeded', () => {
+    const noIntent = createFixture({ draft: CARD_DRAFT_COMPLETE, paymentIntent: null });
+    checkTermsConsent(noIntent);
+    const noIntentRoot = getRoot(noIntent);
+    const noIntentButton = getButton(noIntentRoot, 'review-submit');
+    expect(noIntentButton.disabled).toBe(true);
+    const noIntentExplanation = getByTestId(noIntentRoot, 'review-cta-explanation');
+    expect(noIntentExplanation.textContent.trim()).toBe(
+      'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.',
+    );
+
+    TestBed.resetTestingModule();
+    const withIntent = createFixture({
+      draft: CARD_DRAFT_COMPLETE,
+      paymentIntent: SUCCEEDED_INTENT,
     });
-    checkBothConsents(fixture);
-    const root = getRootElement(fixture);
-    expect(getButton(root, 'review-submit').disabled).toBe(true);
+    checkTermsConsent(withIntent);
+    const withIntentRoot = getRoot(withIntent);
+    const withIntentButton = getButton(withIntentRoot, 'review-submit');
+    expect(withIntentButton.disabled).toBe(false);
+    expect(withIntentRoot.querySelectorAll('[data-testid="review-cta-explanation"]').length).toBe(
+      0,
+    );
   });
 
-  it('disables the CTA when the draft has no chosen delivery option', () => {
-    const fixture = createReviewStep({
-      state: 'ready',
-      draft: { ...DRAFT_COMPLETE, delivery: undefined },
-    });
-    checkBothConsents(fixture);
-    const root = getRootElement(fixture);
-    expect(getButton(root, 'review-submit').disabled).toBe(true);
+  it('RS-25 an unconfirmed price change keeps the CTA disabled ahead of every other reason', () => {
+    const fixture = createFixture({ priceChange: PRICE_CHANGE });
+    checkTermsConsent(fixture);
+    const root = getRoot(fixture);
+    const button = getButton(root, 'review-submit');
+    expect(button.disabled).toBe(true);
+    const explanation = getByTestId(root, 'review-cta-explanation');
+    expect(explanation.textContent.trim()).toBe(
+      'Erősítsd meg az új végösszeget a rendelés leadásához.',
+    );
+  });
+
+  it("RS-26 the terms dialog opens from its control and closes from the dialog's own event", () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    getButton(root, 'review-consent-terms-button').click();
+    fixture.detectChanges();
+    const dialog = getTermsDialog(fixture);
+    expect(dialog.opened()).toBe(true);
+
+    dialog.closed.emit();
+    fixture.detectChanges();
+    expect(dialog.opened()).toBe(false);
   });
 });
