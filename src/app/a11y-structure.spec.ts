@@ -332,7 +332,7 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     readonly matches: boolean = true;
     readonly media: string;
     onchange: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null = null;
-    private readonly legacyListeners = new Map<
+    private readonly wrappedListeners = new Map<
       (this: MediaQueryList, ev: MediaQueryListEvent) => unknown,
       EventListener
     >();
@@ -349,7 +349,7 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
       const wrapped: EventListener = (event) => {
         if (isMediaQueryListEvent(event)) callback.call(this, event);
       };
-      this.legacyListeners.set(callback, wrapped);
+      this.wrappedListeners.set(callback, wrapped);
       this.addEventListener('change', wrapped);
     }
 
@@ -357,10 +357,10 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
       callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
     ): void {
       if (callback === null) return;
-      const wrapped = this.legacyListeners.get(callback);
+      const wrapped = this.wrappedListeners.get(callback);
       if (wrapped === undefined) return;
       this.removeEventListener('change', wrapped);
-      this.legacyListeners.delete(callback);
+      this.wrappedListeners.delete(callback);
     }
   }
 

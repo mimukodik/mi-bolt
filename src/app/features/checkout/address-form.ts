@@ -16,7 +16,6 @@ import {
   type FieldError,
 } from '../../shared/ui/form-field-message/form-field-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
-import type { Address } from '../../api/generated/models/address';
 
 type AddressField = 'postalCode' | 'city' | 'line1' | 'line2';
 const FIELDS: readonly AddressField[] = ['postalCode', 'city', 'line1', 'line2'] as const;
@@ -83,8 +82,6 @@ export class AddressForm {
   readonly line2 = model<string>('');
   /** Surfaces errors even on unfocused fields once the parent submits. */
   readonly submitted = model<boolean>(false);
-  /** Two-way bound to the parent's address state; updated on every change. */
-  readonly addressChanged = model<Address | null>(null);
 
   /** JSON-pointer base for `FieldError.pointer`, and this instance's element id prefix. */
   readonly pointerBase = input<string>('/delivery/address');
@@ -112,20 +109,6 @@ export class AddressForm {
   readonly isComplete = computed<boolean>(() =>
     FIELDS.every((field) => this.errors(field).length === 0),
   );
-
-  /** Snapshot into the wire-shaped `Address`; `null` while any field
-   *  has a visible error, so the parent never sends a malformed payload. */
-  readonly snapshot = computed<Address | null>(() => {
-    if (!this.isComplete()) return null;
-    const line2 = this.line2().trim();
-    return {
-      countryCode: 'HU',
-      postalCode: this.postalCode().trim(),
-      city: this.city().trim(),
-      line1: this.line1().trim(),
-      ...(line2.length > 0 ? { line2 } : {}),
-    };
-  });
 
   errors(field: AddressField): readonly FieldError[] {
     const result = validateField(field, this.models[field]().trim());
@@ -162,6 +145,5 @@ export class AddressForm {
   onInput(field: AddressField, event: Event): void {
     if (!isHTMLInputElement(event.target)) return;
     this.models[field].set(event.target.value);
-    this.addressChanged.set(this.snapshot());
   }
 }

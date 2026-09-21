@@ -227,7 +227,7 @@ class StaticMediaQueryList extends EventTarget implements MediaQueryList {
   readonly matches: boolean = true;
   readonly media: string;
   onchange: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null = null;
-  private readonly legacyListeners = new Map<
+  private readonly wrappedListeners = new Map<
     (this: MediaQueryList, ev: MediaQueryListEvent) => unknown,
     EventListener
   >();
@@ -242,7 +242,7 @@ class StaticMediaQueryList extends EventTarget implements MediaQueryList {
     const wrapped: EventListener = (event) => {
       if (isMediaQueryListEvent(event)) callback.call(this, event);
     };
-    this.legacyListeners.set(callback, wrapped);
+    this.wrappedListeners.set(callback, wrapped);
     this.addEventListener('change', wrapped);
   }
 
@@ -250,10 +250,10 @@ class StaticMediaQueryList extends EventTarget implements MediaQueryList {
     callback: ((this: MediaQueryList, ev: MediaQueryListEvent) => unknown) | null,
   ): void {
     if (callback === null) return;
-    const wrapped = this.legacyListeners.get(callback);
+    const wrapped = this.wrappedListeners.get(callback);
     if (wrapped === undefined) return;
     this.removeEventListener('change', wrapped);
-    this.legacyListeners.delete(callback);
+    this.wrappedListeners.delete(callback);
   }
 }
 
@@ -872,7 +872,7 @@ describe('T13-AC03 mobile filter drawer', () => {
     await harness.tick();
 
     // CDK's `DialogRef` closes on Escape by checking `event.keyCode === 27`
-    // (the legacy numeric code), not `event.key`; jsdom's `KeyboardEvent`
+    // (the numeric key code), not `event.key`; jsdom's `KeyboardEvent`
     // does not derive `keyCode` from `key`, so it must be passed
     // explicitly or the dialog never sees a matching keydown.
     const escape = new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true });
