@@ -7,6 +7,7 @@ import { Button } from './button';
   imports: [Button],
   template: `
     <app-button
+      [block]="block()"
       [disabled]="disabled()"
       [label]="label()"
       [loading]="loading()"
@@ -24,6 +25,7 @@ class HostComponent {
   readonly disabled = signal(false);
   readonly loading = signal(false);
   readonly type = signal<'button' | 'submit' | 'reset'>('button');
+  readonly block = signal(false);
   readonly clickCount = signal(0);
 }
 
@@ -271,5 +273,14 @@ describe('Button primitive', () => {
     expect(disabled).toContain('background:var(--color-disabled-bg)');
     // the retired orange palette is gone from this primitive.
     expect(css).not.toContain('color-brand-accent');
+  });
+
+  it('adds is-block to the root when block is set (MIM-211)', () => {
+    const { fixture, host, root } = setup();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.classList.contains('is-block')).toBe(false);
+    host.block.set(true);
+    fixture.detectChanges();
+    expect(btn?.classList.contains('is-block')).toBe(true);
   });
 });

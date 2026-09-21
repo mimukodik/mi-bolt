@@ -54,6 +54,9 @@ export class OrderSummary {
    *  server would accept. */
   readonly serverTotal = input<Money | null>(null);
 
+  /** Navy card look for the cart page; the review step leaves it off. */
+  readonly inverse = input(false);
+
   /**
    * Final total. When shipping is not yet known, the total is a
    * zero Money so `PriceBlock` does NOT invent an amount (it shows

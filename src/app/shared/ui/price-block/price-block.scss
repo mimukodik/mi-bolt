@@ -27,6 +27,14 @@
   line-height: 28px;
 }
 
+.root[data-layout='row'] {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  gap: 16px;
+}
+
 .root[data-inverse] {
   color: var(--color-text-inverse);
 }
