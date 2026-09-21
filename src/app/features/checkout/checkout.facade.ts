@@ -528,31 +528,25 @@ export class CheckoutFacade {
   }
 
   /**
-   * Ends the checkout session a placed order closed: the draft and
-   * every stored key go, the receipt stays for the success page to
-   * render (design §3.4). The last-known `paymentIntent` snapshot is
-   * kept on the facade — the success-state of the succeeded intent
-   * is part of the user-visible commit history even though the store
-   * has since deleted the row, so a later read of `paymentIntent()`
-   * still shows `status: 'succeeded'` until the next
-   * `createPaymentIntent` overwrites it. The cart's own post-order
-   * reset is the success page's call, not this one.
+   * Ends the checkout session a placed order closed: the draft, the
+   * payment intent that paid for it and every stored key go; the
+   * receipt stays for the success page to render. The cart's own
+   * post-order reset is the success page's call, not this one.
    */
   resetAfterOrder(): void {
     checkoutKeys.clearAll();
     this.sessionWritable.set(null);
+    this.paymentIntentWritable.set(null);
     this.clearFailureOverlay();
   }
 
   /**
    * Starts a fresh purchase from the success page: everything
-   * `resetAfterOrder` clears, the payment intent and the receipt
-   * with it, so the wizard guards no longer send the shopper back to
-   * the old success URL.
+   * `resetAfterOrder` clears, the receipt with it, so the wizard
+   * guards no longer send the shopper back to the old success URL.
    */
   startNewPurchase(): void {
     this.resetAfterOrder();
-    this.paymentIntentWritable.set(null);
     this.orderWritable.set(null);
   }
 

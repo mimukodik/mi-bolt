@@ -1252,6 +1252,30 @@ describe('orders', () => {
     expect(checkout.paymentIntent()).toBeNull();
   });
 
+  it('F-30: a card order consumes its payment intent: after the commit the facade holds none, so a new draft must mint a fresh one', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    await seedMoto();
+    await checkout.ensureOptions();
+    await seedCompleteDraft(checkout, 'card');
+
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    await resolveSucceeded(created.value.id);
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: created.value.id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(true);
+    if (!placed.ok) return;
+
+    expect(checkout.order()).not.toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
+  });
+
   it('F-28: fetchOrder() hydrates by id through GET and never POSTs', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
     await seedMoto();

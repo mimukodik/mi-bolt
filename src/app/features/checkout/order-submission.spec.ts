@@ -286,9 +286,7 @@ describe('OrderSubmission', () => {
       acceptedTerms: true,
       termsVersion: '2026-09',
     });
-    const intentAfter = checkout.paymentIntent();
-    expect(intentAfter?.id).toBe(intentId);
-    expect(intentAfter?.status).toBe('succeeded');
+    expect(checkout.paymentIntent()).toBeNull();
   });
 
   // -------------------------------------------------------------------------

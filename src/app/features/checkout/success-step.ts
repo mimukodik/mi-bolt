@@ -266,16 +266,19 @@ export class SuccessStep {
     //      but idempotent — `ensureCart` will create a fresh one);
     //   2. Call `ensureCart()` so the next add-to-cart hits a server-
     //      side cart instead of creating a phantom one locally;
-    //   3. Clear the checkout session and the receipt through
-    //      `startNewPurchase()` so the wizard guards do not bounce the
-    //      next navigation back to this success URL;
-    //   4. Navigate to the shop so the user can keep shopping.
+    //   3. Navigate to the shop first so the receipt block does
+    //      not blank on screen — `successGuard` only runs on
+    //      navigation TO the success route, so clearing after
+    //      leaving is safe;
+    //   4. Clear the checkout session and the receipt through
+    //      `startNewPurchase()` so the wizard guards do not bounce
+    //      a later navigation back to this success URL.
     void this.cart
       .ensureCart()
+      .then(() => this.router.navigate(['/telefonok']))
       .then(() => {
         this.checkout.startNewPurchase();
       })
-      .then(() => this.router.navigate(['/telefonok']))
       .catch(() => this.router.navigate(['/penztar/kosar']))
       .finally(() => {
         this.startingNewCart.set(false);

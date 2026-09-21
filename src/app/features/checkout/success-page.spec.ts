@@ -464,7 +464,7 @@ describe('SuccessStep', () => {
     TestBed.resetTestingModule();
     configureTestBed();
     const requests: string[] = [];
-    captureRequests(requests);
+    const stopCapturing = captureRequests(requests);
 
     const _fixture = await mountSuccessPage(orderId);
 
@@ -478,6 +478,7 @@ describe('SuccessStep', () => {
       (entry) => entry.startsWith('POST ') && entry.includes('/orders'),
     );
     expect(posts).toEqual([]);
+    stopCapturing();
   });
 
   it('SP-08 the page renders the receipt already in memory without a second request', async () => {
@@ -488,7 +489,7 @@ describe('SuccessStep', () => {
     // The facade now carries the order. Mount the page with that id
     // and watch for any GET /orders/<id>.
     const requests: string[] = [];
-    captureRequests(requests);
+    const stopCapturing = captureRequests(requests);
 
     const _fixture = await mountSuccessPage(orderId);
 
@@ -497,11 +498,12 @@ describe('SuccessStep', () => {
     );
     expect(gets).toEqual([]);
     expect(queryHTMLElement(document, '[data-testid="order-receipt"]')).not.toBeNull();
+    stopCapturing();
   });
 
   it('SP-09 an unknown order id renders the recovery state and never fabricates a success', async () => {
     const requests: string[] = [];
-    captureRequests(requests);
+    const stopCapturing = captureRequests(requests);
 
     const _fixture = await mountSuccessPage('ord-missing');
 
@@ -514,6 +516,7 @@ describe('SuccessStep', () => {
       (entry) => entry.startsWith('POST ') && entry.includes('/orders'),
     );
     expect(posts).toEqual([]);
+    stopCapturing();
   });
 
   it('SP-10 a non-404 failure renders the error state carrying the retry control', async () => {
@@ -527,13 +530,14 @@ describe('SuccessStep', () => {
 
   it('SP-11 a malformed order id is treated as missing without any request', async () => {
     const requests: string[] = [];
-    captureRequests(requests);
+    const stopCapturing = captureRequests(requests);
 
     const _fixture = await mountSuccessPage('nope/../etc');
 
     expect(queryHTMLElement(document, '[data-testid="success-missing"]')).not.toBeNull();
     const gets = requests.filter((entry) => entry.startsWith('GET ') && entry.includes('/orders'));
     expect(gets).toEqual([]);
+    stopCapturing();
   });
 
   it('SP-12 the retry re-issues the fetch and reaches the receipt on the second attempt', async () => {
@@ -665,10 +669,10 @@ describe('SuccessStep', () => {
     // The three calls happened in this order; no other navigation
     // action fired on the page.
     const ensureOrder = ensureCartSpy.mock.invocationCallOrder[0];
-    const startOrder = startSpy.mock.invocationCallOrder[0];
     const navOrder = navigateSpy.mock.invocationCallOrder[0];
-    expect(ensureOrder).toBeLessThan(startOrder);
-    expect(startOrder).toBeLessThan(navOrder);
+    const startOrder = startSpy.mock.invocationCallOrder[0];
+    expect(ensureOrder).toBeLessThan(navOrder);
+    expect(navOrder).toBeLessThan(startOrder);
   });
 
   it('SP-18 after the new-shopping action the facade holds no order, so a wizard guard would not redirect to the success URL', async () => {
