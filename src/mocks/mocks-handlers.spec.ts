@@ -40,8 +40,7 @@ import './orders/order.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
 import { isRecord } from './is-record';
 import type { VariantLookup } from './catalog/catalog-store';
-import { useMswServer } from '../../tests/msw-server';
-import { server } from '../../tests/msw-server';
+import { server, useMswServer } from '../../tests/msw-server';
 import catalogFixture from '../../docs/api/fixtures/catalog.json';
 
 // Stand-in literals typed directly against `VariantLookup`'s own
@@ -1047,7 +1046,7 @@ describe('OrderStore.toPersistedOrderState isolates per-session data (MIM-212 Un
 describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
   beforeAll(() => {
     if (!isCatalogFixtureShape(catalogFixture)) {
-      throw new Error('[checkout-mock.spec] committed fixture does not match expected shape');
+      throw new Error('[mocks-handlers.spec] committed fixture does not match expected shape');
     }
     loadCatalogFixture(catalogFixture);
   });
