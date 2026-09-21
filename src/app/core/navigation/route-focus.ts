@@ -6,7 +6,8 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 import { NavigationEnd, Router, type Event } from '@angular/router';
-import { Observable, distinctUntilChanged, filter } from 'rxjs';
+import type { Observable } from 'rxjs';
+import { distinctUntilChanged, filter } from 'rxjs';
 
 /**
  * Route focus management.

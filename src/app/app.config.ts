@@ -1,10 +1,5 @@
-import {
-  ApplicationConfig,
-  EnvironmentProviders,
-  Provider,
-  provideBrowserGlobalErrorListeners,
-  provideZonelessChangeDetection,
-} from '@angular/core';
+import type { ApplicationConfig, EnvironmentProviders, Provider } from '@angular/core';
+import { provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 

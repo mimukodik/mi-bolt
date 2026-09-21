@@ -1,4 +1,5 @@
-import { Component, ElementRef, afterNextRender, input, signal, viewChild } from '@angular/core';
+import type { ElementRef } from '@angular/core';
+import { Component, afterNextRender, input, signal, viewChild } from '@angular/core';
 
 import { MobileDrawer } from './mobile-drawer';
 
