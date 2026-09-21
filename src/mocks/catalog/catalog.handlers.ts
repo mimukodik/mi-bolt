@@ -295,9 +295,17 @@ async function defaultMediaLoader(imageId: string): Promise<ArrayBuffer | undefi
   if (origin.length === 0) return undefined;
   const url = `${origin}/media/${imageId}.png`;
   const request = new Request(url, { method: 'GET' });
-  const response = await fetch(request);
-  if (!response.ok) return undefined;
-  return response.arrayBuffer();
+  try {
+    const response = await fetch(request);
+    if (!response.ok) return undefined;
+    return await response.arrayBuffer();
+  } catch {
+    // The Node test environment has no real network and the MSW
+    // worker rejects the unhandled /media request with `error`;
+    // either failure mode resolves as "not found" rather than
+    // surfacing as a 500 to the caller.
+    return undefined;
+  }
 }
 
 function readOrigin(scope: Record<string, unknown>): string {

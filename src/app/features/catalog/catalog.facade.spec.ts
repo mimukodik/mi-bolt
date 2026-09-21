@@ -783,6 +783,16 @@ describe('T12-AC04 vm status transitions preserve useful content', () => {
   it('facets reach the vm whole (MIM-210)', async () => {
     const { facade, api, tick } = setupFacade();
     const page = makePage([], 0);
+    // Issue the request the response will resolve, otherwise the SDK
+    // observable never sees a subscriber and `api.resolve(page)`
+    // pushes onto a Subject nobody is listening on. setFilters
+    // short-circuits the 300 ms search debounce, so a single tick
+    // is enough to reach the SDK call. The empty page is a deliberate
+    // fixture: the assertion is that whatever facets the SDK returns
+    // — full object, every documented field — reach the vm without
+    // being narrowed or stripped.
+    facade.setFilters({ q: 'trigger' });
+    await tick();
     api.resolve(page);
     await tick();
     const vm = facade.vm();
