@@ -43,7 +43,7 @@ import { TestBed } from '@angular/core/testing';
 import { Injectable, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { Observable } from 'rxjs';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { Api } from '../../api/generated/api';
 import { listProducts } from '../../api/generated/fn/catalog/list-products';
@@ -591,6 +591,73 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     }
     const priceAmounts = root.querySelectorAll('[data-testid="price-amount"]');
     expect(priceAmounts.length).toBe(items.length);
+  });
+
+  it('renders two storage sizes of one featured product without a duplicate track key (MIM-210)', async () => {
+    const sharedSlug = 'demo-one-5g';
+    const item = (storageGb: 128 | 256, variantId: string, price: number): CatalogItem => ({
+      id: sharedSlug,
+      slug: sharedSlug,
+      brand: 'MiBolt Demo',
+      name: 'Demo One 5G',
+      highlights: ['6,7" kijelző'],
+      is5g: true,
+      releasedAt: '2026-01-15',
+      storageGb,
+      variantId,
+      variantSlug: `${sharedSlug}-grafit-${String(storageGb)}`,
+      price: { amount: price, currency: 'HUF' },
+      availability: 'in_stock',
+      maxQuantity: 5,
+      image: imageFor(sharedSlug),
+      colors: [
+        {
+          colorCode: 'graphite',
+          colorName: 'Grafit',
+          swatchHex: '#343B43',
+          variantId,
+          variantSlug: `${sharedSlug}-grafit-${String(storageGb)}`,
+          price: { amount: price, currency: 'HUF' },
+          availability: 'in_stock',
+        },
+      ],
+    });
+    const items: readonly CatalogItem[] = [
+      item(128, `${sharedSlug}-128`, 319_990),
+      item(256, `${sharedSlug}-256`, 339_990),
+    ];
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([], withComponentInputBinding()),
+        ],
+      });
+      await TestBed.compileComponents();
+      const fixture = TestBed.createComponent(FeaturedProducts);
+      fixture.componentRef.setInput('state', {
+        status: 'success',
+        items,
+        error: null,
+      } satisfies FeaturedState);
+      fixture.detectChanges();
+      // Same items in reversed order — the @for is reconciled against the
+      // previous render, which is when NG0955 would fire on a duplicate key.
+      fixture.componentRef.setInput('state', {
+        status: 'success',
+        items: [items[1], items[0]],
+        error: null,
+      } satisfies FeaturedState);
+      fixture.detectChanges();
+
+      const root = getRootElement(fixture);
+      expect(root.querySelectorAll('[data-testid^="featured-card-"]').length).toBe(2);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('does not show a price while the listProducts call is still pending', async () => {

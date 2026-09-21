@@ -7,11 +7,12 @@ import { Component, provideZonelessChangeDetection, signal } from '@angular/core
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
+import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
 import { isProductNotFound, ProductFacade, type ProductVm } from './product.facade';
@@ -994,5 +995,62 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     expect(facade.vm().slug).toBe('demo-pro-5g');
     expect(facade.vm().related).toEqual([]);
+  });
+
+  it('renders two storage sizes of one related product without a duplicate track key (MIM-210)', async () => {
+    const sharedSlug = 'demo-related-shared';
+    const sharedItem = (storageGb: 128 | 256, variantId: string): CatalogItem => ({
+      id: sharedSlug,
+      slug: sharedSlug,
+      brand: 'MiBolt Demo',
+      name: 'Demo Related Shared',
+      highlights: ['Hasonló ajánlat'],
+      is5g: true,
+      releasedAt: '2026-01-01',
+      storageGb,
+      variantId,
+      variantSlug: `${sharedSlug}-graphite-${String(storageGb)}`,
+      price: { amount: 199_990, currency: 'HUF' },
+      availability: 'in_stock',
+      maxQuantity: 5,
+      image: {
+        id: `${sharedSlug}-graphite-${String(storageGb)}-front`,
+        src: '/assets/products/silver-front.webp',
+        alt: 'Demo Related Shared',
+        width: 320,
+        height: 400,
+      },
+      colors: [
+        {
+          colorCode: 'graphite',
+          colorName: 'Grafit',
+          swatchHex: '#343B43',
+          variantId,
+          variantSlug: `${sharedSlug}-graphite-${String(storageGb)}`,
+          price: { amount: 199_990, currency: 'HUF' },
+          availability: 'in_stock',
+        },
+      ],
+    });
+    server.use(
+      http.get(`${BASE_URL}/products/:slug/related`, () =>
+        HttpResponse.json(
+          [sharedItem(128, `${sharedSlug}-128`), sharedItem(256, `${sharedSlug}-256`)],
+          { status: 200 },
+        ),
+      ),
+    );
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { facade, root } = await createHarness();
+      expect(facade.vm().related.length).toBe(2);
+      const section = queryElement(root, '[data-testid="related-products"]');
+      const cards = section.querySelectorAll('li app-product-card');
+      expect(cards.length).toBe(2);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
