@@ -2,6 +2,7 @@
   class="root inline-flex flex-col items-start gap-1"
   [attr.data-status]="status()"
   [attr.data-size]="size()"
+  [attr.data-inverse]="inverse() ? '' : null"
 >
   <span class="label">{{ label() }}</span>
   @switch (status()) {

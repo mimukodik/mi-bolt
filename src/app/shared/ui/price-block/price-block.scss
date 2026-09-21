@@ -27,6 +27,19 @@
   line-height: 28px;
 }
 
+.root[data-inverse] {
+  color: var(--color-text-inverse);
+}
+
+.root[data-inverse] .label,
+.root[data-inverse] .currency {
+  color: var(--color-text-inverse-muted);
+}
+
+.root[data-inverse] .amount {
+  color: var(--color-accent);
+}
+
 .amount--error,
 .amount--placeholder {
   color: var(--color-text-secondary);
