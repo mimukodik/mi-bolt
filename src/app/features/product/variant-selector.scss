@@ -59,7 +59,7 @@
   min-width: 144px;
 }
 
-.option:hover:not(:disabled) {
+.option:hover:not(:disabled):not(.is-selected) {
   box-shadow: 0 0 0 1px var(--color-primary) inset;
 }
 
@@ -93,7 +93,7 @@
 
 .reason {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-helper);
   color: var(--color-status-error);
   line-height: var(--line-height-body);
 }

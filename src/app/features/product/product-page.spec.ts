@@ -361,7 +361,7 @@ describe('T16-AC02 product-page embeds the gallery primitive', () => {
 });
 
 describe('T16-AC03 product-page variant selection is semantically labelled', () => {
-  it('T16-AC03: VariantSelector renders color buttons with label, swatch and checkmark', async () => {
+  it('T16-AC03: VariantSelector renders color buttons with label and swatch, no checkmark', async () => {
     const { root } = await createHarness();
 
     const colorGroup = queryElement(root, '[data-testid="variant-color-group"]');
