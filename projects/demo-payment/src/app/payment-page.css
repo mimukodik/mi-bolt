@@ -1,0 +1,155 @@
+/*
+ * The authorisation card. Tokens come from `src/styles.css`; nothing here
+ * declares a colour or a length of its own.
+ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* A flex column so the inter-element rhythm is one `gap` rather than a
+ * margin per state: Angular's control-flow anchors are comment nodes and
+ * never become flex items, so the gaps stay correct in every state. */
+.pay-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pay-space-4);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--pay-space-8);
+  background: var(--pay-card);
+  border: 1px solid var(--pay-border);
+  border-radius: var(--pay-radius-card);
+}
+
+.pay-card h1 {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 44px;
+}
+
+.pay-lede,
+.pay-note,
+.pay-status {
+  margin: 0;
+  color: var(--pay-muted);
+}
+
+.pay-note,
+.pay-status {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.pay-summary {
+  margin: 0;
+  padding: var(--pay-space-4) 0;
+  border-top: 1px solid var(--pay-border);
+  border-bottom: 1px solid var(--pay-border);
+}
+
+.pay-summary dt {
+  margin: 0;
+  color: var(--pay-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.pay-summary dd {
+  margin: 0 0 var(--pay-space-4);
+}
+
+.pay-summary dd:last-child {
+  margin-bottom: 0;
+}
+
+.pay-amount {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 36px;
+}
+
+.pay-ref {
+  font-size: 14px;
+  line-height: 20px;
+  word-break: break-all;
+}
+
+/* Three choices of equal weight read faster stacked, at both viewports. */
+.pay-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pay-space-3);
+}
+
+.pay-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--pay-control-height);
+  padding: 12px 24px;
+  background: var(--pay-card);
+  color: var(--pay-ink);
+  border: 1px solid var(--pay-border);
+  border-radius: var(--pay-radius-control);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  cursor: pointer;
+}
+
+.pay-button--primary {
+  background: var(--pay-action);
+  color: var(--pay-on-action);
+  border-color: var(--pay-action);
+}
+
+.pay-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* The ring sits outside the control, so one ink outline reads on the
+ * white card behind both the primary and the secondary buttons. */
+.pay-card h1:focus-visible,
+.pay-alert:focus-visible,
+.pay-button:focus-visible,
+.pay-back:focus-visible {
+  outline: 2px solid var(--pay-ink);
+  outline-offset: 2px;
+}
+
+.pay-alert {
+  margin: 0;
+  padding-left: var(--pay-space-3);
+  border-left: 4px solid var(--pay-error);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.pay-outcome {
+  margin: 0;
+}
+
+.pay-back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--pay-touch-floor);
+  color: var(--pay-action);
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .pay-card h1 {
+    font-size: 28px;
+    line-height: 36px;
+  }
+}

@@ -1,1 +1,90 @@
-/* You can add global styles to this file, and also import other style files */
+/*
+ * Demo payment application — global styles.
+ *
+ * Plain CSS on purpose: this project does not import Tailwind and declares
+ * no `@theme` block. One page does not earn a utility framework's content
+ * scan, and keeping Tailwind out makes it impossible to reach a shop theme
+ * utility by habit.
+ *
+ * The numeric scales below are the shop's reference scales, which are not
+ * brand: the 8-point spacing rhythm, the two dominant radii, the 44px
+ * control height on a 48px touch floor, and the type steps the page needs.
+ * The palette and the typeface are deliberately NOT the shop's: a payment
+ * authorisation screen may carry neither the shop's identity nor a
+ * provider's (`docs/01-kommunikacio.md:223-224`).
+ */
+
+:root {
+  /* Spacing — the reference's 8-point rhythm. */
+  --pay-space-1: 4px;
+  --pay-space-2: 8px;
+  --pay-space-3: 12px;
+  --pay-space-4: 16px;
+  --pay-space-6: 24px;
+  --pay-space-8: 32px;
+  --pay-space-12: 48px;
+  --pay-space-16: 64px;
+
+  /* Radii — card and control, the reference's two dominant values. */
+  --pay-radius-card: 16px;
+  --pay-radius-control: 8px;
+
+  /* Control heights — 44px buttons, 48px touch floor. */
+  --pay-control-height: 44px;
+  --pay-touch-floor: 48px;
+
+  /* Palette — neutral grey and slate, declared here and nowhere else. */
+  --pay-page: #f4f5f7;
+  --pay-card: #ffffff;
+  --pay-border: #d8dce1;
+  --pay-ink: #1f2933;
+  --pay-muted: #5b6670;
+  --pay-action: #2f3b45;
+  --pay-on-action: #ffffff;
+  --pay-success: #5cb85c;
+  --pay-error: #d9534f;
+  --pay-warning: #ffd500;
+  --pay-on-warning: #332b00;
+
+  /* A system stack: no licensed face of the reference's ships here, and
+   * a system surface is what an authorisation screen should look like. */
+  --pay-font: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--pay-page);
+  color: var(--pay-ink);
+  font-family: var(--pay-font);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* The demo warning is the first element in the document and the first
+ * thing a screen reader reaches. #ffd500 on #332b00 is a 12.6:1 pair. */
+.pay-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--pay-warning);
+  color: var(--pay-on-warning);
+}
+
+.pay-banner__text {
+  margin: 0;
+  padding: var(--pay-space-3) var(--pay-space-4);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* One column at every viewport: the card is centred at 390px and at
+ * 1920px alike, and never spreads into two columns. */
+.pay-main {
+  display: flex;
+  justify-content: center;
+  padding: var(--pay-space-12) var(--pay-space-4) var(--pay-space-16);
+}
