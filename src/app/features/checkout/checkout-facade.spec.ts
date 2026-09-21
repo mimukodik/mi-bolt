@@ -21,8 +21,8 @@
  * same shape.
  */
 
-import '@angular/compiler';
 // @vitest-environment jsdom
+import '@angular/compiler';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http } from 'msw';
 import { server, useMswServer } from '../../../../tests/msw-server';
@@ -727,9 +727,6 @@ describe('payment intents', () => {
     captures.length = 0;
     server.resetHandlers(...createHandlers(options));
     server.use(http.post('*/api/v1/payment-intents', () => HttpResponse.error()));
-    server.events.on('request:start', ({ request }) => {
-      void captureRequest(request);
-    });
 
     await checkout.createPaymentIntent();
     const second = findRequest('POST', '/payment-intents');
@@ -805,9 +802,6 @@ describe('payment intents', () => {
         ),
       ),
     );
-    server.events.on('request:start', ({ request }) => {
-      void captureRequest(request);
-    });
 
     await checkout.createPaymentIntent();
     const second = findRequest('POST', '/payment-intents');
@@ -905,7 +899,64 @@ describe('orders', () => {
     expect(sessionStorage.getItem('mi-bolt.checkout.intent-id')).toBeNull();
   });
 
-  it('F-24: submitOrder() mints a fresh key after `resetAfterOrder()` clears the slot', async () => {
+  // F-24: same-key replay returns the cached receipt.
+  it('F-24: submitOrder() replays on the same key', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    await seedMoto();
+    await checkout.ensureOptions();
+    await seedCompleteDraft(checkout, 'cash_on_delivery');
+    captures.length = 0;
+
+    const first = await checkout.submitOrder({
+      paymentMethod: 'cash_on_delivery',
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.orderNumber).toBe('DEMO-000001');
+
+    const posts = requestsTo('POST', '/orders');
+    expect(posts[0]).toBeDefined();
+    const post = posts[0];
+    expect(post.headers['x-demo-session']).toMatch(/./);
+    expect(post.headers['idempotency-key']).toMatch(KEY_PATTERN);
+
+    // The mock's order-store replay branch runs before any completeness
+    // check (`src/mocks/orders/order-store.ts:365-373`): on a second
+    // POST /orders carrying the same X-Demo-Session, Idempotency-Key
+    // and body, it returns the cached receipt. The raw fetch below
+    // proves that contract from outside the facade.
+    const replay = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Demo-Session': post.headers['x-demo-session'] ?? '',
+        'Idempotency-Key': post.headers['idempotency-key'] ?? '',
+      },
+      body: post.body,
+    });
+    expect(replay.status).toBe(201);
+
+    const replayBody: unknown = await replay.json();
+    if (!isRecord(replayBody)) throw new Error('expected replay body to be an object');
+    const replayOrderNumber = readString(replayBody, 'orderNumber');
+    expect(replayOrderNumber).toBe('DEMO-000001');
+    expect(replayOrderNumber).toBe(first.value.orderNumber);
+    expect(JSON.stringify(replayBody)).toBe(JSON.stringify(first.value));
+
+    // One POST landed on the wire from the facade; the raw replay was
+    // the second POST. The store accepted it as a replay, so a second
+    // order number was never minted: GET /orders/DEMO-000002 must
+    // answer 404 against the same demo session.
+    expect(requestsTo('POST', '/orders')).toHaveLength(2);
+    const lookup = await fetch('http://localhost/api/v1/orders/DEMO-000002', {
+      headers: { 'X-Demo-Session': post.headers['x-demo-session'] ?? '' },
+    });
+    expect(lookup.status).toBe(404);
+  });
+
+  it('F-24b: submitOrder() mints a fresh key after resetAfterOrder() clears the slot', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
     await seedMoto();
     await checkout.ensureOptions();
