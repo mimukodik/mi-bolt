@@ -282,9 +282,8 @@ describe('T16-AC02 product-gallery thumbnail strip and count display', () => {
         '[data-testid="gallery-thumb-image"] [data-testid="image-photo"]',
       );
       expect(imagePath(img)).toBe(image.src);
-      const rootEl = thumb.querySelector('[data-testid="gallery-thumb-image"] .root');
-      expect(rootEl instanceof HTMLElement).toBe(true);
-      expect((rootEl as HTMLElement).style.aspectRatio).toBe('1 / 1');
+      const rootEl = queryElement(thumb, '[data-testid="gallery-thumb-image"] .root');
+      expect(rootEl.style.aspectRatio).toBe('1 / 1');
     });
   });
 
