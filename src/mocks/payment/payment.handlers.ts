@@ -28,6 +28,7 @@ import {
 } from '../create-handlers';
 import { buildTraceId, problemType } from '../cart/cart-store';
 import type { Problem } from '../../app/api/generated/models/problem';
+import { PROBLEM_CONTENT_TYPE, problemResponse } from '../problem-response';
 
 import { orderStore } from '../checkout/checkout.handlers';
 
@@ -37,8 +38,6 @@ function requireOrderStore(): NonNullable<typeof orderStore.current> {
   }
   return orderStore.current;
 }
-
-const PROBLEM_CONTENT_TYPE = 'application/problem+json' as const;
 
 /** 400 Problem for a missing or malformed handler-level input. */
 function invalidRequest(
@@ -68,13 +67,6 @@ async function readJsonBody(request: Request): Promise<unknown> {
   } catch {
     return null;
   }
-}
-
-function problemResponse(outcome: { ok: false; problem: Problem }): HttpResponse<DefaultBodyType> {
-  return HttpResponse.json(outcome.problem, {
-    status: outcome.problem.status,
-    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
-  });
 }
 
 export const paymentHandlersEntry: BusinessHandlerEntry = (
