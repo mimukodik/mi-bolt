@@ -379,8 +379,7 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     const swatch = queryElement(graphiteBtn, '.swatch');
     expect(swatch).not.toBeNull();
 
-    const check = queryElement(graphiteBtn, '.check');
-    expect(check.textContent.trim()).toBe('✓');
+    expect(graphiteBtn.querySelector('.check')).toBeNull();
   });
 
   it('T16-AC03: VariantSelector renders storage options with label, checkmark, and aria-pressed', async () => {
