@@ -375,10 +375,15 @@ function isValidIdempotencyRecord(value: unknown): value is PersistedIdempotency
   if (!isRecord(value)) return false;
   const r = value;
   if (typeof r['key'] !== 'string') return false;
-  if (typeof r['status'] !== 'number' || !Number.isFinite(r['status'])) return false;
+  if (typeof r['status'] !== 'number' || !Number.isInteger(r['status'])) return false;
   if (!isRecord(r['body'])) return false;
   if (typeof r['payloadHash'] !== 'string') return false;
-  if (typeof r['expiresAtMs'] !== 'number' || !Number.isFinite(r['expiresAtMs'])) return false;
+  if (
+    typeof r['expiresAtMs'] !== 'number' ||
+    !Number.isInteger(r['expiresAtMs']) ||
+    r['expiresAtMs'] < 1
+  )
+    return false;
   const allowed = new Set(['key', 'status', 'body', 'payloadHash', 'expiresAtMs']);
   for (const key of Object.keys(r)) {
     if (!allowed.has(key)) return false;
