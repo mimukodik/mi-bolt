@@ -105,7 +105,7 @@ describe('FilterDrawer — facets wire-up', () => {
     const mid = queryElement('[data-testid="drawer-storage-256"]');
     expect(mid.textContent).toContain('256 GB');
     const midCount = mid.querySelector('.option__count');
-    expect(midCount?.textContent.trim()).toBe('5');
+    expect(midCount?.textContent.trim()).toBe('(5)');
   });
 
   it('stock and 5G toggles show their facet count when facets are loaded', () => {
@@ -121,10 +121,10 @@ describe('FilterDrawer — facets wire-up', () => {
     fixture.detectChanges();
 
     const inStock = queryElement('[data-testid="drawer-inStock"]');
-    expect(inStock.querySelector('.option__count')?.textContent.trim()).toBe('7');
+    expect(inStock.querySelector('.option__count')?.textContent.trim()).toBe('(7)');
 
     const is5g = queryElement('[data-testid="drawer-is5g"]');
-    expect(is5g.querySelector('.option__count')?.textContent.trim()).toBe('9');
+    expect(is5g.querySelector('.option__count')?.textContent.trim()).toBe('(9)');
   });
 
   it('price inputs carry the price range as a placeholder when facets are loaded', () => {

@@ -237,10 +237,10 @@ describe('T13-AC04 ProductCard', () => {
     expect(text).toContain('128 GB');
   });
 
-  it('renders the outlined "Részletek" CTA: not a filled primary button', () => {
+  it('renders the outlined "Megnézem" CTA: not a filled primary button', () => {
     const { fixture } = setup();
     const cta = queryElement(getRootElement(fixture), '[data-testid="product-card-cta"]');
-    expect(cta.textContent).toContain('Részletek');
+    expect(cta.textContent).toContain('Megnézem');
     const css = getComponentStyles(ProductCard).join('\n');
     expect(css).toContain('border'); // outlined look: border on the CTA
   });
@@ -325,7 +325,7 @@ describe('T13-AC04 ProductCard', () => {
     );
     fixture.detectChanges();
     const list = getRootElement(fixture).querySelectorAll(
-      '[data-testid="product-card-highlights"] li',
+      '[data-testid="product-card-highlights"] .highlights__item',
     );
     expect(list.length).toBe(2);
     const first = list[0];

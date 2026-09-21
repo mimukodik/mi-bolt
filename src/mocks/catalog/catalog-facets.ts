@@ -36,7 +36,12 @@ function capFeatured(items: readonly CatalogEntry[], filter: Filter): readonly C
 }
 
 /** Builds the `brands` facet. Removes the `brand` filter before counting,
- *  then sorts and caps under `featured=true` before tallying per-brand. */
+ *  then sorts and caps under `featured=true` before tallying per-brand.
+ *  The `value` is the lowercased brand key (the identifier the URL and
+ *  the panel filter on); the `label` is the brand's display name as it
+ *  appears on a product page, so the filter row reads "Apple (17)" and
+ *  not "apple (17)" — the demo copy and the API contract both expect
+ *  the display name (MIM-210). */
 function buildBrandFacet(entries: readonly CatalogEntry[], filter: Filter): FacetValue[] {
   const noBrand: Filter = { ...filter, brands: [] };
   const capped = capFeatured(
@@ -44,12 +49,16 @@ function buildBrandFacet(entries: readonly CatalogEntry[], filter: Filter): Face
     filter,
   );
   const counts = new Map<string, number>();
+  const displayNames = new Map<string, string>();
   for (const entry of capped) {
     counts.set(entry.brandKey, (counts.get(entry.brandKey) ?? 0) + 1);
+    if (!displayNames.has(entry.brandKey)) {
+      displayNames.set(entry.brandKey, entry.product.brand);
+    }
   }
   return [...counts.entries()]
-    .map(([value, count]) => ({ value, label: value, count }))
-    .sort((a, b) => a.value.localeCompare(b.value, 'hu'));
+    .map(([value, count]) => ({ value, label: displayNames.get(value) ?? value, count }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'hu'));
 }
 
 /** Builds the `storageGb` facet. Counts the sizes present, in fixed order,
