@@ -53,11 +53,14 @@
     }
     @default {
       <div
-        class="layout flex flex-col gap-5 lg:grid lg:grid-cols-[1fr_360px] lg:gap-6 lg:items-start"
+        class="layout flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-x-10 lg:items-start"
         data-testid="cart-layout"
       >
         <div class="lines">
-          <ul class="lines-list m-0 p-0 list-none flex flex-col gap-3">
+          <p class="section-label" data-testid="cart-count">
+            Kosárban található termékek ({{ items().length }})
+          </p>
+          <ul class="lines-list">
             @for (item of items(); track item.variantId) {
               <li>
                 <app-cart-line
@@ -71,53 +74,44 @@
           </ul>
         </div>
 
-        <app-order-summary
-          [subtotal]="subtotal()"
-          [shipping]="null"
-          [footnote]="summaryFootnote()"
-        ></app-order-summary>
+        <div class="summary-column lg:sticky lg:top-6">
+          <app-order-summary
+            [subtotal]="subtotal()"
+            [shipping]="null"
+            [footnote]="summaryFootnote()"
+            [inverse]="true"
+          >
+            <div class="actions flex flex-col gap-3" data-testid="cart-footer">
+              <app-button
+                variant="primary"
+                label="Tovább az adatokhoz"
+                [loadingLabel]="'Ellenőrzés…'"
+                [loading]="continuing()"
+                [disabled]="!canContinue()"
+                [block]="true"
+                (pressed)="onContinue()"
+                data-testid="cart-continue"
+              ></app-button>
+              <app-button
+                variant="secondaryOnDark"
+                label="Vásárlás folytatása"
+                [block]="true"
+                (pressed)="onContinueShopping()"
+              ></app-button>
+              <app-button
+                variant="secondaryOnDark"
+                label="Kosár ürítése"
+                [loadingLabel]="'Ürítés…'"
+                [loading]="clearing()"
+                [disabled]="clearing() || continuing() || facade.pending() > 0"
+                [block]="true"
+                (pressed)="onClearCart()"
+                data-testid="cart-clear"
+              ></app-button>
+            </div>
+          </app-order-summary>
+        </div>
       </div>
-
-      <footer
-        class="footer flex flex-col gap-4 p-5 rounded lg:flex-row lg:items-center lg:justify-between lg:gap-6"
-        data-testid="cart-footer"
-      >
-        <div class="footer-meta flex flex-col gap-2">
-          <app-price-block
-            [money]="subtotal()"
-            [label]="'Részösszeg'"
-            [status]="'success'"
-          ></app-price-block>
-          <p class="footer-hint m-0">A következő lépésben választod ki.</p>
-        </div>
-        <div
-          class="footer-actions flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center lg:flex-0 lg:flex-shrink-0"
-        >
-          <app-button
-            variant="secondary"
-            label="Kosár ürítése"
-            [loadingLabel]="'Ürítés…'"
-            [loading]="clearing()"
-            [disabled]="clearing() || continuing() || facade.pending() > 0"
-            (pressed)="onClearCart()"
-            data-testid="cart-clear"
-          ></app-button>
-          <app-button
-            variant="secondary"
-            label="Vásárlás folytatása"
-            (pressed)="onContinueShopping()"
-          ></app-button>
-          <app-button
-            variant="primary"
-            label="Tovább az adatokhoz"
-            [loadingLabel]="'Ellenőrzés…'"
-            [loading]="continuing()"
-            [disabled]="!canContinue()"
-            (pressed)="onContinue()"
-            data-testid="cart-continue"
-          ></app-button>
-        </div>
-      </footer>
     }
   }
 </section>
