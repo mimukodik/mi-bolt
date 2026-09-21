@@ -84,6 +84,14 @@ describe('OrderSummary', () => {
       '[data-testid="order-summary-subtotal"] app-price-block .root',
     );
     expect(subtotalRoot?.getAttribute('data-size')).toBe('md');
+    const shippingRoot = root.querySelector<HTMLElement>(
+      '[data-testid="order-summary-shipping"] app-price-block .root',
+    );
+    expect(shippingRoot?.getAttribute('data-size')).toBe('md');
+    const paymentFeeRoot = root.querySelector<HTMLElement>(
+      '[data-testid="order-summary-payment-fee"] app-price-block .root',
+    );
+    expect(paymentFeeRoot?.getAttribute('data-size')).toBe('md');
   });
 
   it('projects consumer content inside the card after the footnote (MIM-211)', () => {
