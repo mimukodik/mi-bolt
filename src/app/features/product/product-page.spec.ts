@@ -438,36 +438,27 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
   });
 
   it('T16-AC03: SpecificationAccordion renders disclosure triggers with aria-expanded and aria-controls', async () => {
+    // The boxes are always open: no trigger, no aria-expanded, every group
+    // renders its title in a bordered box.
     const { root } = await createHarness();
 
     const accordion = queryElement(root, '[data-testid="spec-accordion"]');
     expect(accordion).not.toBeNull();
+    expect(accordion.querySelector('button')).toBeNull();
 
-    const displayTrigger = queryButton(accordion, '[data-testid="spec-disclosure-display"]');
-    expect(displayTrigger.getAttribute('aria-expanded')).toBe('false');
-    expect(displayTrigger.getAttribute('aria-controls')).toBe('spec-panel-display');
-    expect(displayTrigger.textContent).toContain('Kijelző és kialakítás');
-
-    expect(accordion.querySelector('[data-testid="spec-panel-display"]')).toBeNull();
+    const display = queryElement(accordion, '[data-testid="spec-group-display"]');
+    expect(display.querySelector('h3')?.textContent).toContain('Kijelző és kialakítás');
   });
 
   it('T16-AC03: SpecificationAccordion expands panel with role=region and displays rows on click', async () => {
-    const { fixture, root, tick } = await createHarness();
+    // No click: the rows are in the DOM from the first render.
+    const { root } = await createHarness();
 
-    const displayTrigger = queryButton(root, '[data-testid="spec-disclosure-display"]');
-    displayTrigger.click();
-    await tick();
-    fixture.detectChanges();
-
-    expect(displayTrigger.getAttribute('aria-expanded')).toBe('true');
-
-    const panel = queryElement(root, '[data-testid="spec-panel-display"]');
-    expect(panel).not.toBeNull();
-    expect(panel.getAttribute('role')).toBe('region');
-    expect(panel.getAttribute('aria-labelledby')).toBe('spec-trigger-display');
-
-    expect(panel.textContent).toContain('Kijelző');
-    expect(panel.textContent).toContain('Képfrissítés');
+    const display = queryElement(root, '[data-testid="spec-group-display"]');
+    const rows = display.querySelectorAll('dl > div');
+    expect(rows.length).toBeGreaterThan(0);
+    expect(display.textContent).toContain('Kijelző');
+    expect(display.textContent).toContain('Képfrissítés');
   });
 
   it('T16-AC03: renders highlights list when product highlights are present', async () => {
