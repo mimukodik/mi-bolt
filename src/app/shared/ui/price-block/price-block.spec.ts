@@ -74,6 +74,7 @@ describe('PriceBlock primitive', () => {
   it('formats the example 339 990 / 9 990 amounts from the skill', () => {
     expect(PriceBlock.formatHuf(339990)).toBe('339 990');
     expect(PriceBlock.formatHuf(9990)).toBe('9 990');
+    expect(PriceBlock.formatHuf(1234567)).toBe('1 234 567');
   });
 
   it('renders a skeleton while loading and never an invented number', () => {
