@@ -43,9 +43,8 @@ import type { PaymentSelection } from '../../app/api/generated/models/payment-se
 
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';
-import { buildTraceId, problemType } from '../cart/cart-store';
 import type { CheckoutStore } from '../checkout/checkout-store';
-import { TERMS_VERSION } from '../checkout/checkout-store';
+import { TERMS_VERSION, checkoutProblem } from '../checkout/checkout-store';
 import { IdempotencyStore, deriveIdempotencyKey, hashPayload } from '../idempotency';
 import type { PersistedIdempotencyRecord } from '../idempotency';
 import { isRecord } from '../is-record';
@@ -87,39 +86,6 @@ interface StoredOrder {
 
 const IDEMPOTENCY_KEY_MIN = 8;
 const IDEMPOTENCY_KEY_MAX = 100;
-
-function titleForStatus(status: number): string {
-  if (status === 400) return 'Invalid request';
-  if (status === 404) return 'Resource not found';
-  if (status === 409) return 'Conflict';
-  if (status === 410) return 'Gone';
-  if (status === 412) return 'Precondition failed';
-  if (status === 422) return 'Unprocessable content';
-  return 'Unknown';
-}
-
-// Unit S3-A3 replaces this with the exported `checkoutProblem` once
-// checkout-store.ts publishes it; the shape below is kept verbatim
-// from checkout-store's private `problem` method.
-function orderProblem(
-  options: CreateHandlersOptions,
-  status: number,
-  code: ProblemCode,
-  detail: string,
-  params: Record<string, unknown>,
-  fieldErrors: readonly FieldError[] = [],
-): Problem {
-  return {
-    type: problemType(code),
-    title: titleForStatus(status),
-    status,
-    code,
-    detail,
-    traceId: buildTraceId(options),
-    fieldErrors: fieldErrors.map((entry) => ({ path: entry.path, code: entry.code })),
-    params,
-  };
-}
 
 function isPaymentIntent(value: unknown): value is PaymentIntent {
   if (!isRecord(value)) return false;
@@ -764,7 +730,7 @@ export class OrderStore {
     params: Record<string, unknown>,
     fieldErrors: readonly FieldError[] = [],
   ): Problem {
-    return orderProblem(this.options, status, code, detail, params, fieldErrors);
+    return checkoutProblem(this.options, status, code, detail, params, fieldErrors);
   }
 }
 
