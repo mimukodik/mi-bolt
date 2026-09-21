@@ -38,9 +38,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { form, validate } from '@angular/forms/signals';
+import { form, validate, type FieldTree } from '@angular/forms/signals';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -83,7 +83,10 @@ const TEST_PROVIDERS = [provideZonelessChangeDetection(), provideRouter([])];
  * it in the other order throws "Cannot configure the test module when the
  * test module has already been instantiated").
  */
-function createContactStep(initial: Contact = EMPTY_CONTACT, saveState: AsyncStatus = 'idle') {
+function createContactStep(
+  initial: Contact = EMPTY_CONTACT,
+  saveState: AsyncStatus = 'idle',
+): { fixture: ComponentFixture<ContactStep>; fields: FieldTree<Contact> } {
   TestBed.configureTestingModule({ providers: TEST_PROVIDERS });
   const fields = TestBed.runInInjectionContext(() => buildContactForm(signal(initial)));
   const fixture = TestBed.createComponent(ContactStep);

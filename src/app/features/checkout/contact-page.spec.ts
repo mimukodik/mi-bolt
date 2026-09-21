@@ -50,7 +50,10 @@ function provideSessionStub(session: CheckoutSession | null): Provider {
   return { provide: CheckoutFacade, useValue: stub };
 }
 
-function createContactPage(saver: ContactDraftSaver, session: CheckoutSession | null = null) {
+function createContactPage(
+  saver: ContactDraftSaver,
+  session: CheckoutSession | null = null,
+): ComponentFixture<ContactPage> {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
