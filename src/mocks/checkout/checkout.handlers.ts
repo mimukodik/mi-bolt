@@ -135,6 +135,19 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
   checkoutStore.current = checkout;
   orderStore.current = order;
 
+  if (options.snapshot) {
+    if (options.snapshot.checkoutDraft) {
+      checkout.seedFromSnapshot(
+        options.snapshot.simulatedSessionId,
+        options.snapshot.checkoutDraft,
+      );
+    }
+    order.seedFromSnapshot(options.snapshot.simulatedSessionId, {
+      intents: options.snapshot.paymentIntents,
+      receipts: options.snapshot.receipts,
+    });
+  }
+
   const getOptions: RequestHandler = http.get('*/api/v1/checkout/options', ({ request }) => {
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
@@ -161,6 +174,7 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
     const ifMatch = request.headers.get('If-Match');
     const body = await readJsonBody(request);
     const outcome = requireCheckoutStore().update(sessionId, ifMatch, body);
+    if (outcome.ok) options.persist?.(sessionId);
     const etag = outcome.ok ? `"${String(outcome.session.version)}"` : null;
     return outcomeResponse(outcome, etag);
   });

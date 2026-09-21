@@ -21,9 +21,9 @@
  * because the checkout, payment and order mocks and their specs
  * still read the seeded `Repository` product. S3 migrates those.
  *
- * `options.persist` is not called: the browser snapshot persists the
- * `Repository` cart, which this store no longer uses (the real
- * backend keeps the cart server-side).
+ * `options.persist` fires after every successful mutation so the browser
+ * worker can write the sessionStorage snapshot, and `options.snapshot`
+ * seeds the store at construction (MIM-212, S3-P0).
  */
 
 import { http, HttpResponse, type DefaultBodyType, type RequestHandler } from 'msw';
@@ -289,6 +289,10 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   const store = new CartStore(options, (id) => requireCatalog().getVariant(id));
   cartStore.current = store;
 
+  if (options.snapshot?.cart) {
+    store.seedFromSnapshot(options.snapshot.simulatedSessionId, options.snapshot.cart);
+  }
+
   const getCart: RequestHandler = http.get('*/api/v1/cart', ({ request }) => {
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
@@ -308,7 +312,9 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
     if (!variantRead.ok) return variantRead.response;
     const quantityRead = readQuantity(options, body);
     if (!quantityRead.ok) return quantityRead.response;
-    return outcomeResponse(store.add(sessionId, ifMatch, variantRead.value, quantityRead.value));
+    const outcome = store.add(sessionId, ifMatch, variantRead.value, quantityRead.value);
+    if (outcome.ok) options.persist?.(sessionId);
+    return outcomeResponse(outcome);
   });
 
   const clearCart: RequestHandler = http.delete('*/api/v1/cart/items', ({ request }) => {
@@ -317,7 +323,9 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
     }
     const ifMatch = request.headers.get('If-Match');
-    return outcomeResponse(store.clear(sessionId, ifMatch));
+    const outcome = store.clear(sessionId, ifMatch);
+    if (outcome.ok) options.persist?.(sessionId);
+    return outcomeResponse(outcome);
   });
 
   const setCartItemQuantity: RequestHandler = http.patch(
@@ -332,7 +340,9 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
       const quantityRead = readQuantity(options, body);
       if (!quantityRead.ok) return quantityRead.response;
       const variantId = String(params['variantId']);
-      return outcomeResponse(store.setQuantity(sessionId, ifMatch, variantId, quantityRead.value));
+      const outcome = store.setQuantity(sessionId, ifMatch, variantId, quantityRead.value);
+      if (outcome.ok) options.persist?.(sessionId);
+      return outcomeResponse(outcome);
     },
   );
 
@@ -345,7 +355,9 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
       }
       const ifMatch = request.headers.get('If-Match');
       const variantId = String(params['variantId']);
-      return outcomeResponse(store.remove(sessionId, ifMatch, variantId));
+      const outcome = store.remove(sessionId, ifMatch, variantId);
+      if (outcome.ok) options.persist?.(sessionId);
+      return outcomeResponse(outcome);
     },
   );
 

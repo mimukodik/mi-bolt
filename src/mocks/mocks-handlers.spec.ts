@@ -7,7 +7,7 @@
  * pure data structures; the handler factory is exercised as a
  * shape-only assertion.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createHandlers } from '../mocks/create-handlers';
 import { Repository } from '../mocks/repository';
@@ -25,15 +25,24 @@ import {
   DEFAULT_SCENARIO,
   parseScenarioFromLocation,
   resolveScenario,
+  type Clock,
+  type Ids,
 } from '../mocks/scenarios';
 import { buildSnapshot } from './snapshot';
 import { CartStore, type VariantLookupFn } from './cart/cart-store';
 import { CheckoutStore } from './checkout/checkout-store';
 import { OrderStore } from './orders/order-store';
 import { IdempotencyStore } from './idempotency';
-import { DEMO_PRODUCT } from './cart/cart.handlers';
+import { DEMO_PRODUCT, cartStore } from './cart/cart.handlers';
+import { checkoutStore, orderStore } from './checkout/checkout.handlers';
+import './payment/payment.handlers';
+import './orders/order.handlers';
+import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
+import { isRecord } from './is-record';
 import type { VariantLookup } from './catalog/catalog-store';
 import { useMswServer } from '../../tests/msw-server';
+import { server } from '../../tests/msw-server';
+import catalogFixture from '../../docs/api/fixtures/catalog.json';
 
 // Stand-in literals typed directly against `VariantLookup`'s own
 // shape — the generated SDK types — and shared by every `describe`
@@ -1032,5 +1041,195 @@ describe('OrderStore.toPersistedOrderState isolates per-session data (MIM-212 Un
     const b = order.toPersistedOrderState('sess-b');
     expect(b.intents).toEqual([intentB]);
     expect(b.receipts).toEqual([receiptB]);
+  });
+});
+
+describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
+  beforeAll(() => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[checkout-mock.spec] committed fixture does not match expected shape');
+    }
+    loadCatalogFixture(catalogFixture);
+  });
+
+  const SESSION_1 = 'spec-session-0001';
+  const HONOR = 'honor-x7d--fekete--128';
+  const MOTO = 'motorola-edge-50-fusion--zold--256';
+
+  const VALID_CONTACT = {
+    fullName: 'Teszt Elek',
+    email: 'Teszt.Elek@Pelda.hu',
+    phone: '+36301234567',
+  };
+  const VALID_BILLING = {
+    name: 'Teszt Elek',
+    address: {
+      countryCode: 'HU',
+      postalCode: '1052',
+      city: 'Budapest',
+      line1: 'Petőfi utca 1.',
+    },
+  };
+  const VALID_DELIVERY_ADDRESS = {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  };
+
+  let clock: Clock;
+  let ids: Ids;
+  let options: {
+    repository: Repository;
+    clock: Clock;
+    ids: Ids;
+    scenario: ReturnType<Repository['getScenario']>;
+    apiRoot: string;
+  };
+
+  beforeEach(() => {
+    clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    ids = createDeterministicIds(1);
+    options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    options.repository.loadProducts([DEMO_PRODUCT]);
+  });
+
+  function session1Headers(): Record<string, string> {
+    return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
+  }
+
+  function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+    if (!isRecord(value)) {
+      throw new Error('expected an object');
+    }
+  }
+
+  function findRecord(arr: readonly unknown[]): Record<string, unknown> | undefined {
+    for (const candidate of arr) {
+      if (isRecord(candidate)) return candidate;
+    }
+    return undefined;
+  }
+
+  it('POST /cart/items persists once and a rebuilt handler set serves the same line', async () => {
+    let captured: MockSnapshot | null = null;
+    const persistCalls: string[] = [];
+    const persist = (sessionId: string): void => {
+      persistCalls.push(sessionId);
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now()));
+    };
+    server.use(...createHandlers({ ...options, persist }));
+
+    const addRes = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
+    });
+    expect(addRes.status).toBe(200);
+    expect(persistCalls).toEqual([SESSION_1]);
+    expect(captured).not.toBeNull();
+
+    server.resetHandlers();
+    server.use(...createHandlers({ ...options, snapshot: captured }));
+
+    const getRes = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(getRes.status).toBe(200);
+    const body: unknown = await getRes.json();
+    expectRecord(body);
+    const items = body['items'];
+    if (!Array.isArray(items)) throw new Error('items not an array');
+    const itemRecord = findRecord(items);
+    if (!itemRecord) throw new Error('cart has no item record');
+    const item: Record<string, unknown> = itemRecord;
+    expect(item['variantId']).toBe(HONOR);
+    expect(item['quantity']).toBe(1);
+    expect(body['version']).toBe(2);
+  });
+
+  it('POST /payment-intents/:id/outcome persists and the intent survives the rebuild', async () => {
+    let captured: MockSnapshot | null = null;
+    const persistCalls: string[] = [];
+    const persist = (sessionId: string): void => {
+      persistCalls.push(sessionId);
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now()));
+    };
+    server.use(...createHandlers({ ...options, persist }));
+
+    // Seed the cart with one line.
+    const motoRes = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(motoRes.status).toBe(200);
+
+    // Patch a complete draft (contact + billing + delivery + payment).
+    const patchRes = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'card' },
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    // Create a payment intent.
+    const intentRes = await fetch('http://localhost/api/v1/payment-intents', {
+      method: 'POST',
+      headers: {
+        ...session1Headers(),
+        'If-Match': '"3"',
+        'Idempotency-Key': 'idem-int-roundtrip-1',
+      },
+      body: '',
+    });
+    expect(intentRes.status).toBe(201);
+    const intentBody: unknown = await intentRes.json();
+    expectRecord(intentBody);
+    const intentId = intentBody['id'];
+    if (typeof intentId !== 'string') throw new Error('id not a string');
+
+    const persistCountBefore = persistCalls.length;
+
+    // Resolve the intent as succeeded.
+    const outcomeRes = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+      method: 'POST',
+      headers: session1Headers(),
+      body: JSON.stringify({ outcome: 'succeeded' }),
+    });
+    expect(outcomeRes.status).toBe(200);
+    expect(persistCalls.length).toBe(persistCountBefore + 1);
+
+    expect(captured).not.toBeNull();
+
+    server.resetHandlers();
+    server.use(...createHandlers({ ...options, snapshot: captured }));
+
+    const getIntentRes = await fetch(`http://localhost/api/v1/payment-intents/${intentId}`, {
+      headers: session1Headers(),
+    });
+    expect(getIntentRes.status).toBe(200);
+    const intentGetBody: unknown = await getIntentRes.json();
+    expectRecord(intentGetBody);
+    expect(intentGetBody['status']).toBe('succeeded');
   });
 });

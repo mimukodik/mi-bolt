@@ -92,6 +92,7 @@ export const paymentHandlersEntry: BusinessHandlerEntry = (
     const ifMatch = request.headers.get('If-Match');
     const outcome = requireOrderStore().createPaymentIntent(sessionId, idempotencyKey, ifMatch);
     if (!outcome.ok) return problemResponse(outcome);
+    options.persist?.(sessionId);
     return HttpResponse.json(outcome.intent, {
       status: 201,
       headers: { Location: `${options.apiRoot}/payment-intents/${outcome.intent.id}` },
@@ -127,6 +128,7 @@ export const paymentHandlersEntry: BusinessHandlerEntry = (
         body,
       );
       if (!outcome.ok) return problemResponse(outcome);
+      options.persist?.(sessionId);
       return HttpResponse.json(outcome.intent, { status: 200 });
     },
   );
