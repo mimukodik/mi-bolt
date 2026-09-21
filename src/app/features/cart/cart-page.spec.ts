@@ -452,6 +452,34 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
     expect(root.textContent).toContain('Végösszeg');
   });
 
+  it('labels the shipping row once: "Szállítási díj" with a fee, "Szállítás" with the next-step placeholder', async () => {
+    const withFee = TestBed.createComponent(OrderSummary);
+    withFee.componentRef.setInput('subtotal', { amount: UNIT_PRICE_MOTO, currency: 'HUF' });
+    withFee.componentRef.setInput('shipping', { amount: 0, currency: 'HUF' });
+    await withFee.whenStable();
+    withFee.detectChanges();
+
+    const feeRow = getElement(getRootElement(withFee), '[data-testid="order-summary-shipping"]');
+    expect(
+      Array.from(feeRow.querySelectorAll('.label')).map((el) => el.textContent.trim()),
+    ).toEqual(['Szállítási díj']);
+
+    const withoutFee = TestBed.createComponent(OrderSummary);
+    withoutFee.componentRef.setInput('subtotal', { amount: UNIT_PRICE_MOTO, currency: 'HUF' });
+    withoutFee.componentRef.setInput('shipping', null);
+    await withoutFee.whenStable();
+    withoutFee.detectChanges();
+
+    const placeholderRow = getElement(
+      getRootElement(withoutFee),
+      '[data-testid="order-summary-shipping"]',
+    );
+    expect(
+      Array.from(placeholderRow.querySelectorAll('.label')).map((el) => el.textContent.trim()),
+    ).toEqual(['Szállítás']);
+    expect(placeholderRow.textContent).toContain('A következő lépésben választod ki.');
+  });
+
   it('never invents a monthly fee or hidden add-on (T18-AC05)', async () => {
     const fixture = TestBed.createComponent(OrderSummary);
     fixture.componentRef.setInput('subtotal', { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' });
@@ -1034,5 +1062,34 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
     expect(queryElement(root, 'app-product-image')).not.toBeNull();
     expect(queryElement(root, 'app-price-block')).not.toBeNull();
     expect(queryElement(root, 'app-quantity-control')).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MIM-212 S3-C8: the guards redirect with `?navigationReason=...`
+// (`checkout.guards.ts`); the cart page tells the shopper why they are here.
+// ---------------------------------------------------------------------------
+describe('MIM-212 S3-C8 cart page renders the guard redirect banner', () => {
+  it('renders the empty-cart sentence when the route carries navigationReason=empty-cart', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigate(['/penztar/adatok'], { queryParams: { navigationReason: 'empty-cart' } });
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const banner = getElement(getRootElement(fixture), '[data-testid="navigation-reason"]');
+    expect(banner.textContent.trim()).toBe('A kosarad üres, ezért ide irányítottunk.');
+  });
+
+  it('renders no banner at all when the route carries no navigationReason', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigate(['/penztar/adatok']);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(queryElement(getRootElement(fixture), '[data-testid="navigation-reason"]')).toBeNull();
   });
 });

@@ -1,0 +1,8 @@
+@if (message(); as text) {
+  <app-status-message
+    [message]="text"
+    severity="info"
+    [persistent]="true"
+    data-testid="navigation-reason"
+  ></app-status-message>
+}

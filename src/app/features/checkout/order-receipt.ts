@@ -30,6 +30,7 @@ import { Component, computed, input } from '@angular/core';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
+import type { Address } from '../../api/generated/models/address';
 import type { OrderLine } from '../../api/generated/models/order-line';
 import type { OrderReceipt } from '../../api/generated/models/order-receipt';
 
@@ -70,6 +71,22 @@ export class OrderReceiptComponent {
   readonly deliveryLabel = computed<string>(
     () => DELIVERY_LABELS[this.receipt().delivery.optionId],
   );
+
+  /** The name the invoice is made out to. Required for every order,
+   *  pickup included (`BillingDetails`). */
+  readonly billingName = computed<string>(() => this.receipt().billing.name);
+
+  /** The invoice address. */
+  readonly billingAddress = computed<Address>(() => this.receipt().billing.address);
+
+  /** The delivery address, or null for pickup: the pickup arm of
+   *  `DeliverySelection` has no address member at all, so narrowing on
+   *  `optionId` is what reaches `address` without a cast. */
+  readonly deliveryAddress = computed<Address | null>(() => {
+    const delivery = this.receipt().delivery;
+    if (delivery.optionId !== 'home_delivery') return null;
+    return delivery.address;
+  });
 
   /** The simulation notice copy. Pulled from the receipt body when present. */
   readonly simulationNotice = computed<string>(() => {

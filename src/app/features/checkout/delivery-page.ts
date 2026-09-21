@@ -31,6 +31,7 @@ import {
 } from './checkout-form.model';
 import { CheckoutFacade, type CheckoutError } from './checkout.facade';
 import { DeliveryStep } from './delivery-step';
+import { NavigationReasonBanner } from './navigation-reason-banner';
 
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -50,7 +51,7 @@ type LoadState =
 
 @Component({
   selector: 'app-delivery-page',
-  imports: [DeliveryStep, ErrorState, LoadingState, StatusMessage],
+  imports: [DeliveryStep, ErrorState, LoadingState, NavigationReasonBanner, StatusMessage],
   templateUrl: './delivery-page.html',
   styleUrl: './delivery-page.scss',
 })

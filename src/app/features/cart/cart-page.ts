@@ -27,6 +27,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
+import { NavigationReasonBanner } from '../checkout/navigation-reason-banner';
 import { CartFacade } from './cart.facade';
 import { CartLine } from './cart-line';
 import { OrderSummary } from './order-summary';
@@ -94,6 +95,7 @@ function readNumberParam(notice: CartNotice, key: string): number | null {
   imports: [
     RouterLink,
     CartLine,
+    NavigationReasonBanner,
     OrderSummary,
     EmptyState,
     ErrorState,
