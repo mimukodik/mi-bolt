@@ -104,6 +104,7 @@ function makeItem(opts: {
   readonly availability?: 'in_stock' | 'out_of_stock';
   readonly imageSrc?: string;
   readonly is5g?: boolean;
+  readonly extraColors?: readonly { colorName: string; swatchHex: string; price?: number }[];
 }): CatalogItem {
   const colorCode = opts.colorName !== undefined ? opts.colorName.toLowerCase() : 'graphite';
   const imageId = `${opts.id}-front`;
@@ -120,6 +121,18 @@ function makeItem(opts: {
     price,
     availability: opts.availability ?? 'in_stock',
   };
+  const extraColors: readonly ColorOption[] = (opts.extraColors ?? []).map((entry) => {
+    const extraCode = entry.colorName.toLowerCase();
+    return {
+      colorCode: extraCode,
+      colorName: entry.colorName,
+      swatchHex: entry.swatchHex,
+      variantId: `${opts.id}-${String(storageVal)}-${extraCode}`,
+      variantSlug: `${opts.slug}-${extraCode}-${String(storageVal)}`,
+      price: money(entry.price ?? opts.price ?? 339_990),
+      availability: 'in_stock',
+    };
+  });
   return {
     id: opts.id,
     slug: opts.slug,
@@ -142,7 +155,7 @@ function makeItem(opts: {
       width: 320,
       height: 400,
     },
-    colors: [displayedColor],
+    colors: [displayedColor, ...extraColors],
   };
 }
 
@@ -350,5 +363,109 @@ describe('T13-AC04 ProductCard', () => {
     const tag = queryElement(root, '[data-testid="product-card-tag"]');
     expect(tag.textContent.trim()).toBe('DEMÓTERMÉK');
     expect(root.textContent).not.toContain('MiBolt Demo');
+  });
+});
+
+describe('MIM-210 colour swatches', () => {
+  it('renders one swatch per colour, the displayed variant pressed', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-08',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Grafit',
+        extraColors: [
+          { colorName: 'Ezüst', swatchHex: '#D5D5D5' },
+          { colorName: 'Fekete', swatchHex: '#000000' },
+        ],
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const swatches = root.querySelectorAll('[data-testid="product-card-swatch"]');
+    expect(swatches.length).toBe(3);
+    const first = swatches[0] as HTMLElement;
+    expect(first.getAttribute('aria-pressed')).toBe('true');
+    expect(first.getAttribute('aria-label')).toBe('Grafit');
+    expect(first.style.backgroundColor).not.toBe('');
+    const second = swatches[1] as HTMLElement;
+    const third = swatches[2] as HTMLElement;
+    expect(second.getAttribute('aria-pressed')).toBe('false');
+    expect(third.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('renders no swatch row for a one-colour item', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="product-card-swatches"]')).toBeNull();
+  });
+
+  it('selecting a swatch switches the colour name, the price and the variant query', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-08',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Grafit',
+        price: 300_000,
+        extraColors: [{ colorName: 'Ezüst', swatchHex: '#D5D5D5', price: 320_000 }],
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const photo = queryImage(root, '[data-testid="image-photo"]');
+    const srcBefore = photo.getAttribute('src');
+    const swatches = root.querySelectorAll('[data-testid="product-card-swatch"]');
+    (swatches[1] as HTMLElement).click();
+    fixture.detectChanges();
+    const variantColor = queryElement(root, '.variant__color');
+    expect(variantColor.textContent.trim()).toBe('Ezüst');
+    const cta = queryAnchor(root, '[data-testid="product-card-cta"]');
+    const ezustVariantId = host.product().colors[1].variantId;
+    expect(cta.getAttribute('href')).toBe(
+      `/telefonok/demo-pro-5g?variant=${encodeURIComponent(ezustVariantId)}`,
+    );
+    const media = queryAnchor(root, '.media');
+    expect(media.getAttribute('aria-label')).toContain('Ezüst');
+    const priceRoot = queryElement(root, '[data-testid="price-amount"]');
+    expect(priceRoot.textContent.replace(/\s+/g, ' ').trim()).toContain('320 000');
+    expect((swatches[1] as HTMLElement).getAttribute('aria-pressed')).toBe('true');
+    expect((swatches[0] as HTMLElement).getAttribute('aria-pressed')).toBe('false');
+    expect(photo.getAttribute('src')).toBe(srcBefore);
+  });
+
+  it('a new product input resets the selection to its displayed variant', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-08',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Grafit',
+        price: 300_000,
+        extraColors: [{ colorName: 'Ezüst', swatchHex: '#D5D5D5', price: 320_000 }],
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const swatches = root.querySelectorAll('[data-testid="product-card-swatch"]');
+    (swatches[1] as HTMLElement).click();
+    fixture.detectChanges();
+    host.product.set(
+      makeItem({
+        id: 'p-09',
+        slug: 'demo-nine',
+        name: 'Demo Nine',
+        colorName: 'Kék',
+        extraColors: [{ colorName: 'Zöld', swatchHex: '#00AA00' }],
+      }),
+    );
+    fixture.detectChanges();
+    const after = getRootElement(fixture);
+    const updated = after.querySelectorAll('[data-testid="product-card-swatch"]');
+    expect((updated[0] as HTMLElement).getAttribute('aria-pressed')).toBe('true');
+    expect(queryElement(after, '.variant__color').textContent.trim()).toBe('Kék');
   });
 });
