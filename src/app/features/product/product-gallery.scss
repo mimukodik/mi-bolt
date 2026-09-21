@@ -82,8 +82,6 @@ app-product-image {
   right: var(--space-3);
   transform: none;
   border-radius: 50%;
-  font-size: var(--type-helper);
-  font-weight: var(--weight-medium);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,8 +152,5 @@ app-product-image {
   .step {
     min-width: var(--size-control);
     min-height: var(--size-control);
-  }
-  .zoom {
-    font-size: var(--type-helper);
   }
 }
