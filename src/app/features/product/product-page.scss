@@ -53,6 +53,11 @@
   color: var(--color-primary);
 }
 
+.meta-value {
+  margin-left: var(--space-1);
+  color: var(--color-text-primary);
+}
+
 .meta-label {
   margin-right: var(--space-1);
 }
@@ -78,7 +83,7 @@
 .buy-box {
   background: var(--color-primary);
   border-radius: var(--radius-card);
-  padding: var(--space-5);
+  padding: var(--space-6);
   color: var(--color-text-inverse);
   display: flex;
   flex-direction: column;
@@ -173,7 +178,7 @@
 
   .buy {
     position: sticky;
-    top: var(--space-5);
+    top: var(--space-6);
   }
 
   .description-section {
