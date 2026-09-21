@@ -35,6 +35,15 @@ type IdempotencyRecord = IdempotencyOutcome & {
   expiresAtMs: number;
 };
 
+/** One cache entry as the snapshot carries it: the derived key plus the record. */
+export interface PersistedIdempotencyRecord {
+  key: string;
+  status: number;
+  body: unknown;
+  payloadHash: string;
+  expiresAtMs: number;
+}
+
 /**
  * Builds the cache key for an idempotent mutation. Method and path
  * are normalized to upper-case so `POST /carts` and `post /carts`
@@ -140,6 +149,24 @@ export class IdempotencyStore {
       payloadHash,
       expiresAtMs: nowMs + IDEMPOTENCY_WINDOW_MS,
     });
+  }
+
+  /** Every unexpired entry, for the snapshot builder. */
+  toPersisted(): readonly PersistedIdempotencyRecord[] {
+    const out: PersistedIdempotencyRecord[] = [];
+    for (const [key, record] of this.entries) {
+      if (this.isExpired(record)) continue;
+      out.push({ key, ...record });
+    }
+    return out;
+  }
+
+  /** Restores the entries a snapshot carried; expired ones are dropped at seed time. */
+  seedFromSnapshot(records: readonly PersistedIdempotencyRecord[]): void {
+    for (const { key, ...record } of records) {
+      if (this.isExpired(record)) continue;
+      this.entries.set(key, record);
+    }
   }
 
   /** Test-only: returns the number of cached entries (including expired). */

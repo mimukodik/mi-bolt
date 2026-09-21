@@ -112,6 +112,7 @@ function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
     cart: undefined,
     paymentIntents: [],
     receipts: [],
+    idempotency: [],
     ...overrides,
   };
 }
@@ -637,6 +638,22 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
         ],
       }),
     },
+    {
+      name: 'idempotency record',
+      patch: (b) => ({
+        ...b,
+        idempotency: [
+          {
+            key: 'POST|/orders|sess|k',
+            status: 201,
+            body: {},
+            payloadHash: '{}',
+            expiresAtMs: 1,
+            extra: 'junk',
+          },
+        ],
+      }),
+    },
   ];
 
   for (const { name, patch } of cases) {
@@ -839,6 +856,7 @@ describe('snapshot v2 — buildSnapshot reads from stores and yields exactly the
     const built = buildSnapshot({ cart, checkout, order }, 'sess-keys', Date.now());
     expect(Object.keys(built).sort()).toEqual([
       'expiresAt',
+      'idempotency',
       'paymentIntents',
       'providerId',
       'receipts',
@@ -1043,6 +1061,62 @@ describe('OrderStore.toPersistedOrderState isolates per-session data (MIM-212 Un
   });
 });
 
+describe('IdempotencyStore persisted round trip (MIM-212 Unit P0c)', () => {
+  it('toPersisted and seedFromSnapshot round-trip unexpired records, drop expired ones', () => {
+    const clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    const store = new IdempotencyStore(clock);
+    const keyA = 'POST|/orders|sess|k-aaaaa';
+    const hashA = '{"paymentMethod":"cash_on_delivery"}';
+    const bodyA = { id: 'r-a', orderNumber: 'DEMO-000001' };
+    store.record(keyA, hashA, { status: 201, body: bodyA });
+
+    const keyB = 'POST|/orders|sess|k-bbbbb';
+    const hashB = '{"paymentMethod":"card","paymentIntentId":"pi-b"}';
+    const bodyB = { id: 'r-b', orderNumber: 'DEMO-000002' };
+    store.record(keyB, hashB, { status: 201, body: bodyB });
+
+    const persisted = store.toPersisted();
+    expect(persisted).toHaveLength(2);
+    const byKey = new Map(persisted.map((entry) => [entry.key, entry]));
+    const expectedExpiry = Date.parse('2026-09-20T10:00:00.000Z') + 24 * 60 * 60 * 1000;
+    expect(byKey.get(keyA)).toEqual({
+      key: keyA,
+      status: 201,
+      body: bodyA,
+      payloadHash: hashA,
+      expiresAtMs: expectedExpiry,
+    });
+    expect(byKey.get(keyB)).toEqual({
+      key: keyB,
+      status: 201,
+      body: bodyB,
+      payloadHash: hashB,
+      expiresAtMs: expectedExpiry,
+    });
+
+    // A second store, seeded from the first, replays both entries.
+    const store2 = new IdempotencyStore(clock);
+    store2.seedFromSnapshot(persisted);
+    expect(store2.find(keyA, hashA)).toEqual({ status: 201, body: bodyA });
+    expect(store2.find(keyB, hashB)).toEqual({ status: 201, body: bodyB });
+
+    // An expired entry is dropped at seed time and returns null on find.
+    const staleKey = 'POST|/orders|sess|k-stale';
+    const staleHash = '{}';
+    const store3 = new IdempotencyStore(clock);
+    store3.seedFromSnapshot([
+      {
+        key: staleKey,
+        status: 201,
+        body: { x: 1 },
+        payloadHash: staleHash,
+        expiresAtMs: 1,
+      },
+    ]);
+    expect(store3.find(staleKey, staleHash)).toBeNull();
+  });
+});
+
 describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
   beforeAll(() => {
     if (!isCatalogFixtureShape(catalogFixture)) {
@@ -1230,5 +1304,78 @@ describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
     const intentGetBody: unknown = await getIntentRes.json();
     expectRecord(intentGetBody);
     expect(intentGetBody['status']).toBe('succeeded');
+  });
+
+  it('POST /orders replays after a rebuild from the captured snapshot', async () => {
+    let captured: MockSnapshot | null = null;
+    const persistCalls: string[] = [];
+    const persist = (sessionId: string): void => {
+      persistCalls.push(sessionId);
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now()));
+    };
+    server.use(...createHandlers({ ...options, persist }));
+
+    // Seed the cart, patch a complete cash-on-delivery draft, then
+    // place the first order with the documented Idempotency-Key.
+    const motoRes = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(motoRes.status).toBe(200);
+
+    const patchRes = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'cash_on_delivery' },
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const first = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"3"', 'Idempotency-Key': 'idem-ord-p0c' },
+      body: JSON.stringify({
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: '2026-09',
+        acceptedTerms: true,
+      }),
+    });
+    expect(first.status).toBe(201);
+    const firstBody: unknown = await first.json();
+    expectRecord(firstBody);
+
+    expect(captured).not.toBeNull();
+
+    // Rebuild the handler set from the captured snapshot. The new
+    // checkoutHandlersEntry seeds the order store's idempotency
+    // cache from `options.snapshot.idempotency`, so a replay with
+    // the same key and body returns the original 201 receipt rather
+    // than falling through to the consumed cart.
+    server.resetHandlers();
+    server.use(...createHandlers({ ...options, snapshot: captured }));
+
+    const replay = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"', 'Idempotency-Key': 'idem-ord-p0c' },
+      body: JSON.stringify({
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: '2026-09',
+        acceptedTerms: true,
+      }),
+    });
+    expect(replay.status).toBe(201);
+    const replayBody: unknown = await replay.json();
+    expectRecord(replayBody);
+    expect(JSON.stringify(replayBody)).toBe(JSON.stringify(firstBody));
   });
 });

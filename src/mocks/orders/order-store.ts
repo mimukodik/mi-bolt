@@ -47,6 +47,7 @@ import { buildTraceId, problemType } from '../cart/cart-store';
 import type { CheckoutStore } from '../checkout/checkout-store';
 import { TERMS_VERSION } from '../checkout/checkout-store';
 import { IdempotencyStore, deriveIdempotencyKey, hashPayload } from '../idempotency';
+import type { PersistedIdempotencyRecord } from '../idempotency';
 import { isRecord } from '../is-record';
 
 export const PAYMENT_INTENT_TTL_MS = 30 * 60 * 1000;
@@ -584,6 +585,16 @@ export class OrderStore {
       if (s.sessionId === sessionId) receipts.push(s.receipt);
     }
     return { intents, receipts };
+  }
+
+  /** The idempotency cache for the snapshot; see `IdempotencyStore.toPersisted`. */
+  toPersistedIdempotency(): readonly PersistedIdempotencyRecord[] {
+    return this.idempotency.toPersisted();
+  }
+
+  /** Restores the idempotency cache a snapshot carried. */
+  seedIdempotency(records: readonly PersistedIdempotencyRecord[]): void {
+    this.idempotency.seedFromSnapshot(records);
   }
 
   // ---------------------------------------------------------------------------

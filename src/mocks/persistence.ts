@@ -27,12 +27,20 @@ import type { PaymentSelection } from '../app/api/generated/models/payment-selec
 
 import { isRecord } from './is-record';
 import type { ScenarioName } from './scenarios';
+import type { PersistedIdempotencyRecord } from './idempotency';
 
 /** Snapshot key prefix; the scenario name namespaces the entry. */
 const SNAPSHOT_KEY_PREFIX = 'mi-bolt.snapshot.';
 
-/** Bumped whenever the on-disk shape changes incompatibly. */
-export const SNAPSHOT_SCHEMA_VERSION = 2;
+/**
+ * Bumped whenever the on-disk shape changes incompatibly.
+ * Version 3 added `idempotency`: the unexpired records held in
+ * `IdempotencyStore`. A v2 entry found in a browser is discarded
+ * on the next hydrate — that is the intended behaviour for a
+ * schema change, since the cart and draft would otherwise look
+ * alive without their replay answers.
+ */
+export const SNAPSHOT_SCHEMA_VERSION = 3;
 
 /** Snapshots older than this are considered stale and discarded. */
 export const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -71,6 +79,7 @@ export interface MockSnapshot {
   checkoutDraft?: PersistedCheckoutDraft;
   paymentIntents: readonly PaymentIntent[];
   receipts: readonly OrderReceipt[];
+  idempotency: readonly PersistedIdempotencyRecord[];
 }
 
 export interface PersistenceOptions {
@@ -294,6 +303,7 @@ function isValidSnapshot(value: unknown): value is MockSnapshot {
   if (typeof v['expiresAt'] !== 'string') return false;
   if (!Array.isArray(v['paymentIntents'])) return false;
   if (!Array.isArray(v['receipts'])) return false;
+  if (!Array.isArray(v['idempotency'])) return false;
   const cart = v['cart'];
   if (cart !== undefined && !isValidCart(cart)) return false;
   const draft = v['checkoutDraft'];
@@ -303,6 +313,9 @@ function isValidSnapshot(value: unknown): value is MockSnapshot {
   }
   for (const receipt of v['receipts']) {
     if (!isValidOrderReceipt(receipt)) return false;
+  }
+  for (const record of v['idempotency']) {
+    if (!isValidIdempotencyRecord(record)) return false;
   }
   // Any unknown top-level property means a future change accidentally
   // added a field and we should fail closed.
@@ -316,6 +329,7 @@ function isValidSnapshot(value: unknown): value is MockSnapshot {
     'checkoutDraft',
     'paymentIntents',
     'receipts',
+    'idempotency',
   ]);
   for (const key of Object.keys(v)) {
     if (!allowed.has(key)) return false;
@@ -352,6 +366,26 @@ function isValidCartLine(value: unknown): value is PersistedCartLine {
   if (!isPositiveInteger(i['quantity'])) return false;
   const allowed = new Set(['variantId', 'quantity']);
   for (const key of Object.keys(i)) {
+    if (!allowed.has(key)) return false;
+  }
+  return true;
+}
+
+function isValidIdempotencyRecord(value: unknown): value is PersistedIdempotencyRecord {
+  if (!isRecord(value)) return false;
+  const r = value;
+  if (typeof r['key'] !== 'string') return false;
+  if (typeof r['status'] !== 'number' || !Number.isInteger(r['status'])) return false;
+  if (!isRecord(r['body'])) return false;
+  if (typeof r['payloadHash'] !== 'string') return false;
+  if (
+    typeof r['expiresAtMs'] !== 'number' ||
+    !Number.isInteger(r['expiresAtMs']) ||
+    r['expiresAtMs'] < 1
+  )
+    return false;
+  const allowed = new Set(['key', 'status', 'body', 'payloadHash', 'expiresAtMs']);
+  for (const key of Object.keys(r)) {
     if (!allowed.has(key)) return false;
   }
   return true;

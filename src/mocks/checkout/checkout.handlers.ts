@@ -146,6 +146,7 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
       intents: options.snapshot.paymentIntents,
       receipts: options.snapshot.receipts,
     });
+    order.seedIdempotency(options.snapshot.idempotency);
   }
 
   const getOptions: RequestHandler = http.get('*/api/v1/checkout/options', ({ request }) => {
