@@ -973,7 +973,37 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
       }),
     );
 
-    const { fixture, facade, root, tick } = await createHarness();
+    // Inlined harness: createHarness awaits `fixture.whenStable()`,
+    // which waits for the hung related request above; that wait
+    // never resolves and the case times out. Build the same fixture
+    // without waiting for the related request, then drive the case.
+    TestBed.configureTestingModule({
+      imports: [ProductPageHost],
+      providers: [
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
+        provideApiConfiguration(BASE_URL),
+        provideRouter([{ path: 'telefonok', component: StubCatalogPage }]),
+      ],
+      teardown: { destroyAfterEach: true },
+    });
+
+    await TestBed.compileComponents();
+
+    const fixture = TestBed.createComponent(ProductPageHost);
+    const facade = TestBed.inject(ProductFacade);
+    const root = getRootElement(fixture);
+
+    const tick = async (): Promise<void> => {
+      for (let i = 0; i < 8; i += 1) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 15);
+        });
+        fixture.detectChanges();
+      }
+    };
+
+    fixture.detectChanges();
+    await tick();
 
     expect(facade.vm().related).toEqual([]);
     expect(root.querySelector('[data-testid="related-products"]')).toBeNull();

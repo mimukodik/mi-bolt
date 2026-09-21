@@ -33,6 +33,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
@@ -636,10 +637,7 @@ describe('SuccessStep', () => {
     expect(actionWrapper).not.toBeNull();
     expect(actionWrapper?.textContent).toContain('Vissza a telefonokhoz');
 
-    const actionButton = queryHTMLElement(
-      document,
-      '[data-testid="success-new-shopping"] button',
-    );
+    const actionButton = queryHTMLElement(document, '[data-testid="success-new-shopping"] button');
     expect(actionButton).not.toBeNull();
     if (!(actionButton instanceof HTMLButtonElement)) {
       throw new Error('expected the new-shopping action to be an HTMLButtonElement');
@@ -664,46 +662,51 @@ describe('SuccessStep', () => {
 });
 
 // ---------------------------------------------------------------------------
-// SP-16, SP-17 — successGuard on the success URL
+// SP-16, SP-17 — successGuard on the success URL, driven through the router
 // ---------------------------------------------------------------------------
-
-/** `successGuard`'s `CanActivateFn` signature asks for a full
- *  `ActivatedRouteSnapshot` and `RouterStateSnapshot`, but the
- *  implementation only reads `route.paramMap`. The router exposes
- *  the snapshot as a structural type (no usable constructor), and the
- *  `extends Tree<...>` hierarchy on `RouterStateSnapshot` makes a
- *  literal object incompatible. The cast is unavoidable because TS will
- *  not let a partial literal satisfy the type — the guard's own
- *  dispatch is the only thing that touches the surface it needs. */
-function invokeGuardWithParamMap(
-  paramMap: ReturnType<typeof convertToParamMap>,
-): unknown {
-  const route = { paramMap };
-  return TestBed.runInInjectionContext(() =>
-    successGuard(
-      route as Parameters<typeof successGuard>[0],
-      {} as Parameters<typeof successGuard>[1],
-    ),
-  );
-}
 
 describe('successGuard', () => {
   beforeEach(() => {
-    configureTestBed();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
+        provideApiConfiguration(BASE_URL),
+        // The success route with `:orderId` covers SP-16; a sibling route
+        // without `:orderId` is needed so SP-17's "no order id" URL
+        // matches a guarded path and the guard's empty-paramMap branch
+        // runs. A `children: []` route needs no component, so nothing
+        // empty is declared and nothing is cast.
+        provideRouter([
+          {
+            path: 'penztar/siker/:orderId',
+            canActivate: [successGuard],
+            children: [],
+          },
+          {
+            path: 'penztar/siker',
+            canActivate: [successGuard],
+            children: [],
+          },
+          { path: 'penztar/kosar', children: [] },
+        ]),
+      ],
+      teardown: { destroyAfterEach: true },
+    });
   });
 
-  it('SP-16 the success guard lets a route carrying an order id through, so the page owns the hydration', () => {
-    const result = invokeGuardWithParamMap(convertToParamMap({ orderId: 'ord-guard-1' }));
-    expect(result).toBe(true);
+  it('SP-16 the success guard lets a route carrying an order id through, so the page owns the hydration', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/penztar/siker/ord-guard-1');
+    expect(TestBed.inject(Router).url).toBe('/penztar/siker/ord-guard-1');
   });
 
-  it('SP-17 the success guard sends a deep link with no order id back to the cart', () => {
-    const result = invokeGuardWithParamMap(convertToParamMap({}));
-    const router = TestBed.inject(Router);
-    expect(result).not.toBe(true);
-    const serialised = router.serializeUrl(result as Parameters<Router['serializeUrl']>[0]);
-    expect(serialised).toContain('/penztar/kosar');
-    expect(serialised).toContain('navigationReason=deep-link');
+  it('SP-17 the success guard sends a deep link with no order id back to the cart', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/penztar/siker');
+    const url = TestBed.inject(Router).url;
+    expect(url).toContain('/penztar/kosar');
+    expect(url).toContain('navigationReason=deep-link');
   });
 });
 

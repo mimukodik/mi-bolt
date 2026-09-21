@@ -694,7 +694,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
       set: {
         imports: [Hero, HowDemoWorks, FeaturedProducts],
         template:
-          '<app-hero></app-hero><app-featured-products [state]="featured()" (retryRequested)="retryFeatured()"></app-featured-products><app-how-demo-works></app-how-demo-works>',
+          '<app-hero title="A következő mobilod." subtitle="Egyszerűen."></app-hero><app-featured-products [state]="featured()" (retryRequested)="retryFeatured()"></app-featured-products><app-how-demo-works></app-how-demo-works>',
       },
     });
     await TestBed.compileComponents();
