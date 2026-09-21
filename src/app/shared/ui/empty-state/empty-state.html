@@ -6,11 +6,11 @@
 >
   <h2 class="title m-0 font-bold">{{ title() }}</h2>
   <p class="message m-0 leading-relaxed">{{ message() }}</p>
-  @if (actionLabel()) {
+  @if (actionLabel(); as label) {
     <div class="actions mt-4 flex items-center justify-center">
       <app-button
         [variant]="actionVariant()"
-        [label]="actionLabel()!"
+        [label]="label"
         (pressed)="actionRequested.emit()"
       ></app-button>
     </div>

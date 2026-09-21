@@ -95,11 +95,19 @@ export const CONTACT_DRAFT_SAVER = new InjectionToken<ContactDraftSaver>('CONTAC
   factory: () => () => Promise.resolve({ ok: true }),
 });
 
+/** Reads the `pointer` a server-style field error carries; schema-defined
+ *  errors do not carry one and the function returns `undefined` for them. */
+function errorPointer(error: ValidationError.WithFieldTree): string | undefined {
+  if (!('pointer' in error)) return undefined;
+  const { pointer } = error;
+  return typeof pointer === 'string' ? pointer : undefined;
+}
+
 /** Convert the Signal Form errors array into the local FieldError shape. */
 function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readonly FieldError[] {
   const out: FieldError[] = [];
   for (const error of errors) {
-    const pointer = (error as ValidationError.WithFieldTree & { pointer?: string }).pointer;
+    const pointer = errorPointer(error);
     out.push({
       code: error.kind,
       message: error.message ?? error.kind,
@@ -207,8 +215,7 @@ export class ContactStep {
       const errors = field.errors();
       if (errors.length === 0) return;
       const first = errors[0];
-      const pointer =
-        (first as ValidationError.WithFieldTree & { pointer?: string }).pointer ?? `/${key}`;
+      const pointer = errorPointer(first) ?? `/${key}`;
       out.push({
         field: key,
         label,

@@ -1,23 +1,12 @@
 /**
- * FIX-56: `DeliveryPage` is the owning container `checkout.routes.ts:220`
- * routes `szallitas` to. It fetches `CheckoutOptions`, owns the load and
- * save state machines, and performs the three facade saves plus the
- * navigation `DeliveryStep.onConfirm()` used to do itself before this
- * task moved that responsibility up here (`components.md:566-576`).
- *
- * MIM-212 S3-C4: ported to the 2.0.0 contract. Options come from
- * `CheckoutFacade.ensureOptions()` / `.options()` rather than a page-local
- * `Api` instance, and the page now owns the Signal Forms `CheckoutFieldTree`
- * the facade no longer builds (`8331540`'s commit message: "the pages
- * follow in the next units"). `onContinueRequested` runs the three
- * section writes the delivery step's billing block and options require —
- * `updateDelivery`, `updatePayment`, `updateBilling`, in that order —
- * each gated on the previous one succeeding.
- *
- * The failure detail from a rejected save is rendered here rather than
- * in `DeliveryStep`, because the contract's `saveState` is a plain
- * `AsyncStatus` with no room for a message — the same shape `FIX-63`
- * resolves for `ReviewPage`'s `SubmitFailure`.
+ * `DeliveryPage` is the owning container `checkout.routes.ts` routes `szallitas` to.
+ * It fetches `CheckoutOptions` through `CheckoutFacade.ensureOptions()` / `.options()`,
+ * owns the load and save state machines and the Signal Forms `CheckoutFieldTree`, and
+ * on `onContinueRequested` runs the three section writes the delivery step's billing
+ * block and options require, `updateDelivery`, `updatePayment`, `updateBilling`, in that
+ * order, each gated on the previous one succeeding. The failure detail of a rejected
+ * save is rendered here rather than in `DeliveryStep`, because the contract's
+ * `saveState` is a plain `AsyncStatus` with no room for a message.
  */
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -95,8 +84,8 @@ export class DeliveryPage {
 
   /** Rendered when the confirm action's save fails. Takes the
    *  wire's own detail and adds the same "nothing was lost" sentence
-   *  FIX-25/FIX-44 use for the identical situation, so the two
-   *  checkout screens do not speak differently. */
+   *  the other checkout screens use for the identical situation, so
+   *  they do not speak differently. */
   readonly saveFailureMessage = computed<string>(() => {
     const failure = this.saveFailure();
     if (failure === null) return '';
@@ -147,10 +136,9 @@ export class DeliveryPage {
   }
 
   /** Handles `DeliveryStep`'s `(continueRequested)`: the three facade
-   *  saves and the navigation `onConfirm()`'s tail used to do itself.
-   *  Sequential and gated: a failure at any of the three stops the
-   *  sequence, renders the failure banner and does not navigate
-   *  (`delivery-page.spec.ts` case 4). */
+   *  saves plus the post-save navigation, in sequence and gated. A
+   *  failure at any of the three stops the sequence, renders the
+   *  failure banner and does not navigate. */
   async onContinueRequested(): Promise<void> {
     this.saveState.set('loading');
     this.saveFailure.set(null);
