@@ -36,7 +36,10 @@ const intentOpen: PaymentIntent = {
   status: 'requires_action',
 } satisfies PaymentIntent;
 
-function closedWith(status: PaymentIntent['status']): PaymentIntent {
+/** A status the server can return after it has resolved the intent. */
+type ClosedStatus = Exclude<PaymentIntent['status'], 'requires_action'>;
+
+function closedWith(status: ClosedStatus): PaymentIntent {
   return {
     ...intentOpen,
     status,
@@ -290,6 +293,7 @@ describe('PaymentPage', () => {
 
     expect(text(fixture, '[role="alert"]')).toBe('Hiányzó fizetési azonosító.');
     expect(captured).toEqual([]);
+    expect(hostElement(fixture).querySelector('h1')).toBeNull();
     expect(hostElement(fixture).querySelector('[data-testid="pay-back"]')).toBeNull();
     expect(hostElement(fixture).querySelector('[data-testid="pay-retry"]')).toBeNull();
   });
