@@ -593,6 +593,26 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     expect(priceAmounts.length).toBe(items.length);
   });
 
+  it('loads the first featured photo eagerly and the rest lazily (MIM-210)', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
+    });
+    await TestBed.compileComponents();
+    const fixture = TestBed.createComponent(FeaturedProducts);
+    const items = catalogItemFixtures();
+    fixture.componentRef.setInput('state', {
+      status: 'success',
+      items,
+      error: null,
+    } satisfies FeaturedState);
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const loadings = Array.from(
+      root.querySelectorAll<HTMLImageElement>('[data-testid="image-photo"]'),
+    ).map((img) => img.getAttribute('loading'));
+    expect(loadings).toEqual(['eager', 'lazy', 'lazy', 'lazy']);
+  });
+
   it('renders two storage sizes of one featured product without a duplicate track key (MIM-210)', async () => {
     const sharedSlug = 'demo-one-5g';
     const item = (storageGb: 128 | 256, variantId: string, price: number): CatalogItem => ({

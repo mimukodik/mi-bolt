@@ -142,12 +142,9 @@ app-product-image {
   outline-offset: 2px;
 }
 
-.thumb-img {
+.thumb app-product-image {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 4 / 3;
-  object-fit: contain;
 }
 
 .thumb-check {

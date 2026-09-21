@@ -11,6 +11,7 @@ import type { ImageLike } from './product-image';
       [productName]="productName()"
       [aspectRatio]="aspectRatio()"
       [decorative]="decorative()"
+      [eager]="eager()"
       (loadFailed)="failedCount.set(failedCount() + 1)"
     ></app-product-image>
   `,
@@ -26,6 +27,7 @@ class HostComponent {
   readonly aspectRatio = signal('4 / 3');
   readonly failedCount = signal(0);
   readonly decorative = signal(false);
+  readonly eager = signal(false);
 }
 
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
@@ -384,5 +386,23 @@ describe('ProductImage primitive', () => {
     expect(
       getNativeElement(fixture).querySelector('[data-testid="image-fallback"]'),
     ).not.toBeNull();
+  });
+
+  it('renders the photo with loading="lazy" by default', () => {
+    const { fixture } = setup();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    expect(photo?.getAttribute('loading')).toBe('lazy');
+  });
+
+  it('renders the photo with loading="eager" when eager is set', () => {
+    const { fixture, host } = setup();
+    host.eager.set(true);
+    fixture.detectChanges();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    expect(photo?.getAttribute('loading')).toBe('eager');
   });
 });

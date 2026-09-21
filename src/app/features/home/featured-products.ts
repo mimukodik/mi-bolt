@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Money } from '../../api/generated/models/money';
 import { Button } from '../../shared/ui/button/button';
+import { ProductImage } from '../../shared/ui/product-image/product-image';
 
 /** Status of the whole featured grid in the home page. */
 export type FeaturedStatus = 'loading' | 'success' | 'error';
@@ -45,7 +46,7 @@ export interface FeaturedState {
  */
 @Component({
   selector: 'app-featured-products',
-  imports: [RouterLink, Button],
+  imports: [RouterLink, Button, ProductImage],
   templateUrl: './featured-products.html',
   styleUrl: './featured-products.scss',
 })
@@ -71,12 +72,6 @@ export class FeaturedProducts {
 
   /** Items for the success branch. */
   readonly items = computed(() => this.state().items);
-
-  /** Returns the image alt text for the item, falling back to the name. */
-  firstImageAlt(item: CatalogItem): string {
-    const alt = item.image.alt;
-    return alt.length > 0 ? alt : item.name;
-  }
 
   /** Hungarian integer HUF formatter. Non-breaking space thousands separator. */
   formatPrice(money: Money): string {

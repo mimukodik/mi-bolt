@@ -63,15 +63,12 @@
           [attr.aria-label]="'Ugrás a(z) ' + (i + 1) + '. képre'"
           (click)="goTo(image.id)"
         >
-          <img
-            class="thumb-img"
-            [src]="image.src"
-            alt=""
-            aria-hidden="true"
-            [attr.width]="image.width"
-            [attr.height]="image.height"
-            decoding="async"
-            loading="lazy"
+          <app-product-image
+            [image]="image"
+            [productName]="productName()"
+            aspectRatio="1 / 1"
+            [decorative]="true"
+            data-testid="gallery-thumb-image"
           />
           <span class="thumb-check" aria-hidden="true">✓</span>
         </button>
