@@ -1,0 +1,89 @@
+<section class="pay-card" [attr.aria-labelledby]="labelledBy()" [attr.aria-busy]="busy()">
+  @switch (display()) {
+    @case ('loading') {
+      <p class="pay-status" role="status">Fizetési adatok betöltése…</p>
+    }
+    @case ('alert') {
+      <p #payAlert class="pay-alert" role="alert" tabindex="-1">{{ alertMessage() }}</p>
+      @if (closedLabel(); as label) {
+        <p class="pay-outcome">
+          Eredmény: <strong>{{ label }}</strong>
+        </p>
+      }
+      @if (backUrl(); as url) {
+        <a class="pay-back" data-testid="pay-back" [href]="url">Vissza a boltba</a>
+      }
+      @if (retryable()) {
+        <button
+          class="pay-button pay-button--primary"
+          type="button"
+          data-testid="pay-retry"
+          (click)="onRetry()"
+        >
+          Újrapróbálom
+        </button>
+      }
+    }
+    @case ('card') {
+      @if (intent(); as intent) {
+        <h1 #payTitle id="pay-title" tabindex="-1">Fizetés jóváhagyása</h1>
+        <p class="pay-lede">
+          Ez egy szimulált fizetési felület. Válaszd ki, hogyan viselkedjen a fizetés.
+        </p>
+
+        <dl class="pay-summary">
+          <dt>Fizetendő összeg</dt>
+          <dd class="pay-amount" data-testid="pay-amount">
+            {{
+              intent.amount.amount | currency: intent.amount.currency : 'symbol' : '1.0-0' : 'hu-HU'
+            }}
+          </dd>
+          <dt>Tranzakció azonosító</dt>
+          <dd class="pay-ref" data-testid="pay-ref">{{ intent.id }}</dd>
+        </dl>
+
+        @if (redirecting()) {
+          <p class="pay-status" role="status">Visszairányítás a boltba…</p>
+        } @else {
+          <div class="pay-actions">
+            <button
+              class="pay-button pay-button--primary"
+              type="button"
+              data-testid="pay-succeeded"
+              [disabled]="submitting()"
+              (click)="onChoose('succeeded')"
+            >
+              {{ pressed() === 'succeeded' ? 'Feldolgozás…' : 'Sikeres fizetés' }}
+            </button>
+            <button
+              class="pay-button"
+              type="button"
+              data-testid="pay-declined"
+              [disabled]="submitting()"
+              (click)="onChoose('declined')"
+            >
+              {{ pressed() === 'declined' ? 'Feldolgozás…' : 'Elutasított fizetés' }}
+            </button>
+            <button
+              class="pay-button"
+              type="button"
+              data-testid="pay-pending"
+              [disabled]="submitting()"
+              (click)="onChoose('pending')"
+            >
+              {{ pressed() === 'pending' ? 'Feldolgozás…' : 'Függőben marad' }}
+            </button>
+          </div>
+          @if (submitting()) {
+            <p class="pay-status" role="status">A fizetés feldolgozása folyamatban.</p>
+          }
+        }
+
+        <p class="pay-note">
+          A három gomb a bankkártyás jóváhagyás három lehetséges kimenetét szimulálja. Az oldal soha
+          nem kér kártyaszámot.
+        </p>
+      }
+    }
+  }
+</section>
