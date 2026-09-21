@@ -1,5 +1,5 @@
 <section
-  class="panel flex flex-col gap-6 p-5 rounded"
+  class="panel flex flex-col gap-6"
   [attr.aria-busy]="disabled() ? 'true' : null"
   data-testid="filter-panel"
 >
@@ -14,13 +14,13 @@
     ></app-button>
   </header>
 
-  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-search">
-    <legend class="legend uppercase tracking-wider">Keresés</legend>
+  <fieldset class="group" data-testid="filter-group-search">
+    <legend class="legend">Keresés</legend>
     <label class="search block">
       <span class="sr-only">Keresés a telefonok között</span>
       <input
         type="search"
-        class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+        class="input"
         data-testid="filter-search-input"
         [value]="searchDraft()"
         (input)="onSearchInput($event)"
@@ -30,41 +30,54 @@
     </label>
   </fieldset>
 
-  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-brand">
-    <legend class="legend uppercase tracking-wider">Márka</legend>
-    <ul class="options flex flex-col gap-2 m-0 p-0 list-none" role="list">
-      @for (brand of brandFacets(); track brand.value) {
+  <fieldset class="group" data-testid="filter-group-brand">
+    <legend class="legend">Gyártó</legend>
+    <ul class="options" role="list">
+      @for (brand of visibleBrandFacets(); track brand.value) {
         <li>
           <button
             type="button"
-            class="option inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
+            class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
             [class.is-selected]="isBrandSelected(brand.value)"
             [attr.data-testid]="'filter-brand-' + brand.value"
             [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
             [disabled]="disabled() || brand.count === 0"
             (click)="toggleBrand(brand.value)"
           >
-            <span
-              class="check inline-flex items-center justify-center w-5 font-bold"
-              aria-hidden="true"
-              >{{ isBrandSelected(brand.value) ? '✓' : '' }}</span
+            <span class="check" aria-hidden="true">{{
+              isBrandSelected(brand.value) ? '✓' : ''
+            }}</span>
+            <span class="option__label"
+              >{{ brand.label
+              }}<span class="option__count" aria-label="találatok száma"
+                >&nbsp;({{ brand.count }})</span
+              ></span
             >
-            <span class="option__label flex-1">{{ brand.label }}</span>
-            <span class="option__count" aria-label="találatok száma">{{ brand.count }}</span>
           </button>
         </li>
       }
     </ul>
+    @if (brandFacets().length > 5) {
+      <button
+        type="button"
+        class="more"
+        data-testid="filter-brand-more"
+        [attr.aria-expanded]="brandsExpanded() ? 'true' : 'false'"
+        (click)="toggleBrandsExpanded()"
+      >
+        {{ brandsExpanded() ? 'Kevesebb gyártó' : 'Még több gyártó' }}
+      </button>
+    }
   </fieldset>
 
-  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-color">
-    <legend class="legend uppercase tracking-wider">Szín</legend>
-    <ul class="options flex flex-col gap-2 m-0 p-0 list-none" role="list">
+  <fieldset class="group" data-testid="filter-group-color">
+    <legend class="legend">Szín</legend>
+    <ul class="color-options" role="list">
       @for (color of colorFacets(); track color.value) {
         <li>
           <button
             type="button"
-            class="option inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
+            class="color-chip"
             [class.is-selected]="isColorSelected(color.value)"
             [attr.data-testid]="'filter-color-' + color.value"
             [attr.aria-pressed]="isColorSelected(color.value) ? 'true' : 'false'"
@@ -72,54 +85,55 @@
             (click)="toggleColor(color.value)"
           >
             <span
-              class="check inline-flex items-center justify-center w-5 font-bold"
-              aria-hidden="true"
-              >{{ isColorSelected(color.value) ? '✓' : '' }}</span
-            >
-            <span
-              class="inline-block w-4 h-4 rounded-full border border-current"
+              class="color-chip__swatch"
               aria-hidden="true"
               [style.background-color]="color.swatchHex"
             ></span>
-            <span class="option__label flex-1">{{ color.label }}</span>
-            <span class="option__count" aria-label="találatok száma">{{ color.count }}</span>
+            <span class="color-chip__label"
+              >{{ color.label
+              }}<span class="color-chip__count" aria-label="találatok száma"
+                >&nbsp;({{ color.count }})</span
+              ></span
+            >
           </button>
         </li>
       }
     </ul>
   </fieldset>
 
-  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-storage">
-    <legend class="legend uppercase tracking-wider">Tárhely</legend>
-    <ul class="options options--row flex flex-wrap gap-2 m-0 p-0 list-none" role="list">
+  <fieldset class="group" data-testid="filter-group-storage">
+    <legend class="legend">Tárhely</legend>
+    <ul class="options" role="list">
       @for (bucket of storageFacets(); track bucket.gb) {
         <li>
           <button
             type="button"
-            class="option option--chip inline-flex items-center gap-2 min-h-10 px-3 rounded font-inherit cursor-pointer"
+            class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
             [class.is-selected]="isStorageSelected(bucket.gb)"
             [attr.data-testid]="'filter-storage-' + bucket.gb"
             [attr.aria-pressed]="isStorageSelected(bucket.gb) ? 'true' : 'false'"
             [disabled]="disabled()"
             (click)="toggleStorage(bucket.gb)"
           >
-            <span
-              class="check inline-flex items-center justify-center w-5 font-bold"
-              aria-hidden="true"
-              >{{ isStorageSelected(bucket.gb) ? '✓' : '' }}</span
-            >
-            <span>{{ bucket.label }}</span>
-            @if (bucket.count !== null) {
-              <span class="option__count" aria-label="találatok száma">{{ bucket.count }}</span>
-            }
+            <span class="check" aria-hidden="true">{{
+              isStorageSelected(bucket.gb) ? '✓' : ''
+            }}</span>
+            <span class="option__label"
+              >{{ bucket.label }}
+              @if (bucket.count !== null) {
+                <span class="option__count" aria-label="találatok száma"
+                  >&nbsp;({{ bucket.count }})</span
+                >
+              }
+            </span>
           </button>
         </li>
       }
     </ul>
   </fieldset>
 
-  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-price">
-    <legend class="legend uppercase tracking-wider">Ár (Ft, egész szám)</legend>
+  <fieldset class="group" data-testid="filter-group-price">
+    <legend class="legend">Ár (Ft, egész szám)</legend>
     <div class="price grid grid-cols-2 gap-2">
       <label class="price__field flex flex-col gap-1">
         <span class="price__label">Min.</span>
@@ -128,7 +142,7 @@
           inputmode="numeric"
           min="0"
           step="1000"
-          class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+          class="input"
           data-testid="filter-min-price"
           [value]="minDraft()"
           (input)="onMinInput($event)"
@@ -143,7 +157,7 @@
           inputmode="numeric"
           min="0"
           step="1000"
-          class="input w-full min-h-10 px-3 rounded font-inherit leading-none"
+          class="input"
           data-testid="filter-max-price"
           [value]="maxDraft()"
           (input)="onMaxInput($event)"
@@ -163,45 +177,51 @@
     }
   </fieldset>
 
-  <fieldset class="group flex flex-col gap-2 m-0 p-0 border-0" data-testid="filter-group-flags">
-    <legend class="legend uppercase tracking-wider">További szűrők</legend>
-    <button
-      type="button"
-      class="option option--toggle inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
-      [class.is-selected]="isInStockSelected()"
-      [attr.data-testid]="'filter-inStock'"
-      [attr.aria-pressed]="isInStockSelected() ? 'true' : 'false'"
-      [disabled]="disabled()"
-      (click)="toggleInStock()"
-    >
-      <span
-        class="check inline-flex items-center justify-center w-5 font-bold"
-        aria-hidden="true"
-        >{{ isInStockSelected() ? '✓' : '' }}</span
-      >
-      <span>Csak raktáron</span>
-      @if (inStockCount() !== null) {
-        <span class="option__count" aria-label="találatok száma">{{ inStockCount() }}</span>
-      }
-    </button>
-    <button
-      type="button"
-      class="option option--toggle inline-flex items-center gap-2 w-full min-h-10 px-3 rounded font-inherit leading-none cursor-pointer text-left"
-      [class.is-selected]="isFiveGSelected()"
-      [attr.data-testid]="'filter-is5g'"
-      [attr.aria-pressed]="isFiveGSelected() ? 'true' : 'false'"
-      [disabled]="disabled()"
-      (click)="toggleFiveG()"
-    >
-      <span
-        class="check inline-flex items-center justify-center w-5 font-bold"
-        aria-hidden="true"
-        >{{ isFiveGSelected() ? '✓' : '' }}</span
-      >
-      <span>Csak 5G</span>
-      @if (fiveGCount() !== null) {
-        <span class="option__count" aria-label="találatok száma">{{ fiveGCount() }}</span>
-      }
-    </button>
+  <fieldset class="group" data-testid="filter-group-flags">
+    <legend class="legend">Egyéb</legend>
+    <ul class="options" role="list">
+      <li>
+        <button
+          type="button"
+          class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
+          [class.is-selected]="isInStockSelected()"
+          data-testid="filter-inStock"
+          [attr.aria-pressed]="isInStockSelected() ? 'true' : 'false'"
+          [disabled]="disabled()"
+          (click)="toggleInStock()"
+        >
+          <span class="check" aria-hidden="true">{{ isInStockSelected() ? '✓' : '' }}</span>
+          <span class="option__label"
+            >Csak raktáron
+            @if (inStockCount() !== null) {
+              <span class="option__count" aria-label="találatok száma"
+                >&nbsp;({{ inStockCount() }})</span
+              >
+            }
+          </span>
+        </button>
+      </li>
+      <li>
+        <button
+          type="button"
+          class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
+          [class.is-selected]="isFiveGSelected()"
+          data-testid="filter-is5g"
+          [attr.aria-pressed]="isFiveGSelected() ? 'true' : 'false'"
+          [disabled]="disabled()"
+          (click)="toggleFiveG()"
+        >
+          <span class="check" aria-hidden="true">{{ isFiveGSelected() ? '✓' : '' }}</span>
+          <span class="option__label"
+            >Csak 5G
+            @if (fiveGCount() !== null) {
+              <span class="option__count" aria-label="találatok száma"
+                >&nbsp;({{ fiveGCount() }})</span
+              >
+            }
+          </span>
+        </button>
+      </li>
+    </ul>
   </fieldset>
 </section>

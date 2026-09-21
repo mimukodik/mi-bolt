@@ -466,7 +466,7 @@ describe('FilterPanel — facets wire-up', () => {
     const mid = queryElement(root, '[data-testid="filter-storage-256"]');
     expect(mid.textContent).toContain('256 GB');
     const midCount = mid.querySelector('.option__count');
-    expect(midCount?.textContent.trim()).toBe('5');
+    expect(midCount?.textContent.trim()).toBe('(5)');
   });
 
   it('stock and 5G toggles show their facet count when facets are loaded', () => {
@@ -484,11 +484,11 @@ describe('FilterPanel — facets wire-up', () => {
 
     const inStock = queryElement(root, '[data-testid="filter-inStock"]');
     const inStockCount = inStock.querySelector('.option__count');
-    expect(inStockCount?.textContent.trim()).toBe('7');
+    expect(inStockCount?.textContent.trim()).toBe('(7)');
 
     const is5g = queryElement(root, '[data-testid="filter-is5g"]');
     const is5gCount = is5g.querySelector('.option__count');
-    expect(is5gCount?.textContent.trim()).toBe('9');
+    expect(is5gCount?.textContent.trim()).toBe('(9)');
   });
 
   it('price inputs carry the price range as a placeholder when facets are loaded', () => {

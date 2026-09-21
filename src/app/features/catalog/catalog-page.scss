@@ -87,8 +87,9 @@
 
 @media (min-width: 1024px) {
   .layout {
-    grid-template-columns: 264px 1fr;
-    gap: var(--space-7);
+    grid-template-columns: 280px minmax(0, 1fr);
+    column-gap: 40px;
+    row-gap: var(--space-7);
   }
 }
 

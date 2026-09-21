@@ -116,6 +116,31 @@ export class FilterDrawer {
   /** Brand facets, falling back to an empty list when none are present. */
   readonly brandFacets = computed(() => this.facets()?.brands ?? []);
 
+  /** MIM-210: brand list collapses to the first five rows behind a
+   *  `Még több gyártó` text link. A brand selected beyond the first
+   *  five keeps the list expanded so the chip the user picked stays
+   *  visible. */
+  readonly brandsExpanded = signal(false);
+
+  /** Brands to render: the first five when collapsed, otherwise the
+   *  full list. When collapsed but a brand beyond row five is selected,
+   *  the list stays open so the chip stays visible. */
+  readonly visibleBrandFacets = computed<readonly FacetValue[]>(() => {
+    const all = this.brandFacets();
+    if (this.brandsExpanded()) return all;
+    if (all.length <= 5) return all;
+    const hasDeeperSelection = this.draftBrands().some((b) => {
+      const idx = all.findIndex((f) => f.value === b);
+      return idx >= 5;
+    });
+    if (hasDeeperSelection) return all;
+    return all.slice(0, 5);
+  });
+
+  toggleBrandsExpanded(): void {
+    this.brandsExpanded.update((v) => !v);
+  }
+
   /** Colour facets, falling back to an empty list when none are present. */
   readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
 
