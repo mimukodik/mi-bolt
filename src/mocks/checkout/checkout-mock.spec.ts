@@ -2,8 +2,8 @@
  * MIM-212 — checkout, payment intent and order mock spec on the
  * 2.0.0 contract.
  *
- * 75 cases over `/checkout/options`, `/checkout`, `/payment-intents`
- * and `/orders` (31 + 17 + 27), measured against the configured backend values the
+ * 76 cases over `/checkout/options`, `/checkout`, `/payment-intents`
+ * and `/orders` (31 + 17 + 28), measured against the configured backend values the
  * addendum of `/tmp/s3-a-design.md` (2026-09-20 ~21:25Z) locks in.
  * Every case asserts an exact wire value, never `.exists()`-style
  * coverage; the spec is the independent measurement of the mock
@@ -25,6 +25,7 @@ import {
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/cart-store';
 import { CheckoutStore, TERMS_VERSION } from '../../mocks/checkout/checkout-store';
+import { IDEMPOTENCY_WINDOW_MS } from '../../mocks/idempotency';
 import '../../mocks/checkout/checkout.handlers';
 import '../../mocks/payment/payment.handlers';
 import '../../mocks/orders/order.handlers';
@@ -883,20 +884,19 @@ describe('POST /payment-intents', () => {
     expect(errors).toEqual([{ path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD' }]);
   });
 
-  it('I-06: a draft with only contact set returns 422 CHECKOUT_INCOMPLETE with PAYMENT_METHOD_NOT_CARD (blocked: brief expects three SECTION_MISSING)', async () => {
+  it('I-06: a draft with only contact set returns 422 CHECKOUT_INCOMPLETE with three SECTION_MISSING errors', async () => {
     await seedMotoOnce(session1Headers());
     await patchCheckout({ contact: VALID_CONTACT }, '"2"');
     const { status, body } = await createCardIntent('"3"', 'idem-int-0006');
     expect(status).toBe(422);
     expectRecord(body);
     expect(body['code']).toBe('CHECKOUT_INCOMPLETE');
-    // Blocked: the implementation returns PAYMENT_METHOD_NOT_CARD on
-    // /payment before it ever reaches checkCompleteness (OrderStore
-    // line 227-239). The brief expects three SECTION_MISSING errors
-    // on /billing, /delivery, /payment; the actual response carries
-    // only {path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD'}.
     const errors = readFieldErrors(body);
-    expect(errors).toEqual([{ path: '/payment', code: 'PAYMENT_METHOD_NOT_CARD' }]);
+    expect(errors).toEqual([
+      { path: '/billing', code: 'SECTION_MISSING' },
+      { path: '/delivery', code: 'SECTION_MISSING' },
+      { path: '/payment', code: 'SECTION_MISSING' },
+    ]);
   });
 
   it('I-07: a complete draft on an empty cart returns 422 CHECKOUT_INCOMPLETE with detail "The cart is empty."', async () => {
@@ -1682,7 +1682,7 @@ describe('POST /orders', () => {
     expect(body['code']).toBe('IDEMPOTENCY_CONFLICT');
   });
 
-  it('O-23: a key replay on an expired cart after a successful order returns the original receipt', async () => {
+  it('O-23: a key replay inside the retention window, after the order consumed the cart, returns the original receipt', async () => {
     const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
     const first = await placeOrder(
       {
@@ -1698,13 +1698,7 @@ describe('POST /orders', () => {
     expectRecord(first.body);
     const firstReceipt = first.body;
 
-    // Blocked: CART_TTL_MS (24h) equals IDEMPOTENCY_WINDOW_MS (24h),
-    // so advancing the clock by CART_TTL_MS also expires the
-    // idempotency record, and the replay falls through to the cart
-    // version check (which sees a fresh v1 reset cart and returns
-    // 412). The headline rule — replay before cart state — only
-    // fires while the record is still in the replay window.
-    clock.advanceMs(CART_TTL_MS);
+    clock.advanceMs(IDEMPOTENCY_WINDOW_MS - 60_000);
     const replay = await placeOrder(
       {
         paymentMethod: 'card',
@@ -1715,11 +1709,40 @@ describe('POST /orders', () => {
       '"3"',
       'idem-ord-0023',
     );
+    expect(replay.status).toBe(201);
+    expect(JSON.stringify(replay.body)).toBe(JSON.stringify(firstReceipt));
+  });
+
+  it('O-23b: a key replay after the retention window falls through to the cart state and returns 412', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const first = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0023b',
+    );
+    expect(first.status).toBe(201);
+    expectRecord(first.body);
+    const firstReceipt = first.body;
+
+    clock.advanceMs(IDEMPOTENCY_WINDOW_MS);
+    const replay = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0023b',
+    );
     expect(replay.status).toBe(412);
     expectRecord(replay.body);
     expect(replay.body['code']).toBe('CART_VERSION_CONFLICT');
-    // Preserve the assertion the brief specifies; this codepath will
-    // pass once IDEMPOTENCY_WINDOW_MS exceeds CART_TTL_MS.
     expect(JSON.stringify(replay.body)).not.toBe(JSON.stringify(firstReceipt));
   });
 
