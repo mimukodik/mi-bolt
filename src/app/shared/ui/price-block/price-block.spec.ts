@@ -180,4 +180,15 @@ describe('PriceBlock primitive', () => {
     expect(root).not.toBeNull();
     expect(root?.hasAttribute('data-inverse')).toBe(true);
   });
+
+  it('renders the error dash inside an inverse root (MIM-210)', () => {
+    const { fixture, host } = setup();
+    host.inverse.set(true);
+    host.status.set('error');
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root?.hasAttribute('data-inverse')).toBe(true);
+    const dash = root?.querySelector('[data-testid="price-error"]');
+    expect(dash?.classList.contains('amount--error')).toBe(true);
+  });
 });
