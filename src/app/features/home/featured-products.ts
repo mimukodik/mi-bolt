@@ -30,19 +30,21 @@ export interface FeaturedState {
  * catalogue detail route with the documented slug and variant id
  * (T14-AC02).
  *
- * The home page renders its own price block / image element rather
- * than the shared `PriceBlock` / `ProductImage` primitives (FIX-33
- * item 5). `PriceBlock` requires a `label: string` input with no
- * value fixed anywhere in the specification, and its skeleton/empty
- * states use different class names and test ids from the ones this
- * card and its existing spec assertions already rely on
- * (`.featured__skeleton--price`, `data-testid="price-skeleton"`).
- * Swapping it in was attempted and measured; adopting it would mean
- * inventing the label text (R25) and rewriting the price-state
- * assertions in the same commit as the rest of this rebuild, which
- * this task defers rather than doing under scope pressure. The
- * component keeps the same data contract so a future task can make
- * the swap deliberately.
+ * The home page renders its own price block rather than the shared
+ * `PriceBlock` primitive (FIX-33 item 5). `PriceBlock` requires a
+ * `label: string` input with no value fixed anywhere in the
+ * specification, and its skeleton/empty states use different class
+ * names and test ids from the ones this card and its existing spec
+ * assertions already rely on (`.featured__skeleton--price`,
+ * `data-testid="price-skeleton"`). Swapping it in was attempted and
+ * measured; adopting it would mean inventing the label text (R25)
+ * and rewriting the price-state assertions in the same commit as
+ * the rest of this rebuild, which this task defers rather than
+ * doing under scope pressure. The component keeps the same data
+ * contract so a future task can make the swap deliberately. The
+ * images themselves render through the shared `ProductImage`
+ * primitive (`MIM-210`), with the first card's photo eager-loaded
+ * (`loading="eager"`) and the rest lazy.
  */
 @Component({
   selector: 'app-featured-products',
