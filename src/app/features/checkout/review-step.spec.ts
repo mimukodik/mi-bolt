@@ -463,7 +463,7 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     const text = lines[0].textContent;
     expect(text).toContain('Motorola Edge 50 Fusion');
     expect(text).toContain('Zöld · 256 GB');
-    expect(text).toContain('1');
+    expect(text).toContain('1 ×');
     expect(text).toContain(PriceBlock.formatHuf(89990));
   });
 
@@ -580,6 +580,7 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
       'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.',
     );
 
+    TestBed.resetTestingModule();
     const withIntent = createFixture({
       draft: CARD_DRAFT_COMPLETE,
       paymentIntent: SUCCEEDED_INTENT,
