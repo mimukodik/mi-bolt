@@ -42,16 +42,28 @@ describe('resolveAssetUrl', () => {
     expect(resolveAssetUrl(path, base)).toBe(expected);
   });
 
+  // The contract lets the server send an absolute content-delivery URL
+  // (`docs/api/openapi.yaml:1126`); the client passes it through and the
+  // parser normalises a traversal segment in the same call.
+  it.each([
+    ['https://cdn.example/products/a.webp', 'https://cdn.example/products/a.webp'],
+    ['http://cdn.example/products/a.webp', 'http://cdn.example/products/a.webp'],
+    ['https://cdn.example/products/../a.webp', 'https://cdn.example/a.webp'],
+  ])('passes %s through unchanged', (path, expected) => {
+    expect(resolveAssetUrl(path, 'https://example.test/')).toBe(expected);
+  });
+
   it.each([
     ['/assets/../../etc/passwd'],
     ['/assets/%2e%2e/%2e%2e/etc/passwd'],
     ['//evil.example/assets/x.webp'],
-    ['https://evil.example/assets/x.webp'],
     ['javascript:alert(1)'],
     ['data:image/png;base64,iVBORw0KGgo='],
     ['assets/products/x.webp'],
     ['/assets/products/x%2Ewebp'],
     [''],
+    ['https://'],
+    ['ftp://cdn.example/a.webp'],
   ])('rejects %s as AssetUrlError', (path) => {
     expect(() => resolveAssetUrl(path, 'https://example.test/mi-bolt/')).toThrow(AssetUrlError);
   });

@@ -1,27 +1,33 @@
 /**
- * Resolve a contract image URL against the deployment's base URI.
+ * Resolve a contract image URL.
  *
  * `docs/api/openapi.yaml:1126` fixes what arrives here: `Image.src` is a
  * ready-to-use URL the client puts into the markup unchanged and never
- * prefixes or rewrites, and the server decides its shape — the catalogue
- * serves `/api/v1/media/<imageId>`, the bundled device art
- * `/assets/products/<file>`. Any root-relative path is therefore valid
- * input, not only the `/assets/` one.
+ * prefixes or rewrites, and the server decides its shape — a
+ * root-relative path resolved under the deployment base, or an
+ * absolute `http(s)` URL handed in by a content delivery network.
  *
- * The boundary `docs/spec/architecture.md` §18 asks for is kept, minus
- * the `/assets/` prefix that section still names: this is the single
- * place an `<img src>` value is produced, and it accepts only a
- * normalised root-relative path resolved under the deployment's own
- * base. An absolute URL, a protocol-relative `//host/…`, a
- * `javascript:`/`data:` URL, a percent-encoded path, a `.` or `..`
- * segment and anything that escapes the base are all rejected, so no
+ * This is the single place an `<img src>` value is produced. The two
+ * contract shapes are accepted as the server sent them, and every
+ * other scheme, a protocol-relative `//host/…`, a relative path, an
+ * encoded path or a path with a `.` / `..` segment is refused, so no
  * untrusted remote URL can reach an `<img src>` through it.
  */
 export class AssetUrlError extends Error {}
 
 export function resolveAssetUrl(path: string, documentBaseUri: string): string {
-  // A single leading slash and nothing else: this rejects an absolute
-  // URL, a protocol-relative `//host/…`, a `javascript:` or `data:` URL
+  if (path.startsWith('https://') || path.startsWith('http://')) {
+    let absolute: URL;
+    try {
+      absolute = new URL(path);
+    } catch {
+      throw new AssetUrlError(`asset URL is not a valid absolute URL: ${path}`);
+    }
+    return absolute.href;
+  }
+
+  // A single leading slash and nothing else: this rejects a
+  // protocol-relative `//host/…`, a `javascript:` or `data:` URL
   // and a relative path in one condition.
   if (!path.startsWith('/') || path.startsWith('//')) {
     throw new AssetUrlError(`asset path must be a root-relative path: ${path}`);

@@ -209,6 +209,30 @@ describe('ProductImage primitive', () => {
     );
   });
 
+  it('renders the photo for an absolute https src', () => {
+    const { fixture, host } = setup();
+    host.image.set({
+      src: 'https://cdn.example/products/a.webp',
+      alt: 'Demo telefon fotó',
+      width: 800,
+      height: 600,
+    });
+    fixture.detectChanges();
+    expect(getNativeElement(fixture).querySelector('[data-testid="image-fallback"]')).toBeNull();
+    const photo = getNativeElement(fixture).querySelector<HTMLImageElement>(
+      '[data-testid="image-photo"]',
+    );
+    expect(photo?.getAttribute('src')).toBe('https://cdn.example/products/a.webp');
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('data-status')).toBe('loading');
+    if (!photo) {
+      throw new Error('Expected image photo');
+    }
+    photo.dispatchEvent(new Event('load'));
+    fixture.detectChanges();
+    expect(root?.getAttribute('data-status')).toBe('loaded');
+  });
+
   it('lays the skeleton over the photo until the image loads (MIM-210)', () => {
     const { fixture } = setup();
     const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
@@ -320,7 +344,7 @@ describe('ProductImage primitive', () => {
     fixture.detectChanges();
 
     host.image.set({
-      src: 'https://evil.example/x.webp',
+      src: '//evil.example/x.webp',
       alt: 'Elutasított kép',
       width: 800,
       height: 600,
@@ -350,7 +374,7 @@ describe('ProductImage primitive', () => {
   it('renders the fallback, not a broken <img>, when the wire src is rejected (FIX-49)', () => {
     const { fixture, host } = setup();
     host.image.set({
-      src: 'https://evil.example/x.webp',
+      src: '//evil.example/x.webp',
       alt: 'Demo telefon fotó',
       width: 800,
       height: 600,
