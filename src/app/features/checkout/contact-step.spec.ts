@@ -590,10 +590,10 @@ describe('T20 contact-step shared wiring', () => {
 });
 
 // ---------------------------------------------------------------------------
-// MIM-212 — Server errors surface in the field-level messages and the
+// Server errors surface in the field-level messages and the
 // submit-time summary, with the wire's `pointer` (e.g. `/phone`).
 // ---------------------------------------------------------------------------
-describe('MIM-212 server errors surface under the field and in the summary', () => {
+describe('server errors surface under the field and in the summary', () => {
   it('server errors appear in the summary with their pointer (MIM-212)', async () => {
     const { fixture } = createContactStep(VALID_CONTACT);
 

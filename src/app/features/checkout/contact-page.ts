@@ -1,12 +1,12 @@
 /**
  * The owning container of the contact step: it holds the `Contact` Signal Forms model seeded from the checkout session, the `CONTACT_DRAFT_SAVER` save call and the post-save navigation to the delivery step.
  *
- * MIM-212 — when the saver answers 422 with per-field errors the page
+ * When the saver answers 422 with per-field errors the page
  * hands them to `ContactStep` together with the `Contact` values that
  * were saved, so the step can drop a server error the moment the user
  * edits the field it referred to.
  */
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { buildContactForm, normalizeContact } from './contact.schema';
@@ -40,6 +40,7 @@ export class ContactPage {
   private readonly saver = inject(CONTACT_DRAFT_SAVER);
   private readonly router = inject(Router);
   private readonly checkout = inject(CheckoutFacade);
+  private readonly step = viewChild.required(ContactStep);
 
   /**
    * The form starts from the contact section the checkout draft
@@ -80,6 +81,9 @@ export class ContactPage {
             errors: saveResult.fieldErrors,
           });
           this.saveState.set('idle');
+          const step = this.step();
+          step.focusSummary();
+          step.focusFirstInvalidField();
           return;
         }
         this.saveState.set('error');

@@ -10,7 +10,7 @@
  */
 
 import { provideZonelessChangeDetection, signal, type Provider } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
@@ -62,6 +62,12 @@ function createContactPage(saver: ContactDraftSaver, session: CheckoutSession | 
   const fixture = TestBed.createComponent(ContactPage);
   fixture.detectChanges();
   return fixture;
+}
+
+function getContactStep(fixture: ComponentFixture<ContactPage>): ContactStep {
+  const instance: unknown = fixture.debugElement.query(By.directive(ContactStep)).componentInstance;
+  if (!(instance instanceof ContactStep)) throw new Error('Expected ContactStep');
+  return instance;
 }
 
 function fillModel(fixture: ReturnType<typeof createContactPage>): void {
@@ -199,7 +205,7 @@ describe('ContactPage owns the save call and post-save navigation', () => {
   });
 
   // -------------------------------------------------------------------------
-  // MIM-212 — A 422 with `fieldErrors` marks the field(s) the wire named,
+  // A 422 with `fieldErrors` marks the field(s) the wire named,
   // keeps `saveState` idle (no banner), and does not navigate. Editing the
   // named field clears the server error.
   // -------------------------------------------------------------------------
@@ -224,14 +230,10 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     const navigateSpy = vi.spyOn(router, 'navigate');
 
     fillModel(fixture);
-    // In the real flow the user presses "Tovább" before the 422 arrives,
-    // so the rendered step's `submitted()` is already true and the
-    // FormFieldMessage knows to surface the error.
-    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
-      .componentInstance as ContactStep;
-    stepInstance.submitted.set(true);
+    const stepInstance = getContactStep(fixture);
 
-    await fixture.componentInstance.onContinue();
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.saveState()).toBe('idle');
@@ -243,6 +245,37 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     expect(message).not.toBeNull();
     expect(message?.textContent).toContain('Adj meg egy érvényes e-mail címet.');
     expect(root.querySelector('[data-testid="contact-save-error"]')).toBeNull();
+  });
+
+  it('a 422 with field errors moves focus to the first field it names (MIM-212)', async () => {
+    const saver: ContactDraftSaver = () =>
+      Promise.resolve({
+        ok: false,
+        message: 'x',
+        fieldErrors: {
+          email: [
+            {
+              code: 'EMAIL_FORMAT',
+              message: 'Adj meg egy érvényes e-mail címet.',
+              pointer: '/email',
+            },
+          ],
+        },
+      });
+    const fixture = createContactPage(saver);
+
+    fillModel(fixture);
+    const stepInstance = getContactStep(fixture);
+
+    document.body.focus();
+    expect(document.activeElement).toBe(document.body);
+
+    await stepInstance.onSubmit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    expect(document.activeElement?.id).toBe('contact-email-input');
   });
 
   it('editing the field clears its server error (MIM-212)', async () => {
@@ -263,10 +296,9 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     const fixture = createContactPage(saver);
 
     fillModel(fixture);
-    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
-      .componentInstance as ContactStep;
-    stepInstance.submitted.set(true);
-    await fixture.componentInstance.onContinue();
+    const stepInstance = getContactStep(fixture);
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
@@ -311,10 +343,9 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     const navigateSpy = vi.spyOn(router, 'navigate');
 
     fillModel(fixture);
-    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
-      .componentInstance as ContactStep;
-    stepInstance.submitted.set(true);
-    await fixture.componentInstance.onContinue();
+    const stepInstance = getContactStep(fixture);
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.saveState()).toBe('idle');
@@ -353,10 +384,9 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     const fixture = createContactPage(saver);
 
     fillModel(fixture);
-    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
-      .componentInstance as ContactStep;
-    stepInstance.submitted.set(true);
-    await fixture.componentInstance.onContinue();
+    const stepInstance = getContactStep(fixture);
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
@@ -390,10 +420,9 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     const fixture = createContactPage(saver);
 
     fillModel(fixture);
-    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
-      .componentInstance as ContactStep;
-    stepInstance.submitted.set(true);
-    await fixture.componentInstance.onContinue();
+    const stepInstance = getContactStep(fixture);
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     const root = getRootElement(fixture);

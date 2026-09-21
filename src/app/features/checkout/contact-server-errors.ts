@@ -1,5 +1,5 @@
 /**
- * MIM-212 — `ContactServerErrors` and `toContactFieldErrors`.
+ * `ContactServerErrors` and `toContactFieldErrors`.
  *
  * `PATCH /checkout` answers 422 with `fieldErrors` (each `{ path,
  * code, params? }`) on the contact payload, e.g.

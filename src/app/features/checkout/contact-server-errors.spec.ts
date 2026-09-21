@@ -1,5 +1,5 @@
 /**
- * MIM-212 — `toContactFieldErrors` mapping the wire's `FieldError[]`
+ * `toContactFieldErrors` mapping the wire's `FieldError[]`
  * (the ones `PATCH /checkout` answers 422 with) onto the local
  * `ContactFieldKey` map `ContactStep` reads. The mapper strips the
  * `/contact` JSONpointer prefix, ignores errors from outside the
@@ -14,7 +14,7 @@ import { toContactFieldErrors } from './contact-server-errors';
 
 import type { FieldError as WireFieldError } from '../../api/generated/models/field-error';
 
-describe('MIM-212 toContactFieldErrors — wire → local field map', () => {
+describe('toContactFieldErrors — wire → local field map', () => {
   it('maps a /contact/email wire error onto email with the schema email message', () => {
     const errors: WireFieldError[] = [{ path: '/contact/email', code: 'EMAIL_FORMAT' }];
     expect(toContactFieldErrors(errors)).toEqual({

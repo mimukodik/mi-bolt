@@ -57,7 +57,7 @@ import { toContactFieldErrors } from './contact-server-errors';
  * ignores the message, so a leaked detail is harmless — but no
  * component should render it. A 422 carries per-field errors
  * (`CheckoutError.fieldErrors`) the page maps onto the contact
- * form fields (MIM-212).
+ * form fields.
  */
 const contactDraftSaverFactory =
   (facade: CheckoutFacade): ContactDraftSaver =>
