@@ -57,6 +57,7 @@ describe('OrderSummary', () => {
     priceRoots.forEach((priceRoot) => {
       expect(priceRoot.getAttribute('data-layout')).toBe('stack');
       expect(priceRoot.hasAttribute('data-inverse')).toBe(false);
+      expect(priceRoot.getAttribute('data-size')).toBe('lg');
     });
   });
 

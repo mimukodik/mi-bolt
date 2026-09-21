@@ -10,10 +10,10 @@
     <div class="row row--subtotal" data-testid="order-summary-subtotal">
       <app-price-block
         label="Részösszeg"
-        size="md"
         [inverse]="inverse()"
         [layout]="priceBlockLayout()"
         [money]="subtotal()"
+        [size]="priceBlockSize()"
         [status]="subtotalStatus()"
       />
     </div>
@@ -22,11 +22,11 @@
       @if (shipping(); as fee) {
         <app-price-block
           label="Szállítási díj"
-          size="md"
           status="success"
           [inverse]="inverse()"
           [layout]="priceBlockLayout()"
           [money]="fee"
+          [size]="priceBlockSize()"
         />
       } @else {
         <span class="label">Szállítás</span>
@@ -40,11 +40,11 @@
       <div class="row" data-testid="order-summary-payment-fee">
         <app-price-block
           label="Fizetési díj"
-          size="md"
           status="success"
           [inverse]="inverse()"
           [layout]="priceBlockLayout()"
           [money]="fee"
+          [size]="priceBlockSize()"
         />
       </div>
     }

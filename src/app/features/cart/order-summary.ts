@@ -62,6 +62,10 @@ export class OrderSummary {
    *  right rail's shape. */
   readonly priceBlockLayout = computed<'stack' | 'row'>(() => (this.inverse() ? 'row' : 'stack'));
 
+  /** Inverse ships the smaller 20 px amount; the right rail on the
+   *  cart page uses the 28 px product-page size. */
+  readonly priceBlockSize = computed<'md' | 'lg'>(() => (this.inverse() ? 'md' : 'lg'));
+
   /**
    * Final total. When shipping is not yet known, the total is a
    * zero Money so `PriceBlock` does NOT invent an amount (it shows
