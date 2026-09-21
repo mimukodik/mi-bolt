@@ -747,22 +747,25 @@ describe('T13-AC02 filter, sort, page-size and applied chips wired to the URL', 
   it('renders one card per storage size of the same product without a duplicate track key (MIM-210)', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const harness = await setupHarness();
-    const items = [
-      buildItem('p-03', 'MiBolt Demo', 'Demo Pro 5G', 339990, true, 128),
-      buildItem('p-03', 'MiBolt Demo', 'Demo Pro 5G', 379990, true, 256),
-    ];
-    harness.respond(successPage(items, 2));
-    await harness.waitForStatus('success');
-    harness.fixture.componentInstance.onPageChanged(2);
-    await harness.tick();
-    // Duplicate keys are recorded only when a rendered list is reconciled against the next one.
-    harness.respond(successPage(items, 2));
-    await harness.waitForStatus('success');
-    const root = getRootElement(harness.fixture);
-    expect(root.querySelectorAll('app-product-card').length).toBe(2);
-    expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
-    warn.mockRestore();
-    harness.cleanup();
+    try {
+      const items = [
+        buildItem('p-03', 'MiBolt Demo', 'Demo Pro 5G', 339990, true, 128),
+        buildItem('p-03', 'MiBolt Demo', 'Demo Pro 5G', 379990, true, 256),
+      ];
+      harness.respond(successPage(items, 2));
+      await harness.waitForStatus('success');
+      harness.fixture.componentInstance.onPageChanged(2);
+      await harness.tick();
+      // Duplicate keys are recorded only when a rendered list is reconciled against the next one.
+      harness.respond(successPage(items, 2));
+      await harness.waitForStatus('success');
+      const root = getRootElement(harness.fixture);
+      expect(root.querySelectorAll('app-product-card').length).toBe(2);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
+    } finally {
+      warn.mockRestore();
+      harness.cleanup();
+    }
   });
 });
 
