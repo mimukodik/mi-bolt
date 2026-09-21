@@ -278,6 +278,47 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     expect(document.activeElement?.id).toBe('contact-email-input');
   });
 
+  it('a corrected retry after a 422 clears the server errors and navigates (MIM-212)', async () => {
+    let calls = 0;
+    const saver: ContactDraftSaver = () => {
+      calls += 1;
+      if (calls === 1) {
+        return Promise.resolve({
+          ok: false,
+          message: 'x',
+          fieldErrors: {
+            email: [
+              {
+                code: 'EMAIL_FORMAT',
+                message: 'Adj meg egy érvényes e-mail címet.',
+                pointer: '/email',
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ ok: true });
+    };
+    const fixture = createContactPage(saver);
+    fillModel(fixture);
+    const stepInstance = getContactStep(fixture);
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.serverErrors()).not.toBeNull();
+
+    fixture.componentInstance.contactFields.email().value.set('teszt2@example.test');
+    fixture.detectChanges();
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
+
+    expect(calls).toBe(2);
+    expect(fixture.componentInstance.serverErrors()).toBeNull();
+    expect(navigate).toHaveBeenCalledWith(['/penztar/szallitas']);
+  });
+
   it('editing the field clears its server error (MIM-212)', async () => {
     const saver: ContactDraftSaver = () =>
       Promise.resolve({
@@ -432,5 +473,32 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     fixture.detectChanges();
 
     expect(root.querySelector('#contact-fullname-message')).toBeNull();
+  });
+
+  it('a seeded form with its fields cleared is blocked by client validation and never saved (MIM-212)', async () => {
+    let calls = 0;
+    const saver: ContactDraftSaver = () => {
+      calls += 1;
+      return Promise.resolve({ ok: true });
+    };
+    const fixture = createContactPage(saver, SESSION_WITH_CONTACT);
+    const root = getRootElement(fixture);
+    const stepInstance = getContactStep(fixture);
+
+    for (const id of ['contact-fullname-input', 'contact-email-input', 'contact-phone-input']) {
+      const input = root.querySelector<HTMLInputElement>(`#${id}`);
+      expect(input).not.toBeNull();
+      if (input === null) return;
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    fixture.detectChanges();
+
+    await stepInstance.onSubmit();
+    await fixture.whenStable();
+
+    expect(calls).toBe(0);
+    expect(root.querySelector('[data-testid="contact-summary"]')).not.toBeNull();
+    expect(stepInstance.invalidFields().length).toBe(3);
   });
 });
