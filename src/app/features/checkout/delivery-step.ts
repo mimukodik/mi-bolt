@@ -121,7 +121,6 @@ export class DeliveryStep {
   });
 
   readonly addressSubmitted = signal<boolean>(false);
-  readonly addressSnapshot = signal<Address | null>(null);
 
   /** Current payment method — no default (screens.md:79: "Defaults must
    *  not represent a paid addon"); seeded from the field tree the same way. */
