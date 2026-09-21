@@ -79,4 +79,11 @@ module.exports = defineConfig([
     },
   },
   eslintConfigPrettier,
+  {
+    // ng-openapi-gen writes an `/* eslint-disable */` header into every
+    // generated file; the header stays as generated, so its report as an
+    // unused directive is off for this folder only.
+    files: ['src/app/api/generated/**/*.ts'],
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+  },
 ]);
