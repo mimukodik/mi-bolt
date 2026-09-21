@@ -1,26 +1,33 @@
 <aside
-  class="summary flex flex-col gap-4 p-5 rounded"
   aria-label="Rendelés összesítése"
+  class="summary flex flex-col gap-4 p-5 rounded"
   data-testid="order-summary"
+  [attr.data-inverse]="inverse() ? '' : null"
 >
   <h2 class="title m-0 font-bold">Rendelés összesítése</h2>
 
   <div class="rows flex flex-col gap-3">
-    <div class="row row--subtotal flex flex-col gap-1" data-testid="order-summary-subtotal">
+    <div class="row row--subtotal" data-testid="order-summary-subtotal">
       <app-price-block
+        label="Részösszeg"
+        [inverse]="inverse()"
+        [layout]="priceBlockLayout()"
         [money]="subtotal()"
-        [label]="'Részösszeg'"
+        [size]="priceBlockSize()"
         [status]="subtotalStatus()"
-      ></app-price-block>
+      />
     </div>
 
-    <div class="row row--shipping flex flex-col gap-1" data-testid="order-summary-shipping">
+    <div class="row row--shipping" data-testid="order-summary-shipping">
       @if (shipping(); as fee) {
         <app-price-block
+          label="Szállítási díj"
+          status="success"
+          [inverse]="inverse()"
+          [layout]="priceBlockLayout()"
           [money]="fee"
-          [label]="'Szállítási díj'"
-          [status]="'success'"
-        ></app-price-block>
+          [size]="priceBlockSize()"
+        />
       } @else {
         <span class="label">Szállítás</span>
         <span class="placeholder" data-testid="shipping-placeholder">
@@ -30,25 +37,33 @@
     </div>
 
     @if (paymentFee(); as fee) {
-      <div class="row flex flex-col gap-0" data-testid="order-summary-payment-fee">
+      <div class="row" data-testid="order-summary-payment-fee">
         <app-price-block
+          label="Fizetési díj"
+          status="success"
+          [inverse]="inverse()"
+          [layout]="priceBlockLayout()"
           [money]="fee"
-          [label]="'Fizetési díj'"
-          [status]="'success'"
-        ></app-price-block>
+          [size]="priceBlockSize()"
+        />
       </div>
     }
 
-    <div class="row row--total flex flex-col gap-0" data-testid="order-summary-total">
+    <div class="row row--total" data-testid="order-summary-total">
       <app-price-block
+        label="Végösszeg"
+        size="lg"
+        [inverse]="inverse()"
+        [layout]="priceBlockLayout()"
         [money]="total()"
-        [label]="'Végösszeg'"
         [status]="totalStatus()"
-      ></app-price-block>
+      />
     </div>
   </div>
 
   @if (footnote()) {
     <p class="footnote m-0" data-testid="order-summary-footnote">{{ footnote() }}</p>
   }
+
+  <ng-content />
 </aside>

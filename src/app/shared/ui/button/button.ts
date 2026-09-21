@@ -33,6 +33,8 @@ export class Button {
   readonly disabled = input(false);
   readonly loading = input(false);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
+  /** Full-width button for a card's action column. */
+  readonly block = input(false);
 
   readonly pressed = output<MouseEvent>();
 

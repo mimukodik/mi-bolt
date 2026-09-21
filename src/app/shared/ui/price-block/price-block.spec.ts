@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { PriceBlock } from './price-block';
 import type { AsyncStatus } from '../../types/async-status';
@@ -8,12 +9,13 @@ import type { Money } from './price-block';
   imports: [PriceBlock],
   template: `
     <app-price-block
-      [money]="money()"
-      [label]="label()"
-      [status]="status()"
-      [size]="size()"
       [inverse]="inverse()"
-    ></app-price-block>
+      [label]="label()"
+      [layout]="layout()"
+      [money]="money()"
+      [size]="size()"
+      [status]="status()"
+    />
   `,
 })
 class HostComponent {
@@ -21,6 +23,7 @@ class HostComponent {
   readonly label = signal('Készülékár, egyszeri díj');
   readonly status = signal<AsyncStatus>('success');
   readonly size = signal<'md' | 'lg'>('lg');
+  readonly layout = signal<'stack' | 'row'>('stack');
   readonly inverse = signal(false);
 }
 
@@ -190,5 +193,19 @@ describe('PriceBlock primitive', () => {
     expect(root?.hasAttribute('data-inverse')).toBe(true);
     const dash = root?.querySelector('[data-testid="price-error"]');
     expect(dash?.classList.contains('amount--error')).toBe(true);
+  });
+
+  it('renders data-layout stack on the root by default (MIM-211)', () => {
+    const { fixture } = setup();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root?.getAttribute('data-layout')).toBe('stack');
+  });
+
+  it('renders data-layout row on the root when asked (MIM-211)', () => {
+    const { fixture, host } = setup();
+    host.layout.set('row');
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector('.root');
+    expect(root?.getAttribute('data-layout')).toBe('row');
   });
 });
