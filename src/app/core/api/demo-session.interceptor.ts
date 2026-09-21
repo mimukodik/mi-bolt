@@ -15,15 +15,14 @@
 // `Idempotency-Key` is also request-specific and is left to callers because
 // retry-safety requires the same caller to reuse the same key for retries.
 
-import {
-  HttpContext,
-  HttpContextToken,
+import type {
   HttpEvent,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpContext, HttpContextToken } from '@angular/common/http';
+import type { Observable } from 'rxjs';
 
 const DEMO_SESSION_PATTERN = /^[a-zA-Z0-9_-]{8,80}$/;
 
