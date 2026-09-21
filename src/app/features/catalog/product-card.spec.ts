@@ -84,6 +84,12 @@ function queryImage(parent: Element, selector: string): HTMLImageElement {
   return el;
 }
 
+function queryAllElements(parent: Element, selector: string): readonly HTMLElement[] {
+  return Array.from(parent.querySelectorAll(selector)).filter(
+    (el): el is HTMLElement => el instanceof HTMLElement,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Fixture factory
 // ---------------------------------------------------------------------------
@@ -383,14 +389,12 @@ describe('MIM-210 colour swatches', () => {
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const swatches = root.querySelectorAll('[data-testid="product-card-swatch"]');
+    const swatches = queryAllElements(root, '[data-testid="product-card-swatch"]');
     expect(swatches.length).toBe(3);
-    const first = swatches[0] as HTMLElement;
+    const [first, second, third] = swatches;
     expect(first.getAttribute('aria-pressed')).toBe('true');
     expect(first.getAttribute('aria-label')).toBe('Grafit');
     expect(first.style.backgroundColor).not.toBe('');
-    const second = swatches[1] as HTMLElement;
-    const third = swatches[2] as HTMLElement;
     expect(second.getAttribute('aria-pressed')).toBe('false');
     expect(third.getAttribute('aria-pressed')).toBe('false');
   });
@@ -417,8 +421,9 @@ describe('MIM-210 colour swatches', () => {
     const root = getRootElement(fixture);
     const photo = queryImage(root, '[data-testid="image-photo"]');
     const srcBefore = photo.getAttribute('src');
-    const swatches = root.querySelectorAll('[data-testid="product-card-swatch"]');
-    (swatches[1] as HTMLElement).click();
+    const swatches = queryAllElements(root, '[data-testid="product-card-swatch"]');
+    const [, secondSwatch] = swatches;
+    secondSwatch.click();
     fixture.detectChanges();
     const variantColor = queryElement(root, '.variant__color');
     expect(variantColor.textContent.trim()).toBe('Ezüst');
@@ -431,8 +436,12 @@ describe('MIM-210 colour swatches', () => {
     expect(media.getAttribute('aria-label')).toContain('Ezüst');
     const priceRoot = queryElement(root, '[data-testid="price-amount"]');
     expect(priceRoot.textContent.replace(/\s+/g, ' ').trim()).toContain('320 000');
-    expect((swatches[1] as HTMLElement).getAttribute('aria-pressed')).toBe('true');
-    expect((swatches[0] as HTMLElement).getAttribute('aria-pressed')).toBe('false');
+    const [firstSwatchAfter, secondSwatchAfter] = queryAllElements(
+      getRootElement(fixture),
+      '[data-testid="product-card-swatch"]',
+    );
+    expect(secondSwatchAfter.getAttribute('aria-pressed')).toBe('true');
+    expect(firstSwatchAfter.getAttribute('aria-pressed')).toBe('false');
     expect(photo.getAttribute('src')).toBe(srcBefore);
   });
 
@@ -450,8 +459,9 @@ describe('MIM-210 colour swatches', () => {
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const swatches = root.querySelectorAll('[data-testid="product-card-swatch"]');
-    (swatches[1] as HTMLElement).click();
+    const swatches = queryAllElements(root, '[data-testid="product-card-swatch"]');
+    const [, secondSwatch] = swatches;
+    secondSwatch.click();
     fixture.detectChanges();
     host.product.set(
       makeItem({
@@ -464,8 +474,8 @@ describe('MIM-210 colour swatches', () => {
     );
     fixture.detectChanges();
     const after = getRootElement(fixture);
-    const updated = after.querySelectorAll('[data-testid="product-card-swatch"]');
-    expect((updated[0] as HTMLElement).getAttribute('aria-pressed')).toBe('true');
+    const updated = queryAllElements(after, '[data-testid="product-card-swatch"]');
+    expect(updated[0].getAttribute('aria-pressed')).toBe('true');
     expect(queryElement(after, '.variant__color').textContent.trim()).toBe('Kék');
   });
 });
