@@ -72,13 +72,6 @@ export class OrderReceiptComponent {
     () => DELIVERY_LABELS[this.receipt().delivery.optionId],
   );
 
-  /** The name the invoice is made out to. Required for every order,
-   *  pickup included (`BillingDetails`). */
-  readonly billingName = computed<string>(() => this.receipt().billing.name);
-
-  /** The invoice address. */
-  readonly billingAddress = computed<Address>(() => this.receipt().billing.address);
-
   /** The delivery address, or null for pickup: the pickup arm of
    *  `DeliverySelection` has no address member at all, so narrowing on
    *  `optionId` is what reaches `address` without a cast. */
