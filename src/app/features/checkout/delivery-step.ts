@@ -61,7 +61,7 @@
  *               default.
  */
 
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
 
 import { AddressForm } from './address-form';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
@@ -113,15 +113,22 @@ export class DeliveryStep {
   readonly continueRequested = output();
   readonly retryOptions = output();
 
-  /** Selected delivery option id (null until the user picks one). */
-  readonly selectedOptionId = signal<DeliveryOptionId | null>(null);
+  /** Selected delivery option id; seeded from the field tree so a
+   *  returning visitor sees the saved choice, then owned locally. */
+  readonly selectedOptionId = linkedSignal<DeliveryOptionId | null>(() => {
+    const saved = this.fields().deliveryOptionId().value();
+    return saved === '' ? null : saved;
+  });
 
   readonly addressSubmitted = signal<boolean>(false);
   readonly addressSnapshot = signal<Address | null>(null);
 
   /** Current payment method — no default (screens.md:79: "Defaults must
-   *  not represent a paid addon"; a 2.0.0 payment method can carry a fee). */
-  readonly paymentMethod = signal<PaymentMethodId | null>(null);
+   *  not represent a paid addon"); seeded from the field tree the same way. */
+  readonly paymentMethod = linkedSignal<PaymentMethodId | null>(() => {
+    const saved = this.fields().paymentMethod().value();
+    return saved === '' ? null : saved;
+  });
 
   private readonly billingNameTouchedInternal = signal<boolean>(false);
 
@@ -347,10 +354,9 @@ export class DeliveryStep {
     // Mirror the selection into the shared `fields()` tree the container
     // also holds so the two facade saves see the user's final choice.
     // The address / billing sub-fields are already written there
-    // directly by the setters above; only the option id and payment
-    // method need copying across, since those two stay local signals
-    // for the reasons `onOptionSelected` / `onPaymentChanged` are kept
-    // "as they are".
+    // directly by the setters above; the option id and payment method
+    // are seeded from the tree and owned locally from then on, so only
+    // they need copying back here.
     const selection = this.snapshotChange();
     this.fields().deliveryOptionId().value.set(selection.delivery.optionId);
     this.fields().paymentMethod().value.set(selection.paymentMethod);

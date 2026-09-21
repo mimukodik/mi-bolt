@@ -55,8 +55,7 @@ type LoadState =
   styleUrl: './delivery-page.scss',
 })
 export class DeliveryPage {
-  /** Not private: the template binds `[fields]="fields"`. */
-  readonly checkoutFacade = inject(CheckoutFacade);
+  private readonly checkoutFacade = inject(CheckoutFacade);
   private readonly router = inject(Router);
 
   /** The Signal Forms field tree the delivery step binds to. The facade

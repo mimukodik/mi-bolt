@@ -183,6 +183,8 @@
             (line1Change)="setBillingLine1($event)"
             [line2]="billingLine2()"
             (line2Change)="setBillingLine2($event)"
+            pointerBase="/billing/address"
+            [legend]="null"
             data-testid="billing-address-form"
           ></app-address-form>
         }

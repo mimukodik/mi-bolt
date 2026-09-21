@@ -25,12 +25,14 @@
         data-testid="delivery-save-failure-detail"
       ></app-status-message>
     }
-    <app-delivery-step
-      [options]="readyOptions()!"
-      [fields]="fields"
-      [saveState]="saveState()"
-      (continueRequested)="onContinueRequested()"
-      (retryOptions)="onRetryOptions()"
-    ></app-delivery-step>
+    @if (readyOptions(); as options) {
+      <app-delivery-step
+        [options]="options"
+        [fields]="fields"
+        [saveState]="saveState()"
+        (continueRequested)="onContinueRequested()"
+        (retryOptions)="onRetryOptions()"
+      ></app-delivery-step>
+    }
   }
 }
