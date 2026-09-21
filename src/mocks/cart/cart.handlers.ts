@@ -38,7 +38,7 @@ import { type Product, Repository } from '../repository';
 
 import { CartStore } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
-import { PROBLEM_CONTENT_TYPE, invalidRequest } from '../problem-response';
+import { invalidRequest, problemResponse } from '../problem-response';
 
 /** Cross-handler reference to the cart store; consumed by the checkout and order mocks. */
 export const cartStore: { current: CartStore | null } = { current: null };
@@ -190,10 +190,7 @@ function outcomeResponse(outcome: ReturnType<CartStore['get']>): HttpResponse<De
       headers: { ETag: `"${String(outcome.cart.version)}"` },
     });
   }
-  return HttpResponse.json(outcome.problem, {
-    status: outcome.problem.status,
-    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
-  });
+  return problemResponse(outcome);
 }
 
 async function readJsonBody(request: Request): Promise<unknown> {

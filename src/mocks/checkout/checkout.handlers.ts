@@ -27,7 +27,7 @@ import {
 } from '../create-handlers';
 import { cartStore } from '../cart/cart.handlers';
 import { IdempotencyStore } from '../idempotency';
-import { PROBLEM_CONTENT_TYPE, invalidRequest } from '../problem-response';
+import { invalidRequest, problemResponse } from '../problem-response';
 
 import { OrderStore } from '../orders/order-store';
 import { CheckoutStore } from './checkout-store';
@@ -76,10 +76,7 @@ function outcomeResponse(
     if (etag !== null) headers['ETag'] = etag;
     return HttpResponse.json(outcome.session, { status: 200, headers });
   }
-  return HttpResponse.json(outcome.problem, {
-    status: outcome.problem.status,
-    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
-  });
+  return problemResponse(outcome);
 }
 
 /** `GET /checkout/options` — no ETag, success or problem. */
@@ -89,10 +86,7 @@ function optionsResponse(
   if (outcome.ok) {
     return HttpResponse.json(outcome.options, { status: 200 });
   }
-  return HttpResponse.json(outcome.problem, {
-    status: outcome.problem.status,
-    headers: { 'content-type': PROBLEM_CONTENT_TYPE },
-  });
+  return problemResponse(outcome);
 }
 
 /**
