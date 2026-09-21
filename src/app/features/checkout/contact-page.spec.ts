@@ -279,4 +279,129 @@ describe('ContactPage owns the save call and post-save navigation', () => {
 
     expect(root.querySelector('#contact-email-message')).toBeNull();
   });
+
+  it('a 422 with errors on multiple fields marks them all (MIM-212)', async () => {
+    // The wire returns one server error per invalid field. All of them
+    // must surface, not just the first, so the user fixes the form in
+    // one submit cycle rather than discovering further errors on the
+    // next attempt.
+    const saver: ContactDraftSaver = () =>
+      Promise.resolve({
+        ok: false,
+        message: 'x',
+        fieldErrors: {
+          email: [
+            {
+              code: 'EMAIL_FORMAT',
+              message: 'Adj meg egy érvényes e-mail címet.',
+              pointer: '/email',
+            },
+          ],
+          phone: [
+            {
+              code: 'PHONE_FORMAT',
+              message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+              pointer: '/phone',
+            },
+          ],
+        },
+      });
+    const fixture = createContactPage(saver);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+
+    fillModel(fixture);
+    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
+      .componentInstance as ContactStep;
+    stepInstance.submitted.set(true);
+    await fixture.componentInstance.onContinue();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.saveState()).toBe('idle');
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+    const root = getRootElement(fixture);
+    expect(root.querySelector('#contact-email-message')).not.toBeNull();
+    expect(root.querySelector('#contact-phone-message')).not.toBeNull();
+  });
+
+  it('editing one of multiple server-errored fields drops only that one (MIM-212)', async () => {
+    // With errors on email AND phone, editing the email must clear the
+    // email message and leave the phone message in place — the saved
+    // phone value still matches what the wire rejected.
+    const saver: ContactDraftSaver = () =>
+      Promise.resolve({
+        ok: false,
+        message: 'x',
+        fieldErrors: {
+          email: [
+            {
+              code: 'EMAIL_FORMAT',
+              message: 'Adj meg egy érvényes e-mail címet.',
+              pointer: '/email',
+            },
+          ],
+          phone: [
+            {
+              code: 'PHONE_FORMAT',
+              message: 'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+              pointer: '/phone',
+            },
+          ],
+        },
+      });
+    const fixture = createContactPage(saver);
+
+    fillModel(fixture);
+    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
+      .componentInstance as ContactStep;
+    stepInstance.submitted.set(true);
+    await fixture.componentInstance.onContinue();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(root.querySelector('#contact-email-message')).not.toBeNull();
+    expect(root.querySelector('#contact-phone-message')).not.toBeNull();
+
+    fixture.componentInstance.contactFields.email().value.set('masik@example.test');
+    fixture.detectChanges();
+
+    expect(root.querySelector('#contact-email-message')).toBeNull();
+    expect(root.querySelector('#contact-phone-message')).not.toBeNull();
+  });
+
+  it('editing fullName clears its server error (MIM-212)', async () => {
+    // The per-field edit-clears behaviour holds for fullName too;
+    // email-only coverage would leave a regression hiding here.
+    const saver: ContactDraftSaver = () =>
+      Promise.resolve({
+        ok: false,
+        message: 'x',
+        fieldErrors: {
+          fullName: [
+            {
+              code: 'FULL_NAME_LENGTH',
+              message: 'Add meg a teljes neved (2–100 karakter).',
+              pointer: '/fullName',
+            },
+          ],
+        },
+      });
+    const fixture = createContactPage(saver);
+
+    fillModel(fixture);
+    const stepInstance = fixture.debugElement.query(By.directive(ContactStep))
+      .componentInstance as ContactStep;
+    stepInstance.submitted.set(true);
+    await fixture.componentInstance.onContinue();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(root.querySelector('#contact-fullname-message')).not.toBeNull();
+
+    fixture.componentInstance.contactFields.fullName().value.set('Másik Név');
+    fixture.detectChanges();
+
+    expect(root.querySelector('#contact-fullname-message')).toBeNull();
+  });
 });
