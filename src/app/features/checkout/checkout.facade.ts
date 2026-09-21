@@ -399,7 +399,7 @@ export class CheckoutFacade {
 
   /**
    * Reads a payment intent by id. No `If-Match`, no key. Stores the
-   * result on `paymentIntent`. A 404 is returned in the result and
+   * result on `paymentIntent`. A 404 is returned in the result as a
    * `CheckoutError` and is NOT recorded on `error`, so the return
    * page can render its own recovery.
    */

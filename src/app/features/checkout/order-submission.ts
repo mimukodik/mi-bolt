@@ -6,8 +6,7 @@
  * `submitOrder(body)` and map the result. There is no polling loop
  * and no progress stream: the SPA is destroyed by the payment
  * redirect and the outcome is read once on return (fact (d) of the
- * S3 design, `/tmp/s3-c-design.md` §1). `SafeLogger` whitelists the
- * context a log line may carry.
+ * S3 design). `SafeLogger` whitelists the context a log line may carry.
  */
 
 import { Service, computed, inject, signal, type Signal } from '@angular/core';
@@ -120,9 +119,10 @@ const noopLogger: SafeLogger = () => undefined;
 
 // ---------------------------------------------------------------------------
 // OrderSubmission — the orchestration root. Holds the in-flight mutex
-// (a second `submitOrder()` returns the same promise), the safe-logger seam and the read-only signals the page
-// binds. All wire calls go through the facade; this service has no
-// `HttpClient` of its own (design §7.1).
+// (a second `submitOrder()` returns the same promise), the safe-logger
+// seam, and the read-only signals the page binds. All wire calls go
+// through the facade; this service has no `HttpClient` of its own
+// (design §7.1).
 // ---------------------------------------------------------------------------
 
 @Service()

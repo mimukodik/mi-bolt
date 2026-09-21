@@ -16,9 +16,11 @@
  * The guards run as part of route matching so a deep link or hard
  * reload of an unfinished checkout lands the user on the right step
  * with a `navigationReason` query param the page renders as a
- * banner. The cart survives because the `CartFacade` is the source of truth
- * for it, and the checkout draft is the server's session, re-read on
- * every guard run, so a hard reload loses nothing.
+ * banner. The cart survives because the `CartFacade` is the source of
+ * truth for it, and the checkout draft is the server's session, read
+ * from the in-memory signal the guards return against and re-fetched
+ * by the page that mounts after each guard (T19-AC05 guards do not
+ * call the network).
  */
 
 import { inject } from '@angular/core';
