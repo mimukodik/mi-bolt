@@ -1,18 +1,18 @@
 <div class="toolbar">
   <div class="row toolbar__top">
-    <div class="result-count" data-testid="result-count" #resultCount tabindex="-1">
+    <div #resultCount class="result-count" data-testid="result-count" tabindex="-1">
       {{ resultCountLabel() }}
     </div>
     <button
-      type="button"
+      #filterTrigger
       class="trigger"
       data-testid="filter-trigger"
-      #filterTrigger
-      [attr.aria-expanded]="drawerExpanded() ? 'true' : 'false'"
+      type="button"
       [attr.aria-controls]="'filter-drawer'"
+      [attr.aria-expanded]="drawerExpanded() ? 'true' : 'false'"
       (click)="openFilters.emit()"
     >
-      Szűrők{{ appliedCount() > 0 ? ' (' + appliedCount() + ')' : '' }}
+      Szűrők{{ appliedCount() > 0 ? ` (${appliedCount()})` : '' }}
     </button>
   </div>
 
@@ -26,7 +26,7 @@
         (change)="onSortChange($event)"
       >
         @for (mode of sortModes; track mode) {
-          <option [value]="mode" [selected]="mode === sort()">
+          <option [selected]="mode === sort()" [value]="mode">
             {{ sortLabel(mode) }}
           </option>
         }
@@ -37,8 +37,8 @@
       <select
         class="select"
         data-testid="catalog-page-size"
-        [value]="pageSize()"
         [disabled]="status() === 'loading'"
+        [value]="pageSize()"
         (change)="onPageSizeChange($event)"
       >
         <option value="12">12 / oldal</option>
