@@ -175,7 +175,7 @@ export class OrderSubmission {
       return this.inFlightPromise;
     }
     this.inFlightWritable.set(true);
-    const promise = Promise.resolve(this.runSubmit());
+    const promise = this.runSubmit();
     this.inFlightPromise = promise;
     return promise.finally(() => {
       this.inFlightPromise = null;
@@ -188,17 +188,15 @@ export class OrderSubmission {
     // is something to commit, so the incomplete check runs first.
     const session = this.checkout.session();
     if (session === null) {
-      return Promise.resolve(this.setOutcome({ kind: 'unknown', code: 'NO_SESSION' }));
+      return this.setOutcome({ kind: 'unknown', code: 'NO_SESSION' });
     }
     // 2. incomplete draft → navigate to the first missing step.
     if (!session.complete) {
-      return Promise.resolve(
-        this.setOutcome({ kind: 'incomplete', route: firstMissingSessionRoute(session) }),
-      );
+      return this.setOutcome({ kind: 'incomplete', route: firstMissingSessionRoute(session) });
     }
     const options = this.checkout.options();
     if (options === null) {
-      return Promise.resolve(this.setOutcome({ kind: 'unknown', code: 'NO_OPTIONS' }));
+      return this.setOutcome({ kind: 'unknown', code: 'NO_OPTIONS' });
     }
 
     const method = session.payment?.method;
@@ -215,30 +213,26 @@ export class OrderSubmission {
     //    shopper reached submit without redirecting first.
     const intent = this.checkout.paymentIntent();
     if (intent === null) {
-      return Promise.resolve(
-        this.setOutcome({
-          kind: 'payment-required',
-          intentId: null,
-          redirectUrl: null,
-        }),
-      );
+      return this.setOutcome({
+        kind: 'payment-required',
+        intentId: null,
+        redirectUrl: null,
+      });
     }
     // 4. a non-succeeded intent must yield an outcome before submitOrder
     //    is even called — a poll there would contradict the redirect.
     if (intent.status === 'declined') {
-      return Promise.resolve(this.setOutcome({ kind: 'declined', intentId: intent.id }));
+      return this.setOutcome({ kind: 'declined', intentId: intent.id });
     }
     if (intent.status === 'pending') {
-      return Promise.resolve(this.setOutcome({ kind: 'payment-pending', intentId: intent.id }));
+      return this.setOutcome({ kind: 'payment-pending', intentId: intent.id });
     }
     if (intent.status === 'requires_action') {
-      return Promise.resolve(
-        this.setOutcome({
-          kind: 'payment-required',
-          intentId: intent.id,
-          redirectUrl: intent.redirectUrl,
-        }),
-      );
+      return this.setOutcome({
+        kind: 'payment-required',
+        intentId: intent.id,
+        redirectUrl: intent.redirectUrl,
+      });
     }
     return this.commit({
       paymentMethod: 'card',
@@ -252,9 +246,9 @@ export class OrderSubmission {
    *  pre-commit return path in `runSubmit` and `commit` goes through
    *  this so the page's `canRetry` / `canChangeMethod` signals always
    *  reflect the most recent terminal state. */
-  private setOutcome(outcome: SubmitOutcome): SubmitOutcome {
+  private setOutcome(outcome: SubmitOutcome): Promise<SubmitOutcome> {
     this.lastOutcomeWritable.set(outcome);
-    return outcome;
+    return Promise.resolve(outcome);
   }
 
   private async commit(body: OrderRequest): Promise<SubmitOutcome> {
