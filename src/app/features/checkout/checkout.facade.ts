@@ -528,15 +528,19 @@ export class CheckoutFacade {
   }
 
   /**
-   * Ends the checkout session a placed order closed: the draft, the
-   * intent and every stored key go, the receipt stays for the success
-   * page to render (design §3.4). The cart's own post-order reset is
-   * the success page's call, not this one.
+   * Ends the checkout session a placed order closed: the draft and
+   * every stored key go, the receipt stays for the success page to
+   * render (design §3.4). The last-known `paymentIntent` snapshot is
+   * kept on the facade — the success-state of the succeeded intent
+   * is part of the user-visible commit history even though the store
+   * has since deleted the row, so a later read of `paymentIntent()`
+   * still shows `status: 'succeeded'` until the next
+   * `createPaymentIntent` overwrites it. The cart's own post-order
+   * reset is the success page's call, not this one.
    */
   resetAfterOrder(): void {
     checkoutKeys.clearAll();
     this.sessionWritable.set(null);
-    this.paymentIntentWritable.set(null);
     this.clearFailureOverlay();
   }
 
@@ -601,14 +605,17 @@ export class CheckoutFacade {
       // A back-to-back conflict must keep the FIRST failed intent so
       // retry() replays the user's original operation, not the second
       // one. Only the first recordFailure for a fresh conflict surface
-      // gets to overwrite `lastFailedIntent`.
-      if (this.conflictWritable() === null && 'run' in mutation) {
+      // gets to overwrite `lastFailedIntent` and the conflict signal's
+      // visible `intent`.
+      const existingConflict = this.conflictWritable();
+      const firstConflictSurface = existingConflict === null;
+      if (firstConflictSurface && 'run' in mutation) {
         this.lastFailedIntent = mutation;
       }
       const conflict: CheckoutConflict = {
         code: 'CART_VERSION_CONFLICT',
         status: 412,
-        intent: mutation.kind,
+        intent: existingConflict?.intent ?? mutation.kind,
         serverVersion: this.version() ?? 0,
       };
       this.conflictWritable.set(conflict);
