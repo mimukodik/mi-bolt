@@ -91,6 +91,7 @@ export const orderHandlersEntry: BusinessHandlerEntry = (
     const body = await readJsonBody(request);
     const outcome = requireOrderStore().createOrder(sessionId, idempotencyKey, ifMatch, body);
     if (!outcome.ok) return problemResponse(outcome);
+    options.persist?.(sessionId);
     return HttpResponse.json(outcome.receipt, {
       status: 201,
       headers: { Location: `${options.apiRoot}/orders/${outcome.receipt.id}` },
