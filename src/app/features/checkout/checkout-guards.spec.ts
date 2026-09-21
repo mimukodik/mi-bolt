@@ -1,7 +1,7 @@
 /**
  * MIM-212 — checkout wizard guard cases on the 2.0.0 contract.
  *
- * Sixteen guard cases on the 2.0.0 checkout session.
+ * Seventeen guard cases on the 2.0.0 checkout session.
  * `CheckoutFacade.updateContact` / `updateDelivery` / `updatePayment` /
  * `updateBilling` write the four sections, and the three guards
  * (`contactGuard`, `deliveryGuard`, `reviewGuard`) run against the
@@ -59,6 +59,7 @@ import type { BillingDetails } from '../../../app/api/generated/models/billing-d
 import type { Contact } from '../../../app/api/generated/models/contact';
 import type { DeliverySelection } from '../../../app/api/generated/models/delivery-selection';
 import type { PaymentSelection } from '../../../app/api/generated/models/payment-selection';
+import type { Problem } from '../../../app/api/generated/models/problem';
 
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
@@ -231,20 +232,29 @@ async function saveBilling(): Promise<void> {
   expect(result.ok).toBe(true);
 }
 
-/** Fails every `GET /cart` with a 503-shaped Problem body. */
+/**
+ * Fails every `GET /cart` with the 503 the contract declares for the
+ * operation (`docs/api/openapi.yaml:290-291`), in the Problem shape the
+ * generated model requires: the `urn:mi-bolt:problem:…` type
+ * `problemType()` builds (`src/mocks/cart/cart-store.ts`), plus the
+ * mandatory `traceId` and `fieldErrors`.
+ */
 function failCartReads(): void {
+  const problem: Problem = {
+    type: 'urn:mi-bolt:problem:service-unavailable',
+    title: 'Service unavailable',
+    status: 503,
+    code: 'SERVICE_UNAVAILABLE',
+    detail: 'The cart store is unavailable.',
+    traceId: 'mock-trace-guards',
+    fieldErrors: [],
+  };
   server.use(
     http.get('*/api/v1/cart', () =>
-      HttpResponse.json(
-        {
-          type: 'https://mi-bolt.example/problems/service-unavailable',
-          title: 'Service unavailable',
-          status: 500,
-          code: 'SERVICE_UNAVAILABLE',
-          detail: 'The cart store is unavailable.',
-        },
-        { status: 500 },
-      ),
+      HttpResponse.json(problem, {
+        status: 503,
+        headers: { 'content-type': 'application/problem+json' },
+      }),
     ),
   );
 }
@@ -333,7 +343,7 @@ function serialise(tree: UrlTree): string {
 }
 
 // ---------------------------------------------------------------------------
-// contactGuard — hydration and cart state (G-01..G-03)
+// contactGuard — hydration and cart state (G-01..G-03, G-17)
 // ---------------------------------------------------------------------------
 
 describe('contactGuard', () => {
@@ -373,6 +383,23 @@ describe('contactGuard', () => {
   it('G-03 contactGuard returns true when the cart has items', async () => {
     await seedCartWithItem();
     expect(await runContact()).toBe(true);
+  });
+
+  it('G-17 contactGuard issues no request when the cart and the draft are already in memory', async () => {
+    await seedCartWithItem();
+    await saveContact();
+    expect(await runContact()).toBe(true);
+
+    // The first run left both snapshots loaded; a navigation inside the
+    // wizard must therefore cost nothing. The line this pins is
+    // `CheckoutFacade.ensureSession`'s `existing !== null` early return:
+    // removing it makes this case read ['GET /api/v1/checkout']. The cart
+    // side is guarded twice, by `CartFacade.ensureCart`'s early return and
+    // by the re-check inside its queue callback, so removing either one
+    // alone issues no request.
+    requestLog = [];
+    expect(await runContact()).toBe(true);
+    expect(requestLog).toEqual([]);
   });
 });
 
