@@ -46,7 +46,7 @@
         [hasPrevious]="hasPrevious()"
         (retryRequested)="onRetry()"
       >
-        @for (item of facade.vm().items; track item.id) {
+        @for (item of facade.vm().items; track item.variantId) {
           <app-product-card [product]="item"></app-product-card>
         }
         <app-button
