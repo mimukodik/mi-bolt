@@ -1,0 +1,44 @@
+
+> mi-bolt@0.0.0 build
+> ng build
+
+❯ Building...
+✔ Building...
+Initial chunk files | Names               |  Raw size | Estimated transfer size
+main-BX5JX554.js    | main                | 202.58 kB |                47.84 kB
+chunk-CqsyXLn8.js   | -                   | 179.33 kB |                52.04 kB
+styles-6AU43PEM.css | styles              |  27.04 kB |                 5.49 kB
+chunk-CH6-Q8xY.js   | -                   |  17.75 kB |                 5.49 kB
+chunk-DbtJhp1x.js   | -                   | 763 bytes |               763 bytes
+chunk-Da4-SChG.js   | -                   | 633 bytes |               633 bytes
+
+                    | Initial total       | 428.10 kB |               112.26 kB
+
+Lazy chunk files    | Names               |  Raw size | Estimated transfer size
+chunk-dJeyFD2X.js   | bootstrap-demo      | 408.82 kB |                93.03 kB
+chunk-AEBYOITI.js   | index               | 175.15 kB |                38.32 kB
+chunk-C3WJgLvz.js   | -                   |  63.74 kB |                16.26 kB
+chunk-CmefdaZo.js   | catalog-page        |  58.47 kB |                11.67 kB
+chunk-jP3cX1nT.js   | product-page        |  49.05 kB |                11.05 kB
+chunk-SwhEBiqn.js   | review-page         |  38.87 kB |                 9.65 kB
+chunk-CEaQerWB.js   | delivery-page       |  32.73 kB |                 6.99 kB
+chunk-CCpM84rE.js   | home-page           |  29.32 kB |                 6.30 kB
+chunk-9LN9qnnl.js   | success-step        |  20.01 kB |                 5.18 kB
+chunk-X_90aP2Z.js   | cart-page           |  15.77 kB |                 4.18 kB
+chunk-B15_zpUU.js   | -                   |  11.46 kB |                 3.50 kB
+chunk-B6uKxo6b.js   | -                   |  10.36 kB |                 2.83 kB
+chunk-KoJeR3i1.js   | checkout-routes     |   7.61 kB |                 2.75 kB
+chunk-DPiFJCMQ.js   | primitives-showcase |   7.58 kB |                 2.45 kB
+chunk-RburZwDP.js   | -                   |   6.79 kB |                 1.88 kB
+...and 17 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [4.458 seconds] - 2026-09-20T16:19:55.710Z
+
+
+
+
+
+
+
+Output location: /Users/eggp/projects/puffancs/worktrees-mi-bolt-frontend/eggprojec/mim-209-build-warnings/dist/mi-bolt
+
