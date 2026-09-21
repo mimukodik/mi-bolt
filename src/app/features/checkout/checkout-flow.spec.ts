@@ -479,7 +479,7 @@ describe('CF-04 a failed section save leaves the form values untouched', () => {
       http.patch('*/api/v1/checkout', () =>
         HttpResponse.json(
           {
-            type: 'urn:mi-bolt:problem:cart-version-conflict',
+            type: 'urn:mi-bolt:problem:version-conflict',
             title: 'Cart version conflict',
             status: 412,
             code: 'CART_VERSION_CONFLICT',
@@ -552,14 +552,16 @@ describe('CF-05 a declined payment leaves the saved sections untouched', () => {
     expect(sessionBefore?.complete).toBe(true);
 
     const submission = TestBed.inject(OrderSubmission);
+    requestLog = [];
     const outcome = await submission.submitOrder();
     expect(outcome.kind).toBe('declined');
     if (outcome.kind !== 'declined') throw new Error('expected declined outcome');
 
-    // The declined outcome short-circuits before `commit()` is reached
-    // (`order-submission.ts:220-222`), so the session snapshot stays
-    // exactly as it was before the submit. `resetAfterOrder` is only
-    // called on a successful commit, so `session` is still populated.
+    // A declined intent is refused on the client: no order POST ever leaves the app.
+    expect(requestLog.filter((line) => line === 'POST /api/v1/orders')).toEqual([]);
+
+    // The declined outcome is decided on the client (`order-submission.ts:220-222`): the
+    // request log holds no order POST, and the session snapshot is the one saved before the submit.
     const sessionAfter = checkout.session();
     expect(sessionAfter?.contact).toEqual(STORED_CONTACT);
     expect(sessionAfter?.delivery).toEqual(HOME_DELIVERY);
