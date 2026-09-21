@@ -6,8 +6,8 @@
  *   - Product image (ProductImage primitive, lazy through the
  *     <img> element's own loading="lazy" attribute).
  *   - Product name + variant descriptor (color name + storage bucket).
- *   - Unit price + line total through the PriceBlock primitive so the
- *     whole HUF formatting and the loading/empty states are reused.
+ *   - Line total through the PriceBlock primitive so the whole HUF
+ *     formatting and the loading/empty states are reused.
  *   - QuantityControl (T10) so the user can increment / decrement
  *     within the variant's `maxQuantity` ceiling. The component
  *     surfaces `pending` so the controls disable while a
@@ -44,12 +44,6 @@ export class CartLine {
   readonly quantityChanged = output<number>();
   readonly removeRequested = output<string>();
 
-  /**
-   * `PriceBlock` expects a unit in whole HUF; the wire-shaped
-   * `unitPrice` already is. We re-export the value as `Money` so the
-   * template can use `app-price-block` without a manual cast.
-   */
-  readonly unitPrice = computed<Money>(() => this.line().unitPrice);
   readonly lineTotal = computed<Money>(() => this.line().lineTotal);
 
   /**

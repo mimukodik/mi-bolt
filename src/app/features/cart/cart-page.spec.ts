@@ -322,7 +322,7 @@ afterEach(() => {
 // T18-AC01: add-to-cart surface confirms the addition and line card renders correctly
 // ---------------------------------------------------------------------------
 describe('T18-AC01 cart page renders the line card matching the mock cart', () => {
-  it('CartLine renders image, name, variant, unit price, quantity, line total', async () => {
+  it('T18-AC01: CartLine renders image, name, variant, quantity and line total', async () => {
     const fixture = TestBed.createComponent(CartLine);
     fixture.componentRef.setInput('line', DEMO_CART_ITEM);
     await fixture.whenStable();
@@ -342,7 +342,7 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
     expect(variantStorage.textContent.trim()).toBe('256 GB');
 
     const priceBlocks = root.querySelectorAll('app-price-block');
-    expect(priceBlocks.length).toBeGreaterThanOrEqual(2);
+    expect(priceBlocks.length).toBe(1);
 
     const qtyControl = queryElement(root, 'app-quantity-control');
     expect(qtyControl).not.toBeNull();
@@ -846,7 +846,7 @@ describe('S2-C notices: server reconcile notices render one status message each'
 // S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/items.
 // ---------------------------------------------------------------------------
 describe('S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/items', () => {
-  it('renders the clear button first in the footer actions and disabled while nothing is loaded', async () => {
+  it('renders the clear button last in the footer actions and disabled while nothing is loaded', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
     await cartFacade.addItem(VARIANT_MOTO_256, 2);
@@ -860,7 +860,7 @@ describe('S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/
     expect(clearButton.textContent.trim()).toBe('Kosár ürítése');
     expect(clearButton.disabled).toBe(false);
     const continueHost = getElement(root, '[data-testid="cart-continue"]');
-    expect(clearHost.compareDocumentPosition(continueHost) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    expect(continueHost.compareDocumentPosition(clearHost) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
   });
@@ -961,9 +961,45 @@ describe('T18-AC05 subtotal and total arithmetic in whole HUF', () => {
     expect(fixture.componentInstance.subtotal().currency).toBe('HUF');
 
     const root = getRootElement(fixture);
-    const footer = getElement(root, '[data-testid="cart-footer"]');
-    const priceBlock = queryElement(footer, 'app-price-block');
-    expect(priceBlock).not.toBeNull();
+    const subtotalRow = getElement(root, '[data-testid="order-summary-subtotal"]');
+    expect(queryElement(subtotalRow, 'app-price-block')).not.toBeNull();
+    expect(
+      queryElement(
+        getElement(root, '[data-testid="cart-footer"]'),
+        '[data-testid="cart-continue"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it('shows the line count in the section label (MIM-211)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    await cartFacade.addItem(VARIANT_HONOR_128, 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(getElement(root, '[data-testid="cart-count"]').textContent.trim()).toBe(
+      'Kosárban található termékek (2)',
+    );
+  });
+
+  it('renders the actions inside the inverse order summary (MIM-211)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const summary = getElement(root, '[data-testid="order-summary"]');
+    expect(summary.hasAttribute('data-inverse')).toBe(true);
+    expect(queryElement(summary, '[data-testid="cart-footer"]')).not.toBeNull();
   });
 
   it('does not display any monthly-fee or hidden-bundle copy (R25)', async () => {

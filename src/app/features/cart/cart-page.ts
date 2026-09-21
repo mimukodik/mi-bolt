@@ -35,7 +35,6 @@ import { OrderSummary } from './order-summary';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
-import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
 import { isRecord } from '../../shared/utils/is-record';
@@ -100,7 +99,6 @@ function readNumberParam(notice: CartNotice, key: string): number | null {
     EmptyState,
     ErrorState,
     LoadingState,
-    PriceBlock,
     Button,
     StatusMessage,
   ],
