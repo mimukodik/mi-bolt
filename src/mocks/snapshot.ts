@@ -1,11 +1,12 @@
 /**
  * T05 — snapshot builder.
  *
- * Reads the cart, the checkout draft, the payment intents and the
- * order receipts from the three live mock stores and shapes them into
- * the allowlisted snapshot `Persistence.save()` writes. Adding an
- * unknown top-level key would make the next `hydrate()` discard the
- * entry, so this builder is the only place the snapshot is composed.
+ * Reads the cart, the checkout draft, the payment intents, the
+ * order receipts and the idempotency cache from the live mock
+ * stores and shapes them into the allowlisted snapshot
+ * `Persistence.save()` writes. Adding an unknown top-level key would
+ * make the next `hydrate()` discard the entry, so this builder is
+ * the only place the snapshot is composed.
  */
 import { MAX_AGE_MS, SNAPSHOT_SCHEMA_VERSION, type MockSnapshot } from './persistence';
 import type { CartStore } from './cart/cart-store';
@@ -42,6 +43,7 @@ export function buildSnapshot(
     expiresAt,
     paymentIntents: persistedOrders.intents,
     receipts: persistedOrders.receipts,
+    idempotency: stores.order.toPersistedIdempotency(),
   };
   if (persistedCart !== undefined) snapshot.cart = persistedCart;
   if (persistedDraft !== undefined) snapshot.checkoutDraft = persistedDraft;
