@@ -2,7 +2,8 @@
 import '@angular/compiler';
 
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { MobileBuyRail } from './mobile-buy-rail';
@@ -20,12 +21,12 @@ import type { Money } from '../../shared/ui/price-block/price-block';
   imports: [MobileBuyRail],
   template: `
     <app-mobile-buy-rail
-      [money]="money()"
       [available]="available()"
-      [pending]="pending()"
       [error]="error()"
+      [money]="money()"
+      [pending]="pending()"
       (addRequested)="onAddRequested()"
-    ></app-mobile-buy-rail>
+    />
   `,
 })
 class TestHostComponent {

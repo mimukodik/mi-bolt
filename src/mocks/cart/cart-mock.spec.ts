@@ -498,7 +498,9 @@ describe('expiry', () => {
 describe('reconcile', () => {
   function lookupForVariant(variantId: string, maxQuantity: number): VariantLookup {
     const hit = catalogStore.current?.getVariant(variantId);
-    if (!hit) throw new Error(`variant ${variantId} missing from fixture`);
+    if (hit === undefined) {
+      throw new Error(`variant ${variantId} missing from fixture`);
+    }
     return {
       product: hit.product,
       variant: { ...hit.variant, maxQuantity },

@@ -2,7 +2,8 @@
 import '@angular/compiler';
 
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { VariantSelector } from './variant-selector';
@@ -60,11 +61,11 @@ const variants: readonly Variant[] = [
   imports: [VariantSelector],
   template: `
     <app-variant-selector
-      [variants]="variants()"
-      [selectedId]="selectedId()"
       [disabled]="disabled()"
+      [selectedId]="selectedId()"
+      [variants]="variants()"
       (variantSelected)="onVariantSelected($event)"
-    ></app-variant-selector>
+    />
   `,
 })
 class TestHostComponent {

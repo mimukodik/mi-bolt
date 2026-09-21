@@ -32,7 +32,8 @@ import {
   provideZonelessChangeDetection,
   ɵresolveComponentResources,
 } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { readdir, readFile } from 'node:fs/promises';
@@ -43,7 +44,7 @@ import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
-import { createHandlers } from '../../../mocks/create-handlers';
+import { type CreateHandlersOptions, createHandlers } from '../../../mocks/create-handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 import { Repository } from '../../../mocks/repository';
 import {
@@ -276,7 +277,7 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
   return content;
 }
 
-function makeEnv() {
+function makeEnv(): CreateHandlersOptions {
   const clock = createFixedClock('2026-09-20T10:00:00.000Z');
   const ids = createDeterministicIds(1);
   const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
@@ -549,8 +550,8 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
 
   it('CartPage renders a loading skeleton on first arrival and an ErrorState on a failure', async () => {
     server.use(
-      http.get('*/api/v1/cart', () => {
-        return HttpResponse.json(
+      http.get('*/api/v1/cart', () =>
+        HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:service-unavailable',
             title: 'Hiba',
@@ -561,8 +562,8 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
             fieldErrors: [],
           },
           { status: 503, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
+        ),
+      ),
     );
 
     const cartFacade = TestBed.inject(CartFacade);
@@ -696,8 +697,8 @@ describe('FIX-21 only the mutating line is disabled', () => {
     // `.finally()` clear fixes: the line's own controls must come back even
     // though the mutation did not succeed.
     server.use(
-      http.patch('*/api/v1/cart/items/:variantId', () => {
-        return HttpResponse.json(
+      http.patch('*/api/v1/cart/items/:variantId', () =>
+        HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:cart-version-conflict',
             title: 'Ütközés',
@@ -709,8 +710,8 @@ describe('FIX-21 only the mutating line is disabled', () => {
             params: { expected: 2, received: 1 },
           },
           { status: 412, headers: { 'content-type': 'application/problem+json' } },
-        );
-      }),
+        ),
+      ),
     );
 
     const fixture = TestBed.createComponent(CartPage);
@@ -866,7 +867,7 @@ describe('S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/
 
   it('clicking it sends DELETE /cart/items with If-Match and renders the empty state', async () => {
     const seen: { method: string; url: string; ifMatch: string | null }[] = [];
-    const listener = ({ request }: { request: Request }) => {
+    const listener = ({ request }: { request: Request }): void => {
       seen.push({
         method: request.method,
         url: request.url,

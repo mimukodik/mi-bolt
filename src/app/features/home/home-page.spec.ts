@@ -323,7 +323,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(ctaLink).not.toBeNull();
     const ctaText = (ctaLink?.textContent ?? '').trim();
     expect(ctaText.length).toBeGreaterThan(2);
-    const ctaImage = ctaLink ? ctaLink.querySelector('img') : null;
+    const ctaImage = ctaLink !== null ? ctaLink.querySelector('img') : null;
     expect(ctaImage).toBeNull();
   });
 
@@ -398,7 +398,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const cta = raw.querySelector('a[data-testid="hero-cta"]');
     expect(cta).not.toBeNull();
-    expect(cta ? cta.getAttribute('href') : '').toBe('/telefonok');
+    expect(cta !== null ? cta.getAttribute('href') : '').toBe('/telefonok');
   });
 
   it('category shortcuts render the three spec categories with valid 5G / inStock filters', async () => {
@@ -550,7 +550,9 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
     for (let i = 0; i < 20; i += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
 
     // The orchestrator must have called listProducts exactly once with { featured: true }.
@@ -721,7 +723,9 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
     for (let i = 0; i < 20; i += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
     fixture.detectChanges();
     const root = getRootElement(fixture);
@@ -748,7 +752,9 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     expect(retryButton).not.toBeNull();
     retryButton?.click();
     for (let i = 0; i < 20; i += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
     }
     fixture.detectChanges();
 

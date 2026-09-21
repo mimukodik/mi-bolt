@@ -726,7 +726,7 @@ describe('CartStore seed / persist round-trip (MIM-212 Unit 1)', () => {
 
     const persisted = store.toPersistedCart('sess-rt');
     expect(persisted).toBeDefined();
-    if (!persisted) return;
+    if (persisted === undefined) return;
     expect(persisted.items).toEqual([{ variantId: 'demo-one-5g-graphite-256', quantity: 2 }]);
 
     // Second store, seeded from the first store's persisted snapshot.
@@ -1223,7 +1223,9 @@ describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
     const items = body['items'];
     if (!Array.isArray(items)) throw new Error('items not an array');
     const itemRecord = findRecord(items);
-    if (!itemRecord) throw new Error('cart has no item record');
+    if (itemRecord === undefined) {
+      throw new Error('cart has no item record');
+    }
     const item: Record<string, unknown> = itemRecord;
     expect(item['variantId']).toBe(HONOR);
     expect(item['quantity']).toBe(1);

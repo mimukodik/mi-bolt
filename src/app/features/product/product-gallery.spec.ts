@@ -2,7 +2,8 @@
 import '@angular/compiler';
 
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ProductGallery } from './product-gallery';
@@ -68,11 +69,11 @@ const sampleImages: readonly Image[] = [
   template: `
     <app-product-gallery
       [images]="images()"
-      [selectedImageId]="selectedImageId()"
       [productName]="productName()"
+      [selectedImageId]="selectedImageId()"
       (imageSelected)="onImageSelected($event)"
       (zoomRequested)="onZoomRequested($event)"
-    ></app-product-gallery>
+    />
   `,
 })
 class GalleryTestHost {

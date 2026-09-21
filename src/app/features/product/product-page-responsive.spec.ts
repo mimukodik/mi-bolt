@@ -34,7 +34,7 @@ const BASE_URL = 'http://localhost/api/v1';
 
 @Component({
   imports: [ProductPage],
-  template: `<app-product-page [slug]="slug()"></app-product-page>`,
+  template: `<app-product-page [slug]="slug()" />`,
 })
 class ProductPageHost {
   readonly slug = signal<string>('demo-one-5g');

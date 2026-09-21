@@ -203,7 +203,9 @@ async function resolveIntentOutcome(
  */
 async function waitForNavigate(spy: MockInstance): Promise<void> {
   for (let i = 0; i < 200 && spy.mock.calls.length === 0; i++) {
-    await new Promise<void>((r) => setTimeout(r, 5));
+    await new Promise<void>((r) => {
+      setTimeout(r, 5);
+    });
   }
 }
 
