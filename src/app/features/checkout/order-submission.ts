@@ -196,7 +196,7 @@ export class OrderSubmission {
     }
     const options = this.checkout.options();
     if (options === null) {
-      return this.setOutcome({ kind: 'unknown', code: 'NO_SESSION' });
+      return this.setOutcome({ kind: 'unknown', code: 'NO_OPTIONS' });
     }
 
     const method = session.payment?.method;

@@ -534,9 +534,9 @@ export class CheckoutFacade {
    * kept on the facade — the success-state of the succeeded intent
    * is part of the user-visible commit history even though the store
    * has since deleted the row, so a later read of `paymentIntent()`
-   * still shows `status: 'succeeded'` until the next review page.
-   * The cart's own post-order reset is the success page's call, not
-   * this one.
+   * still shows `status: 'succeeded'` until the next
+   * `createPaymentIntent` overwrites it. The cart's own post-order
+   * reset is the success page's call, not this one.
    */
   resetAfterOrder(): void {
     checkoutKeys.clearAll();
