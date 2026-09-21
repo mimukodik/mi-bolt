@@ -92,6 +92,23 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     );
   });
 
+  it('opens the breadcrumb trail at Főoldal, the way the delivery and review steps do', () => {
+    const fixture = createContactPage(() => Promise.resolve({ ok: true }));
+    const root = getRootElement(fixture);
+
+    const crumbs = Array.from(root.querySelectorAll('nav.breadcrumbs a.breadcrumb')).map(
+      (anchor) => ({ label: anchor.textContent.trim(), href: anchor.getAttribute('href') }),
+    );
+
+    expect(crumbs).toEqual([
+      { label: 'Főoldal', href: '/' },
+      { label: 'Kosár', href: '/penztar/kosar' },
+    ]);
+    expect(root.querySelector('nav.breadcrumbs .breadcrumb.is-current')?.textContent.trim()).toBe(
+      'Adatok',
+    );
+  });
+
   it('calls the injected CONTACT_DRAFT_SAVER with the normalized contact and navigates to /penztar/szallitas on success', async () => {
     let received: unknown = null;
     const saver: ContactDraftSaver = (contact) => {

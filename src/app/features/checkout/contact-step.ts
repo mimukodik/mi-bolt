@@ -54,6 +54,7 @@ import {
   type FieldError,
 } from '../../shared/ui/form-field-message/form-field-message';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import { NavigationReasonBanner } from './navigation-reason-banner';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
 import type { Contact } from '../../api/generated/models/contact';
@@ -110,7 +111,14 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
 
 @Component({
   selector: 'app-contact-step',
-  imports: [Button, CheckoutStepHeader, FormField, FormFieldMessage, StatusMessage],
+  imports: [
+    Button,
+    CheckoutStepHeader,
+    FormField,
+    FormFieldMessage,
+    NavigationReasonBanner,
+    StatusMessage,
+  ],
   templateUrl: './contact-step.html',
   styleUrl: './contact-step.scss',
 })
@@ -124,10 +132,12 @@ export class ContactStep {
    *  invalid submission. */
   private readonly summaryRef = viewChild<ElementRef<HTMLElement>>('summary');
 
-  /** Breadcrumb trail for the shared `CheckoutStepHeader`. Order matches
-   *  the previous template: Kosár, with this step (`Adatok`) as the
+  /** Breadcrumb trail for the shared `CheckoutStepHeader`: the same
+   *  trail `delivery-step.ts` and `review-step.ts` open with, so every
+   *  checkout step starts at `Főoldal`. This step (`Adatok`) is the
    *  trailing non-link. */
   protected readonly crumbs: readonly CheckoutCrumb[] = [
+    { label: 'Főoldal', link: '/' },
     { label: 'Kosár', link: '/penztar/kosar' },
   ];
 

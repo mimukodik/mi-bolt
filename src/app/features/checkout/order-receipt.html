@@ -126,6 +126,35 @@
         <dd class="m-0">{{ deliveryLabel() }}</dd>
       </div>
       <div
+        class="meta__row meta__row--block flex justify-between gap-3"
+        data-testid="receipt-row-billing"
+      >
+        <dt class="m-0">Számlázási cím</dt>
+        <dd class="m-0 text-right">
+          {{ receipt().billing.name }}<br />
+          {{ receipt().billing.address.line1 }}<br />
+          @if (receipt().billing.address.line2) {
+            {{ receipt().billing.address.line2 }}<br />
+          }
+          {{ receipt().billing.address.postalCode }} {{ receipt().billing.address.city }}
+        </dd>
+      </div>
+      @if (deliveryAddress(); as address) {
+        <div
+          class="meta__row meta__row--block flex justify-between gap-3"
+          data-testid="receipt-row-delivery-address"
+        >
+          <dt class="m-0">Szállítási cím</dt>
+          <dd class="m-0 text-right">
+            {{ address.line1 }}<br />
+            @if (address.line2) {
+              {{ address.line2 }}<br />
+            }
+            {{ address.postalCode }} {{ address.city }}
+          </dd>
+        </div>
+      }
+      <div
         class="meta__row flex items-center justify-between gap-3"
         data-testid="receipt-row-status"
       >

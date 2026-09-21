@@ -24,7 +24,7 @@
     class="layout flex flex-col gap-(--space-5) lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-(--space-6) lg:items-start"
     data-testid="review-layout"
   >
-    <div class="column flex flex-col gap-(--space-5) min-w-0">
+    <div class="column flex flex-col gap-(--space-5) min-w-0 lg:col-start-1 lg:row-start-1">
       <article
         class="card flex flex-col gap-(--space-3) p-(--space-5) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
         data-testid="review-contact"
@@ -201,7 +201,49 @@
           </ul>
         }
       </article>
+    </div>
 
+    <div
+      class="summary flex flex-col gap-(--space-4) lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-(--space-5)"
+      data-testid="review-summary"
+    >
+      @if (summary(); as totals) {
+        <app-order-summary
+          [subtotal]="totals.subtotal"
+          [shipping]="totals.shippingFee"
+          [paymentFee]="totals.paymentFee"
+          [serverTotal]="totals.total"
+        ></app-order-summary>
+      } @else {
+        <div class="summary-loading" data-testid="review-summary-loading">
+          <app-loading-state variant="lines" label="Összesítő betöltése"></app-loading-state>
+        </div>
+      }
+
+      <dl
+        class="summary-rows flex flex-col gap-(--space-3) m-0 p-(--space-5) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
+      >
+        <div class="row">
+          <dt>Fizetési mód</dt>
+          <dd>{{ paymentLabel() }}</dd>
+        </div>
+        <div class="row">
+          <dt>Szállítási mód</dt>
+          <dd>{{ deliveryLabel() }}</dd>
+        </div>
+        <div class="row">
+          <dt>Demórendelés státusza</dt>
+          <dd>
+            <span class="badge" data-testid="review-demo-badge">Demó</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <div
+      class="confirm flex flex-col gap-(--space-5) min-w-0 lg:col-start-1 lg:row-start-2"
+      data-testid="review-confirm"
+    >
       <div class="status-row flex flex-col gap-(--space-3)" data-testid="review-status">
         @if (paymentIntent(); as intent) {
           <div
@@ -433,43 +475,6 @@
           {{ explanation }}
         </p>
       }
-    </div>
-
-    <div
-      class="summary flex flex-col gap-(--space-4) lg:sticky lg:top-(--space-5)"
-      data-testid="review-summary"
-    >
-      @if (summary(); as totals) {
-        <app-order-summary
-          [subtotal]="totals.subtotal"
-          [shipping]="totals.shippingFee"
-          [paymentFee]="totals.paymentFee"
-          [serverTotal]="totals.total"
-        ></app-order-summary>
-      } @else {
-        <div class="summary-loading" data-testid="review-summary-loading">
-          <app-loading-state variant="lines" label="Összesítő betöltése"></app-loading-state>
-        </div>
-      }
-
-      <dl
-        class="summary-rows flex flex-col gap-(--space-3) m-0 p-(--space-5) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
-      >
-        <div class="row">
-          <dt>Fizetési mód</dt>
-          <dd>{{ paymentLabel() }}</dd>
-        </div>
-        <div class="row">
-          <dt>Szállítási mód</dt>
-          <dd>{{ deliveryLabel() }}</dd>
-        </div>
-        <div class="row">
-          <dt>Demórendelés státusza</dt>
-          <dd>
-            <span class="badge" data-testid="review-demo-badge">Demó</span>
-          </dd>
-        </div>
-      </dl>
     </div>
   </div>
 

@@ -618,4 +618,18 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     fixture.detectChanges();
     expect(dialog.opened()).toBe(false);
   });
+
+  it('the order summary precedes the payment panel and the terms card in DOM order (MIM-212)', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const items = getByTestId(root, 'review-items');
+    const summary = getByTestId(root, 'review-summary');
+    const status = getByTestId(root, 'review-status');
+    const confirm = getByTestId(root, 'review-confirm');
+
+    const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(items.compareDocumentPosition(summary) & FOLLOWING).toBeTruthy();
+    expect(summary.compareDocumentPosition(status) & FOLLOWING).toBeTruthy();
+    expect(confirm.contains(status)).toBe(true);
+  });
 });

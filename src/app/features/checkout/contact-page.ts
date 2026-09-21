@@ -1,9 +1,5 @@
 /**
- * FIX-63: `ContactPage` is the owning container `checkout.routes.ts:203`
- * routes `adatok` to. It owns the `Contact` Signal Forms model, the
- * `CONTACT_DRAFT_SAVER` save call and the post-save navigation
- * `ContactStep.onSubmit()` used to do itself before this task moved that
- * responsibility up here (`components.md:551-557`).
+ * The owning container of the contact step: it holds the `Contact` Signal Forms model seeded from the checkout session, the `CONTACT_DRAFT_SAVER` save call and the post-save navigation to the delivery step.
  */
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';

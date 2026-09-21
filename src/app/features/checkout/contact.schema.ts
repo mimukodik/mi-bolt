@@ -17,11 +17,7 @@
  * The schema also owns the JSONpointer → field mapping the
  * checkout facade (T19) will reuse when it surfaces 422 server errors.
  *
- * `contactFormSchema`/`buildContactForm` (FIX-63) are the Signal Forms
- * wiring `ContactPage` (the owning container) uses to build the
- * `contactFields` field tree it passes down to `ContactStep` — the same
- * schema `ContactStep` used to build inline before FIX-63 moved
- * responsibility for the SDK/save call up to the container. Mirrors
+ * `contactFormSchema`/`buildContactForm` are the Signal Forms wiring `ContactPage` uses to build the `contactFields` field tree it passes down to `ContactStep`. Mirrors
  * `checkoutFormSchema`/`buildCheckoutForm` in `checkout-form.model.ts`.
  */
 
@@ -162,10 +158,7 @@ export function validateContact(input: ContactInput): ContactValidationResult {
 /**
  * Signal Forms schema for `Contact`. Mirrors `validateContact` above —
  * the same trim-aware bounds and the same normalized-phone check — so
- * the live form and the pure validator never drift. Moved here from
- * `ContactStep`'s inline `form(this.model, (path) => {...})` by FIX-63,
- * which gave `ContactStep` a declared `contactFields` input instead of
- * building its own field tree.
+ * the live form and the pure validator never drift.
  */
 export const contactFormSchema: SchemaFn<Contact> = (path) => {
   required(path.fullName, {

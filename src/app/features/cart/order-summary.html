@@ -15,14 +15,14 @@
     </div>
 
     <div class="row row--shipping flex flex-col gap-1" data-testid="order-summary-shipping">
-      <span class="label">Szállítás</span>
-      @if (shipping()) {
+      @if (shipping(); as fee) {
         <app-price-block
-          [money]="shipping()!"
+          [money]="fee"
           [label]="'Szállítási díj'"
           [status]="'success'"
         ></app-price-block>
       } @else {
+        <span class="label">Szállítás</span>
         <span class="placeholder" data-testid="shipping-placeholder">
           A következő lépésben választod ki.
         </span>
