@@ -1,14 +1,14 @@
 <section class="cart flex flex-col gap-6" data-testid="cart-page">
   <header class="heading flex flex-col gap-3">
-    <nav class="breadcrumbs flex flex-wrap gap-2" aria-label="Navigáció">
-      <a routerLink="/" class="breadcrumb no-underline">Főoldal</a>
+    <nav aria-label="Navigáció" class="breadcrumbs flex flex-wrap gap-2">
+      <a class="breadcrumb no-underline" routerLink="/">Főoldal</a>
       <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
-      <span class="breadcrumb is-current font-medium" aria-current="page">Kosár</span>
+      <span aria-current="page" class="breadcrumb is-current font-medium">Kosár</span>
     </nav>
     <h1 class="title m-0">A kosarad</h1>
   </header>
 
-  <app-navigation-reason-banner></app-navigation-reason-banner>
+  <app-navigation-reason-banner />
 
   @if (statusMessage(); as message) {
     <div class="status flex">
@@ -16,40 +16,40 @@
         [message]="message.text"
         [severity]="message.severity"
         (dismissed)="dismissStatusMessage()"
-      ></app-status-message>
+      />
     </div>
   }
 
   @for (notice of noticeMessages(); track $index) {
     <div class="status flex" data-testid="cart-notice">
-      <app-status-message [message]="notice" [severity]="'info'"></app-status-message>
+      <app-status-message severity="info" [message]="notice" />
     </div>
   }
 
   @switch (state()) {
     @case ('loading') {
       <div class="loading flex items-center justify-center min-h-72" data-testid="cart-loading">
-        <app-loading-state variant="card" label="Kosár betöltése"></app-loading-state>
+        <app-loading-state label="Kosár betöltése" variant="card" />
       </div>
     }
     @case ('error') {
       <app-error-state
-        [title]="'A kosár nem érhető el'"
+        retryLabel="Újrapróbálom"
+        title="A kosár nem érhető el"
         [message]="errorMessage()"
-        [retryLabel]="'Újrapróbálom'"
         [pending]="revalidating()"
         [preserving]="true"
         (retryRequested)="onRetry()"
-      ></app-error-state>
+      />
     }
     @case ('empty') {
       <app-empty-state
-        [title]="'A kosarad még üres.'"
-        [message]="'Nézd meg a demókészülékeket, és válaszd ki a kedvenced.'"
-        [actionLabel]="'Telefonokat nézek'"
-        [actionVariant]="'primary'"
+        actionLabel="Telefonokat nézek"
+        actionVariant="primary"
+        message="Nézd meg a demókészülékeket, és válaszd ki a kedvenced."
+        title="A kosarad még üres."
         (actionRequested)="onContinueShopping()"
-      ></app-empty-state>
+      />
     }
     @default {
       <div
@@ -68,7 +68,7 @@
                   [pending]="pendingVariantIds().has(item.variantId)"
                   (quantityChanged)="onQuantityChanged(item, $event)"
                   (removeRequested)="onRemoveRequested($event)"
-                ></app-cart-line>
+                />
               </li>
             }
           </ul>
@@ -76,38 +76,38 @@
 
         <div class="summary-column lg:sticky lg:top-6">
           <app-order-summary
-            [subtotal]="subtotal()"
-            [shipping]="null"
             [footnote]="summaryFootnote()"
             [inverse]="true"
+            [shipping]="null"
+            [subtotal]="subtotal()"
           >
             <div class="actions flex flex-col gap-3" data-testid="cart-footer">
               <app-button
-                variant="primary"
-                label="Tovább az adatokhoz"
-                [loadingLabel]="'Ellenőrzés…'"
-                [loading]="continuing()"
-                [disabled]="!canContinue()"
-                [block]="true"
-                (pressed)="onContinue()"
                 data-testid="cart-continue"
-              ></app-button>
+                label="Tovább az adatokhoz"
+                loadingLabel="Ellenőrzés…"
+                variant="primary"
+                [block]="true"
+                [disabled]="!canContinue()"
+                [loading]="continuing()"
+                (pressed)="onContinue()"
+              />
               <app-button
-                variant="secondaryOnDark"
                 label="Vásárlás folytatása"
+                variant="secondaryOnDark"
                 [block]="true"
                 (pressed)="onContinueShopping()"
-              ></app-button>
+              />
               <app-button
-                variant="secondaryOnDark"
-                label="Kosár ürítése"
-                [loadingLabel]="'Ürítés…'"
-                [loading]="clearing()"
-                [disabled]="clearing() || continuing() || facade.pending() > 0"
-                [block]="true"
-                (pressed)="onClearCart()"
                 data-testid="cart-clear"
-              ></app-button>
+                label="Kosár ürítése"
+                loadingLabel="Ürítés…"
+                variant="secondaryOnDark"
+                [block]="true"
+                [disabled]="clearing() || continuing() || facade.pending() > 0"
+                [loading]="clearing()"
+                (pressed)="onClearCart()"
+              />
             </div>
           </app-order-summary>
         </div>

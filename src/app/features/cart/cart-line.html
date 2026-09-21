@@ -1,14 +1,14 @@
 <article
   class="line grid gap-4"
-  [attr.aria-busy]="pending() ? 'true' : null"
   data-testid="cart-line"
+  [attr.aria-busy]="pending() ? 'true' : null"
 >
   <div class="media flex items-start justify-center min-w-0">
     <app-product-image
+      aspectRatio="1 / 1"
       [image]="imageLike()"
       [productName]="line().productName"
-      [aspectRatio]="'1 / 1'"
-    ></app-product-image>
+    />
   </div>
 
   <div class="body flex flex-col gap-3 min-w-0">
@@ -16,41 +16,36 @@
       <h3 class="name m-0" data-testid="cart-line-name">{{ line().productName }}</h3>
       <p class="variant m-0">
         <span class="variant-color">{{ line().colorName }}</span>
-        <span class="variant-sep mx-2" aria-hidden="true">·</span>
+        <span aria-hidden="true" class="variant-sep mx-2">·</span>
         <span class="variant-storage">{{ line().storageGb }} GB</span>
       </p>
     </header>
 
     <div class="quantity-row flex flex-col gap-2">
-      <span class="qty-label" aria-hidden="true">Darabszám</span>
+      <span aria-hidden="true" class="qty-label">Darabszám</span>
       <app-quantity-control
-        [value]="line().quantity"
-        [min]="1"
-        [max]="maxQuantity()"
+        label="Darabszám"
         [disabled]="pending()"
+        [max]="maxQuantity()"
+        [min]="1"
         [pending]="pending()"
-        [label]="'Darabszám'"
+        [value]="line().quantity"
         (quantityChanged)="onQuantityChanged($event)"
-      ></app-quantity-control>
+      />
     </div>
   </div>
 
   <div class="totals flex flex-row justify-between items-baseline">
     <button
-      type="button"
       class="remove"
-      [attr.aria-label]="'Törlés: ' + line().productName"
+      data-testid="cart-line-remove"
+      type="button"
+      [attr.aria-label]="`Törlés: ${line().productName}`"
       [disabled]="pending()"
       (click)="onRemoveRequested()"
-      data-testid="cart-line-remove"
     >
       Törlés
     </button>
-    <app-price-block
-      [money]="line().lineTotal"
-      [label]="'Részösszeg'"
-      [status]="'success'"
-      size="md"
-    ></app-price-block>
+    <app-price-block label="Részösszeg" size="md" status="success" [money]="line().lineTotal" />
   </div>
 </article>
