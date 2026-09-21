@@ -312,6 +312,29 @@ describe('T20-AC02 accessible label/autocomplete/error wiring', () => {
     expect(fixture.componentInstance.invalidFields().length).toBe(3);
   });
 
+  it('moves focus to the full-name input when it is the first invalid field (MIM-212)', async () => {
+    // Regression: `focusFirstInvalidField` built the DOM id from the field
+    // key (`contact-${field}-input`), but the template id is lowercase —
+    // `contact-fullname-input`, not `contact-fullName-input` — so the lookup
+    // returned `null` for `fullName`. With email and phone valid only the
+    // full-name field is invalid, so `document.activeElement` lands on it.
+    const { fixture } = createContactStep({
+      fullName: '',
+      email: 'teszt@example.test',
+      phone: '+36301234567',
+    });
+
+    document.body.focus();
+    expect(document.activeElement).toBe(document.body);
+
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    expect(document.activeElement?.id).toBe('contact-fullname-input');
+  });
+
   it('does not emit continueRequested when the form is invalid', async () => {
     const { fixture } = createContactStep(EMPTY_CONTACT);
     let count = 0;

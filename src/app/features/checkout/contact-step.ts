@@ -62,6 +62,13 @@ import type { Contact } from '../../api/generated/models/contact';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';
 
+/** DOM id of each field's input; the ids are lowercase while the keys are not. */
+const INPUT_IDS: Record<ContactFieldKey, string> = {
+  fullName: 'contact-fullname-input',
+  email: 'contact-email-input',
+  phone: 'contact-phone-input',
+};
+
 /**
  * Final shape emitted by the contact step on a successful save.
  * Mirrors the generated `Contact` SDK type, minus the JSONpointer
@@ -276,14 +283,14 @@ export class ContactStep {
       const invalid = this.invalidFields();
       if (invalid.length === 0) return;
       const first = invalid[0];
-      const target = document.getElementById(`contact-${first.field}-input`);
+      const target = document.getElementById(INPUT_IDS[first.field]);
       target?.focus();
     });
   }
 
   focusField(field: ContactFieldKey, event: Event): void {
     event.preventDefault();
-    const target = document.getElementById(`contact-${field}-input`);
+    const target = document.getElementById(INPUT_IDS[field]);
     target?.focus();
   }
 
