@@ -34,14 +34,17 @@ import type { OrderLine } from '../../api/generated/models/order-line';
 import type { OrderReceipt } from '../../api/generated/models/order-receipt';
 
 const PAYMENT_LABELS: Readonly<Record<OrderReceipt['paymentMethod'], string>> = {
-  demo_card: 'Bankkártya (szimulált)',
-  demo_cod: 'Utánvét (demó)',
+  card: 'Bankkártya (szimulált)',
+  cash_on_delivery: 'Utánvét (demó)',
 };
 
-const DELIVERY_LABELS: Readonly<Record<OrderReceipt['deliveryOptionId'], string>> = {
-  home_delivery: 'Házhozszállítás',
-  demo_pickup: 'Bemutatótermi átvétel (demó)',
-};
+/** Labels keyed on `DeliverySelection` discriminator (`optionId`), since the
+ *  wire carries a `DeliverySelection`, not a top-level delivery id. */
+const DELIVERY_LABELS: Readonly<Record<NonNullable<OrderReceipt['delivery']>['optionId'], string>> =
+  {
+    home_delivery: 'Házhozszállítás',
+    pickup_point: 'Bemutatótermi átvétel (demó)',
+  };
 
 /**
  * Notice string rendered under the totals. Hungarian copy that makes
@@ -64,7 +67,9 @@ export class OrderReceiptComponent {
   readonly paymentLabel = computed<string>(() => PAYMENT_LABELS[this.receipt().paymentMethod]);
 
   /** Friendly Hungarian label for the delivery option. */
-  readonly deliveryLabel = computed<string>(() => DELIVERY_LABELS[this.receipt().deliveryOptionId]);
+  readonly deliveryLabel = computed<string>(
+    () => DELIVERY_LABELS[this.receipt().delivery.optionId],
+  );
 
   /** The simulation notice copy. Pulled from the receipt body when present. */
   readonly simulationNotice = computed<string>(() => {
