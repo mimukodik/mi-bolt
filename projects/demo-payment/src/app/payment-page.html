@@ -1,4 +1,4 @@
-<section class="pay-card" [attr.aria-labelledby]="labelledBy()" [attr.aria-busy]="busy()">
+<section class="pay-card" [attr.aria-busy]="busy()" [attr.aria-labelledby]="labelledBy()">
   @switch (display()) {
     @case ('loading') {
       <p class="pay-status" role="status">Fizetési adatok betöltése…</p>
@@ -16,8 +16,8 @@
       @if (retryable()) {
         <button
           class="pay-button pay-button--primary"
-          type="button"
           data-testid="pay-retry"
+          type="button"
           (click)="onRetry()"
         >
           Újrapróbálom
@@ -48,8 +48,8 @@
           <div class="pay-actions">
             <button
               class="pay-button pay-button--primary"
-              type="button"
               data-testid="pay-succeeded"
+              type="button"
               [disabled]="submitting()"
               (click)="onChoose('succeeded')"
             >
@@ -57,8 +57,8 @@
             </button>
             <button
               class="pay-button"
-              type="button"
               data-testid="pay-declined"
+              type="button"
               [disabled]="submitting()"
               (click)="onChoose('declined')"
             >
@@ -66,8 +66,8 @@
             </button>
             <button
               class="pay-button"
-              type="button"
               data-testid="pay-pending"
+              type="button"
               [disabled]="submitting()"
               (click)="onChoose('pending')"
             >

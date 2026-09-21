@@ -10,6 +10,12 @@ us write them down in a file under docs so we know what we took out, I feel
 I overdid that lint rule"; then: "switch off unicorn and sonar too ... what
 fits, the rest we switch off; keep only what is very important").
 
+Since the MIM-209 switch (this commit) `eslint.config.mjs` is the only
+eslint configuration in the repository: `ng lint` (the `npm run lint` step
+of the CI lint job) runs it for the shop, for `tests/**` and for
+`projects/demo-payment`; the interim `eslint.config.js` that carried the
+old rule set while the slices were fixed one folder at a time is deleted.
+
 | Rule | Before | After | Removed | Reason |
 | --- | ---: | ---: | ---: | --- |
 | `unicorn/*` | ≈330 | 0 | ≈330 | Style-only: naming, member order, ternary style. Plugin removed from `package.json` because no rule is enabled. |
