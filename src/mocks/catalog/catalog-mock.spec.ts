@@ -682,9 +682,10 @@ describe('GET /media/:imageId', () => {
     // Override the media handler registered by installHandlers with one
     // that uses the stub loader; the rest of the catalog handlers stay
     // in place from the beforeEach. `server.use(...)` prepends the new
-    // handler so it claims the route ahead of the default one, while
-    // `resetHandlers` would have appended both and the default would
-    // still have matched first.
+    // handler so it claims the route ahead of the default one; a
+    // `resetHandlers(...)` call here would have *replaced* every
+    // registered handler with only the catalog and media handlers
+    // (dropping cart, checkout, payment, order), so we layer instead.
     server.use(buildMediaHandler(options, stub));
     const res = await fetch(`http://localhost/api/v1/media/${imageId}`);
     expect(res.status).toBe(200);
