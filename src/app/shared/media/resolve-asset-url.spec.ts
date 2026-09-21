@@ -42,15 +42,16 @@ describe('resolveAssetUrl', () => {
     expect(resolveAssetUrl(path, base)).toBe(expected);
   });
 
-  // The contract lets the server send an absolute content-delivery URL
-  // (`docs/api/openapi.yaml:1126`); the client passes it through and the
-  // parser normalises a traversal segment in the same call.
+  // The client never rewrites an absolute src, so a traversal segment, an
+  // upper-case host or a default port all reach the markup as sent, and the
+  // browser's own parser is what resolves them at fetch time.
   it.each([
-    ['https://cdn.example/products/a.webp', 'https://cdn.example/products/a.webp'],
-    ['http://cdn.example/products/a.webp', 'http://cdn.example/products/a.webp'],
-    ['https://cdn.example/products/../a.webp', 'https://cdn.example/a.webp'],
-  ])('passes %s through unchanged', (path, expected) => {
-    expect(resolveAssetUrl(path, 'https://example.test/')).toBe(expected);
+    ['https://cdn.example/products/a.webp'],
+    ['http://cdn.example/products/a.webp'],
+    ['https://cdn.example/products/../a.webp'],
+    ['https://CDN.example:443/products/a.webp#'],
+  ])('passes %s through as the exact string the server sent', (path) => {
+    expect(resolveAssetUrl(path, 'https://example.test/')).toBe(path);
   });
 
   it.each([

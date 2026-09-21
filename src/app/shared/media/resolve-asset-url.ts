@@ -17,13 +17,13 @@ export class AssetUrlError extends Error {}
 
 export function resolveAssetUrl(path: string, documentBaseUri: string): string {
   if (path.startsWith('https://') || path.startsWith('http://')) {
-    let absolute: URL;
     try {
-      absolute = new URL(path);
+      new URL(path);
     } catch {
       throw new AssetUrlError(`asset URL is not a valid absolute URL: ${path}`);
     }
-    return absolute.href;
+    // The contract forbids rewriting an absolute src, so the wire string is returned as it came.
+    return path;
   }
 
   // A single leading slash and nothing else: this rejects a
