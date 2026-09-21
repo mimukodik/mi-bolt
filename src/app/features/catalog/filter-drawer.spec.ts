@@ -50,8 +50,8 @@ function queryElement(selector: string): HTMLElement {
     [applied]="applied()"
     [facets]="facets()"
     [opened]="opened()"
-    (filtersChanged)="onFiltersChanged($event)"
     (closed)="onClosed()"
+    (filtersChanged)="onFiltersChanged($event)"
   />`,
 })
 class HostComponent {
@@ -86,7 +86,7 @@ describe('FilterDrawer — facets wire-up', () => {
     expect(document.body.querySelectorAll('[data-testid="drawer-storage-128"]').length).toBe(1);
     const beforeChip = document.body.querySelector('[data-testid="drawer-storage-128"]');
     expect(beforeChip).not.toBeNull();
-    if (!beforeChip) return;
+    if (beforeChip === null) return;
     expect(beforeChip.querySelector('.option__count')).toBeNull();
 
     host.facets.set({

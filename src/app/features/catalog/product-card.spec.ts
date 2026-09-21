@@ -105,7 +105,7 @@ function makeItem(opts: {
   readonly imageSrc?: string;
   readonly is5g?: boolean;
 }): CatalogItem {
-  const colorCode = opts.colorName ? opts.colorName.toLowerCase() : 'graphite';
+  const colorCode = opts.colorName !== undefined ? opts.colorName.toLowerCase() : 'graphite';
   const imageId = `${opts.id}-front`;
   const storageVal = opts.storageGb ?? 256;
   const variantId = `${opts.id}-${String(storageVal)}-${colorCode}`;
@@ -125,7 +125,8 @@ function makeItem(opts: {
     slug: opts.slug,
     brand: opts.brand ?? 'MiBolt Demo',
     name: opts.name,
-    highlights: opts.highlights ? [...opts.highlights] : ['6,7″ kijelző', '50 MP kamera'],
+    highlights:
+      opts.highlights !== undefined ? [...opts.highlights] : ['6,7″ kijelző', '50 MP kamera'],
     is5g: opts.is5g ?? true,
     releasedAt: '2026-01-01',
     storageGb: storageVal,
