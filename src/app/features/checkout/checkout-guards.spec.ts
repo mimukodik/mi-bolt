@@ -403,9 +403,11 @@ describe('guards redirect to the success URL once an order exists', () => {
     await savePayment();
     await saveBilling();
 
-    // ensureOptions is not called by submitOrder on its own — the facade
-    // looks it up internally. We seed it explicitly to avoid a NO_OPTIONS
-    // error on the cash-on-delivery body the brief specifies.
+    // submitOrder reads `optionsWritable().termsVersion` directly and
+    // returns NO_OPTIONS when the snapshot is null; it does NOT call
+    // ensureOptions internally. We seed it explicitly because the body
+    // the brief specifies is cash on delivery, which has no card side
+    // and would otherwise strand on the missing termsVersion.
     const checkout = TestBed.inject(CheckoutFacade);
     const optionsResult = await checkout.ensureOptions();
     expect(optionsResult.ok).toBe(true);

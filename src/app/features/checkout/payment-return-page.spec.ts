@@ -58,7 +58,6 @@ import type { PaymentSelection } from '../../../app/api/generated/models/payment
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';
 import { PaymentReturnPage } from '../../../app/features/checkout/payment-return-page';
-import { checkoutKeys } from '../../../app/features/checkout/checkout-keys';
 
 useMswServer();
 
@@ -224,9 +223,10 @@ describe('PaymentReturnPage', () => {
     if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
     const id = created.value.id;
 
-    // Wipe the storage-backed id so the page's fallback path is the
-    // *only* source of the id, then reset and store a fresh one.
-    checkoutKeys.setActiveIntentId(id);
+    // `createPaymentIntent()` above already persisted `id` through
+    // `checkoutKeys.setActiveIntentId()`, so the page's fallback path
+    // (`?? checkoutKeys.activeIntentId()` in hydrate) finds it without
+    // an explicit wipe or a re-set here.
 
     const requests: string[] = [];
     captureRequests(requests);
