@@ -37,4 +37,22 @@ describe('FIX-52 skip link', () => {
     expect(skip.getAttribute('href')).toBe('#main-content');
     expect(skip.textContent.trim()).toBe('Ugrás a tartalomhoz');
   });
+
+  it('MIM-220: a click focuses main#main-content on the current route instead of navigating', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const raw: unknown = fixture.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    main.setAttribute('tabindex', '-1');
+    document.body.appendChild(main);
+    const skip = raw.querySelector('a.skip-link');
+    if (!(skip instanceof HTMLAnchorElement)) throw new Error('Expected the skip link');
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    skip.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(main);
+    main.remove();
+  });
 });
