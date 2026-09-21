@@ -548,7 +548,10 @@ describe('DP-07..DP-09 gated section saves', () => {
     });
 
     // Subcase B: same setup with the checkbox unchecked and a
-    // distinct billing address.
+    // distinct billing address. Both fixtures share the root-scoped
+    // facade, and vi.spyOn on an already mocked method returns the
+    // same mock, so subcase A's call is cleared before B runs.
+    billingA.mockClear();
     const fixtureB = await createReadySettled();
     const facadeB = TestBed.inject(CheckoutFacade);
     const billingB = vi
