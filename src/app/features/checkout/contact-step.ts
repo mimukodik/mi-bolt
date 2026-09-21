@@ -40,7 +40,10 @@ import {
   Component,
   ElementRef,
   InjectionToken,
+  Injector,
+  afterNextRender,
   computed,
+  inject,
   input,
   output,
   signal,
@@ -148,6 +151,13 @@ export class ContactStep {
   /** Reference to the form summary so we can move focus to it on
    *  invalid submission. */
   private readonly summaryRef = viewChild<ElementRef<HTMLElement>>('summary');
+
+  /** `afterNextRender` needs an injector outside the constructor: the
+   *  focus moves run after the next render, because the summary and a
+   *  field's server-error state only reach the DOM on the next change
+   *  detection tick, and a microtask ran before the zoneless scheduler's
+   *  tick with the summary ref and the `serverErrors` input still stale. */
+  private readonly injector = inject(Injector);
 
   /** Breadcrumb trail for the shared `CheckoutStepHeader`: the same
    *  trail `delivery-step.ts` and `review-step.ts` open with, so every
@@ -279,21 +289,27 @@ export class ContactStep {
   }
 
   focusSummary(): void {
-    queueMicrotask(() => {
-      const ref = this.summaryRef();
-      if (ref === undefined) return;
-      ref.nativeElement.focus();
-    });
+    afterNextRender(
+      () => {
+        const ref = this.summaryRef();
+        if (ref === undefined) return;
+        ref.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   focusFirstInvalidField(): void {
-    queueMicrotask(() => {
-      const invalid = this.invalidFields();
-      if (invalid.length === 0) return;
-      const first = invalid[0];
-      const target = document.getElementById(INPUT_IDS[first.field]);
-      target?.focus();
-    });
+    afterNextRender(
+      () => {
+        const invalid = this.invalidFields();
+        if (invalid.length === 0) return;
+        const first = invalid[0];
+        const target = document.getElementById(INPUT_IDS[first.field]);
+        target?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   focusField(field: ContactFieldKey, event: Event): void {

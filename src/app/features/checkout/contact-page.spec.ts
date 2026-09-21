@@ -270,10 +270,10 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     document.body.focus();
     expect(document.activeElement).toBe(document.body);
 
+    // No synchronous detectChanges(): the focus has to survive the real
+    // tick order, where the render happens after the microtask queue.
     await stepInstance.onSubmit();
-    fixture.detectChanges();
     await fixture.whenStable();
-    await Promise.resolve();
 
     expect(document.activeElement?.id).toBe('contact-email-input');
   });
