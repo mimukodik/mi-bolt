@@ -7,95 +7,95 @@
     <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-postalCode">
       <span class="label">Irányítószám</span>
       <input
-        type="text"
-        inputmode="numeric"
         autocomplete="postal-code"
         class="input w-full min-h-10 px-3 rounded font-inherit"
-        [attr.aria-invalid]="errors('postalCode').length > 0 ? 'true' : 'false'"
-        [attr.aria-describedby]="describedBy('postalCode')"
-        [value]="postalCode()"
-        (input)="onInput('postalCode', $event)"
-        (blur)="markTouched('postalCode')"
         data-testid="address-input-postalCode"
+        inputmode="numeric"
+        type="text"
+        [attr.aria-describedby]="describedBy('postalCode')"
+        [attr.aria-invalid]="errors('postalCode').length > 0 ? 'true' : 'false'"
+        [value]="postalCode()"
+        (blur)="markTouched('postalCode')"
+        (input)="onInput('postalCode', $event)"
       />
       <app-form-field-message
-        [fieldId]="fieldId('postalCode')"
+        helpText="Négyjegyű, 1-es vagy 9-es kezdettel."
         [errors]="errors('postalCode')"
-        [touched]="isTouched('postalCode')"
+        [fieldId]="fieldId('postalCode')"
         [submitted]="submitted()"
-        [helpText]="'Négyjegyű, 1-es vagy 9-es kezdettel.'"
-      ></app-form-field-message>
+        [touched]="isTouched('postalCode')"
+      />
     </label>
 
     <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-city">
       <span class="label">Város</span>
       <input
-        type="text"
         autocomplete="address-level2"
         class="input w-full min-h-10 px-3 rounded font-inherit"
-        [attr.aria-invalid]="errors('city').length > 0 ? 'true' : 'false'"
-        [attr.aria-describedby]="describedBy('city')"
-        [value]="city()"
-        (input)="onInput('city', $event)"
-        (blur)="markTouched('city')"
         data-testid="address-input-city"
+        type="text"
+        [attr.aria-describedby]="describedBy('city')"
+        [attr.aria-invalid]="errors('city').length > 0 ? 'true' : 'false'"
+        [value]="city()"
+        (blur)="markTouched('city')"
+        (input)="onInput('city', $event)"
       />
       <app-form-field-message
-        [fieldId]="fieldId('city')"
         [errors]="errors('city')"
-        [touched]="isTouched('city')"
+        [fieldId]="fieldId('city')"
         [submitted]="submitted()"
-      ></app-form-field-message>
+        [touched]="isTouched('city')"
+      />
     </label>
 
     <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-line1">
       <span class="label">Cím (utca, házszám)</span>
       <input
-        type="text"
         autocomplete="address-line1"
         class="input w-full min-h-10 px-3 rounded font-inherit"
-        [attr.aria-invalid]="errors('line1').length > 0 ? 'true' : 'false'"
-        [attr.aria-describedby]="describedBy('line1')"
-        [value]="line1()"
-        (input)="onInput('line1', $event)"
-        (blur)="markTouched('line1')"
         data-testid="address-input-line1"
+        type="text"
+        [attr.aria-describedby]="describedBy('line1')"
+        [attr.aria-invalid]="errors('line1').length > 0 ? 'true' : 'false'"
+        [value]="line1()"
+        (blur)="markTouched('line1')"
+        (input)="onInput('line1', $event)"
       />
       <app-form-field-message
-        [fieldId]="fieldId('line1')"
         [errors]="errors('line1')"
-        [touched]="isTouched('line1')"
+        [fieldId]="fieldId('line1')"
         [submitted]="submitted()"
-      ></app-form-field-message>
+        [touched]="isTouched('line1')"
+      />
     </label>
 
     <label class="field flex flex-col gap-2 min-w-0" data-testid="address-field-line2">
       <span class="label">Emelet, ajtó (opcionális)</span>
       <input
-        type="text"
         autocomplete="address-line2"
         class="input w-full min-h-10 px-3 rounded font-inherit"
-        [attr.aria-invalid]="errors('line2').length > 0 ? 'true' : 'false'"
-        [attr.aria-describedby]="describedBy('line2')"
-        [value]="line2()"
-        (input)="onInput('line2', $event)"
-        (blur)="markTouched('line2')"
         data-testid="address-input-line2"
+        type="text"
+        [attr.aria-describedby]="describedBy('line2')"
+        [attr.aria-invalid]="errors('line2').length > 0 ? 'true' : 'false'"
+        [value]="line2()"
+        (blur)="markTouched('line2')"
+        (input)="onInput('line2', $event)"
       />
       <app-form-field-message
-        [fieldId]="fieldId('line2')"
+        helpText="Legfeljebb 120 karakter."
         [errors]="errors('line2')"
-        [touched]="isTouched('line2')"
+        [fieldId]="fieldId('line2')"
         [submitted]="submitted()"
-        [helpText]="'Legfeljebb 120 karakter.'"
-      ></app-form-field-message>
+        [touched]="isTouched('line2')"
+      />
     </label>
 
     <div class="field flex flex-col gap-2 min-w-0" data-testid="address-field-country">
       <span class="label">Ország</span>
       <p
-        class="country m-0 inline-flex items-baseline gap-2 min-h-10 px-3 rounded"
         aria-readonly="true"
+        class="country m-0 inline-flex items-baseline gap-2 min-h-10 px-3 rounded"
       >
         <span class="country-code font-bold">{{ countryCode }}</span>
         <span class="country-label">{{ countryLabel }}</span>

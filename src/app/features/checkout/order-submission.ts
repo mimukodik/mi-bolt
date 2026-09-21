@@ -175,7 +175,7 @@ export class OrderSubmission {
       return this.inFlightPromise;
     }
     this.inFlightWritable.set(true);
-    const promise = this.runSubmit();
+    const promise = Promise.resolve(this.runSubmit());
     this.inFlightPromise = promise;
     return promise.finally(() => {
       this.inFlightPromise = null;
@@ -183,20 +183,22 @@ export class OrderSubmission {
     });
   }
 
-  private async runSubmit(): Promise<SubmitOutcome> {
+  private runSubmit(): Promise<SubmitOutcome> {
     // 1. session must be loaded; options are only required when there
     // is something to commit, so the incomplete check runs first.
     const session = this.checkout.session();
     if (session === null) {
-      return this.setOutcome({ kind: 'unknown', code: 'NO_SESSION' });
+      return Promise.resolve(this.setOutcome({ kind: 'unknown', code: 'NO_SESSION' }));
     }
     // 2. incomplete draft → navigate to the first missing step.
     if (!session.complete) {
-      return this.setOutcome({ kind: 'incomplete', route: firstMissingSessionRoute(session) });
+      return Promise.resolve(
+        this.setOutcome({ kind: 'incomplete', route: firstMissingSessionRoute(session) }),
+      );
     }
     const options = this.checkout.options();
     if (options === null) {
-      return this.setOutcome({ kind: 'unknown', code: 'NO_OPTIONS' });
+      return Promise.resolve(this.setOutcome({ kind: 'unknown', code: 'NO_OPTIONS' }));
     }
 
     const method = session.payment?.method;
@@ -213,26 +215,30 @@ export class OrderSubmission {
     //    shopper reached submit without redirecting first.
     const intent = this.checkout.paymentIntent();
     if (intent === null) {
-      return this.setOutcome({
-        kind: 'payment-required',
-        intentId: null,
-        redirectUrl: null,
-      });
+      return Promise.resolve(
+        this.setOutcome({
+          kind: 'payment-required',
+          intentId: null,
+          redirectUrl: null,
+        }),
+      );
     }
     // 4. a non-succeeded intent must yield an outcome before submitOrder
     //    is even called — a poll there would contradict the redirect.
     if (intent.status === 'declined') {
-      return this.setOutcome({ kind: 'declined', intentId: intent.id });
+      return Promise.resolve(this.setOutcome({ kind: 'declined', intentId: intent.id }));
     }
     if (intent.status === 'pending') {
-      return this.setOutcome({ kind: 'payment-pending', intentId: intent.id });
+      return Promise.resolve(this.setOutcome({ kind: 'payment-pending', intentId: intent.id }));
     }
     if (intent.status === 'requires_action') {
-      return this.setOutcome({
-        kind: 'payment-required',
-        intentId: intent.id,
-        redirectUrl: intent.redirectUrl,
-      });
+      return Promise.resolve(
+        this.setOutcome({
+          kind: 'payment-required',
+          intentId: intent.id,
+          redirectUrl: intent.redirectUrl,
+        }),
+      );
     }
     return this.commit({
       paymentMethod: 'card',

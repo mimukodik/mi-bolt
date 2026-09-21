@@ -167,21 +167,17 @@ export class CheckoutFacade {
   readonly options: Signal<CheckoutOptions | null> = this.optionsWritable.asReadonly();
 
   /** The server's recomputed summary. Null when no session is loaded. */
-  readonly summary: Signal<CheckoutSummary | null> = computed(() => {
-    return this.sessionWritable()?.summary ?? null;
-  });
+  readonly summary: Signal<CheckoutSummary | null> = computed(
+    () => this.sessionWritable()?.summary ?? null,
+  );
 
   /** The server's own answer; the client never recomputes it. */
-  readonly complete: Signal<boolean> = computed(() => {
-    return this.sessionWritable()?.complete ?? false;
-  });
+  readonly complete: Signal<boolean> = computed(() => this.sessionWritable()?.complete ?? false);
 
   /** Authoritative version, read from the cart facade. This is the
    *  `If-Match` source on every write — `session().version` is never
    *  read for the header (design §2.1). */
-  readonly version: Signal<number | null> = computed(() => {
-    return this.cart.cart()?.version ?? null;
-  });
+  readonly version: Signal<number | null> = computed(() => this.cart.cart()?.version ?? null);
 
   /** Number of intents currently queued or dispatching. */
   private readonly pendingWritable = signal(0);
@@ -307,19 +303,19 @@ export class CheckoutFacade {
   // Section writes — all four go through `patch()`
   // -------------------------------------------------------------------------
 
-  async updateContact(contact: Contact): Promise<CheckoutResult<CheckoutSession>> {
+  updateContact(contact: Contact): Promise<CheckoutResult<CheckoutSession>> {
     return this.patch('contact', { contact } satisfies UpdateCheckoutRequest);
   }
 
-  async updateBilling(billing: BillingDetails): Promise<CheckoutResult<CheckoutSession>> {
+  updateBilling(billing: BillingDetails): Promise<CheckoutResult<CheckoutSession>> {
     return this.patch('billing', { billing } satisfies UpdateCheckoutRequest);
   }
 
-  async updateDelivery(delivery: DeliverySelection): Promise<CheckoutResult<CheckoutSession>> {
+  updateDelivery(delivery: DeliverySelection): Promise<CheckoutResult<CheckoutSession>> {
     return this.patch('delivery', { delivery } satisfies UpdateCheckoutRequest);
   }
 
-  async updatePayment(payment: PaymentSelection): Promise<CheckoutResult<CheckoutSession>> {
+  updatePayment(payment: PaymentSelection): Promise<CheckoutResult<CheckoutSession>> {
     return this.patch('payment', { payment } satisfies UpdateCheckoutRequest);
   }
 
@@ -329,7 +325,7 @@ export class CheckoutFacade {
    * sections are written; absent sections are retained"), so no
    * merge is needed client-side (design §3.4).
    */
-  private async patch(
+  private patch(
     kind: 'contact' | 'billing' | 'delivery' | 'payment',
     body: UpdateCheckoutRequest,
   ): Promise<CheckoutResult<CheckoutSession>> {
@@ -362,7 +358,7 @@ export class CheckoutFacade {
    * sessionStorage, and the value returned to the caller, who then
    * issues the full-page redirect.
    */
-  async createPaymentIntent(): Promise<CheckoutResult<PaymentIntent>> {
+  createPaymentIntent(): Promise<CheckoutResult<PaymentIntent>> {
     const mutation: CheckoutMutation<PaymentIntent> = {
       kind: 'paymentIntent',
       run: async (expectedVersion) => {
@@ -429,7 +425,7 @@ export class CheckoutFacade {
    * owns the result mapping. A 201 stores the receipt, clears the
    * idempotency key, drops the session and returns the value.
    */
-  async submitOrder(body: OrderRequest): Promise<CheckoutResult<OrderReceipt>> {
+  submitOrder(body: OrderRequest): Promise<CheckoutResult<OrderReceipt>> {
     const mutation: CheckoutMutation<OrderReceipt> = {
       kind: 'order',
       run: async (expectedVersion) => {

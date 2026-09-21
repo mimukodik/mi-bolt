@@ -26,11 +26,11 @@ import { navigationReasonMessage, toNavigationReason } from './navigation-reason
   template: `
     @if (text(); as message) {
       <app-status-message
-        [message]="message"
-        severity="info"
-        (dismissed)="dismissed.set(true)"
         data-testid="navigation-reason"
-      ></app-status-message>
+        severity="info"
+        [message]="message"
+        (dismissed)="dismissed.set(true)"
+      />
     }
   `,
   // Every host of this banner is a `flex flex-col gap-…` section, where a

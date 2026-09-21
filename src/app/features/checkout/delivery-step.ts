@@ -261,9 +261,7 @@ export class DeliveryStep {
     return option?.fee ?? null;
   });
 
-  readonly requiresAddress = computed<boolean>(() => {
-    return this.selectedOptionId() === 'home_delivery';
-  });
+  readonly requiresAddress = computed<boolean>(() => this.selectedOptionId() === 'home_delivery');
 
   readonly canConfirm = computed<boolean>(() => {
     if (this.saveState() === 'loading') return false;
