@@ -599,10 +599,10 @@ describe('ST-03 the submitting and loading states each render their own loader, 
 describe('ST-04 the conflict, stock-error and error states render no CTA explanation, because their banner already says what happened', () => {
   it('renders no review-cta-explanation in any of the three states', () => {
     for (const state of ['conflict', 'stock-error', 'error'] as const) {
+      TestBed.resetTestingModule();
       const fixture = createFixture({ state });
       const root = getRootElement(fixture);
       expect(root.querySelectorAll('[data-testid="review-cta-explanation"]').length).toBe(0);
-      TestBed.resetTestingModule();
     }
   });
 });
