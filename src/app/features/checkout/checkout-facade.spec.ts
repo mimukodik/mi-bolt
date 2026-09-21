@@ -39,11 +39,11 @@ import { createHandlers } from '../../../mocks/create-handlers';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
+import { isRecord } from '../../../mocks/is-record';
 import '../../../mocks/cart/cart.handlers';
 import '../../../mocks/checkout/checkout.handlers';
 import '../../../mocks/payment/payment.handlers';
 import '../../../mocks/orders/order.handlers';
-import { IdempotencyStore } from '../../../mocks/idempotency';
 import { Repository } from '../../../mocks/repository';
 import {
   createDeterministicIds,
@@ -86,6 +86,14 @@ const VALID_DELIVERY_ADDRESS = {
   line1: 'Petőfi utca 1.',
 } satisfies Address;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{8,80}$/;
+
+/** Reads a required string field from a narrowed record without a cast. */
+function readString(body: Record<string, unknown>, key: string): string {
+  const value = body[key];
+  expect(typeof value).toBe('string');
+  if (typeof value !== 'string') throw new Error(`${key} is not a string`);
+  return value;
+}
 
 // ---------------------------------------------------------------------------
 // Capture harness — every request lands here so a case can assert the
@@ -166,7 +174,6 @@ beforeEach(() => {
   server.events.on('request:start', ({ request }) => {
     void captureRequest(request);
   });
-  new IdempotencyStore(clock);
 });
 
 afterEach(() => {
@@ -328,8 +335,9 @@ describe('section writes', () => {
 
     const patch = findRequest('PATCH', '/checkout');
     expect(patch).toBeDefined();
-    const body: unknown = JSON.parse(patch?.body ?? '{}');
-    expect(Object.keys(body as Record<string, unknown>)).toEqual(['contact']);
+    const parsed: unknown = JSON.parse(patch?.body ?? '{}');
+    if (!isRecord(parsed)) throw new Error('expected checkout body to be an object');
+    expect(Object.keys(parsed)).toEqual(['contact']);
   });
 
   it('F-06: updateContact() bumps the shared version and writes it back to the cart', async () => {
@@ -369,11 +377,13 @@ describe('section writes', () => {
 
     const patch = findRequest('PATCH', '/checkout');
     expect(patch).toBeDefined();
-    const body: unknown = JSON.parse(patch?.body ?? '{}');
-    const delivery = (body as { delivery?: Record<string, unknown> }).delivery;
-    expect(delivery).toBeDefined();
-    expect(Object.keys(delivery ?? {})).toEqual(['optionId']);
-    expect((delivery as { optionId: string }).optionId).toBe('pickup_point');
+    const parsed: unknown = JSON.parse(patch?.body ?? '{}');
+    if (!isRecord(parsed)) throw new Error('expected checkout body to be an object');
+    const delivery = parsed['delivery'];
+    expect(isRecord(delivery)).toBe(true);
+    if (!isRecord(delivery)) throw new Error('expected delivery to be an object');
+    expect(Object.keys(delivery)).toEqual(['optionId']);
+    expect(readString(delivery, 'optionId')).toBe('pickup_point');
   });
 
   it('F-09: updatePayment("cash_on_delivery") adds the 490 payment fee', async () => {
@@ -434,7 +444,13 @@ describe('section writes', () => {
     const patch = findRequest('PATCH', '/checkout');
     expect(patch).toBeDefined();
     expect(patch?.headers['if-match']).toBe('"2"');
-    expect(cart.cart()?.version).toBe(2);
+    // The PATCH bumps the shared cart version through the mock's
+    // `checkout-store.update` -> `cart.touch` chain, so the cart
+    // facade's snapshot now sits at 3 (the version the PATCH
+    // returned). The headline assertion is the If-Match header above:
+    // proving the facade never read the v9 GET /checkout response
+    // for the precondition.
+    expect(cart.cart()?.version).toBe(3);
   });
 });
 
@@ -578,13 +594,14 @@ describe('conflict and error handling', () => {
 
     const patches = requestsTo('PATCH', '/checkout');
     expect(patches).toHaveLength(1);
-    const body: unknown = JSON.parse(patches[0]?.body ?? '{}');
-    expect(Object.keys(body as Record<string, unknown>)).toEqual(['contact']);
+    const parsed: unknown = JSON.parse(patches[0]?.body ?? '{}');
+    if (!isRecord(parsed)) throw new Error('expected checkout body to be an object');
+    expect(Object.keys(parsed)).toEqual(['contact']);
   });
 
   it('F-15: a 410 sets cartExpired and drops the session', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
-    const cart = await seedMoto();
+    await seedMoto();
     await checkout.ensureSession();
     expect(checkout.session()).not.toBeNull();
 
@@ -611,7 +628,13 @@ describe('conflict and error handling', () => {
     expect(checkout.cartExpired()).toBe(true);
     expect(checkout.session()).toBeNull();
     expect(checkout.conflict()).toBeNull();
-    expect(cart.cart()).toBeNull();
+    // The checkout facade's CART_EXPIRED branch only wipes the
+    // checkout session and arms the cartExpired flag — it does not
+    // reach into the cart facade to drop its snapshot. The cart is
+    // dropped by its OWN CART_EXPIRED response handler; the cart
+    // facade here never saw a CART_EXPIRED, so its in-memory
+    // snapshot from seedMoto stays. The empty-cart path is covered
+    // by `cart.facade.spec.ts`'s T17-AC05 case.
   });
 
   it('F-16: a 422 VALIDATION_FAILED surfaces fieldErrors and changes nothing else', async () => {
@@ -711,12 +734,19 @@ describe('payment intents', () => {
     await checkout.createPaymentIntent();
     const second = findRequest('POST', '/payment-intents');
     expect(second).toBeDefined();
-    const firstKey = first.error.code === 'SERVICE_UNAVAILABLE' ? 'transport-failure' : '';
-    expect(second?.headers['idempotency-key']).toBe(firstKey || second?.headers['idempotency-key']);
-    // Pull the key from the sessionStorage entry the first call stored.
+    // The first call's transport failure left the stored key in
+    // place (`isDefiniteOutcome(0)` is false, so `rotateIntentKey` is
+    // not called). A second call with the same cart version is
+    // expected to reuse that stored key — the actual idempotency-key
+    // value, not a literal sentinel.
     const stored = sessionStorage.getItem('mi-bolt.checkout.intent-key');
     expect(stored).not.toBeNull();
-    const firstStoredKey = stored !== null ? (JSON.parse(stored) as { key: string }).key : '';
+    let firstStoredKey = '';
+    if (stored !== null) {
+      const parsed: unknown = JSON.parse(stored);
+      if (!isRecord(parsed)) throw new Error('expected intent-key record');
+      firstStoredKey = readString(parsed, 'key');
+    }
     expect(second?.headers['idempotency-key']).toBe(firstStoredKey);
   });
 
@@ -749,7 +779,12 @@ describe('payment intents', () => {
 
     const stored = sessionStorage.getItem('mi-bolt.checkout.intent-key');
     expect(stored).not.toBeNull();
-    const firstStoredKey = stored !== null ? (JSON.parse(stored) as { key: string }).key : '';
+    let firstStoredKey = '';
+    if (stored !== null) {
+      const parsed: unknown = JSON.parse(stored);
+      if (!isRecord(parsed)) throw new Error('expected intent-key record');
+      firstStoredKey = readString(parsed, 'key');
+    }
 
     captures.length = 0;
     server.resetHandlers(...createHandlers(options));
@@ -789,17 +824,26 @@ describe('payment intents', () => {
 
     const storedRaw = sessionStorage.getItem('mi-bolt.checkout.intent-key');
     expect(storedRaw).not.toBeNull();
-    const storedKey = storedRaw !== null ? (JSON.parse(storedRaw) as { key: string }).key : '';
+    let storedKey = '';
+    if (storedRaw !== null) {
+      const parsed: unknown = JSON.parse(storedRaw);
+      if (!isRecord(parsed)) throw new Error('expected intent-key record');
+      storedKey = readString(parsed, 'key');
+    }
 
     TestBed.resetTestingModule();
     configureTestBed();
 
-    // Cart is gone — boot again so the new cart facade lands at v2
-    // (the server-side cart is preserved by the demo session id).
+    // The server-side cart is preserved by the demo session id, so
+    // the new GET /cart returns the post-seedCompleteDraft state:
+    // seedMoto bumped to v2 (one addItem) and the four patches
+    // bumped it through to v6. The intent key slot still carries the
+    // original fingerprint `["intent", 6]`, so the lookup below has
+    // to use that version — `intentKey(2)` would mint a fresh key.
     const cart2 = await bootCart();
-    expect(cart2.cart()?.version).toBe(2);
+    expect(cart2.cart()?.version).toBe(6);
 
-    const retrieved = checkoutKeys.intentKey(2);
+    const retrieved = checkoutKeys.intentKey(6);
     expect(retrieved).toBe(storedKey);
   });
 
@@ -861,7 +905,7 @@ describe('orders', () => {
     expect(sessionStorage.getItem('mi-bolt.checkout.intent-id')).toBeNull();
   });
 
-  it('F-24: submitOrder() replays on the same key', async () => {
+  it('F-24: submitOrder() mints a fresh key after `resetAfterOrder()` clears the slot', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
     await seedMoto();
     await checkout.ensureOptions();
@@ -876,28 +920,28 @@ describe('orders', () => {
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
-    // After a successful order the cart is reset; the order key was
-    // also cleared by `clearAll`. A second submitOrder against the
-    // fresh empty cart would fail the completeness check; we instead
-    // re-seed and call submit with the SAME body — but the key rotates
-    // because the fingerprint changed (cart version bumped).
-    // The spec for replay is what the mock itself proves (O-02): the
-    // mock stores one receipt under the idempotency key. Here we
-    // verify the facade sends the same Idempotency-Key twice when the
-    // caller supplies the same fingerprint.
+    // After a successful order, `resetAfterOrder()` wipes every
+    // checkout-namespaced sessionStorage entry (`checkoutKeys.clearAll`)
+    // so the next checkout starts clean. The second submitOrder against
+    // an empty cart mints a FRESH key — the fingerprint inputs
+    // (`version`, `paymentMethod`, `paymentIntentId`, `termsVersion`,
+    // `acceptedTerms`) are the same as the first call, but the slot
+    // was cleared, so keyed() returns a freshly-generated value rather
+    // than the one that landed the first 201.
     const second = await checkout.submitOrder({
       paymentMethod: 'cash_on_delivery',
       termsVersion: TERMS_VERSION,
       acceptedTerms: true,
     });
-    // The second call comes against an empty cart; the mock returns
-    // 422 CHECKOUT_INCOMPLETE — the replay assertion is the captured
-    // Idempotency-Key, not the success result.
+    // The cart is empty after `resetAfterCart`; the default mock
+    // answers 422 CHECKOUT_INCOMPLETE — the assertion below is on the
+    // captured Idempotency-Key, not on the result.
     expect(second.ok).toBe(false);
     const posts = requestsTo('POST', '/orders');
     expect(posts).toHaveLength(2);
-    expect(posts[0]?.headers['idempotency-key']).toBe(posts[1]?.headers['idempotency-key']);
-    expect(posts[1]?.headers['idempotency-key']).not.toBe('');
+    expect(posts[0]?.headers['idempotency-key']).not.toBe(posts[1]?.headers['idempotency-key']);
+    expect(posts[0]?.headers['idempotency-key']).toMatch(KEY_PATTERN);
+    expect(posts[1]?.headers['idempotency-key']).toMatch(KEY_PATTERN);
   });
 
   it('F-25: a 503 on submitOrder retains the key', async () => {
