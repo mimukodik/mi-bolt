@@ -59,7 +59,7 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": { "proxyConfig": "proxy.conf.json" },
+          "options": { "proxyConfig": "proxy.conf.json", "hmr": false },
           "configurations": {
             "production": {
               "buildTarget": "mi-bolt:build:production"
@@ -143,7 +143,7 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": { "port": 4210, "servePath": "/demo-fizetes" },
+          "options": { "port": 4210, "servePath": "/demo-fizetes", "hmr": false },
           "configurations": {
             "production": { "buildTarget": "demo-payment:build:production" },
             "development": { "buildTarget": "demo-payment:build:development" }
