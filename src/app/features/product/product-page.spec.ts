@@ -4,7 +4,8 @@ import '@angular/compiler';
 import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Location } from '@angular/common';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -117,8 +118,8 @@ beforeEach(() => {
       );
     }),
 
-    http.get(`${BASE_URL}/products/:slug/related`, () => {
-      return HttpResponse.json(
+    http.get(`${BASE_URL}/products/:slug/related`, () =>
+      HttpResponse.json(
         [
           {
             id: 'r-01',
@@ -182,15 +183,15 @@ beforeEach(() => {
           },
         ],
         { status: 200 },
-      );
-    }),
+      ),
+    ),
 
-    http.get(`${BASE_URL}/cart`, () => {
-      return HttpResponse.json(makeMockCart('cart-test-page-1'), {
+    http.get(`${BASE_URL}/cart`, () =>
+      HttpResponse.json(makeMockCart('cart-test-page-1'), {
         status: 200,
         headers: { ETag: '"1"' },
-      });
-    }),
+      }),
+    ),
 
     http.post(`${BASE_URL}/cart/items`, async ({ request }) => {
       const bodyText = await request.text();
@@ -210,7 +211,7 @@ afterEach(() => {
 
 @Component({
   imports: [ProductPage],
-  template: ` <app-product-page [slug]="slug()"></app-product-page> `,
+  template: ` <app-product-page [slug]="slug()" /> `,
 })
 class ProductPageHost {
   readonly slug = signal<string>('demo-one-5g');
@@ -571,11 +572,13 @@ describe('T16-AC05 product-page has no 3D surface', () => {
 describe('T16 product-page loading and error states', () => {
   it('displays loading state skeleton while product is in flight', async () => {
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return new Promise<Response>(() => {
-          // Keep request pending
-        });
-      }),
+      http.get(
+        `${BASE_URL}/products/:slug`,
+        () =>
+          new Promise<Response>(() => {
+            // Keep request pending
+          }),
+      ),
     );
 
     TestBed.configureTestingModule({
@@ -603,8 +606,8 @@ describe('T16 product-page loading and error states', () => {
     // which is its own dedicated 'notfound' state — see the FIX-23
     // describe block below).
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return HttpResponse.json(
+      http.get(`${BASE_URL}/products/:slug`, () =>
+        HttpResponse.json(
           {
             type: 'https://example.com/server-error',
             title: 'Szolgáltatás nem elérhető',
@@ -612,8 +615,8 @@ describe('T16 product-page loading and error states', () => {
             detail: 'Service unavailable',
           },
           { status: 503 },
-        );
-      }),
+        ),
+      ),
     );
 
     const { fixture, facade, root, tick } = await createHarness();
@@ -629,9 +632,9 @@ describe('T16 product-page loading and error states', () => {
 
     // Simulate recovery on retry
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return HttpResponse.json(DEMO_PRODUCT, { status: 200 });
-      }),
+      http.get(`${BASE_URL}/products/:slug`, () =>
+        HttpResponse.json(DEMO_PRODUCT, { status: 200 }),
+      ),
     );
 
     retryBtn.click();
@@ -847,8 +850,8 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
 
   it('FIX-23-AC06: a 404 renders the dedicated not-found state with a catalogue return, distinct from a transient error', async () => {
     server.use(
-      http.get(`${BASE_URL}/products/:slug`, () => {
-        return HttpResponse.json(
+      http.get(`${BASE_URL}/products/:slug`, () =>
+        HttpResponse.json(
           {
             type: 'https://example.com/not-found',
             title: 'Nem található',
@@ -856,8 +859,8 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
             detail: 'Product not found',
           },
           { status: 404 },
-        );
-      }),
+        ),
+      ),
     );
 
     const { facade, root } = await createHarness();
@@ -1068,7 +1071,9 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     // torn down (lines 178-181), so the `next` callback never fires
     // and `relatedSignal` stays at the empty array the reset put there.
     resolvers.current?.();
-    await new Promise<void>((r) => setTimeout(r, 30));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 30);
+    });
     fixture.detectChanges();
 
     expect(facade.vm().slug).toBe('demo-pro-5g');

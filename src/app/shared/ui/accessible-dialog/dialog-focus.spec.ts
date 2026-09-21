@@ -14,7 +14,8 @@
  * two feature directories owned by other agents' worktrees this round.
  * That wiring is deferred; see this task's Status line.
  */
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import { AccessibleDialog } from './accessible-dialog';
@@ -22,11 +23,11 @@ import { AccessibleDialog } from './accessible-dialog';
 @Component({
   imports: [AccessibleDialog, DialogModule],
   template: `
-    <button #trigger type="button" data-testid="trigger-a">Trigger A</button>
-    <button #other type="button" data-testid="trigger-b">Trigger B</button>
+    <button #trigger data-testid="trigger-a" type="button">Trigger A</button>
+    <button #other data-testid="trigger-b" type="button">Trigger B</button>
     <app-accessible-dialog
+      label="Megerősítés"
       [opened]="opened()"
-      [label]="'Megerősítés'"
       [restoreTarget]="restoreTarget()"
       (closed)="closed.set(closed() + 1)"
     >
@@ -65,7 +66,7 @@ describe('AccessibleDialog focus restoration (FIX-30)', () => {
     const triggerA = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="trigger-a"]',
     );
-    if (!triggerA) throw new Error('Expected trigger A');
+    if (triggerA === null) throw new Error('Expected trigger A');
     triggerA.focus();
     expect(document.activeElement).toBe(triggerA);
 
@@ -88,7 +89,7 @@ describe('AccessibleDialog focus restoration (FIX-30)', () => {
     const triggerB = getNativeElement(fixture).querySelector<HTMLButtonElement>(
       '[data-testid="trigger-b"]',
     );
-    if (!triggerA || !triggerB) throw new Error('Expected both triggers');
+    if (triggerA === null || triggerB === null) throw new Error('Expected both triggers');
     host.restoreTarget.set(triggerB);
     triggerA.focus();
 

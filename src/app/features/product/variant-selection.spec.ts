@@ -99,7 +99,7 @@ function makeVariant(
     price: money(price),
     availability,
     maxQuantity,
-    images: images ? [...images] : [makeImage(`${id}-front`)],
+    images: images !== undefined ? [...images] : [makeImage(`${id}-front`)],
   };
 }
 
@@ -443,7 +443,7 @@ beforeEach(() => {
       const slug = String(params['slug']);
       captures.push({ method: request.method, url: request.url, slug });
       const delayed = delayedHandlers.find((h) => h.slug === slug);
-      if (delayed) {
+      if (delayed !== undefined) {
         return new Promise<Response>((resolve) => {
           delayed.resolve = () => {
             resolve(HttpResponse.json(delayed.payload));
@@ -521,7 +521,9 @@ function buildFacade(): { facade: ProductFacade; flushMicrotasks: () => Promise<
       // Promise resolution, MSW interceptor). Yield enough ticks for
       // every link in the chain to complete.
       for (let i = 0; i < 20; i += 1) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 0);
+        });
       }
     },
   };
@@ -767,7 +769,7 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
       resolve: () => undefined,
     });
     const proPayload = payloadForSlug('demo-pro-5g');
-    if (!proPayload) throw new Error('Expected payload for demo-pro-5g');
+    if (proPayload === null) throw new Error('Expected payload for demo-pro-5g');
     delayedHandlers.push({
       slug: 'demo-pro-5g',
       payload: proPayload,
@@ -778,17 +780,23 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
 
     facade.load('demo-one-5g', new URLSearchParams());
     // Yield so the first request is in flight before we issue the second.
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
     facade.load('demo-pro-5g', new URLSearchParams());
     // Yield so the second request is in flight before we resolve it.
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
 
     // Resolve only the second request: the first must be cancelled
     // by switchMap and never reach the product signal.
     const second = delayedHandlers.find((h) => h.slug === 'demo-pro-5g');
-    if (!second) throw new Error('Expected second handler');
+    if (second === undefined) throw new Error('Expected second handler');
     second.resolve();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
 
     // expect.poll retries the assertion until it holds, covering the
     // MSW -> fetch -> SDK -> RxJS -> signal chain in whatever order the
@@ -801,9 +809,11 @@ describe('T15 ProductFacade — switchMap cancels obsolete loads on route change
     // Resolving the first handler after cancellation must NOT swap the
     // product back to demo-one-5g.
     const first = delayedHandlers.find((h) => h.slug === 'demo-one-5g');
-    if (!first) throw new Error('Expected first handler');
+    if (first === undefined) throw new Error('Expected first handler');
     first.resolve();
-    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 50);
+    });
     expect(facade.vm().product?.slug).toBe('demo-pro-5g');
   });
 

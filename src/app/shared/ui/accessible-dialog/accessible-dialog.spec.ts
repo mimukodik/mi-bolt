@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import { AccessibleDialog } from './accessible-dialog';
@@ -6,10 +7,10 @@ import { AccessibleDialog } from './accessible-dialog';
 @Component({
   imports: [AccessibleDialog, DialogModule],
   template: `
-    <button #trigger type="button" data-testid="dialog-trigger" (click)="open()">Open</button>
+    <button #trigger data-testid="dialog-trigger" type="button" (click)="open()">Open</button>
     <app-accessible-dialog
-      [opened]="opened()"
       [label]="label()"
+      [opened]="opened()"
       [restoreTarget]="triggerEl"
       (closed)="closedCount.set(closedCount() + 1)"
     >
@@ -33,10 +34,10 @@ class HostComponent {
 @Component({
   imports: [AccessibleDialog, DialogModule],
   template: `
-    <app-accessible-dialog [opened]="opened1()" [label]="label1()">
+    <app-accessible-dialog [label]="label1()" [opened]="opened1()">
       <p data-testid="dialog-1-body">Első tartalom</p>
     </app-accessible-dialog>
-    <app-accessible-dialog [opened]="opened2()" [label]="label2()">
+    <app-accessible-dialog [label]="label2()" [opened]="opened2()">
       <p data-testid="dialog-2-body">Második tartalom</p>
     </app-accessible-dialog>
   `,
@@ -143,7 +144,7 @@ describe('AccessibleDialog primitive', () => {
     fixture.detectChanges();
     const close = document.body.querySelector<HTMLButtonElement>('[data-testid="dialog-close"]');
     expect(close).not.toBeNull();
-    if (!close) {
+    if (close === null) {
       throw new Error('Expected close button');
     }
     close.click();
