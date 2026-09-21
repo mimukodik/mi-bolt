@@ -221,6 +221,11 @@
   outline-offset: 2px;
 }
 
+.input:disabled {
+  background: var(--color-surface-section);
+  color: var(--color-text-secondary);
+}
+
 /* Row items cannot shrink (button.scss white-space: nowrap), so the
    row must be allowed to wrap. */
 .footer {

@@ -37,7 +37,7 @@
         <li>
           <button
             type="button"
-            class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
+            class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
             [class.is-selected]="isBrandSelected(brand.value)"
             [attr.data-testid]="'filter-brand-' + brand.value"
             [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
@@ -108,7 +108,7 @@
         <li>
           <button
             type="button"
-            class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
+            class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
             [class.is-selected]="isStorageSelected(bucket.gb)"
             [attr.data-testid]="'filter-storage-' + bucket.gb"
             [attr.aria-pressed]="isStorageSelected(bucket.gb) ? 'true' : 'false'"
@@ -183,7 +183,7 @@
       <li>
         <button
           type="button"
-          class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
+          class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
           [class.is-selected]="isInStockSelected()"
           data-testid="filter-inStock"
           [attr.aria-pressed]="isInStockSelected() ? 'true' : 'false'"
@@ -204,7 +204,7 @@
       <li>
         <button
           type="button"
-          class="option inline-flex items-center gap-2 w-full min-h-10 cursor-pointer text-left leading-none"
+          class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
           [class.is-selected]="isFiveGSelected()"
           data-testid="filter-is5g"
           [attr.aria-pressed]="isFiveGSelected() ? 'true' : 'false'"
