@@ -259,11 +259,10 @@ describe('T13-AC04 ProductCard', () => {
     fixture.detectChanges();
     const link = queryAnchor(getRootElement(fixture), '[data-testid="product-card-cta"]');
     const href = link.getAttribute('href') ?? '';
-    expect(href).toContain('/telefonok/demo-one-5g');
-    expect(href).toContain('variant=p-01-256-graphite');
+    expect(href).toBe('/telefonok/demo-one-5g?variant=p-01-256-grafit');
   });
 
-  it("the details link carries the item's variantId as the variant matrix parameter (MIM-210)", () => {
+  it("the details link carries the item's variantId as the variant query parameter (MIM-210)", () => {
     const { fixture, host } = setup();
     host.product.set(
       makeItem({
@@ -278,7 +277,29 @@ describe('T13-AC04 ProductCard', () => {
     const item = host.product();
     const link = queryAnchor(getRootElement(fixture), '[data-testid="product-card-cta"]');
     const href = link.getAttribute('href') ?? '';
-    expect(href).toContain(`variant=${item.variantId}`);
+    expect(href).toBe(`/telefonok/${item.slug}?variant=${item.variantId}`);
+  });
+
+  it('the image and name links carry the same variant query as the CTA', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-07',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Arany',
+        storageGb: 512,
+      }),
+    );
+    fixture.detectChanges();
+    const item = host.product();
+    const root = getRootElement(fixture);
+    const anchors = Array.from(root.querySelectorAll('a[href]'));
+    expect(anchors.length).toBe(3);
+    const expected = `/telefonok/${item.slug}?variant=${item.variantId}`;
+    for (const anchor of anchors) {
+      expect(anchor.getAttribute('href')).toBe(expected);
+    }
   });
 
   it('falls back to the named image-fallback when the photo errors (no invented device)', () => {

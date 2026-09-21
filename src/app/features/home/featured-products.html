@@ -60,7 +60,8 @@
             >
               <a
                 class="featured__media"
-                [routerLink]="['/telefonok', item.slug, { variant: item.variantId }]"
+                [routerLink]="['/telefonok', item.slug]"
+                [queryParams]="{ variant: item.variantId }"
                 [attr.aria-label]="item.name + ' — részletek'"
               >
                 <span class="featured__tag">DEMÓTERMÉK</span>
@@ -84,7 +85,8 @@
                 </p>
                 <a
                   class="featured__details mt-2 inline-flex min-h-12 min-w-12 items-center justify-center self-start no-underline"
-                  [routerLink]="['/telefonok', item.slug, { variant: item.variantId }]"
+                  [routerLink]="['/telefonok', item.slug]"
+                  [queryParams]="{ variant: item.variantId }"
                   [attr.data-testid]="'featured-details-' + item.slug"
                   >Részletek</a
                 >

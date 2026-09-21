@@ -70,11 +70,14 @@ export class ProductCard {
     this.product().highlights.slice(0, 2),
   );
 
-  /** Router link to the product page, including the matching variant id. */
+  /** Router link to the product page; the variant goes in `detailsQuery`. */
   readonly detailsLink = computed(() => {
     const item = this.product();
-    return ['/telefonok', item.slug, { variant: item.variantId }];
+    return ['/telefonok', item.slug];
   });
+
+  /** The selected variant travels as `?variant=`, which the product page reads. */
+  readonly detailsQuery = computed(() => ({ variant: this.product().variantId }));
 
   /** Concatenated accessible name for the image link. */
   readonly ariaLabel = computed(() => {
