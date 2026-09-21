@@ -362,7 +362,7 @@ export class CheckoutStore {
    */
   toPersistedDraft(sessionId: string): PersistedCheckoutDraft | undefined {
     const draft = this.drafts.get(sessionId);
-    if (!draft || Object.keys(draft).length === 0) return undefined;
+    if (draft === undefined || Object.keys(draft).length === 0) return undefined;
     return { ...draft };
   }
 

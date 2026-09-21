@@ -24,6 +24,8 @@ import type { DeliverySelection } from '../app/api/generated/models/delivery-sel
 import type { OrderReceipt } from '../app/api/generated/models/order-receipt';
 import type { PaymentIntent } from '../app/api/generated/models/payment-intent';
 import type { PaymentSelection } from '../app/api/generated/models/payment-selection';
+import type { Address } from '../app/api/generated/models/address';
+import type { OrderLine } from '../app/api/generated/models/order-line';
 
 import { isRecord } from './is-record';
 import type { ScenarioName } from './scenarios';
@@ -100,12 +102,12 @@ export interface StorageLike {
 class SessionStorageAdapter {
   private denied = false;
   private warned = false;
-  private memory = new Map<string, string>();
+  private readonly memory = new Map<string, string>();
 
   constructor(private readonly storage: StorageLike | null) {}
 
   read(key: string): string | null {
-    if (this.storage && !this.denied) {
+    if (this.storage !== null && !this.denied) {
       try {
         return this.storage.getItem(key);
       } catch {
@@ -116,7 +118,7 @@ class SessionStorageAdapter {
   }
 
   write(key: string, value: string): { ok: boolean } {
-    if (this.storage && !this.denied) {
+    if (this.storage !== null && !this.denied) {
       try {
         this.storage.setItem(key, value);
         return { ok: true };
@@ -132,7 +134,7 @@ class SessionStorageAdapter {
   }
 
   remove(key: string): void {
-    if (this.storage && !this.denied) {
+    if (this.storage !== null && !this.denied) {
       try {
         this.storage.removeItem(key);
       } catch {
@@ -463,9 +465,7 @@ function isValidOrderReceipt(value: unknown): value is OrderReceipt {
   return true;
 }
 
-function isValidOrderLine(
-  value: unknown,
-): value is import('../app/api/generated/models/order-line').OrderLine {
+function isValidOrderLine(value: unknown): value is OrderLine {
   if (!isRecord(value)) return false;
   const i = value;
   if (typeof i['variantId'] !== 'string') return false;
@@ -498,9 +498,7 @@ function isValidBillingDetails(value: unknown): value is BillingDetails {
   return true;
 }
 
-function isValidAddress(
-  value: unknown,
-): value is import('../app/api/generated/models/address').Address {
+function isValidAddress(value: unknown): value is Address {
   if (!isRecord(value)) return false;
   const a = value;
   if (typeof a['city'] !== 'string') return false;

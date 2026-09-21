@@ -119,7 +119,7 @@ function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): Colo
       if (seenCodes.has(code)) continue;
       seenCodes.add(code);
       const sample = codeFirstEntry.get(code);
-      if (!sample) continue;
+      if (sample === undefined) continue;
       out.push({
         value: code,
         label: sample.variant.colorName,

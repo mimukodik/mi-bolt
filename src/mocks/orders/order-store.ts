@@ -45,8 +45,8 @@ import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';
 import type { CheckoutStore } from '../checkout/checkout-store';
 import { TERMS_VERSION, checkoutProblem } from '../checkout/checkout-store';
-import { IdempotencyStore, deriveIdempotencyKey, hashPayload } from '../idempotency';
-import type { PersistedIdempotencyRecord } from '../idempotency';
+import { deriveIdempotencyKey, hashPayload } from '../idempotency';
+import type { PersistedIdempotencyRecord, IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
 
 export const PAYMENT_INTENT_TTL_MS = 30 * 60 * 1000;
@@ -165,7 +165,7 @@ export class OrderStore {
     const payload = { ifMatch };
     const hash = hashPayload(payload);
     const cached = this.idempotency.find(key, hash);
-    if (cached) {
+    if (cached !== null) {
       if (!isPaymentIntent(cached.body)) {
         throw new Error('[order-store] cached body for /payment-intents is not a PaymentIntent');
       }
@@ -332,7 +332,7 @@ export class OrderStore {
     const key = deriveIdempotencyKey('POST', '/orders', sessionId, idempotencyKey);
     const hash = hashPayload(orderRequest);
     const cached = this.idempotency.find(key, hash);
-    if (cached) {
+    if (cached !== null) {
       if (!isOrderReceipt(cached.body)) {
         throw new Error('[order-store] cached body for /orders is not an OrderReceipt');
       }
@@ -759,5 +759,5 @@ function toOrderLine(item: {
  * `nextOrderNumber()` cannot collide with one from before reload. */
 function parseOrderSequence(orderNumber: string): number | null {
   const m = /^DEMO-(\d+)$/.exec(orderNumber);
-  return m ? Number(m[1]) : null;
+  return m !== null ? Number(m[1]) : null;
 }

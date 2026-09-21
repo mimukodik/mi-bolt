@@ -206,7 +206,7 @@ export class Repository {
    */
   ensureCart(sessionId: string): Cart {
     const existing = this.cartsBySession.get(sessionId);
-    if (existing) {
+    if (existing !== undefined) {
       const cart = this.carts.get(existing);
       if (cart?.status === 'active' && !this.isCartExpired(cart)) return cart;
     }

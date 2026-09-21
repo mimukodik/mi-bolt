@@ -98,7 +98,7 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
       const cart = cartStore.current;
       const checkout = checkoutStore.current;
       const order = orderStore.current;
-      if (!cart || !checkout || !order) {
+      if (cart === null || checkout === null || order === null) {
         throw new Error('[browser] persist called before the three stores were initialised');
       }
       persistence.save(

@@ -111,7 +111,7 @@ export class IdempotencyStore {
    */
   find(key: string, payloadHash: string): IdempotencyOutcome | null {
     const record = this.entries.get(key);
-    if (!record) return null;
+    if (record === undefined) return null;
     if (this.isExpired(record)) {
       this.entries.delete(key);
       return null;
@@ -128,7 +128,7 @@ export class IdempotencyStore {
    */
   hasConflictingPayload(key: string, payloadHash: string): boolean {
     const record = this.entries.get(key);
-    if (!record) return false;
+    if (record === undefined) return false;
     if (this.isExpired(record)) {
       this.entries.delete(key);
       return false;

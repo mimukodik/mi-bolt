@@ -31,7 +31,7 @@ import { invalidRequest, problemResponse } from '../problem-response';
 import { orderStore } from '../checkout/checkout.handlers';
 
 function requireOrderStore(): NonNullable<typeof orderStore.current> {
-  if (!orderStore.current) {
+  if (orderStore.current === null) {
     throw new Error('[payment.handlers] order store has not been loaded');
   }
   return orderStore.current;

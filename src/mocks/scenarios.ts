@@ -94,7 +94,7 @@ export const BUILT_IN_SCENARIOS: Readonly<Record<ScenarioName, ScenarioDescripto
 export function resolveScenario(name: ScenarioName | null | undefined): ScenarioDescriptor {
   if (typeof name !== 'string' || name.length === 0) return DEFAULT_SCENARIO;
   const known = BUILT_IN_SCENARIOS[name];
-  if (known) return known;
+  if (known !== undefined) return known;
   return {
     name,
     seed: DEFAULT_SCENARIO.seed,

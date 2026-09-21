@@ -34,7 +34,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { isRecord } from '../is-record';
-import { type Product, Repository } from '../repository';
+import type { Product, Repository } from '../repository';
 
 import { CartStore } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
@@ -176,7 +176,7 @@ function ensureFixture(repository: Repository): void {
  * loaded. The cart handlers cannot answer a request without it.
  */
 function requireCatalog(): NonNullable<typeof catalogStore.current> {
-  if (!catalogStore.current) {
+  if (catalogStore.current === null) {
     throw new Error('[cart.handlers] catalog store has not been loaded');
   }
   return catalogStore.current;
@@ -262,7 +262,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   const store = new CartStore(options, (id) => requireCatalog().getVariant(id));
   cartStore.current = store;
 
-  if (options.snapshot?.cart) {
+  if (options.snapshot?.cart !== undefined) {
     store.seedFromSnapshot(options.snapshot.simulatedSessionId, options.snapshot.cart);
   }
 
