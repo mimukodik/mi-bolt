@@ -265,9 +265,8 @@ export class CheckoutFacade {
 
   /**
    * Loads `/checkout`. A stale version must not turn a reload into
-   * a 412, so no `If-Match` is sent (the 1.0.0 `fetchOrder` already
-   * reasons this way at `checkout.facade.ts:589-592`). On success
-   * the cart's version is adopted from the server's answer.
+   * a 412, so no `If-Match` is sent. On success the cart's version
+   * is adopted from the server's answer.
    */
   async ensureSession(force = false): Promise<CheckoutResult<CheckoutSession>> {
     if (!force) {
@@ -400,10 +399,9 @@ export class CheckoutFacade {
 
   /**
    * Reads a payment intent by id. No `If-Match`, no key. Stores the
-   * result on `paymentIntent`. A 404 is returned in the result and
-   * `CheckoutError` and is NOT recorded on `error`, the way the 1.0.0
-   * `fetchOrder` treats a 404 (`checkout.facade.ts:599-609`), so the
-   * return page can render its own recovery.
+   * result on `paymentIntent`. A 404 is returned in the result as a
+   * `CheckoutError` and is NOT recorded on `error`, so the return
+   * page can render its own recovery.
    */
   async readPaymentIntent(paymentIntentId: string): Promise<CheckoutResult<PaymentIntent>> {
     try {

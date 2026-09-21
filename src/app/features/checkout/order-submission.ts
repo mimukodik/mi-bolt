@@ -3,13 +3,10 @@
  *
  * A thin mapper over `CheckoutFacade.submitOrder`: pick the arm of
  * `OrderRequest` (the discriminated union on `paymentMethod`), call
- * `submitOrder(body)` and map the result. The 1.0.0 polling loop, its
- * `FakeClock`, the progress stream, the local `safeKey` and the second
- * `Api` instance all lose their subject to fact (d) of the S3 design
- * (`/tmp/s3-c-design.md` §1): the SPA is destroyed by the payment
- * redirect and the outcome is read once on return. `SafeLogger` is the
- * one piece carried over; the `quoteId`, `orderKey` and `cartId`
- * whitelist entries are gone with the things they labelled.
+ * `submitOrder(body)` and map the result. There is no polling loop
+ * and no progress stream: the SPA is destroyed by the payment
+ * redirect and the outcome is read once on return (fact (d) of the
+ * S3 design). `SafeLogger` whitelists the context a log line may carry.
  */
 
 import { Service, computed, inject, signal, type Signal } from '@angular/core';
@@ -25,9 +22,8 @@ import { CheckoutFacade } from './checkout.facade';
 
 // ---------------------------------------------------------------------------
 // Public outcome — eight kinds, every recovery the UI can offer on its
-// own. Mirrors `payment-progress.ts`'s five states plus the order-time
-// outcomes (committed, payment-required, payment-pending, price-changed,
-// incomplete, conflict).
+// own: committed, declined, payment-required, payment-pending,
+// price-changed, incomplete, conflict, unknown.
 // ---------------------------------------------------------------------------
 
 export type SubmitOutcome =
@@ -46,9 +42,8 @@ export type SubmitOutcome =
   | { readonly kind: 'conflict' }
   | { readonly kind: 'unknown'; readonly code: string };
 
-/** Whitelist-only context the safe logger emits. The 1.0.0 fields
- *  `cartId`, `quoteId` and `orderKey` are gone with the things they
- *  labelled; nothing here can be replayed from a log line. */
+/** Whitelist-only context the safe logger emits; nothing here can be
+ *  replayed from a log line. */
 export interface SafeLogContext {
   readonly paymentIntentId?: string;
   readonly orderId?: string;
@@ -124,10 +119,10 @@ const noopLogger: SafeLogger = () => undefined;
 
 // ---------------------------------------------------------------------------
 // OrderSubmission — the orchestration root. Holds the in-flight mutex
-// (kept verbatim from 1.0.0 — a second `submitOrder()` returns the same
-// promise), the safe-logger seam and the read-only signals the page
-// binds. All wire calls go through the facade; this service has no
-// `HttpClient` of its own (design §7.1).
+// (a second `submitOrder()` returns the same promise), the safe-logger
+// seam, and the read-only signals the page binds. All wire calls go
+// through the facade; this service has no `HttpClient` of its own
+// (design §7.1).
 // ---------------------------------------------------------------------------
 
 @Service()
@@ -136,8 +131,7 @@ export class OrderSubmission {
 
   /** In-flight submit mutex. The reference is held in a closure so a
    *  second `submitOrder()` observes the same promise as the first;
-   *  null when no submit is running. Verbatim from
-   *  `order-submission.ts:218,338-354` of the 1.0.0 file. */
+   *  null when no submit is running. */
   private inFlightPromise: Promise<SubmitOutcome> | null = null;
 
   private readonly inFlightWritable = signal(false);

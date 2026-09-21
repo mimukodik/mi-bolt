@@ -16,10 +16,13 @@
  * The guards run as part of route matching so a deep link or hard
  * reload of an unfinished checkout lands the user on the right step
  * with a `navigationReason` query param the page renders as a
- * banner. The cart survives because the `CartFacade` is the source
- * of truth for it; only contact / address / paymentMethod in memory
- * are cleared on hard reload (the facade's `loadSession` does that
- * when the URL contains `?reload=1`).
+ * banner. The cart survives because the `CartFacade` is the source of
+ * truth for it, and the checkout draft is the server's session. The
+ * guards read only the in-memory `CheckoutFacade.session()` signal
+ * (T19-AC05, no network), which is `null` on a fresh document load
+ * until a `PATCH /checkout` response or `PaymentReturnPage`'s
+ * `ensureSession()` fills it, so a reload restarts the wizard from
+ * the cart.
  */
 
 import { inject } from '@angular/core';
@@ -136,8 +139,8 @@ export const contactGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =
  *     `empty-cart` (T19-AC02);
  *   - the contact section has not been saved yet →
  *     /penztar/adatok so a deep link to the delivery step lands on
- *     the contact form, where the checkout facade hydrates whatever
- *     was saved server-side.
+ *     the contact form, which starts empty; the `PATCH /checkout`
+ *     it sends returns the whole retained draft into `session()`.
  */
 export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
