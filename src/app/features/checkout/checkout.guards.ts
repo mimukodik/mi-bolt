@@ -54,16 +54,17 @@ import { CheckoutFacade } from './checkout.facade';
 
 /**
  * Why the shopper is being sent somewhere else. The value is written
- * to the `navigationReason` query parameter; nothing in `src/app`
- * reads it back, so it travels with the URL as a diagnostic rather
- * than as the input of a banner.
+ * to the `navigationReason` query parameter; `NavigationReasonBanner`
+ * (`navigation-reason-banner.ts`) reads it on the cart, contact and
+ * delivery pages and shows the sentence `navigationReasonMessage` maps
+ * it to.
  *
  *   - `incomplete`: an earlier step of the wizard has no saved section.
  *   - `empty-cart`: the hydrated cart has no lines.
  *   - `cart-unavailable`: the cart could not be read from the server.
  *   - `deep-link`: the success URL was opened without an order id.
  */
-type NavigationReason = 'incomplete' | 'empty-cart' | 'cart-unavailable' | 'deep-link';
+export type NavigationReason = 'incomplete' | 'empty-cart' | 'cart-unavailable' | 'deep-link';
 
 /**
  * Everything a guard needs, collected while the injection context is

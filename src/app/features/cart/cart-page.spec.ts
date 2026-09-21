@@ -773,7 +773,7 @@ describe('S2-C notices: server reconcile notices render one status message each'
 
     const root = getRootElement(fixture);
     const notices = root.querySelectorAll('[data-testid="cart-notice"]');
-    expect(notices[0].textContent.trim()).toBe(
+    expect(notices[0].querySelector('.message')?.textContent.trim()).toBe(
       'Motorola Edge 50 Fusion: a mennyiséget 5 → 3 darabra csökkentettük a készlet miatt.',
     );
     expect(notices.length).toBe(1);
@@ -800,7 +800,7 @@ describe('S2-C notices: server reconcile notices render one status message each'
 
     const root = getRootElement(fixture);
     const notices = root.querySelectorAll('[data-testid="cart-notice"]');
-    expect(notices[0].textContent.trim()).toBe(
+    expect(notices[0].querySelector('.message')?.textContent.trim()).toBe(
       'Egy termék kikerült a kosárból, mert már nem kapható.',
     );
     expect(notices.length).toBe(1);
@@ -831,8 +831,10 @@ describe('S2-C notices: server reconcile notices render one status message each'
 
     const root = getRootElement(fixture);
     const noticeHosts = root.querySelectorAll('[data-testid="cart-notice"]');
-    expect(noticeHosts[0].textContent.trim()).toBe('Motorola Edge 50 Fusion: az ár megváltozott.');
-    expect(noticeHosts[1].textContent.trim()).toBe(
+    expect(noticeHosts[0].querySelector('.message')?.textContent.trim()).toBe(
+      'Motorola Edge 50 Fusion: az ár megváltozott.',
+    );
+    expect(noticeHosts[1].querySelector('.message')?.textContent.trim()).toBe(
       'Motorola Edge 50 Fusion: a mennyiséget a készlethez igazítottuk.',
     );
     expect(noticeHosts.length).toBe(2);
@@ -1079,7 +1081,9 @@ describe('MIM-212 S3-C8 cart page renders the guard redirect banner', () => {
     fixture.detectChanges();
 
     const banner = getElement(getRootElement(fixture), '[data-testid="navigation-reason"]');
-    expect(banner.textContent.trim()).toBe('A kosarad üres, ezért ide irányítottunk.');
+    expect(banner.querySelector('.message')?.textContent.trim()).toBe(
+      'A kosarad üres, ezért ide irányítottunk.',
+    );
   });
 
   it('renders no banner at all when the route carries no navigationReason', async () => {

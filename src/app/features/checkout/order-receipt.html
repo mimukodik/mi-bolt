@@ -139,23 +139,21 @@
           {{ receipt().billing.address.postalCode }} {{ receipt().billing.address.city }}
         </dd>
       </div>
-      <div
-        class="meta__row meta__row--block flex justify-between gap-3"
-        data-testid="receipt-row-delivery-address"
-      >
-        <dt class="m-0">Szállítási cím</dt>
-        <dd class="m-0 text-right">
-          @if (deliveryAddress(); as address) {
+      @if (deliveryAddress(); as address) {
+        <div
+          class="meta__row meta__row--block flex justify-between gap-3"
+          data-testid="receipt-row-delivery-address"
+        >
+          <dt class="m-0">Szállítási cím</dt>
+          <dd class="m-0 text-right">
             {{ address.line1 }}<br />
             @if (address.line2) {
               {{ address.line2 }}<br />
             }
             {{ address.postalCode }} {{ address.city }}
-          } @else {
-            {{ deliveryLabel() }}
-          }
-        </dd>
-      </div>
+          </dd>
+        </div>
+      }
       <div
         class="meta__row flex items-center justify-between gap-3"
         data-testid="receipt-row-status"

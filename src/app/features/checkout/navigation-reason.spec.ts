@@ -9,7 +9,11 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { navigationReasonMessage } from './navigation-reason';
+import {
+  NAVIGATION_REASONS,
+  navigationReasonMessage,
+  toNavigationReason,
+} from './navigation-reason';
 
 describe('navigationReasonMessage', () => {
   it('maps "incomplete" to the "fill this step first" sentence', () => {
@@ -22,16 +26,35 @@ describe('navigationReasonMessage', () => {
     expect(navigationReasonMessage('empty-cart')).toBe('A kosarad üres, ezért ide irányítottunk.');
   });
 
+  it('maps "cart-unavailable" to the "cart unavailable" sentence', () => {
+    expect(navigationReasonMessage('cart-unavailable')).toBe(
+      'A kosár most nem érhető el, próbáld újra.',
+    );
+  });
+
   it('maps "deep-link" to the "start from the cart" sentence', () => {
     expect(navigationReasonMessage('deep-link')).toBe('A pénztárba a kosárból indulhatsz.');
   });
 
-  it('maps "reload" to the "continue from here" sentence', () => {
-    expect(navigationReasonMessage('reload')).toBe('Az oldal újratöltése után innen folytathatod.');
+  it('returns null for null, so the banner renders nothing', () => {
+    expect(navigationReasonMessage(null)).toBeNull();
   });
 
-  it('returns null for a reason this build does not know, so the banner renders nothing', () => {
-    expect(navigationReasonMessage('something-else')).toBeNull();
-    expect(navigationReasonMessage('')).toBeNull();
+  it('covers every NavigationReason with a non-null sentence, so the switch stays exhaustive', () => {
+    for (const reason of NAVIGATION_REASONS) {
+      expect(navigationReasonMessage(reason)).not.toBeNull();
+    }
+  });
+});
+
+describe('toNavigationReason', () => {
+  it('returns null for null and empty strings', () => {
+    expect(toNavigationReason(null)).toBeNull();
+    expect(toNavigationReason('')).toBeNull();
+  });
+
+  it('returns null for strings the guards never emit', () => {
+    expect(toNavigationReason('reload')).toBeNull();
+    expect(toNavigationReason('something-else')).toBeNull();
   });
 });
