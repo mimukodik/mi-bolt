@@ -55,4 +55,35 @@ describe('FIX-52 skip link', () => {
     expect(document.activeElement).toBe(main);
     main.remove();
   });
+
+  it('MIM-220: without a main#main-content the native anchor is left alone', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const raw: unknown = fixture.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    expect(document.querySelector('main#main-content')).toBeNull();
+    const skip = raw.querySelector('a.skip-link');
+    if (!(skip instanceof HTMLAnchorElement)) throw new Error('Expected the skip link');
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    skip.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+  });
+
+  it('MIM-220: a modifier-key click keeps the native anchor behaviour', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const raw: unknown = fixture.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    main.setAttribute('tabindex', '-1');
+    document.body.appendChild(main);
+    const skip = raw.querySelector('a.skip-link');
+    if (!(skip instanceof HTMLAnchorElement)) throw new Error('Expected the skip link');
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, metaKey: true });
+    skip.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(document.activeElement).not.toBe(main);
+    main.remove();
+  });
 });
