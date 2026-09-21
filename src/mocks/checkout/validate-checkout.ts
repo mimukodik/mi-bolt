@@ -38,15 +38,9 @@ export function normalizeContactEmail(value: unknown): string | null {
   // The OpenAPI constraint is `format: email`, which delegates to the
   // runtime. The mock must reject obviously-bad shapes to keep the
   // contract meaningful, while still accepting every well-formed input.
-  // Rewritten without nested quantifiers (MIM-209) to satisfy
-  // eslint-plugin-security's `security/detect-unsafe-regex` rule: the
-  // original pattern nested an optional group `(...)?` inside an
-  // outer-repeated group `(...)+`, a shape the plugin flags even when
-  // the inner class is bounded. The replacement keeps three separate,
-  // single-quantifier regexes (local part, multi-char label, single-char
-  // label) and validates the domain label-by-label. Same matches as
-  // before for every spec case (C-06, C-17, line 522 `mas@pelda.hu`):
-  // well-formed multi-label emails pass, `nope` is rejected.
+  // Three single-quantifier patterns instead of one nested-quantifier regex
+  // (flagged by security/detect-unsafe-regex): local part, then each domain
+  // label; the accepted set is unchanged.
   const localPattern = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
   const labelMultiPattern = /^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/;
   const labelSinglePattern = /^[a-z0-9]$/;
