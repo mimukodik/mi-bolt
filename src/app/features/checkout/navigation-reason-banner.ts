@@ -24,9 +24,9 @@ import { navigationReasonMessage, toNavigationReason } from './navigation-reason
   selector: 'app-navigation-reason-banner',
   imports: [StatusMessage],
   template: `
-    @if (visible()) {
+    @if (text(); as message) {
       <app-status-message
-        [message]="message()!"
+        [message]="message"
         severity="info"
         (dismissed)="dismissed.set(true)"
         data-testid="navigation-reason"
@@ -52,5 +52,7 @@ export class NavigationReasonBanner {
     ),
   );
 
-  readonly visible = computed(() => !this.dismissed() && this.message() !== null);
+  readonly text = computed<string | null>(() => (this.dismissed() ? null : this.message()));
+
+  readonly visible = computed(() => this.text() !== null);
 }
