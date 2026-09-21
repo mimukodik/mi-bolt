@@ -1,87 +1,160 @@
 /**
- * `DeliveryPage` — the container FIX-56 gave `DeliveryStep`'s options
- * fetch, its two facade saves and its navigation to (`components.md:566-576`
- * closed the gap `FIX-56` found: the component itself now knows neither
- * the SDK nor the router). This spec covers what moved here:
+ * MIM-212 — `DeliveryPage` spec on the 2.0.0 contract (S3-F2-3).
  *
- *   T21-AC05 (relocated) — options-load error has retry and never
- *     invents a free-shipping default; the loading skeleton renders
- *     until the options land.
- *   FIX-44 (relocated) — a failed `saveDeliverySection()` /
- *     `savePaymentMethod()` renders a visible failure banner instead of
- *     returning silently, and does not navigate.
+ * Twelve cases that cover what the container `S3-C4` added: the
+ * options load and its retry, the form seeded from the saved session,
+ * the three gated section saves in order with their exact wire
+ * payloads, and the failure banner that stops the sequence before the
+ * navigation.
  *
- * `Api.prototype.invoke` is spied directly rather than standing up MSW,
- * isolating the fetch from the network layer the same way
- * `checkout-f2.spec.ts` isolates the two facade saves.
+ * The harness is facade spies, not MSW: every wire call the page
+ * makes goes through `vi.spyOn(CheckoutFacade, ...)`, so no request
+ * leaves the spec. Routing is spied the same way. The harness mirrors
+ * `payment-return-page.spec.ts`'s provider list; the difference is
+ * that this page makes wire-shaped calls only through the facade, so
+ * every domain method under test is replaceable from the start.
  */
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Api } from '../../api/generated/api';
+import '@angular/compiler';
+
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { provideZonelessChangeDetection, computed } from '@angular/core';
+import { Router, provideRouter } from '@angular/router';
+
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import * as operations from '../../api/generated/functions';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 
-import { CartFacade } from '../cart/cart.facade';
-import { CheckoutFacade } from './checkout.facade';
+import { CheckoutFacade, type CheckoutError, type CheckoutResult } from './checkout.facade';
 import { DeliveryPage } from './delivery-page';
 
 import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
+import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
+import type { Contact } from '../../api/generated/models/contact';
+import type { Money } from '../../api/generated/models/money';
 
 const BASE_URL = 'http://localhost/api/v1';
+
+const ZERO_MONEY: Money = { amount: 0, currency: 'HUF' };
 
 const OPTIONS: CheckoutOptions = {
   deliveryOptions: [
     {
       id: 'home_delivery',
       label: 'Házhoz szállítás',
-      fee: { amount: 1990, currency: 'HUF' },
+      description: 'Futárral, 1–2 munkanapon belül.',
+      fee: { amount: 1490, currency: 'HUF' },
       requiresAddress: true,
-      description: 'demo',
+      estimatedDays: 2,
+      available: true,
     },
     {
-      id: 'demo_pickup',
-      label: 'Virtuális átvétel',
-      fee: { amount: 0, currency: 'HUF' },
+      id: 'pickup_point',
+      label: 'Átvételi pont',
+      description: 'Csomagponton, 2–3 munkanapon belül.',
+      estimatedDays: 3,
+      fee: { amount: 990, currency: 'HUF' },
       requiresAddress: false,
-      description: 'demo',
+      available: true,
     },
   ],
-  paymentMethods: ['demo_card', 'demo_cod'],
-  termsVersion: 'demo-1',
+  paymentMethods: [
+    {
+      id: 'card',
+      label: 'Bankkártya',
+      description: 'Online kártyás fizetés.',
+      fee: { amount: 0, currency: 'HUF' },
+      available: true,
+    },
+    {
+      id: 'cash_on_delivery',
+      label: 'Utánvét',
+      description: 'Készpénzzel vagy kártyával a futárnál.',
+      fee: { amount: 490, currency: 'HUF' },
+      available: true,
+    },
+  ],
+  termsVersion: '2026-09',
 };
 
-function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
-  const raw: unknown = fixture.nativeElement;
-  if (raw instanceof HTMLElement) return raw;
-  throw new Error('Expected HTMLElement');
+const SAVED_CONTACT: Contact = {
+  fullName: 'Teszt Elek',
+  email: 'teszt@example.com',
+  phone: '+36301234567',
+};
+
+interface HuAddress {
+  countryCode: 'HU';
+  postalCode: string;
+  city: string;
+  line1: string;
 }
 
-function getElement(parent: Element, selector: string): HTMLElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
-  }
-  return el;
+const SAVED_ADDRESS: HuAddress = {
+  countryCode: 'HU',
+  postalCode: '1051',
+  city: 'Budapest',
+  line1: 'Fő utca 1.',
+};
+
+const SAVED_BILLING_ADDRESS: HuAddress = {
+  countryCode: 'HU',
+  postalCode: '4024',
+  city: 'Debrecen',
+  line1: 'Kossuth utca 2.',
+};
+
+function buildSummary(): CheckoutSummary {
+  return {
+    subtotal: ZERO_MONEY,
+    shippingFee: ZERO_MONEY,
+    paymentFee: ZERO_MONEY,
+    total: ZERO_MONEY,
+  };
 }
 
-function queryElement(parent: Element, selector: string): HTMLElement | null {
-  const el = parent.querySelector(selector);
-  if (el === null) return null;
-  if (!(el instanceof HTMLElement)) {
-    throw new Error(`Expected HTMLElement matching "${selector}"`);
-  }
-  return el;
+function buildFullSession(): CheckoutSession {
+  return {
+    version: 1,
+    complete: true,
+    summary: buildSummary(),
+    contact: SAVED_CONTACT,
+    delivery: { optionId: 'home_delivery', address: SAVED_ADDRESS },
+    payment: { method: 'card' },
+    billing: { name: 'Teszt Elek Billing', address: SAVED_BILLING_ADDRESS },
+  };
 }
+
+function buildSessionWithContactOnly(): CheckoutSession {
+  return {
+    version: 1,
+    complete: false,
+    summary: buildSummary(),
+    contact: SAVED_CONTACT,
+  };
+}
+
+const CONFLICT_ERROR: CheckoutError = {
+  code: 'CART_VERSION_CONFLICT',
+  status: 412,
+  detail: 'Version mismatch.',
+  fieldErrors: [],
+};
+
+const UNKNOWN_ERROR: CheckoutError = {
+  code: 'UNKNOWN',
+  status: 500,
+  detail: 'Network unreachable',
+  fieldErrors: [],
+};
 
 afterEach(() => {
   vi.restoreAllMocks();
   TestBed.resetTestingModule();
+  sessionStorage.clear();
 });
 
 function configureTestBed(): void {
@@ -96,204 +169,588 @@ function configureTestBed(): void {
   });
 }
 
-/** Seeds a cart + checkout session so `saveDeliverySection()` /
- *  `savePaymentMethod()` don't bail on the NO_CART branch. */
-function pinCartAndSession(): void {
-  const cartFacade = TestBed.inject(CartFacade);
-  vi.spyOn(cartFacade, 'cart').mockReturnValue({
-    id: 'cart-delivery-page-test',
-    version: 1,
-    items: [],
-    itemCount: 0,
-    subtotal: { amount: 0, currency: 'HUF' },
-    status: 'active',
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+/**
+ * Stubs the options fetch with the given result. Must run BEFORE
+ * `TestBed.createComponent`, because the constructor kicks the fetch
+ * (delivery-page.ts:108-110).
+ */
+function pinEnsureOptions(result: CheckoutResult<CheckoutOptions>): void {
+  const facade = TestBed.inject(CheckoutFacade);
+  vi.spyOn(facade, 'ensureOptions').mockResolvedValue(result);
+}
+
+/** Mirrors `pinEnsureOptions`, but the promise never settles —
+ *  the loading state survives past `detectChanges()` so DP-01 can
+ *  assert it. */
+function pinEnsureOptionsNever(): void {
+  const facade = TestBed.inject(CheckoutFacade);
+  const never = new Promise<CheckoutResult<CheckoutOptions>>(() => undefined);
+  vi.spyOn(facade, 'ensureOptions').mockReturnValue(never);
+}
+
+/**
+ * Replaces the public `session` signal with one carrying the given
+ * session. Must run BEFORE `TestBed.createComponent`, because the
+ * page's `buildInitialModel()` reads it synchronously in its field
+ * initialiser (delivery-page.ts:66, 200-232).
+ */
+function pinSession(session: CheckoutSession | null): void {
+  const facade = TestBed.inject(CheckoutFacade);
+  const fakeSignal = computed<CheckoutSession | null>(() => session);
+  // `CheckoutFacade.session` is declared `readonly`, so direct
+  // assignment is a TS error. `Object.defineProperty` bypasses the
+  // readonly check; the field is configurable on the instance because
+  // `useDefineForClassFields` is `true` under the project's
+  // `target: ES2022`.
+  Object.defineProperty(facade, 'session', {
+    configurable: true,
+    value: fakeSignal,
   });
 }
 
+function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
+  const raw: unknown = fixture.nativeElement;
+  if (raw instanceof HTMLElement) return raw;
+  throw new Error('Expected HTMLElement');
+}
+
+function queryOne(parent: Element, selector: string): HTMLElement | null {
+  const el = parent.querySelector(selector);
+  if (el === null) return null;
+  if (!(el instanceof HTMLElement)) {
+    throw new Error(`Expected HTMLElement matching "${selector}"`);
+  }
+  return el;
+}
+
+function queryAll(parent: Element, selector: string): HTMLElement[] {
+  return Array.from(parent.querySelectorAll(selector)).filter(
+    (el): el is HTMLElement => el instanceof HTMLElement,
+  );
+}
+
+function createReady(options: CheckoutOptions = OPTIONS): ComponentFixture<DeliveryPage> {
+  pinEnsureOptions({ ok: true, value: options });
+  const fixture = TestBed.createComponent(DeliveryPage);
+  fixture.detectChanges();
+  // The constructor's `loadOptions(false)` returns synchronously here
+  // through the spy's resolved value; the next microtask drains inside
+  // `whenStable()`.
+  void fixture.whenStable();
+  return fixture;
+}
+
+async function createReadySettled(
+  options: CheckoutOptions = OPTIONS,
+): Promise<ComponentFixture<DeliveryPage>> {
+  const fixture = createReady(options);
+  await fixture.whenStable();
+  fixture.detectChanges();
+  return fixture;
+}
+
+async function createWithSession(
+  session: CheckoutSession | null,
+  options: CheckoutOptions = OPTIONS,
+): Promise<ComponentFixture<DeliveryPage>> {
+  pinEnsureOptions({ ok: true, value: options });
+  pinSession(session);
+  const fixture = TestBed.createComponent(DeliveryPage);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  fixture.detectChanges();
+  return fixture;
+}
+
+/** Sets the six fields a "complete home delivery" model needs. */
+function fillCompleteHomeDelivery(fixture: ComponentFixture<DeliveryPage>): void {
+  const { fields } = fixture.componentInstance;
+  fields.deliveryOptionId().value.set('home_delivery');
+  fields.address.postalCode().value.set('1051');
+  fields.address.city().value.set('Budapest');
+  fields.address.line1().value.set('Fő utca 1.');
+  fields.paymentMethod().value.set('card');
+  fields.billingName().value.set('Teszt Elek Billing');
+  fixture.detectChanges();
+}
+
 // ---------------------------------------------------------------------------
-// T21-AC05 (relocated) - options-load error has retry and never invents a
-// free-shipping default; loading renders a skeleton until options land.
+// DP-01..DP-02 — initial load and ready state
 // ---------------------------------------------------------------------------
-describe('T21-AC05 (relocated to DeliveryPage) options-load error has retry, no fabricated default', () => {
+
+describe('DP-01..DP-02 initial load', () => {
   beforeEach(() => {
     configureTestBed();
   });
 
-  it('renders the loading skeleton until the options land', () => {
-    vi.spyOn(Api.prototype, 'invoke').mockReturnValue(of(OPTIONS));
+  it('DP-01 renders the loading placeholder until the options resolve', () => {
+    pinEnsureOptionsNever();
     const fixture = TestBed.createComponent(DeliveryPage);
     fixture.detectChanges();
 
     expect(fixture.componentInstance.state().kind).toBe('loading');
     const root = getRootElement(fixture);
-    expect(queryElement(root, 'app-loading-state')).not.toBeNull();
+    const placeholders = queryAll(root, '[data-testid="delivery-loading"]');
+    expect(placeholders).toHaveLength(1);
+    expect(queryOne(root, 'app-delivery-step')).toBeNull();
   });
 
-  it('renders ErrorState (with retry) when the options load fails, and never picks a fallback option', async () => {
-    vi.spyOn(Api.prototype, 'invoke').mockReturnValue(
-      throwError(() => new Error('Service unavailable')),
-    );
+  it('DP-02 renders the delivery step once the options land', async () => {
+    const fixture = await createReadySettled();
+
+    expect(fixture.componentInstance.state().kind).toBe('ready');
+    const root = getRootElement(fixture);
+    expect(queryOne(root, '[data-testid="delivery-loading"]')).toBeNull();
+    expect(queryOne(root, 'app-delivery-step')).not.toBeNull();
+    // The page binds `[options]="readyOptions()"`, so the step's
+    // input is the same object reference the spy returned.
+    expect(fixture.componentInstance.readyOptions()).toEqual(OPTIONS);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DP-03..DP-04 — options load failure and its retry
+// ---------------------------------------------------------------------------
+
+describe('DP-03..DP-04 options load failure', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('DP-03 a failed options load renders the error state with a retry control and never picks a fallback option', async () => {
+    pinEnsureOptions({ ok: false, error: UNKNOWN_ERROR });
     const fixture = TestBed.createComponent(DeliveryPage);
+    fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.state().kind).toBe('error');
     const root = getRootElement(fixture);
-    expect(queryElement(root, 'app-error-state')).not.toBeNull();
-    expect(queryElement(root, 'app-delivery-step')).toBeNull();
+    const errorState = queryOne(root, 'app-error-state');
+    expect(errorState).not.toBeNull();
+    // The exact, hard-coded message the page renders for any
+    // options-load failure (delivery-page.ts:99-126). Generic by
+    // design (R15): the wire's own detail never reaches the DOM.
+    expect(errorState?.textContent).toContain(
+      'A szállítási és fizetési opciók betöltése sikertelen.',
+    );
+    expect(root.textContent).not.toContain('Network unreachable');
+    expect(queryOne(root, 'app-delivery-step')).toBeNull();
     expect(fixture.componentInstance.readyOptions()).toBeNull();
   });
 
-  it('retry re-issues the options fetch and reaches the ready state on success', async () => {
-    // Filtered by operation: `CartFacade`'s own constructor eagerly calls
-    // `ensureCart()` through the same `Api.prototype.invoke`, so a blanket
-    // sequential mock would miscount. Only `getCheckoutOptions` calls are
-    // scripted to fail-then-succeed; anything else (the cart creation)
-    // gets an inert success so it does not throw inside the cart queue.
-    let optionsCallCount = 0;
-    const invokeSpy = vi.spyOn(Api.prototype, 'invoke').mockImplementation((fn: unknown) => {
-      if (fn === operations.getCheckoutOptions) {
-        optionsCallCount++;
-        return optionsCallCount === 1
-          ? throwError(() => new Error('Service unavailable'))
-          : of(OPTIONS);
+  it('DP-04 the error retry re-requests the options with force and reaches the ready state', async () => {
+    let calls = 0;
+    let lastForce: boolean | undefined;
+    const facade = TestBed.inject(CheckoutFacade);
+    vi.spyOn(facade, 'ensureOptions').mockImplementation((force?: boolean) => {
+      calls += 1;
+      lastForce = force;
+      if (force === true) {
+        return Promise.resolve({ ok: true, value: OPTIONS });
       }
-      return of(OPTIONS);
+      return Promise.resolve({ ok: false, error: UNKNOWN_ERROR });
     });
+
     const fixture = TestBed.createComponent(DeliveryPage);
+    fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.componentInstance.state().kind).toBe('error');
+    expect(calls).toBe(1);
+    expect(lastForce).toBe(false);
 
     fixture.componentInstance.onRetry();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(optionsCallCount).toBe(2);
+    expect(calls).toBe(2);
+    expect(lastForce).toBe(true);
     expect(fixture.componentInstance.state().kind).toBe('ready');
     const root = getRootElement(fixture);
-    expect(queryElement(root, 'app-delivery-step')).not.toBeNull();
-    invokeSpy.mockRestore();
+    expect(queryOne(root, 'app-delivery-step')).not.toBeNull();
   });
 });
 
 // ---------------------------------------------------------------------------
-// FIX-44 (relocated to DeliveryPage) - onContinueRequested surfaces a
-// failed save instead of returning silently.
+// DP-05..DP-06 — initial model seeded from the saved session
 // ---------------------------------------------------------------------------
-describe('FIX-44 (relocated to DeliveryPage) onContinueRequested surfaces a failed save', () => {
+
+describe('DP-05..DP-06 initial model from session', () => {
   beforeEach(() => {
     configureTestBed();
-    vi.spyOn(Api.prototype, 'invoke').mockReturnValue(of(OPTIONS));
   });
 
-  it('renders the failure banner when saveDeliverySection fails, and does not navigate', async () => {
-    pinCartAndSession();
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    vi.spyOn(checkoutFacade, 'saveDeliverySection').mockResolvedValue({
-      ok: false,
-      error: { code: 'FAIL', status: 500, detail: 'A mentés sikertelen.', fieldErrors: [] },
-    });
-    const savePaymentSpy = vi.spyOn(checkoutFacade, 'savePaymentMethod');
+  it("DP-05 the form model is seeded from the session's contact, delivery, payment and billing", async () => {
+    const fixture = await createWithSession(buildFullSession());
+
+    const { fields } = fixture.componentInstance;
+    expect(fields.fullName().value()).toBe('Teszt Elek');
+    expect(fields.email().value()).toBe('teszt@example.com');
+    expect(fields.phone().value()).toBe('+36301234567');
+    expect(fields.deliveryOptionId().value()).toBe('home_delivery');
+    expect(fields.address.postalCode().value()).toBe('1051');
+    expect(fields.address.city().value()).toBe('Budapest');
+    expect(fields.address.line1().value()).toBe('Fő utca 1.');
+    expect(fields.paymentMethod().value()).toBe('card');
+    expect(fields.billingName().value()).toBe('Teszt Elek Billing');
+    // The session carries a saved billing section, so the
+    // billing-same-as-delivery checkbox starts unchecked (§6.2's
+    // deliberate "we cannot assume the saved billing address
+    // still matches" rule).
+    expect(fields.billingSameAsDelivery().value()).toBe(false);
+  });
+
+  it('DP-06 the billing name defaults to the contact full name when no billing section is saved', async () => {
+    const fixture = await createWithSession(buildSessionWithContactOnly());
+
+    const { fields } = fixture.componentInstance;
+    // §6.2: the billing name is prefilled from the contact's fullName
+    // so the user does not retype it on a fresh draft.
+    expect(fields.billingName().value()).toBe('Teszt Elek');
+    // No saved billing section → the billing-same-as-delivery checkbox
+    // stays at its initial-model default of true.
+    expect(fields.billingSameAsDelivery().value()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DP-07..DP-09 — the three gated section saves and their exact payloads
+// ---------------------------------------------------------------------------
+
+describe('DP-07..DP-09 gated section saves', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('DP-07 continuing saves delivery, payment and billing in that order and then navigates to the review step', async () => {
+    const fixture = await createReadySettled();
+    const facade = TestBed.inject(CheckoutFacade);
+    const fullSession = buildFullSession();
+    const updateDelivery = vi
+      .spyOn(facade, 'updateDelivery')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    const updatePayment = vi
+      .spyOn(facade, 'updatePayment')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    const updateBilling = vi
+      .spyOn(facade, 'updateBilling')
+      .mockResolvedValue({ ok: true, value: fullSession });
     const router = TestBed.inject(Router);
-    const navigateSpy = vi.spyOn(router, 'navigate');
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    const fixture = TestBed.createComponent(DeliveryPage);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+    fillCompleteHomeDelivery(fixture);
     await fixture.componentInstance.onContinueRequested();
     fixture.detectChanges();
 
-    const root = getRootElement(fixture);
-    const banner = getElement(root, '[data-testid="delivery-save-failure-detail"]');
-    expect(banner.textContent).toContain('A mentés sikertelen.');
-    expect(banner.textContent).toContain('megmaradtak');
-    expect(fixture.componentInstance.saveState()).toBe('error');
-    expect(savePaymentSpy).not.toHaveBeenCalled();
-    expect(navigateSpy).not.toHaveBeenCalled();
-  });
+    expect(updateDelivery).toHaveBeenCalledTimes(1);
+    expect(updatePayment).toHaveBeenCalledTimes(1);
+    expect(updateBilling).toHaveBeenCalledTimes(1);
 
-  it('renders the failure banner when only savePaymentMethod fails (the second call)', async () => {
-    pinCartAndSession();
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    vi.spyOn(checkoutFacade, 'saveDeliverySection').mockResolvedValue({
-      ok: true,
-      value: { cartId: 'x', cartVersion: 1 },
-    });
-    vi.spyOn(checkoutFacade, 'savePaymentMethod').mockResolvedValue({
-      ok: false,
-      error: {
-        code: 'FAIL',
-        status: 500,
-        detail: 'A fizetési mód mentése sikertelen.',
-        fieldErrors: [],
+    const deliveryArg = updateDelivery.mock.calls[0]?.[0];
+    expect(deliveryArg).toBeDefined();
+    // Exact wire payload: `optionId`, the four-part address,
+    // and no `line2` key (toWireAddress() omits an empty line2).
+    // `toStrictEqual` enforces exact key sets — `toEqual` would
+    // tolerate extra keys, which is why this matcher is used here.
+    expect(deliveryArg).toStrictEqual({
+      optionId: 'home_delivery',
+      address: {
+        countryCode: 'HU',
+        postalCode: '1051',
+        city: 'Budapest',
+        line1: 'Fő utca 1.',
       },
     });
-    const router = TestBed.inject(Router);
-    const navigateSpy = vi.spyOn(router, 'navigate');
 
-    const fixture = TestBed.createComponent(DeliveryPage);
-    await fixture.whenStable();
+    // The container calls them sequentially and gates each one on
+    // the previous result; `invocationCallOrder` is the cross-spy
+    // monotonic index vitest assigns to each call.
+    const deliveryOrder = updateDelivery.mock.invocationCallOrder[0] ?? 0;
+    const paymentOrder = updatePayment.mock.invocationCallOrder[0] ?? 0;
+    const billingOrder = updateBilling.mock.invocationCallOrder[0] ?? 0;
+    const navigateOrder = navigate.mock.invocationCallOrder[0] ?? 0;
+    expect(deliveryOrder).toBeLessThan(paymentOrder);
+    expect(paymentOrder).toBeLessThan(billingOrder);
+    expect(billingOrder).toBeLessThan(navigateOrder);
+
+    expect(navigate).toHaveBeenCalledWith(['/penztar/ellenorzes']);
+  });
+
+  it('DP-08 a pickup selection sends no address key', async () => {
+    const fixture = await createReadySettled();
+    const facade = TestBed.inject(CheckoutFacade);
+    const fullSession = buildFullSession();
+    const updateDelivery = vi
+      .spyOn(facade, 'updateDelivery')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    const updatePayment = vi
+      .spyOn(facade, 'updatePayment')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    const updateBilling = vi
+      .spyOn(facade, 'updateBilling')
+      .mockResolvedValue({ ok: true, value: fullSession });
+
+    const { fields } = fixture.componentInstance;
+    fields.deliveryOptionId().value.set('pickup_point');
+    fields.paymentMethod().value.set('card');
+    fields.billingName().value.set('Teszt Elek Billing');
     fixture.detectChanges();
 
     await fixture.componentInstance.onContinueRequested();
     fixture.detectChanges();
 
-    const root = getRootElement(fixture);
-    const banner = getElement(root, '[data-testid="delivery-save-failure-detail"]');
-    expect(banner.textContent).toContain('A fizetési mód mentése sikertelen.');
-    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(updateDelivery).toHaveBeenCalledTimes(1);
+    const arg = updateDelivery.mock.calls[0]?.[0];
+    expect(arg).toBeDefined();
+    // The exact wire payload for a pickup selection is
+    // `{ optionId: 'pickup_point' }` — `optionId` and nothing else.
+    expect(arg).toStrictEqual({ optionId: 'pickup_point' });
+    // The other two writes also succeed; the brief's pin here is
+    // exclusively on the delivery payload.
+    expect(updatePayment).toHaveBeenCalledTimes(1);
+    expect(updateBilling).toHaveBeenCalledTimes(1);
   });
 
-  it('renders no failure banner and navigates when both saves succeed', async () => {
-    pinCartAndSession();
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    vi.spyOn(checkoutFacade, 'saveDeliverySection').mockResolvedValue({
-      ok: true,
-      value: { cartId: 'x', cartVersion: 1 },
+  it('DP-09 same-as-delivery reuses the delivery address for billing, and unchecking it sends the billing address', async () => {
+    // Subcase A: `billingSameAsDelivery` stays at the initial-model
+    // default of true, with home delivery.
+    const fixtureA = await createReadySettled();
+    const facadeA = TestBed.inject(CheckoutFacade);
+    const fullSession = buildFullSession();
+    const billingA = vi
+      .spyOn(facadeA, 'updateBilling')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    vi.spyOn(facadeA, 'updateDelivery').mockResolvedValue({ ok: true, value: fullSession });
+    vi.spyOn(facadeA, 'updatePayment').mockResolvedValue({ ok: true, value: fullSession });
+
+    {
+      const fields = fixtureA.componentInstance.fields;
+      fields.deliveryOptionId().value.set('home_delivery');
+      fields.address.postalCode().value.set('1051');
+      fields.address.city().value.set('Budapest');
+      fields.address.line1().value.set('Fő utca 1.');
+      fields.paymentMethod().value.set('card');
+      fields.billingName().value.set('Teszt Elek Billing');
+      // `billingSameAsDelivery` stays at the initial-model default
+      // (true) — the literal set would just be noise.
+      fixtureA.detectChanges();
+
+      await fixtureA.componentInstance.onContinueRequested();
+      fixtureA.detectChanges();
+    }
+
+    expect(billingA).toHaveBeenCalledTimes(1);
+    const argA = billingA.mock.calls[0]?.[0];
+    expect(argA).toEqual({
+      name: 'Teszt Elek Billing',
+      address: { countryCode: 'HU', postalCode: '1051', city: 'Budapest', line1: 'Fő utca 1.' },
     });
-    vi.spyOn(checkoutFacade, 'savePaymentMethod').mockResolvedValue({
-      ok: true,
-      value: { cartId: 'x', cartVersion: 1 },
+
+    // Subcase B: same setup with the checkbox unchecked and a
+    // distinct billing address. Both fixtures share the root-scoped
+    // facade, and vi.spyOn on an already mocked method returns the
+    // same mock, so subcase A's call is cleared before B runs.
+    billingA.mockClear();
+    const fixtureB = await createReadySettled();
+    const facadeB = TestBed.inject(CheckoutFacade);
+    const billingB = vi
+      .spyOn(facadeB, 'updateBilling')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    vi.spyOn(facadeB, 'updateDelivery').mockResolvedValue({ ok: true, value: fullSession });
+    vi.spyOn(facadeB, 'updatePayment').mockResolvedValue({ ok: true, value: fullSession });
+
+    {
+      const fields = fixtureB.componentInstance.fields;
+      fields.deliveryOptionId().value.set('home_delivery');
+      fields.address.postalCode().value.set('1051');
+      fields.address.city().value.set('Budapest');
+      fields.address.line1().value.set('Fő utca 1.');
+      fields.paymentMethod().value.set('card');
+      fields.billingName().value.set('Teszt Elek Billing');
+      fields.billingSameAsDelivery().value.set(false);
+      fields.billingAddress.postalCode().value.set('4024');
+      fields.billingAddress.city().value.set('Debrecen');
+      fields.billingAddress.line1().value.set('Kossuth utca 2.');
+      fixtureB.detectChanges();
+
+      await fixtureB.componentInstance.onContinueRequested();
+      fixtureB.detectChanges();
+    }
+
+    expect(billingB).toHaveBeenCalledTimes(1);
+    const argB = billingB.mock.calls[0]?.[0];
+    expect(argB).toEqual({
+      name: 'Teszt Elek Billing',
+      address: {
+        countryCode: 'HU',
+        postalCode: '4024',
+        city: 'Debrecen',
+        line1: 'Kossuth utca 2.',
+      },
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DP-10..DP-11 — failures and the gated sequence
+// ---------------------------------------------------------------------------
+
+describe('DP-10..DP-11 save failures', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('DP-10 a failed delivery save renders the failure banner, calls neither updatePayment nor updateBilling, and does not navigate', async () => {
+    const fixture = await createReadySettled();
+    const facade = TestBed.inject(CheckoutFacade);
+    vi.spyOn(facade, 'updateDelivery').mockResolvedValue({
+      ok: false,
+      error: CONFLICT_ERROR,
+    });
+    const paymentSpy = vi.spyOn(facade, 'updatePayment');
+    const billingSpy = vi.spyOn(facade, 'updateBilling');
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    const fixture = TestBed.createComponent(DeliveryPage);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
+    fillCompleteHomeDelivery(fixture);
     await fixture.componentInstance.onContinueRequested();
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    expect(queryElement(root, '[data-testid="delivery-save-failure-detail"]')).toBeNull();
-    expect(navigateSpy).toHaveBeenCalledWith(['/penztar/ellenorzes']);
-    expect(fixture.componentInstance.saveState()).toBe('idle');
+    expect(queryOne(root, '[data-testid="delivery-save-failure-detail"]')).not.toBeNull();
+    expect(paymentSpy).not.toHaveBeenCalled();
+    expect(billingSpy).not.toHaveBeenCalled();
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.saveState()).toBe('error');
   });
 
-  it('retryOptions from the child clears a stale save failure and re-fetches options', async () => {
-    pinCartAndSession();
-    const checkoutFacade = TestBed.inject(CheckoutFacade);
-    vi.spyOn(checkoutFacade, 'saveDeliverySection').mockResolvedValue({
+  it('DP-11 a failed payment save stops before the billing save, and a failed billing save still does not navigate', async () => {
+    // Subcase A: updatePayment failing → updateBilling is never called
+    // and `navigate` is never called.
+    const fixtureA = await createReadySettled();
+    const facadeA = TestBed.inject(CheckoutFacade);
+    const fullSession = buildFullSession();
+    vi.spyOn(facadeA, 'updateDelivery').mockResolvedValue({ ok: true, value: fullSession });
+    vi.spyOn(facadeA, 'updatePayment').mockResolvedValue({
       ok: false,
-      error: { code: 'FAIL', status: 500, detail: 'A mentés sikertelen.', fieldErrors: [] },
+      error: CONFLICT_ERROR,
     });
+    const billingA = vi.spyOn(facadeA, 'updateBilling');
+    const routerA = TestBed.inject(Router);
+    const navigateA = vi.spyOn(routerA, 'navigate').mockResolvedValue(true);
 
-    const fixture = TestBed.createComponent(DeliveryPage);
-    await fixture.whenStable();
-    fixture.detectChanges();
-    await fixture.componentInstance.onContinueRequested();
-    fixture.detectChanges();
-    expect(fixture.componentInstance.saveState()).toBe('error');
+    fillCompleteHomeDelivery(fixtureA);
+    await fixtureA.componentInstance.onContinueRequested();
+    fixtureA.detectChanges();
 
-    fixture.componentInstance.onRetryOptions();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    expect(billingA).not.toHaveBeenCalled();
+    expect(navigateA).not.toHaveBeenCalled();
+    const rootA = getRootElement(fixtureA);
+    expect(queryOne(rootA, '[data-testid="delivery-save-failure-detail"]')).not.toBeNull();
 
-    expect(fixture.componentInstance.saveState()).toBe('idle');
-    expect(fixture.componentInstance.saveFailure()).toBeNull();
+    // Subcase B: updateBilling failing → `navigate` is never called,
+    // but the banner IS rendered.
+    const fixtureB = await createReadySettled();
+    const facadeB = TestBed.inject(CheckoutFacade);
+    vi.spyOn(facadeB, 'updateDelivery').mockResolvedValue({ ok: true, value: fullSession });
+    vi.spyOn(facadeB, 'updatePayment').mockResolvedValue({ ok: true, value: fullSession });
+    vi.spyOn(facadeB, 'updateBilling').mockResolvedValue({
+      ok: false,
+      error: CONFLICT_ERROR,
+    });
+    const routerB = TestBed.inject(Router);
+    const navigateB = vi.spyOn(routerB, 'navigate').mockResolvedValue(true);
+
+    fillCompleteHomeDelivery(fixtureB);
+    await fixtureB.componentInstance.onContinueRequested();
+    fixtureB.detectChanges();
+
+    expect(navigateB).not.toHaveBeenCalled();
+    const rootB = getRootElement(fixtureB);
+    expect(queryOne(rootB, '[data-testid="delivery-save-failure-detail"]')).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DP-12 — failure banner wording and the retry-clears-it path
+// ---------------------------------------------------------------------------
+
+describe('DP-12 failure banner wording and retry', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it("DP-12 the failure banner carries the wire detail plus the fixed reassurance sentence, and the step's retry clears it", async () => {
+    // Subcase A: detail present — wire detail is followed by the
+    // single-space-padded reassurance sentence.
+    const fixtureA = await createReadySettled();
+    const facadeA = TestBed.inject(CheckoutFacade);
+    vi.spyOn(facadeA, 'updateDelivery').mockResolvedValue({
+      ok: false,
+      error: CONFLICT_ERROR,
+    });
+    vi.spyOn(facadeA, 'updatePayment');
+    vi.spyOn(facadeA, 'updateBilling');
+    // Pin the options-load response so subcase C's `loadOptions(true)`
+    // reaches a settled result deterministically. Without this the
+    // spy would call through to the original `ensureOptions`, which
+    // would attempt a wire request the harness does not stand up.
+    const ensureSpyA = vi
+      .spyOn(facadeA, 'ensureOptions')
+      .mockResolvedValue({ ok: true, value: OPTIONS });
+
+    fillCompleteHomeDelivery(fixtureA);
+    await fixtureA.componentInstance.onContinueRequested();
+    fixtureA.detectChanges();
+
+    const rootA = getRootElement(fixtureA);
+    const bannerA = queryOne(rootA, '[data-testid="delivery-save-failure-detail"]');
+    if (bannerA === null) {
+      throw new Error('DP-12 expected the failure banner in subcase A');
+    }
+    expect(bannerA.textContent.trim()).toBe(
+      'Version mismatch. A kosarad és az adataid megmaradtak. Próbáld újra.',
+    );
+
+    // Subcase B: empty detail → just the reassurance sentence.
+    const fixtureB = await createReadySettled();
+    const facadeB = TestBed.inject(CheckoutFacade);
+    vi.spyOn(facadeB, 'updateDelivery').mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'CART_VERSION_CONFLICT',
+        status: 412,
+        detail: '',
+        fieldErrors: [],
+      },
+    });
+    vi.spyOn(facadeB, 'updatePayment');
+    vi.spyOn(facadeB, 'updateBilling');
+
+    fillCompleteHomeDelivery(fixtureB);
+    await fixtureB.componentInstance.onContinueRequested();
+    fixtureB.detectChanges();
+
+    const rootB = getRootElement(fixtureB);
+    const bannerB = queryOne(rootB, '[data-testid="delivery-save-failure-detail"]');
+    if (bannerB === null) {
+      throw new Error('DP-12 expected the failure banner in subcase B');
+    }
+    expect(bannerB.textContent.trim()).toBe('A kosarad és az adataid megmaradtak. Próbáld újra.');
+
+    // Subcase C: emitting `retryOptions` from the step clears the
+    // stale banner and re-requests options with force.
+    const callsBefore = ensureSpyA.mock.calls.length;
+    fixtureA.componentInstance.onRetryOptions();
+    await fixtureA.whenStable();
+    fixtureA.detectChanges();
+
+    expect(fixtureA.componentInstance.saveFailure()).toBeNull();
+    expect(fixtureA.componentInstance.saveState()).toBe('idle');
+    const rootC = getRootElement(fixtureA);
+    expect(queryOne(rootC, '[data-testid="delivery-save-failure-detail"]')).toBeNull();
+    expect(ensureSpyA.mock.calls.length).toBe(callsBefore + 1);
+    expect(ensureSpyA.mock.calls[ensureSpyA.mock.calls.length - 1][0]).toBe(true);
   });
 });
