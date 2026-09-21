@@ -284,16 +284,4 @@ export class Repository {
   setIdempotency(key: string, value: unknown): void {
     this.idempotency.set(key, value);
   }
-
-  /**
-   * Returns the session's cart, or undefined when it has none. Unlike
-   * `ensureCart` this never creates one, so a caller that is only
-   * reading (the snapshot builder) cannot mint a cart as a side
-   * effect of persisting.
-   */
-  findCartBySession(sessionId: string): Cart | undefined {
-    const cartId = this.cartsBySession.get(sessionId);
-    if (cartId === undefined) return undefined;
-    return this.carts.get(cartId);
-  }
 }

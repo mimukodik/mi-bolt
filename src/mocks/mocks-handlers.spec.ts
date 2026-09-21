@@ -17,6 +17,7 @@ import {
   snapshotKey,
   type MockSnapshot,
   type PersistedCart,
+  type PersistedCheckoutDraft,
 } from '../mocks/persistence';
 import {
   createDeterministicIds,
@@ -33,6 +34,45 @@ import { IdempotencyStore } from './idempotency';
 import { DEMO_PRODUCT } from './cart/cart.handlers';
 import type { VariantLookup } from './catalog/catalog-store';
 import { useMswServer } from '../../tests/msw-server';
+
+// Stand-in literals typed directly against `VariantLookup`'s own
+// shape — the generated SDK types — and shared by every `describe`
+// block that needs a successful lookup hit. `DEMO_PRODUCT` lives in
+// the repository's mock-local shape (it omits `slug`/`releasedAt`
+// the SDK requires), so wrapping it in a cast hides a real gap.
+const LOOKUP_PRODUCT: VariantLookup['product'] = {
+  id: 'p-01',
+  slug: 'demo-one-5g',
+  brand: 'MiBolt Demo',
+  name: 'Demo One 5G',
+  highlights: [],
+  is5g: true,
+  releasedAt: '2026-01-01T00:00:00.000Z',
+  description: 'Demo',
+  variants: [],
+  specGroups: [],
+};
+
+const LOOKUP_VARIANT: VariantLookup['variant'] = {
+  id: 'demo-one-5g-graphite-256',
+  slug: 'demo-one-5g-graphite-256',
+  colorCode: 'graphite',
+  colorName: 'Grafit',
+  swatchHex: '#343B43',
+  storageGb: 256,
+  price: { amount: 339_990, currency: 'HUF' },
+  availability: 'in_stock',
+  maxQuantity: 5,
+  images: [
+    {
+      id: 'img-demo-one-5g-graphite-256',
+      src: '/assets/demo/demo-one-5g-graphite-256.png',
+      alt: 'Demo One 5G Grafit',
+      width: 800,
+      height: 600,
+    },
+  ],
+};
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
@@ -413,7 +453,7 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
           createdAt: '2026-09-14T10:00:00.000Z',
           expiresAt: '2026-09-15T10:00:00.000Z',
           items: [],
-          extra: 'junk' as unknown as string,
+          extra: 'junk',
         },
       }),
     },
@@ -426,7 +466,7 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
           version: 1,
           createdAt: '2026-09-14T10:00:00.000Z',
           expiresAt: '2026-09-15T10:00:00.000Z',
-          items: [{ variantId: 'x', quantity: 1, extra: 'junk' as unknown as number }],
+          items: [{ variantId: 'x', quantity: 1, extra: 'junk' }],
         },
       }),
     },
@@ -609,10 +649,7 @@ describe('CartStore seed / persist round-trip (MIM-212 Unit 1)', () => {
   // pass does not drop the seeded line.
   const lookup: VariantLookupFn = (variantId): VariantLookup | undefined => {
     if (variantId === 'demo-one-5g-graphite-256') {
-      return {
-        product: DEMO_PRODUCT as unknown as VariantLookup['product'],
-        variant: DEMO_PRODUCT.defaultVariant as unknown as VariantLookup['variant'],
-      };
+      return { product: LOOKUP_PRODUCT, variant: LOOKUP_VARIANT };
     }
     return undefined;
   };
@@ -715,10 +752,7 @@ describe('OrderStore.seedFromSnapshot leaves next orderNumber above restored one
     };
     const lookup: VariantLookupFn = (variantId): VariantLookup | undefined =>
       variantId === 'demo-one-5g-graphite-256'
-        ? {
-            product: DEMO_PRODUCT as unknown as VariantLookup['product'],
-            variant: DEMO_PRODUCT.defaultVariant as unknown as VariantLookup['variant'],
-          }
+        ? { product: LOOKUP_PRODUCT, variant: LOOKUP_VARIANT }
         : undefined;
     const cart = new CartStore(options, lookup);
     const checkout = new CheckoutStore(options, () => cart);
@@ -837,5 +871,166 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
 
     expect(fresh.id).not.toBe(created.id);
     expect(fresh.status).toBe('active');
+  });
+});
+
+describe('CheckoutStore.seedFromSnapshot / toPersistedDraft (MIM-212 Unit 1)', () => {
+  const lookup: VariantLookupFn = (variantId): VariantLookup | undefined =>
+    variantId === 'demo-one-5g-graphite-256'
+      ? { product: LOOKUP_PRODUCT, variant: LOOKUP_VARIANT }
+      : undefined;
+
+  it('seedFromSnapshot restores all four sections intact through get()', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const cart = new CartStore(options, lookup);
+    const checkout = new CheckoutStore(options, () => cart);
+    cart.add('sess-seed', '"1"', 'demo-one-5g-graphite-256', 1);
+
+    const draft = {
+      contact: { fullName: 'Test User', email: 'test@example.com', phone: '+36123456789' },
+      billing: {
+        name: 'Test User',
+        address: {
+          countryCode: 'HU',
+          postalCode: '1111',
+          city: 'Budapest',
+          line1: 'Fo utca 1',
+        },
+      },
+      delivery: { optionId: 'pickup_point' },
+      payment: { method: 'card' },
+    } satisfies PersistedCheckoutDraft;
+    checkout.seedFromSnapshot('sess-seed', draft);
+
+    const result = checkout.get('sess-seed');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.session.contact).toEqual(draft.contact);
+    expect(result.session.billing).toEqual(draft.billing);
+    expect(result.session.delivery).toEqual(draft.delivery);
+    expect(result.session.payment).toEqual(draft.payment);
+  });
+
+  it('toPersistedDraft returns undefined for a session with no draft and the seeded draft for one with a draft', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const cart = new CartStore(options, lookup);
+    const checkout = new CheckoutStore(options, () => cart);
+    cart.add('sess-with', '"1"', 'demo-one-5g-graphite-256', 1);
+
+    expect(checkout.toPersistedDraft('sess-without')).toBeUndefined();
+
+    const seeded = {
+      contact: { fullName: 'Test User', email: 'test@example.com', phone: '+36123456789' },
+      billing: {
+        name: 'Test User',
+        address: {
+          countryCode: 'HU',
+          postalCode: '1111',
+          city: 'Budapest',
+          line1: 'Fo utca 1',
+        },
+      },
+      delivery: { optionId: 'pickup_point' },
+      payment: { method: 'card' },
+    } satisfies PersistedCheckoutDraft;
+    checkout.seedFromSnapshot('sess-with', seeded);
+
+    expect(checkout.toPersistedDraft('sess-with')).toEqual(seeded);
+  });
+});
+
+describe('OrderStore.toPersistedOrderState isolates per-session data (MIM-212 Unit 1)', () => {
+  const lookup: VariantLookupFn = (variantId): VariantLookup | undefined =>
+    variantId === 'demo-one-5g-graphite-256'
+      ? { product: LOOKUP_PRODUCT, variant: LOOKUP_VARIANT }
+      : undefined;
+
+  it('excludes intents and receipts belonging to a different session', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const cart = new CartStore(options, lookup);
+    const checkout = new CheckoutStore(options, () => cart);
+    const idempotency = new IdempotencyStore(clock);
+    const order = new OrderStore(options, checkout, idempotency, () => cart);
+
+    const intentA = {
+      id: 'pi-a',
+      createdAt: '2026-09-14T10:00:00.000Z',
+      expiresAt: '2026-09-14T10:30:00.000Z',
+      redirectUrl: '/demo-fizetes/pi-a',
+      returnUrl: '/penztar?paymentIntentId=pi-a',
+      status: 'requires_action' as const,
+      amount: { amount: 339_990, currency: 'HUF' as const },
+    };
+    const receiptA = {
+      id: 'r-a',
+      orderNumber: 'DEMO-000001',
+      status: 'confirmed' as const,
+      createdAt: '2026-09-14T10:00:00.000Z',
+      contactEmail: 'a@example.com',
+      notice: 'a',
+      paymentMethod: 'card' as const,
+      billing: {
+        name: 'A',
+        address: { countryCode: 'HU' as const, postalCode: '1111', city: 'A', line1: 'A' },
+      },
+      delivery: { optionId: 'pickup_point' as const },
+      items: [],
+      subtotal: { amount: 0, currency: 'HUF' as const },
+      shippingFee: { amount: 0, currency: 'HUF' as const },
+      paymentFee: { amount: 0, currency: 'HUF' as const },
+      total: { amount: 0, currency: 'HUF' as const },
+    };
+    const intentB = {
+      ...intentA,
+      id: 'pi-b',
+      returnUrl: '/penztar?paymentIntentId=pi-b',
+      redirectUrl: '/demo-fizetes/pi-b',
+    };
+    const receiptB = {
+      ...receiptA,
+      id: 'r-b',
+      orderNumber: 'DEMO-000002',
+      contactEmail: 'b@example.com',
+      notice: 'b',
+      billing: {
+        name: 'B',
+        address: { countryCode: 'HU' as const, postalCode: '2222', city: 'B', line1: 'B' },
+      },
+    };
+
+    order.seedFromSnapshot('sess-a', { intents: [intentA], receipts: [receiptA] });
+    order.seedFromSnapshot('sess-b', { intents: [intentB], receipts: [receiptB] });
+
+    const a = order.toPersistedOrderState('sess-a');
+    expect(a.intents).toEqual([intentA]);
+    expect(a.receipts).toEqual([receiptA]);
+
+    const b = order.toPersistedOrderState('sess-b');
+    expect(b.intents).toEqual([intentB]);
+    expect(b.receipts).toEqual([receiptB]);
   });
 });
