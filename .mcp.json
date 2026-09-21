@@ -5,13 +5,14 @@
       "args": ["-y", "@angular/cli", "mcp"]
     },
     "chrome-devtools": {
-      "type": "stdio",
-      "command": "/bin/sh",
+      "command": "npx",
       "args": [
-        "-c",
-        "exec npx -y chrome-devtools-mcp@latest --user-data-dir=\"$HOME/.chrome-devtools-mcp/mi-bolt\" --chrome-arg=--restore-last-session --experimental-screencast"
-      ],
-      "env": {}
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--isolated",
+        "--headless",
+        "--experimental-screencast"
+      ]
     }
   }
 }
