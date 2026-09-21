@@ -1,13 +1,5 @@
-import {
-  Component,
-  ElementRef,
-  computed,
-  effect,
-  input,
-  output,
-  signal,
-  viewChild,
-} from '@angular/core';
+import type { ElementRef } from '@angular/core';
+import { Component, computed, effect, input, output, signal, viewChild } from '@angular/core';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { ProductImage } from '../../shared/ui/product-image/product-image';
@@ -178,9 +170,9 @@ export class ProductGallery {
    */
   onDocumentKeydown(event: KeyboardEvent): void {
     const frame = this.frame()?.nativeElement;
-    if (!frame) return;
+    if (frame === undefined) return;
     const target = event.target instanceof Node ? event.target : null;
-    if (!target || !frame.contains(target)) return;
+    if (target === null || !frame.contains(target)) return;
     this.onKeydown(event);
   }
 
