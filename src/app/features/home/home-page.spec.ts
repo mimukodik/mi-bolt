@@ -706,13 +706,8 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     fixture.detectChanges();
     const root = getRootElement(fixture);
 
-    const errorState = root.querySelector('[data-testid="error-state"]');
-    expect(errorState).not.toBeNull();
-    // The retry control sits inside the error-state block as the only
-    // <button> it renders; no `data-testid="retry-button"` is set on
-    // the `app-button` host, so the test queries the inner button.
-    const retry = errorState?.querySelector<HTMLButtonElement>('button');
-    expect(retry).not.toBeNull();
+    expect(root.querySelector('[data-testid="error-state"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="retry-button"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="featured-grid"]')).toBeNull();
 
     // First listProducts call has been made.
@@ -721,7 +716,17 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     // Resolve the retry call so the orchestrator does not stay loading.
     api.nextListProductsError = null;
     api.listProductsResponse = () => pageFrom(catalogItemFixtures());
-    retry?.click();
+    // The retry control lives on the `<app-button>` host — Angular sets
+    // the `data-testid` attribute on the host element, so the selector
+    // matches the wrapper rather than the inner `<button>` it renders.
+    // Calling `.click()` on the host does not propagate downward to the
+    // inner button's `(click)` handler, so the test reaches the inner
+    // native button through the host and clicks that one explicitly.
+    const retryHost = root.querySelector<HTMLElement>('[data-testid="retry-button"]');
+    expect(retryHost).not.toBeNull();
+    const retryButton = retryHost?.querySelector<HTMLButtonElement>('button');
+    expect(retryButton).not.toBeNull();
+    retryButton?.click();
     for (let i = 0; i < 20; i += 1) {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }

@@ -122,21 +122,24 @@ function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): Colo
   return out;
 }
 
-/** `is5g` facet count: matches the rest of the filters, with `is5g` removed,
- *  sorted, then featured-capped. */
+/** `is5g` facet count: cap the post-filter list to featured-size first,
+ *  then count how many of the capped entries carry `is5g = true`. */
 function buildIs5gCount(entries: readonly CatalogEntry[], filter: Filter): number {
   const noIs5g: Filter = { ...filter, is5g: undefined };
-  const matched = applyFilters(entries, noIs5g).filter((e) => e.product.is5g);
+  const matched = applyFilters(entries, noIs5g);
   const sorted = sortEntries(matched, filter.sort, filter.q);
-  return capFeatured(sorted, filter).length;
+  const capped = capFeatured(sorted, filter);
+  return capped.filter((e) => e.product.is5g).length;
 }
 
-/** `inStock` facet count: forces `inStock=true`, sorts, featured-capped. */
+/** `inStock` facet count: cap the post-filter list to featured-size first,
+ *  then count how many of the capped entries are in stock. */
 function buildInStockCount(entries: readonly CatalogEntry[], filter: Filter): number {
-  const forced: Filter = { ...filter, inStock: true };
-  const matched = applyFilters(entries, forced);
+  const noInStock: Filter = { ...filter, inStock: undefined };
+  const matched = applyFilters(entries, noInStock);
   const sorted = sortEntries(matched, filter.sort, filter.q);
-  return capFeatured(sorted, filter).length;
+  const capped = capFeatured(sorted, filter);
+  return capped.filter((e) => e.variant.availability === 'in_stock').length;
 }
 
 /** Build the `priceRange` from the post-filter, post-sort, post-cap list. */

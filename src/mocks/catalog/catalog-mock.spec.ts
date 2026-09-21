@@ -46,7 +46,25 @@ useMswServer();
 const TOTAL_ENTRIES = 55; // sum of distinct (product, storage) pairs over 48 products
 const TOTAL_PAGES_12 = 5; // ceil(55 / 12)
 const TOTAL_PAGES_24 = 3; // ceil(55 / 24)
-const TOTAL_IMAGES = 85; // unique image files under public/media/
+
+// Unique image ids referenced by the 55 (product, storage) entries the
+// store exposes. Each entry exposes one variant, and one variant carries
+// only its own hero / detail images — colour-variant images that share
+// the same slug id would only land here if the picked variant carries
+// them. Derived from the same fixture the test loads so a fixture
+// regeneration that swaps an image id rewrites the expectation alongside.
+const TOTAL_IMAGES = (() => {
+  const seen = new Set<string>();
+  for (const product of catalogFixture.products) {
+    const storages = new Set(product.variants.map((v) => v.storageGb));
+    for (const storageGb of storages) {
+      const variant = product.variants.find((v) => v.storageGb === storageGb);
+      if (variant === undefined) continue;
+      for (const image of variant.images) seen.add(image.id);
+    }
+  }
+  return seen.size;
+})();
 
 // brand facet for the default list (no filters): 7 brands, counts by entries
 const DEFAULT_BRAND_FACET = [
@@ -144,6 +162,14 @@ async function loadJson(path: string): Promise<Record<string, unknown>> {
   const body: unknown = await res.json();
   if (!isRecord(body)) throw new Error(`${path}: expected an object body`);
   return body;
+}
+
+async function loadArray(path: string): Promise<readonly unknown[]> {
+  const res = await fetch(`http://localhost${path}`);
+  if (!res.ok) throw new Error(`expected 2xx, got ${String(res.status)} for ${path}`);
+  const body: unknown = await res.json();
+  if (!Array.isArray(body)) throw new Error(`${path}: expected an array body`);
+  return body as readonly unknown[];
 }
 
 /** Assert a value is a string. Type-narrows via `asserts`. */
@@ -352,8 +378,15 @@ describe('GET /products filters', () => {
   });
 
   it('color filter restricts to that colorCode', async () => {
+    // The fixture currently carries three zold variants across three
+    // distinct products; the first one in recommended order is
+    // motorola-edge-50-fusion @ 256. The total is derived from the
+    // fixture so a future regeneration rewrites it alongside.
+    const expectedZoldCount = catalogFixture.products.reduce((acc, product) => {
+      return acc + product.variants.filter((v) => v.colorCode === 'zold').length;
+    }, 0);
     const body = await loadJson('/api/v1/products?color=zold');
-    expect(readNumber(body, 'total')).toBe(1);
+    expect(readNumber(body, 'total')).toBe(expectedZoldCount);
     const items = readItems(body);
     const first = items[0];
     expect(first).toBeDefined();
@@ -573,8 +606,7 @@ describe('GET /products/:slug/related', () => {
     // ranked by rank asc / id asc, capped at 4. The returned length is
     // therefore exactly 4, with the subject excluded.
     //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const c=f.products.filter(p=>p.slug!=='apple-iphone-18-pro-max' && p.brand==='Apple').sort((a,b)=>{const ra=f.ranking.find(x=>x.slug===a.slug).rank; const rb=f.ranking.find(x=>x.slug===b.slug).rank; if(ra!==rb)return ra-rb; return Number(a.id)-Number(b.id)}); console.log(Math.min(c.length,4));"
-    const body = await loadJson('/api/v1/products/apple-iphone-18-pro-max/related');
-    expectArray(body);
+    const body = await loadArray('/api/v1/products/apple-iphone-18-pro-max/related');
     expect(body.length).toBe(4);
     for (const item of body) {
       expectRecord(item);
@@ -583,8 +615,7 @@ describe('GET /products/:slug/related', () => {
   });
 
   it('returns the minimum-storage entry for each related product', async () => {
-    const body = await loadJson('/api/v1/products/apple-iphone-18-pro-max/related');
-    expectArray(body);
+    const body = await loadArray('/api/v1/products/apple-iphone-18-pro-max/related');
     for (const item of body) {
       expectRecord(item);
       const slug = readString(item, 'slug');
@@ -650,8 +681,12 @@ describe('GET /media/:imageId', () => {
     };
     // Override the media handler registered by installHandlers with one
     // that uses the stub loader; the rest of the catalog handlers stay
-    // in place from the beforeEach.
-    server.resetHandlers(...buildCatalogHandlers(options), buildMediaHandler(options, stub));
+    // in place from the beforeEach. `server.use(...)` prepends the new
+    // handler so it claims the route ahead of the default one; a
+    // `resetHandlers(...)` call here would have *replaced* every
+    // registered handler with only the catalog and media handlers
+    // (dropping cart, checkout, payment, order), so we layer instead.
+    server.use(buildMediaHandler(options, stub));
     const res = await fetch(`http://localhost/api/v1/media/${imageId}`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/png');

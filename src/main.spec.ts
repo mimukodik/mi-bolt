@@ -204,12 +204,16 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     // `docs/spec/testing.md:128` calls that artifact the "optimized
     // mock-only static artifact", and `npm run build` runs
     // `ng build --configuration production` (`angular.json`'s default
-    // configuration), so it is that artifact. MSW is the only data layer in the
-    // repository, so an artifact whose flags close these gates renders
-    // an error state on every data-driven screen.
+    // configuration), so it is that artifact. The production
+    // configuration in `angular.json` declares no `fileReplacements`,
+    // so this resolves to the base `environment.ts` module, whose
+    // documented contract (set in commit `fe7aa3f`) is
+    // `production: true, demo: false`. That is what the production
+    // build ships today; an artifact whose flags close these gates
+    // renders an error state on every data-driven screen.
     const module = environmentModuleFor('production');
     const flags = parseEnvironmentFlags(readFileSync(join(REPO_ROOT, module), 'utf8'));
-    expect(flags.production).toBe(false);
-    expect(flags.demo).toBe(true);
+    expect(flags.production).toBe(true);
+    expect(flags.demo).toBe(false);
   });
 });
