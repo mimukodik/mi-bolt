@@ -169,7 +169,7 @@ export const deliveryGuard: CanMatchFn = (_route, _segments): boolean | UrlTree 
  *   - the cart is loaded and empty → /penztar/kosar with reason
  *     `empty-cart`;
  *   - contact missing → /penztar/adatok
- *   - delivery / paymentMethod missing → /penztar/szallitas
+ *   - delivery / payment / billing missing → /penztar/szallitas
  */
 export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree => {
   const checkout = inject(CheckoutFacade);
@@ -180,7 +180,11 @@ export const reviewGuard: CanMatchFn = (_route, _segments): boolean | UrlTree =>
   if (session?.contact === undefined) {
     return redirectToStep('contact', 'incomplete');
   }
-  if (session.delivery === undefined || session.paymentMethod === undefined) {
+  if (
+    session.delivery === undefined ||
+    session.payment === undefined ||
+    session.billing === undefined
+  ) {
     return redirectToStep('delivery', 'incomplete');
   }
   return true;
