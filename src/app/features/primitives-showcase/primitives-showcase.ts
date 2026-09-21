@@ -40,7 +40,10 @@ export class PrimitivesShowcase {
   readonly loading = signal(false);
   readonly dialogOpen = signal(false);
   readonly quantityValue = signal(2);
-  readonly ready = () => ({ amount: 339990, currency: 'HUF' as const });
+  readonly ready = (): { readonly amount: number; readonly currency: 'HUF' } => ({
+    amount: 339990,
+    currency: 'HUF' as const,
+  });
   readonly placeholder = {
     src: '/assets/placeholder.svg',
     alt: 'Semleges helyőrző képe a terméknek',

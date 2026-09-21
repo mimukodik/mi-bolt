@@ -1,27 +1,27 @@
 <section
+  aria-labelledby="featured-heading"
   class="featured px-4 py-12 sm:px-6 lg:px-12 lg:py-16"
   data-testid="featured-section"
-  aria-labelledby="featured-heading"
 >
   <div class="featured__inner flex flex-col gap-6">
     <header
       class="featured__header flex flex-col gap-2 min-[720px]:flex-row min-[720px]:items-baseline min-[720px]:justify-between"
     >
-      <h2 id="featured-heading" class="featured__title">Készülékek, amiket érdemes megnézni</h2>
-      <a routerLink="/telefonok" class="featured__all-link" data-testid="featured-all-link"
+      <h2 class="featured__title" id="featured-heading">Készülékek, amiket érdemes megnézni</h2>
+      <a class="featured__all-link" data-testid="featured-all-link" routerLink="/telefonok"
         >Minden telefon</a
       >
     </header>
     @if (allErrored()) {
-      <div class="featured__grid-error" data-testid="error-state" role="status" aria-live="polite">
+      <div aria-live="polite" class="featured__grid-error" data-testid="error-state" role="status">
         <p class="featured__error-title">A kiemelt termékek nem tölthetők be</p>
         <p class="featured__error-message">{{ errorMessage() }}</p>
         <app-button
+          data-testid="retry-button"
           label="Újrapróbálom"
           variant="primary"
-          data-testid="retry-button"
           (pressed)="retryRequested.emit()"
-        ></app-button>
+        />
       </div>
     } @else {
       <ul
@@ -33,20 +33,20 @@
           @for (placeholder of [0, 1, 2, 3]; track placeholder) {
             <li
               class="featured__card flex flex-col overflow-hidden"
-              [attr.data-testid]="'featured-card-skeleton-' + placeholder"
+              [attr.data-testid]="`featured-card-skeleton-${placeholder}`"
             >
               <div class="featured__loading" data-testid="featured-loading">
                 <span
+                  aria-hidden="true"
                   class="featured__skeleton featured__skeleton--image"
-                  aria-hidden="true"
                 ></span>
                 <span
+                  aria-hidden="true"
                   class="featured__skeleton featured__skeleton--title"
-                  aria-hidden="true"
                 ></span>
                 <span
-                  class="featured__skeleton featured__skeleton--price"
                   aria-hidden="true"
+                  class="featured__skeleton featured__skeleton--price"
                   data-testid="price-skeleton"
                 ></span>
                 <span class="sr-only">Termék betöltése…</span>
@@ -57,22 +57,22 @@
           @for (item of items(); track item.variantId) {
             <li
               class="featured__card flex flex-col overflow-hidden"
-              [attr.data-testid]="'featured-card-' + item.slug"
+              [attr.data-testid]="`featured-card-${item.slug}`"
             >
               <a
                 class="featured__media"
-                [routerLink]="['/telefonok', item.slug]"
+                [attr.aria-label]="`${item.name} — részletek`"
                 [queryParams]="{ variant: item.variantId }"
-                [attr.aria-label]="item.name + ' — részletek'"
+                [routerLink]="['/telefonok', item.slug]"
               >
                 <span class="featured__tag">DEMÓTERMÉK</span>
                 <div class="featured__image block overflow-hidden">
                   <app-product-image
-                    [image]="item.image"
-                    [productName]="item.name"
                     aspectRatio="4 / 5"
                     [decorative]="true"
                     [eager]="$first"
+                    [image]="item.image"
+                    [productName]="item.name"
                   />
                 </div>
               </a>
@@ -81,13 +81,13 @@
                 <h3 class="featured__name">{{ item.name }}</h3>
                 <p class="featured__price" data-testid="price-amount">
                   <span class="featured__price-amount">{{ formatPrice(item.price) }}</span>
-                  <span class="featured__price-currency" aria-hidden="true">Ft</span>
+                  <span aria-hidden="true" class="featured__price-currency">Ft</span>
                 </p>
                 <a
                   class="featured__details mt-2 inline-flex min-h-12 min-w-12 items-center justify-center self-start no-underline"
-                  [routerLink]="['/telefonok', item.slug]"
+                  [attr.data-testid]="`featured-details-${item.slug}`"
                   [queryParams]="{ variant: item.variantId }"
-                  [attr.data-testid]="'featured-details-' + item.slug"
+                  [routerLink]="['/telefonok', item.slug]"
                   >Részletek</a
                 >
               </div>
