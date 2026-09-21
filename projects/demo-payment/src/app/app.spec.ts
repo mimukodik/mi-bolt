@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
+
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 
 import { App } from './app';
 import { appConfig } from './app.config';
@@ -17,7 +20,11 @@ describe('demo-payment App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App, PaymentPage],
-      providers: [provideRouter(routes)],
+      providers: [
+        provideRouter(routes),
+        provideHttpClient(),
+        provideApiConfiguration('http://localhost/api/v1'),
+      ],
     }).compileComponents();
   });
 
@@ -30,10 +37,13 @@ describe('demo-payment App', () => {
     expect(appConfig.providers).toHaveLength(5);
   });
 
-  it('renders the placeholder heading', async () => {
+  it('renders the missing-id alert when the route has no id', async () => {
     const fixture = TestBed.createComponent(PaymentPage);
     await fixture.whenStable();
     const raw: unknown = fixture.nativeElement;
-    expect(hostElement(raw).querySelector('h1')?.textContent).toBe('Demó fizetés');
+    const alertEl = hostElement(raw).querySelector('[role="alert"]');
+    const alertText = alertEl === null ? '' : alertEl.textContent;
+    expect(alertText.trim()).toBe('Hiányzó fizetési azonosító.');
+    expect(hostElement(raw).querySelector('h1')).toBeNull();
   });
 });
