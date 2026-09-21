@@ -30,7 +30,7 @@
     </div>
 
     @if (paymentFee(); as fee) {
-      <div class="row flex flex-col gap-0" data-testid="summary-row-payment-fee">
+      <div class="row flex flex-col gap-0" data-testid="order-summary-payment-fee">
         <app-price-block
           [money]="fee"
           [label]="'Fizetési díj'"

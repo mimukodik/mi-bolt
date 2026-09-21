@@ -1,10 +1,9 @@
 /**
  * S3-C5 — the review page on the 2.0.0 contract.
  *
- * Written from scratch: the 1.0.0 container was built around
- * `QuoteController`, a progress poll and `PaymentProgress`, all three
- * of which lost their subject when the payment moved to a redirect
- * the SPA does not survive (design §1 fact d, §5.5).
+ * The page holds the facades, maps the submission outcomes to
+ * navigation and renders the step; the payment itself is a full-page
+ * redirect the SPA does not survive (design §1 fact d, §5.5).
  *
  * It is the owning container `checkout.routes.ts` routes
  * `/penztar/ellenorzes` to. It hydrates the cart, the options and the

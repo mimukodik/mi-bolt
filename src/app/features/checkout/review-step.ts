@@ -1,10 +1,7 @@
 /**
  * S3-C5 — the review step on the 2.0.0 contract.
  *
- * Written from scratch against the 2.0.0 models: the 1.0.0 file was
- * built on `Quote`, `ReviewState` and a client-side price refresh,
- * none of which the contract still has (design §5.5, §6.3). What it
- * renders now:
+ * Renders the review step of the 2.0.0 checkout (design §5.5, §6.3):
  *
  *   - the cart lines, the contact / delivery / payment snapshot read
  *     from the server-confirmed `draft`, and the four-row summary
@@ -48,9 +45,8 @@ import type { PriceChange } from './checkout.facade';
 
 /**
  * The seven states the review surface can be in (design §6.3).
- * Replaces the 1.0.0 `ReviewState`: `quoting` and `expired` lost
- * their subject with the quote, and `conflict` is new with the
- * shared version counter.
+ * `conflict` follows the shared version counter of the cart and the
+ * checkout session.
  */
 export type CheckoutViewState =
   'loading' | 'ready' | 'price-changed' | 'stock-error' | 'conflict' | 'submitting' | 'error';
@@ -167,6 +163,16 @@ export class ReviewStep {
     if (delivery?.optionId !== 'home_delivery') return null;
     return delivery.address;
   });
+
+  /** The invoice name and address. Required for every order, pickup
+   *  included, but absent from the draft until the delivery step has
+   *  been saved. */
+  readonly billingName = computed<string>(() => this.draft().billing?.name ?? UNKNOWN_LABEL);
+  readonly billingAddress = computed<Address | null>(() => this.draft().billing?.address ?? null);
+
+  /** The template's own missing-value placeholder, so the glyph has
+   *  one definition on this screen. */
+  protected readonly unknownLabel = UNKNOWN_LABEL;
 
   readonly deliveryLabel = computed<string>(() => {
     const id = this.draft().delivery?.optionId;
@@ -299,6 +305,12 @@ export class ReviewStep {
   }
 
   onEditDelivery(): void {
+    this.editRequested.emit('delivery');
+  }
+
+  /** Billing is entered on the delivery step (design §6.2), so its
+   *  edit control asks for that step rather than one of its own. */
+  onEditBilling(): void {
     this.editRequested.emit('delivery');
   }
 

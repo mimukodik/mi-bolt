@@ -62,6 +62,47 @@
 
       <article
         class="card flex flex-col gap-(--space-3) p-(--space-5) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
+        data-testid="review-billing"
+      >
+        <header class="card-header flex items-center justify-between gap-(--space-3)">
+          <h2
+            class="card-title m-0 text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+          >
+            Számlázási adatok
+          </h2>
+          <button
+            type="button"
+            class="link-button text-(length:--type-helper)"
+            data-testid="review-edit-billing"
+            (click)="onEditBilling()"
+          >
+            Módosítás
+          </button>
+        </header>
+        <dl class="data-list flex flex-col gap-(--space-2) m-0">
+          <div class="row">
+            <dt>Név</dt>
+            <dd>{{ billingName() }}</dd>
+          </div>
+          <div class="row">
+            <dt>Cím</dt>
+            <dd data-testid="review-billing-address">
+              @if (billingAddress(); as address) {
+                {{ address.line1 }}<br />
+                @if (address.line2) {
+                  {{ address.line2 }}<br />
+                }
+                {{ address.postalCode }} {{ address.city }}
+              } @else {
+                {{ unknownLabel }}
+              }
+            </dd>
+          </div>
+        </dl>
+      </article>
+
+      <article
+        class="card flex flex-col gap-(--space-3) p-(--space-5) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) sm:p-(--space-6)"
         data-testid="review-delivery"
       >
         <header class="card-header flex items-center justify-between gap-(--space-3)">
