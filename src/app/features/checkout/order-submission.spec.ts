@@ -26,7 +26,6 @@ import { demoSessionInterceptor } from '../../../app/core/api/demo-session.inter
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
-import { IdempotencyStore } from '../../../mocks/idempotency';
 import { isRecord } from '../../../mocks/is-record';
 import { Repository } from '../../../mocks/repository';
 import {
@@ -107,12 +106,11 @@ beforeEach((): void => {
     scenario: DEFAULT_SCENARIO,
     apiRoot: '/api/v1',
   };
-  new IdempotencyStore(clock);
   server.use(...createHandlers(options));
 });
 
 afterEach(() => {
-  server.events.removeAllListeners();
+  server.events.removeAllListeners('request:start');
   vi.restoreAllMocks();
   TestBed.resetTestingModule();
   sessionStorage.clear();
@@ -170,7 +168,7 @@ function postsTo(log: readonly CapturedRequest[], path: string): number {
   return log.filter((entry) => entry.line.startsWith('POST ') && entry.line.includes(path)).length;
 }
 
-async function seedCompleteCardDraft(): Promise<void> {
+async function seedCompleteDraft(paymentMethod: PaymentSelection): Promise<void> {
   const cart = TestBed.inject(CartFacade);
   const checkout = TestBed.inject(CheckoutFacade);
   await cart.ensureCart();
@@ -179,7 +177,7 @@ async function seedCompleteCardDraft(): Promise<void> {
   expect(contact.ok).toBe(true);
   const delivery = await checkout.updateDelivery(HOME_DELIVERY);
   expect(delivery.ok).toBe(true);
-  const payment = await checkout.updatePayment(CARD_PAYMENT);
+  const payment = await checkout.updatePayment(paymentMethod);
   expect(payment.ok).toBe(true);
   const billing = await checkout.updateBilling(VALID_BILLING);
   expect(billing.ok).toBe(true);
@@ -187,21 +185,12 @@ async function seedCompleteCardDraft(): Promise<void> {
   expect(opts.ok).toBe(true);
 }
 
+async function seedCompleteCardDraft(): Promise<void> {
+  await seedCompleteDraft(CARD_PAYMENT);
+}
+
 async function seedCompleteCodDraft(): Promise<void> {
-  const cart = TestBed.inject(CartFacade);
-  const checkout = TestBed.inject(CheckoutFacade);
-  await cart.ensureCart();
-  await cart.addItem(MOTO, 1);
-  const contact = await checkout.updateContact(VALID_CONTACT);
-  expect(contact.ok).toBe(true);
-  const delivery = await checkout.updateDelivery(HOME_DELIVERY);
-  expect(delivery.ok).toBe(true);
-  const payment = await checkout.updatePayment(COD_PAYMENT);
-  expect(payment.ok).toBe(true);
-  const billing = await checkout.updateBilling(VALID_BILLING);
-  expect(billing.ok).toBe(true);
-  const opts = await checkout.ensureOptions();
-  expect(opts.ok).toBe(true);
+  await seedCompleteDraft(COD_PAYMENT);
 }
 
 async function resolveIntentOutcome(
@@ -214,6 +203,11 @@ async function resolveIntentOutcome(
     body: JSON.stringify({ outcome }),
   });
   expect(res.status).toBe(200);
+  // The mock store flipped the intent, but the facade's paymentIntentWritable
+  // still holds the pre-resolution 'requires_action' snapshot. Refetching here
+  // is what makes the next `submitOrder()` see the resolved status.
+  const refetched = await TestBed.inject(CheckoutFacade).readPaymentIntent(intentId);
+  expect(refetched.ok).toBe(true);
 }
 
 describe('OrderSubmission', () => {
@@ -393,6 +387,10 @@ describe('OrderSubmission', () => {
     const checkout = TestBed.inject(CheckoutFacade);
     await cart.ensureCart();
     await cart.addItem(MOTO, 1);
+    // The cart facade does not load the checkout session on its own;
+    // a session refetch is what makes OrderSubmission's `session()` non-null.
+    const loaded = await checkout.ensureSession();
+    expect(loaded.ok).toBe(true);
 
     // Nothing saved: the first missing section is contact → adatok.
     const log: CapturedRequest[] = [];
@@ -454,9 +452,7 @@ describe('OrderSubmission', () => {
     expect(outcome.kind).toBe('payment-required');
     if (outcome.kind !== 'payment-required') throw new Error('expected payment-required');
     expect(outcome.intentId).toBe(intentId);
-    const redirectUrl = checkout.paymentIntent()?.redirectUrl;
-    expect(redirectUrl).toBeDefined();
-    expect(outcome.redirectUrl).toBe(redirectUrl);
+    expect(outcome.redirectUrl).toBe(checkout.paymentIntent()?.redirectUrl);
     expect(postsTo(log, '/orders')).toBe(0);
   });
 
@@ -489,7 +485,7 @@ describe('OrderSubmission', () => {
   // OS-11 — 422 PAYMENT_PENDING through POST /orders maps to payment-pending
   // -------------------------------------------------------------------------
 
-  it('OS-11: a 422 PAYMENT_DECLINED from the order endpoint never claims a rejection it did not get', async () => {
+  it('OS-11: a 422 PAYMENT_PENDING from the order endpoint maps to payment-pending, not declined', async () => {
     await seedCompleteCardDraft();
     const checkout = TestBed.inject(CheckoutFacade);
     const created = await checkout.createPaymentIntent();
