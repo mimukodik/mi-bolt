@@ -594,6 +594,121 @@ describe('GET /products filters', () => {
       loadCatalogFixture(committed);
     }
   });
+
+  it('is5g facet count is taken inside the featured cap, not before it', async () => {
+    // Build a 5-entry featured catalogue where the cap changes the
+    // answer. Entries 1, 2, 4, 5 are 5G; entry 3 is not. Counting
+    // before the cap would give 4; the formula caps at 4 first, then
+    // counts 5G, giving 3.
+    const variantOf = (id: string): Product['variants'][number] => ({
+      id: `${id}--szin--128`,
+      slug: 'szin-128gb',
+      colorCode: 'szin',
+      colorName: 'Szín',
+      swatchHex: '#000000',
+      storageGb: 128 as const,
+      price: { amount: 100_000, currency: 'HUF' as const },
+      availability: 'in_stock',
+      maxQuantity: 5,
+      images: [
+        {
+          id: `${id}--szin--128-front`,
+          src: '/api/v1/media/img',
+          alt: id,
+          width: 100,
+          height: 100,
+        },
+      ],
+    });
+    const products: Product[] = [
+      {
+        id: '1',
+        slug: 'feat-1',
+        brand: 'Brand',
+        name: 'Featured 1',
+        highlights: [],
+        is5g: true,
+        releasedAt: '2026-01-01',
+        description: 'd',
+        variants: [variantOf('feat-1')],
+        specGroups: [],
+      },
+      {
+        id: '2',
+        slug: 'feat-2',
+        brand: 'Brand',
+        name: 'Featured 2',
+        highlights: [],
+        is5g: true,
+        releasedAt: '2026-01-01',
+        description: 'd',
+        variants: [variantOf('feat-2')],
+        specGroups: [],
+      },
+      {
+        id: '3',
+        slug: 'feat-3',
+        brand: 'Brand',
+        name: 'Featured 3',
+        highlights: [],
+        is5g: false,
+        releasedAt: '2026-01-01',
+        description: 'd',
+        variants: [variantOf('feat-3')],
+        specGroups: [],
+      },
+      {
+        id: '4',
+        slug: 'feat-4',
+        brand: 'Brand',
+        name: 'Featured 4',
+        highlights: [],
+        is5g: true,
+        releasedAt: '2026-01-01',
+        description: 'd',
+        variants: [variantOf('feat-4')],
+        specGroups: [],
+      },
+      {
+        id: '5',
+        slug: 'feat-5',
+        brand: 'Brand',
+        name: 'Featured 5',
+        highlights: [],
+        is5g: true,
+        releasedAt: '2026-01-01',
+        description: 'd',
+        variants: [variantOf('feat-5')],
+        specGroups: [],
+      },
+    ];
+    const ranking: ProductRanking[] = products.map((p, i) => ({
+      slug: p.slug,
+      rank: i + 1,
+      popularityScore: 100 - i,
+      featured: true,
+      colorOrder: ['szin'],
+    }));
+    loadCatalogFixture({ products, ranking });
+    try {
+      const body = await loadJson('/api/v1/products?featured=true');
+      const facets = body['facets'];
+      expectRecord(facets);
+      // New formula: cap at 4, then count 5G → 3.
+      // Old formula would have given 4 (5 entries − 1 non-5G).
+      expect(readNumber(facets, 'is5g')).toBe(3);
+    } finally {
+      // Restore the committed fixture so subsequent tests see the
+      // 48-product catalogue. The type guard narrows the JSON's
+      // widened `string` availability back to the `Availability`
+      // union so the call satisfies `CatalogFixture`.
+      const committed: CatalogFixture = ((): CatalogFixture => {
+        if (isCatalogFixtureShape(catalogFixture)) return catalogFixture;
+        throw new Error('[is5g facet test] committed fixture failed shape check');
+      })();
+      loadCatalogFixture(committed);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

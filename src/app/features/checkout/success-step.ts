@@ -284,17 +284,4 @@ export class SuccessStep {
         this.startingNewCart.set(false);
       });
   }
-
-  // -------------------------------------------------------------------------
-  // Test seams — exposed only so spec files can drive the page
-  // without standing up the full component tree.
-  // -------------------------------------------------------------------------
-
-  __testForceState(next: LoadState): void {
-    this.loadState.set(next);
-  }
-
-  __testOrderId(): string | null {
-    return this.orderId();
-  }
 }

@@ -600,12 +600,10 @@ describe('SuccessStep', () => {
   it('SP-13 the page resets the ordered cart once the receipt is in memory', async () => {
     await seedCompleteCashDraft();
     await placeCodOrder();
-    // `submitOrder` itself drops the cart snapshot, so the very next
-    // navigation would already see `cart.itemCount() === 0`. The page
-    // binds this in its `hasReceipt` effect; we want to measure the
-    // facade side, not the page's call, so we put a fresh item back,
-    // then mount the page (no second fetch, because the receipt is
-    // already in memory) and watch `itemCount` drop to zero again.
+    // `submitOrder` leaves the cart alone; the reset is the page's own
+    // `hasReceipt` effect calling `resetOrderedCart`. So put a fresh item
+    // in first, then mount the page (no second fetch, the receipt is
+    // already in memory) and watch `itemCount` drop to zero.
     const cart = TestBed.inject(CartFacade);
     await cart.ensureCart();
     await cart.addItem(MOTO, 1);
