@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { Button } from './button';
 
@@ -6,14 +7,14 @@ import { Button } from './button';
   imports: [Button],
   template: `
     <app-button
-      [variant]="variant()"
-      [label]="label()"
-      [loadingLabel]="loadingLabel()"
       [disabled]="disabled()"
+      [label]="label()"
       [loading]="loading()"
+      [loadingLabel]="loadingLabel()"
       [type]="type()"
+      [variant]="variant()"
       (pressed)="clickCount.set(clickCount() + 1)"
-    ></app-button>
+    />
   `,
 })
 class HostComponent {
@@ -56,13 +57,40 @@ function normaliseComponentCss(css: string): string {
  * grouped selector `.root.is-secondary,.root.is-secondary-on-dark`. The
  * boundary includes `;` because Sass prepends `@charset "UTF-8";`. */
 function ruleBody(css: string, selector: string): string {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(`(?:^|[{};])${escaped}\\{`).exec(css);
-  if (match === null) {
+  const matchIndex = findRuleStart(css, selector);
+  if (matchIndex === -1) {
     throw new Error(`Expected a rule for ${selector}`);
   }
-  const open = match.index + match[0].length;
-  return css.slice(open, css.indexOf('}', open));
+  const openBrace = css.indexOf('{', matchIndex + selector.length);
+  const closeBrace = css.indexOf('}', openBrace);
+  return css.slice(openBrace + 1, closeBrace);
+}
+
+function findRuleStart(css: string, selector: string): number {
+  let from = 0;
+  for (;;) {
+    const idx = css.indexOf(selector, from);
+    if (idx === -1) {
+      return -1;
+    }
+    const before = idx === 0;
+    const atCloseBrace =
+      idx > 0 && (css[idx - 1] === '{' || css[idx - 1] === '}' || css[idx - 1] === ';');
+    if (before || atCloseBrace) {
+      let cursor = idx + selector.length;
+      while (cursor < css.length && isAsciiWhitespace(css[cursor])) {
+        cursor += 1;
+      }
+      if (css[cursor] === '{') {
+        return idx;
+      }
+    }
+    from = idx + 1;
+  }
+}
+
+function isAsciiWhitespace(ch: string): boolean {
+  return ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r';
 }
 
 /** The declarations of one rule, as whole `prop:value` strings. A substring

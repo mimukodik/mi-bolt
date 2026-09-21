@@ -16,7 +16,8 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter, type Params } from '@angular/router';
 import { http, HttpResponse } from 'msw';
@@ -69,7 +70,7 @@ function money(amount: number): Money {
 describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
   @Component({
     imports: [ProductPage],
-    template: `<app-product-page [slug]="slug()"></app-product-page>`,
+    template: `<app-product-page [slug]="slug()" />`,
   })
   class ProductPageHost {
     readonly slug = signal('demo-one-5g');
@@ -338,7 +339,9 @@ describe('FIX-29 fact 4 — OrderReceipt meta rows sit inside a <dl>', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const meta = root.querySelector('[data-testid="receipt-meta"]');
-    if (!meta) throw new Error('Expected receipt-meta section');
+    if (meta === null) {
+      throw new Error('Expected receipt-meta section');
+    }
     const pairs = Array.from(meta.querySelectorAll('dt, dd'));
     expect(pairs.length).toBeGreaterThan(0);
     expect(pairs.every((n) => n.closest('dl') !== null)).toBe(true);
@@ -502,7 +505,9 @@ describe('FIX-29 fact 5 — CatalogPage heading order and labelled search', () =
     fixture.detectChanges();
 
     for (let i = 0; i < 20 && facade.vm().status !== 'success'; i += 1) {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
       fixture.detectChanges();
     }
     return fixture;

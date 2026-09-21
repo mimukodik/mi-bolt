@@ -310,7 +310,9 @@ describe('ReviewPage hydrates', () => {
     await h.fixture.whenStable();
     const coldHost = hostOf(h.fixture);
     while (coldHost.querySelector('app-review-step') === null) {
-      await new Promise<void>((r) => setTimeout(r, 5));
+      await new Promise<void>((r) => {
+        setTimeout(r, 5);
+      });
       h.fixture.detectChanges();
     }
 
@@ -330,7 +332,9 @@ describe('ReviewPage hydrates', () => {
     await h2.fixture.whenStable();
     const warmHost = hostOf(h2.fixture);
     while (warmHost.querySelector('app-review-step') === null) {
-      await new Promise<void>((r) => setTimeout(r, 5));
+      await new Promise<void>((r) => {
+        setTimeout(r, 5);
+      });
       h2.fixture.detectChanges();
     }
 
@@ -527,12 +531,16 @@ describe('ReviewPage maps submit outcomes', () => {
     const page = h.fixture.componentInstance;
 
     const submitCall = page.onSubmitRequested();
-    await new Promise<void>((r) => setTimeout(r, 0));
+    await new Promise<void>((r) => {
+      setTimeout(r, 0);
+    });
     expect(page.viewState()).toBe('submitting');
 
     resolveOutcome({ kind: 'declined', intentId: 'pi-1' });
     await submitCall;
-    await new Promise<void>((r) => setTimeout(r, 0));
+    await new Promise<void>((r) => {
+      setTimeout(r, 0);
+    });
     expect(page.viewState()).not.toBe('submitting');
   });
 

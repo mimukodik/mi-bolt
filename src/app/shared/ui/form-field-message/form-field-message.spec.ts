@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { FormFieldMessage, type FieldError } from './form-field-message';
 
@@ -6,13 +7,13 @@ import { FormFieldMessage, type FieldError } from './form-field-message';
   imports: [FormFieldMessage],
   template: `
     <app-form-field-message
-      [fieldId]="fieldId()"
       [errors]="errors()"
-      [touched]="touched()"
-      [submitted]="submitted()"
+      [fieldId]="fieldId()"
       [helpText]="helpText()"
       [severity]="severity()"
-    ></app-form-field-message>
+      [submitted]="submitted()"
+      [touched]="touched()"
+    />
   `,
 })
 class HostComponent {
@@ -99,7 +100,7 @@ describe('FormFieldMessage primitive', () => {
       '[data-testid="form-field-message"]',
     );
     expect(msg).not.toBeNull();
-    if (!msg) {
+    if (msg === null) {
       throw new Error('Expected form-field-message');
     }
     expect(msg.textContent.trim()).toBe('Formátum: nev@példa.hu');

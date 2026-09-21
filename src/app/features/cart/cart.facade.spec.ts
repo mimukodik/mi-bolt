@@ -52,11 +52,14 @@ const VARIANT_IPHONE_OOS = 'apple-iphone-17e--halvany-rozsaszin--256';
 // Shared helpers
 // ---------------------------------------------------------------------------
 
+function hasQueue(t: object): t is { queue: unknown } {
+  return 'queue' in t;
+}
+
 function getQueue(target: unknown): CartMutationQueue | null {
   if (typeof target !== 'object' || target === null) return null;
-  if (!('queue' in target)) return null;
-  // eslint-disable-next-line @typescript-eslint/dot-notation
-  const q = target['queue'];
+  if (!hasQueue(target)) return null;
+  const q = target.queue;
   if (q instanceof CartMutationQueue) return q;
   return null;
 }
@@ -65,7 +68,9 @@ function getQueue(target: unknown): CartMutationQueue | null {
 async function settled(facade: CartFacade): Promise<void> {
   const queue = getQueue(facade);
   if (queue !== null) await queue.settle();
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }
 
 interface CapturedRequest {
@@ -671,5 +676,7 @@ describe('mapError: HttpErrorResponse body narrowing', () => {
 // ---------------------------------------------------------------------------
 async function settledQueue(queue: CartMutationQueue): Promise<void> {
   await queue.settle();
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }

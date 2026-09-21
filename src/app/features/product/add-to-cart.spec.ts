@@ -11,7 +11,8 @@
 import '@angular/compiler';
 
 import { Component, Input, Output, provideZonelessChangeDetection, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { readFile } from 'node:fs/promises';
 import { resolve as pathResolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -101,12 +102,12 @@ beforeAll(async () => {
   imports: [AddToCart],
   template: `
     <app-add-to-cart
-      [variant]="variant()"
-      [quantity]="quantity()"
-      [pending]="pending()"
       [error]="error()"
+      [pending]="pending()"
+      [quantity]="quantity()"
+      [variant]="variant()"
       (addRequested)="onAddRequested($event)"
-    ></app-add-to-cart>
+    />
   `,
 })
 class TestHostComponent {

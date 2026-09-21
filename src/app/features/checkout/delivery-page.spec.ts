@@ -184,7 +184,9 @@ function pinEnsureOptions(result: CheckoutResult<CheckoutOptions>): void {
  *  assert it. */
 function pinEnsureOptionsNever(): void {
   const facade = TestBed.inject(CheckoutFacade);
-  const never = new Promise<CheckoutResult<CheckoutOptions>>(() => undefined);
+  const never = new Promise<CheckoutResult<CheckoutOptions>>(() => {
+    /* never resolves */
+  });
   vi.spyOn(facade, 'ensureOptions').mockReturnValue(never);
 }
 

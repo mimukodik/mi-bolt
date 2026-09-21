@@ -198,7 +198,7 @@ async function seedMotoQuantity(
   return body;
 }
 
-async function patchCheckout(
+function patchCheckout(
   body: unknown,
   ifMatch: string,
   headers: Record<string, string> = session1Headers(),
@@ -1384,7 +1384,7 @@ describe('POST /orders', () => {
   it('O-11: store-level — a CartStore with a stub lookup that returns out_of_stock surfaces OUT_OF_STOCK at createOrder', () => {
     const stubLookup: VariantLookupFn = (id) => {
       const hit = catalogStore.current?.getVariant(id);
-      if (!hit) return undefined;
+      if (hit === undefined) return undefined;
       return {
         product: hit.product,
         variant: { ...hit.variant, availability: 'out_of_stock', maxQuantity: 2 },

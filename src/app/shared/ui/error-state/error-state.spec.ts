@@ -1,4 +1,5 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { ErrorState } from './error-state';
 
@@ -6,13 +7,13 @@ import { ErrorState } from './error-state';
   imports: [ErrorState],
   template: `
     <app-error-state
-      [title]="title()"
       [message]="message()"
-      [retryLabel]="retryLabel()"
       [pending]="pending()"
       [preserving]="preserving()"
+      [retryLabel]="retryLabel()"
+      [title]="title()"
       (retryRequested)="retryCount.set(retryCount() + 1)"
-    ></app-error-state>
+    />
   `,
 })
 class HostComponent {
@@ -69,7 +70,7 @@ describe('ErrorState primitive', () => {
   it('emits retryRequested when the retry button is clicked', () => {
     const { fixture, host } = setup();
     const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (!btn) {
+    if (btn === null) {
       throw new Error('Expected button');
     }
     btn.click();
@@ -81,7 +82,7 @@ describe('ErrorState primitive', () => {
     host.pending.set(true);
     fixture.detectChanges();
     const btn = getNativeElement(fixture).querySelector<HTMLButtonElement>('button');
-    if (!btn) {
+    if (btn === null) {
       throw new Error('Expected button');
     }
     expect(btn.disabled).toBe(true);
