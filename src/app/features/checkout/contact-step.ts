@@ -294,6 +294,13 @@ export class ContactStep {
     target?.focus();
   }
 
+  /** DOM id of the input for `field`; the ids are lowercase while the
+   *  field keys are not. Read from the same map `focusField` uses so
+   *  the summary anchor href and the lookup stay in sync. */
+  protected inputId(field: ContactFieldKey): string {
+    return INPUT_IDS[field];
+  }
+
   // ---- Internals ----------------------------------------------------
 
   private computeFieldState(invalid: boolean, touched: boolean): string {

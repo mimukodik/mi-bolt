@@ -129,7 +129,7 @@
           @for (item of invalidFields(); track item.field) {
             <li>
               <a
-                [href]="'#contact-' + item.field + '-input'"
+                [href]="'#' + inputId(item.field)"
                 (click)="focusField(item.field, $event)"
                 [attr.data-pointer]="item.pointer ?? null"
               >
