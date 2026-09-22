@@ -60,10 +60,24 @@ class GateFailure extends Error {
 function startServe() {
   return spawn('npx', ['ng', 'serve', 'demo-payment', '--port', String(PORT)], {
     stdio: ['ignore', 'pipe', 'pipe'],
+    // Ask the CLI for uncoloured output so the ready marker is byte-stable
+    // across CI and local runs; stripAnsi above is what makes the gate
+    // correct whether or not the CLI honours it.
+    env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
     // `npx` forks the real Angular CLI server as its own child, so the
     // process group is what we signal on shutdown — see killChild.
     detached: true,
   });
+}
+
+// The Angular CLI colours its "Local:" line when it detects CI, which puts an
+// escape sequence between `Local` and the colon, so a match against the raw
+// bytes can never succeed there while it succeeds on an uncoloured local run.
+// Matching against the stripped text compares what a person sees.
+const ANSI_PATTERN = /\u001B\[[0-9;]*[A-Za-z]/g;
+
+function stripAnsi(text) {
+  return text.replace(ANSI_PATTERN, '');
 }
 
 async function waitForReady(child) {
@@ -78,7 +92,7 @@ async function waitForReady(child) {
 
   const deadline = Date.now() + READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    if (stdout.includes(READY_MARKER) || stderr.includes(READY_MARKER)) {
+    if (stripAnsi(stdout).includes(READY_MARKER) || stripAnsi(stderr).includes(READY_MARKER)) {
       return;
     }
     if (child.exitCode !== null) {
