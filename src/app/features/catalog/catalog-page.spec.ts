@@ -1457,6 +1457,43 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 });
 
 // ===========================================================================
+// MIM-239: full-width layout — the catalog page carries no container cap
+// ===========================================================================
+
+describe('MIM-239 full-width layout — the catalog carries no container cap', () => {
+  it('the .catalog selector carries no max-width and no margin: 0 auto (MIM-239)', () => {
+    // jsdom does not resolve `getComputedStyle` against Angular's
+    // processed component CSS, so the assertion runs against the
+    // stylesheet text itself — the same pattern `T13-AC01` uses to
+    // verify the grid template rule. The production line whose removal
+    // fails this test is the deleted `max-width` declaration in
+    // `catalog-page.scss`.
+    //
+    // Angular's view encapsulation appends an attribute selector to every
+    // rule (`[_ngcontent-%COMP%]`), so the rule regex matches the selector
+    // prefix as well as the body. The negative lookahead `(?![-_a-zA-Z0-9])`
+    // after `.catalog` keeps the match from spilling into a `.catalog-*`
+    // sibling rule: `\b` does not exclude a hyphen, and `\s*\{` would skip
+    // the bare `.catalog` rule itself because the attribute selector sits
+    // between the class and the brace. The `.lede` rule still carries
+    // `max-width: 60ch` for line-length readability — a typography concern,
+    // not a container cap, and out of MIM-239's scope.
+    const css = getComponentStyles(CatalogPage).join('\n');
+    // Strip every media query body so the assertion only sees the base
+    // `.catalog` rule. The non-greedy strip leaves a `.catalog` rule
+    // body untouched if it lives outside any `@media` block, which is
+    // the only place the base rule is expected; a `.catalog` rule
+    // inside a `@media` block would be stripped and the assertion
+    // would fail on `expect(catalogRule).not.toBeNull()`.
+    const flat = css.replace(/@media[^{]*\{[\s\S]*?\}/g, '');
+    const catalogRule = /\.catalog(?![-_a-zA-Z0-9])[^{]*\{[^}]*\}/.exec(flat);
+    expect(catalogRule).not.toBeNull();
+    expect(catalogRule?.[0]).not.toMatch(/max-width/);
+    expect(catalogRule?.[0]).not.toMatch(/margin:\s*0\s+auto/);
+  });
+});
+
+// ===========================================================================
 // Self-removing control focus: a click that destroys the button it was made on
 // ===========================================================================
 
@@ -1624,6 +1661,50 @@ describe('self-removing controls — focus moves to the results counter, not <bo
     const root = getRootElement(harness.fixture);
     const counter = queryElement(root, '[data-testid="result-count"]');
     expect(counter.textContent.trim()).toBe('Nincs találat.');
+    harness.cleanup();
+  });
+});
+
+// ===========================================================================
+// MIM-225: every card on the results grid loads its photo eagerly.
+// ===========================================================================
+
+describe('MIM-225 every results-grid card loads its photo eagerly', () => {
+  /**
+   * The defect, measured in Chrome at 1920x1080 and 390x844 against
+   * `/telefonok?pageSize=24`: cards past the browser's native lazy-loading
+   * threshold sat at `data-status="loading"` with `naturalWidth === 0`
+   * and no network request issued — a plain grey box, no spinner, no
+   * letter, no error. The cause was `catalog-page.html`'s `<app-product-card>`
+   * loop never passing `eager`, so every card kept the
+   * `input<boolean>(false)` default and the browser deferred the fetch.
+   *
+   * The fix is `[eager]="true"` on every card. A first-only assertion
+   * would still pass if someone put `$first` back, so this test reads
+   * `product-image.html`'s `<img data-testid="image-photo">` for every
+   * card on the results grid and asserts each carries `loading="eager"`.
+   * The production line whose removal fails it is the
+   * `[eager]="true"` binding the catalogue grid now passes.
+   */
+  it('every card on the results grid loads its photo eagerly', async () => {
+    const harness = await setupHarness();
+    const items = [
+      buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
+      buildItem('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildItem('p-03', 'MiBolt Demo', 'Demo Pro 5G', 419990, true, 512),
+    ];
+    harness.respond(successPage(items, 3));
+    await harness.waitForStatus('success');
+
+    const root = getRootElement(harness.fixture);
+    const cards = root.querySelectorAll('[data-testid="product-card-image"]');
+    expect(cards.length).toBe(3);
+
+    for (const card of Array.from(cards)) {
+      const img = card.querySelector('[data-testid="image-photo"]');
+      expect(img).not.toBeNull();
+      expect(img?.getAttribute('loading')).toBe('eager');
+    }
     harness.cleanup();
   });
 });

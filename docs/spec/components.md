@@ -653,6 +653,11 @@ All interactive states additionally require visible hover/focus and native disab
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
+## Shared focus styling
+
+The two :focus-visible rules in src/styles/primitives.css own the focus ring: one for text-like controls (input, select, textarea) and one for everything else. A component overrides the shared rule only when the standard lime ring would be unreadable on its surface — a lime-on-lime button on the accent strip, a lime-on-navy CTA on a hero band — and the override names that case in a comment beside it.
+
+
 ## Example: precise signal input/output boundary
 
 This is an implementation pattern, not a compiled or tested deliverable in this planning package.

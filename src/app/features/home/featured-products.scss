@@ -3,11 +3,6 @@
   color: var(--color-text-primary);
 }
 
-.featured__inner {
-  max-width: var(--layout-container-max);
-  margin: 0 auto;
-}
-
 .featured__title {
   font-size: var(--type-section-title-mobile);
   line-height: var(--line-height-heading);
@@ -38,11 +33,6 @@
 
 .featured__all-link:hover {
   background: var(--color-brand-accent-soft);
-}
-
-.featured__all-link:focus-visible {
-  outline: 3px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 .featured__grid-error {

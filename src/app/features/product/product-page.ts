@@ -11,6 +11,8 @@ import {
 import { ActivatedRoute, Router, RouterLink, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { BREADCRUMB_VISIBLE } from '../../core/navigation/breadcrumb-visibility';
+
 function paramMapToSearchParams(params: ParamMap): URLSearchParams {
   const search = new URLSearchParams();
   for (const key of params.keys) {
@@ -124,7 +126,8 @@ export class ProductPage {
 
   readonly product = computed(() => this.vm().product);
   readonly productName = computed<string>(() => this.vm().product?.name ?? '');
-  readonly brand = computed<string>(() => this.vm().product?.brand ?? '');
+  /** Switched off for now (MIM-234); the nav stays in place behind this flag. */
+  readonly breadcrumbVisible = BREADCRUMB_VISIBLE;
   readonly highlights = computed<readonly string[]>(() => this.vm().product?.highlights ?? []);
 
   /** Marketing description from the wire model. Empty string while the
@@ -164,24 +167,6 @@ export class ProductPage {
   /** Every variant of the loaded product, for `VariantSelector`
    *  (FIX-50 item 4). Empty until a product has loaded. */
   readonly variants = computed(() => this.product()?.variants ?? []);
-
-  readonly selectedColorCode = computed(() => this.vm().selectedColorCode);
-  readonly selectedStorageGb = computed<number | null>(() => this.vm().selectedStorageGb);
-
-  readonly selectedColorName = computed<string | null>(() => {
-    const code = this.selectedColorCode();
-    if (code === null) return null;
-    const product = this.product();
-    if (product === null) return null;
-    const match = product.variants.find((v) => v.colorCode === code);
-    return match !== undefined ? match.colorName : code;
-  });
-
-  readonly selectedStorageLabel = computed<string | null>(() => {
-    const gb = this.selectedStorageGb();
-    if (gb === null) return null;
-    return `${String(gb)} GB`;
-  });
 
   readonly devicePrice = computed<Money | null>(() => {
     const variant = this.vm().selectedVariant;

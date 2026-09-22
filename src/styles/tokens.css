@@ -99,12 +99,6 @@
   --line-height-body: 1.5;
   --line-height-heading: 1.15;
 
-  /* layout */
-  --layout-container-max: 1320px;
-  --layout-gutter-mobile: 16px;
-  --layout-gutter-tablet: 24px;
-  --layout-gutter-desktop: 48px;
-
   /* motion */
   --motion-fast: 120ms;
   --motion-standard: 160ms;

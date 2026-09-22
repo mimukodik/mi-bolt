@@ -1,19 +1,17 @@
 :host {
   display: block;
-  padding: 0 var(--layout-gutter-mobile);
+  padding: 0 var(--space-4);
 }
 
 @media (min-width: 640px) {
   :host {
-    padding: 0 var(--layout-gutter-tablet);
+    padding: 0 var(--space-6);
   }
 }
 
 .page {
   position: relative;
   display: block;
-  max-width: var(--layout-container-max);
-  margin: 0 auto;
   padding: var(--space-6) 0 var(--space-10);
   background: var(--color-surface-light);
   color: var(--color-text-primary);
@@ -32,39 +30,11 @@
   gap: var(--space-2);
 }
 
-.brand {
-  font-size: var(--type-helper);
-  color: var(--color-text-secondary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .name {
   font-family: var(--font-family-bold);
   font-size: 32px;
   line-height: 40px;
   color: var(--color-primary);
-}
-
-.meta {
-  font-family: var(--font-family-light);
-  font-size: var(--type-helper);
-  line-height: 20px;
-  color: var(--color-primary);
-}
-
-.meta-value {
-  margin-left: var(--space-1);
-  color: var(--color-text-primary);
-  font-weight: var(--weight-medium);
-}
-
-.meta-label {
-  margin-right: var(--space-1);
-}
-
-.meta-sep {
-  margin: 0 var(--space-2);
 }
 
 .layout {
@@ -106,12 +76,13 @@
   color: var(--color-text-inverse-muted);
 }
 
+/* No width cap: the owner asked on 2026-09-22 for the description to run the
+   full width; the resulting ~250ch measure on a wide screen is the trade-off. */
 .description {
   font-family: var(--font-family-light);
   font-size: var(--type-helper);
   line-height: 22px;
   color: var(--color-primary);
-  max-width: 60ch;
 }
 
 .section-title {
@@ -164,7 +135,7 @@
 
 @media (min-width: 1024px) {
   :host {
-    padding: 0 var(--layout-gutter-desktop);
+    padding: 0 var(--space-9);
   }
 
   .page {
@@ -183,10 +154,13 @@
   }
 
   .description-section {
-    grid-column: 1 / 3;
+    /* Was `1 / 3`; the owner asked on 2026-09-22 for the description to run
+       the full width on desktop, so the section now spans all three columns. */
+    grid-column: 1 / -1;
   }
 }
 
+/* Kept for the slim variant the owner asked for; BREADCRUMB_VISIBLE holds the nav out of the DOM. */
 .breadcrumbs {
   display: flex;
   gap: var(--space-2);
@@ -213,16 +187,6 @@
 
 .breadcrumb__sep {
   color: var(--color-text-secondary);
-}
-
-.demo-tag {
-  align-self: flex-start;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-badge);
-  background: var(--color-brand-accent-soft);
-  color: var(--color-brand-ink);
-  font-size: var(--type-meta);
-  font-weight: var(--weight-bold);
 }
 
 @media (prefers-reduced-motion: reduce) {
