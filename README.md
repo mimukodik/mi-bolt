@@ -24,6 +24,8 @@ npm run start:local-backend
 
 `start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080` and `/demo-fizetes` to the payment app on 4210. Stop the database with `npm run backend:db:stop`.
 
+The built app runs on the real backend with the same static host: `npx ng build --configuration local-backend`, `npm run build:payment`, then `MI_BOLT_API_PROXY=http://localhost:8080 MI_BOLT_PAYMENT_STATIC_DIR=dist/demo-payment/browser PORT=4200 node scripts/serve-static.mjs`. The backend's demo script (mi-bolt-backend `scripts/`) does these steps.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
