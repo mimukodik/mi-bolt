@@ -59,7 +59,6 @@ import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { ProductImage } from '../../shared/ui/product-image/product-image';
-import { QuantityControl } from '../../shared/ui/quantity-control/quantity-control';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { CartFacade } from './cart.facade';
 import { CartLine } from './cart-line';
@@ -150,7 +149,7 @@ function registerComponentMetadata(
 
 registerComponentMetadata(CartLine, {
   inputs: ['line', 'pending'],
-  outputs: ['quantityChanged', 'removeRequested'],
+  outputs: ['removeRequested'],
 });
 registerComponentMetadata(OrderSummary, {
   inputs: ['subtotal', 'shipping', 'footnote'],
@@ -158,10 +157,6 @@ registerComponentMetadata(OrderSummary, {
 registerComponentMetadata(ProductImage, {
   inputs: ['image', 'productName', 'aspectRatio'],
   outputs: ['loadFailed'],
-});
-registerComponentMetadata(QuantityControl, {
-  inputs: ['value', 'min', 'max', 'disabled', 'pending', 'label'],
-  outputs: ['quantityChanged'],
 });
 registerComponentMetadata(EmptyState, {
   inputs: ['title', 'message', 'actionLabel', 'actionVariant'],
@@ -215,14 +210,6 @@ function getButtonElement(parent: Element, selector: string): HTMLButtonElement 
   const el = parent.querySelector(selector);
   if (!(el instanceof HTMLButtonElement)) {
     throw new Error(`Expected HTMLButtonElement matching "${selector}"`);
-  }
-  return el;
-}
-
-function getInputElement(parent: Element, selector: string): HTMLInputElement {
-  const el = parent.querySelector(selector);
-  if (!(el instanceof HTMLInputElement)) {
-    throw new Error(`Expected HTMLInputElement matching "${selector}"`);
   }
   return el;
 }
@@ -344,27 +331,11 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
     const priceBlocks = root.querySelectorAll('app-price-block');
     expect(priceBlocks.length).toBe(1);
 
-    const qtyControl = queryElement(root, 'app-quantity-control');
-    expect(qtyControl).not.toBeNull();
-  });
-
-  it('CartLine quantity control has a real accessible name, not a dangling label[for]', async () => {
-    const fixture = TestBed.createComponent(CartLine);
-    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    const input = getInputElement(root, '[data-testid="quantity-input"]');
-    expect(input.getAttribute('aria-label')).toBe('Darabszám');
-
-    // `QuantityControl` has no `id` input, so a `[id]` binding on
-    // `<app-quantity-control>` lands on that host element rather than on
-    // the real `<input>` inside it. A `<label for="...">` pointing at that
-    // id is not associated with any labelable control at all — it used to
-    // exist here and pointed nowhere real. The name must come from the
-    // input's own `aria-label` instead, with no dangling label left behind.
-    expect(root.querySelector('label[for]')).toBeNull();
+    // Owner's decision, 2026-09-22: like yettel.hu, a cart line has no
+    // quantity control; it shows how many it holds as read-only text.
+    expect(queryElement(root, 'app-quantity-control')).toBeNull();
+    expect(root.querySelector('[data-testid="quantity-input"]')).toBeNull();
+    expect(getElement(root, '[data-testid="cart-line-quantity"]').textContent.trim()).toBe('2 db');
   });
 
   it('CartLine emits removeRequested and uses an aria-label for the remove action', async () => {
@@ -380,13 +351,14 @@ describe('T18-AC01 cart page renders the line card matching the mock cart', () =
 
     const root = getRootElement(fixture);
     const removeBtn = getElement(root, '[data-testid="cart-line-remove"]');
-    expect(removeBtn.getAttribute('aria-label')).toBe('Törlés: Motorola Edge 50 Fusion');
+    expect(removeBtn.getAttribute('aria-label')).toBe('Törlöm: Motorola Edge 50 Fusion');
+    expect(removeBtn.textContent.trim()).toBe('Törlöm');
 
     removeBtn.click();
     expect(removedId).toBe(VARIANT_MOTO_256);
   });
 
-  it('CartPage passes each item to a CartLine, plus wires quantity + remove', async () => {
+  it('CartPage passes each item to a CartLine, plus wires remove', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
     await cartFacade.addItem(VARIANT_MOTO_256, 2);
@@ -498,26 +470,9 @@ describe('T18-AC02 cart page shows subtotal and a shipping placeholder, not a fi
 });
 
 // ---------------------------------------------------------------------------
-// T18-AC03: quantity controls handle boundaries and empty screen on last line removal
+// T18-AC03: a line reports its pending state; removing the last line empties the cart
 // ---------------------------------------------------------------------------
-describe('T18-AC03 quantity boundaries and the empty screen on last-line removal', () => {
-  it('CartLine forwards quantity changes to the facade and respects maxQuantity from the line', async () => {
-    const fixture = TestBed.createComponent(CartLine);
-    fixture.componentRef.setInput('line', DEMO_CART_ITEM);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.maxQuantity()).toBe(5);
-
-    let emittedQty = 0;
-    fixture.componentInstance.quantityChanged.subscribe((qty: number) => {
-      emittedQty = qty;
-    });
-
-    fixture.componentInstance.onQuantityChanged(3);
-    expect(emittedQty).toBe(3);
-  });
-
+describe('T18-AC03 line state and the empty screen on last-line removal', () => {
   it('CartLine surfaces pending state when a mutation is in flight', async () => {
     const fixture = TestBed.createComponent(CartLine);
     fixture.componentRef.setInput('line', DEMO_CART_ITEM);
@@ -581,10 +536,10 @@ describe('T18-AC03 quantity boundaries and the empty screen on last-line removal
 
 // ---------------------------------------------------------------------------
 // Only the cart line whose mutation is in flight is marked busy: every
-// other line stays interactive, so quantity and remove keep working.
+// other line stays interactive, so its remove action keeps working.
 // ---------------------------------------------------------------------------
 describe('FIX-21 only the mutating line is disabled', () => {
-  it('FIX-21-AC01: an idle line at quantity 2 has no aria-busy and every control is enabled', async () => {
+  it('FIX-21-AC01: an idle line at quantity 2 has no aria-busy and its remove action is enabled', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
     await cartFacade.addItem(VARIANT_MOTO_256, 2);
@@ -597,32 +552,7 @@ describe('FIX-21 only the mutating line is disabled', () => {
     const lineEl = getElement(root, '[data-testid="cart-line"]');
     expect(lineEl.hasAttribute('aria-busy')).toBe(false);
 
-    expect(getButtonElement(root, '[data-testid="quantity-decrement"]').disabled).toBe(false);
-    expect(getButtonElement(root, '[data-testid="quantity-increment"]').disabled).toBe(false);
     expect(getButtonElement(root, '[data-testid="cart-line-remove"]').disabled).toBe(false);
-  });
-
-  it('FIX-21-AC02: clicking quantity-increment completes and updates the quantity and the line total', async () => {
-    const cartFacade = TestBed.inject(CartFacade);
-    await cartFacade.ensureCart();
-    await cartFacade.addItem(VARIANT_MOTO_256, 2);
-
-    const fixture = TestBed.createComponent(CartPage);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const root = getRootElement(fixture);
-    getButtonElement(root, '[data-testid="quantity-increment"]').click();
-    await settleMutation(fixture);
-
-    expect(getInputElement(root, '[data-testid="quantity-input"]').value).toBe('3');
-
-    const lineEl = getElement(root, '[data-testid="cart-line"]');
-    const totalsEl = getElement(lineEl, '.totals');
-    const lineTotalAmount = getElement(totalsEl, '[data-testid="price-amount"]');
-    expect(lineTotalAmount.textContent.trim()).toBe(PriceBlock.formatHuf(UNIT_PRICE_MOTO * 3));
-
-    expect(lineEl.hasAttribute('aria-busy')).toBe(false);
   });
 
   it('FIX-21-AC03: removing the last line empties the cart and renders the empty state', async () => {
@@ -666,23 +596,19 @@ describe('FIX-21 only the mutating line is disabled', () => {
     const firstLineEl = getElement(firstHost, '[data-testid="cart-line"]');
     const secondLineEl = getElement(secondHost, '[data-testid="cart-line"]');
 
-    getButtonElement(firstHost, '[data-testid="quantity-increment"]').click();
+    getButtonElement(firstHost, '[data-testid="cart-line-remove"]').click();
     await Promise.resolve();
     fixture.detectChanges();
 
     expect(firstLineEl.getAttribute('aria-busy')).toBe('true');
-    expect(getButtonElement(firstHost, '[data-testid="quantity-decrement"]').disabled).toBe(true);
-    expect(getButtonElement(firstHost, '[data-testid="quantity-increment"]').disabled).toBe(true);
     expect(getButtonElement(firstHost, '[data-testid="cart-line-remove"]').disabled).toBe(true);
 
     expect(secondLineEl.hasAttribute('aria-busy')).toBe(false);
-    expect(getButtonElement(secondHost, '[data-testid="quantity-decrement"]').disabled).toBe(false);
-    expect(getButtonElement(secondHost, '[data-testid="quantity-increment"]').disabled).toBe(false);
     expect(getButtonElement(secondHost, '[data-testid="cart-line-remove"]').disabled).toBe(false);
 
     await settleMutation(fixture);
 
-    expect(firstLineEl.hasAttribute('aria-busy')).toBe(false);
+    expect(root.querySelectorAll('app-cart-line').length).toBe(1);
     expect(secondLineEl.hasAttribute('aria-busy')).toBe(false);
   });
 
@@ -694,10 +620,10 @@ describe('FIX-21 only the mutating line is disabled', () => {
     // A 412 lands on the facade's `conflict` signal, which the page's state
     // machine keeps in `ready` (a generic error would switch to the ErrorState
     // screen), so this exercises exactly the failure path FIX-21's
-    // `.finally()` clear fixes: the line's own controls must come back even
+    // `.finally()` clear fixes: the line's remove action must come back even
     // though the mutation did not succeed.
     server.use(
-      http.patch('*/api/v1/cart/items/:variantId', () =>
+      http.delete('*/api/v1/cart/items/:variantId', () =>
         HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:cart-version-conflict',
@@ -719,7 +645,7 @@ describe('FIX-21 only the mutating line is disabled', () => {
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    getButtonElement(root, '[data-testid="quantity-increment"]').click();
+    getButtonElement(root, '[data-testid="cart-line-remove"]').click();
     await Promise.resolve();
     fixture.detectChanges();
 
@@ -729,8 +655,6 @@ describe('FIX-21 only the mutating line is disabled', () => {
     await settleMutation(fixture);
 
     expect(lineEl.hasAttribute('aria-busy')).toBe(false);
-    expect(getButtonElement(root, '[data-testid="quantity-decrement"]').disabled).toBe(false);
-    expect(getButtonElement(root, '[data-testid="quantity-increment"]').disabled).toBe(false);
     expect(getButtonElement(root, '[data-testid="cart-line-remove"]').disabled).toBe(false);
     // The facade fires a background `GET /cart` after a 412 and
     // `applySuccess` clears the conflict once it lands, so after
@@ -1091,7 +1015,7 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
     expect(priceBlocks.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('CartLine uses ProductImage + PriceBlock + QuantityControl from the shared UI surface', async () => {
+  it('CartLine uses ProductImage + PriceBlock from the shared UI surface and no QuantityControl', async () => {
     const fixture = TestBed.createComponent(CartLine);
     fixture.componentRef.setInput('line', DEMO_CART_ITEM);
     await fixture.whenStable();
@@ -1100,7 +1024,7 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
     const root = getRootElement(fixture);
     expect(queryElement(root, 'app-product-image')).not.toBeNull();
     expect(queryElement(root, 'app-price-block')).not.toBeNull();
-    expect(queryElement(root, 'app-quantity-control')).not.toBeNull();
+    expect(queryElement(root, 'app-quantity-control')).toBeNull();
   });
 });
 
@@ -1148,14 +1072,14 @@ describe('MIM-216: every dismissible status message closes and returns focus', (
     // nothing in the facade clears it automatically), so the
     // server-driven banner stays rendered long enough to assert on.
     server.use(
-      http.patch('*/api/v1/cart/items/:variantId', () =>
+      http.delete('*/api/v1/cart/items/:variantId', () =>
         HttpResponse.json(
           {
             type: 'about:blank',
             title: 'Szerverhiba',
             status: 500,
             code: 'INTERNAL_SERVER_ERROR',
-            detail: 'A kosár frissítése nem sikerült.',
+            detail: 'A termék eltávolítása nem sikerült.',
             traceId: 'spec-trace-500',
             fieldErrors: [],
           },
@@ -1169,7 +1093,7 @@ describe('MIM-216: every dismissible status message closes and returns focus', (
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    getButtonElement(root, '[data-testid="quantity-increment"]').click();
+    getButtonElement(root, '[data-testid="cart-line-remove"]').click();
     await settleMutation(fixture);
 
     expect(cartFacade.error()).not.toBeNull();

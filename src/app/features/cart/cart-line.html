@@ -15,20 +15,8 @@
         <span aria-hidden="true" class="variant-sep mx-2">·</span>
         <span class="variant-storage">{{ line().storageGb }} GB</span>
       </p>
+      <p class="variant m-0" data-testid="cart-line-quantity">{{ line().quantity }} db</p>
     </header>
-
-    <div class="quantity-row flex flex-col gap-2">
-      <span aria-hidden="true" class="qty-label">Darabszám</span>
-      <app-quantity-control
-        label="Darabszám"
-        [disabled]="pending()"
-        [max]="maxQuantity()"
-        [min]="1"
-        [pending]="pending()"
-        [value]="line().quantity"
-        (quantityChanged)="onQuantityChanged($event)"
-      />
-    </div>
   </div>
 
   <div class="totals">
@@ -36,11 +24,11 @@
       class="remove"
       data-testid="cart-line-remove"
       type="button"
-      [attr.aria-label]="`Törlés: ${line().productName}`"
+      [attr.aria-label]="`Törlöm: ${line().productName}`"
       [disabled]="pending()"
       (click)="onRemoveRequested()"
     >
-      Törlés
+      Törlöm
     </button>
     <app-price-block label="Részösszeg" size="md" status="success" [money]="line().lineTotal" />
   </div>
