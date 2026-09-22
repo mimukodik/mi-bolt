@@ -32,8 +32,8 @@ export class MobileBuyRail {
   readonly pending = input<boolean>(false);
   readonly error = input<UiProblem | null>(null);
 
-  /** The page's add-to-cart success message, shown above the rail on narrow
-   *  viewports where the desktop CTA column is hidden. */
+  /** The page's add-to-cart success message, shown as the rail's first row
+   *  on narrow viewports where the desktop CTA column is hidden. */
   readonly success = input<string | null>(null);
 
   readonly addRequested = output();
@@ -71,7 +71,10 @@ export class MobileBuyRail {
     this.focusButton();
   }
 
+  /** Focuses the CTA. The message row comes before it in the DOM, so the
+   *  first `button` in the rail is the message's "Bezárás" while a message
+   *  is shown. */
   focusButton(): void {
-    this.host.nativeElement.querySelector('button')?.focus();
+    this.host.nativeElement.querySelector<HTMLButtonElement>('.rail-cta button')?.focus();
   }
 }

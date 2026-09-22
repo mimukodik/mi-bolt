@@ -1,18 +1,4 @@
 <aside aria-label="Kosárba helyezés" class="rail" data-testid="purchase-rail">
-  <div class="rail-price">
-    <app-price-block label="Készülékár" [money]="money()" [status]="priceStatus()" />
-  </div>
-  <div class="rail-cta">
-    <app-button
-      data-testid="purchase-cta"
-      label="Kosárba teszem"
-      loadingLabel="Hozzáadás…"
-      variant="primary"
-      [disabled]="!available() || pending()"
-      [loading]="pending()"
-      (pressed)="onPress()"
-    />
-  </div>
   @if (error(); as problem) {
     <div class="rail-status">
       <app-status-message
@@ -30,4 +16,20 @@
       />
     </div>
   }
+  <div class="rail-row flex items-center gap-(--space-4)">
+    <div class="rail-price">
+      <app-price-block label="Készülékár" [money]="money()" [status]="priceStatus()" />
+    </div>
+    <div class="rail-cta">
+      <app-button
+        data-testid="purchase-cta"
+        label="Kosárba teszem"
+        loadingLabel="Hozzáadás…"
+        variant="primary"
+        [disabled]="!available() || pending()"
+        [loading]="pending()"
+        (pressed)="onPress()"
+      />
+    </div>
+  </div>
 </aside>
