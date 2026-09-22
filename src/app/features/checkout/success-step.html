@@ -1,10 +1,12 @@
 <section class="success" data-testid="success-page">
   <app-checkout-step-header current="Siker" [crumbs]="crumbs">
-    <div class="success-title">
+    <div
+      class="success-title flex flex-col items-start gap-(--space-4) sm:flex-row sm:items-center"
+    >
       @if (hasReceipt()) {
         <svg
           aria-hidden="true"
-          class="success-check"
+          class="success-check block shrink-0 text-(color:--color-success-mark)"
           data-testid="success-check"
           focusable="false"
           height="32"
