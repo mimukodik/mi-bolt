@@ -100,12 +100,20 @@ p {
   border-radius: inherit;
 }
 
-/* The ring hugs the border: no offset, and the border takes the ring's colour,
-   so border and outline read as one continuous lime ring. `:focus-visible` is
-   written twice to outrank Angular's emulated encapsulation — a single
-   `:focus-visible` loses to `.select[_ngcontent-…]` in catalog-toolbar.scss
-   and `.field[_ngcontent-…] input[_ngcontent-…]` in contact-step.scss, and
-   repeated pseudo-classes are the documented specificity bump (W3C L4 §17). */
+/* A bordered text control reads border + gap + outline as two rings. The ring
+   hugs the border instead: no offset, and the border takes the ring's colour,
+   so the two merge into one continuous ring around the control. Round and
+   small controls keep the offset above, where the gap is what makes the ring
+   visible, which is why checkboxes and radios are excluded here.
+
+   `:focus-visible` is written twice on purpose. This is a global stylesheet,
+   so Angular's emulated view encapsulation adds no `[_ngcontent-…]` attribute
+   to these selectors, while every component rule that sets a control's border
+   gets one per compound segment and so outranks a single `:focus-visible`.
+   Repeating a pseudo-class is the documented way to raise specificity without
+   changing what the selector matches (W3C Selectors Level 4 §15, "Calculating
+   a selector's specificity"). Component rules that set a resting border are
+   kept below this one deliberately; see the checkout stylesheets. */
 input:not([type='checkbox']):not([type='radio']):focus-visible:focus-visible,
 select:focus-visible:focus-visible,
 textarea:focus-visible:focus-visible {

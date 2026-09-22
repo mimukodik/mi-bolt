@@ -1,5 +1,10 @@
 /* MiBolt ProductImage primitive. Reserved dimensions, no stretching. */
 
+/* The grey plate behind the photo is exposed as `--product-image-surface`
+ * so a host (today: the catalog list card) can opt out of it and let
+ * the card's own light surface show through. Other call sites leave the
+ * custom property unset and keep the default. */
+
 :host {
   display: block;
   width: 100%;
@@ -9,7 +14,7 @@
   position: relative;
   display: block;
   width: 100%;
-  background: var(--color-surface-section);
+  background: var(--product-image-surface, var(--color-surface-section));
   border-radius: var(--radius-card);
   overflow: hidden;
 }
@@ -21,7 +26,7 @@
   height: 100%;
   object-fit: contain;
   display: block;
-  background: var(--color-surface-section);
+  background: var(--product-image-surface, var(--color-surface-section));
 }
 
 .skeleton {

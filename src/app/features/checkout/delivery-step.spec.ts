@@ -531,6 +531,26 @@ describe('DS-18 an empty billing name reports the required message once the fiel
   });
 });
 
+describe('MIM-254: an invalid address field is marked aria-invalid so the border rule can match it', () => {
+  it('marks the postal code input aria-invalid="true" when the field is empty', () => {
+    // The address form's postal-code binding is
+    // `[attr.aria-invalid]="errors('postalCode').length > 0 ? 'true' : 'false'"`,
+    // and an empty value produces the required error unconditionally, so the
+    // attribute is set as soon as the component renders. The border-color rule
+    // (address-form.scss) keys off this attribute; without the attribute the
+    // border never turns red.
+    const fixture = createFixture();
+    selectDelivery(fixture, 'home_delivery');
+    const root = getRootElement(fixture);
+
+    const input = getInputElement(
+      root,
+      'app-address-form:not([data-testid="billing-address-form"]) [data-testid="address-input-postalCode"]',
+    );
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // DS-19 — address setters write through to the shared field tree
 // ---------------------------------------------------------------------------

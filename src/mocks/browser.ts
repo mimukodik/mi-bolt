@@ -55,7 +55,20 @@ import './checkout/checkout.handlers';
 import './payment/payment.handlers';
 import './orders/order.handlers';
 
-export const worker = setupWorker();
+// `setupWorker()` from `msw/browser` requires a real Service Worker API:
+// jsdom ships `window` and `navigator` but no `navigator.serviceWorker`,
+// so any caller there throws `Invariant Violation: [MSW] Failed to execute
+// setupWorker in a non-browser environment`. The `'serviceWorker' in
+// navigator` probe distinguishes jsdom from a real browser without reading
+// `process` (the latter is not in the Angular app typings, which would
+// force an `as` cast the project rule forbids). Guarding the call lets
+// the helper functions below stay reachable from the unit suite; the
+// page-side path through `startMockWorker` is unaffected.
+const isBrowserProcess = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+
+export const worker: ReturnType<typeof setupWorker> | undefined = isBrowserProcess
+  ? setupWorker()
+  : undefined;
 
 /**
  * The `production` scenario is the only one that runs with an empty
@@ -123,7 +136,7 @@ export function installBusinessRouteBypass(): void {
     ({ request }) => isSameOriginNonBusiness(new URL(request.url), pageOrigin),
     () => passthrough(),
   );
-  worker.use(bypassSameOriginNonApi);
+  worker?.use(bypassSameOriginNonApi);
 }
 
 /**
@@ -152,7 +165,7 @@ export function installCrossOriginBlock(): void {
       );
     },
   );
-  worker.use(blockCrossOrigin);
+  worker?.use(blockCrossOrigin);
 }
 
 /**
@@ -189,7 +202,7 @@ export function installUnclaimedApiRouteNetworkError(): void {
     ({ request }) => new URL(request.url).pathname.startsWith('/api/'),
     () => HttpResponse.error(),
   );
-  worker.use(failUnclaimedApiRoute);
+  worker?.use(failUnclaimedApiRoute);
 }
 
 /**
@@ -211,6 +224,25 @@ export function buildBrowserHandlers(
 }
 
 /**
+ * The service-worker script is served from the application's own base
+ * path, which is `/` for the shop and `/demo-fizetes/` for the demo
+ * payment application. A root-absolute URL is rejected by the dev
+ * server's base-path middleware before the file layer is reached, so
+ * the path is resolved against the document's base instead.
+ *
+ * Resolution is plain WHATWG: a relative reference replaces the base's last
+ * path segment, so a base ending in `index.html` resolves beside it and a base
+ * ending in `/` resolves inside it. Forcing a trailing slash here was tried and
+ * reverted — it broke the `index.html` case. The one shape that would resolve
+ * wrongly, a base with no trailing slash and no file name, cannot occur:
+ * Angular's `baseHref` ends in `/`, and `mock-worker-url.spec.ts` fails if it
+ * ever stops doing so.
+ */
+export function resolveMockWorkerUrl(baseUri: string): string {
+  return new URL('mockServiceWorker.js', baseUri).pathname;
+}
+
+/**
  * Boots the MSW service worker. Production builds skip the boot
  * entirely; the demo configuration registers the handlers built
  * by `createHandlers` behind the `/api/...` network-error catch-all
@@ -220,6 +252,11 @@ export function buildBrowserHandlers(
  */
 export async function startMockWorker(snapshot: MockSnapshot | null = null): Promise<void> {
   if (!environment.demo) return;
+  if (worker === undefined) {
+    throw new Error(
+      '[browser] startMockWorker called outside a browser; MSW setupWorker was skipped at module load',
+    );
+  }
 
   // Registration order is evaluation order reversed, so the
   // catch-all and the cross-origin block go in first to be consulted
@@ -237,7 +274,7 @@ export async function startMockWorker(snapshot: MockSnapshot | null = null): Pro
       // and the Vite dev server chunks all bypass MSW silently.
     },
     serviceWorker: {
-      url: '/mockServiceWorker.js',
+      url: resolveMockWorkerUrl(document.baseURI),
     },
   });
 }
