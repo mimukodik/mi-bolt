@@ -148,13 +148,13 @@
   font-weight: 600;
 }
 
-/* The drawn card face. A 1.586:1 ISO ID-1 ratio, full width, capped at 22rem,
- * painted in the payment app's own palette. Pure CSS: no image asset, no
- * SVG file, no vendor logo, no bank name. The fields it carries are
- * scenery — nothing they hold is read, posted or stored. The ratio is a
- * floor for the shape, not a cap on the content: min-height: min-content
- * lets the face grow when a narrow screen needs more room for its fields,
- * so nothing is clipped. */
+/* The drawn card face, full width, capped at 22rem, painted in the payment
+ * app's own palette. Pure CSS: no image asset, no SVG file, no vendor logo,
+ * no bank name. The fields it carries are scenery: nothing they hold is
+ * read, posted or stored. Its height is its content, never less than the
+ * 1.586:1 ISO ID-1 card height at the full 22rem width, so the card keeps
+ * the bank-card shape where its fields fit and grows on a phone, where the
+ * rows stack, instead of clipping them. */
 .pay-card-face {
   box-sizing: border-box;
   display: flex;
@@ -162,8 +162,7 @@
   gap: var(--pay-space-3);
   width: 100%;
   max-width: 22rem;
-  aspect-ratio: 1.586 / 1;
-  min-height: min-content;
+  min-height: calc(22rem / 1.586);
   margin: var(--pay-space-4) 0;
   padding: var(--pay-space-6);
   border-radius: var(--pay-radius-card);
