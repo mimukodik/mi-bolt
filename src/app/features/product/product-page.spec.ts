@@ -482,11 +482,8 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     expect(toast.textContent).toContain('2 darab a kosárban');
   });
 
-  it('T16-AC01: displays brand and product name matching the loaded product', async () => {
+  it('T16-AC01: displays the product name matching the loaded product', async () => {
     const { root } = await createHarness();
-
-    const brandEl = queryElement(root, '.brand');
-    expect(brandEl.textContent.trim()).toBe('MiBolt Demo');
 
     const nameEl = queryElement(root, '[data-testid="product-name"]');
     expect(nameEl.textContent.trim()).toBe('Demo One 5G');
@@ -576,15 +573,11 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     const graphiteBtn = queryButton(root, '[data-testid="variant-color-graphite"]');
     expect(graphiteBtn.getAttribute('aria-pressed')).toBe('false');
 
-    const meta = queryElement(root, '.page-header .meta');
-    expect(meta.textContent).toContain('Ezüst');
-    expect(meta.textContent).toContain('256 GB');
-
     const priceSection = queryElement(root, '.prices');
     expect(priceSection.textContent).toContain('344');
   });
 
-  it('T16-AC03: clicking another storage updates selection, active variant price and metadata', async () => {
+  it('T16-AC03: clicking another storage updates selection and active variant price', async () => {
     const { fixture, root, tick } = await createHarness();
 
     const storage512 = queryButton(root, '[data-testid="variant-storage-512"]');
@@ -593,9 +586,6 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     fixture.detectChanges();
 
     expect(storage512.getAttribute('aria-pressed')).toBe('true');
-
-    const meta = queryElement(root, '.page-header .meta');
-    expect(meta.textContent).toContain('512 GB');
 
     const priceSection = queryElement(root, '.prices');
     expect(priceSection.textContent).toContain('378');
@@ -805,13 +795,10 @@ describe('T16 product-page loading and error states', () => {
 });
 
 describe('FIX-45 product page breadcrumb, description, stock and demo notes', () => {
-  it('FIX-45-AC01/AC07: renders breadcrumb, description and simulation note with the exact prototype copy', async () => {
+  it('FIX-45-AC01/AC07: the breadcrumb is held out of the DOM; description and simulation note render with the exact prototype copy', async () => {
     const { root } = await createHarness();
 
-    const breadcrumb = queryElement(root, '[data-testid="product-breadcrumb"]');
-    expect(breadcrumb.textContent).toContain('Főoldal');
-    expect(breadcrumb.textContent).toContain('Mobiltelefonok');
-    expect(breadcrumb.textContent).toContain('Demo One 5G');
+    expect(root.querySelector('[data-testid="product-breadcrumb"]')).toBeNull();
 
     expect(root.querySelector('[data-testid="product-demo-tag"]')).toBeNull();
     expect(root.textContent).not.toContain('DEMÓTERMÉK');
@@ -825,19 +812,32 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(note.textContent.trim()).toBe('A rendelés kipróbálható, de nem jár valódi vásárlással.');
   });
 
-  it('FIX-45-AC02: breadcrumb links navigate in-app rather than reloading', async () => {
-    const { root, location } = await createHarness();
+  it('FIX-45-AC02: the breadcrumb link is held out of the DOM, so navigation has no product-page breadcrumb link to follow', async () => {
+    const { root } = await createHarness();
 
-    const link = queryElement(
-      root,
-      '[data-testid="product-breadcrumb"] a[routerLink="/telefonok"]',
-    );
-    link.click();
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 20);
-    });
+    expect(
+      root.querySelector('[data-testid="product-breadcrumb"] a[routerLink="/telefonok"]'),
+    ).toBeNull();
+  });
 
-    expect(location.path()).toBe('/telefonok');
+  it('MIM-235: the product header renders no separate brand line', async () => {
+    const { root } = await createHarness();
+
+    expect(root.querySelector('.brand')).toBeNull();
+  });
+
+  it('MIM-236: no colour or storage line under the title', async () => {
+    const { root } = await createHarness();
+
+    expect(root.querySelector('.meta')).toBeNull();
+    expect(queryElement(root, '.page-header').textContent).not.toContain('Tárhely:');
+  });
+
+  it('MIM-236: the add-to-cart button is outlined on the navy box', async () => {
+    const { root } = await createHarness();
+
+    const button = queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button');
+    expect(button.classList.contains('is-secondary-on-dark')).toBe(true);
   });
 
   it('FIX-45-AC04: stock line renders "Raktáron a demó készletben" for an in-stock variant', async () => {

@@ -1,11 +1,13 @@
 <div class="page" data-testid="product-page">
-  <nav aria-label="Navigáció" class="breadcrumbs" data-testid="product-breadcrumb">
-    <a class="breadcrumb" routerLink="/">Főoldal</a>
-    <span aria-hidden="true" class="breadcrumb__sep">/</span>
-    <a class="breadcrumb" routerLink="/telefonok">Mobiltelefonok</a>
-    <span aria-hidden="true" class="breadcrumb__sep">/</span>
-    <span aria-current="page" class="breadcrumb is-current">{{ productName() }}</span>
-  </nav>
+  @if (breadcrumbVisible) {
+    <nav aria-label="Navigáció" class="breadcrumbs" data-testid="product-breadcrumb">
+      <a class="breadcrumb" routerLink="/">Főoldal</a>
+      <span aria-hidden="true" class="breadcrumb__sep">/</span>
+      <a class="breadcrumb" routerLink="/telefonok">Mobiltelefonok</a>
+      <span aria-hidden="true" class="breadcrumb__sep">/</span>
+      <span aria-current="page" class="breadcrumb is-current">{{ productName() }}</span>
+    </nav>
+  }
   <article class="card">
     @switch (state()) {
       @case ('loading') {
@@ -35,17 +37,7 @@
       }
       @default {
         <header class="page-header">
-          <p class="brand m-0">{{ brand() }}</p>
           <h1 class="name m-0" data-testid="product-name">{{ productName() }}</h1>
-          @if (selectedColorName() !== null) {
-            <p class="meta m-0">
-              <span class="meta-label">Szín:</span>
-              <span class="meta-value">{{ selectedColorName() }}</span>
-              <span aria-hidden="true" class="meta-sep">·</span>
-              <span class="meta-label">Tárhely:</span>
-              <span class="meta-value">{{ selectedStorageLabel() }}</span>
-            </p>
-          }
         </header>
 
         <div class="layout">
@@ -131,7 +123,7 @@
                   <app-button
                     label="Kosárba teszem"
                     loadingLabel="Hozzáadás…"
-                    variant="primary"
+                    variant="secondaryOnDark"
                     [disabled]="true"
                   />
                 }
