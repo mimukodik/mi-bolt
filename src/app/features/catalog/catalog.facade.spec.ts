@@ -560,6 +560,21 @@ describe('T12-AC02 search debounce + page reset on filter/sort', () => {
     await tick();
   });
 
+  it('a filter change opens page 1 even when the partial carries the old page', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.setPage(2);
+    await tick();
+    api.resolve(emptyPage());
+    await tick();
+    facade.setFilters({ ...facade.query(), brands: ['Samsung'] });
+    await tick();
+    expect(facade.query().page).toBe(1);
+    expect(api.calls.at(-1)?.page).toBe(1);
+    expect(api.calls.at(-1)?.brand).toEqual(['Samsung']);
+    api.resolve(emptyPage());
+    await tick();
+  });
+
   it('serialises the active query through currentParams()', () => {
     const { facade } = setupFacade();
     facade.toggleBrand('Apple');

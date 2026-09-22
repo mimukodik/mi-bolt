@@ -1061,9 +1061,13 @@ describe('FIX-24-AC01 clearing the filters clears the URL', () => {
       is5g: true,
       featured: true,
       sort: 'price_desc',
-      page: 2,
       pageSize: 24,
     });
+    await harness.tick();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    // The page is the pager's to set: a filter change always opens page 1.
+    harness.facade.setPage(2);
     await harness.tick();
     harness.respond(successPage([], 0));
     await harness.waitForStatus('empty');
