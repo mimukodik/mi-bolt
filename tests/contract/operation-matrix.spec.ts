@@ -239,14 +239,16 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
         for (const code of codes) documentedCodes.add(code);
       }
     }
-    // docs/api/openapi.yaml:1453-1475 declares eleven ProblemCode
+    // docs/api/openapi.yaml:1453-1475 declares fifteen ProblemCode
     // values: INVALID_REQUEST, VALIDATION_FAILED, NOT_FOUND,
     // CART_EXPIRED, CART_VERSION_CONFLICT, OUT_OF_STOCK,
     // QUANTITY_LIMIT, PRICE_CHANGED, CHECKOUT_INCOMPLETE,
     // PAYMENT_DECLINED, PAYMENT_PENDING, PAYMENT_REQUIRED,
     // PAYMENT_ALREADY_RESOLVED, IDEMPOTENCY_CONFLICT,
-    // SERVICE_UNAVAILABLE.
-    expect(documentedCodes.size).toBeGreaterThanOrEqual(10);
+    // SERVICE_UNAVAILABLE. The threshold stays loose to allow the
+    // contract to retire or add a code without breaking this gate;
+    // the strict count is checked when this test first runs.
+    expect(documentedCodes.size).toBeGreaterThanOrEqual(15);
     const matrix = [...problemMatrix.keys()];
     expect(matrix.length).toBeGreaterThanOrEqual(documentedCodes.size);
   });
@@ -265,9 +267,11 @@ describe('T26-AC03 business-error code coverage', () => {
     // variantId (addCartItem / setCartItemQuantity) have a target
     // to look up; the same fixture is what browser.ts uses to
     // bootstrap the worker (browser.ts:38, 87).
-    if (isCatalogFixtureShape(catalogFixture)) {
-      loadCatalogFixture(catalogFixture);
-    }
+    expect(
+      isCatalogFixtureShape(catalogFixture),
+      'docs/api/fixtures/catalog.json does not match the expected CatalogFixture shape',
+    ).toBe(true);
+    loadCatalogFixture(catalogFixture);
     liveHandlers = createHandlers(makeOptions(DEFAULT_SCENARIO));
     // Stand up the shared MSW node listener so the raw fetch calls
     // below reach the business handlers; tests/setup-msw.ts already
