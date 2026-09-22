@@ -55,7 +55,20 @@ import './checkout/checkout.handlers';
 import './payment/payment.handlers';
 import './orders/order.handlers';
 
-export const worker = setupWorker();
+// `setupWorker()` from `msw/browser` refuses to run in a Node process, so
+// importing this module from a unit spec throws at load time. Guard the call
+// so the helper functions above (no MSW dependency) stay reachable from the
+// unit suite; the page-side path through `startMockWorker` is unaffected.
+const isBrowserProcess = ((): boolean => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const proc = globalThis['process' as keyof typeof globalThis] as
+    { versions?: { node?: unknown } } | undefined;
+  return proc?.versions?.node === undefined;
+})();
+
+export const worker = isBrowserProcess
+  ? setupWorker()
+  : (undefined as unknown as ReturnType<typeof setupWorker>);
 
 /**
  * The `production` scenario is the only one that runs with an empty
@@ -211,6 +224,17 @@ export function buildBrowserHandlers(
 }
 
 /**
+ * The service-worker script is served from the application's own base
+ * path, which is `/` for the shop and `/demo-fizetes/` for the demo
+ * payment application. A root-absolute URL is rejected by the dev
+ * server's base-path middleware before the file layer is reached, so
+ * the path is resolved against the document's base instead.
+ */
+export function resolveMockWorkerUrl(baseUri: string): string {
+  return new URL('mockServiceWorker.js', baseUri).pathname;
+}
+
+/**
  * Boots the MSW service worker. Production builds skip the boot
  * entirely; the demo configuration registers the handlers built
  * by `createHandlers` behind the `/api/...` network-error catch-all
@@ -237,7 +261,7 @@ export async function startMockWorker(snapshot: MockSnapshot | null = null): Pro
       // and the Vite dev server chunks all bypass MSW silently.
     },
     serviceWorker: {
-      url: '/mockServiceWorker.js',
+      url: resolveMockWorkerUrl(document.baseURI),
     },
   });
 }

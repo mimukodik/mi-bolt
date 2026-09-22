@@ -82,6 +82,7 @@ jobs:
       - run: npm ci
       - run: npm run build:check
       - run: npm run build:payment
+      - run: npm run check:payment-boot
 
   api-drift:
     name: API client drift
