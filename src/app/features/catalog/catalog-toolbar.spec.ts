@@ -6,6 +6,26 @@ import { CatalogToolbar } from './catalog-toolbar';
 import type { Sort } from './catalog-query';
 import type { AsyncStatus } from '../../shared/types/async-status';
 
+interface ComponentWithStyles {
+  ɵcmp: {
+    styles: readonly string[];
+  };
+}
+
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
+    return false;
+  }
+  if (val === null || !('ɵcmp' in val)) {
+    return false;
+  }
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
+}
+
 @Component({
   imports: [CatalogToolbar],
   template: `
@@ -153,5 +173,53 @@ describe('CatalogToolbar', () => {
     const { fixture } = setup();
     const toolbar = getToolbar(fixture);
     expect(toolbar.resultCountLabel()).toBe('16 találat a szűrt feltételek szerint');
+  });
+
+  describe('owner 2026-09-22: on mobile the two selects share one row', () => {
+    function ruleBody(css: string, selectorStart: string, from = 0): string {
+      const start = css.indexOf(selectorStart, from);
+      if (start === -1) throw new Error(`No rule starting with ${selectorStart}`);
+      const open = css.indexOf('{', start);
+      const close = css.indexOf('}', open);
+      return css.slice(open + 1, close);
+    }
+
+    it('the select row is a left-aligned row below 1024px, not a centred column', () => {
+      if (!hasStyles(CatalogToolbar)) throw new Error('Expected CatalogToolbar to have styles');
+      const css = CatalogToolbar.ɵcmp.styles.join('\n');
+      const base = ruleBody(css, '.toolbar__selects[_ngcontent-%COMP%]');
+      expect(base).toContain('flex-direction: row');
+      expect(base).toContain('align-items: flex-end');
+      expect(base).toContain('flex-wrap: nowrap');
+      const media = css.indexOf('@media (min-width: 1024px)');
+      const desktop = ruleBody(css, '.toolbar__selects[_ngcontent-%COMP%]', media);
+      expect(desktop).toContain('align-items: center');
+      expect(desktop).toContain('flex-wrap: wrap');
+    });
+
+    it('each select field takes half of the row below 1024px and its own width from 1024px', () => {
+      if (!hasStyles(CatalogToolbar)) throw new Error('Expected CatalogToolbar to have styles');
+      const css = CatalogToolbar.ɵcmp.styles.join('\n');
+      const media = css.indexOf('@media (min-width: 1024px)');
+      expect(
+        ruleBody(css, '.toolbar__selects[_ngcontent-%COMP%]   .select-field[_ngcontent-%COMP%]'),
+      ).toContain('flex: 1 1 0');
+      expect(
+        ruleBody(
+          css,
+          '.toolbar__selects[_ngcontent-%COMP%]   .select-field[_ngcontent-%COMP%]',
+          media,
+        ),
+      ).toContain('flex: 0 1 auto');
+    });
+
+    it('a select value too long for its half of the row ends in an ellipsis', () => {
+      if (!hasStyles(CatalogToolbar)) throw new Error('Expected CatalogToolbar to have styles');
+      const css = CatalogToolbar.ɵcmp.styles.join('\n');
+      const select = ruleBody(css, '.select[_ngcontent-%COMP%]');
+      expect(select).toContain('text-overflow: ellipsis');
+      expect(select).toContain('overflow: hidden');
+      expect(select).toContain('white-space: nowrap');
+    });
   });
 });

@@ -39,11 +39,22 @@
   cursor: pointer;
 }
 
+/* Declared after .row (same specificity), whose align-items and flex-wrap
+   this rule overrides below 1024px; keep it below .row. */
 .toolbar__selects {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-end;
+  flex-wrap: nowrap;
   gap: var(--space-3);
   width: 100%;
+}
+
+/* Below 1024px the two selects share the row under "Szűrők", half each
+   (owner, 2026-09-22). */
+.toolbar__selects .select-field {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .select-field {
@@ -73,6 +84,10 @@
   font-size: 16px;
   line-height: 24px;
   cursor: pointer;
+  /* A value too long for half the mobile row reads as cut, not clipped. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (min-width: 1024px) {
@@ -92,8 +107,14 @@
 
   .toolbar__selects {
     flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
     width: auto;
     gap: var(--space-3);
+  }
+
+  .toolbar__selects .select-field {
+    flex: 0 1 auto;
   }
 
   .sort .select {
