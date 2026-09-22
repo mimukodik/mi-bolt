@@ -1471,14 +1471,20 @@ describe('MIM-239 full-width layout — the catalog carries no container cap', (
     //
     // Angular's view encapsulation appends an attribute selector to every
     // rule (`[_ngcontent-xxx]`), so the rule regex matches the selector
-    // prefix as well as the body. The `.lede` rule still carries
-    // `max-width: 60ch` for line-length readability — a typography
-    // concern, not a container cap, and out of MIM-239's scope.
+    // prefix as well as the body. The `\b` after `.catalog` keeps the
+    // match from spilling into a `.catalog-*` sibling rule. The `.lede`
+    // rule still carries `max-width: 60ch` for line-length readability —
+    // a typography concern, not a container cap, and out of MIM-239's
+    // scope.
     const css = getComponentStyles(CatalogPage).join('\n');
-    // Strip every media query body so the assertion catches both the
-    // base `.catalog` rule and any breakpoint-specific override.
+    // Strip every media query body so the assertion only sees the base
+    // `.catalog` rule. The non-greedy strip leaves a `.catalog` rule
+    // body untouched if it lives outside any `@media` block, which is
+    // the only place the base rule is expected; a `.catalog` rule
+    // inside a `@media` block would be stripped and the assertion
+    // would fail on `expect(catalogRule).not.toBeNull()`.
     const flat = css.replace(/@media[^{]*\{[\s\S]*?\}/g, '');
-    const catalogRule = /\.catalog[^{]*\{[^}]*\}/.exec(flat);
+    const catalogRule = /\.catalog\b[^{]*\{[^}]*\}/.exec(flat);
     expect(catalogRule).not.toBeNull();
     expect(catalogRule?.[0]).not.toMatch(/max-width/);
     expect(catalogRule?.[0]).not.toMatch(/margin:\s*0\s+auto/);

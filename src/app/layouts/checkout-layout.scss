@@ -16,12 +16,11 @@
   // This <main> is projected through <ng-content> into <app-app-shell>,
   // whose `:host` is `display: flex; flex-direction: column` and whose
   // `<ng-content>` carries `display: contents`. The unwrap turns this
-  // element into a direct flex item, so width is the cross axis. With
-  // `margin: 0 auto` on both cross-axis sides, the flex item's cross
-  // size is sized shrink-to-fit instead of stretched, and the auto
-  // margins absorb the remainder. (CSS Flexible Box Layout: a flex
-  // item whose cross-axis margin is auto has the cross-axis stretch
-  // suppressed.)
+  // element into a direct flex item, so width is the cross axis.
+  // `width: 100%` pins the cross size explicitly so a future
+  // `margin: 0 auto` (which would suppress the flex stretch) keeps the
+  // element at the container's cross size instead of falling back to
+  // shrink-to-fit.
   width: 100%;
   /* The free space in the shell's flex column belongs to the page, not to
      the DEMÓ notice: this <main> is projected through <ng-content>, so only
