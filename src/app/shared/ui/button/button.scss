@@ -75,6 +75,13 @@
   outline-color: var(--color-text-inverse);
 }
 
+/* primary on dark — the lime pill on a navy surface (the product page's buy
+   box, the cart summary): the base lime fill and hover, with the same white
+   ring. */
+.root.is-primary-on-dark:focus-visible {
+  outline-color: var(--color-text-inverse);
+}
+
 .root:disabled {
   color: var(--color-disabled-text);
   background: var(--color-disabled-bg);

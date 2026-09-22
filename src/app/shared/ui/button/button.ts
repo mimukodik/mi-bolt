@@ -6,6 +6,9 @@ import { Component, input, output } from '@angular/core';
  * Variants follow docs/design/yettel.md §5 and §9:
  * - `primary`   — navy on lime `.btn--primary-inverse` (single prominent CTA
  *   per unit); the lime pill is yettel's CTA on every captured screen.
+ * - `primaryOnDark` — the same lime pill on a navy surface (the product
+ *   page's buy box, the cart summary), where the focus ring has to be white
+ *   rather than navy.
  * - `secondary` — the outlined navy `.btn-outline-navy` on white (restrained).
  * - `secondaryOnDark` — the outlined lime `.btn-outline-lime` for navy shell
  *   surfaces, where the focus ring has to be white rather than navy.
@@ -27,7 +30,9 @@ import { Component, input, output } from '@angular/core';
   styleUrl: './button.scss',
 })
 export class Button {
-  readonly variant = input<'primary' | 'secondary' | 'secondaryOnDark' | 'navy'>('primary');
+  readonly variant = input<'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark' | 'navy'>(
+    'primary',
+  );
   readonly label = input.required<string>();
   readonly loadingLabel = input<string>('Betöltés…');
   readonly disabled = input(false);

@@ -19,7 +19,9 @@ import { Button } from './button';
   `,
 })
 class HostComponent {
-  readonly variant = signal<'primary' | 'secondary' | 'secondaryOnDark' | 'navy'>('primary');
+  readonly variant = signal<'primary' | 'primaryOnDark' | 'secondary' | 'secondaryOnDark' | 'navy'>(
+    'primary',
+  );
   readonly label = signal('Kosárba teszem');
   readonly loadingLabel = signal('Hozzáadás…');
   readonly disabled = signal(false);
@@ -207,6 +209,16 @@ describe('Button primitive', () => {
     expect(btn?.classList.contains('is-primary')).toBe(false);
   });
 
+  it('applies the lime variant for a navy surface with a white focus ring (owner 2026-09-22)', () => {
+    const { fixture, host, root } = setup();
+    host.variant.set('primaryOnDark');
+    fixture.detectChanges();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.classList.contains('is-primary-on-dark')).toBe(true);
+    expect(btn?.classList.contains('is-primary')).toBe(false);
+    expect(btn?.classList.contains('is-secondary-on-dark')).toBe(false);
+  });
+
   it('declares the focus-visible state in its stylesheet (R20)', () => {
     if (!hasComponentStyles(Button)) {
       throw new Error('Expected Button component styles');
@@ -261,6 +273,11 @@ describe('Button primitive', () => {
       'background:var(--color-accent)',
     );
     expect(declarations(css, '.root.is-secondary-on-dark:focus-visible')).toContain(
+      'outline-color:var(--color-text-inverse)',
+    );
+    // primary-on-dark: the lime pill on a navy surface keeps the base
+    // lime fill and takes the same white ring.
+    expect(declarations(css, '.root.is-primary-on-dark:focus-visible')).toContain(
       'outline-color:var(--color-text-inverse)',
     );
     // navy: the filled .btn--primary, white on #002340, hover #01385e.
