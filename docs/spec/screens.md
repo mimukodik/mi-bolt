@@ -30,7 +30,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 ## S1 — Home
 
-**Purpose:** give a clear first action and explain the simulation. Header: MiBolt brand left, Mobiltelefonok active nav, A demóról anchor, search and cart right. Compact demo banner immediately below header. Hero charcoal, live heading “A következő mobilod. Egyszerűen.”; accent second line, two concise sentences, primary “Megnézem a telefonokat”, secondary “Hogyan működik?”. Device illustration right; do not put functionality inside an image.
+**Purpose:** give a clear first action and explain the simulation. Header: MiBolt brand left, a single Mobiltelefonok nav link (the home page has no menu entry of its own; decided 2026-09-22), search and cart right. Compact demo banner immediately below header. Hero charcoal, live heading “A következő mobilod. Egyszerűen.”; accent second line, two concise sentences, primary “Megnézem a telefonokat”, secondary “Hogyan működik?”. Device illustration right; do not put functionality inside an image.
 
 **Desktop sequence:** 64px header → demo strip → 360–420px hero → three restrained category shortcuts → featured heading/link → four consistent cards → three how-it-works tiles → dark footer. Categories: Összes telefon, 5G készülékek, Raktáron. Featured card CTA “Részletek”. Cards keep unit price and action aligned.
 
