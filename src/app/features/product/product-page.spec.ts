@@ -1353,11 +1353,17 @@ describe('MIM-233: the stock line on the navy buy box is white, as on yettel.hu'
 
 describe('owner 2026-09-22: a refused add names the per-product limit', () => {
   function refuseAdd(code: string, params?: Record<string, unknown>): void {
+    // The contract derives the `type` URI from the code the same way
+    // `docs/api/openapi.yaml:341-360` and `cart-store.ts:88`
+    // (`problemType`) do. Hardcoding it to `quantity-limit` here made
+    // the OUT_OF_STOCK case below send a body whose `type` and `code`
+    // disagreed with the contract.
+    const type = `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`;
     server.use(
       http.post(`${BASE_URL}/cart/items`, () =>
         HttpResponse.json(
           {
-            type: 'urn:mi-bolt:problem:quantity-limit',
+            type,
             title: 'Conflict',
             status: 409,
             code,
