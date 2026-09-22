@@ -12,6 +12,18 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+## Local backend
+
+`npm start` always runs on the in-page mock (MSW); the real Spring backend is a separate configuration. With the backend repository checked out next to this one (or `MIBOLT_BACKEND_DIR` pointing at it; a git worktree of this repository is not next to it, so set the variable there), in three terminals:
+
+```bash
+npm run backend:db        # PostgreSQL 16 in Docker on port 55433 (scripts/local-database-docker.sh start)
+npm run backend:start     # ./gradlew bootRun in the backend repository, port 8080
+npm run start:local-backend
+```
+
+`start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080` and `/demo-fizetes` to the payment app on 4210. Stop the database with `npm run backend:db:stop`.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
