@@ -55,20 +55,20 @@ import './checkout/checkout.handlers';
 import './payment/payment.handlers';
 import './orders/order.handlers';
 
-// `setupWorker()` from `msw/browser` refuses to run in a Node process, so
-// importing this module from a unit spec throws at load time. Guard the call
-// so the helper functions above (no MSW dependency) stay reachable from the
-// unit suite; the page-side path through `startMockWorker` is unaffected.
-const isBrowserProcess = ((): boolean => {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-  const proc = globalThis['process' as keyof typeof globalThis] as
-    { versions?: { node?: unknown } } | undefined;
-  return proc?.versions?.node === undefined;
-})();
+// `setupWorker()` from `msw/browser` requires a real Service Worker API:
+// jsdom ships `window` and `navigator` but no `navigator.serviceWorker`,
+// so any caller there throws `Invariant Violation: [MSW] Failed to execute
+// setupWorker in a non-browser environment`. The `'serviceWorker' in
+// navigator` probe distinguishes jsdom from a real browser without reading
+// `process` (the latter is not in the Angular app typings, which would
+// force an `as` cast the project rule forbids). Guarding the call lets
+// the helper functions below stay reachable from the unit suite; the
+// page-side path through `startMockWorker` is unaffected.
+const isBrowserProcess = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
 
-export const worker = isBrowserProcess
+export const worker: ReturnType<typeof setupWorker> | undefined = isBrowserProcess
   ? setupWorker()
-  : (undefined as unknown as ReturnType<typeof setupWorker>);
+  : undefined;
 
 /**
  * The `production` scenario is the only one that runs with an empty
@@ -136,7 +136,7 @@ export function installBusinessRouteBypass(): void {
     ({ request }) => isSameOriginNonBusiness(new URL(request.url), pageOrigin),
     () => passthrough(),
   );
-  worker.use(bypassSameOriginNonApi);
+  worker?.use(bypassSameOriginNonApi);
 }
 
 /**
@@ -165,7 +165,7 @@ export function installCrossOriginBlock(): void {
       );
     },
   );
-  worker.use(blockCrossOrigin);
+  worker?.use(blockCrossOrigin);
 }
 
 /**
@@ -202,7 +202,7 @@ export function installUnclaimedApiRouteNetworkError(): void {
     ({ request }) => new URL(request.url).pathname.startsWith('/api/'),
     () => HttpResponse.error(),
   );
-  worker.use(failUnclaimedApiRoute);
+  worker?.use(failUnclaimedApiRoute);
 }
 
 /**
@@ -244,6 +244,11 @@ export function resolveMockWorkerUrl(baseUri: string): string {
  */
 export async function startMockWorker(snapshot: MockSnapshot | null = null): Promise<void> {
   if (!environment.demo) return;
+  if (worker === undefined) {
+    throw new Error(
+      '[browser] startMockWorker called outside a browser; MSW setupWorker was skipped at module load',
+    );
+  }
 
   // Registration order is evaluation order reversed, so the
   // catch-all and the cross-origin block go in first to be consulted
