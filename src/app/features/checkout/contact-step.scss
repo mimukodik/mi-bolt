@@ -69,21 +69,11 @@
   border-radius: var(--radius-control);
 }
 
-.field input:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .form-summary {
   padding: var(--space-4);
   background: var(--color-brand-accent-soft);
   border: 1px solid var(--color-status-error);
   border-radius: var(--radius-card);
-}
-
-.form-summary:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 .form-summary__title {

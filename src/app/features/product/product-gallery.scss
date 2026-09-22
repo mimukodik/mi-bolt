@@ -23,11 +23,6 @@
   border-radius: var(--radius-card);
 }
 
-.frame:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 app-product-image {
   flex: 1 1 auto;
   min-width: 0;
@@ -55,12 +50,6 @@ app-product-image {
 .step:hover:not(:disabled),
 .zoom:hover {
   background: var(--color-brand-accent-soft);
-}
-
-.step:focus-visible,
-.zoom:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 .step:disabled {
@@ -138,11 +127,6 @@ app-product-image {
 .thumb[aria-current='true'] {
   border-color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
-}
-
-.thumb:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {

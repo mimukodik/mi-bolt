@@ -49,11 +49,6 @@
   background: var(--color-surface-section);
 }
 
-.close:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .body {
   font-size: var(--type-body);
   line-height: var(--line-height-body);

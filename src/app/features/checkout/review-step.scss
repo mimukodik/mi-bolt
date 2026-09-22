@@ -75,12 +75,6 @@
   cursor: pointer;
 }
 
-.link-button:focus-visible,
-.checkbox:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .consent[data-state='touched-invalid'],
 .consent[data-state='submitted-invalid'] {
   border-color: var(--color-status-error);

@@ -100,6 +100,17 @@ p {
   border-radius: inherit;
 }
 
+/* A bordered text control reads border + gap + outline as two rings. The ring
+   hugs the border instead: no offset, and the border takes the ring's colour,
+   so the two read as one 2px ring. Round and small controls keep the offset
+   above, where the gap is what makes the ring visible. */
+input:not([type='checkbox']):not([type='radio']):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+  border-color: var(--color-focus-light);
+}
+
 /* Visually-hidden helper for assistive-only labels. */
 .sr-only {
   position: absolute;
