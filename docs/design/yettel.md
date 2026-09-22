@@ -569,9 +569,13 @@ chips, with the same recipe for both kinds:
 
 A second `.product-variant-item--selected` rule on the device page swaps the
 lime ring for navy
-(`box-shadow:0 0 0 2px #002340 inset`) — both are present in the CSS and
-the MiBolt implementation should pick the lime ring for consistency with
-the rest of the surface (the navy ring is used in a different context).
+(`box-shadow:0 0 0 2px #002340 inset`), and that is the rule that wins on
+yettel.hu's live device page: measured in Chrome on 2026-09-22 (Apple iPhone
+17 Pro, 1920x1080 and 390x844), the selected chip's computed box-shadow is
+`rgb(0, 35, 64) 0 0 0 2px inset` with a bold label, and every chip is 48px
+tall. MiBolt follows the measured page: a navy ring and 48px chips (MIM-233,
+after the owner asked for less green on the product page). This replaces the
+earlier choice of the lime ring.
 
 ### Device page: price and instalment blocks
 
@@ -670,8 +674,8 @@ carries `id`, `slug`, `brand`, `name`, `highlights`, `is5g`, `releasedAt`,
 | --- | --- | --- | --- | --- |
 | Image gallery / carousel (Swiper) | `.mobile-gallery__swiper-container` with `.product-details__image-container` and `swiper-slide` per image | `Variant.images: Image[]` (each `id`, `src`, `alt`, `width`, `height`; `src` is used unchanged and may be `/api/v1/media/<id>`) | take | The visual recipe is in §5; the frontend component will wrap Swiper with the captured class names. |
 | Bottom thumbnail row (60px, lime active ring) | `.thumbnail-container` + `.thumbnail-container.active{border:2px solid #b4ff00}` | gallery images served | take | Recipe is in §5. |
-| Colour variant chips (`.product-variant-item--color`) | Yes, with selected lime ring | `Product.variants[]` (`colorCode`, `colorName`, `swatchHex` per variant) | take | Recipe is in §5. |
-| Storage variant chips (`.product-variant-item--main-model`) | Yes, same selected lime ring | `Product.variants[]` (`storageGb` per variant) | take | Recipe is in §5. |
+| Colour variant chips (`.product-variant-item--color`) | Yes, with selected navy ring (MIM-233) | `Product.variants[]` (`colorCode`, `colorName`, `swatchHex` per variant) | take | Recipe is in §5. |
+| Storage variant chips (`.product-variant-item--main-model`) | Yes, same selected navy ring (MIM-233) | `Product.variants[]` (`storageGb` per variant) | take | Recipe is in §5. |
 | One-off price block | `.product-prices__container` border-radius 16px, white surface | served | take | Recipe is in §5. |
 | Instalment / "havi" block | `.shield-configurator-card__headline` with "Teljes ár:", three configurator cards ("tarifa" / "készülék ár" / "biztosítás": tariff, device price, insurance) | not served | drop | Backend has one-off prices only, no instalment or tariff model. |
 | Tariff configurator card | `.configurator-card--tariff-shield` with `border:2px solid #b4ff00;background:rgba(255,255,255,0.1)` for selected | not served | drop | No tariff model in the backend. |
@@ -679,7 +683,7 @@ carries `id`, `slug`, `brand`, `name`, `highlights`, `is5g`, `releasedAt`,
 | Specification table (`.specification__boxes`, `.boxes__title`) | Yes, in `.specification__boxes` | `Product.specGroups: SpecGroup[]` (`id`, `title`, `rows: SpecRow[]` with `label`, `value`) | take | Recipe is in §5; the boxes are grouped under `.specification__title` headings. |
 | Related devices (`.recommendation-item`) | Yes, with sky-blue cards and `.product-card-list` row | `GET /api/v1/products/{slug}/related` returns up to four `CatalogItem`s in relevance order, loaded separately from the product | take | The recommendation row uses the §5 card recipe and shows a placeholder until the related call returns. |
 | Service upsell ("készülék-biztosítás", "kiterjesztett garancia": device insurance, extended warranty) | Yes | not served | drop | User said no services. |
-| Stock state | not visible in the captured markup (covered by "Kosárba" button visibility) | derived from `CatalogItem.availability` on the list and `Variant.availability` on the device page, values `in_stock` and `out_of_stock` | take | The frontend derives in-stock from `availability === 'in_stock'` on the selected variant; there is no top-level `inStock` field on `Product` or `CatalogItem`. |
+| Stock state | not visible in the captured markup (covered by "Kosárba" button visibility) | derived from `CatalogItem.availability` on the list and `Variant.availability` on the device page, values `in_stock` and `out_of_stock` | take | The frontend derives in-stock from `availability === 'in_stock'` on the selected variant; there is no top-level `inStock` field on `Product` or `CatalogItem`. The in-stock line ("Raktáron") on the navy buy box is white, as measured on yettel.hu's device page on 2026-09-22 (MIM-233). |
 | "Teljes ár:" headline | Yes, navy bold | served | take | Recipe is in §5; used as the single price line on the MiBolt device page. |
 
 ## 8. Checkout notes
