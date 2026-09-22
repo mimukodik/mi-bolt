@@ -141,7 +141,7 @@
             "outputPath": { "base": "dist/demo-payment" },
             "assets": [
               {
-                "glob": "**/*",
+                "glob": "mockServiceWorker.js",
                 "input": "public"
               }
             ],

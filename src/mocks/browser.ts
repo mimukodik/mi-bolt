@@ -231,7 +231,15 @@ export function buildBrowserHandlers(
  * the path is resolved against the document's base instead.
  */
 export function resolveMockWorkerUrl(baseUri: string): string {
-  return new URL('mockServiceWorker.js', baseUri).pathname;
+  // `new URL('x', base)` treats the last path segment of `base` as a file and
+  // replaces it, so a base URI without a trailing slash would resolve
+  // '/demo-fizetes' + 'mockServiceWorker.js' to '/mockServiceWorker.js' — the
+  // very 404 this module exists to avoid. Angular's `baseHref` carries the
+  // slash today; normalising here means a `baseHref` edited without it cannot
+  // silently break the worker registration.
+  const base = new URL(baseUri);
+  const directory = base.pathname.endsWith('/') ? base.pathname : `${base.pathname}/`;
+  return new URL('mockServiceWorker.js', new URL(directory, base)).pathname;
 }
 
 /**
