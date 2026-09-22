@@ -6,13 +6,12 @@
  * `<body>` on close. The fix passes `true` to the CDK's `restoreFocus`,
  * which restores focus to whatever had it before the dialog opened.
  *
- * Item 3 of this task's own "Regression test" plan — asserting that
- * `MobileDrawer` / `FilterDrawer` set `initialFocus` to `'first-heading'`
- * and that `TermsDialog` / the gallery's dialog leave it at
- * `'first-tabbable'` — is not covered here: those four components live
- * outside `src/app/shared/ui/**`, in `src/app/core/navigation/` and in
- * two feature directories owned by other agents' worktrees this round.
- * That wiring is deferred; see this task's Status line.
+ * Item 3 of this task's own "Regression test" plan is covered where the
+ * components live: `MobileDrawer` (`src/app/layouts/layouts.spec.ts`) and
+ * `FilterDrawer` (`filter-drawer.spec.ts`) pass `initialFocus` as
+ * `'first-heading'` and their specs assert the heading has the focus;
+ * `TermsDialog` and the gallery's dialog keep the `'first-tabbable'`
+ * default.
  */
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';

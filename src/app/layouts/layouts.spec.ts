@@ -504,6 +504,18 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     expect(dialogNodes.length).toBe(1);
   });
 
+  it('MobileDrawer opens with focus on its heading "Menü" (owner 2026-09-23)', async () => {
+    const f = TestBed.createComponent(MobileDrawerHost);
+    f.detectChanges();
+    f.componentInstance.opened.set(true);
+    f.detectChanges();
+    // The CDK focuses the heading through afterNextRender once the dialog mounts.
+    await f.whenStable();
+    const active = document.activeElement;
+    expect(active?.tagName).toBe('H2');
+    expect(active?.textContent.trim()).toBe('Menü');
+  });
+
   it('MobileDrawer dialog is not a scaled desktop header', () => {
     const f = TestBed.createComponent(MobileDrawerHost);
     f.componentInstance.opened.set(true);
