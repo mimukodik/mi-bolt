@@ -216,24 +216,32 @@ export class CartPage {
    * "Retry", and a transient "Sikeres frissítés." after that would
    * tell them the conflict was cleared when actually nothing was.
    */
-  readonly statusMessage = computed<{ text: string; severity: StatusSeverity } | null>(() => {
+  readonly statusMessage = computed<{
+    text: string;
+    severity: StatusSeverity;
+    dismissible: boolean;
+  } | null>(() => {
     const error = this.facade.error();
     if (error !== null) {
-      return { text: error.detail, severity: 'error' };
+      return { text: error.detail, severity: 'error', dismissible: false };
     }
     if (this.facade.conflict() !== null) {
       return {
         text: 'A kosár időközben megváltozott; frissítsd az oldalt, vagy próbáld újra a műveletet.',
         severity: 'error',
+        dismissible: false,
       };
     }
     if (this.facade.cartExpired()) {
       return {
         text: 'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.',
         severity: 'error',
+        dismissible: false,
       };
     }
-    return this.transientStatus();
+    const transient = this.transientStatus();
+    if (transient === null) return null;
+    return { ...transient, dismissible: true };
   });
 
   private readonly transientStatus = signal<{ text: string; severity: StatusSeverity } | null>(

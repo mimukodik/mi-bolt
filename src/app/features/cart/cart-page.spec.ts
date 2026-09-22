@@ -1139,6 +1139,45 @@ describe('MIM-216: every dismissible status message closes and returns focus', (
     }
   });
 
+  it('the server-driven error banner is persistent and renders no "Bezárás" button', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+
+    // A 500 lands on the facade's `error` signal (unlike 412 / 410,
+    // nothing in the facade clears it automatically), so the
+    // server-driven banner stays rendered long enough to assert on.
+    server.use(
+      http.patch('*/api/v1/cart/items/:variantId', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: 'Szerverhiba',
+            status: 500,
+            code: 'INTERNAL_SERVER_ERROR',
+            detail: 'A kosár frissítése nem sikerült.',
+            traceId: 'spec-trace-500',
+            fieldErrors: [],
+          },
+          { status: 500, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="quantity-increment"]').click();
+    await settleMutation(fixture);
+
+    expect(cartFacade.error()).not.toBeNull();
+    const banner = queryElement(root, '[data-testid="status-message"]');
+    expect(banner).not.toBeNull();
+    expect(banner?.querySelector('button')).toBeNull();
+  });
+
   it('dismissing the transient status banner moves focus to the page h1', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
