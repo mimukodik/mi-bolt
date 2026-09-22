@@ -877,7 +877,7 @@
           "slug": "ezust-256gb",
           "colorCode": "ezust",
           "storageGb": 256,
-          "priceHuf": 599990,
+          "priceHuf": 608990,
           "stock": 4
         },
         {
@@ -885,7 +885,7 @@
           "slug": "fekete-512gb",
           "colorCode": "fekete",
           "storageGb": 512,
-          "priceHuf": 699990,
+          "priceHuf": 717990,
           "stock": 11
         },
         {
@@ -893,7 +893,7 @@
           "slug": "fekete-256gb",
           "colorCode": "fekete",
           "storageGb": 256,
-          "priceHuf": 599990,
+          "priceHuf": 617990,
           "stock": 1
         },
         {
@@ -909,7 +909,7 @@
           "slug": "gleccserszin-256gb",
           "colorCode": "gleccserszin",
           "storageGb": 256,
-          "priceHuf": 599990,
+          "priceHuf": 626990,
           "stock": 1
         },
         {
@@ -917,7 +917,7 @@
           "slug": "ezust-512gb",
           "colorCode": "ezust",
           "storageGb": 512,
-          "priceHuf": 699990,
+          "priceHuf": 708990,
           "stock": 11
         },
         {
@@ -2770,7 +2770,7 @@
           "slug": "kiraly-tengereszkek-256gb",
           "colorCode": "kiraly-tengereszkek",
           "storageGb": 256,
-          "priceHuf": 235990,
+          "priceHuf": 242990,
           "stock": 3
         }
       ]
@@ -4447,7 +4447,7 @@
           "slug": "kekeslila-256gb",
           "colorCode": "kekeslila",
           "storageGb": 256,
-          "priceHuf": 457990,
+          "priceHuf": 462990,
           "stock": 12
         }
       ]
@@ -5876,7 +5876,7 @@
           "slug": "fekete-128gb",
           "colorCode": "fekete",
           "storageGb": 128,
-          "priceHuf": 266990,
+          "priceHuf": 273990,
           "stock": 3
         },
         {
@@ -6713,7 +6713,7 @@
           "slug": "levendula-512gb",
           "colorCode": "levendula",
           "storageGb": 512,
-          "priceHuf": 1003990,
+          "priceHuf": 1006990,
           "stock": 3
         }
       ]
@@ -7001,7 +7001,7 @@
           "slug": "rozsaszin-512gb",
           "colorCode": "rozsaszin",
           "storageGb": 512,
-          "priceHuf": 680989,
+          "priceHuf": 687989,
           "stock": 6
         }
       ]
@@ -7591,7 +7591,7 @@
           "slug": "titan-256gb",
           "colorCode": "titan",
           "storageGb": 256,
-          "priceHuf": 143990,
+          "priceHuf": 148990,
           "stock": 8
         },
         {
@@ -8231,7 +8231,7 @@
           "slug": "vilagos-arany-256gb",
           "colorCode": "vilagos-arany",
           "storageGb": 256,
-          "priceHuf": 362990,
+          "priceHuf": 377990,
           "stock": 11
         },
         {
@@ -8239,7 +8239,7 @@
           "slug": "egkek-256gb",
           "colorCode": "egkek",
           "storageGb": 256,
-          "priceHuf": 362990,
+          "priceHuf": 367990,
           "stock": 9
         },
         {
@@ -8247,7 +8247,7 @@
           "slug": "felhofeher-256gb",
           "colorCode": "felhofeher",
           "storageGb": 256,
-          "priceHuf": 362990,
+          "priceHuf": 372990,
           "stock": 3
         }
       ]
@@ -8822,7 +8822,7 @@
           "slug": "fekete-256gb",
           "colorCode": "fekete",
           "storageGb": 256,
-          "priceHuf": 419990,
+          "priceHuf": 428990,
           "stock": 4
         },
         {
@@ -8838,7 +8838,7 @@
           "slug": "levendula-256gb",
           "colorCode": "levendula",
           "storageGb": 256,
-          "priceHuf": 419990,
+          "priceHuf": 437990,
           "stock": 1
         },
         {
@@ -8846,7 +8846,7 @@
           "slug": "zsalyazold-256gb",
           "colorCode": "zsalyazold",
           "storageGb": 256,
-          "priceHuf": 419990,
+          "priceHuf": 446990,
           "stock": 4
         }
       ]
@@ -10888,7 +10888,7 @@
           "slug": "narancssarga-256gb",
           "colorCode": "narancssarga",
           "storageGb": 256,
-          "priceHuf": 254989,
+          "priceHuf": 257989,
           "stock": 3
         },
         {
@@ -12019,7 +12019,7 @@
           "slug": "fekete-256gb",
           "colorCode": "fekete",
           "storageGb": 256,
-          "priceHuf": 206990,
+          "priceHuf": 211990,
           "stock": 12
         }
       ]
@@ -14116,7 +14116,7 @@
           "slug": "kek-128gb",
           "colorCode": "kek",
           "storageGb": 128,
-          "priceHuf": 294989,
+          "priceHuf": 297989,
           "stock": 0
         }
       ]
