@@ -345,7 +345,12 @@
             }
           }
           @case ('conflict') {
-            <div class="conflict flex flex-col gap-(--space-3)">
+            <div
+              #stateBanner
+              class="conflict flex flex-col gap-(--space-3)"
+              data-testid="review-state-banner"
+              tabindex="-1"
+            >
               <app-status-message
                 severity="error"
                 [message]="conflictMessage"
@@ -360,14 +365,18 @@
             </div>
           }
           @case ('stock-error') {
-            <app-status-message
-              severity="error"
-              [message]="outOfStockMessage"
-              [persistent]="true"
-            />
+            <div #stateBanner class="state-banner" data-testid="review-state-banner" tabindex="-1">
+              <app-status-message
+                severity="error"
+                [message]="outOfStockMessage"
+                [persistent]="true"
+              />
+            </div>
           }
           @case ('error') {
-            <app-status-message severity="error" [message]="errorMessage" [persistent]="true" />
+            <div #stateBanner class="state-banner" data-testid="review-state-banner" tabindex="-1">
+              <app-status-message severity="error" [message]="errorMessage" [persistent]="true" />
+            </div>
           }
           @case ('submitting') {
             <app-loading-state label="Feldolgozás…" variant="lines" />
@@ -398,6 +407,7 @@
             for="review-consent-terms-input"
           >
             <input
+              #termsInput
               class="checkbox"
               data-testid="review-consent-terms-input"
               id="review-consent-terms-input"

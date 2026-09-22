@@ -267,6 +267,26 @@ function getTermsDialog(fixture: ComponentFixture<ReviewStep>): TermsDialog {
   return instance;
 }
 
+interface ComponentWithStyles {
+  ɵcmp: {
+    styles: readonly string[];
+  };
+}
+
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
+    return false;
+  }
+  if (val === null || !('ɵcmp' in val)) {
+    return false;
+  }
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
+}
+
 interface ReviewStepInputs {
   readonly summary?: CheckoutSummary | null;
   readonly cart?: Cart;
@@ -474,6 +494,22 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     const quantity = getByTestId(root, 'review-line-quantity');
     expect(quantity.textContent.replace(/\s+/g, ' ').trim()).toBe('1 × 89 990 Ft');
     expect(text).not.toContain('Egységár');
+  });
+
+  it('RS-14b the line wraps its total below the body when both do not fit, so the one-line quantity never widens the card', () => {
+    if (!hasStyles(ReviewStep)) throw new Error('Expected ReviewStep to have styles');
+    const css = ReviewStep.ɵcmp.styles.join('\n');
+    function ruleBody(cssText: string, selectorStart: string): string {
+      const start = cssText.indexOf(selectorStart);
+      if (start === -1) throw new Error(`No rule starting with ${selectorStart}`);
+      const open = cssText.indexOf('{', start);
+      const close = cssText.indexOf('}', open);
+      return cssText.slice(open + 1, close);
+    }
+    expect(ruleBody(css, '.line[')).toContain('flex-wrap: wrap');
+    expect(ruleBody(css, '.line-body')).toContain('flex: 1 1 0');
+    expect(ruleBody(css, '.line-total')).toContain('margin-left: auto');
+    expect(ruleBody(css, '.line-quantity')).toContain('white-space: nowrap');
   });
 
   it('RS-15 renders the empty placeholder when the cart carries no items', () => {

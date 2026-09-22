@@ -2,9 +2,10 @@
    spacing, the colour and the typography (the @theme / tokens.css
    values through the utility-(--token) shorthand), the same way
    delivery-step.html does. This sheet holds only what those utilities
-   cannot express: the two-column grids, the link-shaped buttons and
-   their focus ring, the consent's data-state colouring, the checkbox
-   accent, and reduced motion. */
+   cannot express: the data-list row grid (`.row`), the cart-line
+   wrapping flex (`.line`, `.line-body`, `.line-total`), the link-shaped
+   buttons and their focus ring, the consent's data-state colouring,
+   the checkbox accent, and reduced motion. */
 
 :host {
   display: block;
@@ -15,9 +16,9 @@
 }
 
 .line {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
   align-items: center;
   padding: var(--space-3) 0;
   border-bottom: 1px solid var(--color-border-subtle);
@@ -25,6 +26,17 @@
 
 .line:last-child {
   border-bottom: 0;
+}
+
+/* The body takes the free width and never shrinks below its narrowest
+   content, the one-line quantity; when that and the total do not fit
+   side by side, the total wraps to its own row, right-aligned. */
+.line-body {
+  flex: 1 1 0;
+}
+
+.line-total {
+  margin-left: auto;
 }
 
 .line-quantity {

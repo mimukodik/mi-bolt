@@ -27,13 +27,15 @@ import {
   afterNextRender,
   Component,
   computed,
-  ElementRef,
   inject,
   Injector,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
+
+import type { ElementRef } from '@angular/core';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -140,7 +142,8 @@ export class ReviewStep {
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);
 
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly termsInput = viewChild<ElementRef<HTMLInputElement>>('termsInput');
+  private readonly stateBanner = viewChild<ElementRef<HTMLElement>>('stateBanner');
   private readonly injector = inject(Injector);
 
   protected readonly crumbs: readonly CheckoutCrumb[] = [
@@ -358,31 +361,31 @@ export class ReviewStep {
 
   /** The CTA is never disabled for an unmet condition (owner,
    *  2026-09-22: "Mindig aktív, kattintásra hibák"): a click that
-   *  cannot submit marks the terms and, when they are unticked,
-   *  moves focus to them. Disabled only while submitting. */
+   *  cannot submit marks the terms and, in the conflict, stock-error
+   *  and error states moves focus to that state's banner (its
+   *  explanation), otherwise to the unticked terms. Disabled only
+   *  while submitting. */
   onSubmit(): void {
     if (this.state() === 'submitting') return;
     this.submitted.set(true);
-    if (!this.canSubmit()) {
-      if (!this.acceptedTerms()) this.focusTerms();
+    if (this.canSubmit()) {
+      this.submitRequested.emit();
       return;
     }
-    this.submitRequested.emit();
+    const state = this.state();
+    if (state === 'conflict' || state === 'stock-error' || state === 'error') {
+      this.focusAfterRender(() => this.stateBanner()?.nativeElement.focus());
+      return;
+    }
+    if (!this.acceptedTerms()) {
+      this.focusAfterRender(() => this.termsInput()?.nativeElement.focus({ focusVisible: true }));
+    }
   }
 
-  /** After the next render, focuses the terms checkbox, the one
-   *  control on this step the shopper can fix here (WAI forms
-   *  tutorial: move focus to the first invalid field).
-   *  `focusVisible` forces the ring a script focus after a mouse
-   *  click would not show. */
-  private focusTerms(): void {
-    afterNextRender(
-      () => {
-        this.host.nativeElement
-          .querySelector<HTMLElement>('#review-consent-terms-input')
-          ?.focus({ focusVisible: true });
-      },
-      { injector: this.injector },
-    );
+  /** Runs `focus` after the next render, once the marking the click
+   *  caused is on the page (WAI forms tutorial: move focus to the
+   *  first thing to fix). */
+  private focusAfterRender(focus: () => void): void {
+    afterNextRender(focus, { injector: this.injector });
   }
 }
