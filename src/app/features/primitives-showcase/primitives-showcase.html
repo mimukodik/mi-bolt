@@ -80,18 +80,6 @@
       </div>
     </article>
 
-    <article class="cell" data-testid="showcase-quantitycontrol">
-      <h2>Mennyiség (QuantityControl)</h2>
-      <div class="row">
-        <app-quantity-control
-          [max]="9"
-          [min]="1"
-          [value]="quantityValue()"
-          (quantityChanged)="quantityValue.set($event)"
-        />
-      </div>
-    </article>
-
     <article class="cell" data-testid="showcase-accessibledialog">
       <h2>Akadálymentes dialógus (AccessibleDialog)</h2>
       <div class="row">

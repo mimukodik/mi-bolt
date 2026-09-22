@@ -265,25 +265,6 @@ describe('T17-AC03: pending controls and authoritative totals', () => {
     expect(facade.pending()).toBe(0);
     expect(facade.itemCount()).toBe(1);
   });
-
-  it('serializes setQuantity(5) then setQuantity(2); the second If-Match binds to the first response version', async () => {
-    const facade = TestBed.inject(CartFacade);
-    await facade.addItem(VARIANT_MOTO_256, 1);
-
-    await Promise.all([
-      facade.setQuantity(VARIANT_MOTO_256, 5),
-      facade.setQuantity(VARIANT_MOTO_256, 2),
-    ]);
-
-    const patches = requestsTo('PATCH', '/cart/items/' + VARIANT_MOTO_256);
-    expect(patches).toHaveLength(2);
-    expect(patches[0]?.headers['if-match']).toBe('"2"');
-    expect(patches[1]?.headers['if-match']).toBe('"3"');
-
-    expect(facade.cart()?.items[0]?.quantity).toBe(2);
-    expect(facade.cart()?.version).toBe(4);
-    expect(facade.subtotal()).toEqual({ amount: 179980, currency: 'HUF' });
-  });
 });
 
 // ---------------------------------------------------------------------------

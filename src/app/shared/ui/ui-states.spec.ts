@@ -10,7 +10,6 @@ import {
   LoadingState,
   EmptyState,
   FormFieldMessage,
-  QuantityControl,
   AccessibleDialog,
   StatusMessage,
   type FieldError,
@@ -113,17 +112,6 @@ class EmptyHost {
 class FormHost {
   readonly errors = signal<FieldError[]>([]);
   readonly touched = signal(false);
-}
-
-@Component({
-  imports: [QuantityControl],
-  template: `
-    <app-quantity-control [disabled]="disabled()" [max]="5" [min]="1" [value]="value()" />
-  `,
-})
-class QuantityHost {
-  readonly value = signal(3);
-  readonly disabled = signal(false);
 }
 
 @Component({
@@ -350,48 +338,6 @@ describe('MiBolt primitives: Required State Contract', () => {
       );
       expect(msg).not.toBeNull();
       expect(msg?.getAttribute('data-pointer')).toBe('/a');
-    });
-  });
-
-  describe('QuantityControl', () => {
-    it('covers default, disabled, invalid; declares hover/focus/disabled in styles', () => {
-      TestBed.configureTestingModule({ imports: [QuantityHost] });
-      const f = TestBed.createComponent(QuantityHost);
-      expect(
-        getNativeElement(f).querySelector('[data-testid="quantity-decrement"]'),
-      ).not.toBeNull();
-
-      f.componentInstance.disabled.set(true);
-      f.detectChanges();
-      const dec = getNativeElement(f).querySelector<HTMLButtonElement>(
-        '[data-testid="quantity-decrement"]',
-      );
-      if (dec === null) {
-        throw new Error('Expected decrement button');
-      }
-      expect(dec.disabled).toBe(true);
-
-      f.componentInstance.disabled.set(false);
-      f.componentInstance.value.set(1);
-      f.detectChanges();
-      const input = getNativeElement(f).querySelector<HTMLInputElement>(
-        '[data-testid="quantity-input"]',
-      );
-      if (input === null) {
-        throw new Error('Expected quantity input');
-      }
-      input.value = '99';
-      input.dispatchEvent(new Event('input'));
-      f.detectChanges();
-      expect(getNativeElement(f).querySelector('[data-testid="quantity-message"]')).not.toBeNull();
-
-      if (!hasStyles(QuantityControl)) {
-        throw new Error('Expected QuantityControl to have styles');
-      }
-      const css = QuantityControl.ɵcmp.styles.join('\n');
-      expect(css).toContain(':hover');
-      expect(css).toContain(':focus-visible');
-      expect(css).toContain(':disabled');
     });
   });
 

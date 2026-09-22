@@ -2,7 +2,7 @@
  * T17 — serialized cart mutation queue.
  *
  * The cart facade drives these operations through MSW:
- *   - addCartItem, setCartItemQuantity, removeCartItem, clearCart (If-Match)
+ *   - addCartItem, removeCartItem, clearCart (If-Match)
  *   - refetch (GET /cart, no If-Match) on construction and after a conflict
  *
  * Every mutation must carry the cart version the server expects.
@@ -32,12 +32,6 @@ import type { Cart } from '../../api/generated/models/cart';
 export type MutationIntent =
   | {
       readonly kind: 'addItem';
-      readonly retry: boolean;
-      readonly variantId: string;
-      readonly quantity: number;
-    }
-  | {
-      readonly kind: 'setQuantity';
       readonly retry: boolean;
       readonly variantId: string;
       readonly quantity: number;

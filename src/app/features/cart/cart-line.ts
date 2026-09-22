@@ -16,8 +16,8 @@
  *
  * The component owns NO state — it is fully driven by the wire-shaped
  * `CartItem` it receives through `line()` and forwards the user's
- * intent through `(removeRequested)`. The
- * cart page subscribes to those events and routes them through the
+ * intent through `(removeRequested)`. The cart page subscribes to
+ * that event and routes it through the
  * `CartFacade` (T17) so the mutation queue's serialization and
  * If-Match binding rules apply uniformly.
  */

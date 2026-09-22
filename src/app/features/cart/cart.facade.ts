@@ -32,13 +32,7 @@ import { firstValueFrom, type Observable } from 'rxjs';
 
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
-import {
-  addCartItem,
-  clearCart,
-  getCart,
-  removeCartItem,
-  setCartItemQuantity,
-} from '../../api/generated/functions';
+import { addCartItem, clearCart, getCart, removeCartItem } from '../../api/generated/functions';
 import { withIfMatch } from '../../core/api/demo-session.interceptor';
 import type { Cart } from '../../api/generated/models/cart';
 import type { Money } from '../../api/generated/models/money';
@@ -209,22 +203,6 @@ export class CartFacade {
   async addItem(variantId: string, quantity: number): Promise<void> {
     const token = ++this.dispatchToken;
     const intent: MutationIntent = { kind: 'addItem', retry: false, variantId, quantity };
-    const result = await this.queue.enqueue(intent, (inputs) => this.dispatch(inputs));
-    if (!this.shouldApplyResult(token)) return;
-    if (result.ok) {
-      this.applySuccess(result.cart);
-    }
-  }
-
-  /**
-   * Sets an absolute quantity on the line keyed by `variantId`. The
-   * intent is serialized behind every other queued mutation; its
-   * `If-Match` binds to the latest server version. A 404 means the
-   * line is not in the cart.
-   */
-  async setQuantity(variantId: string, quantity: number): Promise<void> {
-    const token = ++this.dispatchToken;
-    const intent: MutationIntent = { kind: 'setQuantity', retry: false, variantId, quantity };
     const result = await this.queue.enqueue(intent, (inputs) => this.dispatch(inputs));
     if (!this.shouldApplyResult(token)) return;
     if (result.ok) {
@@ -418,12 +396,6 @@ export class CartFacade {
         return this.api.invoke(
           addCartItem,
           { body: { variantId: intent.variantId, quantity: intent.quantity } },
-          context,
-        );
-      case 'setQuantity':
-        return this.api.invoke(
-          setCartItemQuantity,
-          { variantId: intent.variantId, body: { quantity: intent.quantity } },
           context,
         );
       case 'removeItem':
