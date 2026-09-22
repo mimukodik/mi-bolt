@@ -129,12 +129,13 @@
         [value]="paymentMethod()"
         (paymentChanged)="onPaymentChanged($event)"
         (valueChange)="onPaymentChanged($event)"
-      />
-      <app-form-field-message
-        fieldId="payment-method"
-        [errors]="paymentMethodErrors()"
-        [submitted]="confirmAttempted()"
-      />
+      >
+        <app-form-field-message
+          fieldId="payment-method"
+          [errors]="paymentMethodErrors()"
+          [submitted]="confirmAttempted()"
+        />
+      </app-payment-method-selector>
 
       <fieldset
         class="billing m-0 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) flex flex-col gap-(--space-4)"
