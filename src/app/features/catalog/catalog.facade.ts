@@ -266,15 +266,17 @@ export class CatalogFacade {
 
   /**
    * Apply a partial filter set. Any absent field falls back to the
-   * current value; the page resets to 1 unless the partial explicitly
-   * carries one (the only caller that does is `setPage` / `setPageSize`).
+   * current value, and the page always resets to 1: a filter change
+   * shows the new list from its start. The filter panel and drawer emit
+   * the whole query, page included, so a page in the partial is ignored
+   * here (`setPage` and `setPageSize` own the page).
    */
   setFilters(partial: Partial<CatalogQuery>): void {
     const current = this.querySignal();
     const next: CatalogQuery = {
       ...current,
       ...partial,
-      page: partial.page ?? 1,
+      page: 1,
     };
     this.queryChange$.next(next);
   }
