@@ -19,11 +19,6 @@
   background: var(--color-surface-light);
 }
 
-.media:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .body {
   flex: 1 1 auto;
 }
@@ -52,11 +47,6 @@
   box-shadow: -2px 3px 7px rgba(0, 0, 0, 0.25);
 }
 
-.swatch:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .name {
   margin: 0;
   font-family: var(--font-family-bold);
@@ -77,11 +67,6 @@
 .name-link:hover,
 .name-link:focus-visible {
   text-decoration: underline;
-}
-
-.name-link:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
   border-radius: var(--radius-badge);
 }
 
@@ -146,9 +131,4 @@
 .details:focus-visible {
   background: var(--color-primary);
   color: var(--color-surface-light);
-}
-
-.details:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }

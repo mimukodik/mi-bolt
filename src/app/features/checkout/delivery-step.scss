@@ -27,11 +27,6 @@
   opacity: 0.6;
 }
 
-.radio:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .option-badge {
   background: var(--color-brand-accent);
   color: var(--color-text-primary);
@@ -51,12 +46,7 @@
   line-height: var(--line-height-body);
 }
 
-.field .input:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
-.field .input[aria-invalid='true'] {
+.input[aria-invalid='true'] {
   border-color: var(--color-status-error);
 }
 
