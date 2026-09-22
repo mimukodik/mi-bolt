@@ -21,5 +21,4 @@ import { AppShell } from '../shared/shell/app-shell';
   templateUrl: './marketing-layout.html',
   styleUrl: './marketing-layout.scss',
 })
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class MarketingLayout {}
