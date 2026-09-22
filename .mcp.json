@@ -13,6 +13,13 @@
         "--headless",
         "--experimental-screencast"
       ]
+    },
+    "playwright-test": {
+      "command": "npx",
+      "args": [
+        "playwright",
+        "run-test-mcp-server"
+      ]
     }
   }
 }
