@@ -126,6 +126,7 @@
                     [quantity]="quantity()"
                     [variant]="addableVariant()"
                     (addRequested)="onAddRequested($event)"
+                    (errorDismissed)="addError.set(null)"
                   />
                 } @else {
                   <app-button
@@ -142,7 +143,7 @@
                   <app-status-message
                     severity="success"
                     [message]="message"
-                    (dismissed)="addSuccessMessage.set(null)"
+                    (dismissed)="onSuccessDismissed()"
                   />
                 }
                 <p class="simulation-note m-0" data-testid="product-simulation-note">
@@ -201,6 +202,7 @@
       [money]="devicePrice()"
       [pending]="addPending()"
       (addRequested)="onRailAddRequested()"
+      (errorDismissed)="addError.set(null)"
     />
   }
 </div>

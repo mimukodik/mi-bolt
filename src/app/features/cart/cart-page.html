@@ -5,7 +5,7 @@
       <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
       <span aria-current="page" class="breadcrumb is-current font-medium">Kosár</span>
     </nav>
-    <h1 class="title m-0">A kosarad</h1>
+    <h1 #pageTitle class="title m-0" tabindex="-1">A kosarad</h1>
   </header>
 
   <app-navigation-reason-banner />
@@ -14,6 +14,7 @@
     <div class="status flex">
       <app-status-message
         [message]="message.text"
+        [persistent]="!message.dismissible"
         [severity]="message.severity"
         (dismissed)="dismissStatusMessage()"
       />
@@ -22,7 +23,7 @@
 
   @for (notice of noticeMessages(); track $index) {
     <div class="status flex" data-testid="cart-notice">
-      <app-status-message severity="info" [message]="notice" />
+      <app-status-message severity="info" [message]="notice" [persistent]="true" />
     </div>
   }
 

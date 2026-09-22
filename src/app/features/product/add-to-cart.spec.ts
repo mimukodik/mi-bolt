@@ -68,7 +68,7 @@ function registerComponentMetadata(
 
 registerComponentMetadata(AddToCart, {
   inputs: ['variant', 'quantity', 'pending', 'error'],
-  outputs: ['addRequested'],
+  outputs: ['addRequested', 'errorDismissed'],
 });
 registerComponentMetadata(Button, {
   inputs: ['variant', 'size', 'label', 'loadingLabel', 'disabled', 'loading', 'type'],
@@ -107,6 +107,7 @@ beforeAll(async () => {
       [quantity]="quantity()"
       [variant]="variant()"
       (addRequested)="onAddRequested($event)"
+      (errorDismissed)="onErrorDismissed()"
     />
   `,
 })
@@ -116,9 +117,14 @@ class TestHostComponent {
   readonly pending = signal<boolean>(false);
   readonly error = signal<UiProblem | null>(null);
   readonly requests: { variantId: string; quantity: number }[] = [];
+  readonly errorDismissals = signal<number>(0);
 
   onAddRequested(event: { variantId: string; quantity: number }): void {
     this.requests.push(event);
+  }
+
+  onErrorDismissed(): void {
+    this.errorDismissals.update((n) => n + 1);
   }
 }
 
@@ -248,6 +254,44 @@ describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
   it('with neither pending nor error, no status banner renders', async () => {
     const { root } = await createHarness();
     expect(root.querySelector('[data-testid="status-message"]')).toBeNull();
+  });
+
+  it('MIM-216: the error banner shows a "Bezárás" button and clicking it emits errorDismissed and returns focus to the add CTA', async () => {
+    const { host, root, fixture } = await createHarness();
+    host.error.set({
+      code: 'UNKNOWN',
+      message: 'A termék hozzáadása nem sikerült; a kosár változatlan.',
+      fieldErrors: [],
+      retryable: true,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    if (!(statusEl instanceof HTMLElement)) {
+      throw new Error('Expected status message element');
+    }
+    const closeBtn = queryButton(statusEl, 'button');
+    expect(closeBtn.textContent).toContain('Bezárás');
+
+    closeBtn.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.errorDismissals()).toBe(1);
+    const activeElement = root.querySelector('[data-testid="add-to-cart-button"] button');
+    expect(document.activeElement).toBe(activeElement);
+  });
+
+  it('MIM-216: the in-flight (pending) banner is persistent and renders no "Bezárás" button', async () => {
+    const { host, root, fixture } = await createHarness();
+    host.pending.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    expect(statusEl).not.toBeNull();
+    expect(statusEl?.querySelector('button')).toBeNull();
   });
 });
 
