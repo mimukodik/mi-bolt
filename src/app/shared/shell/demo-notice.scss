@@ -5,13 +5,13 @@
 .demo-notice {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--layout-gutter-mobile);
-  background: var(--color-surface-section);
-  border-bottom: 1px solid var(--color-border-subtle);
-  color: var(--color-text-primary);
-  font-size: var(--type-helper);
-  line-height: var(--line-height-body);
+  gap: var(--space-2);
+  min-height: 28px;
+  padding: 0 var(--layout-gutter-mobile);
+  background: var(--color-shell-dark);
+  color: var(--color-text-inverse);
+  font-size: var(--type-meta);
+  line-height: 16px;
   scroll-margin-top: var(--space-10);
 }
 
@@ -19,14 +19,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: 16px;
   padding: 0 var(--space-2);
-  background: var(--color-brand-accent-soft);
+  background: var(--color-brand-accent);
   color: var(--color-brand-ink);
-  border: 1px solid var(--color-brand-ink);
   font-weight: var(--weight-bold);
-  font-size: var(--type-meta);
-  border-radius: var(--radius-badge);
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-pill);
 }
 
 .demo-notice__text {
@@ -39,19 +40,22 @@
    yellow ground with #332b00 text, hairline and badge. */
 .demo-notice--memory {
   background: var(--color-status-warning);
-  border-bottom-color: var(--color-status-warning-text);
   color: var(--color-status-warning-text);
 }
 
 .demo-notice--memory .demo-notice__badge {
   background: var(--color-status-warning-text);
   color: var(--color-status-warning);
-  border-color: var(--color-status-warning-text);
 }
 
 @media (min-width: 768px) {
   .demo-notice {
-    padding: var(--space-2) var(--layout-gutter-desktop);
+    padding: 0 var(--layout-gutter-desktop);
+  }
+  .demo-notice__text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

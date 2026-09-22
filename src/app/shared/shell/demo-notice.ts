@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 
 /**
- * `DemoNotice` is a light strip immediately below the global header,
+ * `DemoNotice` is a slim navy strip immediately below the global header,
  * stating the simulation. It is intentionally non-dismissable on the
  * demo: every layout renders it because every commercial surface
  * belongs to the simulation. The notice states the simulation in

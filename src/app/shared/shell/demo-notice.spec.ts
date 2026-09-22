@@ -67,4 +67,32 @@ describe('DemoNotice', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.persistenceMode()).toBe('durable');
   });
+
+  it('MIM-216: the strip is the slim navy bar with the lime badge', () => {
+    const raw: unknown = DemoNotice;
+    const cmp: unknown =
+      typeof raw === 'function' && 'ɵcmp' in raw ? Reflect.get(raw, 'ɵcmp') : undefined;
+    const styles: unknown =
+      typeof cmp === 'object' && cmp !== null && 'styles' in cmp
+        ? Reflect.get(cmp, 'styles')
+        : undefined;
+    const css = (Array.isArray(styles) ? styles : [])
+      .filter((s): s is string => typeof s === 'string')
+      .join(' ')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/%NS%/g, '')
+      .replace(/\s+/g, '');
+    const bar = css.slice(
+      css.indexOf('.demo-notice{'),
+      css.indexOf('}', css.indexOf('.demo-notice{')),
+    );
+    const badge = css.slice(
+      css.indexOf('.demo-notice__badge{'),
+      css.indexOf('}', css.indexOf('.demo-notice__badge{')),
+    );
+    expect(bar).toContain('background:var(--color-shell-dark)');
+    expect(bar).toContain('color:var(--color-text-inverse)');
+    expect(bar).toContain('min-height:28px');
+    expect(badge).toContain('background:var(--color-brand-accent)');
+  });
 });
