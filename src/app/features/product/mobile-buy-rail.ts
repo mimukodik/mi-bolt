@@ -1,4 +1,14 @@
-import { Component, ElementRef, computed, inject, input, output } from '@angular/core';
+import {
+  Component,
+  DOCUMENT,
+  DestroyRef,
+  ElementRef,
+  afterNextRender,
+  computed,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 
 import { Button } from '../../shared/ui/button/button';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
@@ -48,6 +58,30 @@ export class MobileBuyRail {
   readonly successDismissed = output();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** Publishes the rail's real height, message row included, as
+   *  `--rail-block-size` on the root element, so the footer clearance
+   *  and the focus scroll padding in `primitives.css` follow it rather
+   *  than the fixed `--rail-height` (MIM-238). */
+  constructor() {
+    const root = inject(DOCUMENT).documentElement;
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      const rail = this.host.nativeElement.querySelector<HTMLElement>('.rail');
+      if (rail === null || typeof ResizeObserver === 'undefined') return;
+      const observer = new ResizeObserver(() => {
+        root.style.setProperty(
+          '--rail-block-size',
+          `${String(rail.getBoundingClientRect().height)}px`,
+        );
+      });
+      observer.observe(rail);
+      destroyRef.onDestroy(() => {
+        observer.disconnect();
+        root.style.removeProperty('--rail-block-size');
+      });
+    });
+  }
 
   readonly priceStatus = computed<'idle' | 'success'>(() =>
     this.money() === null ? 'idle' : 'success',

@@ -203,15 +203,30 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
    can clear it: at maximum scroll the rail covered the footer's only button.
    The clearance goes on the footer's own box rather than on the host, so it
    lands inside the navy ground instead of leaving a white strip under it.
-   --rail-height (tokens.css) is also the rail's own minimum height. */
+   --rail-height (tokens.css) is also the rail's own minimum height. The rail
+   publishes its real height, message row included, as --rail-block-size
+   (mobile-buy-rail.ts); --rail-height is the fallback until it has measured.
+   1.5rem, and 2rem from 640px, are the footer's own py-6 / sm:py-8 bottom padding, which this rule replaces. */
 @media (max-width: 1023px) {
   body:has(app-mobile-buy-rail) app-footer-nav .footer {
-    padding-bottom: calc(env(safe-area-inset-bottom) + var(--rail-height));
+    padding-bottom: calc(
+      var(--rail-block-size, calc(env(safe-area-inset-bottom) + var(--rail-height))) + 1.5rem
+    );
+  }
+  @media (min-width: 640px) {
+    body:has(app-mobile-buy-rail) app-footer-nav .footer {
+      padding-bottom: calc(
+        var(--rail-block-size, calc(env(safe-area-inset-bottom) + var(--rail-height))) + 2rem
+      );
+    }
   }
 
   /* A focused element scrolled into view lands above the rail rather than
-     under it (WCAG 2.2 SC 2.4.11; W3C technique C43, scroll-padding). */
+     under it (WCAG 2.2 SC 2.4.11; W3C technique C43, scroll-padding). The 4px
+     keeps the 2px focus outline and its 2px offset above the rail. */
   html:has(app-mobile-buy-rail) {
-    scroll-padding-bottom: calc(env(safe-area-inset-bottom) + var(--rail-height));
+    scroll-padding-bottom: calc(
+      var(--rail-block-size, calc(env(safe-area-inset-bottom) + var(--rail-height))) + 4px
+    );
   }
 }

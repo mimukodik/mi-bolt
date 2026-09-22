@@ -4,7 +4,7 @@ import '@angular/compiler';
 import { Component, signal } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MobileBuyRail } from './mobile-buy-rail';
 import type { UiProblem } from '../../shared/types/ui-problem';
@@ -299,5 +299,106 @@ describe('MobileBuyRail (FIX-50 extraction from product-page.html)', () => {
     expect(row).not.toBeNull();
     expect(row?.parentElement).toBe(rail);
     expect(rail.firstElementChild).toBe(row);
+  });
+});
+
+describe('MIM-238 follow-up: the rail publishes its real height', () => {
+  let callback: ResizeObserverCallback | null = null;
+  let observed: Element | null = null;
+  let disconnected = 0;
+  const original = globalThis.ResizeObserver;
+
+  class FakeResizeObserver {
+    constructor(cb: ResizeObserverCallback) {
+      callback = cb;
+    }
+    observe(target: Element): void {
+      observed = target;
+    }
+    unobserve(): void {
+      /* no-op */
+    }
+    disconnect(): void {
+      disconnected += 1;
+    }
+  }
+
+  /** The observer argument the production callback ignores. A plain
+   *  object, so no second FakeResizeObserver overwrites `callback`. */
+  const unusedObserver: ResizeObserver = {
+    observe: () => {
+      /* no-op */
+    },
+    unobserve: () => {
+      /* no-op */
+    },
+    disconnect: () => {
+      /* no-op */
+    },
+  };
+
+  beforeEach(() => {
+    callback = null;
+    observed = null;
+    disconnected = 0;
+    globalThis.ResizeObserver = FakeResizeObserver;
+  });
+
+  afterEach(() => {
+    globalThis.ResizeObserver = original;
+    document.documentElement.style.removeProperty('--rail-block-size');
+  });
+
+  it('observes the rail and writes its height to --rail-block-size on the root element', async () => {
+    const { root } = await createHarness();
+    const rail = root.querySelector<HTMLElement>('[data-testid="purchase-rail"]');
+    if (rail === null) throw new Error('Expected the rail');
+    expect(observed).toBe(rail);
+
+    vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({
+      height: 132,
+      width: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } satisfies DOMRect);
+    function takeCallback(): ResizeObserverCallback {
+      if (callback === null) throw new Error('Expected a ResizeObserver callback');
+      return callback;
+    }
+    takeCallback()([], unusedObserver);
+
+    expect(document.documentElement.style.getPropertyValue('--rail-block-size')).toBe('132px');
+  });
+
+  it('removes --rail-block-size and disconnects when the rail is destroyed', async () => {
+    const { fixture, root } = await createHarness();
+    const rail = root.querySelector<HTMLElement>('[data-testid="purchase-rail"]');
+    if (rail === null) throw new Error('Expected the rail');
+    vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({
+      height: 132,
+      width: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } satisfies DOMRect);
+    function takeCallback(): ResizeObserverCallback {
+      if (callback === null) throw new Error('Expected a ResizeObserver callback');
+      return callback;
+    }
+    takeCallback()([], unusedObserver);
+
+    fixture.destroy();
+
+    expect(document.documentElement.style.getPropertyValue('--rail-block-size')).toBe('');
+    expect(disconnected).toBe(1);
   });
 });
