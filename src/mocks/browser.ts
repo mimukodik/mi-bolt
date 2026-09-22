@@ -229,17 +229,17 @@ export function buildBrowserHandlers(
  * payment application. A root-absolute URL is rejected by the dev
  * server's base-path middleware before the file layer is reached, so
  * the path is resolved against the document's base instead.
+ *
+ * Resolution is plain WHATWG: a relative reference replaces the base's last
+ * path segment, so a base ending in `index.html` resolves beside it and a base
+ * ending in `/` resolves inside it. Forcing a trailing slash here was tried and
+ * reverted — it broke the `index.html` case. The one shape that would resolve
+ * wrongly, a base with no trailing slash and no file name, cannot occur:
+ * Angular's `baseHref` ends in `/`, and `mock-worker-url.spec.ts` fails if it
+ * ever stops doing so.
  */
 export function resolveMockWorkerUrl(baseUri: string): string {
-  // `new URL('x', base)` treats the last path segment of `base` as a file and
-  // replaces it, so a base URI without a trailing slash would resolve
-  // '/demo-fizetes' + 'mockServiceWorker.js' to '/mockServiceWorker.js' — the
-  // very 404 this module exists to avoid. Angular's `baseHref` carries the
-  // slash today; normalising here means a `baseHref` edited without it cannot
-  // silently break the worker registration.
-  const base = new URL(baseUri);
-  const directory = base.pathname.endsWith('/') ? base.pathname : `${base.pathname}/`;
-  return new URL('mockServiceWorker.js', new URL(directory, base)).pathname;
+  return new URL('mockServiceWorker.js', baseUri).pathname;
 }
 
 /**
