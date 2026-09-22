@@ -5,7 +5,7 @@
 // to `$GITHUB_STEP_SUMMARY`.
 import { existsSync, readFileSync } from 'node:fs';
 
-const heading = '### Unit coverage';
+const heading = process.argv[3] ?? '### Unit coverage';
 
 const argument = process.argv[2];
 if (!argument) {

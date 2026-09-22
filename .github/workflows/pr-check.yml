@@ -96,3 +96,44 @@ jobs:
       - run: npm ci
       - name: Regenerate and diff
         run: npm run api:drift
+
+  e2e:
+    name: E2E and coverage (Playwright)
+    # Skipped deliberately: the suite has no tests yet, so the coverage gate
+    # would fail on an empty denominator. The user asked on 2026-09-22 for the
+    # job to exist and be skipped. Remove this `if:` line when the first spec
+    # under e2e/integration/ lands.
+    if: false
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npm run e2e:install
+      - name: Build (development configuration, mock worker on)
+        run: npx ng build --configuration development
+      - name: Playwright integration suite with coverage
+        run: npm run e2e
+        env:
+          CI: 'true'
+      - name: Coverage summary (e2e)
+        if: always()
+        run: node scripts/coverage-summary.mjs coverage/e2e/coverage/coverage-summary.json '### E2E coverage' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-e2e
+          path: |
+            playwright-report/
+            coverage/e2e/
+            test-results/
+          if-no-files-found: error
+          overwrite: true

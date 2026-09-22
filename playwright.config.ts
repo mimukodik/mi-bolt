@@ -11,6 +11,28 @@ const smoke = process.env['E2E_TARGET'] === 'local-backend';
 const port = Number(process.env['E2E_PORT'] ?? (smoke ? 4410 : 4400));
 const serveConfiguration = smoke ? 'local-backend' : 'development';
 const baseURL = `http://localhost:${port}`;
+const ngServeCommand = `npx ng serve --configuration ${serveConfiguration} --port ${port}`;
+// In CI, Playwright runs against the built app served by scripts/serve-static.mjs (user, 2026-09-22).
+// The smoke config keeps `ng serve` in CI because its /api proxy lives in the dev server.
+// env: { [key: string]: string; }  (playwright/types/test.d.ts:10993)
+const webServer =
+  smoke || !process.env['CI']
+    ? {
+        command: ngServeCommand,
+        url: baseURL,
+        reuseExistingServer: !process.env['CI'],
+        timeout: 120_000,
+      }
+    : {
+        command: 'node scripts/serve-static.mjs',
+        env: {
+          PORT: String(port),
+          MI_BOLT_E2E_STATIC_DIR: 'dist/mi-bolt/browser',
+        },
+        url: baseURL,
+        reuseExistingServer: false,
+        timeout: 120_000,
+      };
 
 export default defineConfig({
   testDir: './e2e',
@@ -52,10 +74,5 @@ export default defineConfig({
     { name: 'integration', testDir: './e2e/integration', use: { ...devices['Desktop Chrome'] } },
     { name: 'smoke', testDir: './e2e/smoke', use: { ...devices['Desktop Chrome'] } },
   ],
-  webServer: {
-    command: `npx ng serve --configuration ${serveConfiguration} --port ${port}`,
-    url: baseURL,
-    reuseExistingServer: !process.env['CI'],
-    timeout: 120_000,
-  },
+  webServer,
 });
