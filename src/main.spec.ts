@@ -153,6 +153,23 @@ function readFileReplacements(configuration: string): FileReplacement[] {
   return Array.isArray(node) ? node.filter(isFileReplacement) : [];
 }
 
+/** Reads one `serve` configuration out of `angular.json`, or `null` if absent. */
+function readServeConfiguration(configuration: string): Record<string, unknown> | null {
+  const parsed: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'angular.json'), 'utf8'));
+  let node: unknown = parsed;
+  for (const key of [
+    'projects',
+    'mi-bolt',
+    'architect',
+    'serve',
+    'configurations',
+    configuration,
+  ]) {
+    node = isRecord(node) ? node[key] : undefined;
+  }
+  return isRecord(node) ? node : null;
+}
+
 /**
  * The environment module `ng build --configuration <configuration>`
  * compiles. With no replacement declared the builder compiles the
@@ -229,5 +246,9 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     const flags = parseEnvironmentFlags(readFileSync(join(REPO_ROOT, module), 'utf8'));
     expect(flags.production).toBe(false);
     expect(flags.demo).toBe(false);
+    const serve = readServeConfiguration('local-backend');
+    expect(serve?.['buildTarget']).toBe('mi-bolt:build:local-backend');
+    expect(serve?.['proxyConfig']).toBe('proxy.local-backend.conf.json');
+    expect(existsSync(join(REPO_ROOT, 'proxy.local-backend.conf.json'))).toBe(true);
   });
 });
