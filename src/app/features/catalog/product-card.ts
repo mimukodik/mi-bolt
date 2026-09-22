@@ -103,6 +103,13 @@ export class ProductCard {
     return availability === 'out_of_stock';
   });
 
+  /** The stock state as it reads inside an accessible name, empty when the
+   *  shown variant is available. The marker under the price is visual only;
+   *  a screen-reader user navigating by links or swatches never reaches it,
+   *  so the same word rides on the accessible names instead of a live region
+   *  (MIM-247 review, 2026-09-22). */
+  readonly stockSuffix = computed<string>(() => (this.isOutOfStock() ? ', elfogyott' : ''));
+
   /** Router link to the product page; the variant goes in `detailsQuery`. */
   readonly detailsLink = computed(() => {
     const item = this.product();
@@ -112,9 +119,16 @@ export class ProductCard {
   /** The selected variant travels as `?variant=`, which the product page reads. */
   readonly detailsQuery = computed(() => ({ variant: this.selectedVariantId() }));
 
+  /** Accessible name for the name link and the "Megnézem" CTA, both of
+   *  which lead to the same product page (the image link uses the more
+   *  descriptive `ariaLabel()` instead). */
+  readonly detailsAriaLabel = computed(
+    () => `${this.product().name} részleteinek megnyitása${this.stockSuffix()}`,
+  );
+
   /** Concatenated accessible name for the image link. */
   readonly ariaLabel = computed(() => {
     const item = this.product();
-    return `${item.name}, ${this.colorName()}, ${String(item.storageGb)} GB - részletek megnyitása`;
+    return `${item.name}, ${this.colorName()}, ${String(item.storageGb)} GB - részletek megnyitása${this.stockSuffix()}`;
   });
 }

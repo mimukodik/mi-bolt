@@ -390,6 +390,10 @@ describe('T13-AC04 ProductCard', () => {
     const root = getRootElement(fixture);
     const stock = queryElement(root, '[data-testid="product-card-stock"]');
     expect(stock.textContent.trim()).toBe('Elfogyott');
+    // The visible marker duplicates the state that already rides on the
+    // link and swatch aria-labels, so screen readers should never reach
+    // it; the link aria-labels are the announcement (MIM-247 review).
+    expect(stock.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('MIM-247: an in-stock variant shows no marker', () => {
@@ -430,6 +434,52 @@ describe('T13-AC04 ProductCard', () => {
     fixture.detectChanges();
     const stock = queryElement(getRootElement(fixture), '[data-testid="product-card-stock"]');
     expect(stock.textContent.trim()).toBe('Elfogyott');
+  });
+
+  it('MIM-247: an out-of-stock card names the state in its detail link', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-01',
+        slug: 'demo-one-5g',
+        name: 'Demo One 5G',
+        availability: 'out_of_stock',
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const cta = queryElement(root, '[data-testid="product-card-cta"]');
+    expect(cta.getAttribute('aria-label')).toBe('Demo One 5G részleteinek megnyitása, elfogyott');
+  });
+
+  it("MIM-247: an in-stock card's detail link names no state", () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', availability: 'in_stock' }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const cta = queryElement(root, '[data-testid="product-card-cta"]');
+    expect(cta.getAttribute('aria-label')).toBe('Demo One 5G részleteinek megnyitása');
+  });
+
+  it('MIM-247: an out-of-stock colour swatch names the state', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-08',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Grafit',
+        availability: 'in_stock',
+        extraColors: [{ colorName: 'Fekete', swatchHex: '#000000', availability: 'out_of_stock' }],
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const swatches = queryAllElements(root, '[data-testid="product-card-swatch"]');
+    expect(swatches[0].getAttribute('aria-label')).toBe('Grafit');
+    expect(swatches[1].getAttribute('aria-label')).toBe('Fekete, elfogyott');
   });
 });
 

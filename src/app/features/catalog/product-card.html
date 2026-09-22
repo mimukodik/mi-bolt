@@ -23,7 +23,9 @@
             class="swatch"
             data-testid="product-card-swatch"
             type="button"
-            [attr.aria-label]="c.colorName"
+            [attr.aria-label]="
+              c.availability === 'out_of_stock' ? `${c.colorName}, elfogyott` : c.colorName
+            "
             [attr.aria-pressed]="c.variantId === selectedVariantId()"
             [class.is-selected]="c.variantId === selectedVariantId()"
             [style.background-color]="c.swatchHex"
@@ -36,7 +38,7 @@
     <h3 class="name line-clamp-2">
       <a
         class="name-link"
-        [attr.aria-label]="`${product().name} részleteinek megnyitása`"
+        [attr.aria-label]="detailsAriaLabel()"
         [queryParams]="detailsQuery()"
         [routerLink]="detailsLink()"
         >{{ product().name }}</a
@@ -60,7 +62,7 @@
     <div class="price-row mt-auto">
       <app-price-block label="Egyszeri készülékár" size="md" status="success" [money]="price()" />
       @if (isOutOfStock()) {
-        <p class="stock" data-testid="product-card-stock">Elfogyott</p>
+        <p aria-hidden="true" class="stock" data-testid="product-card-stock">Elfogyott</p>
       }
     </div>
   </div>
@@ -69,7 +71,7 @@
     <a
       class="details"
       data-testid="product-card-cta"
-      [attr.aria-label]="`${product().name} részleteinek megnyitása`"
+      [attr.aria-label]="detailsAriaLabel()"
       [queryParams]="detailsQuery()"
       [routerLink]="detailsLink()"
       >Megnézem</a
