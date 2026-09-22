@@ -20,6 +20,11 @@
   gap: var(--space-1);
 }
 
+.row--subtotal,
+.row--total {
+  gap: 0;
+}
+
 .row--shipping .label {
   font-size: var(--type-helper);
   color: var(--color-text-secondary);
