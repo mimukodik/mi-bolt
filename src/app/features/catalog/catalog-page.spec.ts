@@ -27,7 +27,7 @@ import {
   Router,
   type Params,
 } from '@angular/router';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { BehaviorSubject } from 'rxjs';
 
@@ -1705,6 +1705,82 @@ describe('MIM-225 every results-grid card loads its photo eagerly', () => {
       expect(img).not.toBeNull();
       expect(img?.getAttribute('loading')).toBe('eager');
     }
+    harness.cleanup();
+  });
+});
+
+// ===========================================================================
+// MIM-228: a filter change keeps the scroll position; only paging opens at
+// the top. Every URL write is a router navigation, and withInMemoryScrolling
+// in app.config.ts scrolls to the top after each one, so a filter click at
+// y=600 landed at 0. The catalogue now passes scroll: 'manual' on every
+// filter/sort/page-size/search write and scroll: 'after-transition' on the
+// pager alone, so the next page still opens at the top.
+// ===========================================================================
+
+describe('MIM-228 a filter change keeps the scroll position; paging opens at the top', () => {
+  function lastScroll(spy: { mock: { calls: unknown[][] } }): unknown {
+    const extras = spy.mock.calls.at(-1)?.[1];
+    return typeof extras === 'object' && extras !== null && 'scroll' in extras
+      ? extras.scroll
+      : 'none';
+  }
+
+  it('a brand toggle navigates with scroll: manual', async () => {
+    const harness = await setupHarness();
+    harness.respond(
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+    );
+    await harness.waitForStatus('success');
+    const spy = vi.spyOn(harness.router, 'navigate');
+
+    queryButton(
+      getRootElement(harness.fixture),
+      '[data-testid="filter-brand-MiBolt Demo"]',
+    ).click();
+    await harness.tick();
+
+    expect(spy).toHaveBeenCalled();
+    expect(lastScroll(spy)).toBe('manual');
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    harness.cleanup();
+  });
+
+  it('a sort change navigates with scroll: manual', async () => {
+    const harness = await setupHarness();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    const spy = vi.spyOn(harness.router, 'navigate');
+
+    const select = querySelect(getRootElement(harness.fixture), '[data-testid="catalog-sort"]');
+    select.value = 'price_asc';
+    select.dispatchEvent(new Event('change'));
+    await harness.tick();
+
+    expect(lastScroll(spy)).toBe('manual');
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    harness.cleanup();
+  });
+
+  it('the pager navigates with scroll: after-transition', async () => {
+    const harness = await setupHarness();
+    harness.respond(
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+    );
+    await harness.waitForStatus('success');
+    const spy = vi.spyOn(harness.router, 'navigate');
+
+    queryButton(getRootElement(harness.fixture), '[data-testid="pagination-next"]').click();
+    await harness.tick();
+
+    expect(harness.facade.query().page).toBe(2);
+    expect(lastScroll(spy)).toBe('after-transition');
+    harness.respond(
+      successPage([buildItem('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+    );
+    await harness.waitForStatus('success');
     harness.cleanup();
   });
 });
