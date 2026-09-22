@@ -1,10 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Ports come from the workspace ledger in
-// .claude/rules/frontend-browser.md; E2E_PORT overrides it for a second or
-// third worktree running at the same time (see 00-overview, "Parallel
-// worktrees"). `local-backend` is the S5/MIM-214 serve configuration and does
-// not exist yet: `npm run e2e:smoke` fails with
+// Default port 4400 (or 4410 for the local-backend smoke config) is chosen to
+// avoid collision with the regular dev server on 4200 and the demo-payment
+// dev server on 4210. E2E_PORT overrides the default for a second or third
+// worktree running at the same time. `local-backend` is the S5/MIM-214 serve
+// configuration and does not exist yet: `npm run e2e:smoke` fails with
 // "Configuration 'local-backend' is not set" until that task lands.
 const smoke = process.env['E2E_TARGET'] === 'local-backend';
 const port = Number(process.env['E2E_PORT'] ?? (smoke ? 4410 : 4400));
@@ -25,7 +25,9 @@ export default defineConfig({
     {
       name: 'seed',
       testDir: './e2e',
-      testMatch: /seed\.spec\.ts$/,
+      // Anchored so a nested `e2e/integration/seed.spec.ts` does not get
+      // picked up by both this project and the integration project.
+      testMatch: /^seed\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     { name: 'integration', testDir: './e2e/integration', use: { ...devices['Desktop Chrome'] } },
