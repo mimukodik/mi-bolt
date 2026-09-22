@@ -341,12 +341,27 @@ describe('MIM-238 follow-up: the rail publishes its real height', () => {
     if (rail === null) throw new Error('Expected the rail');
     expect(observed).toBe(rail);
 
-    vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({ height: 132 } as DOMRect);
+    vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({
+      height: 132,
+      width: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } satisfies DOMRect);
     function takeCallback(): ResizeObserverCallback {
       if (callback === null) throw new Error('Expected a ResizeObserver callback');
       return callback;
     }
-    takeCallback()([], {} as ResizeObserver);
+    takeCallback()(
+      [],
+      new FakeResizeObserver(() => {
+        /* no-op */
+      }),
+    );
 
     expect(document.documentElement.style.getPropertyValue('--rail-block-size')).toBe('132px');
   });
@@ -355,12 +370,27 @@ describe('MIM-238 follow-up: the rail publishes its real height', () => {
     const { fixture, root } = await createHarness();
     const rail = root.querySelector<HTMLElement>('[data-testid="purchase-rail"]');
     if (rail === null) throw new Error('Expected the rail');
-    vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({ height: 132 } as DOMRect);
+    vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({
+      height: 132,
+      width: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } satisfies DOMRect);
     function takeCallback(): ResizeObserverCallback {
       if (callback === null) throw new Error('Expected a ResizeObserver callback');
       return callback;
     }
-    takeCallback()([], {} as ResizeObserver);
+    takeCallback()(
+      [],
+      new FakeResizeObserver(() => {
+        /* no-op */
+      }),
+    );
 
     fixture.destroy();
 
