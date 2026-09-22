@@ -46,7 +46,7 @@
   line-height: var(--line-height-body);
 }
 
-.field .input[aria-invalid='true'] {
+.input[aria-invalid='true'] {
   border-color: var(--color-status-error);
 }
 

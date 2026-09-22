@@ -100,14 +100,15 @@ p {
   border-radius: inherit;
 }
 
-/* A bordered text control reads border + gap + outline as two rings. The ring
-   hugs the border instead: no offset, and the border takes the ring's colour,
-   so the two merge into one continuous lime ring around the input. Round and
-   small controls keep the offset above, where the gap is what makes the ring
-   visible. */
-input:not([type='checkbox']):not([type='radio']):focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+/* The ring hugs the border: no offset, and the border takes the ring's colour,
+   so border and outline read as one continuous lime ring. `:focus-visible` is
+   written twice to outrank Angular's emulated encapsulation — a single
+   `:focus-visible` loses to `.select[_ngcontent-…]` in catalog-toolbar.scss
+   and `.field[_ngcontent-…] input[_ngcontent-…]` in contact-step.scss, and
+   repeated pseudo-classes are the documented specificity bump (W3C L4 §17). */
+input:not([type='checkbox']):not([type='radio']):focus-visible:focus-visible,
+select:focus-visible:focus-visible,
+textarea:focus-visible:focus-visible {
   outline-offset: 0;
   border-color: var(--color-focus-light);
 }
