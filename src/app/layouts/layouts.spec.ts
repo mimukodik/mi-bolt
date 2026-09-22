@@ -173,7 +173,8 @@ describe('T11-AC02 brand-consistent header and footer', () => {
       .join(' ')
       .replaceAll('%NS%', '')
       .replace(/\[[^\]]*\]/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1');
     // .portal-header__bar{height:72px;background:#b4ff00} with navy text —
     // the header no longer takes the navy shell token, which still grounds
     // the footer, the hero and the drawer.
@@ -196,6 +197,50 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(has1).toBe(true);
     expect(text.includes('A demóról')).toBe(false);
     expect(nav?.querySelectorAll('a').length ?? 0).toBe(1);
+  });
+
+  it('MIM-220: the active nav link carries aria-current="page"', async () => {
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [
+        MarketingLayout,
+        ShopLayout,
+        CheckoutLayout,
+        AppShell,
+        HeaderNav,
+        FooterNav,
+        MobileDrawer,
+        AccessibleDialog,
+      ],
+      // Stub routes — the catalog route at `/telefonok` instantiates
+      // `CatalogPage`, which calls `window.matchMedia` and explodes in
+      // jsdom; routing to `/` and `/telefonok` against empty route
+      // records is enough for `routerLinkActive` to flip.
+      providers: [
+        provideRouter([
+          { path: '', children: [] },
+          { path: 'telefonok', children: [] },
+        ]),
+        provideZonelessChangeDetection(),
+      ],
+    });
+    await TestBed.compileComponents();
+    const f = TestBed.createComponent(MarketingLayout);
+    f.detectChanges();
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const nav = raw.querySelector('nav');
+    if (!(nav instanceof HTMLElement)) throw new Error('Expected <nav>');
+
+    await TestBed.inject(Router).navigateByUrl('/telefonok');
+    f.detectChanges();
+    const active = nav.querySelector('a[aria-current="page"]');
+    expect(active?.textContent ?? '').toContain('Mobiltelefonok');
+
+    await TestBed.inject(Router).navigateByUrl('/');
+    f.detectChanges();
+    expect(nav.querySelector('a[aria-current]')).toBeNull();
   });
 
   it('MarketingLayout renders the single-bar footer with the demo-explainer CTA', () => {
@@ -625,7 +670,8 @@ describe('S0-G2 item D: .layout-main carries the shell fill', () => {
       .join(' ')
       .replaceAll('%NS%', '')
       .replace(/\[[^\]]*\]/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1');
   }
 
   function layoutMainBody(comp: unknown): string {
@@ -640,14 +686,14 @@ describe('S0-G2 item D: .layout-main carries the shell fill', () => {
   });
 
   it('MarketingLayout .layout-main is flex: 1 1 auto', () => {
-    expect(layoutMainBody(MarketingLayout)).toContain('flex:11auto');
+    expect(layoutMainBody(MarketingLayout)).toContain('flex:1 1 auto');
   });
 
   it('ShopLayout .layout-main is flex: 1 1 auto', () => {
-    expect(layoutMainBody(ShopLayout)).toContain('flex:11auto');
+    expect(layoutMainBody(ShopLayout)).toContain('flex:1 1 auto');
   });
 
   it('CheckoutLayout .layout-main is flex: 1 1 auto', () => {
-    expect(layoutMainBody(CheckoutLayout)).toContain('flex:11auto');
+    expect(layoutMainBody(CheckoutLayout)).toContain('flex:1 1 auto');
   });
 });

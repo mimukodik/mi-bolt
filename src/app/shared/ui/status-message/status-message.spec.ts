@@ -138,12 +138,13 @@ describe('StatusMessage primitive', () => {
       .filter((s): s is string => typeof s === 'string')
       .join(' ')
       .replace(/\[[^\]]*\]/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1');
     const root = css.slice(css.indexOf('.root{'), css.indexOf('}', css.indexOf('.root{')));
     const message = css.slice(css.indexOf('.message{'), css.indexOf('}', css.indexOf('.message{')));
     const actions = css.slice(css.indexOf('.actions{'), css.indexOf('}', css.indexOf('.actions{')));
     expect(root).toContain('flex-wrap:wrap');
-    expect(message).toContain('flex:1 1 12rem'.replace(/\s+/g, ''));
+    expect(message).toContain('flex:1 1 12rem');
     expect(message).toContain('min-width:0');
     expect(actions).toContain('margin-left:auto');
   });
