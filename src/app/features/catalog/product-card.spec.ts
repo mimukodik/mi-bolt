@@ -359,16 +359,16 @@ describe('T13-AC04 ProductCard', () => {
     expect(first.textContent).toContain('6,7″ kijelző');
   });
 
-  it('FIX-35: carries a DEMÓTERMÉK tag and never renders the brand name', () => {
+  it('FIX-35: carries no DEMÓTERMÉK tag and never renders the brand name', () => {
     const { fixture, host } = setup();
     host.product.set(
       makeItem({ id: 'p-04', slug: 'demo-lite-5g', name: 'Demo Lite 5G', brand: 'MiBolt Demo' }),
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const tag = queryElement(root, '[data-testid="product-card-tag"]');
-    expect(tag.textContent.trim()).toBe('DEMÓTERMÉK');
+    expect(root.querySelector('[data-testid="product-card-tag"]')).toBeNull();
     expect(root.textContent).not.toContain('MiBolt Demo');
+    expect(root.textContent).not.toContain('DEMÓTERMÉK');
   });
 });
 
