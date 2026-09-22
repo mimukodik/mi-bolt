@@ -125,4 +125,26 @@ describe('StatusMessage primitive', () => {
     const text = getNativeElement(fixture).querySelector('.message')?.textContent ?? '';
     expect(text).not.toMatch(/utolsó|készleten|siess/i);
   });
+
+  it('MIM-216: the row wraps so a narrow host drops the close button under the text', () => {
+    const raw: unknown = StatusMessage;
+    const cmp: unknown =
+      typeof raw === 'function' && 'ɵcmp' in raw ? Reflect.get(raw, 'ɵcmp') : undefined;
+    const styles: unknown =
+      typeof cmp === 'object' && cmp !== null && 'styles' in cmp
+        ? Reflect.get(cmp, 'styles')
+        : undefined;
+    const css = (Array.isArray(styles) ? styles : [])
+      .filter((s): s is string => typeof s === 'string')
+      .join(' ')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s+/g, '');
+    const root = css.slice(css.indexOf('.root{'), css.indexOf('}', css.indexOf('.root{')));
+    const message = css.slice(css.indexOf('.message{'), css.indexOf('}', css.indexOf('.message{')));
+    const actions = css.slice(css.indexOf('.actions{'), css.indexOf('}', css.indexOf('.actions{')));
+    expect(root).toContain('flex-wrap:wrap');
+    expect(message).toContain('flex:1 1 12rem'.replace(/\s+/g, ''));
+    expect(message).toContain('min-width:0');
+    expect(actions).toContain('margin-left:auto');
+  });
 });
