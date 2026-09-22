@@ -143,7 +143,7 @@ describe('StatusMessage primitive', () => {
     const message = css.slice(css.indexOf('.message{'), css.indexOf('}', css.indexOf('.message{')));
     const actions = css.slice(css.indexOf('.actions{'), css.indexOf('}', css.indexOf('.actions{')));
     expect(root).toContain('flex-wrap:wrap');
-    expect(message).toContain('flex:11 12rem'.replace(' ', ''));
+    expect(message).toContain('flex:1 1 12rem'.replace(/\s+/g, ''));
     expect(message).toContain('min-width:0');
     expect(actions).toContain('margin-left:auto');
   });
