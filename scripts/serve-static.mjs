@@ -44,6 +44,8 @@
 //                              is still proxied, `/demo-fizetes/*` is served,
 //                              and every other GET answers 302 to
 //                              `/demo-fizetes/`; the shop bundle is not served.
+//                              Without MI_BOLT_PAYMENT_STATIC_DIR the host
+//                              exits 1 at startup.
 //   PORT                     listen port (default 4200).
 //   HOST                     listen address (default 127.0.0.1).
 //
@@ -70,7 +72,11 @@ const API_PROXY_TIMEOUT_MS =
 const PAYMENT_STATIC_DIR = process.env['MI_BOLT_PAYMENT_STATIC_DIR']
   ? resolve(repoRoot, process.env['MI_BOLT_PAYMENT_STATIC_DIR'])
   : null;
-const PAYMENT_ONLY = process.env['MI_BOLT_PAYMENT_ONLY'] === '1' && PAYMENT_STATIC_DIR !== null;
+const PAYMENT_ONLY = process.env['MI_BOLT_PAYMENT_ONLY'] === '1';
+if (PAYMENT_ONLY && PAYMENT_STATIC_DIR === null) {
+  console.error('serve-static: MI_BOLT_PAYMENT_ONLY=1 needs MI_BOLT_PAYMENT_STATIC_DIR');
+  process.exit(1);
+}
 const HOST = process.env['HOST'] ?? '127.0.0.1';
 const PORT = Number.parseInt(process.env['PORT'] ?? '4200', 10);
 
