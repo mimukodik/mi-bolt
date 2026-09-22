@@ -8,7 +8,6 @@ export { ErrorState } from './error-state/error-state';
 export { LoadingState, type LoadingVariant } from './loading-state/loading-state';
 export { EmptyState } from './empty-state/empty-state';
 export { FormFieldMessage, type FieldError } from './form-field-message/form-field-message';
-export { QuantityControl } from './quantity-control/quantity-control';
 export { AccessibleDialog } from './accessible-dialog/accessible-dialog';
 export { StatusMessage, type StatusSeverity } from './status-message/status-message';
 export { AsyncContent } from './async-content/async-content';
