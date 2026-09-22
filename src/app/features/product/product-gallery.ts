@@ -161,10 +161,10 @@ export class ProductGallery {
     } else if (event.key === 'Escape' && this.zoomOpen()) {
       event.preventDefault();
       this.closeZoom();
-    } else if (event.key === 'Home' && list.length > 0) {
+    } else if (event.key === 'Home' && this.hasSeveral()) {
       event.preventDefault();
       this.imageSelected.emit(list[0].id);
-    } else if (event.key === 'End' && list.length > 0) {
+    } else if (event.key === 'End' && this.hasSeveral()) {
       event.preventDefault();
       this.imageSelected.emit(list[list.length - 1].id);
     }

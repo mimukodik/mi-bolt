@@ -565,6 +565,10 @@ describe('MIM-233 product-gallery with a single image', () => {
     expect(root.querySelector('[data-testid="gallery-count"]')).toBeNull();
     expect(root.querySelector('[data-testid="gallery-zoom-open"]')).not.toBeNull();
     expect(root.querySelectorAll('button.thumb').length).toBe(1);
+    expect(
+      root.querySelector('[data-testid="gallery-main"] [data-testid="image-photo"]'),
+    ).not.toBeNull();
+    expect(queryButton(root, 'button.thumb').getAttribute('aria-current')).toBe('true');
   });
 
   it('MIM-233: two images render both buttons and the counter', async () => {
@@ -577,5 +581,24 @@ describe('MIM-233 product-gallery with a single image', () => {
     expect(root.querySelector('[data-testid="gallery-prev"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="gallery-next"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="gallery-count"]')?.textContent.trim()).toBe('1 / 2');
+  });
+
+  it('MIM-233: ArrowLeft, ArrowRight, Home and End on a single-image gallery do not emit imageSelected', async () => {
+    const { fixture, host, root } = await createHarness();
+    host.images.set([sampleImages[0]]);
+    host.selectedImageId.set(sampleImages[0].id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const gallerySection = queryElement(root, '[data-testid="product-gallery"]');
+
+    for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) {
+      gallerySection.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    expect(host.emittedImageSelected.length).toBe(0);
+    expect(host.selectedImageId()).toBe(sampleImages[0].id);
   });
 });

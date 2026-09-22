@@ -502,6 +502,7 @@ describe('T16-AC02 product-page embeds the gallery primitive', () => {
 
     expect(galleryEl.querySelector('[data-testid="gallery-count"]')).toBeNull();
     expect(galleryEl.querySelector('[data-testid="gallery-prev"]')).toBeNull();
+    expect(galleryEl.querySelector('[data-testid="gallery-next"]')).toBeNull();
   });
 
   it('T16-AC02: forwards gallery imageChange events to update active image', async () => {
