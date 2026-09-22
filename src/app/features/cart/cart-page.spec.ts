@@ -868,6 +868,22 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
   });
 });
 
+describe('MIM-234 cart breadcrumb switched off', () => {
+  it('MIM-234: the breadcrumb is held out of the DOM', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="cart-breadcrumb"]')).toBeNull();
+    expect(root.querySelector('nav.breadcrumbs')).toBeNull();
+    expect(root.querySelector('h1.title')?.textContent.trim()).toBe('A kosarad');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // T18-AC05: subtotal and total arithmetic in whole HUF
 // ---------------------------------------------------------------------------

@@ -26,6 +26,7 @@ import { FilterDrawer } from './filter-drawer';
 import { ProductCard } from './product-card';
 import { CatalogToolbar } from './catalog-toolbar';
 import { AppliedFilters } from './applied-filters';
+import { BREADCRUMB_VISIBLE } from '../../core/navigation/breadcrumb-visibility';
 import { Pagination } from './pagination';
 
 import { AsyncContent } from '../../shared/ui/async-content/async-content';
@@ -84,6 +85,8 @@ export class CatalogPage {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly facade = inject(CatalogFacade);
+  /** Switched off for now (MIM-234); the nav stays in place behind this flag. */
+  protected readonly breadcrumbVisible = BREADCRUMB_VISIBLE;
 
   /** Trigger button the catalog page opens the filter drawer with — passed
    *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3).
