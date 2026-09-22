@@ -1,12 +1,13 @@
 // tests/contract/sdk-transport.spec.ts — T04-AC04 SDK transport contract.
 //
 // Every operation declared in docs/api/openapi.yaml must reach MSW through the
-// generated SDK, which itself uses Angular's real HttpClient. The test asserts:
-//   1. the 16 operations are present and each one round-trips with the
-//      documented URL, method, body and headers,
-//   2. repeated brand[] and storageGb[] query-array parameters are encoded
-//      with style=form, explode=true (the spec-mandated encoding),
-//   3. the SDK cannot bypass itself by accident — no operation is dropped.
+// generated SDK, which itself uses Angular's real HttpClient. The test asserts
+// (1) the 17 operations are present and each one round-trips with the
+// documented URL, method, body and headers; (2) repeated brand[] and
+// storageGb[] query-array parameters are encoded with style=form,
+// explode=true (the spec-mandated encoding); (3) `If-Match` and
+// `Idempotency-Key`, both contract-mandated on the mutations that name them,
+// are written by the right caller at the right call site.
 
 // @vitest-environment jsdom
 import { readFile } from 'node:fs/promises';
@@ -106,59 +107,70 @@ function capture(request: Request, bodyText: string): void {
 }
 
 /**
- * MSW handlers: one per operation. The response shape mirrors the OpenAPI
- * schema; tests assert the request shape (URL, method, headers, body), not
- * the response content. The capture happens before the response resolves so
- * a failing test sees the exact request the SDK produced.
+ * MSW handlers: one per 2.0.0 operation. The capture happens before the
+ * response resolves so a failing test sees the exact request the SDK
+ * produced. The handlers under `src/mocks/**` require a session-scoped
+ * `X-Demo-Session` header that the 2.0.0 contract does not declare (the
+ * contract's session is the `mibolt_session` cookie — `docs/api/openapi.yaml`
+ * line 936-939). The contract suite must assert the wire contract, so this
+ * file ships its own minimal handlers instead of the real slice handlers:
+ * the wire shape is the contract, the per-tab session state is an
+ * implementation detail of the test bed.
  */
 const handlers = [
-  http.get(`${BASE_URL}/config`, ({ request }) => {
-    capture(request, '');
-    return HttpResponse.json(EMPTY_CONFIG);
-  }),
   http.get(`${BASE_URL}/products`, ({ request }) => {
     capture(request, '');
     return HttpResponse.json(EMPTY_PRODUCT_PAGE);
   }),
-  http.get(`${BASE_URL}/products/:slug`, ({ request, params }) => {
+  http.get(`${BASE_URL}/products/:slug`, ({ request }) => {
     capture(request, '');
-    return HttpResponse.json(MINIMAL_PRODUCT(String(params['slug'])));
+    return HttpResponse.json(
+      MINIMAL_PRODUCT(String(new URL(request.url).pathname.split('/').pop())),
+    );
   }),
-  http.post(`${BASE_URL}/carts`, ({ request }) => {
+  http.get(`${BASE_URL}/products/:slug/related`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json([]);
+  }),
+  http.get(`${BASE_URL}/media/:imageId`, ({ request }) => {
+    capture(request, '');
+    // getMedia returns raw bytes (Blob); the SDK uses responseType 'blob'.
+    return new HttpResponse(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), {
+      status: 200,
+      headers: { 'Content-Type': 'image/png' },
+    });
+  }),
+  http.get(`${BASE_URL}/cart`, ({ request }) => {
     capture(request, '');
     return HttpResponse.json(MINIMAL_CART(1));
   }),
-  http.get(`${BASE_URL}/carts/:cartId`, ({ request }) => {
-    capture(request, '');
-    return HttpResponse.json(MINIMAL_CART(1));
-  }),
-  http.post(`${BASE_URL}/carts/:cartId/items`, async ({ request }) => {
+  http.post(`${BASE_URL}/cart/items`, async ({ request }) => {
     capture(request, await request.text());
     return HttpResponse.json(MINIMAL_CART(2));
   }),
-  http.patch(`${BASE_URL}/carts/:cartId/items/:itemId`, async ({ request }) => {
-    capture(request, await request.text());
+  http.delete(`${BASE_URL}/cart/items`, ({ request }) => {
+    capture(request, '');
     return HttpResponse.json(MINIMAL_CART(3));
   }),
-  http.delete(`${BASE_URL}/carts/:cartId/items/:itemId`, ({ request }) => {
-    capture(request, '');
+  http.patch(`${BASE_URL}/cart/items/:variantId`, async ({ request }) => {
+    capture(request, await request.text());
     return HttpResponse.json(MINIMAL_CART(4));
+  }),
+  http.delete(`${BASE_URL}/cart/items/:variantId`, ({ request }) => {
+    capture(request, '');
+    return HttpResponse.json(MINIMAL_CART(5));
   }),
   http.get(`${BASE_URL}/checkout/options`, ({ request }) => {
     capture(request, '');
     return HttpResponse.json(EMPTY_CHECKOUT_OPTIONS);
   }),
-  http.get(`${BASE_URL}/checkout/:cartId`, ({ request }) => {
+  http.get(`${BASE_URL}/checkout`, ({ request }) => {
     capture(request, '');
-    return HttpResponse.json({ cartId: 'cart-demo-001', cartVersion: 1 });
+    return HttpResponse.json(MINIMAL_CHECKOUT(1));
   }),
-  http.put(`${BASE_URL}/checkout/:cartId`, async ({ request }) => {
+  http.patch(`${BASE_URL}/checkout`, async ({ request }) => {
     capture(request, await request.text());
-    return HttpResponse.json({ cartId: 'cart-demo-001', cartVersion: 1 });
-  }),
-  http.post(`${BASE_URL}/checkout/:cartId/quote`, ({ request }) => {
-    capture(request, '');
-    return HttpResponse.json(MINIMAL_QUOTE);
+    return HttpResponse.json(MINIMAL_CHECKOUT(1));
   }),
   http.post(`${BASE_URL}/payment-intents`, async ({ request }) => {
     capture(request, await request.text());
@@ -166,6 +178,10 @@ const handlers = [
   }),
   http.get(`${BASE_URL}/payment-intents/:paymentIntentId`, ({ request }) => {
     capture(request, '');
+    return HttpResponse.json(MINIMAL_PAYMENT_INTENT);
+  }),
+  http.post(`${BASE_URL}/payment-intents/:paymentIntentId/outcome`, async ({ request }) => {
+    capture(request, await request.text());
     return HttpResponse.json(MINIMAL_PAYMENT_INTENT);
   }),
   http.post(`${BASE_URL}/orders`, async ({ request }) => {
@@ -178,21 +194,13 @@ const handlers = [
   }),
 ];
 
-const EMPTY_CONFIG = {
-  providerId: 'mi-bolt',
-  displayName: 'MiBolt',
-  currency: 'HUF',
-  isDemo: true,
-  termsVersion: 'demo-1',
-  featuredSlugs: ['demo-one-5g'],
-  maximumLineQuantity: 5,
-};
 const EMPTY_PRODUCT_PAGE = {
   items: [],
   total: 0,
   page: 1,
   pageSize: 12,
-  facets: { brands: [], storageGb: [] },
+  totalPages: 0,
+  facets: { brands: [], storageGb: [], colors: [] },
 };
 const EMPTY_CHECKOUT_OPTIONS = {
   deliveryOptions: [
@@ -204,25 +212,17 @@ const EMPTY_CHECKOUT_OPTIONS = {
       description: 'demo',
     },
   ],
-  paymentMethods: ['demo_card', 'demo_cod'],
+  paymentMethods: ['card', 'cash_on_delivery'],
   termsVersion: 'demo-1',
-};
-const MINIMAL_QUOTE = {
-  id: 'quote-demo-001',
-  cartId: 'cart-demo-001',
-  cartVersion: 1,
-  subtotal: { amount: 339_990, currency: 'HUF' },
-  shipping: { amount: 1990, currency: 'HUF' },
-  total: { amount: 341_980, currency: 'HUF' },
-  expiresAt: '2026-09-14T10:05:00Z',
 };
 const MINIMAL_PAYMENT_INTENT = {
   id: 'pi-001',
-  cartId: 'cart-demo-001',
-  quoteId: 'quote-demo-001',
-  status: 'succeeded',
-  isSimulation: true,
+  status: 'requires_action',
   amount: { amount: 341_980, currency: 'HUF' },
+  redirectUrl: '/demo-fizetes/payment/pi-001',
+  returnUrl: '/checkout?paymentReturn=pi-001',
+  createdAt: '2026-09-14T10:01:00Z',
+  expiresAt: '2026-09-14T10:16:00Z',
 };
 const MINIMAL_ORDER = {
   id: 'order-demo-001',
@@ -234,7 +234,7 @@ const MINIMAL_ORDER = {
   subtotal: { amount: 0, currency: 'HUF' },
   shipping: { amount: 0, currency: 'HUF' },
   total: { amount: 0, currency: 'HUF' },
-  paymentMethod: 'demo_cod',
+  paymentMethod: 'cash_on_delivery',
   deliveryOptionId: 'home_delivery',
   notice: 'demo',
 };
@@ -247,6 +247,13 @@ function MINIMAL_CART(version: number): Cart {
     subtotal: { amount: 0, currency: 'HUF' },
     status: 'active',
     expiresAt: '2026-09-15T10:00:00Z',
+  };
+}
+function MINIMAL_CHECKOUT(version: number): Record<string, unknown> {
+  return {
+    version,
+    sections: { contact: null, billing: null, delivery: null, payment: null },
+    complete: false,
   };
 }
 function MINIMAL_PRODUCT(slug: string): Product {
@@ -331,85 +338,116 @@ function makeSdk(): { api: Api; httpClient: HttpClient; config: ApiConfig } {
 // ---------------------------------------------------------------------------
 
 describe('T04-AC04 every generated operation reaches MSW', () => {
-  it('exercises all 16 operations end-to-end through the real HttpClient', async () => {
+  it('exercises all 17 operations end-to-end through the real HttpClient', async () => {
     const { api } = makeSdk();
     expect(TestBed.inject(ApiConfig).rootUrl).toBe(BASE_URL);
 
-    await callOperation(api, 'getConfig');
+    // catalog (public; no If-Match) — docs/api/openapi.yaml:54-244
     await callOperation(api, 'listProducts');
     await callOperation(api, 'getProduct', { slug: 'demo-one-5g' });
-    await callOperation(api, 'createCart', { body: { providerId: 'mi-bolt' } });
-    await callOperation(api, 'getCart', { cartId: 'cart-demo-001' });
+    await callOperation(api, 'listRelatedProducts', { slug: 'demo-one-5g' });
+    await callOperation(api, 'getMedia$Jpeg', { imageId: 'i1' });
+
+    // cart (session-scoped; If-Match on mutations) — docs/api/openapi.yaml:266-465
+    await callOperation(api, 'getCart');
     await callOperation(
       api,
       'addCartItem',
-      {
-        cartId: 'cart-demo-001',
-        body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 },
-      },
+      { body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 } },
       withIfMatch('1'),
     );
+    await callOperation(api, 'clearCart', {}, withIfMatch('2'));
     await callOperation(
       api,
       'setCartItemQuantity',
-      {
-        cartId: 'cart-demo-001',
-        itemId: 'line-001',
-        body: { quantity: 2 },
-      },
-      withIfMatch('1'),
+      { variantId: 'demo-one-5g-graphite-256', body: { quantity: 2 } },
+      withIfMatch('3'),
     );
     await callOperation(
       api,
       'removeCartItem',
-      {
-        cartId: 'cart-demo-001',
-        itemId: 'line-001',
-      },
-      withIfMatch('1'),
+      { variantId: 'demo-one-5g-graphite-256' },
+      withIfMatch('4'),
     );
+
+    // checkout (session-scoped; If-Match on update) — docs/api/openapi.yaml:467-573
     await callOperation(api, 'getCheckoutOptions');
-    await callOperation(api, 'getCheckoutSession', { cartId: 'cart-demo-001' });
+    await callOperation(api, 'getCheckout');
     await callOperation(
       api,
       'updateCheckout',
+      { body: { payment: { method: 'cash_on_delivery' } } },
+      withIfMatch('1'),
+    );
+
+    // payment (If-Match + Idempotency-Key on create; body on resolve)
+    // docs/api/openapi.yaml:575-750
+    await callOperation(
+      api,
+      'createPaymentIntent',
+      { 'Idempotency-Key': 'idem-pi-001', body: { method: 'card' } },
+      withIfMatch('1'),
+    );
+    await callOperation(api, 'getPaymentIntent', { paymentIntentId: 'pi-001' });
+    await callOperation(api, 'resolvePaymentIntent', {
+      paymentIntentId: 'pi-001',
+      body: { outcome: 'succeeded' },
+    });
+
+    // orders (If-Match + Idempotency-Key on create) — docs/api/openapi.yaml:752-933
+    await callOperation(
+      api,
+      'createOrder',
       {
-        cartId: 'cart-demo-001',
-        body: { paymentMethod: 'demo_cod' },
+        'Idempotency-Key': 'idem-order-001',
+        body: {
+          paymentMethod: 'cash_on_delivery',
+          termsVersion: 'demo-1',
+          acceptedTerms: true,
+        },
       },
       withIfMatch('1'),
     );
-    await callOperation(api, 'createCheckoutQuote', { cartId: 'cart-demo-001' }, withIfMatch('1'));
-    await callOperation(api, 'createPaymentIntent', {
-      body: { cartId: 'cart-demo-001', quoteId: 'quote-demo-001' },
-    });
-    await callOperation(api, 'getPaymentIntent', { paymentIntentId: 'pi-001' });
-    await callOperation(api, 'createOrder', {
-      body: {
-        cartId: 'cart-demo-001',
-        quoteId: 'quote-demo-001',
-        termsVersion: 'demo-1',
-        acceptedTerms: true,
-        acknowledgedSimulation: true,
-      },
-    });
     await callOperation(api, 'getOrder', { orderId: 'order-demo-001' });
 
+    // The OpenAPI spec declares one `getMedia` operationId; the generated SDK
+    // splits it across three content-type variants (`getMedia$Jpeg`,
+    // `getMedia$Png`, `getMedia$Webp` — see fn/media/*). Treat any variant
+    // as satisfying the spec row, so a single exercise round-trip counts.
     const declared = new Set(opRows.map((o) => o.operationId));
-    expect(seenOperationIds.size).toBe(declared.size);
+    const getMediaVariantIds = ['getMedia$Jpeg', 'getMedia$Png', 'getMedia$Webp'];
+    const anyGetMediaVariant = getMediaVariantIds.some((id) => seenOperationIds.has(id));
+    const satisfied = [...declared].filter((id) =>
+      id === 'getMedia' ? anyGetMediaVariant : seenOperationIds.has(id),
+    );
+    expect(satisfied.length, `exercised ${satisfied.length} of ${declared.size} ops`).toBe(
+      declared.size,
+    );
     for (const id of declared) {
-      expect(seenOperationIds.has(id), `operation ${id} not exercised by the SDK`).toBe(true);
+      expect(
+        id === 'getMedia' ? anyGetMediaVariant : seenOperationIds.has(id),
+        `operation ${id} not exercised by the SDK`,
+      ).toBe(true);
     }
 
     for (const op of opRows) {
-      const pathRe = new RegExp(
-        '^' +
-          `${BASE_URL_PATH}${op.path}`.replaceAll(/\{[^}]+\}/g, '[^/]+') +
-          String.raw`(?:\?.*)?$`,
-      );
+      // Build the matcher as static literals plus the safe `[^/]+` literal for
+      // each `{name}` placeholder. The path template is read from the on-disk
+      // spec at test time; the per-path segments become literal string parts,
+      // so no non-literal reaches RegExp (security/detect-non-literal-regexp).
+      const segments = `${BASE_URL_PATH}${op.path}`.split(/(\{[^}]+\})/);
+      const parts: string[] = [];
+      for (const seg of segments) {
+        if (seg.startsWith('{') && seg.endsWith('}')) {
+          parts.push('[^/]+');
+        } else if (seg.length > 0) {
+          parts.push(seg.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`));
+        }
+      }
+      const pattern = `^${parts.join('')}(?:\\?.*)?$`;
       const matches = [...captures.values()].filter((c) => {
         const url = new URL(c.url);
-        return c.method === op.method && pathRe.test(url.pathname + url.search);
+        return c.method === op.method && (url.pathname + url.search).match(pattern) !== null;
       });
       expect(matches.length, `${op.method} ${op.path} never reached MSW`).toBeGreaterThan(0);
     }
@@ -445,40 +483,66 @@ describe('T04-AC04 repeated query-array parameters round-trip', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. The X-Demo-Session namespace header is added centrally
+// 3. If-Match is attached by withIfMatch (docs/api/openapi.yaml:993-1001)
+//    and Idempotency-Key by the createOrder caller
+//    (docs/api/openapi.yaml:1002-1008, generated SDK fn/orders/create-order.ts:25)
 // ---------------------------------------------------------------------------
 
-describe('T04-AC05 demo-session header is attached by the interceptor', () => {
-  it('every outgoing request carries X-Demo-Session, even one without a body', async () => {
-    const { api } = makeSdk();
-    await callOperation(api, 'getConfig');
-
-    const call = [...captures.values()][0];
-    expect(call).toBeDefined();
-    const session = call!.headers.get('X-Demo-Session');
-    expect(session, 'X-Demo-Session header missing').toBeTruthy();
-    expect(session).toMatch(/^[a-zA-Z0-9_-]{8,80}$/);
-  });
-
-  it('withIfMatch attaches If-Match alongside X-Demo-Session', async () => {
+describe('T04-AC05 If-Match is attached by withIfMatch', () => {
+  it('a mutation sent with withIfMatch(1) carries If-Match: "1"', async () => {
     const { api } = makeSdk();
     await callOperation(
       api,
       'addCartItem',
+      { body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 } },
+      withIfMatch(1),
+    );
+
+    const call = [...captures.values()].find((c) => {
+      const u = new URL(c.url);
+      return c.method === 'POST' && u.pathname === '/api/v1/cart/items';
+    });
+    expect(call, 'POST /api/v1/cart/items never reached MSW').toBeDefined();
+    expect(call!.headers.get('If-Match')).toBe('"1"');
+  });
+
+  it('a request without withIfMatch carries no If-Match header', async () => {
+    const { api } = makeSdk();
+    await callOperation(api, 'getCart');
+
+    const call = [...captures.values()].find((c) => {
+      const u = new URL(c.url);
+      return c.method === 'GET' && u.pathname === '/api/v1/cart';
+    });
+    expect(call, 'GET /api/v1/cart never reached MSW').toBeDefined();
+    expect(call!.headers.has('If-Match')).toBe(false);
+  });
+});
+
+describe('T04-AC05 Idempotency-Key is passed by the createOrder caller', () => {
+  it('createOrder carries the Idempotency-Key header value the caller supplied', async () => {
+    const { api } = makeSdk();
+    await callOperation(
+      api,
+      'createOrder',
       {
-        cartId: 'cart-demo-001',
-        body: { variantId: 'demo-one-5g-graphite-256', quantity: 1 },
+        'Idempotency-Key': 'idem-contract-001',
+        body: {
+          paymentMethod: 'cash_on_delivery',
+          termsVersion: 'demo-1',
+          acceptedTerms: true,
+        },
       },
       withIfMatch('1'),
     );
 
     const call = [...captures.values()].find((c) => {
       const u = new URL(c.url);
-      return c.method === 'POST' && u.pathname === '/api/v1/carts/cart-demo-001/items';
+      return c.method === 'POST' && u.pathname === '/api/v1/orders';
     });
-    expect(call, 'POST /api/v1/carts/cart-demo-001/items never reached MSW').toBeDefined();
+    expect(call, 'POST /api/v1/orders never reached MSW').toBeDefined();
+    expect(call!.headers.get('Idempotency-Key')).toBe('idem-contract-001');
     expect(call!.headers.get('If-Match')).toBe('"1"');
-    expect(call!.headers.get('X-Demo-Session')).toBeTruthy();
   });
 });
 
@@ -489,8 +553,8 @@ describe('T04-AC05 demo-session header is attached by the interceptor', () => {
 describe('T04-AC05 baseUrl is document.baseURI-aware', () => {
   it('every MSW hit is prefixed by the configured rootUrl, never by hard-coded host', async () => {
     const { api } = makeSdk();
-    await callOperation(api, 'getConfig');
     await callOperation(api, 'listProducts');
+    await callOperation(api, 'getCart');
 
     for (const c of captures.values()) {
       expect(c.url.startsWith(BASE_URL), `unexpected URL ${c.url}`).toBe(true);
