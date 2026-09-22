@@ -92,6 +92,10 @@ export class ProductCard {
     this.product().highlights.slice(0, 2),
   );
 
+  /** True when the shown variant's `CatalogItem.availability` is out of stock
+   *  — drives the muted "Elfogyott" marker under the price (MIM-247). */
+  readonly isOutOfStock = computed<boolean>(() => this.product().availability === 'out_of_stock');
+
   /** Router link to the product page; the variant goes in `detailsQuery`. */
   readonly detailsLink = computed(() => {
     const item = this.product();

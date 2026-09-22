@@ -46,7 +46,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 **Filters:** q search in header/list toolbar; brands (three fixture brands), storage128/256/512, inclusive whole-HUF min/max,5G,stock. Price range needs two labeled number fields, not a slider requiring a new library. Filter controls expose invalid range and do not send it. 300ms search debounce, immediate desktop filter changes, page reset to1. Sorting: Ajánlott sorrend, Ár szerint növekvő, Ár szerint csökkenő, Név szerint. Page sizes12/24.
 
-**Card:** 4:3 neutral media surface; live name, max2 features, exact selected storage/color, one-time price with “Egyszeri készülékár • demóadat”, outlined “Részletek →”. Entire card need not be clickable; make image/title/detail link consistent without nested controls.
+**Card:** 4:3 neutral media surface; live name, max2 features, exact selected storage/color, one-time price with “Egyszeri készülékár • demóadat”, outlined “Részletek →”. A card whose shown variant is out of stock carries the text “Elfogyott” under the price, and the card stays clickable. Entire card need not be clickable; make image/title/detail link consistent without nested controls.
 
 **Mobile filter drawer:** header title+named44px close; scrollable fields; footer “Mégse” and “Szűrők alkalmazása”. Copy of applied state remains transient until Apply. Escape/backdrop behaves as cancel; applied URL unchanged. Initial focus=drawer heading, return=filter trigger. Filter counts computed by API, not stale CSS labels.
 

@@ -370,6 +370,27 @@ describe('T13-AC04 ProductCard', () => {
     expect(root.textContent).not.toContain('MiBolt Demo');
     expect(root.textContent).not.toContain('DEMÓTERMÉK');
   });
+
+  it('MIM-247: an out-of-stock variant shows the Elfogyott marker', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', availability: 'out_of_stock' }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const stock = queryElement(root, '[data-testid="product-card-stock"]');
+    expect(stock.textContent.trim()).toBe('Elfogyott');
+  });
+
+  it('MIM-247: an in-stock variant shows no marker', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', availability: 'in_stock' }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="product-card-stock"]')).toBeNull();
+  });
 });
 
 describe('MIM-210 colour swatches', () => {

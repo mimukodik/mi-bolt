@@ -59,6 +59,9 @@
     }
     <div class="price-row mt-auto">
       <app-price-block label="Egyszeri készülékár" size="md" status="success" [money]="price()" />
+      @if (isOutOfStock()) {
+        <p class="stock" data-testid="product-card-stock">Elfogyott</p>
+      }
     </div>
   </div>
 

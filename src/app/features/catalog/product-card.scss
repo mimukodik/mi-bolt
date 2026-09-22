@@ -16,7 +16,10 @@
   display: block;
   text-decoration: none;
   color: inherit;
-  background: var(--color-surface-light);
+  /* The card already sits on the light surface, so the photo needs no
+   * plate of its own: hand the light token down to product-image and let
+   * the grey default stay for every other call site. */
+  --product-image-surface: var(--color-surface-light);
 }
 
 .body {
@@ -99,6 +102,13 @@
 
 .price-row {
   margin-top: auto;
+}
+
+.stock {
+  margin: var(--space-1) 0 0;
+  font-size: var(--type-meta);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
 }
 
 .cta {
