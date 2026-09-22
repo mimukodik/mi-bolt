@@ -11,6 +11,22 @@ import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 
+/** Save `window.scrollY` and the drawer form's `scrollTop` at the moment a
+ *  user-driven focus would scroll either of them, then restore them after
+ *  the focus-driven scroll has settled. The CDK dialog focuses its first
+ *  heading on open and the browser focuses a clicked button on click; both
+ *  default to `focus()` without `preventScroll`, and on this branch that
+ *  pulls the page back to the top on open and resets the drawer's own
+ *  scroll on every pending toggle. */
+function scheduleScrollRestore(opts: { readonly windowY: number; readonly formTop: number }): void {
+  if (typeof window === 'undefined') return;
+  window.requestAnimationFrame(() => {
+    window.scrollTo(0, opts.windowY);
+    const form = document.querySelector<HTMLElement>('form.drawer');
+    if (form !== null) form.scrollTop = opts.formTop;
+  });
+}
+
 /** What one storage chip needs to render: the size, its label and
  *  the facet count (null when no `Facets` has loaded yet). */
 interface StorageBucket {
@@ -188,7 +204,10 @@ export class FilterDrawer {
   constructor() {
     // Every time the drawer opens we reseed the draft from the parent
     // value so the user always starts from the URL's truth, not from
-    // a previous half-applied state.
+    // a previous half-applied state. The open-path effect also saves
+    // and restores the page and drawer scroll offsets so the CDK's
+    // initial focus (the drawer's first heading) and the close-path
+    // restore do not move either.
     effect(() => {
       const isOpen = this.opened();
       if (!isOpen) return;
@@ -201,6 +220,24 @@ export class FilterDrawer {
       this.draftMin.set(a.minPrice === undefined ? '' : String(a.minPrice));
       this.draftMax.set(a.maxPrice === undefined ? '' : String(a.maxPrice));
       this.brandsExpanded.set(false);
+      if (typeof window !== 'undefined') {
+        const windowY = window.scrollY;
+        scheduleScrollRestore({ windowY, formTop: 0 });
+      }
+    });
+
+    // When the drawer closes (Apply, Cancel, Escape, backdrop) the page
+    // above must land back where it was. The CDK restores focus to the
+    // trigger, which can itself scroll the body; the same rAF trick
+    // counters it.
+    effect(() => {
+      const isOpen = this.opened();
+      if (isOpen) return;
+      if (typeof window === 'undefined') return;
+      const windowY = window.scrollY;
+      const form = document.querySelector<HTMLElement>('form.drawer');
+      const formTop = form?.scrollTop ?? 0;
+      scheduleScrollRestore({ windowY, formTop });
     });
   }
 
@@ -209,35 +246,55 @@ export class FilterDrawer {
   // -------------------------------------------------------------------------
 
   toggleBrand(brand: string): void {
+    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
+    const form = document.querySelector<HTMLElement>('form.drawer');
+    const formTop = form?.scrollTop ?? 0;
     const current = this.draftBrands();
     const next = current.includes(brand) ? current.filter((b) => b !== brand) : [...current, brand];
     this.draftBrands.set(next);
+    scheduleScrollRestore({ windowY, formTop });
   }
 
   toggleStorage(bucket: 128 | 256 | 512): void {
+    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
+    const form = document.querySelector<HTMLElement>('form.drawer');
+    const formTop = form?.scrollTop ?? 0;
     const current = this.draftStorage();
     const next = current.includes(bucket)
       ? current.filter((b) => b !== bucket)
       : [...current, bucket];
     this.draftStorage.set(next);
+    scheduleScrollRestore({ windowY, formTop });
   }
 
   toggleColor(code: string): void {
     const trimmed = code.trim();
     if (trimmed.length === 0) return;
+    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
+    const form = document.querySelector<HTMLElement>('form.drawer');
+    const formTop = form?.scrollTop ?? 0;
     const current = this.draftColors();
     const next = current.includes(trimmed)
       ? current.filter((c) => c !== trimmed)
       : [...current, trimmed];
     this.draftColors.set(next);
+    scheduleScrollRestore({ windowY, formTop });
   }
 
   toggleInStock(): void {
+    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
+    const form = document.querySelector<HTMLElement>('form.drawer');
+    const formTop = form?.scrollTop ?? 0;
     this.draftInStock.set(!this.draftInStock());
+    scheduleScrollRestore({ windowY, formTop });
   }
 
   toggleFiveG(): void {
+    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
+    const form = document.querySelector<HTMLElement>('form.drawer');
+    const formTop = form?.scrollTop ?? 0;
     this.draftFiveG.set(!this.draftFiveG());
+    scheduleScrollRestore({ windowY, formTop });
   }
 
   onMinInput(event: Event): void {

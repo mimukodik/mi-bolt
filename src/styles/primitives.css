@@ -169,6 +169,17 @@ p {
   background: var(--color-surface-light);
 }
 
+/* The colour row skeleton replaces `.color-chip`, whose box is 44 px tall
+   with a 2 px border that box-sizes inside that 44 px (see
+   `filter-panel.scss` / `filter-drawer.scss` `.color-chip`). The brand row
+   skeleton keeps plain `.row-skeleton` because `.option` is 40 px and
+   borderless. Without this modifier the colour group's first response
+   moves the page by 4 px per row. */
+.row-skeleton--chip {
+  min-height: 44px;
+  border: 2px solid var(--color-line);
+}
+
 .row-skeleton__bar {
   display: block;
   height: 1em;

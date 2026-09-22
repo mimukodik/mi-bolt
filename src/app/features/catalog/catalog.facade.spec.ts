@@ -1163,4 +1163,51 @@ describe('MIM-228: facet universe', () => {
     expect(afterSecond.priceRange).toEqual(priceRange);
     expect(afterSecond.storageGb.map((s) => s.value)).toEqual(['128', '256', '512']);
   });
+
+  it('brands absent from a later response keep their row with a zero count, then drop out when the universe is rebuilt (Finding B)', () => {
+    const firstFresh = makeFreshFacets({
+      colors: [],
+      brands: [
+        { value: 'apple', count: 10 },
+        { value: 'samsung', count: 8 },
+      ],
+    });
+    const afterFirst = mergeFacetsIntoUniverse(universe(), firstFresh);
+
+    expect(afterFirst.brands.map((b) => b.value)).toEqual(['apple', 'samsung']);
+    expect(afterFirst.brands.map((b) => b.count)).toEqual([10, 8]);
+
+    const secondFresh = makeFreshFacets({
+      colors: [],
+      brands: [{ value: 'apple', count: 3 }],
+    });
+    const afterSecond = mergeFacetsIntoUniverse(
+      { brands: afterFirst.brands, colors: afterFirst.colors },
+      secondFresh,
+    );
+
+    expect(afterSecond.brands.map((b) => b.value)).toEqual(['apple', 'samsung']);
+    const secondByValue = new Map(afterSecond.brands.map((b) => [b.value, b.count]));
+    expect(secondByValue.get('apple')).toBe(3);
+    // Samsung is absent from the second response but stays in the
+    // universe with a zero count — the brand arm that updates a
+    // returning entry (catalog.facade.ts:191) must hand back the
+    // count it was told to carry.
+    expect(secondByValue.get('samsung')).toBe(0);
+
+    const thirdFresh = makeFreshFacets({
+      colors: [],
+      brands: [{ value: 'google pixel', count: 2 }],
+    });
+    const afterThird = mergeFacetsIntoUniverse(
+      { brands: afterSecond.brands, colors: afterSecond.colors },
+      thirdFresh,
+    );
+
+    expect(afterThird.brands.map((b) => b.value)).toEqual(['apple', 'samsung', 'google pixel']);
+    const thirdByValue = new Map(afterThird.brands.map((b) => [b.value, b.count]));
+    expect(thirdByValue.get('apple')).toBe(0);
+    expect(thirdByValue.get('samsung')).toBe(0);
+    expect(thirdByValue.get('google pixel')).toBe(2);
+  });
 });
