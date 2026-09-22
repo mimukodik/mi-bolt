@@ -46,16 +46,19 @@
 import { test, expect } from './fixtures/coverage';
 
 test.describe('Seed', () => {
-  test('the shop serves its home page on MSW', { tag: '@integration' }, async ({ page }) => {
+  test('the shop serves its home page on MSW', async ({ page }) => {
     await test.step('open the application root', async () => {
       const response = await page.goto('/');
       expect(response?.ok()).toBe(true);
     });
 
-    await test.step('the app has bootstrapped and MSW has served the catalogue', async () => {
-      // Angular only bootstraps after startMocks() resolves (src/main.ts), so a
-      // rendered h1 proves the MSW worker came up.
-      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await test.step('the app has bootstrapped with MSW active', async () => {
+      // Angular only bootstraps after startMocks() resolves (src/main.ts), so
+      // the hero heading rendering proves both bootstrap and MSW startup.
+      // The getByTestId pin matters: the fatal-state template in
+      // src/index.html also contains an `<h1>`, and `getByRole('heading',
+      // { level: 1 })` would match that one when MSW fails, hiding the bug.
+      await expect(page.getByTestId('hero-heading')).toBeVisible();
     });
   });
 });
