@@ -70,10 +70,7 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": {
-            "proxyConfig": "proxy.conf.json",
-            "hmr": false
-          },
+          "options": { "proxyConfig": "proxy.conf.json", "hmr": false },
           "configurations": {
             "production": {
               "buildTarget": "mi-bolt:build:production"
@@ -141,9 +138,7 @@
             "index": "projects/demo-payment/src/index.html",
             "tsConfig": "projects/demo-payment/tsconfig.app.json",
             "baseHref": "/demo-fizetes/",
-            "outputPath": {
-              "base": "dist/demo-payment"
-            },
+            "outputPath": { "base": "dist/demo-payment" },
             "assets": [
               {
                 "glob": "mockServiceWorker.js",
@@ -155,16 +150,8 @@
           "configurations": {
             "production": {
               "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
-                }
+                { "type": "initial", "maximumWarning": "500kB", "maximumError": "1MB" },
+                { "type": "anyComponentStyle", "maximumWarning": "4kB", "maximumError": "8kB" }
               ],
               "outputHashing": "all"
             },
@@ -191,12 +178,8 @@
             "proxyConfig": "proxy.payment.conf.json"
           },
           "configurations": {
-            "production": {
-              "buildTarget": "demo-payment:build:production"
-            },
-            "development": {
-              "buildTarget": "demo-payment:build:development"
-            }
+            "production": { "buildTarget": "demo-payment:build:production" },
+            "development": { "buildTarget": "demo-payment:build:development" }
           },
           "defaultConfiguration": "development"
         },
