@@ -31,6 +31,7 @@ import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 import { OrderSummary } from '../cart/order-summary';
+import { checkoutKeys } from './checkout-keys';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { TermsDialog } from './terms-dialog';
 
@@ -119,8 +120,10 @@ export class ReviewStep {
 
   /** Local presentation state. The wire body sends `acceptedTerms`
    *  as the literal `true` (`order-submission.ts:208`) because the
-   *  CTA is dead until this is checked. */
-  readonly acceptedTerms = signal<boolean>(false);
+   *  CTA is dead until this is checked. It starts from the tick kept
+   *  in sessionStorage (`checkoutKeys.termsAccepted()`), because the
+   *  card payment returns by a full page load that rebuilds this step. */
+  readonly acceptedTerms = signal<boolean>(checkoutKeys.termsAccepted());
   private readonly termsTouched = signal<boolean>(false);
 
   /** Whether the demo terms dialog is open. */
@@ -332,6 +335,7 @@ export class ReviewStep {
   onAcceptedTermsChange(event: Event): void {
     if (!isHTMLInputElement(event.target)) return;
     this.acceptedTerms.set(event.target.checked);
+    checkoutKeys.setTermsAccepted(event.target.checked);
   }
 
   onAcceptedTermsBlur(): void {

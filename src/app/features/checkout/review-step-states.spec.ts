@@ -31,6 +31,12 @@ import type { CheckoutSummary } from '../../api/generated/models/checkout-summar
 import type { PaymentIntent } from '../../api/generated/models/payment-intent';
 import type { PaymentIntentStatus } from '../../api/generated/models/payment-intent-status';
 
+// The terms tick is kept in sessionStorage (checkout-keys.ts), so a case
+// that ticks it must not leak the tick into the next case.
+afterEach(() => {
+  sessionStorage.removeItem('mi-bolt.checkout.terms-accepted');
+});
+
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
   if (!(raw instanceof HTMLElement)) {
