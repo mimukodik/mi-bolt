@@ -219,4 +219,15 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     expect(dev.production).toBe(false);
     expect(dev.demo).toBe(true);
   });
+
+  it('the local-backend configuration compiles a mock-free development build (MIM-214)', () => {
+    // The frontend on the real local backend: no optimisation, no mock
+    // worker; `npm start` stays on the mock (the owner's rule, 2026-09-22).
+    const module = environmentModuleFor('local-backend');
+    expect(module).toBe('src/environments/environment.local-backend.ts');
+    expect(existsSync(join(REPO_ROOT, module))).toBe(true);
+    const flags = parseEnvironmentFlags(readFileSync(join(REPO_ROOT, module), 'utf8'));
+    expect(flags.production).toBe(false);
+    expect(flags.demo).toBe(false);
+  });
 });
