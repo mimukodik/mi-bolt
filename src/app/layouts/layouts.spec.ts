@@ -326,6 +326,24 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(ruleBody).not.toMatch(/(?<![\w-])width:\s*(?!100%)/);
   });
 
+  it('owner 2026-09-22: the checkout host has no side padding, so the shell bars run edge to edge; the content keeps its inset', () => {
+    const f = TestBed.createComponent(CheckoutLayout);
+    f.componentRef.setInput('step', 'cart');
+    f.detectChanges();
+    const css = getComponentStyles(CheckoutLayout).join('\n');
+    const hostRules = [...css.matchAll(/\[_nghost-%COMP%\][^{]*\{([^}]*)\}/g)].map((m) => m[1]);
+    expect(hostRules.length).toBeGreaterThan(0);
+    for (const body of hostRules) expect(body).not.toMatch(/padding/);
+
+    const mainRules = [...css.matchAll(/\.layout-main(?![-_a-zA-Z0-9])[^{]*\{([^}]*)\}/g)].map(
+      (m) => m[1],
+    );
+    const joined = mainRules.join('\n');
+    expect(joined).toContain('var(--%NS%space-4)');
+    expect(joined).toContain('var(--%NS%space-6)');
+    expect(joined).toContain('var(--%NS%space-9)');
+  });
+
   it('FIX-35: on the contact step the first indicator is complete (✓) and the second shows 2', () => {
     const f = TestBed.createComponent(CheckoutLayout);
     f.componentRef.setInput('step', 'contact');
