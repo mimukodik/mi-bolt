@@ -688,7 +688,7 @@ describe('SuccessStep', () => {
     expect(navOrder).toBeLessThan(startOrder);
   });
 
-  it('SP-16 the success mark is yettel check-circle: 32px, two filled paths, no stroke', async () => {
+  it('SP-21 the success mark is yettel check-circle: 32px, two filled paths, no stroke', async () => {
     await seedCompleteCashDraft();
     const placed = await placeCodOrder();
 
