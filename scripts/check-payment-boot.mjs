@@ -18,6 +18,13 @@
  *        page answers with a 200
  *   1  - the dev server did not come up in time, or one of the two
  *        fetches returned an unexpected status / content type
+ *
+ * The four ceilings below (FETCH_TIMEOUT_MS, KILL_GRACE_MS,
+ * KILL_CEILING_MS, TOTAL_BUDGET_MS) are safety nets rather than gates: on
+ * three measured green runs the whole `Production build` job took 27-30
+ * seconds end to end, so every one of them is at least an order of
+ * magnitude above anything the healthy path needs, and none of them can
+ * fail a run that is working.
  */
 import { spawn } from 'node:child_process';
 
@@ -25,7 +32,18 @@ const PORT = 4299;
 const BASE_PATH = '/demo-fizetes';
 const SERVE_URL = `http://localhost:${PORT}${BASE_PATH}`;
 const WORKER_URL = `${SERVE_URL}/mockServiceWorker.js`;
-const READY_TIMEOUT_MS = 180_000;
+const READY_TIMEOUT_MS = 180_000; // orchestrator's choice: ceiling on the dev-server startup wait.
+// FETCH_TIMEOUT_MS bounds every fetch; a dev server that accepts the TCP connection
+// and never answers would otherwise leave a promise pending forever.
+const FETCH_TIMEOUT_MS = 30_000;
+// KILL_GRACE_MS is how long we wait between SIGTERM and SIGKILL when stopping ng serve.
+const KILL_GRACE_MS = 5_000;
+// KILL_CEILING_MS is the absolute upper bound on how long killChild will wait.
+const KILL_CEILING_MS = 10_000;
+// TOTAL_BUDGET_MS bounds the whole script run; set under the CI step timeout
+// (commit 2 of this unit raises it to 6 minutes) so the script reports its
+// own failure instead of being killed from outside with no message.
+const TOTAL_BUDGET_MS = 300_000;
 const READY_MARKER = 'Local:';
 
 class GateFailure extends Error {
@@ -41,6 +59,9 @@ class GateFailure extends Error {
 function startServe() {
   return spawn('npx', ['ng', 'serve', 'demo-payment', '--port', String(PORT)], {
     stdio: ['ignore', 'pipe', 'pipe'],
+    // `npx` forks the real Angular CLI server as its own child, so the
+    // process group is what we signal on shutdown — see killChild.
+    detached: true,
   });
 }
 
@@ -74,7 +95,15 @@ async function waitForReady(child) {
 }
 
 async function assertOk(url, { requireContentType } = {}) {
-  const res = await fetch(url);
+  let res;
+  try {
+    res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  } catch (error) {
+    throw new GateFailure(
+      `request to ${url} did not answer within ${FETCH_TIMEOUT_MS / 1000} seconds`,
+      { cause: error },
+    );
+  }
   if (res.status !== 200) {
     throw new GateFailure(`expected 200 for ${url}, got ${res.status}`);
   }
@@ -89,25 +118,59 @@ async function assertOk(url, { requireContentType } = {}) {
 }
 
 function killChild(child) {
-  if (child.exitCode !== null) {
+  if (child.exitCode !== null || child.pid === undefined) {
     return Promise.resolve();
   }
   return new Promise((resolve) => {
-    child.once('exit', () => resolve());
-    child.kill('SIGTERM');
-    setTimeout(() => {
-      if (child.exitCode === null) {
-        child.kill('SIGKILL');
+    let settled = false;
+    let killTimer;
+    let ceilingTimer;
+    const finish = () => {
+      if (settled) {
+        return;
       }
-    }, 5_000);
+      settled = true;
+      clearTimeout(killTimer);
+      clearTimeout(ceilingTimer);
+      resolve();
+    };
+    child.once('exit', finish);
+    // `npx` forks the real server as its own child, so `child.kill('SIGTERM')`
+    // signals `npx` and not the server. Signal the whole process group with the
+    // negated pid; swallow the error if the group is already gone.
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      finish();
+      return;
+    }
+    killTimer = setTimeout(() => {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        // Group is already gone.
+      }
+    }, KILL_GRACE_MS);
+    ceilingTimer = setTimeout(finish, KILL_CEILING_MS);
   });
 }
 
 async function main() {
+  // Total-run budget. Deliberately under the CI step timeout added in the
+  // commit alongside this one, so the script reports its own failure with
+  // a message instead of being killed from outside with none.
+  const budgetTimer = setTimeout(() => {
+    process.stderr.write(
+      `check-payment-boot: total budget of ${TOTAL_BUDGET_MS / 1000} seconds reached, exiting\n`,
+    );
+    process.exit(1);
+  }, TOTAL_BUDGET_MS);
   const child = startServe();
   try {
     await waitForReady(child);
+    process.stdout.write(`checking ${WORKER_URL}\n`);
     await assertOk(WORKER_URL, { requireContentType: 'javascript' });
+    process.stdout.write(`checking ${SERVE_URL}\n`);
     await assertOk(SERVE_URL);
     process.stdout.write('check-payment-boot: OK\n');
   } catch (error) {
@@ -119,6 +182,7 @@ async function main() {
     process.exitCode = 1;
   } finally {
     await killChild(child);
+    clearTimeout(budgetTimer);
   }
 }
 
