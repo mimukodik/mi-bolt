@@ -213,17 +213,6 @@
   align-items: flex-start;
 }
 
-.receipt__notice {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-section);
-  border-left: 4px solid var(--color-brand-ink);
-  border-radius: var(--radius-card);
-  font-size: var(--type-helper);
-  color: var(--color-text-primary);
-  line-height: var(--line-height-body);
-}
-
 .receipt__actions {
   display: flex;
   flex-wrap: wrap;
