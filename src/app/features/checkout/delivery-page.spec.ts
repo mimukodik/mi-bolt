@@ -431,10 +431,8 @@ describe('DP-13..DP-14 same-as-delivery tick from the saved session', () => {
 
     const { fields } = fixture.componentInstance;
     expect(fields.billingSameAsDelivery().value()).toBe(true);
-    const checkbox = queryOne(
-      fixture.nativeElement as HTMLElement,
-      '[data-testid="billing-same-as-delivery"]',
-    );
+    const root = getRootElement(fixture);
+    const checkbox = queryOne(root, '[data-testid="billing-same-as-delivery"]');
     if (!(checkbox instanceof HTMLInputElement))
       throw new Error('Expected the same-as-delivery checkbox');
     expect(checkbox.checked).toBe(true);
