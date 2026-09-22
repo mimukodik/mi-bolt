@@ -3,7 +3,7 @@ import '@angular/compiler';
 
 import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Location } from '@angular/common';
-import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
+import { Component, provideZonelessChangeDetection, signal, viewChild } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -215,6 +215,7 @@ afterEach(() => {
 })
 class ProductPageHost {
   readonly slug = signal<string>('demo-one-5g');
+  readonly page = viewChild(ProductPage);
 }
 
 @Component({ template: '' })
@@ -326,6 +327,28 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     const price = queryElement(root, '.buy-box app-price-block .root');
     expect(price.hasAttribute('data-inverse')).toBe(true);
     expect(price.getAttribute('data-size')).toBe('lg');
+  });
+
+  it('MIM-216: Bezárás dismisses the add-to-cart success message', async () => {
+    const { root, fixture, host } = await createHarness();
+
+    const page = host.page();
+    if (!(page instanceof ProductPage)) {
+      throw new Error('Expected ProductPage');
+    }
+    page.addSuccessMessage.set('Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.');
+    fixture.detectChanges();
+
+    const cta = queryElement(root, '.cta-desktop');
+    const toast = queryElement(cta, '[data-testid="status-message"]');
+    expect(toast.textContent).toContain('1 darab a kosárban.');
+
+    const close = queryButton(toast, 'button');
+    close.click();
+    fixture.detectChanges();
+
+    expect(page.addSuccessMessage()).toBeNull();
+    expect(cta.querySelector('[data-testid="status-message"]')).toBeNull();
   });
 
   it('T16-AC01: displays brand and product name matching the loaded product', async () => {
