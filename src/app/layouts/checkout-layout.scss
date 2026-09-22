@@ -31,10 +31,12 @@
 }
 
 /* The step row reads as a connected path: no pill background, no border
-   radius, items joined by a 2px connector line. The connector after a
-   done step is the brand primary so the eye can follow the walked part
-   of the journey; the connector after a current or upcoming step is the
-   neutral `--color-line`. */
+   radius, items joined by a 2px connector line. The non-last items
+   grow into the row's leftover space and each one's `::after` connector
+   absorbs that growth, so the walked part of the journey reads as one
+   continuous line (brand primary for done, neutral `--color-line` for
+   current or upcoming). The last item has no connector and is sized to
+   its content (see `.steps__item:last-child` below). */
 .steps {
   list-style: none;
   padding: 0;
@@ -49,7 +51,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   color: var(--color-text-secondary);
   font-size: var(--type-helper);
   min-height: var(--size-control);
@@ -66,6 +68,12 @@
 
 .steps__item:last-child::after {
   content: none;
+}
+
+// The last item has no connector to absorb the slack, so it is sized to
+// its content and the growth is shared by the three items that do.
+.steps__item:last-child {
+  flex: 0 0 auto;
 }
 
 .steps__item.is-done::after {
@@ -115,7 +123,17 @@
 }
 
 /* Below 640px only the current step keeps its visible label; the four
-   circles still fit on one line because the connectors absorb the slack. */
+   circles still fit on one line because the connectors absorb the slack.
+
+   The row is 288px wide at a 320px viewport (16px padding on each side).
+   Each non-current item is a 28px circle + 8px gap to its 8px connector
+   with var(--space-1) margins on each side = 52px; the current item
+   adds its visible label after the 28px circle and an 8px gap (the
+   label `steps__label` is `position: absolute` on the non-current
+   items, so those do not contribute). With "Ellenőrzés" (~66px) as the
+   worst-case visible label the four items total ~258px; the three
+   connectors absorb whatever slack remains, which is at least ~30px
+   when the current step is review. */
 @media (max-width: 639.98px) {
   .steps__item:not(.is-current) .steps__label {
     position: absolute;
@@ -127,6 +145,16 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  .steps__index {
+    width: 28px;
+    height: 28px;
+  }
+
+  .steps__item::after {
+    min-width: 8px;
+    margin: 0 var(--space-1);
   }
 }
 
