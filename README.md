@@ -14,17 +14,18 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 ## Local backend
 
-`npm start` always runs on the in-page mock (MSW); the real Spring backend is a separate configuration. With the backend repository checked out next to this one (or `MIBOLT_BACKEND_DIR` pointing at it; a git worktree of this repository is not next to it, so set the variable there), in three terminals:
+`npm start` always runs on the in-page mock (MSW); the real Spring backend is a separate configuration. With the backend repository checked out next to this one (or `MIBOLT_BACKEND_DIR` pointing at it; a git worktree of this repository is not next to it, so set the variable there), in four terminals:
 
 ```bash
 npm run backend:db        # PostgreSQL 16 in Docker on port 55433 (scripts/local-database-docker.sh start)
 npm run backend:start     # ./gradlew bootRun in the backend repository, port 8080
+npm run start:payment     # the demo payment app on its own origin, http://localhost:4210/demo-fizetes/
 npm run start:local-backend
 ```
 
-`start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080` and `/demo-fizetes` to the payment app on 4210. Stop the database with `npm run backend:db:stop`.
+`start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080`. The backend hands the shop an absolute `redirectUrl` on `http://localhost:4210` (MIM-251: the payment gateway is a separate origin, as a real one is), so the browser leaves the shop for the payment dev server, whose `proxy.payment.conf.json` forwards its `/api` calls to the same backend; `returnUrl` brings it back to `http://localhost:4200/penztar`. With `npm start` (MSW) both apps stay on 4200: the mock's URLs are relative and `proxy.conf.json` reaches the payment app through `/demo-fizetes`. Stop the database with `npm run backend:db:stop`.
 
-The built app runs on the real backend with the same static host: `npx ng build --configuration local-backend`, `npm run build:payment`, then `MI_BOLT_API_PROXY=http://localhost:8080 MI_BOLT_PAYMENT_STATIC_DIR=dist/demo-payment/browser PORT=4200 node scripts/serve-static.mjs`. The backend's demo script (mi-bolt-backend `scripts/`) does these steps.
+The built apps run on the real backend with two static hosts: `npx ng build --configuration local-backend`, `npm run build:payment`, then `MI_BOLT_API_PROXY=http://localhost:8080 PORT=4200 node scripts/serve-static.mjs` for the shop and `MI_BOLT_PAYMENT_ONLY=1 MI_BOLT_PAYMENT_STATIC_DIR=dist/demo-payment/browser MI_BOLT_API_PROXY=http://localhost:8080 PORT=4210 node scripts/serve-static.mjs` for the payment app. The backend's demo script (mi-bolt-backend `scripts/demo-stack.sh`) does these steps.
 
 ## Code scaffolding
 
