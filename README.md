@@ -14,7 +14,7 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 ## Local backend
 
-`npm start` always runs on the in-page mock (MSW); the real Spring backend is a separate configuration. With the backend repository checked out next to this one (or `MIBOLT_BACKEND_DIR` pointing at it), in three terminals:
+`npm start` always runs on the in-page mock (MSW); the real Spring backend is a separate configuration. With the backend repository checked out next to this one (or `MIBOLT_BACKEND_DIR` pointing at it; a git worktree of this repository is not next to it, so set the variable there), in three terminals:
 
 ```bash
 npm run backend:db        # PostgreSQL 16 in Docker on port 55433 (scripts/local-database-docker.sh start)
