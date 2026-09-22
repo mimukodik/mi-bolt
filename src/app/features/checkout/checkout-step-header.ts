@@ -14,10 +14,10 @@ export interface CheckoutCrumb {
  * projects the step's heading + notice + (for success) the checkmark through
  * `<ng-content />`.
  *
- * Styled entirely with Tailwind utilities — no companion `.scss`. The class
- * names the existing specs and the FIX-55 anchor selector rely on
- * (`nav.breadcrumbs`, `a.breadcrumb`, `.breadcrumb.is-current`,
- * `.breadcrumb__sep`) are kept verbatim so the existing tests stay green.
+ * Styled entirely with Tailwind utilities — no companion `.scss`. The
+ * trail's markup and class names stay in the template behind
+ * `BREADCRUMB_VISIBLE`, so switching it back on needs no markup change
+ * (`breadcrumb-visibility.ts`).
  */
 @Component({
   selector: 'app-checkout-step-header',
