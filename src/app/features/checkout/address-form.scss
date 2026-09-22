@@ -49,12 +49,7 @@
   line-height: var(--line-height-body);
 }
 
-/* The four address controls carry `[attr.aria-invalid]`, never a class, so the
-   selector has to match the attribute; the class-based rule that stood here
-   matched nothing and the fields never turned red. */
-.input[aria-invalid='true'] {
-  border-color: var(--color-status-error);
-}
+/* The invalid look (red border, icon, focus halo) lives in src/styles/primitives.css. */
 
 .country {
   margin: 0;

@@ -37,9 +37,7 @@
   color: var(--color-text-secondary);
 }
 
-/* No `.field` ancestor: the invalid rule below has to outrank this one, and
-   adding specificity there instead would put it above the global focus ring
-   in primitives.css, which must win while the control is focused. */
+/* The invalid look (red border, icon, focus halo) lives in src/styles/primitives.css. */
 .input {
   min-height: var(--size-control);
   border-color: var(--color-border-control);
@@ -47,10 +45,6 @@
   color: var(--color-text-primary);
   font-size: var(--type-body);
   line-height: var(--line-height-body);
-}
-
-.input[aria-invalid='true'] {
-  border-color: var(--color-status-error);
 }
 
 @media (prefers-reduced-motion: reduce) {

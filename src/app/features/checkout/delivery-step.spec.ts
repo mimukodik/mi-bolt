@@ -536,7 +536,7 @@ describe('MIM-254: a pristine billing-name input is not marked invalid', () => {
     // The delivery step uses `'false'` as the false branch of the
     // billing-name `[attr.aria-invalid]` binding. A pristine input must
     // announce "not invalid" until the shopper has left the field; the
-    // border rule (delivery-step.scss) keys off `[aria-invalid='true']`
+    // border rule (src/styles/primitives.css) keys off `[aria-invalid='true']`
     // and stays idle. The billing-name field carries no `[submitted]`
     // gate (no form submission precedes it on this step), so the only
     // flip is the touch.

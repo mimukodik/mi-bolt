@@ -87,8 +87,9 @@
   cursor: not-allowed;
 }
 
-.root.is-invalid .step,
-.root.is-invalid .value {
+/* The input itself turns red through the global [aria-invalid] rule in
+   src/styles/primitives.css; the two step buttons are not inputs. */
+.root.is-invalid .step {
   border-color: var(--color-status-error);
 }
 
