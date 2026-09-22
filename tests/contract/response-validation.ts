@@ -95,7 +95,7 @@ export type OperationDescriptor = {
 
 let rawSpecCache: OpenApiSpec | null = null;
 let derefSpecCache: OpenApiSpec | null = null;
-let ajvCache: Ajv | null = null;
+let ajvCache: Ajv2020 | null = null;
 let responseValidators: Map<string, Map<string, ValidateFunction>> | null = null;
 let requestValidators: Map<string, ValidateFunction> | null = null;
 let problemValidator: ValidateFunction | null = null;
@@ -132,7 +132,7 @@ export async function loadOpenApiSpec(): Promise<{
 
 function buildAjv(): Ajv2020 {
   // The contract gates `date-time` and `email` formats at the wire
-  // boundary (Cart.expiresAt, PaymentIntent.expiresAt, BillingDetails.contactEmail).
+  // boundary (Cart.expiresAt, PaymentIntent.expiresAt, OrderReceipt.contactEmail).
   // Disabling format validation entirely would let a malformed timestamp
   // pass, which is exactly the kind of drift T26-AC05 must catch. Keep all
   // format checks enabled. Compiling against Ajv 2020 (draft 2020-12)
