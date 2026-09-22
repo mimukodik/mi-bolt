@@ -119,11 +119,16 @@
 
 /* The ring sits outside the control, so one ink outline reads on the
  * white card behind both the primary and the secondary buttons. */
-.pay-alert:focus-visible,
 .pay-button:focus-visible,
 .pay-back:focus-visible {
   outline: 2px solid var(--pay-ink);
   outline-offset: 2px;
+}
+
+/* The alert takes focus only so it is announced; it draws no ring
+   (owner, 2026-09-23). */
+.pay-alert:focus-visible {
+  outline: none;
 }
 
 .pay-alert {

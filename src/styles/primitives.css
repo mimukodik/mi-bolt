@@ -100,6 +100,14 @@ p {
   border-radius: inherit;
 }
 
+/* Text that takes focus only so assistive technology announces it (a
+   dialog heading, a state banner, the skip-link target) draws no ring.
+   Every such element carries tabindex="-1" and is out of the tab order,
+   so no control loses its ring here (owner, 2026-09-23). */
+[tabindex='-1']:focus-visible {
+  outline: none;
+}
+
 /* Text fields follow yettel's `.form-control` recipe (docs/design/yettel.md
    §5 "Text field"): on focus the border turns #0069c0, with no outline and no
    ring. An invalid field keeps its red border and shows yettel's red "!" icon
