@@ -61,7 +61,19 @@
  *               default.
  */
 
-import { Component, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  linkedSignal,
+  output,
+  signal,
+} from '@angular/core';
 
 import { AddressForm } from './address-form';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
@@ -121,6 +133,18 @@ export class DeliveryStep {
   });
 
   readonly addressSubmitted = signal<boolean>(false);
+
+  /** The billing address form's "mark everything" switch, driven by a
+   *  click on an incomplete step like `addressSubmitted`. */
+  readonly billingAddressSubmitted = signal<boolean>(false);
+
+  /** True once the confirm button was pressed on an incomplete step:
+   *  every missing field then shows its error (owner's decision,
+   *  2026-09-22: the button is never disabled for an incomplete form). */
+  readonly confirmAttempted = signal<boolean>(false);
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   /** Current payment method — no default (screens.md:79: "Defaults must
    *  not represent a paid addon"); seeded from the field tree the same way. */
@@ -249,15 +273,36 @@ export class DeliveryStep {
   /** `aria-invalid` is gated on touched: the message under the field
    *  is `app-form-field-message` with `[touched]` and no `[submitted]`,
    *  so the attribute must use the same gate. The border rule keys
-   *  off `[aria-invalid='true']` and stays idle on a pristine input. */
+   *  off `[aria-invalid='true']` and stays idle on a pristine input.
+   *  A click on the confirm button of an incomplete step counts as touched. */
   readonly billingNameShowsInvalid = computed<boolean>(
-    () => this.billingNameInvalid() && this.billingNameTouched(),
+    () => this.billingNameInvalid() && (this.billingNameTouched() || this.confirmAttempted()),
   );
 
   readonly billingNameErrors = computed<readonly FieldError[]>(() => {
     if (!this.billingNameInvalid()) return [];
     return [{ code: 'required', message: 'A számlázási név megadása kötelező.' }];
   });
+
+  readonly deliveryOptionErrors = computed<readonly FieldError[]>(() =>
+    this.selectedOptionId() === null
+      ? [{ code: 'required', message: 'Válassz szállítási módot.' }]
+      : [],
+  );
+
+  readonly paymentMethodErrors = computed<readonly FieldError[]>(() =>
+    this.paymentMethod() === null ? [{ code: 'required', message: 'Válassz fizetési módot.' }] : [],
+  );
+
+  /** Marks the delivery options for the focus query while unchosen after a click. */
+  readonly deliveryOptionMissing = computed<boolean>(
+    () => this.confirmAttempted() && this.selectedOptionId() === null,
+  );
+
+  /** Marks the payment methods for the focus query while unchosen after a click. */
+  readonly paymentMethodMissing = computed<boolean>(
+    () => this.confirmAttempted() && this.paymentMethod() === null,
+  );
 
   // ---------------------------------------------------------------------------
   // Public computed surface
@@ -355,7 +400,14 @@ export class DeliveryStep {
   }
 
   onConfirm(): void {
-    if (!this.canConfirm()) return;
+    if (this.saveState() === 'loading') return;
+    if (!this.canConfirm()) {
+      this.confirmAttempted.set(true);
+      this.addressSubmitted.set(true);
+      this.billingAddressSubmitted.set(true);
+      this.focusFirstInvalid();
+      return;
+    }
     // Mirror the selection into the shared `fields()` tree the container
     // also holds so the two facade saves see the user's final choice.
     // The address / billing sub-fields are already written there
@@ -366,6 +418,22 @@ export class DeliveryStep {
     this.fields().deliveryOptionId().value.set(selection.delivery.optionId);
     this.fields().paymentMethod().value.set(selection.paymentMethod);
     this.continueRequested.emit();
+  }
+
+  /** After the next render, focuses the first control the shopper has to
+   *  fix, in page order: an unchosen option group's first available radio
+   *  or the first field marked `aria-invalid="true"` (WAI forms tutorial:
+   *  move focus to the first invalid field). */
+  private focusFirstInvalid(): void {
+    afterNextRender(
+      () => {
+        const target = this.host.nativeElement.querySelector<HTMLElement>(
+          '[aria-invalid="true"], [data-missing-choice="true"] input[type="radio"]:not(:disabled)',
+        );
+        target?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   onRetry(): void {

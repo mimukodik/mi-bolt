@@ -18,6 +18,8 @@
       <fieldset
         class="options m-0 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card)"
         data-testid="delivery-options"
+        [attr.aria-describedby]="deliveryOptionMissing() ? 'delivery-option-message' : null"
+        [attr.data-missing-choice]="deliveryOptionMissing() ? 'true' : null"
       >
         <legend
           class="legend px-(--space-2) text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
@@ -90,6 +92,11 @@
             </li>
           }
         </ul>
+        <app-form-field-message
+          fieldId="delivery-option"
+          [errors]="deliveryOptionErrors()"
+          [submitted]="confirmAttempted()"
+        />
       </fieldset>
 
       @if (requiresAddress()) {
@@ -116,10 +123,16 @@
       }
 
       <app-payment-method-selector
+        [attr.data-missing-choice]="paymentMethodMissing() ? 'true' : null"
         [options]="options().paymentMethods"
         [value]="paymentMethod()"
         (paymentChanged)="onPaymentChanged($event)"
         (valueChange)="onPaymentChanged($event)"
+      />
+      <app-form-field-message
+        fieldId="payment-method"
+        [errors]="paymentMethodErrors()"
+        [submitted]="confirmAttempted()"
       />
 
       <fieldset
@@ -164,6 +177,7 @@
           <app-form-field-message
             fieldId="billing-name"
             [errors]="billingNameErrors()"
+            [submitted]="confirmAttempted()"
             [touched]="billingNameTouched()"
           />
         </label>
@@ -177,6 +191,7 @@
             [line1]="billingLine1()"
             [line2]="billingLine2()"
             [postalCode]="billingPostalCode()"
+            [(submitted)]="billingAddressSubmitted"
             (cityChange)="setBillingCity($event)"
             (line1Change)="setBillingLine1($event)"
             (line2Change)="setBillingLine2($event)"
@@ -249,7 +264,7 @@
           data-testid="delivery-confirm"
           loadingLabel="Mentés…"
           variant="primary"
-          [disabled]="!canConfirm()"
+          [disabled]="saveState() === 'loading'"
           [label]="confirmLabel()"
           [loading]="saveState() === 'loading'"
           (pressed)="onConfirm()"
