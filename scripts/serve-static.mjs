@@ -39,6 +39,11 @@
 //                              and SPA fallback as the shop; without
 //                              it `/demo-fizetes` falls through to the
 //                              shop shell.
+//   MI_BOLT_PAYMENT_ONLY       when set to `1` (with MI_BOLT_PAYMENT_STATIC_DIR),
+//                              the host serves only the payment app: `/api`
+//                              is still proxied, `/demo-fizetes/*` is served,
+//                              and every other GET answers 302 to
+//                              `/demo-fizetes/`; the shop bundle is not served.
 //   PORT                     listen port (default 4200).
 //   HOST                     listen address (default 127.0.0.1).
 //
@@ -65,6 +70,7 @@ const API_PROXY_TIMEOUT_MS =
 const PAYMENT_STATIC_DIR = process.env['MI_BOLT_PAYMENT_STATIC_DIR']
   ? resolve(repoRoot, process.env['MI_BOLT_PAYMENT_STATIC_DIR'])
   : null;
+const PAYMENT_ONLY = process.env['MI_BOLT_PAYMENT_ONLY'] === '1' && PAYMENT_STATIC_DIR !== null;
 const HOST = process.env['HOST'] ?? '127.0.0.1';
 const PORT = Number.parseInt(process.env['PORT'] ?? '4200', 10);
 
@@ -248,9 +254,11 @@ function serveStatic(res, urlPath, baseDir, prefix) {
  *   2. Non-GET/HEAD on any other path returns 405.
  *   3. `/api/*` without a proxy returns 404 + problem+json, never the SPA shell.
  *   4. `/demo-fizetes` static (when configured) uses its own fallback.
- *   5. Real files (mockServiceWorker.js, assets, hashed bundles,
+ *   5. On a payment-only host (MI_BOLT_PAYMENT_ONLY=1) everything else
+ *      answers 302 to `/demo-fizetes/`.
+ *   6. Real files (mockServiceWorker.js, assets, hashed bundles,
  *      favicon) are served as themselves.
- *   6. Everything else falls back to `index.html`.
+ *   7. Everything else falls back to `index.html`.
  */
 function handle(request, res) {
   const rawPath = request.url ?? '/';
@@ -331,7 +339,15 @@ function handle(request, res) {
     return;
   }
 
-  // 5-6. Real files from the shop, then the shop SPA fallback.
+  // 5. A payment-only host has nothing else to serve: send every other path
+  // to the payment app instead of exposing the shop bundle.
+  if (PAYMENT_ONLY) {
+    res.writeHead(302, { location: '/demo-fizetes/' });
+    res.end();
+    return;
+  }
+
+  // 6-7. Real files from the shop, then the shop SPA fallback.
   serveStatic(res, urlPath, STATIC_DIR, '/');
 }
 
