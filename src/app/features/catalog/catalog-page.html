@@ -15,6 +15,7 @@
   <div class="layout gap-6">
     <aside class="sidebar" data-testid="filter-sidebar">
       <app-filter-panel
+        [busy]="facetsBusy()"
         [disabled]="controlsDisabled()"
         [facets]="facade.vm().facets"
         [value]="facade.query()"
@@ -73,6 +74,7 @@
   <app-filter-drawer
     id="filter-drawer"
     [applied]="facade.query()"
+    [busy]="facetsBusy()"
     [disabled]="controlsDisabled()"
     [facets]="facade.vm().facets"
     [opened]="drawerOpened()"

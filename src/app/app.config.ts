@@ -7,6 +7,7 @@ import { routes } from './app.routes';
 import { provideApiConfiguration } from './api/generated/api-configuration';
 import { resolveApiRoot } from './core/api/api-root';
 import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
+import { provideScrollRestoration } from './core/navigation/scroll-restoration';
 
 /**
  * Local production / development build providers. Each binding is
@@ -22,10 +23,11 @@ const _provideRouter = provideRouter(
   withComponentInputBinding(),
   withInMemoryScrolling({
     anchorScrolling: 'enabled',
-    scrollPositionRestoration: 'enabled',
+    scrollPositionRestoration: 'disabled',
   }),
 );
 const _provideApi: Provider = provideApiConfiguration(resolveApiRoot());
+const _provideScroll = provideScrollRestoration();
 
 /**
  * `appConfig` is the provider list passed to `bootstrapApplication`
@@ -39,6 +41,7 @@ export const appConfig: ApplicationConfig = {
     _provideHttpWithFetch,
     _provideRouter,
     _provideApi,
+    _provideScroll,
   ],
 };
 
@@ -54,4 +57,5 @@ export const providerManifest = {
   httpClientWithFetch: _provideHttpWithFetch,
   router: _provideRouter,
   api: _provideApi,
+  scrollRestoration: _provideScroll,
 } as const;

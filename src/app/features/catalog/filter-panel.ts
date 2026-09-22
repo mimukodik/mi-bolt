@@ -113,8 +113,15 @@ export class FilterPanel {
   /** Full `Facets` from the latest successful response, if any. */
   readonly facets = input<Facets | null>(null);
 
-  /** True when the panel should be inert (loading or error refresh). */
+  /** True when the panel should be inert — the first load only,
+   *  before there is anything to filter. The parent deliberately
+   *  does not bind this to `refreshing`, see `controlsDisabled`. */
   readonly disabled = input<boolean>(false);
+
+  /** True while a request is in flight. Drives the facet count
+   *  skeletons and the first-load row skeletons, so the row count
+   *  never changes while the user is filtering. */
+  readonly busy = input<boolean>(false);
 
   /** Emits the next complete CatalogQuery when the user changes a control. */
   readonly filtersChanged = output<CatalogQuery>();
@@ -194,6 +201,14 @@ export class FilterPanel {
 
   /** Colour facets, falling back to an empty list when none are present. */
   readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
+
+  /** Five placeholder rows the panel renders on the very first load
+   *  (busy true, no brand facets yet), one per collapsed-brand row —
+   *  the number the filter-panel.html collapsed-list "more" toggle is
+   *  built around. A real `FacetValue` is needed only after the first
+   *  response lands, so the panel never invents a count before the
+   *  response can supply one. */
+  readonly brandSkeletonRows: readonly unknown[] = [0, 0, 0, 0, 0];
 
   // Local drafts for the controls that need an "in progress" copy. Each
   // is a linkedSignal sourced from its applied field plus the "any

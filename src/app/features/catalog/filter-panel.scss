@@ -249,3 +249,58 @@
   white-space: nowrap;
   border: 0;
 }
+
+/**
+ * Skeleton row for the brand list on the very first load. A
+ * 3/4-width label bar replaces the brand name, a fixed-width bar
+ * replaces the count, and the row carries no interactive element —
+ * the same `<li>` box a real brand button would sit in keeps the
+ * group's vertical rhythm.
+ */
+.row-skeleton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-light);
+}
+
+.row-skeleton__bar {
+  display: block;
+  height: 1em;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-alt);
+}
+
+.row-skeleton__bar--label {
+  width: 75%;
+}
+
+.row-skeleton__bar--count {
+  width: 2.5rem;
+  margin-left: auto;
+}
+
+/**
+ * Inline skeleton that replaces a row's count while a request is in
+ * flight. Same height as the surrounding line so the row's box stays
+ * exactly the same size.
+ */
+.count-skeleton {
+  display: inline-block;
+  width: 2.5rem;
+  height: 1em;
+  margin-left: 4px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-alt);
+  vertical-align: baseline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-skeleton__bar,
+  .count-skeleton {
+    animation: none;
+  }
+}

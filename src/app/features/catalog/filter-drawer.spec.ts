@@ -48,6 +48,7 @@ function queryElement(selector: string): HTMLElement {
   imports: [FilterDrawer, DialogModule],
   template: `<app-filter-drawer
     [applied]="applied()"
+    [busy]="busy()"
     [facets]="facets()"
     [opened]="opened()"
     (closed)="onClosed()"
@@ -58,6 +59,7 @@ class HostComponent {
   readonly applied = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
   readonly facets = signal<Facets | null>(null);
   readonly opened = signal(true);
+  readonly busy = signal(false);
 
   onFiltersChanged(_next: CatalogQuery): void {
     // No-op: the drawer applies the draft through this output.
@@ -216,5 +218,67 @@ describe('FilterDrawer — facets wire-up', () => {
     const more = queryElement('[data-testid="drawer-group-brand"] .more');
     expect(more.getAttribute('aria-expanded')).toBe('true');
     expect(more.textContent.trim()).toBe('Kevesebb gyártó');
+  });
+});
+
+describe('MIM-228: busy input keeps the facet rows stable', () => {
+  it('MIM-228-AC08: while busy the count is replaced by a skeleton and the row count does not change', () => {
+    const { fixture, host } = setup();
+    const colors = [
+      { value: 'a', label: 'A', count: 1, swatchHex: '#111111' },
+      { value: 'b', label: 'B', count: 2, swatchHex: '#222222' },
+      { value: 'c', label: 'C', count: 3, swatchHex: '#333333' },
+      { value: 'd', label: 'D', count: 4, swatchHex: '#444444' },
+      { value: 'e', label: 'E', count: 5, swatchHex: '#555555' },
+      { value: 'f', label: 'F', count: 6, swatchHex: '#666666' },
+      { value: 'g', label: 'G', count: 7, swatchHex: '#777777' },
+      { value: 'h', label: 'H', count: 8, swatchHex: '#888888' },
+    ];
+    host.facets.set({
+      brands: [],
+      colors,
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+
+    const colorList = document.body.querySelector('[data-testid="drawer-group-color"] ul');
+    expect(colorList?.querySelectorAll('li').length).toBe(8);
+    for (const color of colors) {
+      expect(
+        document.body.querySelector(`[data-testid="drawer-color-${color.value}"]`),
+      ).not.toBeNull();
+    }
+
+    host.busy.set(true);
+    fixture.detectChanges();
+
+    expect(colorList?.querySelectorAll('li').length).toBe(8);
+    for (const color of colors) {
+      expect(
+        document.body.querySelector(`[data-testid="drawer-color-${color.value}"]`),
+      ).not.toBeNull();
+      const chip = document.body.querySelector(`[data-testid="drawer-color-${color.value}"]`);
+      expect(chip?.querySelector('.option__count')).toBeNull();
+      expect(chip?.querySelector('.count-skeleton')).not.toBeNull();
+    }
+  });
+
+  it('MIM-228-AC09: the first load renders five brand skeleton rows and one colour skeleton row', () => {
+    const { fixture, host } = setup();
+    host.busy.set(true);
+    fixture.detectChanges();
+
+    const brandList = document.body.querySelector('[data-testid="drawer-group-brand"] ul');
+    expect(brandList?.querySelectorAll('li').length).toBe(5);
+    expect(brandList?.querySelectorAll('li.row-skeleton').length).toBe(5);
+    expect(brandList?.querySelectorAll('button.option').length).toBe(0);
+
+    const colorList = document.body.querySelector('[data-testid="drawer-group-color"] ul');
+    expect(colorList?.querySelectorAll('li').length).toBe(1);
+    expect(colorList?.querySelectorAll('li.row-skeleton').length).toBe(1);
+    expect(colorList?.querySelectorAll('button.color-chip').length).toBe(0);
   });
 });

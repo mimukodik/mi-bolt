@@ -114,6 +114,14 @@ export class CatalogPage {
    *  onto the first rather than onto stale state. */
   readonly controlsDisabled = computed<boolean>(() => this.facade.vm().status === 'loading');
 
+  /** Drives the facet row skeletons. True on every request that has
+   *  not yet resolved — `loading` for the very first load and
+   *  `refreshing` for everything afterwards — and is deliberately wider
+   *  than `controlsDisabled`: the count skeletons must show up on every
+   *  in-flight request, not only on the first one, while the controls
+   *  themselves stay enabled through `refreshing`. */
+  readonly facetsBusy = computed<boolean>(() => this.controlsDisabled() || this.hasPrevious());
+
   /** `AsyncContent`'s `status`, mapped from `CatalogStatus` at the call
    *  site — `'refreshing'` becomes `'loading'`, distinguished from a
    *  first load by `hasPrevious()`. */

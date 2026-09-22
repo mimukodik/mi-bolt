@@ -47,6 +47,8 @@ import {
 import { Api } from '../../api/generated/api';
 import { listProducts } from '../../api/generated/fn/catalog/list-products';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
+import type { FacetValue } from '../../api/generated/models/facet-value';
 import type { Facets } from '../../api/generated/models/facets';
 import {
   DEFAULT_CATALOG_QUERY,
@@ -82,6 +84,20 @@ interface CatalogResult {
   readonly page: number;
   readonly pageSize: 12 | 24;
   readonly facets: Facets;
+}
+
+/** What the facade remembers across responses for the disjunctive
+ *  counts it has rendered at least once. Brand and colour rows are
+ *  appended in first-seen order; an entry that reappears in a later
+ *  response has its `count` (and, for colours, `label` and `swatchHex`)
+ *  overwritten by the latest one — the backend is the source of truth
+ *  for those. `inStock`, `is5g`, `priceRange` and `storageGb` are not
+ *  kept here — storage comes from a fixed enum and the others are
+ *  pass-through fields the merge helper copies straight from the
+ *  latest response. */
+export interface FacetUniverse {
+  readonly brands: readonly FacetValue[];
+  readonly colors: readonly ColorFacetValue[];
 }
 
 /**
@@ -148,6 +164,55 @@ function describeError(err: unknown): string {
 }
 
 /**
+ * Merge a fresh `Facets` from a successful response into the
+ * accumulated universe, returning the `Facets` the page should render.
+ * The universe keeps every brand and colour value the application has
+ * seen since it was constructed, in first-seen order. Each rendered
+ * value carries the count from the current response, or `0` when the
+ * response does not carry that value. Values new in this response are
+ * appended to the universe. `inStock`, `is5g`, `priceRange` and
+ * `storageGb` pass through unchanged — storage is built from a fixed
+ * enum at the panel and the others have no row identity to track.
+ *
+ * Exported so the spec can drive the merge without spinning up the
+ * RxJS pipeline, and the production wiring in `resultSignal` is
+ * exactly the same call site.
+ */
+export function mergeFacetsIntoUniverse(universe: FacetUniverse, fresh: Facets): Facets {
+  const brandIndex = new Map<string, number>();
+  for (const [i, entry] of universe.brands.entries()) brandIndex.set(entry.value, i);
+  const nextBrands: FacetValue[] = universe.brands.map((b) => ({ ...b, count: 0 }));
+  for (const entry of fresh.brands) {
+    const idx = brandIndex.get(entry.value);
+    if (idx === undefined) {
+      brandIndex.set(entry.value, nextBrands.length);
+      nextBrands.push({ ...entry });
+    } else {
+      nextBrands[idx] = { ...entry };
+    }
+  }
+
+  const colorIndex = new Map<string, number>();
+  for (const [i, entry] of universe.colors.entries()) colorIndex.set(entry.value, i);
+  const nextColors: ColorFacetValue[] = universe.colors.map((c) => ({ ...c, count: 0 }));
+  for (const entry of fresh.colors) {
+    const idx = colorIndex.get(entry.value);
+    if (idx === undefined) {
+      colorIndex.set(entry.value, nextColors.length);
+      nextColors.push({ ...entry });
+    } else {
+      nextColors[idx] = { ...entry };
+    }
+  }
+
+  return {
+    ...fresh,
+    brands: nextBrands,
+    colors: nextColors,
+  };
+}
+
+/**
  * Root-provided facade. Single instance per application; consumers
  * inject it directly (no token wrapper) so swapping the facade for a
  * test stub is a single TestBed provider line.
@@ -172,6 +237,12 @@ export class CatalogFacade {
 
   /** Last successful `ProductPage` from the SDK, if any. */
   private readonly resultSignal = signal<CatalogResult | null>(null);
+
+  /** Every brand and colour value the application has rendered at least
+   *  once, in first-seen order. A value that drops out of a later
+   *  response is kept here with a zero count (MIM-228) so the filter
+   *  panel does not reshuffle when a chip is selected. */
+  private readonly facetUniverseSignal = signal<FacetUniverse>({ brands: [], colors: [] });
 
   /** True while a request is in flight (drives `loading` / `refreshing`). */
   private readonly inFlightSignal = signal<boolean>(false);
@@ -231,12 +302,14 @@ export class CatalogFacade {
       .subscribe((event) => {
         this.inFlightSignal.set(false);
         if (event.kind === 'ok') {
+          const merged = mergeFacetsIntoUniverse(this.facetUniverseSignal(), event.page.facets);
+          this.facetUniverseSignal.set({ brands: merged.brands, colors: merged.colors });
           this.resultSignal.set({
             items: event.page.items,
             total: event.page.total,
             page: event.page.page,
             pageSize: event.page.pageSize,
-            facets: event.page.facets,
+            facets: merged,
           });
         } else {
           this.errorSignal.set(event.error);

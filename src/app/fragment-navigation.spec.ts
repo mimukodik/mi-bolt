@@ -3,12 +3,14 @@
  * source-text assertion (FIX-07):
  *
  * - `appConfig.providers` configures the router with a `withInMemoryScrolling`
- *   feature whose `anchorScrolling` and `scrollPositionRestoration` are both
- *   `'enabled'`, read off the actual `RouterScroller` instance the app's own
- *   provider factory constructs, using the same `ɵproviders` introspection
- *   `app.spec.ts` already uses for the other `appConfig` features
- *   (`hasInternalProviders` / `hasProvToken`) — never by reading
- *   `app.config.ts` as text.
+ *   feature whose `anchorScrolling` is `'enabled'` and
+ *   `scrollPositionRestoration` is `'disabled'`. Anchor scrolling stays
+ *   with the router; position restoration is the application's, owned by
+ *   `provideScrollRestoration` (MIM-228). Read off the actual `RouterScroller`
+ *   instance the app's own provider factory constructs, using the same
+ *   `ɵproviders` introspection `app.spec.ts` already uses for the other
+ *   `appConfig` features (`hasInternalProviders` / `hasProvToken`) —
+ *   never by reading `app.config.ts` as text.
  * - `HowDemoWorks` renders an element whose `id` is `how`, and that
  *   element is the same one carrying `data-testid="how-demo-works"`.
  *
@@ -104,7 +106,7 @@ function isRouterScrollerLike(
 }
 
 describe('FIX-42: fragment navigation is configured and has a real target', () => {
-  it('appConfig wires the router with anchor scrolling and scroll position restoration enabled', () => {
+  it('appConfig wires the router with anchor scrolling enabled and scroll position restoration disabled (MIM-228)', () => {
     TestBed.configureTestingModule({
       providers: [...appConfig.providers],
     });
@@ -121,7 +123,7 @@ describe('FIX-42: fragment navigation is configured and has a real target', () =
     const scroller = TestBed.runInInjectionContext(() => scrollerProvider.useFactory());
     if (!isRouterScrollerLike(scroller)) throw new Error('Expected a RouterScroller instance');
     expect(scroller.options.anchorScrolling).toBe('enabled');
-    expect(scroller.options.scrollPositionRestoration).toBe('enabled');
+    expect(scroller.options.scrollPositionRestoration).toBe('disabled');
   });
 
   it('HowDemoWorks renders one element with id="how" and it is the how-demo-works section', () => {

@@ -14,31 +14,44 @@
     <fieldset class="group" data-testid="drawer-group-brand">
       <legend class="legend">Gyártó</legend>
       <ul class="options" role="list">
-        @for (brand of visibleBrandFacets(); track brand.value) {
-          <li>
-            <button
-              class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
-              type="button"
-              [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
-              [attr.data-testid]="`drawer-brand-${brand.value}`"
-              [class.is-selected]="isBrandSelected(brand.value)"
-              [disabled]="disabled() || brand.count === 0"
-              (click)="toggleBrand(brand.value)"
-            >
-              <span aria-hidden="true" class="check">{{
-                isBrandSelected(brand.value) ? '✓' : ''
-              }}</span>
-              <span class="option__label"
-                >{{ brand.label
-                }}<span aria-label="találatok száma" class="option__count"
-                  >&nbsp;({{ brand.count }})</span
-                ></span
+        @if (busy() && brandFacets().length === 0) {
+          @for (_ of brandSkeletonRows; track $index) {
+            <li aria-hidden="true" class="row-skeleton">
+              <span class="row-skeleton__bar row-skeleton__bar--label"></span>
+              <span class="row-skeleton__bar row-skeleton__bar--count"></span>
+            </li>
+          }
+        } @else {
+          @for (brand of visibleBrandFacets(); track brand.value) {
+            <li>
+              <button
+                class="option inline-flex items-center gap-2 w-full min-h-10 px-3 cursor-pointer text-left leading-none"
+                type="button"
+                [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
+                [attr.data-testid]="`drawer-brand-${brand.value}`"
+                [class.is-selected]="isBrandSelected(brand.value)"
+                [disabled]="disabled() || brand.count === 0"
+                (click)="toggleBrand(brand.value)"
               >
-            </button>
-          </li>
+                <span aria-hidden="true" class="check">{{
+                  isBrandSelected(brand.value) ? '✓' : ''
+                }}</span>
+                <span class="option__label"
+                  >{{ brand.label }}
+                  @if (!busy()) {
+                    <span aria-label="találatok száma" class="option__count"
+                      >&nbsp;({{ brand.count }})</span
+                    >
+                  } @else {
+                    <span aria-hidden="true" class="count-skeleton"></span>
+                  }
+                </span>
+              </button>
+            </li>
+          }
         }
       </ul>
-      @if (brandFacets().length > 5) {
+      @if (!busy() && brandFacets().length > 5) {
         <button
           class="more"
           data-testid="filter-brand-more"
@@ -54,30 +67,41 @@
     <fieldset class="group" data-testid="drawer-group-color">
       <legend class="legend">Szín</legend>
       <ul class="color-options" role="list">
-        @for (color of colorFacets(); track color.value) {
-          <li>
-            <button
-              class="color-chip"
-              type="button"
-              [attr.aria-pressed]="isColorSelected(color.value) ? 'true' : 'false'"
-              [attr.data-testid]="`drawer-color-${color.value}`"
-              [class.is-selected]="isColorSelected(color.value)"
-              [disabled]="disabled() || color.count === 0"
-              (click)="toggleColor(color.value)"
-            >
-              <span
-                aria-hidden="true"
-                class="color-chip__swatch"
-                [style.background-color]="color.swatchHex"
-              ></span>
-              <span class="color-chip__label"
-                >{{ color.label
-                }}<span aria-label="találatok száma" class="color-chip__count"
-                  >&nbsp;({{ color.count }})</span
-                ></span
-              >
-            </button>
+        @if (busy() && colorFacets().length === 0) {
+          <li aria-hidden="true" class="row-skeleton">
+            <span class="row-skeleton__bar row-skeleton__bar--label"></span>
+            <span class="row-skeleton__bar row-skeleton__bar--count"></span>
           </li>
+        } @else {
+          @for (color of colorFacets(); track color.value) {
+            <li>
+              <button
+                class="color-chip"
+                type="button"
+                [attr.aria-pressed]="isColorSelected(color.value) ? 'true' : 'false'"
+                [attr.data-testid]="`drawer-color-${color.value}`"
+                [class.is-selected]="isColorSelected(color.value)"
+                [disabled]="disabled() || color.count === 0"
+                (click)="toggleColor(color.value)"
+              >
+                <span
+                  aria-hidden="true"
+                  class="color-chip__swatch"
+                  [style.background-color]="color.swatchHex"
+                ></span>
+                <span class="color-chip__label"
+                  >{{ color.label }}
+                  @if (!busy()) {
+                    <span aria-label="találatok száma" class="color-chip__count"
+                      >&nbsp;({{ color.count }})</span
+                    >
+                  } @else {
+                    <span aria-hidden="true" class="count-skeleton"></span>
+                  }
+                </span>
+              </button>
+            </li>
+          }
         }
       </ul>
     </fieldset>
@@ -102,9 +126,13 @@
               <span class="option__label"
                 >{{ bucket.label }}
                 @if (bucket.count !== null) {
-                  <span aria-label="találatok száma" class="option__count"
-                    >&nbsp;({{ bucket.count }})</span
-                  >
+                  @if (!busy()) {
+                    <span aria-label="találatok száma" class="option__count"
+                      >&nbsp;({{ bucket.count }})</span
+                    >
+                  } @else {
+                    <span aria-hidden="true" class="count-skeleton"></span>
+                  }
                 }
               </span>
             </button>
@@ -175,9 +203,13 @@
             <span class="option__label"
               >Csak raktáron
               @if (inStockCount() !== null) {
-                <span aria-label="találatok száma" class="option__count"
-                  >&nbsp;({{ inStockCount() }})</span
-                >
+                @if (!busy()) {
+                  <span aria-label="találatok száma" class="option__count"
+                    >&nbsp;({{ inStockCount() }})</span
+                  >
+                } @else {
+                  <span aria-hidden="true" class="count-skeleton"></span>
+                }
               }
             </span>
           </button>
@@ -196,9 +228,13 @@
             <span class="option__label"
               >Csak 5G
               @if (fiveGCount() !== null) {
-                <span aria-label="találatok száma" class="option__count"
-                  >&nbsp;({{ fiveGCount() }})</span
-                >
+                @if (!busy()) {
+                  <span aria-label="találatok száma" class="option__count"
+                    >&nbsp;({{ fiveGCount() }})</span
+                  >
+                } @else {
+                  <span aria-hidden="true" class="count-skeleton"></span>
+                }
               }
             </span>
           </button>

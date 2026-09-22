@@ -87,6 +87,7 @@ function fireInput(el: HTMLInputElement, value: string): void {
 @Component({
   imports: [FilterPanel],
   template: `<app-filter-panel
+    [busy]="busy()"
     [facets]="facets()"
     [value]="query()"
     (filtersChanged)="onFiltersChanged($event)"
@@ -95,6 +96,7 @@ function fireInput(el: HTMLInputElement, value: string): void {
 class HostComponent {
   readonly query = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
   readonly facets = signal<Facets | null>(null);
+  readonly busy = signal(false);
 
   onFiltersChanged(next: CatalogQuery): void {
     this.query.set(next);
@@ -544,5 +546,67 @@ describe('FilterPanel — facets wire-up', () => {
     const more = queryButton(getRootElement(fixture), '[data-testid="filter-brand-more"]');
     expect(more.getAttribute('aria-expanded')).toBe('true');
     expect(more.textContent.trim()).toBe('Kevesebb gyártó');
+  });
+});
+
+describe('MIM-228: busy input keeps the facet rows stable', () => {
+  it('MIM-228-AC08: while busy the count is replaced by a skeleton and the row count does not change', () => {
+    const { fixture, host } = setup();
+    const colors = [
+      { value: 'a', label: 'A', count: 1, swatchHex: '#111111' },
+      { value: 'b', label: 'B', count: 2, swatchHex: '#222222' },
+      { value: 'c', label: 'C', count: 3, swatchHex: '#333333' },
+      { value: 'd', label: 'D', count: 4, swatchHex: '#444444' },
+      { value: 'e', label: 'E', count: 5, swatchHex: '#555555' },
+      { value: 'f', label: 'F', count: 6, swatchHex: '#666666' },
+      { value: 'g', label: 'G', count: 7, swatchHex: '#777777' },
+      { value: 'h', label: 'H', count: 8, swatchHex: '#888888' },
+    ];
+    host.facets.set({
+      brands: [],
+      colors,
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const colorList = root.querySelector('[data-testid="filter-group-color"] ul');
+    expect(colorList?.querySelectorAll('li').length).toBe(8);
+    for (const color of colors) {
+      const chip = root.querySelector(`[data-testid="filter-color-${color.value}"]`);
+      expect(chip).not.toBeNull();
+      expect(chip?.querySelector('.color-chip__count')).not.toBeNull();
+    }
+
+    host.busy.set(true);
+    fixture.detectChanges();
+
+    expect(colorList?.querySelectorAll('li').length).toBe(8);
+    for (const color of colors) {
+      const chip = root.querySelector(`[data-testid="filter-color-${color.value}"]`);
+      expect(chip).not.toBeNull();
+      expect(chip?.querySelector('.color-chip__count')).toBeNull();
+      expect(chip?.querySelector('.count-skeleton')).not.toBeNull();
+    }
+  });
+
+  it('MIM-228-AC09: the first load renders five brand skeleton rows and one colour skeleton row', () => {
+    const { fixture, host } = setup();
+    host.busy.set(true);
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const brandList = root.querySelector('[data-testid="filter-group-brand"] ul');
+    expect(brandList?.querySelectorAll('li').length).toBe(5);
+    expect(brandList?.querySelectorAll('li.row-skeleton').length).toBe(5);
+    expect(brandList?.querySelectorAll('button.option').length).toBe(0);
+
+    const colorList = root.querySelector('[data-testid="filter-group-color"] ul');
+    expect(colorList?.querySelectorAll('li').length).toBe(1);
+    expect(colorList?.querySelectorAll('li.row-skeleton').length).toBe(1);
+    expect(colorList?.querySelectorAll('button.color-chip').length).toBe(0);
   });
 });

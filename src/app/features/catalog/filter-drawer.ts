@@ -61,6 +61,10 @@ export class FilterDrawer {
   /** Whether the controls are inert (loading / error). */
   readonly disabled = input<boolean>(false);
 
+  /** True while a request is in flight. Drives the facet count
+   *  skeletons and the first-load row skeletons. */
+  readonly busy = input<boolean>(false);
+
   /** Emits the committed draft exactly once per Apply press. */
   readonly filtersChanged = output<CatalogQuery>();
 
@@ -151,6 +155,10 @@ export class FilterDrawer {
 
   /** Colour facets, falling back to an empty list when none are present. */
   readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
+
+  /** Five placeholder rows the drawer renders on the very first load
+   *  (busy true, no brand facets yet), matching the panel. */
+  readonly brandSkeletonRows: readonly unknown[] = [0, 0, 0, 0, 0];
 
   /** Element that should regain focus when the dialog closes. The parent
    *  passes its own trigger button through this input so WCAG focus

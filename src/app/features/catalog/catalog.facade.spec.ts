@@ -26,6 +26,10 @@ import { Api } from '../../../app/api/generated/api';
 import { listProducts } from '../../../app/api/generated/fn/catalog/list-products';
 import { CatalogFacade } from '../../../app/features/catalog/catalog.facade';
 import {
+  mergeFacetsIntoUniverse,
+  type FacetUniverse,
+} from '../../../app/features/catalog/catalog.facade';
+import {
   ALLOWED_PAGE_SIZES,
   ALLOWED_STORAGE_GB,
   CATALOG_QUERY_KEYS,
@@ -1037,5 +1041,126 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     expect(second?.is5g).toBeUndefined();
     api.resolve(emptyPage());
     await tick();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MIM-228: facet universe — colours absent from a later response keep
+// their row with a zero count, values new in a later response are
+// appended, and the pass-through fields are untouched.
+// ---------------------------------------------------------------------------
+
+function universe(): FacetUniverse {
+  return { brands: [], colors: [] };
+}
+
+function makeFreshFacets(args: {
+  colors: readonly { value: string; count: number }[];
+  brands?: readonly { value: string; count: number }[];
+  inStock?: number;
+  is5g?: number;
+}): Facets {
+  return {
+    brands: (args.brands ?? []).map((b) => ({ value: b.value, label: b.value, count: b.count })),
+    colors: args.colors.map((c) => ({
+      value: c.value,
+      label: c.value,
+      count: c.count,
+      swatchHex: '#343B43',
+    })),
+    inStock: args.inStock ?? 0,
+    is5g: args.is5g ?? 0,
+    priceRange: { min: money(0), max: money(1_000_000) },
+    storageGb: ALLOWED_STORAGE_GB.map((s) => makeFacet(String(s), 0)),
+  };
+}
+
+describe('MIM-228: facet universe', () => {
+  it('MIM-228-AC05: a colour absent from the response keeps its row with a zero count', () => {
+    const firstFresh = makeFreshFacets({
+      colors: [
+        { value: 'a', count: 3 },
+        { value: 'b', count: 2 },
+        { value: 'c', count: 1 },
+        { value: 'd', count: 4 },
+        { value: 'e', count: 5 },
+        { value: 'f', count: 6 },
+        { value: 'g', count: 7 },
+        { value: 'h', count: 8 },
+      ],
+    });
+    const afterFirst = mergeFacetsIntoUniverse(universe(), firstFresh);
+
+    const secondFresh = makeFreshFacets({
+      colors: [
+        { value: 'a', count: 1 },
+        { value: 'c', count: 1 },
+        { value: 'e', count: 1 },
+      ],
+    });
+    const afterSecond = mergeFacetsIntoUniverse(
+      { brands: afterFirst.brands, colors: afterFirst.colors },
+      secondFresh,
+    );
+
+    expect(afterSecond.colors.length).toBe(8);
+    const order = afterSecond.colors.map((c) => c.value);
+    expect(order).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+    const byValue = new Map(afterSecond.colors.map((c) => [c.value, c.count]));
+    expect(byValue.get('a')).toBe(1);
+    expect(byValue.get('b')).toBe(0);
+    expect(byValue.get('c')).toBe(1);
+    expect(byValue.get('d')).toBe(0);
+    expect(byValue.get('e')).toBe(1);
+    expect(byValue.get('f')).toBe(0);
+    expect(byValue.get('g')).toBe(0);
+    expect(byValue.get('h')).toBe(0);
+  });
+
+  it('MIM-228-AC06: a value new in a later response is appended', () => {
+    const firstFresh = makeFreshFacets({ colors: [{ value: 'a', count: 3 }] });
+    const afterFirst = mergeFacetsIntoUniverse(universe(), firstFresh);
+
+    const secondFresh = makeFreshFacets({ colors: [{ value: 'b', count: 5 }] });
+    const afterSecond = mergeFacetsIntoUniverse(
+      { brands: afterFirst.brands, colors: afterFirst.colors },
+      secondFresh,
+    );
+
+    expect(afterSecond.colors.map((c) => c.value)).toEqual(['a', 'b']);
+    const byValue = new Map(afterSecond.colors.map((c) => [c.value, c.count]));
+    expect(byValue.get('a')).toBe(0);
+    expect(byValue.get('b')).toBe(5);
+  });
+
+  it('MIM-228-AC07: storageGb, inStock, is5g and priceRange pass through unchanged', () => {
+    const priceRange = { min: money(10_000), max: money(500_000) };
+    const firstFresh: Facets = {
+      brands: [],
+      colors: [{ value: 'a', label: 'a', count: 1, swatchHex: '#111111' }],
+      inStock: 7,
+      is5g: 4,
+      priceRange,
+      storageGb: ALLOWED_STORAGE_GB.map((s) => makeFacet(String(s), 0)),
+    };
+    const afterFirst = mergeFacetsIntoUniverse(universe(), firstFresh);
+
+    const secondFresh: Facets = {
+      brands: [],
+      colors: [],
+      inStock: 11,
+      is5g: 9,
+      priceRange,
+      storageGb: ALLOWED_STORAGE_GB.map((s) => makeFacet(String(s), 0)),
+    };
+    const afterSecond = mergeFacetsIntoUniverse(
+      { brands: afterFirst.brands, colors: afterFirst.colors },
+      secondFresh,
+    );
+
+    expect(afterSecond.inStock).toBe(11);
+    expect(afterSecond.is5g).toBe(9);
+    expect(afterSecond.priceRange).toEqual(priceRange);
+    expect(afterSecond.storageGb.map((s) => s.value)).toEqual(['128', '256', '512']);
   });
 });
