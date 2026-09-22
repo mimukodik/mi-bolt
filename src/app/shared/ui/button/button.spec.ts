@@ -48,7 +48,8 @@ function normaliseComponentCss(css: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replaceAll('%NS%', '')
     .replace(/\[[^\]]*\]/g, '')
-    .replace(/\s+/g, '');
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([{}:;,])\s*/g, '$1');
 }
 
 /** The declaration block of one rule of the normalised sheet. Asserting on the
@@ -241,8 +242,8 @@ describe('Button primitive', () => {
     // the two outlined variants take the hairline out of the padding, so
     // their box is the same 48px as the filled ones.
     const outlined = declarations(css, '.root.is-secondary,.root.is-secondary-on-dark');
-    expect(outlined).toContain('border:1pxsolid');
-    expect(outlined).toContain('padding:11px23px');
+    expect(outlined).toContain('border:1px solid');
+    expect(outlined).toContain('padding:11px 23px');
     // secondary: the navy outline on white (.btn-outline-navy).
     const secondary = declarations(css, '.root.is-secondary');
     expect(secondary).toContain('color:var(--color-primary)');
