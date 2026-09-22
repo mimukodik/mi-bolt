@@ -132,3 +132,16 @@ path-scoped rules trigger only on a read.
   matter!!!!!!! and there is no writing legacy code!!!!!"). Both went out
   entirely, e2e tests with them.
 
+
+- **Only the `playwright-test-*` agents write end-to-end tests.** Every
+  `*.spec.ts` under `e2e/` is written by `playwright-test-generator` or
+  repaired by `playwright-test-healer`, from a plan `playwright-test-planner`
+  saved under `specs/`. No other agent, no `coder-agent.sh` runner and not the
+  orchestrator creates or edits one: a spec written by anything else was never
+  executed against a real page while it was being written, and that execution
+  is the whole of what those three agents add. Everything else under `e2e/`,
+  `playwright.config.ts`, `e2e/fixtures/**` and `e2e/seed.spec.ts`, which is
+  the conventions file rather than a test, is ordinary repository code under
+  the ordinary rules. A production change an end-to-end test turns out to need
+  goes to the unit that owns it, never into the spec. The `playwright-tests`
+  skill owns the two flows and how the agents are watched.

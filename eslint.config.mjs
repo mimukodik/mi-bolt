@@ -294,6 +294,41 @@ export default defineConfig([
     },
   },
   {
+    // Playwright end-to-end tests: Node code driving a browser, not part of
+    // the Angular program, so not in the src/** or tests/** blocks.
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    ignores: ['e2e/seed.spec.ts'],
+    extends: [eslint.configs.recommended, tseslint.configs.recommended],
+    languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: __dirname } },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@playwright/test',
+              importNames: ['test'],
+              message: 'Import `test` from e2e/fixtures/coverage so the V8 coverage fixture runs.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='reload']",
+          message: 'page.reload() is banned here. Use page.goto(page.url()). See e2e/seed.spec.ts.',
+        },
+        {
+          selector: "CallExpression[callee.property.name='waitForTimeout']",
+          message: 'No hard waits. Use a web-first assertion or expect.toPass().',
+        },
+      ],
+    },
+  },
+  { files: ['e2e/fixtures/**/*.ts'], rules: { 'no-restricted-imports': 'off' } },
+  { files: ['e2e/seed.spec.ts'], rules: {} },
+  {
     files: ['**/*.spec.ts'],
     rules: {
       // Relaxed for the demo (MIM-209, docs/lint-relaxations.md).
