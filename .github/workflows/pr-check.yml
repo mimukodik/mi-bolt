@@ -21,16 +21,21 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        timeout-minutes: 3
         with:
           persist-credentials: false
       - uses: actions/setup-node@v7
+        timeout-minutes: 3
         with:
           node-version: 26
           cache: npm
       - run: npm ci
+        timeout-minutes: 5
       - name: ESLint
+        timeout-minutes: 3
         run: npm run lint
       - name: Prettier
+        timeout-minutes: 3
         run: npm run format:check
 
   unit-tests:
@@ -39,25 +44,33 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        timeout-minutes: 3
         with:
           persist-credentials: false
       - uses: actions/setup-node@v7
+        timeout-minutes: 3
         with:
           node-version: 26
           cache: npm
       - run: npm ci
+        timeout-minutes: 5
       - name: Vitest with coverage
+        timeout-minutes: 8
         run: npm run test
       - name: Contract specs (tests/contract)
+        timeout-minutes: 3
         run: npm run test:contract
       - name: Coverage summary
         if: always()
+        timeout-minutes: 2
         run: node scripts/coverage-summary.mjs coverage/unit/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
       - name: Coverage summary (demo-payment)
         if: always()
+        timeout-minutes: 2
         run: node scripts/coverage-summary.mjs coverage/demo-payment/coverage-summary.json '### Demo-payment coverage' >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage report
         if: always()
+        timeout-minutes: 5
         uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
@@ -73,16 +86,22 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        timeout-minutes: 3
         with:
           persist-credentials: false
       - uses: actions/setup-node@v7
+        timeout-minutes: 3
         with:
           node-version: 26
           cache: npm
       - run: npm ci
+        timeout-minutes: 5
       - run: npm run build:check
+        timeout-minutes: 5
       - run: npm run build:payment
+        timeout-minutes: 5
       - run: npm run check:payment-boot
+        timeout-minutes: 6
 
   api-drift:
     name: API client drift
@@ -90,14 +109,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        timeout-minutes: 3
         with:
           persist-credentials: false
       - uses: actions/setup-node@v7
+        timeout-minutes: 3
         with:
           node-version: 26
           cache: npm
       - run: npm ci
+        timeout-minutes: 5
       - name: Regenerate and diff
+        timeout-minutes: 5
         run: npm run api:drift
 
   e2e:
@@ -126,27 +149,35 @@ jobs:
           - { project: integration-webkit-mobile, browser: webkit, gate: '0', seed: '' }
     steps:
       - uses: actions/checkout@v7
+        timeout-minutes: 3
         with:
           persist-credentials: false
       - uses: actions/setup-node@v7
+        timeout-minutes: 3
         with:
           node-version: 26
           cache: npm
       - run: npm ci
+        timeout-minutes: 5
       - name: Install ${{ matrix.browser }}
+        timeout-minutes: 10
         run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Build (development configuration, mock worker on)
+        timeout-minutes: 5
         run: npx ng build --configuration development
       - name: Playwright ${{ matrix.project }}
+        timeout-minutes: 12
         run: npx playwright test ${{ matrix.seed }} --project=${{ matrix.project }}
         env:
           CI: 'true'
           E2E_COVERAGE_GATE: ${{ matrix.gate }}
       - name: Coverage summary (e2e, ${{ matrix.project }})
         if: always() && matrix.gate == '1'
+        timeout-minutes: 3
         run: node scripts/coverage-summary.mjs coverage/e2e/coverage/coverage-summary.json '### E2E coverage (${{ matrix.project }})' >> "$GITHUB_STEP_SUMMARY"
       - name: Upload blob report
         if: always()
+        timeout-minutes: 5
         uses: actions/upload-artifact@v7
         with:
           name: blob-report-${{ matrix.project }}
@@ -155,6 +186,7 @@ jobs:
           if-no-files-found: error
       - name: Upload coverage and traces
         if: always()
+        timeout-minutes: 5
         uses: actions/upload-artifact@v7
         with:
           name: playwright-e2e-${{ matrix.project }}
@@ -172,21 +204,27 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        timeout-minutes: 3
         with:
           persist-credentials: false
       - uses: actions/setup-node@v7
+        timeout-minutes: 3
         with:
           node-version: 26
           cache: npm
       - run: npm ci
+        timeout-minutes: 5
       - uses: actions/download-artifact@v7
+        timeout-minutes: 5
         with:
           path: all-blob-reports
           pattern: blob-report-*
           merge-multiple: true
       - name: Merge the six HTML reports into one
+        timeout-minutes: 5
         run: npx playwright merge-reports --reporter html ./all-blob-reports
       - uses: actions/upload-artifact@v7
+        timeout-minutes: 5
         with:
           name: playwright-e2e-report
           path: playwright-report
