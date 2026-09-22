@@ -70,10 +70,12 @@ import type { Variant } from '../../api/generated/models/variant';
  * sticks to the bottom of the viewport carrying the price + the
  * primary CTA. The rail uses
  * `padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-3))`
- * so iOS / Android notch devices do not obscure the button. The
- * footer clears the rail by `--rail-height` (src/styles/tokens.css),
- * the rail's own minimum height, so at the bottom of the page the
- * rail covers none of the footer.
+ * so iOS / Android notch devices do not obscure the button, and
+ * `min-height: calc(env(safe-area-inset-bottom) + var(--rail-height))`
+ * so its minimum height equals the footer's clearance
+ * (src/styles/tokens.css and src/styles/primitives.css). The two
+ * reference the same token, so at maximum scroll the footer's
+ * button sits above the rail rather than behind it.
  *
  * No 3D (T16-AC05): the baseline page does not ship a 3D script,
  * does not render a fake 3D button and does not lazy-import any
