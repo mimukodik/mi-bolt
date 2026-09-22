@@ -406,7 +406,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `imageSelected:string; zoomRequested:string`.
 
-**Functions:** Prev/next, nonautoplay thumbnails, counter, keyboard controls; variant image collection change remains coherent.
+**Functions:** Prev/next and counter with two or more images (neither with one), nonautoplay thumbnails, keyboard controls; variant image collection change remains coherent.
 
 **Required states:** loading,ready,image-error,zoom-open.
 
