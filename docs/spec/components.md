@@ -492,11 +492,11 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `item:CartItem; pending:boolean`.
+**Signal inputs:** `line:CartItem; pending:boolean`.
 
 **Outputs:** `removeRequested:string`.
 
-**Functions:** Media/title/exact variant/unit+line prices, the quantity as read-only text and remove; emit intent only, no optimistic overwrite.
+**Functions:** Media/title/exact variant/line price (no separate unit price, like yettel.hu's cart; owner, 2026-09-22), the quantity as read-only text and remove; emit intent only, no optimistic overwrite.
 
 **Required states:** default,pending,focus.
 
