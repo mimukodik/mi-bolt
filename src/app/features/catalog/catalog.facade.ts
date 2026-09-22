@@ -47,6 +47,8 @@ import {
 import { Api } from '../../api/generated/api';
 import { listProducts } from '../../api/generated/fn/catalog/list-products';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
+import type { FacetValue } from '../../api/generated/models/facet-value';
 import type { Facets } from '../../api/generated/models/facets';
 import {
   DEFAULT_CATALOG_QUERY,
@@ -82,6 +84,14 @@ interface CatalogResult {
   readonly page: number;
   readonly pageSize: 12 | 24;
   readonly facets: Facets;
+}
+
+/** Every brand and colour value the facade has seen since it was
+ *  constructed, in first-seen order, each carrying the count of the
+ *  latest response or 0 (MIM-228). */
+export interface FacetUniverse {
+  readonly brands: readonly FacetValue[];
+  readonly colors: readonly ColorFacetValue[];
 }
 
 /**
@@ -148,6 +158,36 @@ function describeError(err: unknown): string {
 }
 
 /**
+ * Merges a fresh `Facets` into the accumulated universe and returns the
+ * `Facets` the page renders (MIM-228). A brand or colour absent from the
+ * response keeps its row with count 0, so a filter click never makes the
+ * brand or colour list shrink and grow; a value new in the response is
+ * appended; a value present takes the response's entry. `storageGb`,
+ * `inStock`, `is5g` and `priceRange` pass through from the response.
+ * Exported so the spec drives the same function the facade calls.
+ */
+export function mergeFacetsIntoUniverse(universe: FacetUniverse, fresh: Facets): Facets {
+  return {
+    ...fresh,
+    brands: mergeRows(universe.brands, fresh.brands),
+    colors: mergeRows(universe.colors, fresh.colors),
+  };
+}
+
+function mergeRows<T extends { readonly value: string; readonly count: number }>(
+  known: readonly T[],
+  fresh: readonly T[],
+): T[] {
+  const freshByValue = new Map(fresh.map((row) => [row.value, row]));
+  const merged = known.map((row) => freshByValue.get(row.value) ?? { ...row, count: 0 });
+  const knownValues = new Set(known.map((row) => row.value));
+  for (const row of fresh) {
+    if (!knownValues.has(row.value)) merged.push(row);
+  }
+  return merged;
+}
+
+/**
  * Root-provided facade. Single instance per application; consumers
  * inject it directly (no token wrapper) so swapping the facade for a
  * test stub is a single TestBed provider line.
@@ -172,6 +212,10 @@ export class CatalogFacade {
 
   /** Last successful `ProductPage` from the SDK, if any. */
   private readonly resultSignal = signal<CatalogResult | null>(null);
+
+  /** Every brand and colour row rendered so far, in first-seen order
+   *  (MIM-228); see `mergeFacetsIntoUniverse`. */
+  private readonly facetUniverseSignal = signal<FacetUniverse>({ brands: [], colors: [] });
 
   /** True while a request is in flight (drives `loading` / `refreshing`). */
   private readonly inFlightSignal = signal<boolean>(false);
@@ -231,12 +275,14 @@ export class CatalogFacade {
       .subscribe((event) => {
         this.inFlightSignal.set(false);
         if (event.kind === 'ok') {
+          const facets = mergeFacetsIntoUniverse(this.facetUniverseSignal(), event.page.facets);
+          this.facetUniverseSignal.set({ brands: facets.brands, colors: facets.colors });
           this.resultSignal.set({
             items: event.page.items,
             total: event.page.total,
             page: event.page.page,
             pageSize: event.page.pageSize,
-            facets: event.page.facets,
+            facets,
           });
         } else {
           this.errorSignal.set(event.error);

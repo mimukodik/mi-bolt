@@ -26,6 +26,10 @@ import { Api } from '../../../app/api/generated/api';
 import { listProducts } from '../../../app/api/generated/fn/catalog/list-products';
 import { CatalogFacade } from '../../../app/features/catalog/catalog.facade';
 import {
+  mergeFacetsIntoUniverse,
+  type FacetUniverse,
+} from '../../../app/features/catalog/catalog.facade';
+import {
   ALLOWED_PAGE_SIZES,
   ALLOWED_STORAGE_GB,
   CATALOG_QUERY_KEYS,
@@ -1052,5 +1056,128 @@ describe('T12-AC05 URL round-trip + direct-link restore', () => {
     expect(second?.is5g).toBeUndefined();
     api.resolve(emptyPage());
     await tick();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MIM-228: facet universe. A brand or colour absent from a later response
+// keeps its row with a zero count, a value new in a later response is
+// appended, and the pass-through fields are untouched.
+// ---------------------------------------------------------------------------
+
+function emptyUniverse(): FacetUniverse {
+  return { brands: [], colors: [] };
+}
+
+function makeFreshFacets(args: {
+  colors: readonly { value: string; count: number }[];
+  brands?: readonly { value: string; count: number }[];
+}): Facets {
+  return {
+    brands: (args.brands ?? []).map((b) => ({ value: b.value, label: b.value, count: b.count })),
+    colors: args.colors.map((c) => ({
+      value: c.value,
+      label: c.value,
+      count: c.count,
+      swatchHex: '#343B43',
+    })),
+    inStock: 0,
+    is5g: 0,
+    priceRange: { min: money(0), max: money(1_000_000) },
+    storageGb: ALLOWED_STORAGE_GB.map((s) => makeFacet(String(s), 0)),
+  };
+}
+
+describe('MIM-228: facet universe', () => {
+  it('MIM-228: a colour absent from the response keeps its row with a zero count, in first-seen order', () => {
+    const first = mergeFacetsIntoUniverse(
+      emptyUniverse(),
+      makeFreshFacets({
+        colors: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((value, i) => ({
+          value,
+          count: i + 1,
+        })),
+      }),
+    );
+    const second = mergeFacetsIntoUniverse(
+      { brands: first.brands, colors: first.colors },
+      makeFreshFacets({
+        colors: [
+          { value: 'a', count: 1 },
+          { value: 'c', count: 1 },
+          { value: 'e', count: 1 },
+        ],
+      }),
+    );
+
+    expect(second.colors.map((c) => c.value)).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+    expect(second.colors.map((c) => c.count)).toEqual([1, 0, 1, 0, 1, 0, 0, 0]);
+  });
+
+  it('MIM-228: a value new in a later response is appended', () => {
+    const first = mergeFacetsIntoUniverse(
+      emptyUniverse(),
+      makeFreshFacets({ colors: [{ value: 'a', count: 3 }] }),
+    );
+    const second = mergeFacetsIntoUniverse(
+      { brands: first.brands, colors: first.colors },
+      makeFreshFacets({ colors: [{ value: 'b', count: 5 }] }),
+    );
+
+    expect(second.colors.map((c) => c.value)).toEqual(['a', 'b']);
+    expect(second.colors.map((c) => c.count)).toEqual([0, 5]);
+  });
+
+  it('MIM-228: a brand absent from a later response keeps its row with a zero count', () => {
+    const first = mergeFacetsIntoUniverse(
+      emptyUniverse(),
+      makeFreshFacets({
+        colors: [],
+        brands: [
+          { value: 'apple', count: 10 },
+          { value: 'samsung', count: 8 },
+        ],
+      }),
+    );
+    const second = mergeFacetsIntoUniverse(
+      { brands: first.brands, colors: first.colors },
+      makeFreshFacets({ colors: [], brands: [{ value: 'apple', count: 3 }] }),
+    );
+    const third = mergeFacetsIntoUniverse(
+      { brands: second.brands, colors: second.colors },
+      makeFreshFacets({ colors: [], brands: [{ value: 'google', count: 2 }] }),
+    );
+
+    expect(second.brands.map((b) => [b.value, b.count])).toEqual([
+      ['apple', 3],
+      ['samsung', 0],
+    ]);
+    expect(third.brands.map((b) => [b.value, b.count])).toEqual([
+      ['apple', 0],
+      ['samsung', 0],
+      ['google', 2],
+    ]);
+  });
+
+  it('MIM-228: storageGb, inStock, is5g and priceRange pass through from the latest response', () => {
+    const priceRange = { min: money(10_000), max: money(500_000) };
+    const fresh: Facets = {
+      brands: [],
+      colors: [],
+      inStock: 11,
+      is5g: 9,
+      priceRange,
+      storageGb: ALLOWED_STORAGE_GB.map((s) => makeFacet(String(s), 2)),
+    };
+    const merged = mergeFacetsIntoUniverse(
+      { brands: [], colors: [{ value: 'a', label: 'a', count: 1, swatchHex: '#111111' }] },
+      fresh,
+    );
+
+    expect(merged.inStock).toBe(11);
+    expect(merged.is5g).toBe(9);
+    expect(merged.priceRange).toEqual(priceRange);
+    expect(merged.storageGb).toBe(fresh.storageGb);
+    expect(merged.colors.map((c) => [c.value, c.count])).toEqual([['a', 0]]);
   });
 });
