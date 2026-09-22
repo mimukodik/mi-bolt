@@ -100,11 +100,12 @@ p {
   border-radius: inherit;
 }
 
-/* A bordered text control reads border + gap + outline as two rings. The ring
-   hugs the border instead: no offset, and the border takes the ring's colour,
-   so the two merge into one continuous ring around the control. Round and
-   small controls keep the offset above, where the gap is what makes the ring
-   visible, which is why checkboxes and radios are excluded here.
+/* Text fields follow yettel's `.form-control` recipe (docs/design/yettel.md
+   §5 "Text field"): on focus the border turns #0069c0, with no outline and no
+   ring. An invalid field keeps its red border and shows yettel's red "!" icon
+   at its right edge; focused, it adds a soft red halo and stays red. A field
+   without a border (`border-0`, the header search boxes) keeps the outline
+   ring above, because a border colour on it would show nothing.
 
    `:focus-visible` is written twice on purpose. This is a global stylesheet,
    so Angular's emulated view encapsulation adds no `[_ngcontent-…]` attribute
@@ -112,13 +113,35 @@ p {
    gets one per compound segment and so outranks a single `:focus-visible`.
    Repeating a pseudo-class is the documented way to raise specificity without
    changing what the selector matches (W3C Selectors Level 4 §15, "Calculating
-   a selector's specificity"). Component rules that set a resting border are
-   kept below this one deliberately; see the checkout stylesheets. */
-input:not([type='checkbox']):not([type='radio']):focus-visible:focus-visible,
-select:focus-visible:focus-visible,
-textarea:focus-visible:focus-visible {
-  outline-offset: 0;
-  border-color: var(--color-focus-light);
+   a selector's specificity"). The invalid rules come last so that, at equal
+   specificity, they win over the focus rule. */
+input:not([type='checkbox']):not([type='radio']):not(.border-0):focus-visible:focus-visible,
+select:not(.border-0):focus-visible:focus-visible,
+textarea:not(.border-0):focus-visible:focus-visible {
+  outline: 0;
+  border-color: var(--color-focus-input);
+  box-shadow: none;
+}
+
+input[aria-invalid='true']:not([type='checkbox']):not([type='radio']),
+textarea[aria-invalid='true'] {
+  border-color: var(--color-status-error);
+  padding-right: calc(1.25em + 1rem);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23d9534f' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23d9534f' stroke='none'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.3125em + 0.25rem) center;
+  background-size: calc(0.625em + 0.5rem) calc(0.625em + 0.5rem);
+}
+
+select[aria-invalid='true'] {
+  border-color: var(--color-status-error);
+}
+
+input[aria-invalid='true']:not([type='checkbox']):not([type='radio']):focus-visible:focus-visible,
+select[aria-invalid='true']:focus-visible:focus-visible,
+textarea[aria-invalid='true']:focus-visible:focus-visible {
+  border-color: var(--color-status-error);
+  box-shadow: 0 0 0 0.2rem var(--color-error-halo);
 }
 
 /* Visually-hidden helper for assistive-only labels. */

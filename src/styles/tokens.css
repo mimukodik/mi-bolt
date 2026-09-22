@@ -42,6 +42,12 @@
   /* color focus */
   --color-focus-light: var(--color-primary);
   --color-focus-dark: var(--color-accent);
+  /* Border of a focused text field: yettel's `.form-control:focus`
+     (docs/design/yettel.md §5 "Text field"). */
+  --color-focus-input: #0069c0;
+  /* Halo around a focused invalid field: yettel's
+     `.form-control.is-invalid:focus` box-shadow. */
+  --color-error-halo: rgb(217 83 79 / 25%);
 
   /* spacing scale: 8pt rhythm, 4pt sub-step */
   --space-1: 4px;

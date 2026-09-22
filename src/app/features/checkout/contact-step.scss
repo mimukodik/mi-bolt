@@ -55,9 +55,7 @@ input {
   border-radius: var(--radius-control);
 }
 
-input[aria-invalid='true'] {
-  border-color: var(--color-status-error);
-}
+/* The invalid look (red border, icon, focus halo) lives in src/styles/primitives.css. */
 
 .form-summary {
   padding: var(--space-4);

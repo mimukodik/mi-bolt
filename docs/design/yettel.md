@@ -262,6 +262,15 @@ text-decoration: underline
 
 Source: `.btn-link-no-decoration{font-weight:normal;color:#002340;text-decoration:underline}`.
 
+### Text field (`.form-control`)
+
+Read from the captured `yettel/css/portal.css` on 2026-09-22.
+
+- Focus: `.form-control:focus{color:#474747;background-color:#fff;border-color:#0069c0;outline:0;box-shadow:none}`. The same selector list covers `.search-box__term:focus` and `.cart .cart-item__piece-control-field:focus`. MiBolt: `--color-focus-input` (`#0069c0`), no outline, no ring, on every bordered text field; the borderless header search boxes keep the navy outline ring.
+- Invalid: `.form-control.is-invalid{border-color:#d9534f;padding-right:calc(1.25em + 1rem);background-image:<a 12x12 red circled "!" SVG>;background-repeat:no-repeat;background-position:right calc(.3125em + .25rem) center;background-size:calc(.625em + .5rem) calc(.625em + .5rem)}`, applied to the cart quantity field too. MiBolt matches `aria-invalid="true"` instead of the class and copies the SVG byte for byte.
+- Invalid and focused: `.form-control.is-invalid:focus{border-color:#d9534f;box-shadow:0 0 0 .2rem rgba(217,83,79,0.25)}`. MiBolt: `--color-error-halo`.
+- Recorded, not corrected: a border colour change is a weaker focus indicator than the outline ring it replaces. Yettel fidelity decides for this demo (owner, 2026-09-22).
+
 ### Product card on the list page
 
 The card content block is a flat bordered surface, not a shadowed card:
