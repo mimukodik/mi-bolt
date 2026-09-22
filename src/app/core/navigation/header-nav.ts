@@ -19,7 +19,7 @@ import { isHTMLInputElement } from '../../shared/utils/event-target';
  * Variant of the global header rendered by `AppShell`.
  *
  * - `marketing` and `shop` use the full navigation: brand left, primary
- *   links (Mobiltelefonok, A demóról) center, search + cart right. Both
+ *   link (Mobiltelefonok) center, search + cart right. Both
  *   variants additionally expose a full-width mobile search bar below
  *   the header at narrow widths.
  * - `checkout` uses the compact dark header required by the purchase
@@ -31,13 +31,9 @@ export type HeaderVariant = 'marketing' | 'shop' | 'checkout';
 interface NavLink {
   readonly label: string;
   readonly routerLink: string;
-  readonly fragment?: string;
 }
 
-const STANDARD_LINKS: readonly NavLink[] = [
-  { label: 'Mobiltelefonok', routerLink: '/telefonok' },
-  { label: 'A demóról', routerLink: '/', fragment: 'demo' },
-];
+const STANDARD_LINKS: readonly NavLink[] = [{ label: 'Mobiltelefonok', routerLink: '/telefonok' }];
 
 @Component({
   selector: 'app-header-nav',

@@ -30,7 +30,6 @@ export class MobileDrawerHost {
 
   readonly navLinks = input<readonly { label: string; routerLink: string }[]>([
     { label: 'Mobiltelefonok', routerLink: '/telefonok' },
-    { label: 'A demóról', routerLink: '/' },
   ]);
 
   readonly triggerEl = signal<HTMLElement | null>(null);
