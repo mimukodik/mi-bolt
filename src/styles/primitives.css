@@ -206,12 +206,19 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
    --rail-height (tokens.css) is also the rail's own minimum height. The rail
    publishes its real height, message row included, as --rail-block-size
    (mobile-buy-rail.ts); --rail-height is the fallback until it has measured.
-   1.5rem is the footer's own py-6 bottom padding, which this rule replaces. */
+   1.5rem, and 2rem from 640px, are the footer's own py-6 / sm:py-8 bottom padding, which this rule replaces. */
 @media (max-width: 1023px) {
   body:has(app-mobile-buy-rail) app-footer-nav .footer {
     padding-bottom: calc(
       var(--rail-block-size, calc(env(safe-area-inset-bottom) + var(--rail-height))) + 1.5rem
     );
+  }
+  @media (min-width: 640px) {
+    body:has(app-mobile-buy-rail) app-footer-nav .footer {
+      padding-bottom: calc(
+        var(--rail-block-size, calc(env(safe-area-inset-bottom) + var(--rail-height))) + 2rem
+      );
+    }
   }
 
   /* A focused element scrolled into view lands above the rail rather than

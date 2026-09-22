@@ -323,6 +323,20 @@ describe('MIM-238 follow-up: the rail publishes its real height', () => {
     }
   }
 
+  /** The observer argument the production callback ignores. A plain
+   *  object, so no second FakeResizeObserver overwrites `callback`. */
+  const unusedObserver: ResizeObserver = {
+    observe: () => {
+      /* no-op */
+    },
+    unobserve: () => {
+      /* no-op */
+    },
+    disconnect: () => {
+      /* no-op */
+    },
+  };
+
   beforeEach(() => {
     callback = null;
     observed = null;
@@ -356,12 +370,7 @@ describe('MIM-238 follow-up: the rail publishes its real height', () => {
       if (callback === null) throw new Error('Expected a ResizeObserver callback');
       return callback;
     }
-    takeCallback()(
-      [],
-      new FakeResizeObserver(() => {
-        /* no-op */
-      }),
-    );
+    takeCallback()([], unusedObserver);
 
     expect(document.documentElement.style.getPropertyValue('--rail-block-size')).toBe('132px');
   });
@@ -385,12 +394,7 @@ describe('MIM-238 follow-up: the rail publishes its real height', () => {
       if (callback === null) throw new Error('Expected a ResizeObserver callback');
       return callback;
     }
-    takeCallback()(
-      [],
-      new FakeResizeObserver(() => {
-        /* no-op */
-      }),
-    );
+    takeCallback()([], unusedObserver);
 
     fixture.destroy();
 
