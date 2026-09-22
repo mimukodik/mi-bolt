@@ -1181,4 +1181,54 @@ describe('MIM-228: facet universe', () => {
     expect(merged.colors.map((c) => [c.value, c.count])).toEqual([['a', 0]]);
     expect(merged.colors[0]?.swatchHex).toBe('#111111');
   });
+
+  it('MIM-228: a value repeated in one response is appended once', () => {
+    const universe: FacetUniverse = {
+      brands: [],
+      colors: [makeColorFacet('graphite', 2)],
+    };
+    const fresh = makeFreshFacets({
+      colors: [
+        { value: 'graphite', count: 1 },
+        { value: 'zold', count: 3 },
+        { value: 'zold', count: 3 },
+      ],
+    });
+
+    const result = mergeFacetsIntoUniverse(universe, fresh);
+
+    expect(result.colors.map((c) => c.value)).toEqual(['graphite', 'zold']);
+  });
+
+  it('MIM-228: the facade renders the merged facets, so a colour absent from the second response keeps its row at zero', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.toggleColor('zold');
+    expect(api.calls.length).toBe(1);
+    await tick();
+    api.resolve({
+      ...makePage([], 0),
+      facets: {
+        ...makeFacets(),
+        colors: [makeColorFacet('graphite', 4), makeColorFacet('zold', 2)],
+      },
+    });
+    await tick();
+    facade.toggleColor('zold');
+    expect(api.calls.length).toBe(2);
+    await tick();
+    api.resolve({
+      ...makePage([], 0),
+      facets: {
+        ...makeFacets(),
+        colors: [makeColorFacet('graphite', 5)],
+      },
+    });
+    await tick();
+
+    expect(facade.vm().facets?.colors.map((c) => [c.value, c.count])).toEqual([
+      ['graphite', 5],
+      ['zold', 0],
+    ]);
+    expect(api.calls.length).toBe(2);
+  });
 });

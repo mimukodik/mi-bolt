@@ -162,8 +162,9 @@ function describeError(err: unknown): string {
  * `Facets` the page renders (MIM-228). A brand or colour absent from the
  * response keeps its row with count 0, so a filter click never makes the
  * brand or colour list shrink and grow; a value new in the response is
- * appended; a value present takes the response's entry. `storageGb`,
- * `inStock`, `is5g` and `priceRange` pass through from the response.
+ * appended once, even when the response repeats it; a value present takes
+ * the response's entry. `storageGb`, `inStock`, `is5g` and `priceRange`
+ * pass through from the response.
  */
 export function mergeFacetsIntoUniverse(universe: FacetUniverse, fresh: Facets): Facets {
   return {
@@ -180,8 +181,8 @@ function mergeRows<T extends { readonly value: string; readonly count: number }>
   const freshByValue = new Map(fresh.map((row) => [row.value, row]));
   const merged = known.map((row) => freshByValue.get(row.value) ?? { ...row, count: 0 });
   const knownValues = new Set(known.map((row) => row.value));
-  for (const row of fresh) {
-    if (!knownValues.has(row.value)) merged.push(row);
+  for (const [value, row] of freshByValue) {
+    if (!knownValues.has(value)) merged.push(row);
   }
   return merged;
 }
