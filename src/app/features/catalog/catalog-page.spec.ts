@@ -1627,3 +1627,47 @@ describe('self-removing controls — focus moves to the results counter, not <bo
     harness.cleanup();
   });
 });
+
+// ===========================================================================
+// MIM-225: every card on the results grid loads its photo eagerly.
+// ===========================================================================
+
+describe('MIM-225 every results-grid card loads its photo eagerly', () => {
+  /**
+   * The defect, measured in Chrome at 1920x1080 and 390x844 against
+   * `/telefonok?pageSize=24`: cards past the browser's native lazy-loading
+   * threshold sat at `data-status="loading"` with `naturalWidth === 0`
+   * and no network request issued — a plain grey box, no spinner, no
+   * letter, no error. The cause was `catalog-page.html`'s `<app-product-card>`
+   * loop never passing `eager`, so every card kept the
+   * `input<boolean>(false)` default and the browser deferred the fetch.
+   *
+   * The fix is `[eager]="true"` on every card. A first-only assertion
+   * would still pass if someone put `$first` back, so this test reads
+   * `product-image.html`'s `<img data-testid="image-photo">` for every
+   * card on the results grid and asserts each carries `loading="eager"`.
+   * The production line whose removal fails it is the
+   * `[eager]="true"` binding the catalogue grid now passes.
+   */
+  it('every card on the results grid loads its photo eagerly', async () => {
+    const harness = await setupHarness();
+    const items = [
+      buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256),
+      buildItem('p-02', 'MiBolt Demo', 'Demo Air 5G', 219990, true, 128),
+      buildItem('p-03', 'MiBolt Demo', 'Demo Pro 5G', 419990, true, 512),
+    ];
+    harness.respond(successPage(items, 3));
+    await harness.waitForStatus('success');
+
+    const root = getRootElement(harness.fixture);
+    const cards = root.querySelectorAll('[data-testid="product-card-image"]');
+    expect(cards.length).toBe(3);
+
+    for (const card of Array.from(cards)) {
+      const img = card.querySelector('[data-testid="image-photo"]');
+      expect(img).not.toBeNull();
+      expect(img?.getAttribute('loading')).toBe('eager');
+    }
+    harness.cleanup();
+  });
+});

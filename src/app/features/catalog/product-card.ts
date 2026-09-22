@@ -42,7 +42,12 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
 export class ProductCard {
   readonly product = input.required<CatalogItem>();
 
-  /** When true the card's photo loads eagerly: the first card above the fold must not be lazy (Angular NG0913). */
+  /** When true the card's photo loads eagerly. The catalogue grid passes
+   *  `true` for every card because a page holds at most 24 of them and a
+   *  lazy card past the browser's native threshold renders as an empty
+   *  box with no network request issued. The home page's featured grid
+   *  is the first card only, since above-the-fold is what matters there;
+   *  this is the same Angular NG0913 rule, applied to the whole grid. */
   readonly eager = input<boolean>(false);
 
   /** Currently selected variant id. `linkedSignal` re-initialises from
