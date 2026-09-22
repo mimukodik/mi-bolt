@@ -35,11 +35,6 @@
   background: var(--color-brand-accent-soft);
 }
 
-.featured__all-link:focus-visible {
-  outline: 3px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .featured__grid-error {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);

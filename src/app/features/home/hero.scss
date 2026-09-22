@@ -83,7 +83,7 @@
    the same exception the primitive's is-secondary-on-dark takes). */
 .hero__cta:focus-visible,
 .hero__cta-secondary:focus-visible {
-  outline: 3px solid var(--color-text-inverse);
+  outline: 2px solid var(--color-text-inverse);
   outline-offset: 2px;
 }
 
@@ -106,7 +106,7 @@
 }
 
 .hero-shortcuts__card:focus-visible {
-  outline: 3px solid var(--color-focus-dark);
+  outline: 2px solid var(--color-focus-dark);
   outline-offset: 2px;
 }
 

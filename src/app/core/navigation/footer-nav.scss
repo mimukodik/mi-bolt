@@ -47,7 +47,7 @@
 
 /* Lime on a navy ground: only a white ring reads there (§9). */
 .footer__cta:focus-visible {
-  outline: 3px solid var(--color-text-inverse);
+  outline: 2px solid var(--color-text-inverse);
   outline-offset: 2px;
 }
 
