@@ -139,7 +139,11 @@
                   <p class="hint m-0" role="status">{{ addToCartReason() }}</p>
                 }
                 @if (addSuccessMessage(); as message) {
-                  <app-status-message severity="success" [message]="message" />
+                  <app-status-message
+                    severity="success"
+                    [message]="message"
+                    (dismissed)="addSuccessMessage.set(null)"
+                  />
                 }
                 <p class="simulation-note m-0" data-testid="product-simulation-note">
                   A rendelés kipróbálható, de nem jár valódi vásárlással.
