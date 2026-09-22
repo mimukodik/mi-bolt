@@ -575,7 +575,10 @@ yettel.hu's live device page: measured in Chrome on 2026-09-22 (Apple iPhone
 `rgb(0, 35, 64) 0 0 0 2px inset` with a bold label, and every chip is 48px
 tall. MiBolt follows the measured page: a navy ring and 48px chips (MIM-233,
 after the owner asked for less green on the product page). This replaces the
-earlier choice of the lime ring.
+earlier choice of the lime ring. A keyboard-focused chip takes the input-focus blue
+outline (`--color-focus-input`, `#0069c0`, yettel's own form-control focus
+colour) instead of the global navy ring, so focus never reads as the navy
+selection.
 
 ### Device page: price and instalment blocks
 
