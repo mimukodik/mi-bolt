@@ -899,6 +899,10 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(fixture.componentInstance.selectedAvailability()).toBeNull();
     const root = getRootElement(fixture);
     expect(root.querySelector('[data-testid="product-stock"]')).toBeNull();
+    // PR #176: the disabled placeholder is the filled lime button with the white ring.
+    const placeholder = queryElement(root, '.cta-desktop button');
+    expect(placeholder.classList.contains('is-primary-on-dark')).toBe(true);
+    expect(placeholder.classList.contains('is-secondary-on-dark')).toBe(false);
   });
 });
 
@@ -1344,5 +1348,64 @@ describe('MIM-233: the stock line on the navy buy box is white, as on yettel.hu'
     const body = css.slice(css.indexOf('{', start) + 1, css.indexOf('}', start));
     expect(body).toContain('var(--%NS%color-text-inverse)');
     expect(body).not.toContain('var(--%NS%color-accent)');
+  });
+});
+
+describe('owner 2026-09-22: a refused add names the per-product limit', () => {
+  function refuseAdd(code: string, params?: Record<string, unknown>): void {
+    server.use(
+      http.post(`${BASE_URL}/cart/items`, () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:quantity-limit',
+            title: 'Conflict',
+            status: 409,
+            code,
+            detail: 'Merged quantity would exceed the line maximum',
+            traceId: 't',
+            fieldErrors: [],
+            ...(params === undefined ? {} : { params }),
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+  }
+
+  async function pressAddAndReadMessage(): Promise<string> {
+    const { root, fixture, tick } = await createHarness();
+    queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button').click();
+    await tick();
+    fixture.detectChanges();
+    const cta = queryElement(root, '.cta-desktop');
+    return queryElement(cta, '[data-testid="status-message"] .message').textContent.trim();
+  }
+
+  it('QUANTITY_LIMIT with max 5 says the decided sentence', async () => {
+    refuseAdd('QUANTITY_LIMIT', { max: 5, requested: 6 });
+    expect(await pressAddAndReadMessage()).toBe(
+      'Ebből a termékből legfeljebb 5 db lehet a kosárban.',
+    );
+  });
+
+  it('the number comes from params.max, not from the copy', async () => {
+    refuseAdd('QUANTITY_LIMIT', { max: 3, requested: 4 });
+    expect(await pressAddAndReadMessage()).toBe(
+      'Ebből a termékből legfeljebb 3 db lehet a kosárban.',
+    );
+  });
+
+  it('QUANTITY_LIMIT without a numeric max keeps the generic text', async () => {
+    refuseAdd('QUANTITY_LIMIT');
+    expect(await pressAddAndReadMessage()).toBe(
+      'A termék hozzáadása nem sikerült; a kosár változatlan.',
+    );
+  });
+
+  it('any other refusal keeps the generic text', async () => {
+    refuseAdd('OUT_OF_STOCK', { variantId: 'demo-one-5g-graphite-256' });
+    expect(await pressAddAndReadMessage()).toBe(
+      'A termék hozzáadása nem sikerült; a kosár változatlan.',
+    );
   });
 });

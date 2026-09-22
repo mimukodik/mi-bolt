@@ -31,7 +31,7 @@ import { AddToCart } from './add-to-cart';
 import { MobileBuyRail } from './mobile-buy-rail';
 import { ProductCard } from '../catalog/product-card';
 
-import { CartFacade } from '../cart/cart.facade';
+import { CartFacade, type CartError } from '../cart/cart.facade';
 
 import { Button } from '../../shared/ui/button/button';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
@@ -82,6 +82,17 @@ import type { Variant } from '../../api/generated/models/variant';
  * three.js / babylon.js bundle. Optional O01 (3D viewer) is gated
  * behind a future, explicitly approved change.
  */
+/** The add-to-cart refusal copy. A per-product limit is named with its
+ *  number (owner, 2026-09-22: "Igen, nevezze meg"); every other refusal
+ *  keeps the generic text. */
+function describeAddFailure(failure: CartError | null): string {
+  const max = failure?.code === 'QUANTITY_LIMIT' ? failure.params?.['max'] : undefined;
+  if (typeof max === 'number') {
+    return `Ebből a termékből legfeljebb ${String(max)} db lehet a kosárban.`;
+  }
+  return 'A termék hozzáadása nem sikerült; a kosár változatlan.';
+}
+
 @Component({
   selector: 'app-product-page',
   imports: [
@@ -326,9 +337,10 @@ export class ProductPage {
       // settles, so reading them here reflects this call's own
       // outcome rather than a stale, unrelated failure.
       if (this.cartMutationFailed()) {
+        const failure = this.cartFacade.error();
         this.addError.set({
-          code: this.cartFacade.error()?.code ?? 'UNKNOWN',
-          message: 'A termék hozzáadása nem sikerült; a kosár változatlan.',
+          code: failure?.code ?? 'UNKNOWN',
+          message: describeAddFailure(failure),
           fieldErrors: [],
           retryable: true,
         });
