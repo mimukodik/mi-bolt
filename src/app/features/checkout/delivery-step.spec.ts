@@ -16,7 +16,7 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildCheckoutForm,
@@ -583,13 +583,17 @@ describe('DS-20 the confirm control stays enabled and a click on an incomplete s
     });
     expect(confirmButton(fixture).disabled).toBe(false);
 
+    const root = getRootElement(fixture);
+    const paymentGroup = getElement(root, '[data-testid="payment-selector"]');
+    expect(paymentGroup.getAttribute('aria-describedby')).toBeNull();
+
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
     document.body.focus();
     confirmButton(fixture).click();
     fixture.detectChanges();
     await fixture.whenStable();
     await Promise.resolve();
 
-    const root = getRootElement(fixture);
     expect(emitted).toBe(0);
     expect(getElement(root, '#delivery-option-message').textContent.trim()).toBe(
       'Válassz szállítási módot.',
@@ -601,6 +605,9 @@ describe('DS-20 the confirm control stays enabled and a click on an incomplete s
       getInputElement(root, '[data-testid="billing-name-input"]').getAttribute('aria-invalid'),
     ).toBe('true');
     expect(document.activeElement?.id).toBe('delivery-option-home_delivery');
+    expect(paymentGroup.getAttribute('aria-describedby')).toBe('payment-method-message');
+    expect(focusSpy).toHaveBeenLastCalledWith({ focusVisible: true });
+    focusSpy.mockRestore();
   });
 
   it('home delivery with an empty address: a click marks the address fields and focuses the first of them', async () => {

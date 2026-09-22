@@ -124,6 +124,7 @@
 
       <app-payment-method-selector
         [attr.data-missing-choice]="paymentMethodMissing() ? 'true' : null"
+        [describedBy]="paymentMethodMissing() ? 'payment-method-message' : null"
         [options]="options().paymentMethods"
         [value]="paymentMethod()"
         (paymentChanged)="onPaymentChanged($event)"

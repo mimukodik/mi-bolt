@@ -34,6 +34,10 @@ import type { UnavailableReason } from '../../api/generated/models/unavailable-r
 export class PaymentMethodSelector {
   readonly options = input.required<readonly PaymentMethodOption[]>();
 
+  /** Id of the parent's message that describes the whole group (its
+   *  "choose a payment method" error), or null when there is none. */
+  readonly describedBy = input<string | null>(null);
+
   readonly value = model<PaymentMethodId | null>(null);
   readonly paymentChanged = output<PaymentMethodId>();
 

@@ -270,11 +270,11 @@ export class DeliveryStep {
 
   readonly billingNameInvalid = computed<boolean>(() => this.billingName().trim().length === 0);
 
-  /** `aria-invalid` is gated on touched: the message under the field
-   *  is `app-form-field-message` with `[touched]` and no `[submitted]`,
-   *  so the attribute must use the same gate. The border rule keys
-   *  off `[aria-invalid='true']` and stays idle on a pristine input.
-   *  A click on the confirm button of an incomplete step counts as touched. */
+  /** `aria-invalid` uses the same gate as the message under the field,
+   *  `app-form-field-message` with `[touched]` and
+   *  `[submitted]="confirmAttempted()"`: shown after a blur or after a
+   *  click on the confirm button of an incomplete step. The border rule
+   *  keys off `[aria-invalid='true']` and stays idle on a pristine input. */
   readonly billingNameShowsInvalid = computed<boolean>(
     () => this.billingNameInvalid() && (this.billingNameTouched() || this.confirmAttempted()),
   );
@@ -423,14 +423,16 @@ export class DeliveryStep {
   /** After the next render, focuses the first control the shopper has to
    *  fix, in page order: an unchosen option group's first available radio
    *  or the first field marked `aria-invalid="true"` (WAI forms tutorial:
-   *  move focus to the first invalid field). */
+   *  move focus to the first invalid field). `focusVisible` forces the
+   *  focus ring, which a radio focused by script after a mouse click
+   *  would not show. */
   private focusFirstInvalid(): void {
     afterNextRender(
       () => {
         const target = this.host.nativeElement.querySelector<HTMLElement>(
           '[aria-invalid="true"], [data-missing-choice="true"] input[type="radio"]:not(:disabled)',
         );
-        target?.focus();
+        target?.focus({ focusVisible: true });
       },
       { injector: this.injector },
     );
