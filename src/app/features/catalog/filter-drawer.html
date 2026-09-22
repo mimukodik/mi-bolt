@@ -119,12 +119,15 @@
         <label class="price__field flex flex-col gap-1">
           <span class="price__label">Min.</span>
           <input
+            #minPrice
             class="input"
             data-testid="drawer-min-price"
             inputmode="numeric"
             min="0"
             step="1000"
             type="number"
+            [attr.aria-describedby]="priceInvalidField() === 'min' ? 'drawer-price-message' : null"
+            [attr.aria-invalid]="priceInvalidField() === 'min' ? 'true' : null"
             [attr.placeholder]="priceMinHint()"
             [disabled]="disabled()"
             [value]="minDraft()"
@@ -134,12 +137,15 @@
         <label class="price__field flex flex-col gap-1">
           <span class="price__label">Max.</span>
           <input
+            #maxPrice
             class="input"
             data-testid="drawer-max-price"
             inputmode="numeric"
             min="0"
             step="1000"
             type="number"
+            [attr.aria-describedby]="priceInvalidField() === 'max' ? 'drawer-price-message' : null"
+            [attr.aria-invalid]="priceInvalidField() === 'max' ? 'true' : null"
             [attr.placeholder]="priceMaxHint()"
             [disabled]="disabled()"
             [value]="maxDraft()"
@@ -216,7 +222,7 @@
       <app-button
         data-testid="drawer-apply"
         variant="primary"
-        [disabled]="!canApply()"
+        [disabled]="disabled()"
         [label]="applyLabel()"
         (pressed)="applyDraft()"
       />

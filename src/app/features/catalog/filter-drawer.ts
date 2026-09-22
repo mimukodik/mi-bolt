@@ -1,4 +1,17 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import type {
+  ElementRef} from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  effect,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
 import { ALLOWED_STORAGE_GB, isStorageBucket } from './catalog-query';
@@ -35,10 +48,10 @@ interface StorageBucket {
  * Required states:
  *   - closed       — nothing mounted, focus returns to the trigger.
  *   - open         — drawer visible, focus inside.
- *   - draft-changed— a control was modified; Apply becomes enabled
- *                    only when the draft is valid.
- *   - invalid      — the price range fails the local validation; the
- *                    draft is held but Apply stays disabled.
+ *   - draft-changed— a control was modified; Apply is always active.
+ *   - invalid      — the price range fails the local validation; a
+ *                    click on Apply applies nothing and focuses the
+ *                    invalid price input (owner, 2026-09-22).
  *   - disabled     — the parent disables Apply during a refresh.
  */
 @Component({
@@ -119,7 +132,8 @@ export class FilterDrawer {
   /** The brand list collapses to the first five rows behind a
    *  `Még több gyártó` text link. A brand selected beyond the first
    *  five keeps the list expanded so the chip the user picked stays
-   *  visible. */
+   *  visible. It survives closing and reopening the drawer
+   *  (owner, 2026-09-22). */
   readonly brandsExpanded = signal(false);
 
   /** Brands to render: the first five when collapsed, otherwise the
@@ -171,6 +185,20 @@ export class FilterDrawer {
     return null;
   });
 
+  /** Which price input the current error belongs to, in page order. */
+  readonly priceInvalidField = computed<'min' | 'max' | null>(() => {
+    const min = this.parsePrice(this.draftMin());
+    const max = this.parsePrice(this.draftMax());
+    if (min !== null && min < 0) return 'min';
+    if (max !== null && max < 0) return 'max';
+    if (min !== null && max !== null && min > max) return 'min';
+    return null;
+  });
+
+  private readonly minPriceInput = viewChild<ElementRef<HTMLInputElement>>('minPrice');
+  private readonly maxPriceInput = viewChild<ElementRef<HTMLInputElement>>('maxPrice');
+  private readonly injector = inject(Injector);
+
   readonly canApply = computed<boolean>(() => !this.disabled() && this.priceError() === null);
 
   readonly applyLabel = computed<string>(() =>
@@ -192,7 +220,6 @@ export class FilterDrawer {
       this.draftFiveG.set(a.is5g === true);
       this.draftMin.set(a.minPrice === undefined ? '' : String(a.minPrice));
       this.draftMax.set(a.maxPrice === undefined ? '' : String(a.maxPrice));
-      this.brandsExpanded.set(false);
     });
   }
 
@@ -243,6 +270,12 @@ export class FilterDrawer {
   }
 
   applyDraft(): void {
+    if (this.disabled()) return;
+    const invalid = this.priceInvalidField();
+    if (invalid !== null) {
+      this.focusPrice(invalid);
+      return;
+    }
     if (!this.canApply()) return;
     const min = this.parsePrice(this.draftMin());
     const max = this.parsePrice(this.draftMax());
@@ -258,6 +291,19 @@ export class FilterDrawer {
     };
     this.filtersChanged.emit(draft);
     this.closed.emit();
+  }
+
+  /** After the next render, focuses the invalid price input with a
+   *  visible ring (WAI forms tutorial: move focus to the first
+   *  invalid field). */
+  private focusPrice(field: 'min' | 'max'): void {
+    afterNextRender(
+      () => {
+        const ref = field === 'min' ? this.minPriceInput() : this.maxPriceInput();
+        ref?.nativeElement.focus({ focusVisible: true });
+      },
+      { injector: this.injector },
+    );
   }
 
   cancelDraft(): void {
