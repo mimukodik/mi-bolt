@@ -71,20 +71,13 @@ const IMMUTABLE_HEADERS = {
 };
 
 /**
- * Resolve a request URL to a path inside baseDir, rejecting any attempt to
- * escape via `..` segments. Returns null when the URL is not a safe candidate
+ * Resolve a request pathname to a path inside baseDir, rejecting any attempt to
+ * escape via `..` segments. Returns null when the path is not a safe candidate
  * for file lookup (the SPA fallback handles the rest).
+ *
+ * Accepts a pathname string (already extracted by the caller via `new URL()`).
  */
-function safeResolveFromUrl(rawUrl, baseDir = STATIC_DIR, prefix = '/') {
-  // The request URL is always a path-only string for an HTTP server bound
-  // to 127.0.0.1, but parse defensively in case a client sends an absolute
-  // URL.
-  let urlPath;
-  try {
-    urlPath = new URL(rawUrl, `http://${HOST}`).pathname;
-  } catch {
-    return null;
-  }
+function safeResolveFromPath(urlPath, baseDir = STATIC_DIR, prefix = '/') {
   // Decode percent-encoded segments without throwing on malformed input —
   // the SPA fallback will pick up the bad request.
   let decoded;
@@ -234,9 +227,17 @@ function sendSpaFallback(res, baseDir = STATIC_DIR) {
  */
 function handle(request, res) {
   const rawPath = request.url ?? '/';
-  const parsedUrl = new URL(rawPath, 'http://localhost');
-  const urlPath = parsedUrl.pathname.replace(/\/+/g, '/') || '/';
-  const forwardPath = parsedUrl.search ? urlPath + parsedUrl.search : urlPath;
+  let urlPath;
+  let forwardPath;
+  try {
+    const parsedUrl = new URL(rawPath, `http://${HOST}`);
+    urlPath = parsedUrl.pathname.replace(/\/+/g, '/') || '/';
+    forwardPath = parsedUrl.search ? urlPath + parsedUrl.search : urlPath;
+  } catch {
+    // Malformed URL — fall through to SPA fallback instead of crashing.
+    sendSpaFallback(res);
+    return;
+  }
 
   // 1. Proxied API traffic: forward before the method guard so non-GET
   // methods are preserved for the backend.
@@ -295,7 +296,7 @@ function handle(request, res) {
 
   // 4. Serve the payment app from its own directory when configured.
   if (PAYMENT_STATIC_DIR && (urlPath === '/demo-fizetes' || urlPath.startsWith('/demo-fizetes/'))) {
-    const candidate = safeResolveFromUrl(urlPath, PAYMENT_STATIC_DIR, '/demo-fizetes');
+    const candidate = safeResolveFromPath(urlPath, PAYMENT_STATIC_DIR, '/demo-fizetes');
     if (candidate !== null) {
       try {
         const stat = statSync(candidate);
@@ -312,7 +313,7 @@ function handle(request, res) {
   }
 
   // 5. Real files from the shop.
-  const candidate = safeResolveFromUrl(urlPath);
+  const candidate = safeResolveFromPath(urlPath);
   if (candidate !== null) {
     try {
       const stat = statSync(candidate);
