@@ -12,7 +12,7 @@
  * responses (the 400 list lives in `catalog.handlers.ts`).
  */
 
-import type { CatalogItem, ProductSort, StorageGb } from '../../app/api/generated/models';
+import type { CatalogItem, ProductSort, StorageGb, Variant } from '../../app/api/generated/models';
 import { ALLOWED_STORAGES, PRODUCT_SORTS, type CatalogEntry, toCatalogItem } from './catalog-store';
 import { isProductSort, isStorageGb } from './catalog-store';
 
@@ -270,28 +270,36 @@ function nameKey(entry: CatalogEntry): string {
 }
 
 /**
- * True when the variant-level color filter accepts this entry. The entry
- * passes if any color option at this storage matches the requested code:
- * `entry.colors` is built from `colorOrder` filtered by variants at this
- * storage, so the displayed variant's option is included whenever its
- * colorCode is in `colorOrder` (which it is for every variant).
+ * True when one variant passes every variant-level filter jointly: colour,
+ * price window and stock. Mirrors the backend's `variantMatches`
+ * (CatalogService.java).
  */
-function passesColorFilter(entry: CatalogEntry, colors: readonly string[]): boolean {
-  if (colors.length === 0) return true;
-  return entry.colors.some((c) => colors.includes(c.colorCode));
-}
-
-/** True when every variant-level filter accepts this entry. */
-function passesVariantFilters(entry: CatalogEntry, filter: CatalogFilter): boolean {
-  if (filter.colors.length > 0 && !passesColorFilter(entry, filter.colors)) return false;
-  const amount = entry.variant.price.amount;
+export function variantMatches(variant: Variant, filter: CatalogFilter): boolean {
+  if (filter.colors.length > 0 && !filter.colors.includes(variant.colorCode)) return false;
+  const amount = variant.price.amount;
   if (filter.minPrice !== undefined && amount < filter.minPrice) return false;
   if (filter.maxPrice !== undefined && amount > filter.maxPrice) return false;
-  if (filter.inStock !== undefined) {
-    const isIn = entry.variant.availability === 'in_stock';
-    if (filter.inStock !== isIn) return false;
+  if (filter.inStock !== undefined && filter.inStock !== (variant.availability === 'in_stock')) {
+    return false;
   }
   return true;
+}
+
+/**
+ * The variant an entry displays for this request: the first colour, in
+ * `colorOrder`, whose variant at the entry's storage passes every
+ * variant-level filter; null when none does. Mirrors the backend's
+ * `pickEntry`, so the card, the price sorts and the price range follow the
+ * active filters instead of the variant fixed at load time.
+ */
+export function pickDisplayedVariant(entry: CatalogEntry, filter: CatalogFilter): Variant | null {
+  for (const code of entry.ranking.colorOrder) {
+    const variant = entry.product.variants.find(
+      (v) => v.colorCode === code && v.storageGb === entry.storageGb,
+    );
+    if (variant !== undefined && variantMatches(variant, filter)) return variant;
+  }
+  return null;
 }
 
 /** True when the product-level filters accept this entry. */
@@ -314,12 +322,19 @@ function passesProductFilters(entry: CatalogEntry, filter: CatalogFilter): boole
   return true;
 }
 
-/** Apply every filter. Returns the entries that pass. */
+/** Apply every filter. Returns the entries that pass, each carrying the
+ *  variant it displays for this request (`pickDisplayedVariant`). */
 export function applyFilters(
   entries: readonly CatalogEntry[],
   filter: CatalogFilter,
 ): CatalogEntry[] {
-  return entries.filter((e) => passesProductFilters(e, filter) && passesVariantFilters(e, filter));
+  const out: CatalogEntry[] = [];
+  for (const entry of entries) {
+    if (!passesProductFilters(entry, filter)) continue;
+    const variant = pickDisplayedVariant(entry, filter);
+    if (variant !== null) out.push({ ...entry, variant });
+  }
+  return out;
 }
 
 /** Numeric id used as the final tie-break on non-name sorts. */

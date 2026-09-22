@@ -85,9 +85,9 @@ const DEFAULT_STORAGE_FACET = [
   { value: '256', label: '256 GB', count: 27 },
   { value: '512', label: '512 GB', count: 17 },
 ];
-const DEFAULT_FIRST_COLOR = { value: 'zold', label: 'Zöld', swatchHex: '#7C9F63', count: 1 };
+const DEFAULT_FIRST_COLOR = { value: 'zold', label: 'Zöld', swatchHex: '#7C9F63', count: 3 };
 const DEFAULT_IS5G = 54;
-const DEFAULT_INSTOCK = 52;
+const DEFAULT_INSTOCK = 55;
 const DEFAULT_PRICE_RANGE = { min: 69990, max: 1095990 };
 
 // Default list first 12 slugs (rank asc, id asc, storage asc).
@@ -399,6 +399,55 @@ describe('GET /products filters', () => {
     expect(readString(first, 'variantId')).toBe('motorola-edge-50-fusion--zold--256');
   });
 
+  it('a colour filter shows the matching colour on every card (owner 2026-09-22)', async () => {
+    const body = await loadJson('/api/v1/products?brand=honor&color=fekete');
+    expect(readNumber(body, 'total')).toBe(8);
+    const items = readItems(body);
+    for (const item of items) {
+      const colors = item['colors'];
+      expectArray(colors);
+      const shown = colors.find((c) => {
+        expectRecord(c);
+        return c['variantId'] === item['variantId'];
+      });
+      expectRecord(shown);
+      expect(readString(shown, 'colorCode')).toBe('fekete');
+    }
+    const honor400 = items.find((i) => i['slug'] === 'honor-400-5g');
+    expectRecord(honor400);
+    expect(readString(honor400, 'variantId')).toBe('honor-400-5g--fekete--256');
+  });
+
+  it('the price filter keeps an entry whose other colour is in the window, and shows that colour', async () => {
+    const body = await loadJson('/api/v1/products?minPrice=270000&maxPrice=280000');
+    expect(readNumber(body, 'total')).toBe(1);
+    const [item] = readItems(body);
+    expectRecord(item);
+    expect(readString(item, 'variantId')).toBe('apple-iphone-16e--fekete--128');
+    const price = item['price'];
+    expectRecord(price);
+    expect(readNumber(price, 'amount')).toBe(273990);
+  });
+
+  it('inStock=true shows the in-stock colour of an entry whose first colour is sold out', async () => {
+    const body = await loadJson('/api/v1/products?inStock=true&brand=apple&pageSize=24');
+    const items = readItems(body);
+    const iphone16e = items.find((i) => i['slug'] === 'apple-iphone-16e' && i['storageGb'] === 128);
+    expectRecord(iphone16e);
+    expect(readString(iphone16e, 'variantId')).toBe('apple-iphone-16e--fekete--128');
+    expect(readString(iphone16e, 'availability')).toBe('in_stock');
+  });
+
+  it('a colour filter with a price sort sorts by the shown colour price', async () => {
+    const body = await loadJson('/api/v1/products?brand=honor&color=fekete&sort=price_asc');
+    const amounts = readItems(body).map((item) => {
+      const price = item['price'];
+      expectRecord(price);
+      return readNumber(price, 'amount');
+    });
+    expect(amounts).toEqual([...amounts].sort((a, b) => a - b));
+  });
+
   it('price bounds are inclusive', async () => {
     // Exactly one entry has price.amount = 89990 (motorola-edge-50-fusion
     // @ 256, zold). The filter is inclusive on both ends so the count is 1.
@@ -415,10 +464,9 @@ describe('GET /products filters', () => {
   });
 
   it('inStock=true keeps only entries with an in-stock variant', async () => {
-    // Exactly 52 entries carry an in_stock variant in the fixture.
-    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({p,st}))}); console.log(e.filter(x=>p.variants.some(v=>v.storageGb===st && v.availability==='in_stock')).length);"
+    // All 55 entries carry an in_stock variant; the in-stock colour is shown (backend variantMatches).
     const body = await loadJson('/api/v1/products?inStock=true');
-    expect(readNumber(body, 'total')).toBe(52);
+    expect(readNumber(body, 'total')).toBe(55);
     const items = readItems(body);
     for (const item of items) {
       expect(readString(item, 'availability')).toBe('in_stock');
@@ -479,12 +527,10 @@ describe('GET /products filters', () => {
     expect(sum).toBe(4);
   });
 
-  it('inStock facet count is taken inside the featured cap, not before it', async () => {
-    // Build a 5-entry featured catalogue where the cap changes the
-    // answer. Entries 1, 2, 4 are in_stock; entry 3 is out_of_stock;
-    // entry 5 (excluded by the cap) is in_stock. Counting in-stock
-    // before the cap would give 4 (all 5 entries minus the one OOS);
-    // the new formula caps at 4 first, then counts, giving 3.
+  it('inStock facet count is capped at the featured size, like the backend capCount', async () => {
+    // Five featured entries, all in stock. The backend counts every
+    // in-stock entry and caps the count at the featured size
+    // (CatalogService.java capCount), so the facet reads 4, not 5.
     const variantOf = (
       availability: 'in_stock' | 'out_of_stock',
       id: string,
@@ -542,7 +588,7 @@ describe('GET /products filters', () => {
         is5g: false,
         releasedAt: '2026-01-01',
         description: 'd',
-        variants: [variantOf('out_of_stock', 'feat-3')],
+        variants: [variantOf('in_stock', 'feat-3')],
         specGroups: [],
       },
       {
@@ -584,7 +630,7 @@ describe('GET /products filters', () => {
       expectRecord(facets);
       // New formula: cap at 4, then count in_stock → 3.
       // Old formula would have given 4 (5 entries − 1 OOS).
-      expect(readNumber(facets, 'inStock')).toBe(3);
+      expect(readNumber(facets, 'inStock')).toBe(4);
     } finally {
       // Restore the committed fixture so subsequent tests see the
       // 48-product catalogue. The type guard narrows the JSON's
@@ -806,6 +852,20 @@ describe('GET /products facets', () => {
     expect(filteredHonor).toBeDefined();
     if (filteredHonor === undefined) return;
     expect(readNumber(filteredHonor, 'count')).toBe(8);
+  });
+
+  it('the colour count counts every entry with a variant of that colour (owner 2026-09-22)', async () => {
+    const body = await loadJson('/api/v1/products?brand=honor');
+    const facets = body['facets'];
+    expectRecord(facets);
+    const colors = facets['colors'];
+    expectArray(colors);
+    const fekete = colors.find((c) => {
+      expectRecord(c);
+      return c['value'] === 'fekete';
+    });
+    expectRecord(fekete);
+    expect(readNumber(fekete, 'count')).toBe(8);
   });
 });
 

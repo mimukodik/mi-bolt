@@ -14,6 +14,7 @@
 
 import type {
   ColorFacetValue,
+  ColorOption,
   Facets,
   FacetValue,
   Money,
@@ -25,6 +26,7 @@ import {
   applyFilters,
   filterSort,
   sortEntries,
+  variantMatches,
   type CatalogFilter as Filter,
 } from './catalog-filter';
 
@@ -85,9 +87,10 @@ function buildStorageFacet(entries: readonly CatalogEntry[], filter: Filter): Fa
 /**
  * Builds the `colors` facet. Walks products in recommended order and
  * keeps the first colour per code (`colorOrder` in `ranking[]`
- * preserves the source `colors[]` order). The count is scoped to
- * that code only, with the `color` filter removed and the result
- * sorted + featured-capped before counting.
+ * preserves the source `colors[]` order). The count mirrors the
+ * backend's `matchesColorFacet`: an entry counts for a colour when it
+ * has a variant of that colour at its storage passing every other
+ * active filter, the colour selection removed.
  */
 function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): ColorFacetValue[] {
   const noColor: Filter = { ...filter, colors: [] };
@@ -95,14 +98,15 @@ function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): Colo
     sortEntries(applyFilters(entries, noColor), filter.sort, filter.q),
     filter,
   );
-  const codeFirstEntry = new Map<string, CatalogEntry>();
-  for (const entry of capped) {
-    if (codeFirstEntry.has(entry.variant.colorCode)) continue;
-    codeFirstEntry.set(entry.variant.colorCode, entry);
-  }
+  const samples = new Map<string, ColorOption>();
   const counts = new Map<string, number>();
   for (const entry of capped) {
-    counts.set(entry.variant.colorCode, (counts.get(entry.variant.colorCode) ?? 0) + 1);
+    for (const option of entry.colors) {
+      const variant = entry.product.variants.find((v) => v.id === option.variantId);
+      if (variant === undefined || !variantMatches(variant, noColor)) continue;
+      counts.set(option.colorCode, (counts.get(option.colorCode) ?? 0) + 1);
+      if (!samples.has(option.colorCode)) samples.set(option.colorCode, option);
+    }
   }
   // Walk products by recommended order (preserved by `applyFilters`),
   // then colorOrder within the product.
@@ -118,12 +122,12 @@ function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): Colo
     for (const code of first.ranking.colorOrder) {
       if (seenCodes.has(code)) continue;
       seenCodes.add(code);
-      const sample = codeFirstEntry.get(code);
+      const sample = samples.get(code);
       if (sample === undefined) continue;
       out.push({
         value: code,
-        label: sample.variant.colorName,
-        swatchHex: sample.variant.swatchHex,
+        label: sample.colorName,
+        swatchHex: sample.swatchHex,
         count: counts.get(code) ?? 0,
       });
     }
@@ -141,14 +145,14 @@ function buildIs5gCount(entries: readonly CatalogEntry[], filter: Filter): numbe
   return capped.filter((e) => e.product.is5g).length;
 }
 
-/** `inStock` facet count: cap the post-filter list to featured-size first,
- *  then count how many of the capped entries are in stock. */
+/** `inStock` facet count: the entries that would match with `inStock=true`
+ *  (an in-stock variant passing every other filter), sorted and capped to
+ *  the featured size first. Mirrors the backend's in-stock count. */
 function buildInStockCount(entries: readonly CatalogEntry[], filter: Filter): number {
-  const noInStock: Filter = { ...filter, inStock: undefined };
-  const matched = applyFilters(entries, noInStock);
+  const withInStock: Filter = { ...filter, inStock: true };
+  const matched = applyFilters(entries, withInStock);
   const sorted = sortEntries(matched, filter.sort, filter.q);
-  const capped = capFeatured(sorted, filter);
-  return capped.filter((e) => e.variant.availability === 'in_stock').length;
+  return capFeatured(sorted, filter).length;
 }
 
 /** Build the `priceRange` from the post-filter, post-sort, post-cap list. */
