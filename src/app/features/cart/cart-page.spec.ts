@@ -850,6 +850,21 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     expect(getButtonElement(root, '[data-testid="cart-clear"] button').disabled).toBe(false);
   });
 
+  it('owner 2026-09-23: the continue button on the navy summary takes the white focus ring variant', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const continueBtn = getElement(root, '[data-testid="cart-continue"] button');
+    expect(continueBtn.classList.contains('is-primary-on-dark')).toBe(true);
+    expect(continueBtn.classList.contains('is-primary')).toBe(false);
+  });
+
   it('navigates only after facade.ensureCart() resolves successfully', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();

@@ -812,11 +812,12 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(queryElement(root, '.page-header').textContent).not.toContain('Tárhely:');
   });
 
-  it('MIM-236: the add-to-cart button is outlined on the navy box', async () => {
+  it('owner 2026-09-22: the add-to-cart button is the filled lime pill on the navy box', async () => {
     const { root } = await createHarness();
 
     const button = queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button');
-    expect(button.classList.contains('is-secondary-on-dark')).toBe(true);
+    expect(button.classList.contains('is-primary-on-dark')).toBe(true);
+    expect(button.classList.contains('is-secondary-on-dark')).toBe(false);
   });
 
   it('FIX-45-AC04: stock line renders "Raktáron a demó készletben" for an in-stock variant', async () => {
