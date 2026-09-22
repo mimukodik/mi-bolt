@@ -1,7 +1,8 @@
-/* MiBolt StatusMessage primitive. */
+/* MiBolt StatusMessage primitive. The row wraps: the text keeps 12rem and grows, the close button drops under it when both do not fit (MIM-216). */
 
 .root {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -31,9 +32,12 @@
   margin: 0;
   font-size: var(--type-body);
   line-height: var(--line-height-body);
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .actions {
   display: inline-flex;
   align-items: center;
+  margin-left: auto;
 }
