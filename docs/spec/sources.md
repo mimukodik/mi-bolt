@@ -78,6 +78,8 @@ V8/Istanbul reporting and included-file behavior; enforce explicit project manif
 
 https://playwright.dev/docs/api/class-coverage
 
+No threshold option in Playwright itself; the gate is monocart-reporter's `coverage.onEnd` hook in `playwright.config.ts` (https://github.com/cenfun/monocart-coverage-reports, read 2026-09-22). Projects run in parallel from one worker pool and CI splits them into matrix jobs: https://playwright.dev/docs/test-projects, https://playwright.dev/docs/test-sharding (read 2026-09-22).
+
 Native JS coverage is Chromium-only; resetOnNavigation:false is not a guaranteed reload collector.
 
 ## S14 — Playwright Network guide

@@ -61,7 +61,7 @@ ng test
 
 ## Continuous integration
 
-`.github/workflows/pr-check.yml` runs lint and format, unit tests with coverage (summary in the job summary, report as the `coverage-unit` artifact), the production build and the API client drift check in parallel on every pull request and push to `main`, on Blacksmith runners. The `e2e` job runs Playwright with V8 coverage and is skipped until the first end-to-end spec lands.
+`.github/workflows/pr-check.yml` runs lint and format, unit tests with coverage (summary in the job summary, report as the `coverage-unit` artifact), the production build and the API client drift check in parallel on every pull request and push to `main`, on Blacksmith runners. The `e2e` job is a six-cell matrix, one job per browser (Chromium, Firefox, WebKit) and viewport (Full HD, mobile), each running its `integration-*` Playwright project in parallel; the Chromium cells collect V8 coverage and fail below the `angular.json` thresholds through the `onEnd` hook in `playwright.config.ts`; `e2e-report` merges the six blob reports into one HTML report. Both jobs are skipped until the first end-to-end spec lands.
 
 ## Additional Resources
 

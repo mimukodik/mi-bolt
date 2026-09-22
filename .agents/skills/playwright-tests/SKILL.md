@@ -35,13 +35,21 @@ a `coder-agent.sh` runner and every other agent keep out of those files.
   `e2e/smoke/` (specs on the real backend), `e2e/fixtures/` (the `coverage`
   fixture every spec imports `test` from), `specs/` (the planner's Markdown
   plans).
-- `playwright.config.ts` has three projects: `seed` (only `e2e/seed.spec.ts`)
-  and `integration` (`e2e/integration/**`) start the development build with
-  MSW on port 4400 (`E2E_PORT` overrides it); `smoke` (`e2e/smoke/**`) starts
-  the `local-backend` configuration on 4410 and needs the backend running.
-- Commands: `npm run e2e` runs `seed` and `integration` and then
-  `scripts/check-e2e-coverage.mjs`, the V8 coverage gate; `npm run e2e:smoke`
-  runs `smoke`; `npm run e2e:install` installs Chromium.
+- `playwright.config.ts` has eight projects: `seed` (only `e2e/seed.spec.ts`)
+  and six `integration-{chromium,firefox,webkit}-{fullhd,mobile}` projects
+  (each runs `e2e/integration/**`) start the development build with MSW on
+  port 4400 (`E2E_PORT` overrides it); the fullhd and mobile viewports are
+  1920×1080 and 390×844; only the Chromium projects collect V8 coverage
+  through monocart-reporter, because `page.coverage` is Chromium-only. The
+  `smoke` project (`e2e/smoke/**`) starts the `local-backend` configuration
+  on 4410 and needs the backend running.
+- Commands: `npm run e2e` runs `seed` plus the two Chromium projects with
+  the V8 coverage gate armed via the `onEnd` hook inside `playwright.config.ts`
+  (Firefox and WebKit projects run without coverage); `npm run e2e:all` runs
+  the seed and every `integration-*` project; `npm run e2e:smoke` runs the
+  `smoke` project; `npm run e2e:install` installs all three browsers. The CI
+  matrix in `.github/workflows/pr-check.yml` installs each matrix entry's
+  browser per-job.
 - The backend of `e2e/integration/**` is MSW inside the page. There is no
   server to seed: `src/mocks/repository.ts` is page-side memory (AGENTS.md).
   `e2e/smoke/**` waits on the `local-backend` configuration.
