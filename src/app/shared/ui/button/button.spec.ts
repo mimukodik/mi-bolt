@@ -39,10 +39,11 @@ function hasComponentStyles(val: unknown): val is ComponentWithStyles {
   return 'ɵcmp' in val;
 }
 
-/** Strips comments, the compiler's custom-property namespace placeholder, the
- * emulated encapsulation attribute selector and all whitespace, so a
- * declaration can be asserted verbatim regardless of how the build formatted
- * it. */
+/** Strips comments, the compiler's custom-property namespace placeholder and
+ * the emulated encapsulation attribute selector, then collapses whitespace
+ * and trims the spaces around the structural characters ({, }, :, ;, ,).
+ * Internal whitespace inside a value is preserved, so the normalised form
+ * keeps the space inside `1px solid`. */
 function normaliseComponentCss(css: string): string {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -220,8 +221,9 @@ describe('Button primitive', () => {
     }
     // The compiler stores custom-property names with a namespace placeholder
     // (`var(--%NS%color-primary)`) and the emulated-encapsulation attribute
-    // selector; both are stripped here, and whitespace with them, so the
-    // declaration pairs below match whether or not the build minified them.
+    // selector; both are stripped here, and the whitespace around the
+    // structural characters with them, so the declaration pairs below match
+    // the source's inner spacing (`1px solid`, not `1pxsolid`).
     const css = normaliseComponentCss(Button.ɵcmp.styles.join('\n'));
     // primary: the .btn--primary-inverse recipe, navy #002340 on lime
     // #b4ff00 — the lime pill is yettel's CTA on every captured screen.
