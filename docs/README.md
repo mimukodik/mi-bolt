@@ -37,7 +37,7 @@ The interactive handover report (`index.html`) and the clickable prototype (`des
 
 ## Miért maradt néhány JSON-fájl?
 
-A `tasks.json`, `requirements.json`, `project-acceptance.json` és `test-scenarios.json` a dependency-, követelmény- és acceptance-ellenőrzések géppel feldolgozható bemenete. A `spec/coverage-policy.json` a minőségi küszöböket rögzíti. Ezek nem régi futási logok. A tasklapok olvasható végrehajtási csomagok; az azonosítóik és feltételeik megegyeznek a gépi leíróval.
+A `tasks.json`, `requirements.json`, `project-acceptance.json` és `test-scenarios.json` a dependency-, követelmény- és acceptance-ellenőrzések géppel feldolgozható bemenete. Ezek nem régi futási logok. A tasklapok olvasható végrehajtási csomagok; az azonosítóik és feltételeik megegyeznek a gépi leíróval.
 
 Az OpenAPI YAML, a fixture-k, a komponens-/képernyőtervek és a taskok megmaradtak. **A skill másolata, a nyers kutatások és eredeti ZIP-ek, a régi validációs logok/segédszkriptek, a generált OpenAPI JSON, a task-CSV és a redundáns exportok kikerültek.** A forrásazonosítás és a kutatásból levont döntések a `spec/` alatt megmaradnak.
 

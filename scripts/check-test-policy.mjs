@@ -3,8 +3,7 @@
 //
 // Asserts that no committed spec file contains a focus/skip/disable
 // directive that would let a failing requirement pass the suite
-// silently. The forbidden list mirrors the `coverage-policy.json`
-// "forbidden" entry (`skip/todo/only`) and extends it with every
+// silently. The forbidden list covers `skip/todo/only` and every
 // Vitest / Jest spelling the user is likely to use.
 //
 // Scope:
@@ -59,7 +58,7 @@ const PATTERNS = [
 ];
 
 const STRICT_PATTERNS = [
-  // The coverage-policy forbidden list names "coverage-ignore pragmas".
+  // Coverage-ignore pragmas are forbidden too.
   // Istanbul / nyc use /* istanbul ignore next */ and /* c8 ignore next */;
   // some scripts emit /* v8 ignore next */; we reject every spelling.
   { id: 'coverage-ignore-pragma', regex: /\/\*\s*(istanbul|v8|c8|nyc)\s+ignore\b/i },
@@ -166,9 +165,7 @@ if (findings.length > 0) {
   process.stderr.write(
     `\ntest-policy:FAIL — ${findings.length} finding(s) in ${Object.keys(grouped).length} location(s) across ${scanned} files:\n${lines}\n`,
   );
-  process.stderr.write(
-    'test-policy: per docs/spec/testing.md and docs/spec/coverage-policy.json, every spec must run.\n',
-  );
+  process.stderr.write('test-policy: per docs/spec/testing.md, every spec must run.\n');
   process.exit(1);
 }
 
