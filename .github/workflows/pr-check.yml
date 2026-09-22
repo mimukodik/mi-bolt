@@ -2,7 +2,7 @@ name: PR check
 
 on:
   pull_request:
-    branches: [main, eggprojec/mim-210-s1-sdk]
+    branches: [main, eggprojec/mim-210-s1-sdk, eggprojec/mim-296-admin]
   push:
     branches: [main]
 
@@ -68,6 +68,10 @@ jobs:
         if: always()
         timeout-minutes: 2
         run: node scripts/coverage-summary.mjs coverage/demo-payment/coverage-summary.json '### Demo-payment coverage' >> "$GITHUB_STEP_SUMMARY"
+      - name: Coverage summary (admin)
+        if: always()
+        timeout-minutes: 2
+        run: node scripts/coverage-summary.mjs coverage/admin/coverage-summary.json '### Admin coverage' >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage report
         if: always()
         timeout-minutes: 5
@@ -77,6 +81,7 @@ jobs:
           path: |
             coverage/unit/
             coverage/demo-payment/
+            coverage/admin/
           if-no-files-found: error
           overwrite: true
 
@@ -99,6 +104,8 @@ jobs:
       - run: npm run build:check
         timeout-minutes: 5
       - run: npm run build:payment
+        timeout-minutes: 5
+      - run: npm run build:admin
         timeout-minutes: 5
       - run: npm run check:payment-boot
         timeout-minutes: 6

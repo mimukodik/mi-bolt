@@ -14,7 +14,7 @@ Use latest stable Angular major 22 only, CSR/standalone/zoneless, signals and mo
 
 Read docs/spec/architecture.md, docs/spec/screens.md, docs/spec/components.md, docs/spec/testing.md and docs/spec/acceptance.md before work. Implement task packets in the dependency DAG. Each task needs failing behavior tests, minimal implementation, passing tests and independent skill-based review. Deliver exact 100% unit source metrics plus the behavioral/state coverage matrix; do not lower the requirement or hide unvisited code. The end-to-end suite was reinstated on 2026-09-22: Playwright under `e2e/`, written only by the `playwright-test-*` agents, its CI job skipped until the first spec lands. The coverage policy explicitly separates owned runtime code from generated/vendor/test-only files.
 
-Only O01 (3D) is optional and requires explicit approval. Do not add tariffs, billing, login, newsletter, chat, recommendation SaaS or a partner switcher to fill space. Keep fictional products/prices clearly marked as demo data.
+Only O01 (3D) is optional and requires explicit approval. Do not add tariffs, billing, login, newsletter, chat, recommendation SaaS or a partner switcher to fill space. Keep fictional products/prices clearly marked as demo data. The admin application under projects/admin (MIM-296) is outside this shop specification.
 
 Never claim a planned test has run. Evidence must name commands, revisions, viewports, outputs and remaining limitations.
 

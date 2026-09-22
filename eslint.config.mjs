@@ -41,6 +41,8 @@ export default defineConfig([
       // Generated OpenAPI client; carries its own `/* eslint-disable */`
       // and is never hand-edited (MIM-209 step 3).
       'src/app/api/generated/**',
+      // The admin application's own generated OpenAPI client, same rules.
+      'projects/admin/src/app/api/generated/**',
       'vitest.config.*',
       'vitest.*.config.*',
       'vitest.config.*.timestamp*',
@@ -79,7 +81,7 @@ export default defineConfig([
         'error',
         {
           type: 'attribute',
-          prefix: ['app', 'pay'],
+          prefix: ['app', 'pay', 'adm'],
           style: 'camelCase',
         },
       ],
@@ -87,7 +89,7 @@ export default defineConfig([
         'error',
         {
           type: 'element',
-          prefix: ['app', 'pay'],
+          prefix: ['app', 'pay', 'adm'],
           style: 'kebab-case',
         },
       ],
