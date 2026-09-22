@@ -215,16 +215,6 @@
   color: var(--color-text-secondary);
 }
 
-.demo-tag {
-  align-self: flex-start;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-badge);
-  background: var(--color-brand-accent-soft);
-  color: var(--color-brand-ink);
-  font-size: var(--type-meta);
-  font-weight: var(--weight-bold);
-}
-
 @media (prefers-reduced-motion: reduce) {
   :host {
     animation: none;

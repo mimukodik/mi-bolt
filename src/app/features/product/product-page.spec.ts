@@ -805,7 +805,7 @@ describe('T16 product-page loading and error states', () => {
 });
 
 describe('FIX-45 product page breadcrumb, description, stock and demo notes', () => {
-  it('FIX-45-AC01/AC07: renders breadcrumb, demo tag, description and simulation note with the exact prototype copy', async () => {
+  it('FIX-45-AC01/AC07: renders breadcrumb, description and simulation note with the exact prototype copy', async () => {
     const { root } = await createHarness();
 
     const breadcrumb = queryElement(root, '[data-testid="product-breadcrumb"]');
@@ -813,8 +813,8 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(breadcrumb.textContent).toContain('Mobiltelefonok');
     expect(breadcrumb.textContent).toContain('Demo One 5G');
 
-    const demoTag = queryElement(root, '[data-testid="product-demo-tag"]');
-    expect(demoTag.textContent.trim()).toBe('DEMÓTERMÉK');
+    expect(root.querySelector('[data-testid="product-demo-tag"]')).toBeNull();
+    expect(root.textContent).not.toContain('DEMÓTERMÉK');
 
     const description = queryElement(root, '[data-testid="product-description"]');
     expect(description.textContent.trim()).toBe(
