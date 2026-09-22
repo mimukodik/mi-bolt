@@ -150,3 +150,47 @@ p {
   padding: 0 var(--space-4);
   cursor: pointer;
 }
+
+/* Filter facet skeletons. A brand row that has never rendered shows a
+   3/4-width label bar and a fixed-width count bar in the same box a real
+   row occupies, so the group's height does not change when the data
+   arrives; a row that has rendered before keeps its label and swaps only
+   the count for an inline bar of the same height. Global rather than
+   component-scoped because the filter panel and the filter drawer render
+   the identical markup and a component copy in each puts both stylesheets
+   over the 4 kB anyComponentStyle budget. */
+.row-skeleton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-light);
+}
+
+.row-skeleton__bar {
+  display: block;
+  height: 1em;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-alt);
+}
+
+.row-skeleton__bar--label {
+  width: 75%;
+}
+
+.row-skeleton__bar--count {
+  width: 2.5rem;
+  margin-left: auto;
+}
+
+.count-skeleton {
+  display: inline-block;
+  width: 2.5rem;
+  height: 1em;
+  margin-left: 4px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-alt);
+  vertical-align: baseline;
+}
