@@ -47,7 +47,7 @@
         inputmode="text"
         placeholder="Teszt Elek"
         type="text"
-        [attr.aria-invalid]="fullNameInvalid() ? 'true' : null"
+        [attr.aria-invalid]="fullNameShowsInvalid() ? 'true' : null"
         [formField]="contactFields().fullName"
       />
       <app-form-field-message
@@ -72,7 +72,7 @@
         inputmode="email"
         placeholder="teszt@example.test"
         type="email"
-        [attr.aria-invalid]="emailInvalid() ? 'true' : null"
+        [attr.aria-invalid]="emailShowsInvalid() ? 'true' : null"
         [formField]="contactFields().email"
       />
       <app-form-field-message
@@ -97,7 +97,7 @@
         inputmode="tel"
         placeholder="+36201234567"
         type="tel"
-        [attr.aria-invalid]="phoneInvalid() ? 'true' : null"
+        [attr.aria-invalid]="phoneShowsInvalid() ? 'true' : null"
         [formField]="contactFields().phone"
       />
       <app-form-field-message

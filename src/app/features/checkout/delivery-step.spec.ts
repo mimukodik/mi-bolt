@@ -531,23 +531,19 @@ describe('DS-18 an empty billing name reports the required message once the fiel
   });
 });
 
-describe('MIM-254: an invalid address field is marked aria-invalid so the border rule can match it', () => {
-  it('marks the postal code input aria-invalid="true" when the field is empty', () => {
-    // The address form's postal-code binding is
-    // `[attr.aria-invalid]="errors('postalCode').length > 0 ? 'true' : 'false'"`,
-    // and an empty value produces the required error unconditionally, so the
-    // attribute is set as soon as the component renders. The border-color rule
-    // (address-form.scss) keys off this attribute; without the attribute the
-    // border never turns red.
+describe('MIM-254: a pristine billing-name input is not marked invalid', () => {
+  it('the billing-name input carries aria-invalid="false" on an untouched form', () => {
+    // The delivery step uses `'false'` as the false branch of the
+    // billing-name `[attr.aria-invalid]` binding. A pristine input must
+    // announce "not invalid" until the shopper has left the field; the
+    // border rule (delivery-step.scss) keys off `[aria-invalid='true']`
+    // and stays idle. The billing-name field carries no `[submitted]`
+    // gate (no form submission precedes it on this step), so the only
+    // flip is the touch.
     const fixture = createFixture();
-    selectDelivery(fixture, 'home_delivery');
     const root = getRootElement(fixture);
-
-    const input = getInputElement(
-      root,
-      'app-address-form:not([data-testid="billing-address-form"]) [data-testid="address-input-postalCode"]',
-    );
-    expect(input.getAttribute('aria-invalid')).toBe('true');
+    const input = getInputElement(root, '[data-testid="billing-name-input"]');
+    expect(input.getAttribute('aria-invalid')).toBe('false');
   });
 });
 

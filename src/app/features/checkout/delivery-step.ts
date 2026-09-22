@@ -246,6 +246,14 @@ export class DeliveryStep {
 
   readonly billingNameInvalid = computed<boolean>(() => this.billingName().trim().length === 0);
 
+  /** `aria-invalid` is gated on touched: the message under the field
+   *  is `app-form-field-message` with `[touched]` and no `[submitted]`,
+   *  so the attribute must use the same gate. The border rule keys
+   *  off `[aria-invalid='true']` and stays idle on a pristine input. */
+  readonly billingNameShowsInvalid = computed<boolean>(
+    () => this.billingNameInvalid() && this.billingNameTouched(),
+  );
+
   readonly billingNameErrors = computed<readonly FieldError[]>(() => {
     if (!this.billingNameInvalid()) return [];
     return [{ code: 'required', message: 'A számlázási név megadása kötelező.' }];

@@ -156,7 +156,7 @@
             data-testid="billing-name-input"
             type="text"
             [attr.aria-describedby]="'billing-name-message'"
-            [attr.aria-invalid]="billingNameInvalid() ? 'true' : 'false'"
+            [attr.aria-invalid]="billingNameShowsInvalid() ? 'true' : 'false'"
             [value]="billingName()"
             (blur)="markBillingNameTouched()"
             (input)="onBillingNameInput($event)"

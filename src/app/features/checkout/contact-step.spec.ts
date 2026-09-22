@@ -626,19 +626,55 @@ describe('T20 contact-step shared wiring', () => {
 // apply the stylesheet, so the attribute is what a spec pins; the
 // browser pass asserts the border.
 // ---------------------------------------------------------------------------
-describe('MIM-254: an invalid contact field is marked aria-invalid so the border rule can match it', () => {
-  it('marks the full-name input aria-invalid="true" when it is empty', () => {
-    // `fullNameInvalid()` is what the template binds to `[attr.aria-invalid]`,
-    // returning `'true'` whenever the field has at least one error. Signal
-    // Forms computes errors eagerly, so the attribute is set as soon as the
-    // component renders an empty form — `onSubmit()` is not what flips it.
-    // The border-color rule keys off this attribute; without it the field
-    // keeps its idle border even though the message under it is red.
+describe('MIM-254: a pristine required field is not marked invalid', () => {
+  it('every required input keeps aria-invalid null on an empty, untouched form', () => {
+    // The contact step uses `null` as the false branch of the
+    // `[attr.aria-invalid]` binding so a pristine field carries no
+    // aria-invalid attribute at all. The border-color rule keys off
+    // `[aria-invalid='true']`; until the shopper has left the field or
+    // tried to submit, the attribute must be absent on every required
+    // input, not just the first one.
     const { fixture } = createContactStep(EMPTY_CONTACT);
     const root = getRootElement(fixture);
 
+    const fullNameInput = root.querySelector<HTMLInputElement>('#contact-fullname-input');
+    const emailInput = root.querySelector<HTMLInputElement>('#contact-email-input');
+    const phoneInput = root.querySelector<HTMLInputElement>('#contact-phone-input');
+
+    expect(fullNameInput?.getAttribute('aria-invalid')).toBeNull();
+    expect(emailInput?.getAttribute('aria-invalid')).toBeNull();
+    expect(phoneInput?.getAttribute('aria-invalid')).toBeNull();
+  });
+});
+
+describe('MIM-254: blurring an empty required field marks it invalid', () => {
+  it('blurring the full-name input flips its aria-invalid to "true"', () => {
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    const root = getRootElement(fixture);
     const input = root.querySelector<HTMLInputElement>('#contact-fullname-input');
-    expect(input?.getAttribute('aria-invalid')).toBe('true');
+    if (input === null) throw new Error('Expected fullname input');
+
+    input.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+});
+
+describe('MIM-254: submitting marks every empty required field invalid', () => {
+  it('onSubmit flips aria-invalid to "true" on every required input without any blur', async () => {
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    await fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const fullNameInput = root.querySelector<HTMLInputElement>('#contact-fullname-input');
+    const emailInput = root.querySelector<HTMLInputElement>('#contact-email-input');
+    const phoneInput = root.querySelector<HTMLInputElement>('#contact-phone-input');
+
+    expect(fullNameInput?.getAttribute('aria-invalid')).toBe('true');
+    expect(emailInput?.getAttribute('aria-invalid')).toBe('true');
+    expect(phoneInput?.getAttribute('aria-invalid')).toBe('true');
   });
 });
 
