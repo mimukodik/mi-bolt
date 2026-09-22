@@ -1,5 +1,7 @@
 /* variant-selector.scss — yettel device page colour and storage chips
-   (`docs/design/yettel.md` §5 "Variant chips", lines 491-615). */
+   (`docs/design/yettel.md` §5 "Variant chips"). The selected chip carries
+   yettel's navy ring and every chip is 48px tall (13px + 24px line box +
+   11px), both measured on yettel.hu's device page on 2026-09-22 (MIM-233). */
 
 :host {
   display: block;
@@ -47,7 +49,7 @@
   color: var(--color-primary);
   font-family: var(--font-family-light);
   font-size: 14px;
-  line-height: 1;
+  line-height: 24px;
   cursor: pointer;
 }
 
@@ -65,7 +67,7 @@
 
 .option.is-selected {
   font-family: var(--font-family-bold);
-  box-shadow: 0 0 0 2px var(--color-accent) inset;
+  box-shadow: 0 0 0 2px var(--color-primary) inset;
 }
 
 .option:disabled {

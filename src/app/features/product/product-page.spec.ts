@@ -1313,3 +1313,34 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     }
   });
 });
+
+interface ComponentWithStyles {
+  ɵcmp: {
+    styles: readonly string[];
+  };
+}
+
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
+    return false;
+  }
+  if (val === null || !('ɵcmp' in val)) {
+    return false;
+  }
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
+}
+
+describe('MIM-233: the stock line on the navy buy box is white, as on yettel.hu', () => {
+  it('the in-stock line uses the inverse text colour, not lime', () => {
+    if (!hasStyles(ProductPage)) throw new Error('Expected ProductPage to have styles');
+    const css = ProductPage.ɵcmp.styles.join('\n');
+    const start = css.indexOf('.stock[');
+    const body = css.slice(css.indexOf('{', start) + 1, css.indexOf('}', start));
+    expect(body).toContain('var(--%NS%color-text-inverse)');
+    expect(body).not.toContain('var(--%NS%color-accent)');
+  });
+});

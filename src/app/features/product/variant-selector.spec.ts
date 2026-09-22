@@ -178,3 +178,47 @@ describe('VariantSelector (FIX-50 reshape to components.md:435-443)', () => {
     expect(host.selections.length).toBe(0);
   });
 });
+
+interface ComponentWithStyles {
+  ɵcmp: {
+    styles: readonly string[];
+  };
+}
+
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
+    return false;
+  }
+  if (val === null || !('ɵcmp' in val)) {
+    return false;
+  }
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
+}
+
+describe('MIM-233: variant chips follow the yettel.hu device page', () => {
+  function ruleBody(css: string, selectorStart: string): string {
+    const start = css.indexOf(selectorStart);
+    if (start === -1) throw new Error(`No rule starting with ${selectorStart}`);
+    const open = css.indexOf('{', start);
+    const close = css.indexOf('}', open);
+    return css.slice(open + 1, close);
+  }
+
+  it('the selected chip ring is navy, not lime', () => {
+    if (!hasStyles(VariantSelector)) throw new Error('Expected VariantSelector to have styles');
+    const css = VariantSelector.ɵcmp.styles.join('\n');
+    const selected = ruleBody(css, '.option.is-selected');
+    expect(selected).toContain('var(--%NS%color-primary)');
+    expect(selected).not.toContain('var(--%NS%color-accent)');
+  });
+
+  it('every chip has a 24px line box, so it is 48px tall with its padding', () => {
+    if (!hasStyles(VariantSelector)) throw new Error('Expected VariantSelector to have styles');
+    const css = VariantSelector.ɵcmp.styles.join('\n');
+    expect(ruleBody(css, '.option[')).toContain('line-height: 24px');
+  });
+});
