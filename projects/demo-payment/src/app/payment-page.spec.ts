@@ -144,11 +144,22 @@ describe('PaymentPage', () => {
     expect(nbsp(text(fixture, '[data-testid="pay-amount"]'))).toBe('129 990 Ft');
     expect(text(fixture, '[data-testid="pay-ref"]')).toBe('pi_test_1');
     expect(text(fixture, 'h1')).toBe('Fizetés jóváhagyása');
-    expect(document.activeElement).toBe(hostElement(fixture).querySelector('h1'));
+    expect(hostElement(fixture).querySelector('h1')?.getAttribute('tabindex')).toBeNull();
 
     const gets = captured.filter((c) => c.method === 'GET');
     expect(gets).toHaveLength(1);
     expect(gets[0]?.pathname).toBe('/api/v1/payment-intents/pi_test_1');
+  });
+
+  it('MIM-259: the card heading is not focusable and never takes focus', async () => {
+    await configureTestBed();
+    server.use(http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)));
+    const fixture = await render('pi_test_1');
+    await flush();
+
+    const heading = hostElement(fixture).querySelector('#pay-title');
+    expect(heading?.getAttribute('tabindex')).toBeNull();
+    expect(document.activeElement).not.toBe(heading);
   });
 
   it('P-02: Sikeres fizetés posts { outcome: "succeeded" }', async () => {
@@ -326,7 +337,7 @@ describe('PaymentPage', () => {
 
     expect(text(fixture, 'h1')).toBe('Fizetés jóváhagyása');
     expect(captured.filter((c) => c.method === 'GET')).toHaveLength(2);
-    expect(document.activeElement).toBe(hostElement(fixture).querySelector('h1'));
+    expect(document.activeElement).not.toBe(hostElement(fixture).querySelector('h1'));
   });
 
   it('P-11: a failed post offers a retry that re-posts the same outcome', async () => {

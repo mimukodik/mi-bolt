@@ -117,7 +117,6 @@
 
 /* The ring sits outside the control, so one ink outline reads on the
  * white card behind both the primary and the secondary buttons. */
-.pay-card h1:focus-visible,
 .pay-alert:focus-visible,
 .pay-button:focus-visible,
 .pay-back:focus-visible {
