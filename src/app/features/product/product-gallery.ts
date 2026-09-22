@@ -161,12 +161,14 @@ export class ProductGallery {
     } else if (event.key === 'Escape' && this.zoomOpen()) {
       event.preventDefault();
       this.closeZoom();
-    } else if (event.key === 'Home' && this.hasSeveral()) {
+    } else if (event.key === 'Home' && list.length > 0) {
+      // Home and End never scroll the page from the gallery; with one
+      // image there is nothing to move to, so nothing is emitted.
       event.preventDefault();
-      this.imageSelected.emit(list[0].id);
-    } else if (event.key === 'End' && this.hasSeveral()) {
+      if (this.hasSeveral()) this.imageSelected.emit(list[0].id);
+    } else if (event.key === 'End' && list.length > 0) {
       event.preventDefault();
-      this.imageSelected.emit(list[list.length - 1].id);
+      if (this.hasSeveral()) this.imageSelected.emit(list[list.length - 1].id);
     }
   }
 

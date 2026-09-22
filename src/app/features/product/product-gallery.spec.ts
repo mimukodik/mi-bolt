@@ -601,4 +601,21 @@ describe('MIM-233 product-gallery with a single image', () => {
     expect(host.emittedImageSelected.length).toBe(0);
     expect(host.selectedImageId()).toBe(sampleImages[0].id);
   });
+
+  it('MIM-233: Home and End on a single-image gallery still stop the page from scrolling', async () => {
+    const { fixture, host, root } = await createHarness();
+    host.images.set([sampleImages[0]]);
+    host.selectedImageId.set(sampleImages[0].id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const gallerySection = queryElement(root, '[data-testid="product-gallery"]');
+
+    for (const key of ['Home', 'End']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      gallerySection.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    }
+    expect(host.emittedImageSelected.length).toBe(0);
+  });
 });
