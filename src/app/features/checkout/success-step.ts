@@ -44,6 +44,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from '../../shared/ui/button/button';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';
@@ -58,7 +59,14 @@ const ORDER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,80}$/;
 
 @Component({
   selector: 'app-success-page',
-  imports: [Button, CheckoutStepHeader, ErrorState, LoadingState, OrderReceiptComponent],
+  imports: [
+    Button,
+    CheckoutStepHeader,
+    ErrorState,
+    LoadingState,
+    OrderReceiptComponent,
+    StatusMessage,
+  ],
   templateUrl: './success-step.html',
   styleUrl: './success-step.scss',
 })
@@ -128,6 +136,12 @@ export class SuccessStep {
 
   /** Retry button label. */
   readonly retryLabel = computed<string>(() => 'Visszatöltés újra');
+
+  /** Standing "this is a demo" notice rendered as `app-status-message` on
+   *  this screen. Persistent: the primitive hides its dismiss button
+   *  when `[persistent]` is true (MIM-240b1). */
+  readonly demoNoticeMessage =
+    'Demó pénztár. A sikeroldal csupán a működést mutatja be — nem történt valódi fizetés, szállítás vagy e-mail-küldés.';
 
   constructor() {
     // Drive the hydration pipeline off the URL signal. We don't reach

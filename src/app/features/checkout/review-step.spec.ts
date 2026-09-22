@@ -632,4 +632,23 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(summary.compareDocumentPosition(status) & FOLLOWING).toBeTruthy();
     expect(confirm.contains(status)).toBe(true);
   });
+
+  // MIM-240b1: the demo notice is `app-status-message` with the primitive's
+  // own message string and `[persistent]` true. The data-testid stays on
+  // the primitive's host so any existing query keeps working.
+  it('renders the exact message string the primitive carries (MIM-240b1)', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const demoNotice = getByTestId(root, 'review-demo-notice');
+    expect(demoNotice.textContent?.trim()).toBe(
+      'Demó pénztár. A rendelés leadása nem küld valódi megrendelést, nem indít valódi fizetést, és nem küld e-mailt. Az adatok a böngésző memóriájában maradnak.',
+    );
+  });
+
+  it('renders no "Bezárás" dismiss button because the primitive is persistent (MIM-240b1)', () => {
+    const fixture = createFixture();
+    const root = getRoot(fixture);
+    const demoNotice = getByTestId(root, 'review-demo-notice');
+    expect(demoNotice.textContent ?? '').not.toContain('Bezárás');
+  });
 });
