@@ -201,8 +201,10 @@
       [error]="addError()"
       [money]="devicePrice()"
       [pending]="addPending()"
+      [success]="addSuccessMessage()"
       (addRequested)="onRailAddRequested()"
       (errorDismissed)="addError.set(null)"
+      (successDismissed)="onSuccessDismissed()"
     />
   }
 </div>

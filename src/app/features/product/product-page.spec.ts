@@ -355,6 +355,35 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     expect(document.activeElement).toBe(addCta);
   });
 
+  it('MIM-216: the mobile purchase rail shows the add-to-cart success message and forwards its dismiss', async () => {
+    const { root, fixture, host } = await createHarness();
+
+    const page = host.page();
+    if (!(page instanceof ProductPage)) {
+      throw new Error('Expected ProductPage');
+    }
+    const message = 'Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.';
+    page.addSuccessMessage.set(message);
+    fixture.detectChanges();
+
+    const rail = queryElement(root, '[data-testid="purchase-rail"]');
+    const railStatus = queryElement(rail, '.rail-status');
+    const railToast = queryElement(railStatus, '[data-testid="status-message"]');
+    expect(railToast.textContent).toContain('1 darab a kosárban.');
+    expect(railToast.textContent).toContain('Demo One 5G');
+
+    const desktopCta = queryElement(root, '.cta-desktop');
+    const desktopToast = queryElement(desktopCta, '[data-testid="status-message"]');
+    expect(railToast.textContent).toBe(desktopToast.textContent);
+
+    const close = queryButton(railToast, 'button');
+    close.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(page.addSuccessMessage()).toBeNull();
+  });
+
   it('MIM-216: Bezárás on the add-to-cart error banner clears addError through errorDismissed', async () => {
     const { root, fixture, host } = await createHarness();
 
