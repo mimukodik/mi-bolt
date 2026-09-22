@@ -8,16 +8,19 @@ import {
 
 describe('parseProxyTimeout', () => {
   it.each([
-    [undefined, 30000],
-    ['', 30000],
-    ['abc', 30000],
-    ['0', 30000],
-    ['-5', 30000],
+    [undefined, DEFAULT_PROXY_TIMEOUT_MS],
+    ['', DEFAULT_PROXY_TIMEOUT_MS],
+    ['abc', DEFAULT_PROXY_TIMEOUT_MS],
+    ['0', DEFAULT_PROXY_TIMEOUT_MS],
+    ['-5', DEFAULT_PROXY_TIMEOUT_MS],
     ['1e3', 1000],
     [' 5000 ', 5000],
-    ['2147483647', 2147483647],
-    ['2147483648', 30000],
-    ['99999999999999', 30000],
+    [String(MAX_TIMER_MS), MAX_TIMER_MS],
+    [String(MAX_TIMER_MS + 1), DEFAULT_PROXY_TIMEOUT_MS],
+    ['99999999999999', DEFAULT_PROXY_TIMEOUT_MS],
+    ['Infinity', DEFAULT_PROXY_TIMEOUT_MS],
+    ['NaN', DEFAULT_PROXY_TIMEOUT_MS],
+    ['null', DEFAULT_PROXY_TIMEOUT_MS],
   ])('%j gives %i', (raw, expected) => {
     expect(parseProxyTimeout(raw)).toBe(expected);
   });
