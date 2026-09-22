@@ -137,9 +137,11 @@ select[aria-invalid='true']:not(.border-0) {
   border-color: var(--color-status-error);
 }
 
-input[aria-invalid='true']:not([type='checkbox']):not([type='radio']):focus-visible:focus-visible,
-select[aria-invalid='true']:focus-visible:focus-visible,
-textarea[aria-invalid='true']:focus-visible:focus-visible {
+input[aria-invalid='true']:not([type='checkbox']):not([type='radio']):not(
+    .border-0
+  ):focus-visible:focus-visible,
+select[aria-invalid='true']:not(.border-0):focus-visible:focus-visible,
+textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
   border-color: var(--color-status-error);
   box-shadow: 0 0 0 0.2rem var(--color-error-halo);
 }
