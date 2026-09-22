@@ -28,7 +28,11 @@
 //                              the same method, path, query and headers
 //                              (host rewritten to the target's host)
 //                              instead of answering 404; a connection
-//                              failure replies 502 with problem+json.
+//                              failure or timeout replies 502 with
+//                              problem+json (timeout: MI_BOLT_API_PROXY_TIMEOUT_MS).
+//   MI_BOLT_API_PROXY_TIMEOUT_MS
+//                              milliseconds the proxy waits for the backend
+//                              before answering 502 (default 30000).
 //   MI_BOLT_PAYMENT_STATIC_DIR when set, `/demo-fizetes` and
 //                              `/demo-fizetes/*` are served from that
 //                              directory with the same safe resolution
@@ -54,6 +58,10 @@ const STATIC_DIR = resolve(
   process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser',
 );
 const API_PROXY = process.env['MI_BOLT_API_PROXY'] ?? null;
+/** Milliseconds the proxy waits for the backend before answering 502. */
+const parsedTimeout = Number(process.env['MI_BOLT_API_PROXY_TIMEOUT_MS'] ?? '30000');
+const API_PROXY_TIMEOUT_MS =
+  Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 30000;
 const PAYMENT_STATIC_DIR = process.env['MI_BOLT_PAYMENT_STATIC_DIR']
   ? resolve(repoRoot, process.env['MI_BOLT_PAYMENT_STATIC_DIR'])
   : null;
@@ -215,11 +223,30 @@ function sendSpaFallback(res, baseDir = STATIC_DIR) {
 }
 
 /**
+ * Serves `urlPath` from `baseDir` when it resolves to a real file, otherwise
+ * the directory's `index.html` (the SPA fallback for that root).
+ */
+function serveStatic(res, urlPath, baseDir, prefix) {
+  const candidate = safeResolveFromPath(urlPath, baseDir, prefix);
+  if (candidate !== null) {
+    try {
+      if (statSync(candidate).isFile()) {
+        sendFile(res, candidate);
+        return;
+      }
+    } catch {
+      // missing or unreadable — fall through to the fallback.
+    }
+  }
+  sendSpaFallback(res, baseDir);
+}
+
+/**
  * Per-request dispatcher. The order matters:
  *   1. `/api` proxy (when configured) forwards to the backend before the
  *      method guard so POST/PUT work for proxied API traffic.
- *   2. `/api/*` always returns 404 + problem+json, never SPA shell.
- *   3. Non-GET/HEAD on a non-API path returns 405.
+ *   2. Non-GET/HEAD on any other path returns 405.
+ *   3. `/api/*` without a proxy returns 404 + problem+json, never the SPA shell.
  *   4. `/demo-fizetes` static (when configured) uses its own fallback.
  *   5. Real files (mockServiceWorker.js, assets, hashed bundles,
  *      favicon) are served as themselves.
@@ -232,7 +259,7 @@ function handle(request, res) {
   try {
     const parsedUrl = new URL(rawPath, `http://${HOST}`);
     urlPath = parsedUrl.pathname.replace(/\/+/g, '/') || '/';
-    forwardPath = parsedUrl.search ? urlPath + parsedUrl.search : urlPath;
+    forwardPath = parsedUrl.pathname + parsedUrl.search;
   } catch {
     // Malformed URL — fall through to SPA fallback instead of crashing.
     sendSpaFallback(res);
@@ -251,12 +278,16 @@ function handle(request, res) {
         path: forwardPath,
         method: request.method,
         headers,
+        timeout: API_PROXY_TIMEOUT_MS,
       },
       (upstreamRes) => {
         res.writeHead(upstreamRes.statusCode, upstreamRes.headers);
         upstreamRes.pipe(res);
       },
     );
+    upstream.on('timeout', () => {
+      upstream.destroy(Object.assign(new Error('upstream timeout'), { code: 'ETIMEDOUT' }));
+    });
     upstream.on('error', (error) => {
       process.stderr.write(`[serve-static] api proxy error: ${error?.stack ?? error}\n`);
       if (res.headersSent) {
@@ -274,7 +305,7 @@ function handle(request, res) {
     return;
   }
 
-  // Only GET and HEAD go through the SPA fallback; other methods surface as
+  // 2. Only GET and HEAD go through the SPA fallback; other methods surface as
   // 405 so a misconfigured POST is not silently served the shell.
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     res.writeHead(405, { 'content-type': 'text/plain', allow: 'GET, HEAD' });
@@ -282,7 +313,7 @@ function handle(request, res) {
     return;
   }
 
-  // 2. The mock worker owns business traffic in the demo build; never hand
+  // 3. The mock worker owns business traffic in the demo build; never hand
   // `/api/...` to `index.html`.
   if (urlPath.startsWith('/api/') || urlPath === '/api') {
     sendApiProblem(
@@ -296,38 +327,12 @@ function handle(request, res) {
 
   // 4. Serve the payment app from its own directory when configured.
   if (PAYMENT_STATIC_DIR && (urlPath === '/demo-fizetes' || urlPath.startsWith('/demo-fizetes/'))) {
-    const candidate = safeResolveFromPath(urlPath, PAYMENT_STATIC_DIR, '/demo-fizetes');
-    if (candidate !== null) {
-      try {
-        const stat = statSync(candidate);
-        if (stat.isFile()) {
-          sendFile(res, candidate);
-          return;
-        }
-      } catch {
-        // missing or unreadable — fall through to the payment SPA fallback.
-      }
-    }
-    sendSpaFallback(res, PAYMENT_STATIC_DIR);
+    serveStatic(res, urlPath, PAYMENT_STATIC_DIR, '/demo-fizetes');
     return;
   }
 
-  // 5. Real files from the shop.
-  const candidate = safeResolveFromPath(urlPath);
-  if (candidate !== null) {
-    try {
-      const stat = statSync(candidate);
-      if (stat.isFile()) {
-        sendFile(res, candidate);
-        return;
-      }
-    } catch {
-      // missing or unreadable — fall through to SPA fallback below.
-    }
-  }
-
-  // 6. Shop SPA fallback.
-  sendSpaFallback(res);
+  // 5-6. Real files from the shop, then the shop SPA fallback.
+  serveStatic(res, urlPath, STATIC_DIR, '/');
 }
 
 const server = createServer((request, res) => {
