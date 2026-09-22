@@ -2,14 +2,6 @@
  * CheckoutStepHeader: the shared header of the four checkout steps. The
  * breadcrumb trail is switched off for now (MIM-234, BREADCRUMB_VISIBLE),
  * so the header renders only the projected heading and notice.
- *
- * One test:
- *
- *   MIM-234: the breadcrumb is held out of the DOM.
- *
- * Helper functions:
- *
- *   createHeader, getRootElement, HostForCheckoutStepHeader, CRUMBS.
  */
 
 import { provideZonelessChangeDetection, Component } from '@angular/core';
