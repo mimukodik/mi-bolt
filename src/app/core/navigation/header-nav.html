@@ -68,9 +68,7 @@
           <a
             class="relative inline-flex items-center no-underline min-h-11 px-3"
             routerLinkActive="is-active"
-            [fragment]="link.fragment"
             [routerLink]="link.routerLink"
-            [routerLinkActiveOptions]="link.routerLink === '/' ? { exact: true } : { exact: false }"
             >{{ link.label }}</a
           >
         }
@@ -158,13 +156,9 @@
     (closed)="closeDrawer()"
   >
     @for (link of navLinks(); track link.label) {
-      <a
-        class="block no-underline"
-        [fragment]="link.fragment"
-        [routerLink]="link.routerLink"
-        (click)="closeDrawer()"
-        >{{ link.label }}</a
-      >
+      <a class="block no-underline" [routerLink]="link.routerLink" (click)="closeDrawer()">{{
+        link.label
+      }}</a>
     }
   </app-mobile-drawer>
 }

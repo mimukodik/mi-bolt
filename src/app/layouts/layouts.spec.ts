@@ -185,7 +185,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(css.includes('color-shell-dark')).toBe(false);
   });
 
-  it('MarketingLayout exposes Hungarian nav links', () => {
+  it('MarketingLayout exposes the single Hungarian nav link', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
     const raw: unknown = f.nativeElement;
@@ -193,9 +193,9 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     const nav = raw.querySelector('nav');
     const text = nav?.textContent ?? '';
     const has1 = text.includes('Mobiltelefonok');
-    const has2 = text.includes('A demóról');
     expect(has1).toBe(true);
-    expect(has2).toBe(true);
+    expect(text.includes('A demóról')).toBe(false);
+    expect(nav?.querySelectorAll('a').length).toBe(1);
   });
 
   it('MarketingLayout renders the single-bar footer with the demo-explainer CTA', () => {
@@ -426,7 +426,7 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     }
     expect(modal).toBe('true');
     const links = document.body.querySelectorAll('[role="dialog"] a');
-    expect(links.length).toBe(2);
+    expect(links.length).toBe(1);
     // Exactly one node may carry the dialog role. The CDK container
     // carries it by default (DialogConfig.role), so a primitive that
     // also stamps role="dialog" on its own panel nests two dialogs.
