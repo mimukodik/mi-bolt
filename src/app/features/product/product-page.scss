@@ -76,12 +76,13 @@
   color: var(--color-text-inverse-muted);
 }
 
+/* No width cap: the owner asked on 2026-09-22 for the description to run the
+   full width; the resulting ~250ch measure on a wide screen is the trade-off. */
 .description {
   font-family: var(--font-family-light);
   font-size: var(--type-helper);
   line-height: 22px;
   color: var(--color-primary);
-  max-width: 60ch;
 }
 
 .section-title {
