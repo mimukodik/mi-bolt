@@ -10,7 +10,7 @@ import { Component, input } from '@angular/core';
  *
  * The element carries no `role` and no `aria-live`: the demo texts are
  * read in place when the user reaches them rather than announced on
- * load, where several live regions at once drown each other and the
+ * load, where several live regions at once drown out each other and the
  * real announcements (the owner's decision 16, 2026-09-22). The
  * visible text is the source of truth, not a redundant aria-label.
  *
