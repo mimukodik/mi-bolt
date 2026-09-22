@@ -169,13 +169,15 @@ describe('T03-AC01 operationIds', () => {
 
   it('every media-type example on responses and requestBodies validates against its own schema', () => {
     // docs/api/openapi.yaml declares `examples:` blocks at the media
-    // type level (`grep -n 'examples:' docs/api/openapi.yaml` →
-    // 247, 337, 558, 621, 654, 739, 808, 851). Walk every operation
-    // response and requestBody on the dereferenced spec so the media
-    // schemas no longer carry $ref nodes (ajv would otherwise fail to
-    // resolve them), collect each example with its media type's
-    // schema, and validate with ajv. A schema the ajv instance cannot
-    // compile is the kind of drift T03-AC01 must catch.
+    // type level on seven operations (`grep -n 'examples:' docs/api/openapi.yaml` →
+    // 337, 558, 621, 654, 739, 808, 851; the eighth hit at line 247 is
+    // a header-schema array, not a media-type named map and so is not
+    // walked here). Walk every operation response and requestBody on
+    // the dereferenced spec so the media schemas no longer carry $ref
+    // nodes (ajv would otherwise fail to resolve them), collect each
+    // example with its media type's schema, and validate with ajv. A
+    // schema the ajv instance cannot compile is the kind of drift
+    // T03-AC01 must catch.
     const exampleAjv = new Ajv({ allErrors: true, strict: false, validateFormats: false });
     addFormats(exampleAjv);
     let checked = 0;
@@ -359,7 +361,7 @@ describe('T03-AC04 schema constraints', () => {
   });
 
   it('CartItem.quantity is integer 1..10', () => {
-    // docs/api/openapi.yaml:1594-1596
+    // docs/api/openapi.yaml:1583-1586
     const cartItem = dereferenced.components.schemas.CartItem as {
       properties: { quantity: { type: string; minimum: number; maximum: number } };
     };
@@ -548,10 +550,9 @@ describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
   });
 
   it('every fixture product validates against the OpenAPI Product schema', () => {
-    // The schema has `additionalProperties: false` on ProductBase and
-    // `unevaluatedProperties: false` on Product, so a field the
-    // fixture adds that the schema does not know is a real failure;
-    // do not loosen the check.
+    // Product carries `unevaluatedProperties: false` (docs/api/openapi.yaml:1322),
+    // so a field the fixture adds that no allOf branch declares is a real
+    // failure; do not loosen the check.
     const productSchema = dereferenced.components.schemas.Product as Record<string, unknown>;
     const validate = ajv.compile(productSchema);
     for (const p of catalog.products) {
