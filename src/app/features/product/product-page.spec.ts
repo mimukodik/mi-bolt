@@ -68,7 +68,7 @@ function toGeneratedProduct(source: typeof DEMO_PRODUCT): Product {
  *   - T16-AC05: baseline product page has no 3D surface (no canvas element,
  *     no 3D script, no fake 3D button).
  *   - States (R19): initial loading state skeleton, error state with retry.
- *   - Shared primitives: Button, PriceBlock, QuantityControl, ErrorState,
+ *   - Shared primitives: Button, PriceBlock, ErrorState,
  *     LoadingState, ProductGallery, VariantSelector, SpecificationAccordion.
  */
 
@@ -675,28 +675,6 @@ describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
     const cartPost = capturedRequests.find((r) => r.url.includes('/cart/items'));
     expect(cartPost).toBeDefined();
   });
-
-  it('T16-AC04/FIX-50: QuantityControl increments and the rail CTA adds the updated quantity', async () => {
-    const { fixture, root, tick } = await createHarness();
-
-    const incrementBtn = queryButton(root, '[data-testid="quantity-increment"]');
-    incrementBtn.click();
-    await tick();
-    fixture.detectChanges();
-
-    const inputEl = root.querySelector('[data-testid="quantity-input"]');
-    if (inputEl instanceof HTMLInputElement) {
-      expect(inputEl.value).toBe('2');
-    }
-
-    const ctaButton = queryButton(root, '[data-testid="purchase-cta"] button');
-    ctaButton.click();
-    await tick();
-
-    const addReq = capturedRequests.find((r) => r.url.includes('/items'));
-    const body: unknown = JSON.parse(addReq?.bodyText ?? '{}');
-    expect(body).toMatchObject({ quantity: 2 });
-  });
 });
 
 describe('T16-AC05 product-page has no 3D surface', () => {
@@ -883,8 +861,6 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
       galleryIndex: -1,
       selectedColorCode: null,
       selectedStorageGb: null,
-      quantity: 1,
-      quantityOverMax: false,
       disabledCombinations: [],
       invalidVariantQuery: null,
       addToCart: { enabled: false, reason: null },
@@ -1041,34 +1017,20 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
   });
 });
 
-describe('product-page quantity control has a real accessible name, not a dangling label[for]', () => {
-  it('quantity input carries an aria-label and no label[for] points at a non-labelable host', async () => {
-    const { root } = await createHarness();
-
-    // `QuantityControl` has no `id` input, so a `[id]` binding on
-    // `<app-quantity-control>` lands on that host element rather than on
-    // the real `<input>` inside it. A `<label for="...">` pointing at that
-    // id is not associated with any labelable control at all. The name
-    // must come from the input's own `aria-label` instead, with no
-    // dangling label left behind (identical defect fixed on the cart side
-    // in 68f14b7).
-    const input = root.querySelector('[data-testid="quantity-input"]');
-    expect(input).not.toBeNull();
-    expect(input?.getAttribute('aria-label')).toBe('Darabszám');
-    expect(root.querySelector('label[for]')).toBeNull();
-  });
-});
-
 describe('T16 product-page shared-primitive dependency wiring', () => {
-  it('wires shared UI primitives: Button, PriceBlock, QuantityControl, ProductGallery, VariantSelector, SpecificationAccordion', async () => {
+  it('wires shared UI primitives: Button, PriceBlock, ProductGallery, VariantSelector, SpecificationAccordion', async () => {
     const { root } = await createHarness();
 
     expect(root.querySelector('app-button')).not.toBeNull();
     expect(root.querySelector('app-price-block')).not.toBeNull();
-    expect(root.querySelector('app-quantity-control')).not.toBeNull();
     expect(root.querySelector('app-product-gallery')).not.toBeNull();
     expect(root.querySelector('app-variant-selector')).not.toBeNull();
     expect(root.querySelector('app-specification-accordion')).not.toBeNull();
+  });
+
+  it('MIM-233: the product page no longer renders the quantity control', async () => {
+    const { root } = await createHarness();
+    expect(root.querySelector('app-quantity-control')).toBeNull();
   });
 });
 

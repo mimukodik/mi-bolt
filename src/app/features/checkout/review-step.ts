@@ -242,6 +242,12 @@ export class ReviewStep {
     'Egy vagy több változat elfogyott. Visszavonulhatsz a kosárhoz a cikk korrigálásához.';
   readonly errorMessage = 'A rendelés leadása nem sikerült.';
 
+  /** Standing "this is a demo" notice rendered as `app-status-message` on
+   *  this screen. Persistent: the primitive hides its dismiss button
+   *  when `[persistent]` is true (MIM-240b1). */
+  readonly demoNoticeMessage =
+    'Demó pénztár. A rendelés leadása nem küld valódi megrendelést, nem indít valódi fizetést, és nem küld e-mailt. Az adatok a böngésző memóriájában maradnak.';
+
   // ---------------------------------------------------------------------------
   // Consent gating
   // ---------------------------------------------------------------------------

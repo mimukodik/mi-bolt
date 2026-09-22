@@ -5,15 +5,12 @@
     >
       Kapcsolattartási adatok
     </h1>
-    <p
-      class="demo-notice m-0 p-3 px-4 rounded text-sm leading-relaxed"
+    <app-status-message
       data-testid="contact-demo-notice"
-      role="note"
-    >
-      <strong class="font-bold mr-1">Demó pénztár.</strong>
-      Kérlek, ne használj valós személyes adatokat — ez egy működési bemutató, nem küldünk valódi
-      rendelést vagy e-mailt.
-    </p>
+      severity="info"
+      [message]="demoNoticeMessage"
+      [persistent]="true"
+    />
   </app-checkout-step-header>
 
   <app-navigation-reason-banner />
@@ -47,7 +44,7 @@
         inputmode="text"
         placeholder="Teszt Elek"
         type="text"
-        [attr.aria-invalid]="fullNameInvalid() ? 'true' : null"
+        [attr.aria-invalid]="fullNameShowsInvalid() ? 'true' : null"
         [formField]="contactFields().fullName"
       />
       <app-form-field-message
@@ -72,7 +69,7 @@
         inputmode="email"
         placeholder="teszt@example.test"
         type="email"
-        [attr.aria-invalid]="emailInvalid() ? 'true' : null"
+        [attr.aria-invalid]="emailShowsInvalid() ? 'true' : null"
         [formField]="contactFields().email"
       />
       <app-form-field-message
@@ -97,7 +94,7 @@
         inputmode="tel"
         placeholder="+36201234567"
         type="tel"
-        [attr.aria-invalid]="phoneInvalid() ? 'true' : null"
+        [attr.aria-invalid]="phoneShowsInvalid() ? 'true' : null"
         [formField]="contactFields().phone"
       />
       <app-form-field-message

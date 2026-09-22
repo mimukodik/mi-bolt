@@ -447,9 +447,9 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `variant:Variant|null; quantity:number; pending:boolean; error:UiProblem|null`.
+**Signal inputs:** `variant:Variant|null; pending:boolean; error:UiProblem|null`.
 
-**Outputs:** `addRequested:{variantId:string;quantity:number}`.
+**Outputs:** `addRequested:{variantId:string;quantity:number}` (the quantity is fixed at 1; the page-level intent never invents a different value).
 
 **Functions:** Single primary CTA with native disabled/in-flight label and stable width; emit one intent, no own cart persistence.
 
@@ -680,24 +680,21 @@ import type { Variant } from '../../api/generated/models/variant';
 })
 export class AddToCartControl {
   readonly variant = input<Variant | null>(null);
-  readonly quantity = input.required<number>();
   readonly pending = input(false);
   readonly addRequested = output<{variantId: string; quantity: number}>();
   readonly blocked = computed(() => {
     const v = this.variant();
-    const n = this.quantity();
-    return this.pending() || !v || v.availability !== 'in_stock'
-      || !Number.isInteger(n) || n < 1 || n > Math.min(v.maxQuantity, 5);
+    return this.pending() || !v || v.availability !== 'in_stock';
   });
   requestAdd(): void {
     const v = this.variant();
     if (!v || this.blocked()) return;
-    this.addRequested.emit({variantId: v.id, quantity: this.quantity()});
+    this.addRequested.emit({variantId: v.id, quantity: 1});
   }
 }
 ```
 
-Parent: `[variant]="product.vm().selectedVariant" [quantity]="product.vm().quantity" [pending]="cart.pending()" (addRequested)="cart.addItem($event)"` is a conceptual binding. The public CartFacade.addItem(command): void command owns subscription/queue lifecycle. It invokes a private Observable queue subscribed exactly once; no container subscription and no un-subscribed cold Observable are allowed. The readonly DTO is never mutated by the child.
+Parent: `[variant]="product.vm().selectedVariant" [pending]="cart.pending()" (addRequested)="cart.addItem($event)"` is a conceptual binding. The public CartFacade.addItem(command): void command owns subscription/queue lifecycle. It invokes a private Observable queue subscribed exactly once; no container subscription and no un-subscribed cold Observable are allowed. The readonly DTO is never mutated by the child.
 
 ## Communication examples
 

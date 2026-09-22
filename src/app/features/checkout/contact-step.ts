@@ -177,6 +177,12 @@ export class ContactStep {
    *  component only reports the outcome R15 allows it to show. */
   readonly saveErrorMessage = 'A mentés sikertelen. Próbáld újra.';
 
+  /** Standing "this is a demo" notice rendered as `app-status-message` on
+   *  this screen. Persistent: the primitive hides its dismiss button
+   *  when `[persistent]` is true (MIM-240b1). */
+  readonly demoNoticeMessage =
+    'Demó pénztár. Kérlek, ne használj valós személyes adatokat — ez egy működési bemutató, nem küldünk valódi rendelést vagy e-mailt.';
+
   /** Submit gating. Disabled while a save is pending so a rapid
    *  second click does not fire the action twice. */
   readonly canSubmit = computed<boolean>(() => this.saveState() !== 'loading');
@@ -199,6 +205,13 @@ export class ContactStep {
   ]);
   readonly fullNameInvalid = computed(() => this.fullNameErrors().length > 0);
   readonly fullNameTouched = computed(() => this.contactFields().fullName().touched());
+  /** `aria-invalid` is gated on touched/submitted: the message under
+   *  the field already uses the same gate, and the border rule keys
+   *  off `[aria-invalid='true']`. A pristine required field stays
+   *  idle until the shopper has either left it or tried to submit. */
+  readonly fullNameShowsInvalid = computed<boolean>(
+    () => this.fullNameInvalid() && (this.fullNameTouched() || this.submitted()),
+  );
 
   readonly emailErrors = computed<readonly FieldError[]>(() => [
     ...toFieldErrors(this.contactFields().email().errors()),
@@ -206,6 +219,9 @@ export class ContactStep {
   ]);
   readonly emailInvalid = computed(() => this.emailErrors().length > 0);
   readonly emailTouched = computed(() => this.contactFields().email().touched());
+  readonly emailShowsInvalid = computed<boolean>(
+    () => this.emailInvalid() && (this.emailTouched() || this.submitted()),
+  );
 
   readonly phoneErrors = computed<readonly FieldError[]>(() => [
     ...toFieldErrors(this.contactFields().phone().errors()),
@@ -213,6 +229,9 @@ export class ContactStep {
   ]);
   readonly phoneInvalid = computed(() => this.phoneErrors().length > 0);
   readonly phoneTouched = computed(() => this.contactFields().phone().touched());
+  readonly phoneShowsInvalid = computed<boolean>(
+    () => this.phoneInvalid() && (this.phoneTouched() || this.submitted()),
+  );
 
   readonly fullNameFieldState = computed(() =>
     this.computeFieldState(this.fullNameInvalid(), this.fullNameTouched()),

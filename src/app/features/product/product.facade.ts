@@ -1,10 +1,9 @@
 /**
  * T15 — root-provided signal facade for the product detail page.
  *
- * Owns the product data, the selected variant, the gallery index and
- * the quantity the user wants to add. Renders an atomic view model
- * `vm` so the page never reads from two signals and gets mismatched
- * price / stock / image data.
+ * Owns the product data, the selected variant and the gallery index.
+ * Renders an atomic view model `vm` so the page never reads from two
+ * signals and gets mismatched price / stock / image data.
  *
  * The read path is a per-facade controller built on RxJS:
  *
@@ -49,7 +48,6 @@ import {
   selectInitialVariant,
   selectVariantByPair,
   serializeVariantQuery,
-  validateQuantity,
   type AddToCartState,
   type DisabledCombination,
   type InitialVariantSelection,
@@ -70,10 +68,6 @@ export interface ProductVm {
   readonly galleryIndex: number;
   readonly selectedColorCode: string | null;
   readonly selectedStorageGb: number | null;
-  /** The user's explicit selection. Never silently rewritten. */
-  readonly quantity: number;
-  /** True when `quantity` is above the variant's `maxQuantity`. */
-  readonly quantityOverMax: boolean;
   readonly disabledCombinations: readonly DisabledCombination[];
   readonly invalidVariantQuery: string | null;
   readonly addToCart: AddToCartState;
@@ -121,7 +115,6 @@ export class ProductFacade {
   private readonly errorSignal = signal<string | null>(null);
   private readonly selectedColorCodeSignal = signal<string | null>(null);
   private readonly selectedStorageGbSignal = signal<number | null>(null);
-  private readonly quantitySignal = signal<number>(1);
   private readonly galleryImageIdSignal = signal<string | null>(null);
   private readonly invalidQuerySignal = signal<string | null>(null);
   private readonly variantQuerySignal = signal<string | null>(null);
@@ -152,7 +145,6 @@ export class ProductFacade {
             a.retryNonce === b.retryNonce,
         ),
         tap(({ slug, variantQuery }) => {
-          const isNewProduct = slug !== this.slugSignal();
           this.slugSignal.set(slug);
           this.variantQuerySignal.set(variantQuery);
           this.statusSignal.set('loading');
@@ -171,14 +163,6 @@ export class ProductFacade {
             this.relatedSub = null;
           }
           this.relatedSignal.set([]);
-          // Only reset the quantity when navigating to a NEW product
-          // (slug change). A variant-only query change within the
-          // same product must preserve the user's typed quantity
-          // (AC05 — "the value is stored as written, never silently
-          // rewritten").
-          if (isNewProduct) {
-            this.quantitySignal.set(1);
-          }
         }),
         switchMap(({ slug }) =>
           this.api.invoke(getProduct, { slug }).pipe(
@@ -318,15 +302,6 @@ export class ProductFacade {
   }
 
   /**
-   * Update the quantity the user wants to add. The value is stored
-   * as written — `validateQuantity` surfaces the validation as
-   * `quantityOverMax` in the VM, never as a hidden clamp (AC05).
-   */
-  setQuantity(quantity: number): void {
-    this.quantitySignal.set(quantity);
-  }
-
-  /**
    * Encodes the current variant selection as `?variant=...` so the
    * page can write it back to the router without rebuilding the
    * search string by hand.
@@ -408,7 +383,6 @@ export class ProductFacade {
     const product = this.productSignal();
     const variant = this.currentVariant(product);
     const invalidQuery = this.invalidQuerySignal();
-    const quantity = this.quantitySignal();
     const error = this.errorSignal();
     const variantQuery = this.variantQuerySignal();
     const slug = this.slugSignal();
@@ -423,13 +397,10 @@ export class ProductFacade {
         galleryIndex: -1,
         selectedColorCode: null,
         selectedStorageGb: null,
-        quantity,
-        quantityOverMax: false,
         disabledCombinations: [],
         invalidVariantQuery: null,
         addToCart: computeAddToCartState({
           variant: null,
-          quantityValidation: validateQuantity(quantity, 0),
           invalidQuery: null,
         }),
         error,
@@ -442,10 +413,8 @@ export class ProductFacade {
     const gallery = variant?.images ?? [];
     const imagePick = selectImageFromGallery(gallery, this.galleryImageIdSignal());
     const disabledCombinations = computeDisabledCombinations(product);
-    const quantityValidation = validateQuantity(quantity, variant?.maxQuantity ?? 0);
     const addToCart = computeAddToCartState({
       variant,
-      quantityValidation,
       invalidQuery,
     });
 
@@ -458,8 +427,6 @@ export class ProductFacade {
       galleryIndex: imagePick.index,
       selectedColorCode: variant?.colorCode ?? null,
       selectedStorageGb: variant?.storageGb ?? null,
-      quantity,
-      quantityOverMax: quantityValidation.overMax,
       disabledCombinations,
       invalidVariantQuery: invalidQuery,
       addToCart,

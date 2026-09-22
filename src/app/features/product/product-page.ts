@@ -35,7 +35,6 @@ import { CartFacade } from '../cart/cart.facade';
 
 import { Button } from '../../shared/ui/button/button';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
-import { QuantityControl } from '../../shared/ui/quantity-control/quantity-control';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
@@ -88,7 +87,6 @@ import type { Variant } from '../../api/generated/models/variant';
     SpecificationAccordion,
     Button,
     PriceBlock,
-    QuantityControl,
     ErrorState,
     LoadingState,
     AddToCart,
@@ -182,19 +180,15 @@ export class ProductPage {
     return 'success';
   });
 
-  readonly quantity = computed(() => this.vm().quantity);
-  readonly quantityOverMax = computed(() => this.vm().quantityOverMax);
-  readonly maxQuantity = computed<number>(() => this.vm().selectedVariant?.maxQuantity ?? 5);
-
   readonly addToCartEnabled = computed(() => this.vm().addToCart.enabled);
   readonly addToCartReason = computed<string | null>(() => this.vm().addToCart.reason);
 
   /** `AddToCartControl`'s contract (components.md:450) has no
    *  `enabled` input of its own — the only way it can be disabled is
    *  `variant === null`. The page therefore withholds the variant
-   *  whenever `addToCart.enabled` is false (invalid deep-link query,
-   *  out of stock, quantity over max), rather than handing over a
-   *  variant the component would otherwise treat as addable. */
+   *  whenever `addToCart.enabled` is false (invalid deep-link query
+   *  or out of stock), rather than handing over a variant the
+   *  component would otherwise treat as addable. */
   readonly addableVariant = computed<Variant | null>(() =>
     this.addToCartEnabled() ? this.selectedVariant() : null,
   );
@@ -310,10 +304,6 @@ export class ProductPage {
     // which image was zoomed without a page change.
   }
 
-  onQuantityChanged(value: number): void {
-    this.facade.setQuantity(value);
-  }
-
   /** Performs the one cart mutation this page owns. Called by the
    *  desktop control's `(addRequested)` and by the mobile rail's
    *  `(addRequested)` (docs/spec/architecture.md:57, components.md:409:
@@ -362,7 +352,7 @@ export class ProductPage {
   onRailAddRequested(): void {
     const v = this.vm();
     if (v.selectedVariant === null) return;
-    void this.onAddRequested({ variantId: v.selectedVariant.id, quantity: v.quantity });
+    void this.onAddRequested({ variantId: v.selectedVariant.id, quantity: 1 });
   }
 
   private cartMutationFailed(): boolean {

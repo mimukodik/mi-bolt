@@ -403,6 +403,21 @@ describe('OrderReceiptComponent', () => {
     );
   });
 
+  it('SP-03b the receipt notice renders through the StatusMessage primitive', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt({ notice: '' }));
+    fixture.detectChanges();
+
+    const notice = queryHTMLElement(document, '[data-testid="receipt-simulation-notice"]');
+    const inner = notice?.querySelector('[data-testid="status-message"]');
+    expect(inner).not.toBeNull();
+    expect(inner?.getAttribute('role')).toBe('status');
+    expect(inner?.classList.contains('is-info')).toBe(true);
+    expect(notice?.querySelector('app-button')).toBeNull();
+    expect(notice?.textContent).toContain('Demó figyelmeztetés.');
+  });
+
   it('SP-04 the receipt is presentational: it renders from its input with no facade and no router provided', () => {
     // TestBed was already configured with only `provideZonelessChangeDetection`
     // in the outer `beforeEach`. The component has no constructor dependencies
@@ -699,6 +714,31 @@ describe('SuccessStep', () => {
     await fixture.whenStable();
 
     expect(TestBed.inject(CheckoutFacade).order()).toBeNull();
+  });
+
+  // MIM-240b1: the demo notice is `app-status-message` with the primitive's
+  // own message string and `[persistent]` true. The data-testid stays on
+  // the primitive's host so any existing query keeps working.
+  it('SP-19 renders the exact message string the primitive carries (MIM-240b1)', async () => {
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+
+    await mountSuccessPage(placed.orderId);
+
+    const demoNotice = queryHTMLElement(document, '[data-testid="success-demo-notice"]');
+    expect(demoNotice?.textContent.trim()).toBe(
+      'Demó pénztár. A sikeroldal csupán a működést mutatja be — nem történt valódi fizetés, szállítás vagy e-mail-küldés.',
+    );
+  });
+
+  it('SP-20 renders no "Bezárás" dismiss button because the primitive is persistent (MIM-240b1)', async () => {
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+
+    await mountSuccessPage(placed.orderId);
+
+    const demoNotice = queryHTMLElement(document, '[data-testid="success-demo-notice"]');
+    expect(demoNotice?.textContent ?? '').not.toContain('Bezárás');
   });
 });
 
