@@ -551,3 +551,31 @@ describe('T16-AC05 product-gallery has no 3D surface', () => {
     expect(fullText).not.toContain('3d');
   });
 });
+
+describe('MIM-233 product-gallery with a single image', () => {
+  it('MIM-233: one image renders no prev/next buttons and no counter, and keeps zoom and the thumbnail', async () => {
+    const { fixture, host, root } = await createHarness();
+    host.images.set([sampleImages[0]]);
+    host.selectedImageId.set(sampleImages[0].id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(root.querySelector('[data-testid="gallery-prev"]')).toBeNull();
+    expect(root.querySelector('[data-testid="gallery-next"]')).toBeNull();
+    expect(root.querySelector('[data-testid="gallery-count"]')).toBeNull();
+    expect(root.querySelector('[data-testid="gallery-zoom-open"]')).not.toBeNull();
+    expect(root.querySelectorAll('button.thumb').length).toBe(1);
+  });
+
+  it('MIM-233: two images render both buttons and the counter', async () => {
+    const { fixture, host, root } = await createHarness();
+    host.images.set([sampleImages[0], sampleImages[1]]);
+    host.selectedImageId.set(sampleImages[0].id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(root.querySelector('[data-testid="gallery-prev"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="gallery-next"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="gallery-count"]')?.textContent.trim()).toBe('1 / 2');
+  });
+});

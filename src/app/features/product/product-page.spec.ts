@@ -491,7 +491,7 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
 });
 
 describe('T16-AC02 product-page embeds the gallery primitive', () => {
-  it('T16-AC02: mounts ProductGallery with active variant images and count', async () => {
+  it('T16-AC02: mounts ProductGallery with the active variant image and no counter for a single image', async () => {
     const { root } = await createHarness();
 
     const galleryEl = queryElement(root, 'app-product-gallery');
@@ -500,8 +500,8 @@ describe('T16-AC02 product-page embeds the gallery primitive', () => {
     const galleryMain = queryElement(galleryEl, '[data-testid="gallery-main"]');
     expect(galleryMain).not.toBeNull();
 
-    const count = queryElement(galleryEl, '[data-testid="gallery-count"]');
-    expect(count.textContent.trim()).toBe('1 / 1');
+    expect(galleryEl.querySelector('[data-testid="gallery-count"]')).toBeNull();
+    expect(galleryEl.querySelector('[data-testid="gallery-prev"]')).toBeNull();
   });
 
   it('T16-AC02: forwards gallery imageChange events to update active image', async () => {
