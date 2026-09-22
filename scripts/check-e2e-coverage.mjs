@@ -2,12 +2,12 @@
 // Enforce the e2e coverage gate. Reads the istanbul `json-summary` report
 // monocart-reporter produces (coverage/e2e/coverage/coverage-summary.json) and
 // compares statements, branches, functions and lines against the unit-test
-// thresholds declared in angular.json (lines 102-108): statements 80, branches
-// 75, functions 80, lines 80. Exits 1 on any under-threshold metric or when no
-// coverage entry was collected at all (the json-summary file is absent).
-// While e2e/integration/ holds no *.spec.ts the four metrics are printed and
-// the gate is skipped (exit 0), because the thresholds are for the
-// integration suite, not for the seed alone.
+// thresholds declared in angular.json: statements 80, branches 75, functions
+// 80, lines 80. Exits 1 on any under-threshold metric, when no coverage entry
+// was collected at all (the json-summary file is absent), or when the JSON
+// cannot be parsed. While e2e/integration/ holds no *.spec.ts the file-missing
+// and under-threshold paths print the four metrics and exit 0 instead, because
+// the thresholds are for the integration suite, not for the seed alone.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -41,15 +41,15 @@ if (!argument) {
 }
 
 if (!existsSync(argument)) {
+  if (!gated) {
+    console.log(skipReason);
+    process.exit(0);
+  }
   console.error(
     'e2e coverage gate failed: no coverage entry was collected (0 entries → every metric is 0%)',
   );
   for (const [metric, threshold] of Object.entries(thresholds)) {
     console.error(`e2e coverage ${metric} 0.0% (threshold ${threshold}%)`);
-  }
-  if (!gated) {
-    console.log(skipReason);
-    process.exit(0);
   }
   process.exit(1);
 }
