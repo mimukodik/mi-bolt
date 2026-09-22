@@ -114,7 +114,13 @@
     <article class="cell" data-testid="showcase-statusmessage">
       <h2>Állapotüzenet (StatusMessage)</h2>
       <div class="row column">
-        <app-status-message message="A művelet sikeres volt." severity="success" />
+        @if (!successDismissed()) {
+          <app-status-message
+            message="A művelet sikeres volt."
+            severity="success"
+            (dismissed)="successDismissed.set(true)"
+          />
+        }
         <app-status-message
           message="A fizetési kísérlet nem járt sikerrel."
           severity="error"
