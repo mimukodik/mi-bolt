@@ -24,7 +24,8 @@
  * layouts duplicating it.
  */
 
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import type { ElementRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { NavigationReasonBanner } from '../checkout/navigation-reason-banner';
@@ -121,6 +122,11 @@ export class CartPage {
 
   /** `true` while the "Kosár ürítése" call is in flight. */
   readonly clearing = signal<boolean>(false);
+
+  /** Template ref for the cart page `<h1>` so a dismiss of the
+   *  transient status banner returns focus to the page heading rather
+   *  than dropping to `<body>`. */
+  private readonly pageTitle = viewChild<ElementRef<HTMLElement>>('pageTitle');
 
   /** Variant id of the line whose mutation is currently in flight, or null.
    *  Only that line is disabled while the facade dispatches. */
@@ -356,6 +362,7 @@ export class CartPage {
 
   dismissStatusMessage(): void {
     this.transientStatus.set(null);
+    this.pageTitle()?.nativeElement.focus();
   }
 
   /** `true` when the facade holds no failure signal after a mutation settled. */

@@ -14,7 +14,7 @@
  * by the parent instead (see `ProductPage`).
  */
 
-import { Component, computed, input, output } from '@angular/core';
+import { Component, ElementRef, computed, inject, input, output } from '@angular/core';
 
 import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
@@ -44,7 +44,17 @@ export class AddToCart {
   /** Emitted once per click; the parent performs the actual mutation. */
   readonly addRequested = output<{ variantId: string; quantity: number }>();
 
+  /** Emitted when the user closes the error banner via the StatusMessage
+   *  primitive's "Bezárás" button. The parent clears its `error` input;
+   *  the control itself stays mounted so the next click keeps working. */
+  readonly errorDismissed = output();
+
   readonly disabled = computed<boolean>(() => this.variant() === null || this.pending());
+
+  /** Host element so a dismiss of the error banner can return focus to the
+   *  add CTA. The StatusMessage primitive is a sibling, not a descendant of
+   *  the button, so it has no native way to land focus back. */
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Transient status banner copy + severity, driven entirely by the
    *  parent's `pending` / `error` inputs. The component never invents
@@ -70,5 +80,19 @@ export class AddToCart {
     const variant = this.variant();
     if (variant === null || this.pending()) return;
     this.addRequested.emit({ variantId: variant.id, quantity: this.quantity() });
+  }
+
+  /** The "Bezárás" on the error banner: tells the parent to clear its
+   *  error and returns focus to the add button so a keyboard user keeps
+   *  their place. Called by the parent via the `(errorDismissed)` listener. */
+  onErrorDismissed(): void {
+    this.errorDismissed.emit();
+    this.focusButton();
+  }
+
+  /** Move keyboard focus to the add CTA. Used by `onErrorDismissed` and
+   *  reachable from the page through its `viewChild(AddToCart)` handle. */
+  focusButton(): void {
+    this.host.nativeElement.querySelector('button')?.focus();
   }
 }

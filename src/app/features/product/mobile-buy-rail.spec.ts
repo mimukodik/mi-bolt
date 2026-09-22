@@ -26,6 +26,7 @@ import type { Money } from '../../shared/ui/price-block/price-block';
       [money]="money()"
       [pending]="pending()"
       (addRequested)="onAddRequested()"
+      (errorDismissed)="onErrorDismissed()"
     />
   `,
 })
@@ -35,9 +36,14 @@ class TestHostComponent {
   readonly pending = signal<boolean>(false);
   readonly error = signal<UiProblem | null>(null);
   readonly presses: number[] = [];
+  readonly errorDismissals = signal<number>(0);
 
   onAddRequested(): void {
     this.presses.push(1);
+  }
+
+  onErrorDismissed(): void {
+    this.errorDismissals.update((n) => n + 1);
   }
 }
 
@@ -152,5 +158,32 @@ describe('MobileBuyRail (FIX-50 extraction from product-page.html)', () => {
     await fixture.whenStable();
 
     expect(host.presses.length).toBe(0);
+  });
+
+  it('MIM-216: the error toast shows "Bezárás" and clicking it emits errorDismissed and returns focus to the rail CTA', async () => {
+    const { host, root, fixture } = await createHarness();
+    host.error.set({
+      code: 'UNKNOWN',
+      message: 'A termék hozzáadása nem sikerült; a kosár változatlan.',
+      fieldErrors: [],
+      retryable: true,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    if (!(statusEl instanceof HTMLElement)) {
+      throw new Error('Expected status message element');
+    }
+    const closeBtn = queryButton(statusEl, 'button');
+    expect(closeBtn.textContent).toContain('Bezárás');
+
+    closeBtn.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.errorDismissals()).toBe(1);
+    const ctaButton = root.querySelector('[data-testid="purchase-cta"] button');
+    expect(document.activeElement).toBe(ctaButton);
   });
 });

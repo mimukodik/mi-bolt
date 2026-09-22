@@ -1105,9 +1105,68 @@ describe('T18 cart-page shared-primitive dependency wiring', () => {
 });
 
 // ---------------------------------------------------------------------------
-// MIM-212 S3-C8: the guards redirect with `?navigationReason=...`
-// (`checkout.guards.ts`); the cart page tells the shopper why they are here.
+// MIM-216: reconcile notices are persistent (no "Bezárás" button); dismissing
+// the transient status banner returns focus to the page h1.
 // ---------------------------------------------------------------------------
+describe('MIM-216: every dismissible status message closes and returns focus', () => {
+  it('the reconcile notices are persistent and render no "Bezárás" button', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+
+    cartFacade._seedCart({
+      id: 'seeded-cart',
+      version: 3,
+      items: [DEMO_CART_ITEM],
+      lineCount: 1,
+      totalQuantity: 2,
+      subtotal: { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' },
+      notices: [
+        { code: 'QUANTITY_REDUCED', variantId: VARIANT_MOTO_256, params: { from: 5, to: 3 } },
+        { code: 'ITEM_REMOVED', variantId: VARIANT_MOTO_256 },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const notices = root.querySelectorAll('[data-testid="cart-notice"]');
+    expect(notices.length).toBe(2);
+    for (const notice of Array.from(notices)) {
+      expect(notice.querySelector('button')).toBeNull();
+    }
+  });
+
+  it('dismissing the transient status banner moves focus to the page h1', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Trigger a transient status through the public handler (the
+    // same path a Remove / Clear click takes), then dismiss it via
+    // the rendered StatusMessage's "Bezárás".
+    fixture.componentInstance.onRemoveRequested(VARIANT_MOTO_256);
+    fixture.detectChanges();
+    await settleMutation(fixture);
+
+    const root = getRootElement(fixture);
+    const statusHost = getElement(root, '[data-testid="status-message"]');
+    const closeBtn = getButtonElement(statusHost, 'button');
+    closeBtn.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(queryElement(root, '[data-testid="status-message"]')).toBeNull();
+    const h1 = root.querySelector('h1');
+    expect(document.activeElement).toBe(h1);
+  });
+});
 describe('MIM-212 S3-C8 cart page renders the guard redirect banner', () => {
   it('renders the empty-cart sentence when the route carries navigationReason=empty-cart', async () => {
     const router = TestBed.inject(Router);

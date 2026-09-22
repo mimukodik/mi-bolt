@@ -1,4 +1,13 @@
-import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -32,6 +41,7 @@ import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import type { UiProblem } from '../../shared/types/ui-problem';
 
 import type { Availability } from '../../api/generated/models/availability';
+import type { CartItem } from '../../api/generated/models/cart-item';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Variant } from '../../api/generated/models/variant';
 
@@ -217,6 +227,12 @@ export class ProductPage {
    *  (components.md:450-452), so the page signals it directly. */
   readonly addSuccessMessage = signal<string | null>(null);
 
+  /** View handle on the desktop `AddToCart` control. Used to return
+   *  focus to the add CTA when the success banner is dismissed (the
+   *  StatusMessage primitive is a sibling, not a descendant of the
+   *  control, so it has no native way to land focus back). */
+  private readonly addToCart = viewChild(AddToCart);
+
   readonly invalidQuery = computed<string | null>(() => this.vm().invalidVariantQuery);
 
   readonly related = computed<readonly CatalogItem[]>(() => this.vm().related);
@@ -347,7 +363,7 @@ export class ProductPage {
             productName,
             selection.colorName,
             selection.storageGb,
-            intent.quantity,
+            added.quantity,
           ),
         );
       }
@@ -374,8 +390,11 @@ export class ProductPage {
 
   /** Locates the freshly added line in the local cart snapshot. The
    *  cart mock returns a deterministic id per variant, so the line is
-   *  the one whose `variantId` matches the user's selection. */
-  private findAddedLine(variantId: string): { variantId: string } | null {
+   *  the one whose `variantId` matches the user's selection. Returns
+   *  the line itself so the caller can read its current `quantity`,
+   *  which on a repeated add of the same variant is the cart total —
+   *  not the amount just dispatched. */
+  private findAddedLine(variantId: string): CartItem | null {
     const cart = this.cartFacade.cart();
     if (cart === null) return null;
     return cart.items.find((item) => item.variantId === variantId) ?? null;
@@ -383,7 +402,9 @@ export class ProductPage {
 
   /** Composes the Hungarian confirmation body the StatusMessage
    *  announces: "<product>, <color>, <storage> GB – <qty> darab a
-   *  kosárban." The page never invents numbers — every value comes
+   *  kosárban." `<qty>` is the line's quantity in the cart — what the
+   *  shopper will actually see in their basket — not the amount just
+   *  dispatched. The page never invents numbers — every value comes
    *  from the wire-shaped selection it already holds. */
   private composeAddedMessage(
     productName: string,
@@ -392,6 +413,15 @@ export class ProductPage {
     quantity: number,
   ): string {
     return `${productName}, ${colorName}, ${String(storageGb)} GB – ${String(quantity)} darab a kosárban.`;
+  }
+
+  /** Dismisses the success banner and hands focus back to the desktop
+   *  add CTA. Wired to the success StatusMessage's `(dismissed)` so
+   *  closing it leaves the keyboard user on the same control they
+   *  pressed to add the item. */
+  onSuccessDismissed(): void {
+    this.addSuccessMessage.set(null);
+    this.addToCart()?.focusButton();
   }
 
   onRetry(): void {

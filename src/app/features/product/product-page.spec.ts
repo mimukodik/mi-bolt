@@ -329,7 +329,7 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     expect(price.getAttribute('data-size')).toBe('lg');
   });
 
-  it('MIM-216: Bezárás dismisses the add-to-cart success message', async () => {
+  it('MIM-216: Bezárás dismisses the add-to-cart success message and returns focus to the add CTA', async () => {
     const { root, fixture, host } = await createHarness();
 
     const page = host.page();
@@ -346,9 +346,72 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     const close = queryButton(toast, 'button');
     close.click();
     fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(page.addSuccessMessage()).toBeNull();
     expect(cta.querySelector('[data-testid="status-message"]')).toBeNull();
+    const addCta = queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button');
+    expect(document.activeElement).toBe(addCta);
+  });
+
+  it('MIM-216: success message reports the cart line quantity, not the amount just dispatched', async () => {
+    // Mock the POST so the cart snapshot reflects a 2-item line for the
+    // selected variant — what the shopper sees in their cart after a
+    // second add of the same variant.
+    server.use(
+      http.post(`${BASE_URL}/cart/items`, () =>
+        HttpResponse.json(
+          {
+            id: 'cart-test-page-1',
+            version: 2,
+            items: [
+              {
+                variantId: 'demo-one-5g-graphite-256',
+                variantSlug: 'demo-one-5g-graphite-256-variant',
+                productId: 'demo-one-5g',
+                productName: 'Demo One 5G',
+                productSlug: 'demo-one-5g',
+                colorName: 'Grafit',
+                storageGb: 256,
+                quantity: 2,
+                unitPrice: { amount: 339_990, currency: 'HUF' },
+                lineTotal: { amount: 679_980, currency: 'HUF' },
+                maxQuantity: 5,
+                availability: 'in_stock',
+                image: {
+                  id: 'demo-one-5g-graphite-256-front',
+                  src: '/assets/products/graphite-front.webp',
+                  alt: 'Demo One 5G',
+                  width: 800,
+                  height: 800,
+                },
+              },
+            ],
+            lineCount: 1,
+            totalQuantity: 2,
+            subtotal: { amount: 679_980, currency: 'HUF' },
+            expiresAt: '2026-12-31T23:59:59.000Z',
+            notices: [],
+          } satisfies Cart,
+          {
+            status: 200,
+            headers: { ETag: '"2"' },
+          },
+        ),
+      ),
+    );
+
+    const { root, fixture, tick } = await createHarness();
+
+    const addButton = queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button');
+    addButton.click();
+    await tick();
+    fixture.detectChanges();
+
+    const cta = queryElement(root, '.cta-desktop');
+    const toast = queryElement(cta, '[data-testid="status-message"]');
+    expect(toast).not.toBeNull();
+    expect(toast.textContent).toContain('2 darab a kosárban');
   });
 
   it('T16-AC01: displays brand and product name matching the loaded product', async () => {
