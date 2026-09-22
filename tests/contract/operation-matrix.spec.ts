@@ -52,6 +52,7 @@ import '../../src/mocks/payment/payment.handlers';
 import '../../src/mocks/orders/order.handlers';
 
 import {
+  REQUIRED_OPERATION_COUNT,
   SPEC_PATH,
   collectOperations,
   compileRequestValidator,
@@ -73,12 +74,7 @@ import catalogFixture from '../../docs/api/fixtures/catalog.json';
 const BASE_URL = 'http://localhost/api/v1';
 const API_ROOT = '/api/v1';
 
-// 2.0.0 contract inventories 17 operations across catalog, media, cart,
-// checkout, payment and orders. response-validation.ts still carries the
-// retired 16 in REQUIRED_OPERATION_COUNT and is out of scope for this
-// rewrite, so the suite asserts the literal 17 here. Schema facts at
-// docs/api/openapi.yaml:55-933 (paths block) and 1453-1470 (ProblemCode).
-const REQUIRED_OPERATION_COUNT = 17;
+// 2.0.0 contract: 17 operations (docs/api/openapi.yaml:55-933), ProblemCode at 1453-1470.
 
 let dereferencedSpec: OpenApiSpec;
 let operationsById: Map<string, OperationDescriptor>;
@@ -757,7 +753,7 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
     }
     case 'getProduct': {
       // Product (docs/api/openapi.yaml:1320-1342) uses allOf with
-      // ProductBase (docs/api/openapi.yaml:1246-1280) and an inner object. AJV does
+      // ProductBase (docs/api/openapi.yaml:1246-1279) and an inner object. AJV does
       // not gather required keys across allOf members, so the
       // schema-level example must surface every required field by
       // hand. The schema-level ProductBase required set is id,
@@ -953,7 +949,7 @@ function sampleRequestFixture(op: OperationDescriptor): unknown {
       return { quantity: 1 };
     }
     case 'updateCheckout': {
-      // UpdateCheckoutRequest (docs/api/openapi.yaml:1906-1909):
+      // UpdateCheckoutRequest (docs/api/openapi.yaml:1906-1919):
       // contact, billing, delivery, payment; minProperties: 1.
       return { payment: { methodId: 'card' } };
     }

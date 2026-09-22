@@ -14,6 +14,7 @@
     "build:check": "node scripts/build-check.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:contract": "vitest run --config vitest.contract.config.ts",
     "lint": "ng lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
