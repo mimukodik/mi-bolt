@@ -42,9 +42,10 @@
   margin-left: var(--space-1);
 }
 
-/* Same reason as delivery-step.scss: the resting rule stays low so the
-   invalid rule below outranks it and the global focus ring outranks both.
-   Encapsulation scopes the bare `input` to this component's template. */
+/* Encapsulation scopes the bare `input` to this component's template. The
+   invalid and focus styles for that input live in src/styles/primitives.css;
+   the rules there raise their specificity with `:not()` and a repeated
+   `:focus-visible`, so this resting rule sits underneath both. */
 input {
   min-height: var(--size-control);
   padding: var(--space-2) var(--space-3);
