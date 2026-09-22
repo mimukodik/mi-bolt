@@ -403,7 +403,7 @@ describe('OrderReceiptComponent', () => {
     );
   });
 
-  it('SP-03b the receipt notice renders through the StatusMessage primitive', () => {
+  it('SP-03b decision 16: the receipt notice renders through the StatusMessage primitive without being a live region', () => {
     const fixture: ComponentFixture<OrderReceiptComponent> =
       TestBed.createComponent(OrderReceiptComponent);
     fixture.componentRef.setInput('receipt', makeReceipt({ notice: '' }));
