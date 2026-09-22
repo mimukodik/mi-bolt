@@ -1138,6 +1138,18 @@ describe('FIX-24-AC03 clearing the filters restores the unfiltered result count'
   });
 });
 
+describe('MIM-234 catalogue breadcrumb switched off', () => {
+  it('MIM-234: the breadcrumb is held out of the DOM', async () => {
+    const harness = await setupHarness();
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    const root = getRootElement(harness.fixture);
+    expect(root.querySelector('[data-testid="catalog-breadcrumb"]')).toBeNull();
+    expect(root.querySelector('nav.breadcrumbs')).toBeNull();
+    expect(root.querySelector('h1.title')?.textContent.trim()).toBe('Mobiltelefonok');
+  });
+});
+
 describe('FIX-24-AC05 sort control restores the value the URL asked for', () => {
   it('a fresh load of ?sort=price_desc&pageSize=24 selects the matching sort option and page size', async () => {
     const harness = await setupHarness({ sort: 'price_desc', pageSize: '24' });
