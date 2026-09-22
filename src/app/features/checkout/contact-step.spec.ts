@@ -644,7 +644,7 @@ describe('T20 contact-step shared wiring', () => {
 
 // ---------------------------------------------------------------------------
 // MIM-254 — invalid contact field carries aria-invalid="true" so the
-// border-color rule (contact-step.scss) can match it. jsdom does not
+// border-color rule (src/styles/primitives.css) can match it. jsdom does not
 // apply the stylesheet, so the attribute is what a spec pins; the
 // browser pass asserts the border.
 // ---------------------------------------------------------------------------
