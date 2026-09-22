@@ -46,7 +46,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `none`.
 
-**Functions:** Reuse full shopping header/footer, common content width and breadcrumb slot; no marketing hero.
+**Functions:** Reuse full shopping header/footer, common content width and breadcrumb slot (the trail is switched off for now behind `BREADCRUMB_VISIBLE`; owner, 2026-09-22, MIM-234); no marketing hero.
 
 **Required states:** ready.
 
@@ -391,7 +391,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `none`.
 
-**Functions:** Compose breadcrumbs, gallery, configuration, price, add controls, spec groups and narrow sticky buy rail; CartFacade injection only at container/add orchestrator.
+**Functions:** Compose breadcrumbs (switched off for now behind `BREADCRUMB_VISIBLE`, MIM-234), gallery, configuration, price, add controls, spec groups and narrow sticky buy rail; CartFacade injection only at container/add orchestrator.
 
 **Required states:** loading,ready,error,not-found.
 
