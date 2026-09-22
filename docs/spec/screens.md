@@ -42,7 +42,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 ## S2 — Catalogue
 
-**Purpose:** find a device and enter a precise variant. Top breadcrumb Főoldal / Mobiltelefonok, H1 Mobiltelefonok, supporting demo sentence. Left264px filters. Main toolbar count, sort and page size. Applied chips between toolbar/grid; 3-column grid at wide desktop, all cards matched in height. Pagination below grid, footer after content.
+**Purpose:** find a device and enter a precise variant. H1 Mobiltelefonok (the breadcrumb trail is switched off for now; owner, 2026-09-22, MIM-234), supporting demo sentence. Left264px filters. Main toolbar count, sort and page size. Applied chips between toolbar/grid; 3-column grid at wide desktop, all cards matched in height. Pagination below grid, footer after content.
 
 **Filters:** q search in header/list toolbar; brands (three fixture brands), storage128/256/512, inclusive whole-HUF min/max,5G,stock. Price range needs two labeled number fields, not a slider requiring a new library. Filter controls expose invalid range and do not send it. 300ms search debounce, immediate desktop filter changes, page reset to1. Sorting: Ajánlott sorrend, Ár szerint növekvő, Ár szerint csökkenő, Név szerint. Page sizes12/24.
 
@@ -54,7 +54,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 ## S3 — Product details
 
-**Purpose:** inspect media/specifications, select exact configuration, add one piece to the cart. Shared shop shell/breadcrumb. Desktop left7 columns gallery, right5 columns product/configuration; light shopping canvas, no hero. Right: H1 Demo One5G, description, stock, color/storage selectors, unit price, primary “Kosárba teszem”, simulation note. More specifications below main content in disclosures. No subscription configurator.
+**Purpose:** inspect media/specifications, select exact configuration, add one piece to the cart. Shared shop shell; the breadcrumb trail is switched off for now (owner, 2026-09-22, MIM-234). Desktop left7 columns gallery, right5 columns product/configuration; light shopping canvas, no hero. Right: H1 Demo One5G, description, stock, color/storage selectors, unit price, primary “Kosárba teszem”, simulation note. More specifications below main content in disclosures. No subscription configurator.
 
 **Gallery:** reserved main stage, previous/next44px targets, live counter, thumbnail row. Zoom opens real modal with named close and contained focus. The demo uses authorized/user-provided artwork as illustrative device media; mock data must never describe it as a verified real phone. Asset manifest links each view/variant to an explicit media source. A back-view image cannot be replaced by a front image while labeled back.
 
