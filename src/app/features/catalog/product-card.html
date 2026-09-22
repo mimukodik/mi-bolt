@@ -36,13 +36,9 @@
       </div>
     }
     <h3 class="name line-clamp-2">
-      <a
-        class="name-link"
-        [attr.aria-label]="detailsAriaLabel()"
-        [queryParams]="detailsQuery()"
-        [routerLink]="detailsLink()"
-        >{{ product().name }}</a
-      >
+      <a class="name-link" [queryParams]="detailsQuery()" [routerLink]="detailsLink()">{{
+        product().name
+      }}</a>
     </h3>
     <p class="variant">
       <span class="variant__color">{{ colorName() }}</span>
@@ -62,7 +58,7 @@
     <div class="price-row mt-auto">
       <app-price-block label="Egyszeri készülékár" size="md" status="success" [money]="price()" />
       @if (isOutOfStock()) {
-        <p aria-hidden="true" class="stock" data-testid="product-card-stock">Elfogyott</p>
+        <p class="stock" data-testid="product-card-stock">Elfogyott</p>
       }
     </div>
   </div>
