@@ -61,7 +61,6 @@
   flex: 1 1 auto;
   min-width: 16px;
   margin: 0 var(--space-2);
-  align-self: center;
   background: var(--color-line);
 }
 
@@ -138,11 +137,5 @@
 
   .layout-main {
     padding: var(--space-7) 0 var(--space-8);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .steps__item {
-    transition: none;
   }
 }

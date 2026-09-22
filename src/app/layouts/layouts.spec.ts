@@ -323,7 +323,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(ruleBody).not.toBe('');
     expect(ruleBody).not.toMatch(/max-width/);
     expect(ruleBody).not.toMatch(/margin:\s*0\s+auto/);
-    expect(ruleBody).not.toMatch(/width:\s*(?!100%)/);
+    expect(ruleBody).not.toMatch(/(?<![\w-])width:\s*(?!100%)/);
   });
 
   it('FIX-35: on the contact step the first indicator is complete (✓) and the second shows 2', () => {
