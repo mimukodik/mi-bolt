@@ -106,14 +106,13 @@ export class PaymentPage implements OnInit {
 
   private readonly state = signal<PageState>({ kind: 'loading' });
 
-  private readonly titleRef = viewChild<ElementRef<HTMLElement>>('payTitle');
   private readonly alertRef = viewChild<ElementRef<HTMLElement>>('payAlert');
 
   /**
    * What focus was last moved for: the state kind for an alert, and `'card'`
-   * for the whole ready/submitting/redirecting group, which shares one `h1`.
-   * Grouping the card states is what keeps `submitting` from taking focus off
-   * the button the shopper just pressed.
+   * for the whole ready/submitting/redirecting group. The card group takes no
+   * focus — its heading is not focusable — but it is still recorded, so
+   * leaving an alert and coming back to the same alert kind moves focus again.
    */
   private focusedFor: PageState['kind'] | 'card' | null = null;
 
@@ -189,27 +188,22 @@ export class PaymentPage implements OnInit {
     // `provideHttpClient(withInterceptors(...))`.
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
 
-    // Both view queries are read on every run, so the effect re-runs when
+    // The alert view query is read on every run, so the effect re-runs when
     // the element it wants mounts. That makes the move order-independent:
-    // whether the query resolves before or after this effect first runs,
-    // the focus lands exactly once, on the run where the target exists.
+    // whether the query resolves before or after this effect first runs, the
+    // focus lands exactly once, on the run where the target exists.
     //
-    // Entering the card group takes focus to the `h1` once. That covers the
-    // first render and the retry that leaves the error state: the button the
-    // shopper pressed is destroyed with the alert, and a browser leaves focus
-    // on `<body>` for an element that stops existing (WCAG 2.4.3, 2.4.7) —
-    // the same failure `CatalogPage.focusResultCount` answers in the shop.
+    // An alert takes focus because the button the shopper pressed is destroyed
+    // with the state change, and a browser leaves focus on `<body>` for an
+    // element that stops existing (WCAG 2.4.3, 2.4.7). The card group takes
+    // none: its `h1` carries no `tabindex`, so it is not focusable.
     effect(() => {
       const display = this.display();
       const kind = this.state().kind;
-      const title = this.titleRef();
       const alert = this.alertRef();
       const target = display === 'card' ? 'card' : kind;
       if (this.focusedFor === target) return;
-      if (display === 'card') {
-        if (title === undefined) return;
-        title.nativeElement.focus();
-      } else if (display === 'alert') {
+      if (display === 'alert') {
         if (alert === undefined) return;
         alert.nativeElement.focus();
       }
