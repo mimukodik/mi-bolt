@@ -1,41 +1,42 @@
 <section class="success" data-testid="success-page">
   <app-checkout-step-header current="Siker" [crumbs]="crumbs">
-    @if (hasReceipt()) {
-      <svg
-        aria-hidden="true"
-        class="success-check"
-        data-testid="success-check"
-        focusable="false"
-        height="48"
-        viewBox="0 0 48 48"
-        width="48"
-      >
-        <circle cx="24" cy="24" fill="none" r="22" stroke="currentColor" stroke-width="3" />
-        <path
-          d="M14 24.5 L20.5 31 L34 16.5"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="3"
-        />
-      </svg>
-    }
-    <h1
-      class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
-      data-testid="success-heading"
-      id="success-heading"
-    >
+    <div class="success-title">
       @if (hasReceipt()) {
-        Elkészült a demórendelésed.
-      } @else if (loadState().kind === 'missing') {
-        A rendelés nem található
-      } @else if (loadState().kind === 'error') {
-        A betöltés nem sikerült
-      } @else {
-        Demórendelés betöltése…
+        <svg
+          aria-hidden="true"
+          class="success-check"
+          data-testid="success-check"
+          focusable="false"
+          height="32"
+          viewBox="0 0 32 32"
+          width="32"
+        >
+          <path
+            d="M16.056 29.3332C8.70399 29.3332 2.72266 23.3518 2.72266 15.9998C2.72266 8.64784 8.70399 2.6665 16.056 2.6665C23.408 2.6665 29.3893 8.64784 29.3893 15.9998C29.3893 23.3518 23.408 29.3332 16.056 29.3332ZM16.056 5.33317C10.1747 5.33317 5.38932 10.1185 5.38932 15.9998C5.38932 21.8812 10.1747 26.6665 16.056 26.6665C21.9373 26.6665 26.7227 21.8812 26.7227 15.9998C26.7227 10.1185 21.9373 5.33317 16.056 5.33317Z"
+            fill="currentColor"
+          />
+          <path
+            d="M14.9346 22.5707L9.54395 17.1801L11.8999 14.8227L14.5093 17.4307L20.0319 9.69873L22.7453 11.6361L14.9346 22.5707Z"
+            fill="currentColor"
+          />
+        </svg>
       }
-    </h1>
+      <h1
+        class="title m-0 text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+        data-testid="success-heading"
+        id="success-heading"
+      >
+        @if (hasReceipt()) {
+          Elkészült a demórendelésed.
+        } @else if (loadState().kind === 'missing') {
+          A rendelés nem található
+        } @else if (loadState().kind === 'error') {
+          A betöltés nem sikerült
+        } @else {
+          Demórendelés betöltése…
+        }
+      </h1>
+    </div>
     <app-status-message
       data-testid="success-demo-notice"
       severity="info"

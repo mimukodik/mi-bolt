@@ -34,6 +34,9 @@
 
   /* color status */
   --color-status-success: var(--color-success);
+  /* Yettel's success mark: check-circle-32px.svg fills both paths #76D18B
+     (measured on yettel.hu, 2026-09-22). */
+  --color-success-mark: #76d18b;
   --color-status-error: var(--color-error);
   --color-status-warning: var(--color-warning);
   --color-status-warning-text: var(--color-warning-text);

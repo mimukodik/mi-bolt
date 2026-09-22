@@ -688,6 +688,23 @@ describe('SuccessStep', () => {
     expect(navOrder).toBeLessThan(startOrder);
   });
 
+  it('SP-21 the success mark is yettel check-circle: 32px, two filled paths, no stroke', async () => {
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+
+    const _fixture = await mountSuccessPage(placed.orderId);
+
+    const check = document.querySelector('[data-testid="success-check"]');
+    expect(check?.getAttribute('viewBox')).toBe('0 0 32 32');
+    expect(check?.getAttribute('width')).toBe('32');
+    expect(check?.getAttribute('height')).toBe('32');
+    const paths = Array.from(check?.querySelectorAll('path') ?? []);
+    expect(paths).toHaveLength(2);
+    expect(paths.every((p) => p.getAttribute('fill') === 'currentColor')).toBe(true);
+    expect(check?.querySelector('[stroke]')).toBeNull();
+    expect(check?.parentElement?.classList.contains('success-title')).toBe(true);
+  });
+
   it('SP-18 after the new-shopping action the facade holds no order, so a wizard guard would not redirect to the success URL', async () => {
     await seedCompleteCashDraft();
     await placeCodOrder();
