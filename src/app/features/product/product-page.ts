@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -46,6 +47,17 @@ import type { CartItem } from '../../api/generated/models/cart-item';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import type { Variant } from '../../api/generated/models/variant';
 
+/** The add-to-cart refusal copy. A per-product limit is named with its
+ *  number (owner, 2026-09-22: "Igen, nevezze meg"); every other refusal
+ *  keeps the generic text. */
+function describeAddFailure(failure: CartError | null): string {
+  const max = failure?.code === 'QUANTITY_LIMIT' ? failure.params?.['max'] : undefined;
+  if (typeof max === 'number') {
+    return `Ebből a termékből legfeljebb ${String(max)} db lehet a kosárban.`;
+  }
+  return 'A termék hozzáadása nem sikerült; a kosár változatlan.';
+}
+
 /**
  * T16 — product detail page (S3).
  *
@@ -82,17 +94,6 @@ import type { Variant } from '../../api/generated/models/variant';
  * three.js / babylon.js bundle. Optional O01 (3D viewer) is gated
  * behind a future, explicitly approved change.
  */
-/** The add-to-cart refusal copy. A per-product limit is named with its
- *  number (owner, 2026-09-22: "Igen, nevezze meg"); every other refusal
- *  keeps the generic text. */
-function describeAddFailure(failure: CartError | null): string {
-  const max = failure?.code === 'QUANTITY_LIMIT' ? failure.params?.['max'] : undefined;
-  if (typeof max === 'number') {
-    return `Ebből a termékből legfeljebb ${String(max)} db lehet a kosárban.`;
-  }
-  return 'A termék hozzáadása nem sikerült; a kosár változatlan.';
-}
-
 @Component({
   selector: 'app-product-page',
   imports: [
@@ -212,8 +213,14 @@ export class ProductPage {
    *  its own (docs/spec/architecture.md:57, components.md:409). */
   readonly addPending = signal<boolean>(false);
 
-  /** Last cart-mutation failure, or null. Same single owner. */
-  readonly addError = signal<UiProblem | null>(null);
+  /** Last cart-mutation failure, or null. Same single owner. It resets
+   *  whenever the selected variant changes, so a refusal never stays on
+   *  screen for another colour or storage (owner, 2026-09-23;
+   *  https://angular.dev/guide/signals/linked-signal). */
+  readonly addError = linkedSignal<string | null, UiProblem | null>({
+    source: () => this.selectedVariant()?.id ?? null,
+    computation: () => null,
+  });
 
   /** Confirmation text after a successful add. `AddToCartControl`
    *  declares no input for its own `success` state

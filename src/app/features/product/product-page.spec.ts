@@ -1414,4 +1414,26 @@ describe('owner 2026-09-22: a refused add names the per-product limit', () => {
       'A termék hozzáadása nem sikerült; a kosár változatlan.',
     );
   });
+
+  it('a numeric max on another code keeps the generic text (pin for the QUANTITY_LIMIT check)', async () => {
+    refuseAdd('OUT_OF_STOCK', { max: 5, variantId: 'demo-one-5g-graphite-256' });
+    expect(await pressAddAndReadMessage()).toBe(
+      'A termék hozzáadása nem sikerült; a kosár változatlan.',
+    );
+  });
+
+  it('switching colour clears the refusal of the previous variant (owner 2026-09-23)', async () => {
+    refuseAdd('QUANTITY_LIMIT', { max: 3, requested: 4 });
+    const { root, fixture, tick } = await createHarness();
+    queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button').click();
+    await tick();
+    fixture.detectChanges();
+    expect(queryElement(root, '.cta-desktop').textContent).toContain(
+      'Ebből a termékből legfeljebb 3 db lehet a kosárban.',
+    );
+    queryButton(root, '[data-testid="variant-color-silver"]').click();
+    await tick();
+    fixture.detectChanges();
+    expect(queryElement(root, '.cta-desktop').textContent).not.toContain('legfeljebb');
+  });
 });
