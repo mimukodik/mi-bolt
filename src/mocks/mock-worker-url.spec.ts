@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { resolve as pathResolve } from 'node:path';
 
 import { isRecord } from './is-record';
 import { resolveMockWorkerUrl } from './browser';
@@ -45,13 +46,13 @@ describe('MIM-254 resolveMockWorkerUrl', () => {
   // exists to prevent. Guard the configuration rather than second-guess URL
   // resolution in the resolver.
   //
-  // `@angular/build:unit-test` emits each spec at the workspace root as
-  // `<segments>-<file>.js` (measured: `spec-mocks-mock-worker-url.js`), so
-  // `import.meta.dirname` is the workspace root and `angular.json` sits beside
-  // it. Going `../..` would leave the filesystem, which `readFileSync`
-  // reports as `ENOENT` long before `URL must be of scheme file`.
+  // `ng test` runs from the workspace root, so `process.cwd()` is where
+  // `angular.json` sits, with coverage on or off. `import.meta.dirname` is
+  // not: it is the root only while coverage instrumentation is on, and
+  // `--no-coverage` resolved it to `src/mocks/` (ENOENT, measured
+  // 2026-09-22).
   it('MIM-254: the demo payment baseHref ends in a slash', () => {
-    const raw = readFileSync(`${import.meta.dirname}/angular.json`, 'utf8');
+    const raw = readFileSync(pathResolve(process.cwd(), 'angular.json'), 'utf8');
     const parsed: unknown = JSON.parse(raw);
     const baseHref = readNode(parsed, [
       'projects',
