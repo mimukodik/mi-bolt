@@ -13,7 +13,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { ReviewStep, type CheckoutViewState } from './review-step';
 import { TermsDialog } from './terms-dialog';
@@ -211,6 +211,12 @@ const PRICE_CHANGE: PriceChange = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// The terms tick is kept in sessionStorage (checkout-keys.ts), so a case
+// that ticks it must not leak the tick into the next case.
+afterEach(() => {
+  sessionStorage.removeItem('mi-bolt.checkout.terms-accepted');
+});
 
 function getRoot(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;
@@ -516,6 +522,32 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     const terms = getByTestId(root, 'review-consent-terms');
     expect(terms.getAttribute('data-state')).toBe('default');
     expect(root.querySelectorAll('[data-testid="review-consent-terms-message"]').length).toBe(0);
+  });
+
+  it('RS-19b a tick survives the cold return from the card payment: a new ReviewStep starts ticked', () => {
+    const first = createFixture();
+    checkTermsConsent(first);
+    first.destroy();
+    TestBed.resetTestingModule();
+
+    const second = createFixture();
+    const checkbox = getCheckbox(getRoot(second), 'review-consent-terms-input');
+    expect(checkbox.checked).toBe(true);
+    expect(second.componentInstance.acceptedTerms()).toBe(true);
+  });
+
+  it('RS-19c an untick is remembered too: a new ReviewStep starts unticked', () => {
+    const first = createFixture();
+    checkTermsConsent(first);
+    const box = getCheckbox(getRoot(first), 'review-consent-terms-input');
+    box.checked = false;
+    box.dispatchEvent(new Event('change'));
+    first.detectChanges();
+    first.destroy();
+    TestBed.resetTestingModule();
+
+    const second = createFixture();
+    expect(getCheckbox(getRoot(second), 'review-consent-terms-input').checked).toBe(false);
   });
 
   it('RS-20 blurring the unchecked checkbox moves it to the touched-invalid state and shows the message', () => {
