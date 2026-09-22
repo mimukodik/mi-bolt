@@ -37,7 +37,10 @@
   color: var(--color-text-secondary);
 }
 
-.field .input {
+/* No `.field` ancestor: the invalid rule below has to outrank this one, and
+   adding specificity there instead would put it above the global focus ring
+   in primitives.css, which must win while the control is focused. */
+.input {
   min-height: var(--size-control);
   border-color: var(--color-border-control);
   background: var(--color-surface-light);

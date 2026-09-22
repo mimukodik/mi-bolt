@@ -621,6 +621,28 @@ describe('T20 contact-step shared wiring', () => {
 });
 
 // ---------------------------------------------------------------------------
+// MIM-254 — invalid contact field carries aria-invalid="true" so the
+// border-color rule (contact-step.scss) can match it. jsdom does not
+// apply the stylesheet, so the attribute is what a spec pins; the
+// browser pass asserts the border.
+// ---------------------------------------------------------------------------
+describe('MIM-254: an invalid contact field is marked aria-invalid so the border rule can match it', () => {
+  it('marks the full-name input aria-invalid="true" when it is empty', () => {
+    // `fullNameInvalid()` is what the template binds to `[attr.aria-invalid]`,
+    // returning `'true'` whenever the field has at least one error. Signal
+    // Forms computes errors eagerly, so the attribute is set as soon as the
+    // component renders an empty form — `onSubmit()` is not what flips it.
+    // The border-color rule keys off this attribute; without it the field
+    // keeps its idle border even though the message under it is red.
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    const root = getRootElement(fixture);
+
+    const input = root.querySelector<HTMLInputElement>('#contact-fullname-input');
+    expect(input?.getAttribute('aria-invalid')).toBe('true');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Server errors surface in the field-level messages and the
 // submit-time summary, with the wire's `pointer` (e.g. `/phone`).
 // ---------------------------------------------------------------------------
