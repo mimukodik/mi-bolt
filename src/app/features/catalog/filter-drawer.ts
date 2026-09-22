@@ -1,5 +1,4 @@
-import type {
-  ElementRef} from '@angular/core';
+import type { ElementRef } from '@angular/core';
 import {
   afterNextRender,
   Component,
@@ -175,31 +174,37 @@ export class FilterDrawer {
 
   readonly maxDraft = computed<string>(() => this.draftMax());
 
-  readonly priceError = computed<string | null>(() => {
+  /** Single source of truth for the price validation: the message that
+   *  renders under the fieldset, and which input the error belongs to
+   *  (used by `aria-invalid`/`aria-describedby` and by `focusPrice`).
+   *  Two computeds reading one validation keeps the two outputs from
+   *  drifting apart when the rules change. */
+  private readonly priceValidation = computed<{
+    readonly field: 'min' | 'max' | null;
+    readonly message: string | null;
+  }>(() => {
     const min = this.parsePrice(this.draftMin());
     const max = this.parsePrice(this.draftMax());
-    if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
-    if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    if (min !== null && max !== null && min > max)
-      return 'A minimum nem lehet nagyobb a maximum árnál.';
-    return null;
+    if (min !== null && min < 0) {
+      return { field: 'min', message: 'A minimum ár nem lehet negatív.' };
+    }
+    if (max !== null && max < 0) {
+      return { field: 'max', message: 'A maximum ár nem lehet negatív.' };
+    }
+    if (min !== null && max !== null && min > max) {
+      return { field: 'min', message: 'A minimum nem lehet nagyobb a maximum árnál.' };
+    }
+    return { field: null, message: null };
   });
 
+  readonly priceError = computed<string | null>(() => this.priceValidation().message);
+
   /** Which price input the current error belongs to, in page order. */
-  readonly priceInvalidField = computed<'min' | 'max' | null>(() => {
-    const min = this.parsePrice(this.draftMin());
-    const max = this.parsePrice(this.draftMax());
-    if (min !== null && min < 0) return 'min';
-    if (max !== null && max < 0) return 'max';
-    if (min !== null && max !== null && min > max) return 'min';
-    return null;
-  });
+  readonly priceInvalidField = computed<'min' | 'max' | null>(() => this.priceValidation().field);
 
   private readonly minPriceInput = viewChild<ElementRef<HTMLInputElement>>('minPrice');
   private readonly maxPriceInput = viewChild<ElementRef<HTMLInputElement>>('maxPrice');
   private readonly injector = inject(Injector);
-
-  readonly canApply = computed<boolean>(() => !this.disabled() && this.priceError() === null);
 
   readonly applyLabel = computed<string>(() =>
     this.disabled() ? 'Alkalmazás…' : 'Szűrők alkalmazása',
@@ -276,7 +281,6 @@ export class FilterDrawer {
       this.focusPrice(invalid);
       return;
     }
-    if (!this.canApply()) return;
     const min = this.parsePrice(this.draftMin());
     const max = this.parsePrice(this.draftMax());
     const draft: CatalogQuery = {

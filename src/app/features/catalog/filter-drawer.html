@@ -7,6 +7,7 @@
   <form
     class="drawer flex flex-col gap-5"
     data-testid="filter-drawer"
+    novalidate
     (submit)="$event.preventDefault(); applyDraft()"
   >
     <p class="intro m-0">Állítsd be a szűrőket, majd az „Alkalmazás" gombra kattints.</p>
