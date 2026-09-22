@@ -1457,6 +1457,43 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 });
 
 // ===========================================================================
+// MIM-239: full-width layout — the catalog page carries no container cap
+// ===========================================================================
+
+describe('MIM-239 full-width layout — the catalog carries no container cap', () => {
+  it('the .catalog selector carries no max-width and no margin: 0 auto (MIM-239)', () => {
+    // jsdom does not resolve `getComputedStyle` against Angular's
+    // processed component CSS, so the assertion runs against the
+    // stylesheet text itself — the same pattern `T13-AC01` uses to
+    // verify the grid template rule. The production line whose removal
+    // fails this test is the deleted `max-width` declaration in
+    // `catalog-page.scss`.
+    //
+    // Angular's view encapsulation appends an attribute selector to every
+    // rule (`[_ngcontent-%COMP%]`), so the rule regex matches the selector
+    // prefix as well as the body. The negative lookahead `(?![-_a-zA-Z0-9])`
+    // after `.catalog` keeps the match from spilling into a `.catalog-*`
+    // sibling rule: `\b` does not exclude a hyphen, and `\s*\{` would skip
+    // the bare `.catalog` rule itself because the attribute selector sits
+    // between the class and the brace. The `.lede` rule still carries
+    // `max-width: 60ch` for line-length readability — a typography concern,
+    // not a container cap, and out of MIM-239's scope.
+    const css = getComponentStyles(CatalogPage).join('\n');
+    // Strip every media query body so the assertion only sees the base
+    // `.catalog` rule. The non-greedy strip leaves a `.catalog` rule
+    // body untouched if it lives outside any `@media` block, which is
+    // the only place the base rule is expected; a `.catalog` rule
+    // inside a `@media` block would be stripped and the assertion
+    // would fail on `expect(catalogRule).not.toBeNull()`.
+    const flat = css.replace(/@media[^{]*\{[\s\S]*?\}/g, '');
+    const catalogRule = /\.catalog(?![-_a-zA-Z0-9])[^{]*\{[^}]*\}/.exec(flat);
+    expect(catalogRule).not.toBeNull();
+    expect(catalogRule?.[0]).not.toMatch(/max-width/);
+    expect(catalogRule?.[0]).not.toMatch(/margin:\s*0\s+auto/);
+  });
+});
+
+// ===========================================================================
 // Self-removing control focus: a click that destroys the button it was made on
 // ===========================================================================
 
