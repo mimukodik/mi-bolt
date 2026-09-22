@@ -6,17 +6,22 @@
   display: none;
 }
 
+/* Below 1024px the rail is one fixed block at the viewport bottom. An
+ * add-to-cart message, when there is one, is its first row and the price
+ * and CTA row sits under it, so the block grows with the message rather
+ * than a second fixed layer guessing the rail's height (MIM-238). */
 @media (max-width: 1023px) {
   .rail {
     display: flex;
-    align-items: center;
-    gap: var(--space-4);
+    flex-direction: column;
+    gap: var(--space-3);
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     padding: var(--space-3) var(--space-4);
     padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-3));
+    min-height: calc(env(safe-area-inset-bottom) + var(--rail-height));
     background: var(--color-surface-light);
     border-top: 1px solid var(--color-border-subtle);
     box-shadow: 0 -2px 8px rgba(23, 27, 31, 0.04);
@@ -30,19 +35,5 @@
     flex: 1 1 auto;
     display: flex;
     justify-content: flex-end;
-  }
-}
-
-.rail-status {
-  position: fixed;
-  left: var(--space-4);
-  right: var(--space-4);
-  bottom: calc(env(safe-area-inset-bottom) + var(--space-3) + 3.5rem);
-  z-index: 11;
-}
-
-@media (min-width: 1024px) {
-  .rail-status {
-    display: none;
   }
 }

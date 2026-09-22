@@ -73,7 +73,6 @@
                 <app-cart-line
                   [line]="item"
                   [pending]="pendingVariantIds().has(item.variantId)"
-                  (quantityChanged)="onQuantityChanged(item, $event)"
                   (removeRequested)="onRemoveRequested($event)"
                 />
               </li>

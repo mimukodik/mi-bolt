@@ -1,14 +1,16 @@
 /**
  * T19+ — checkout idempotency keys and the active payment intent id.
  *
- * Three namespaced entries live in `sessionStorage` so they survive a
+ * Four namespaced entries live in `sessionStorage` so they survive a
  * reload of the same tab (the SPA is destroyed by the payment redirect
  * — `01-kommunikacio.md` §8.3 — and is rebuilt cold on return). A new
  * tab gets fresh keys because sessionStorage is not shared across
  * tabs. A storage-denied context (private browsing, Node unit runner)
  * degrades to page-local: the key is generated and used once, never
  * stored, which is the same fallback the demo session interceptor
- * applies (`core/api/demo-session.interceptor.ts:40-46`).
+ * applies (`core/api/demo-session.interceptor.ts:40-46`). The fourth is
+ * the review step's demo-terms tick, kept so the cold return from the
+ * payment page does not untick it (owner's decision, 2026-09-22).
  *
  * Rotation policy is `uncertain retains, definite rotates` (design
  * §3.6). The only call that mints a fresh key is the matching
@@ -21,6 +23,7 @@ import { isRecord } from '../../shared/utils/is-record';
 const INTENT_KEY_STORAGE = 'mi-bolt.checkout.intent-key';
 const ORDER_KEY_STORAGE = 'mi-bolt.checkout.order-key';
 const INTENT_ID_STORAGE = 'mi-bolt.checkout.intent-id';
+const TERMS_ACCEPTED_STORAGE = 'mi-bolt.checkout.terms-accepted';
 
 interface KeyedRecord {
   readonly fingerprint: string;
@@ -175,6 +178,29 @@ export const checkoutKeys = {
     }
   },
 
+  /** Whether the shopper ticked the demo terms on the review step; false
+   *  when nothing is stored or storage is denied. */
+  termsAccepted(): boolean {
+    const storage = readableStorage();
+    try {
+      return storage?.getItem(TERMS_ACCEPTED_STORAGE) === 'true';
+    } catch {
+      // Storage read denied — the review step starts unticked.
+      return false;
+    }
+  },
+
+  /** Persists the demo-terms tick for the cold return from the payment page. */
+  setTermsAccepted(accepted: boolean): void {
+    const storage = readableStorage();
+    try {
+      storage?.setItem(TERMS_ACCEPTED_STORAGE, String(accepted));
+    } catch {
+      // Storage denied — the in-memory tick satisfies this page but is
+      // lost on reload.
+    }
+  },
+
   /**
    * Wipes every checkout-namespaced entry. Called by the facade
    * after a 201 order lands, so the next checkout starts clean.
@@ -185,6 +211,7 @@ export const checkoutKeys = {
       storage?.removeItem(INTENT_KEY_STORAGE);
       storage?.removeItem(ORDER_KEY_STORAGE);
       storage?.removeItem(INTENT_ID_STORAGE);
+      storage?.removeItem(TERMS_ACCEPTED_STORAGE);
     } catch {
       // Storage denied — nothing to drop on this page reload.
     }

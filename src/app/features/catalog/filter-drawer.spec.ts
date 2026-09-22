@@ -218,3 +218,45 @@ describe('FilterDrawer — facets wire-up', () => {
     expect(more.textContent.trim()).toBe('Kevesebb gyártó');
   });
 });
+
+describe('MIM-228: a selected facet row with a zero count stays clickable (drawer)', () => {
+  it('a selected brand and colour at count 0 are enabled; unselected ones at count 0 are disabled', () => {
+    const { fixture, host } = setup();
+
+    host.applied.set({ ...DEFAULT_CATALOG_QUERY, brands: ['apple'], colors: ['black'] });
+    host.facets.set({
+      brands: [
+        { value: 'apple', label: 'Apple', count: 0 },
+        { value: 'samsung', label: 'Samsung', count: 0 },
+      ],
+      colors: [
+        { value: 'black', label: 'Fekete', count: 0, swatchHex: '#000000' },
+        { value: 'white', label: 'Fehér', count: 0, swatchHex: '#FFFFFF' },
+      ],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    // Reseed the drawer's draft so the selected values propagate into the
+    // rendered rows (the same reopen dance MIM-210 uses).
+    host.opened.set(false);
+    fixture.detectChanges();
+    host.opened.set(true);
+    fixture.detectChanges();
+
+    const apple = document.body.querySelector('[data-testid="drawer-brand-apple"]');
+    const samsung = document.body.querySelector('[data-testid="drawer-brand-samsung"]');
+    const black = document.body.querySelector('[data-testid="drawer-color-black"]');
+    const white = document.body.querySelector('[data-testid="drawer-color-white"]');
+    if (!(apple instanceof HTMLButtonElement)) throw new Error('drawer-brand-apple');
+    if (!(samsung instanceof HTMLButtonElement)) throw new Error('drawer-brand-samsung');
+    if (!(black instanceof HTMLButtonElement)) throw new Error('drawer-color-black');
+    if (!(white instanceof HTMLButtonElement)) throw new Error('drawer-color-white');
+
+    expect(apple.disabled).toBe(false);
+    expect(samsung.disabled).toBe(true);
+    expect(black.disabled).toBe(false);
+    expect(white.disabled).toBe(true);
+  });
+});

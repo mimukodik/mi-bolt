@@ -41,7 +41,7 @@
             [attr.aria-pressed]="isBrandSelected(brand.value) ? 'true' : 'false'"
             [attr.data-testid]="`filter-brand-${brand.value}`"
             [class.is-selected]="isBrandSelected(brand.value)"
-            [disabled]="disabled() || brand.count === 0"
+            [disabled]="disabled() || (brand.count === 0 && !isBrandSelected(brand.value))"
             (click)="toggleBrand(brand.value)"
           >
             <span aria-hidden="true" class="check">{{
@@ -81,7 +81,7 @@
             [attr.aria-pressed]="isColorSelected(color.value) ? 'true' : 'false'"
             [attr.data-testid]="`filter-color-${color.value}`"
             [class.is-selected]="isColorSelected(color.value)"
-            [disabled]="disabled() || color.count === 0"
+            [disabled]="disabled() || (color.count === 0 && !isColorSelected(color.value))"
             (click)="toggleColor(color.value)"
           >
             <span

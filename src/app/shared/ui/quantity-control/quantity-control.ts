@@ -16,7 +16,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
  * - default  — both buttons enabled, value inside the range.
  * - hover/focus — focus ring and hover color via Button primitive.
  * - disabled — native disabled, both controls uninteractive.
- * - invalid  — value outside the range, inline message, no emit.
+ * - invalid  — value outside the range or not a whole number, inline message, no emit; on blur the field shows the last valid quantity again.
  * - pending  — both controls disabled, input shows pending spinner.
  */
 @Component({
@@ -41,15 +41,20 @@ export class QuantityControl {
   readonly draftValue = computed<number>(() => {
     const text = this.draft();
     if (text === null) return this.value();
-    const n = Number.parseInt(text, 10);
-    return Number.isFinite(n) ? n : Number.NaN;
+    const trimmed = text.trim();
+    return /^\d+$/.test(trimmed) ? Number.parseInt(trimmed, 10) : Number.NaN;
   });
 
   readonly invalid = computed(() => {
     const v = this.draftValue();
-    if (!Number.isFinite(v)) return false;
+    if (!Number.isFinite(v)) return true;
     return v < this.min() || v > this.max();
   });
+
+  /** What the field shows: the shopper's draft while there is one, the
+   *  last valid quantity otherwise, so dropping a refused draft on blur
+   *  also rewrites the field (MIM-283). */
+  readonly displayValue = computed<string>(() => this.draft() ?? String(this.value()));
 
   readonly decrementDisabled = computed(
     () => this.disabled() || this.pending() || this.draftValue() <= this.min(),
@@ -64,6 +69,7 @@ export class QuantityControl {
   readonly message = computed<string | null>(() => {
     if (!this.invalid()) return null;
     const v = this.draftValue();
+    if (!Number.isFinite(v)) return 'A megadott mennyiség csak egész szám lehet.';
     if (v < this.min()) {
       return `A megadott mennyiség nem lehet kevesebb mint ${String(this.min())}.`;
     }
@@ -89,15 +95,13 @@ export class QuantityControl {
     if (!(event.target instanceof HTMLInputElement)) return;
     const input = event.target;
     this.draft.set(input.value);
-    const n = Number.parseInt(input.value, 10);
-    if (Number.isFinite(n) && n >= this.min() && n <= this.max()) {
-      this.quantityChanged.emit(n);
+    if (!this.invalid()) {
+      this.quantityChanged.emit(this.draftValue());
     }
   }
 
   onBlur(): void {
-    const n = this.draftValue();
-    if (!Number.isFinite(n) || n < this.min() || n > this.max()) {
+    if (this.invalid()) {
       this.draft.set(null);
     }
   }

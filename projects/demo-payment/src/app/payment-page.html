@@ -42,6 +42,73 @@
           <dd class="pay-ref" data-testid="pay-ref">{{ intent.id }}</dd>
         </dl>
 
+        <div class="pay-card-face">
+          <div aria-hidden="true" class="pay-chip"></div>
+
+          <div class="pay-field">
+            <label class="pay-field-label" for="pay-card-number">Kártyaszám</label>
+            <input
+              autocomplete="off"
+              class="pay-field-input pay-field-mono"
+              data-testid="pay-card-number"
+              id="pay-card-number"
+              name="demo-number"
+              type="text"
+              [value]="cardNumber()"
+              (input)="cardNumber.set($event.target.value)"
+            />
+          </div>
+
+          <div class="pay-row">
+            <div class="pay-field">
+              <label class="pay-field-label" for="pay-card-holder">Kártyabirtokos neve</label>
+              <input
+                autocomplete="off"
+                class="pay-field-input"
+                data-testid="pay-card-holder"
+                id="pay-card-holder"
+                name="demo-holder"
+                type="text"
+                [value]="holderName()"
+                (input)="holderName.set($event.target.value)"
+              />
+            </div>
+            <div class="pay-sub-row">
+              <div class="pay-field">
+                <label class="pay-field-label" for="pay-card-expiry">Lejárat</label>
+                <input
+                  autocomplete="off"
+                  class="pay-field-input"
+                  data-testid="pay-card-expiry"
+                  id="pay-card-expiry"
+                  name="demo-expiry"
+                  type="text"
+                  [value]="expiry()"
+                  (input)="expiry.set($event.target.value)"
+                />
+              </div>
+              <div class="pay-field">
+                <label class="pay-field-label" for="pay-card-cvc">CVC</label>
+                <input
+                  autocomplete="off"
+                  class="pay-field-input"
+                  data-testid="pay-card-cvc"
+                  id="pay-card-cvc"
+                  name="demo-cvc"
+                  type="text"
+                  [value]="cvc()"
+                  (input)="cvc.set($event.target.value)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="pay-notice">
+          Ez egy szimuláció: a kártyaadatok sehova nem jutnak el, és a böngésződet sem hagyják el.
+          Ne írj be valódi kártyaszámot.
+        </p>
+
         @if (redirecting()) {
           <p class="pay-status" role="status">Visszairányítás a boltba…</p>
         } @else {
@@ -80,8 +147,8 @@
         }
 
         <p class="pay-note">
-          A három gomb a bankkártyás jóváhagyás három lehetséges kimenetét szimulálja. Az oldal soha
-          nem kér kártyaszámot.
+          A három gomb a bankkártyás jóváhagyás három lehetséges kimenetét szimulálja. A kártya
+          mezői díszletek: a kimenetet a gombok döntik el.
         </p>
       }
     }

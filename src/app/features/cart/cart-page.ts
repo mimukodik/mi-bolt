@@ -13,8 +13,7 @@
  *   - keep the cart hot (`ensureCart()` on mount);
  *   - render the four documented states (loading / error / empty /
  *     success);
- *   - forward `quantityChanged` / `removeRequested` from each line
- *     to `setQuantity` / `removeItem`;
+ *   - forward `removeRequested` from each line to `removeItem`;
  *   - disable Continue while the cart is empty, pending or in
  *     error, and re-validate through `ensureCart()` before the
  *     actual navigation (AC04).
@@ -271,27 +270,6 @@ export class CartPage {
     effect(() => {
       this.cart();
     });
-  }
-
-  onQuantityChanged(item: { variantId: string }, quantity: number): void {
-    this.transientStatus.set({ text: 'A mennyiség frissítése…', severity: 'info' });
-    this.mutatingVariantId.set(item.variantId);
-    void this.facade
-      .setQuantity(item.variantId, quantity)
-      .then(() => {
-        // `statusMessage` renders the facade's error / conflict /
-        // cartExpired signals ahead of this banner, so the handler
-        // reports success only when none of them is set and otherwise
-        // clears the in-flight text to let the signal through.
-        if (this.mutationLanded()) {
-          this.transientStatus.set({ text: 'A mennyiség frissítve.', severity: 'success' });
-        } else {
-          this.transientStatus.set(null);
-        }
-      })
-      .finally(() => {
-        this.mutatingVariantId.set(null);
-      });
   }
 
   onRemoveRequested(variantId: string): void {
