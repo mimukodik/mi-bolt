@@ -62,6 +62,19 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
   return { fixture, host: fixture.componentInstance };
 }
 
+function typeInto(fixture: ComponentFixture<HostComponent>, text: string): HTMLInputElement {
+  const input = getNativeElement(fixture).querySelector<HTMLInputElement>(
+    '[data-testid="quantity-input"]',
+  );
+  if (input === null) {
+    throw new Error('Expected quantity input');
+  }
+  input.value = text;
+  input.dispatchEvent(new Event('input'));
+  fixture.detectChanges();
+  return input;
+}
+
 describe('QuantityControl primitive', () => {
   it('renders three controls in the order decrement, input, increment', () => {
     const { fixture } = setup();
@@ -212,5 +225,42 @@ describe('QuantityControl primitive', () => {
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     expect(host.changes()).toEqual([3]);
+  });
+
+  it('MIM-283: letters are refused with aria-invalid, a message and no emit', () => {
+    const { fixture, host } = setup();
+    const input = typeInto(fixture, 'abc');
+    expect(host.changes()).toEqual([]);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    const msgEl = getNativeElement(fixture).querySelector('[data-testid="quantity-message"]');
+    expect(msgEl?.textContent.trim()).toBe('A megadott mennyiség csak egész szám lehet.');
+  });
+
+  it('MIM-283: digits followed by letters are refused, not read as a number', () => {
+    const { fixture, host } = setup();
+    const input = typeInto(fixture, '2abc');
+    expect(host.changes()).toEqual([]);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('MIM-283: a refused 0 gives way to the last valid quantity on blur', () => {
+    const { fixture, host } = setup();
+    const input = typeInto(fixture, '0');
+    input.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(input.value).toBe('1');
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+    expect(getNativeElement(fixture).querySelector('[data-testid="quantity-message"]')).toBeNull();
+    expect(host.changes()).toEqual([]);
+  });
+
+  it('MIM-283: refused letters give way to the last valid quantity on blur', () => {
+    const { fixture, host } = setup();
+    const input = typeInto(fixture, 'abc');
+    input.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(input.value).toBe('1');
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+    expect(host.changes()).toEqual([]);
   });
 });
