@@ -40,6 +40,7 @@ export class PrimitivesShowcase {
   readonly loading = signal(false);
   readonly dialogOpen = signal(false);
   readonly quantityValue = signal(2);
+  readonly successDismissed = signal(false);
   readonly ready = (): { readonly amount: number; readonly currency: 'HUF' } => ({
     amount: 339990,
     currency: 'HUF' as const,

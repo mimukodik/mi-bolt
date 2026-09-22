@@ -16,6 +16,7 @@ import type { Cart } from '../../api/generated/models/cart';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
+import type { UiProblem } from '../../shared/types/ui-problem';
 import { isProductNotFound, ProductFacade, type ProductVm } from './product.facade';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
@@ -351,6 +352,38 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     expect(page.addSuccessMessage()).toBeNull();
     expect(cta.querySelector('[data-testid="status-message"]')).toBeNull();
     const addCta = queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button');
+    expect(document.activeElement).toBe(addCta);
+  });
+
+  it('MIM-216: Bezárás on the add-to-cart error banner clears addError through errorDismissed', async () => {
+    const { root, fixture, host } = await createHarness();
+
+    const page = host.page();
+    if (!(page instanceof ProductPage)) {
+      throw new Error('Expected ProductPage');
+    }
+    const problem = {
+      code: 'OUT_OF_STOCK',
+      message: 'A termék jelenleg nem rendelhető.',
+      fieldErrors: [],
+      retryable: true,
+    } as const satisfies UiProblem;
+    page.addError.set(problem);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const addToCart = queryElement(root, '[data-testid="add-to-cart"]');
+    const errorToast = queryElement(addToCart, '[data-testid="status-message"]');
+    expect(errorToast.textContent).toContain('A termék jelenleg nem rendelhető.');
+
+    const close = queryButton(errorToast, 'button');
+    close.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(page.addError()).toBeNull();
+    expect(addToCart.querySelector('[data-testid="status-message"]')).toBeNull();
+    const addCta = queryButton(addToCart, '[data-testid="add-to-cart-button"] button');
     expect(document.activeElement).toBe(addCta);
   });
 
