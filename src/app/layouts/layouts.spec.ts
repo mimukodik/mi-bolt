@@ -296,19 +296,20 @@ describe('T11-AC02 brand-consistent header and footer', () => {
   });
 
   // -------------------------------------------------------------------------
-  // CENTRE-2: `<main class="layout-main">` inside CheckoutLayout must carry
-  // `width: 100%` so the element behaves as a stretched flex item inside
-  // `<app-app-shell>` instead of being sized shrink-to-fit against the
-  // available cross-axis space (AppShell is `display: flex; flex-direction:
-  // column`, its `<ng-content>` is `display: contents`, and `margin: 0 auto`
-  // on the cross axis suppresses the default stretch). Without this
-  // declaration the cart and contact steps render 129px / 137.66px in from
-  // each side at 1280px while every other route sits on the site
-  // centreline. jsdom does not lay out, so the assertion checks that the
-  // declaration reached the element rather than that some pixel width was
-  // produced — which is the invariant worth pinning.
+  // CENTRE-2: `<main class="layout-main">` inside CheckoutLayout must not
+  // re-introduce the centreline that MIM-239 deleted. The cross-axis size
+  // is the shell's default flex stretch: `app-shell.scss` gives `:host`
+  // `display: flex; flex-direction: column` with no `align-items`
+  // override, so `.layout-main` reaches the full width without an
+  // explicit `width: 100%`. A re-introduced `max-width` or `margin: 0
+  // auto` would suppress that stretch and pull the cart and contact steps
+  // in from the sides at 1280px (the regression MIM-239 fixed). jsdom
+  // does not simulate flex stretch, so the assertion cannot read a
+  // computed width — instead it pins that the centring declarations are
+  // absent from the rule body, which is the invariant MIM-239 cares
+  // about.
   // -------------------------------------------------------------------------
-  it('CheckoutLayout main.layout-main carries width: 100% (CENTRE-2)', () => {
+  it("CheckoutLayout main.layout-main stretches to the shell's full width (CENTRE-2)", () => {
     const f = TestBed.createComponent(CheckoutLayout);
     f.componentRef.setInput('step', 'cart');
     f.detectChanges();
@@ -316,7 +317,11 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
     const main = raw.querySelector('main.layout-main');
     if (!(main instanceof HTMLElement)) throw new Error('Expected main.layout-main');
-    expect(getComputedStyle(main).width).toBe('100%');
+    const css = getComponentStyles(CheckoutLayout).join('\n');
+    const ruleBody = /\.layout-main(?![-_a-zA-Z0-9])[^{]*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(ruleBody).not.toBe('');
+    expect(ruleBody).not.toMatch(/max-width/);
+    expect(ruleBody).not.toMatch(/margin:\s*0\s+auto/);
   });
 
   it('FIX-35: on the contact step the first indicator is complete (✓) and the second shows 2', () => {
