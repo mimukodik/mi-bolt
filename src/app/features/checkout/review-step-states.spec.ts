@@ -596,6 +596,7 @@ describe('ST-03 the submitting and loading states each render their own loader, 
 
     const loadingSubmit = getButton(loadingRoot, 'review-submit');
     expect(loadingSubmit.textContent.trim()).toBe('Demórendelés véglegesítése');
+    expect(loadingSubmit.disabled).toBe(false);
 
     const loadingExplanation = getElement(loadingRoot, '[data-testid="review-cta-explanation"]');
     expect(loadingExplanation.textContent.trim()).toBe(
@@ -615,5 +616,41 @@ describe('ST-04 the conflict, stock-error and error states render no CTA explana
       const root = getRootElement(fixture);
       expect(root.querySelectorAll('[data-testid="review-cta-explanation"]').length).toBe(0);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ST-05 — a click in a failure state moves the focus to that state's banner
+// ---------------------------------------------------------------------------
+describe('ST-05 a click in the conflict, stock-error or error state focuses its banner and submits nothing (owner 2026-09-22: "Mindig aktív, kattintásra hibák")', () => {
+  it('focuses the state banner with the terms ticked, in each of the three states', async () => {
+    for (const state of ['conflict', 'stock-error', 'error'] as const) {
+      TestBed.resetTestingModule();
+      const fixture = createFixture({ state });
+      fixture.componentInstance.acceptedTerms.set(true);
+      const emitted: unknown[] = [];
+      fixture.componentInstance.submitRequested.subscribe((v) => emitted.push(v));
+      const root = getRootElement(fixture);
+      const button = getButton(root, 'review-submit');
+      button.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await Promise.resolve();
+      const banner = root.querySelector('[data-testid="review-state-banner"]');
+      expect(document.activeElement).toBe(banner);
+      expect(emitted.length).toBe(0);
+    }
+  });
+
+  it('focuses the banner, not the terms, when the terms are also unticked', async () => {
+    const fixture = createFixture({ state: 'conflict' });
+    const root = getRootElement(fixture);
+    const button = getButton(root, 'review-submit');
+    button.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+    expect(document.activeElement).toBe(root.querySelector('[data-testid="review-state-banner"]'));
+    expect(fixture.componentInstance.termsConsentState()).toBe('submitted-invalid');
   });
 });

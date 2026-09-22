@@ -13,7 +13,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ReviewStep, type CheckoutViewState } from './review-step';
 import { TermsDialog } from './terms-dialog';
@@ -267,6 +267,26 @@ function getTermsDialog(fixture: ComponentFixture<ReviewStep>): TermsDialog {
   return instance;
 }
 
+interface ComponentWithStyles {
+  ɵcmp: {
+    styles: readonly string[];
+  };
+}
+
+function hasStyles(val: unknown): val is ComponentWithStyles {
+  if (typeof val !== 'function' && typeof val !== 'object') {
+    return false;
+  }
+  if (val === null || !('ɵcmp' in val)) {
+    return false;
+  }
+  const cmp = val.ɵcmp;
+  if (typeof cmp !== 'object' || cmp === null || !('styles' in cmp)) {
+    return false;
+  }
+  return Array.isArray(cmp.styles);
+}
+
 interface ReviewStepInputs {
   readonly summary?: CheckoutSummary | null;
   readonly cart?: Cart;
@@ -471,6 +491,25 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(text).toContain('Zöld · 256 GB');
     expect(text).toContain('1 ×');
     expect(text).toContain(PriceBlock.formatHuf(89990));
+    const quantity = getByTestId(root, 'review-line-quantity');
+    expect(quantity.textContent.replace(/\s+/g, ' ').trim()).toBe('1 × 89 990 Ft');
+    expect(text).not.toContain('Egységár');
+  });
+
+  it('RS-14b the line wraps its total below the body when both do not fit, so the one-line quantity never widens the card', () => {
+    if (!hasStyles(ReviewStep)) throw new Error('Expected ReviewStep to have styles');
+    const css = ReviewStep.ɵcmp.styles.join('\n');
+    function ruleBody(cssText: string, selectorStart: string): string {
+      const start = cssText.indexOf(selectorStart);
+      if (start === -1) throw new Error(`No rule starting with ${selectorStart}`);
+      const open = cssText.indexOf('{', start);
+      const close = cssText.indexOf('}', open);
+      return cssText.slice(open + 1, close);
+    }
+    expect(ruleBody(css, '.line[')).toContain('flex-wrap: wrap');
+    expect(ruleBody(css, '.line-body')).toContain('flex: 1 1 0');
+    expect(ruleBody(css, '.line-total')).toContain('margin-left: auto');
+    expect(ruleBody(css, '.line-quantity')).toContain('white-space: nowrap');
   });
 
   it('RS-15 renders the empty placeholder when the cart carries no items', () => {
@@ -522,6 +561,8 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     const terms = getByTestId(root, 'review-consent-terms');
     expect(terms.getAttribute('data-state')).toBe('default');
     expect(root.querySelectorAll('[data-testid="review-consent-terms-message"]').length).toBe(0);
+    expect(checkbox.getAttribute('aria-invalid')).toBeNull();
+    expect(checkbox.getAttribute('aria-describedby')).toBeNull();
   });
 
   it('RS-19b a tick survives the cold return from the card payment: a new ReviewStep starts ticked', () => {
@@ -562,17 +603,34 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(message.textContent.trim()).toBe('A demó feltételek elfogadása kötelező.');
   });
 
-  it('RS-21 pressing the CTA without consent moves it to the submitted-invalid state and emits nothing', () => {
-    const fixture = createFixture();
+  it('RS-21 the CTA is active without consent; a click emits nothing, marks the terms invalid and focuses the checkbox', async () => {
+    const fixture = createFixture({ draft: CASH_DRAFT_COMPLETE });
     let emitted = 0;
     const sub = fixture.componentInstance.submitRequested.subscribe(() => (emitted += 1));
-    fixture.componentInstance.onSubmit();
-    fixture.detectChanges();
-    sub.unsubscribe();
     const root = getRoot(fixture);
-    const terms = getByTestId(root, 'review-consent-terms');
-    expect(terms.getAttribute('data-state')).toBe('submitted-invalid');
-    expect(emitted).toBe(0);
+    const button = getButton(root, 'review-submit');
+    expect(button.disabled).toBe(false);
+
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+    try {
+      button.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await Promise.resolve();
+
+      expect(emitted).toBe(0);
+      expect(getByTestId(root, 'review-consent-terms').getAttribute('data-state')).toBe(
+        'submitted-invalid',
+      );
+      const checkbox = getCheckbox(root, 'review-consent-terms-input');
+      expect(checkbox.getAttribute('aria-invalid')).toBe('true');
+      expect(checkbox.getAttribute('aria-describedby')).toBe('review-consent-terms-message');
+      expect(document.activeElement).toBe(checkbox);
+      expect(focusSpy).toHaveBeenLastCalledWith({ focusVisible: true });
+    } finally {
+      focusSpy.mockRestore();
+      sub.unsubscribe();
+    }
   });
 
   it('RS-22 a complete cash on delivery draft with the terms accepted enables the CTA and emits once', () => {
@@ -589,24 +647,38 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(emitted).toBe(1);
   });
 
-  it('RS-23 an incomplete draft keeps the CTA disabled and says which condition is unmet', () => {
+  it('RS-23 an incomplete draft keeps the CTA from submitting and says which condition is unmet', () => {
     const fixture = createFixture({ draft: INCOMPLETE_DRAFT });
     checkTermsConsent(fixture);
     const root = getRoot(fixture);
     const button = getButton(root, 'review-submit');
-    expect(button.disabled).toBe(true);
+    expect(button.disabled).toBe(false);
+    let emitted = 0;
+    const sub = fixture.componentInstance.submitRequested.subscribe(() => (emitted += 1));
+    button.click();
+    fixture.detectChanges();
+    sub.unsubscribe();
+    expect(emitted).toBe(0);
     const explanation = getByTestId(root, 'review-cta-explanation');
     expect(explanation.textContent.trim()).toBe(
       'Hiányzó adatok: egészítsd ki a korábbi lépéseket a rendelés leadásához.',
     );
   });
 
-  it('RS-24 a card draft is only submittable once the intent has succeeded', () => {
+  it('RS-24 a card draft only submits once the intent has succeeded', () => {
     const noIntent = createFixture({ draft: CARD_DRAFT_COMPLETE, paymentIntent: null });
     checkTermsConsent(noIntent);
     const noIntentRoot = getRoot(noIntent);
     const noIntentButton = getButton(noIntentRoot, 'review-submit');
-    expect(noIntentButton.disabled).toBe(true);
+    expect(noIntentButton.disabled).toBe(false);
+    let noIntentEmitted = 0;
+    const noIntentSub = noIntent.componentInstance.submitRequested.subscribe(
+      () => (noIntentEmitted += 1),
+    );
+    noIntentButton.click();
+    noIntent.detectChanges();
+    noIntentSub.unsubscribe();
+    expect(noIntentEmitted).toBe(0);
     const noIntentExplanation = getByTestId(noIntentRoot, 'review-cta-explanation');
     expect(noIntentExplanation.textContent.trim()).toBe(
       'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.',
@@ -626,12 +698,18 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     );
   });
 
-  it('RS-25 an unconfirmed price change keeps the CTA disabled ahead of every other reason', () => {
+  it('RS-25 an unconfirmed price change keeps the CTA from submitting ahead of every other reason', () => {
     const fixture = createFixture({ priceChange: PRICE_CHANGE });
     checkTermsConsent(fixture);
     const root = getRoot(fixture);
     const button = getButton(root, 'review-submit');
-    expect(button.disabled).toBe(true);
+    expect(button.disabled).toBe(false);
+    let emitted = 0;
+    const sub = fixture.componentInstance.submitRequested.subscribe(() => (emitted += 1));
+    button.click();
+    fixture.detectChanges();
+    sub.unsubscribe();
+    expect(emitted).toBe(0);
     const explanation = getByTestId(root, 'review-cta-explanation');
     expect(explanation.textContent.trim()).toBe(
       'Erősítsd meg az új végösszeget a rendelés leadásához.',
