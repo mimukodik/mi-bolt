@@ -92,9 +92,16 @@ export class ProductCard {
     this.product().highlights.slice(0, 2),
   );
 
-  /** True when the shown variant's `CatalogItem.availability` is out of stock
-   *  — drives the muted "Elfogyott" marker under the price (MIM-247). */
-  readonly isOutOfStock = computed<boolean>(() => this.product().availability === 'out_of_stock');
+  /** True when the shown variant is out of stock — drives the muted
+   *  "Elfogyott" marker under the price (MIM-247). The selected variant's
+   *  own `ColorOption.availability` wins; the item-level
+   *  `CatalogItem.availability` is the defensive fallback for the rare
+   *  case where no matching colour option is found. */
+  readonly isOutOfStock = computed<boolean>(() => {
+    const color = this.selectedColor();
+    const availability = color?.availability ?? this.product().availability;
+    return availability === 'out_of_stock';
+  });
 
   /** Router link to the product page; the variant goes in `detailsQuery`. */
   readonly detailsLink = computed(() => {

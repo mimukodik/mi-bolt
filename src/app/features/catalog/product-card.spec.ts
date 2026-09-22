@@ -110,7 +110,12 @@ function makeItem(opts: {
   readonly availability?: 'in_stock' | 'out_of_stock';
   readonly imageSrc?: string;
   readonly is5g?: boolean;
-  readonly extraColors?: readonly { colorName: string; swatchHex: string; price?: number }[];
+  readonly extraColors?: readonly {
+    colorName: string;
+    swatchHex: string;
+    price?: number;
+    availability?: 'in_stock' | 'out_of_stock';
+  }[];
 }): CatalogItem {
   const colorCode = opts.colorName !== undefined ? opts.colorName.toLowerCase() : 'graphite';
   const imageId = `${opts.id}-front`;
@@ -136,7 +141,7 @@ function makeItem(opts: {
       variantId: `${opts.id}-${String(storageVal)}-${extraCode}`,
       variantSlug: `${opts.slug}-${extraCode}-${String(storageVal)}`,
       price: money(entry.price ?? opts.price ?? 339_990),
-      availability: 'in_stock',
+      availability: entry.availability ?? 'in_stock',
     };
   });
   return {
@@ -374,7 +379,12 @@ describe('T13-AC04 ProductCard', () => {
   it('MIM-247: an out-of-stock variant shows the Elfogyott marker', () => {
     const { fixture, host } = setup();
     host.product.set(
-      makeItem({ id: 'p-01', slug: 'demo-one-5g', name: 'Demo One 5G', availability: 'out_of_stock' }),
+      makeItem({
+        id: 'p-01',
+        slug: 'demo-one-5g',
+        name: 'Demo One 5G',
+        availability: 'out_of_stock',
+      }),
     );
     fixture.detectChanges();
     const root = getRootElement(fixture);
@@ -390,6 +400,36 @@ describe('T13-AC04 ProductCard', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
     expect(root.querySelector('[data-testid="product-card-stock"]')).toBeNull();
+  });
+
+  it('MIM-247: the marker follows the swatch click, not the item-level availability', () => {
+    // The card shows the displayed variant on first render; the marker
+    // must disappear when the user picks an in-stock swatch and reappear
+    // when they pick an out-of-stock one, regardless of the item-level
+    // availability flag the contract sets on the whole CatalogItem.
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-08',
+        slug: 'demo-pro-5g',
+        name: 'Demo Pro 5G',
+        colorName: 'Grafit',
+        availability: 'in_stock',
+        extraColors: [{ colorName: 'Fekete', swatchHex: '#000000', availability: 'out_of_stock' }],
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(root.querySelector('[data-testid="product-card-stock"]')).toBeNull();
+    const swatches = queryAllElements(root, '[data-testid="product-card-swatch"]');
+    // swatch 0 is the displayed (in-stock) Grafit, swatch 1 is the
+    // out-of-stock Fekete added via extraColors.
+    const fekete = swatches[1];
+    expect(fekete).toBeDefined();
+    fekete.click();
+    fixture.detectChanges();
+    const stock = queryElement(getRootElement(fixture), '[data-testid="product-card-stock"]');
+    expect(stock.textContent.trim()).toBe('Elfogyott');
   });
 });
 
