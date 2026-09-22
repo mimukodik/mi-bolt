@@ -27,6 +27,7 @@
  * fail a run that is working.
  */
 import { spawn } from 'node:child_process';
+import { writeSync } from 'node:fs';
 
 const PORT = 4299;
 const BASE_PATH = '/demo-fizetes';
@@ -160,9 +161,26 @@ async function main() {
   // commit alongside this one, so the script reports its own failure with
   // a message instead of being killed from outside with none.
   const budgetTimer = setTimeout(() => {
-    process.stderr.write(
-      `check-payment-boot: total budget of ${TOTAL_BUDGET_MS / 1000} seconds reached, exiting\n`,
-    );
+    // writeSync so the message reaches stderr before we exit; process.stderr.write
+    // is async on pipes and `process.exit` does not flush it.
+    try {
+      writeSync(
+        process.stderr.fd,
+        `check-payment-boot: total budget of ${TOTAL_BUDGET_MS / 1000} seconds reached, exiting\n`,
+      );
+    } catch {
+      // stderr closed; nothing to report.
+    }
+    // process.exit skips the async finally block, so kill the dev server
+    // synchronously first. With detached: true, the child is a process group
+    // leader, so signal the group; nothing else cleans up after we exit.
+    if (child.pid !== undefined && child.exitCode === null) {
+      try {
+        process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        // Group already gone or not permitted; nothing we can do before exit.
+      }
+    }
     process.exit(1);
   }, TOTAL_BUDGET_MS);
   const child = startServe();
