@@ -334,7 +334,8 @@ describe('owner 2026-09-22: Szűrők alkalmazása is always active', () => {
 describe('screens.md:51: the drawer opens with focus on its heading (owner 2026-09-23)', () => {
   it('the heading "Szűrők" has the focus once the drawer is open', async () => {
     const { fixture } = setup();
-    // wait for the CDK's initial focus the way dialog-focus.spec.ts does
+    // CDK schedules the focus through `afterNextRender` after the
+    // dialog mounts, so the change-detection pass alone is not enough.
     await fixture.whenStable();
     const active = document.activeElement;
     expect(active?.tagName).toBe('H2');
