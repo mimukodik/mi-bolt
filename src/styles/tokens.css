@@ -64,6 +64,12 @@
   --space-9: 48px;
   --space-10: 64px;
 
+  /* The mobile purchase rail's height above the safe-area inset. The rail
+     takes it as its minimum height and the footer clears it by the same
+     amount, so the two cannot drift (the rail's content measured 84.19px
+     at 390x844, rounded up). */
+  --rail-height: 5.5rem;
+
   /* radius. --radius-card is not redeclared here: the theme variable of that
      name is already the yettel 16px card radius, and a self-referencing
      custom property would resolve to nothing. */

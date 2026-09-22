@@ -203,9 +203,9 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
    can clear it: at maximum scroll the rail covered the footer's only button.
    The clearance goes on the footer's own box rather than on the host, so it
    lands inside the navy ground instead of leaving a white strip under it.
-   5.5rem is the rail's measured height, 84.1875px at 390x844, rounded up. */
+   --rail-height (tokens.css) is also the rail's own minimum height. */
 @media (max-width: 1023px) {
   body:has(app-mobile-buy-rail) app-footer-nav .footer {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+    padding-bottom: calc(env(safe-area-inset-bottom) + var(--rail-height));
   }
 }
