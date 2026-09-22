@@ -1198,6 +1198,7 @@ describe('MIM-228: facet universe', () => {
     const result = mergeFacetsIntoUniverse(universe, fresh);
 
     expect(result.colors.map((c) => c.value)).toEqual(['graphite', 'zold']);
+    expect(result.colors.map((c) => c.count)).toEqual([1, 3]);
   });
 
   it('MIM-228: the facade renders the merged facets, so a colour absent from the second response keeps its row at zero', async () => {
@@ -1209,7 +1210,11 @@ describe('MIM-228: facet universe', () => {
       ...makePage([], 0),
       facets: {
         ...makeFacets(),
-        colors: [makeColorFacet('graphite', 4), makeColorFacet('zold', 2)],
+        colors: [
+          makeColorFacet('graphite', 4),
+          makeColorFacet('zold', 2),
+          makeColorFacet('zold', 2),
+        ],
       },
     });
     await tick();
