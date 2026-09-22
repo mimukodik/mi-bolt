@@ -74,13 +74,13 @@ https://vitest.dev/guide/coverage.html
 
 V8/Istanbul reporting and included-file behavior; enforce explicit project manifest.
 
-## S13 — Playwright Coverage API (historical; the end-to-end suite this cited was removed by decision, 2026-09-20)
+## S13 — Playwright Coverage API
 
 https://playwright.dev/docs/api/class-coverage
 
 Native JS coverage is Chromium-only; resetOnNavigation:false is not a guaranteed reload collector.
 
-## S14 — Playwright Network guide (historical; the end-to-end suite this cited was removed by decision, 2026-09-20)
+## S14 — Playwright Network guide
 
 https://playwright.dev/docs/network
 

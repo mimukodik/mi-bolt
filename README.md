@@ -58,7 +58,7 @@ ng test
 
 ## Continuous integration
 
-`.github/workflows/pr-check.yml` runs lint and format, unit tests with coverage (summary in the job summary, report as the `coverage-unit` artifact), the production build and the API client drift check in parallel on every pull request and push to `main`, on Blacksmith runners. There is no end-to-end suite in this project by decision (2026-09-20).
+`.github/workflows/pr-check.yml` runs lint and format, unit tests with coverage (summary in the job summary, report as the `coverage-unit` artifact), the production build and the API client drift check in parallel on every pull request and push to `main`, on Blacksmith runners. The `e2e` job runs Playwright with V8 coverage and is skipped until the first end-to-end spec lands.
 
 ## Additional Resources
 

@@ -1,6 +1,6 @@
 # Mock-only quality strategy — strict 100% unit coverage
 
-There is no end-to-end suite in this project by decision (2026-09-20).
+The end-to-end suite was reinstated on 2026-09-22: Playwright under `e2e/`, written only by the `playwright-test-*` agents, its CI job skipped until the first spec lands. Section 3 describes it.
 
 These are acceptance requirements for the future application. This planning package does not contain a completed Angular app and therefore does not claim an Angular test suite, 100% application coverage, or successful SDK compilation. Historical package-generation logs are intentionally not distributed with these project docs; fresh application evidence must be produced during implementation under docs/mi-bolt/execution/.
 
@@ -48,7 +48,7 @@ Set `coverageThresholds.perFile` to `true` beside the four 100 values, so each f
 
 ## 3. End-to-end suite
 
-There is no end-to-end suite in this project by decision (2026-09-20); the Playwright-based browser strategy this section used to describe was removed with it.
+The end-to-end suite was reinstated on 2026-09-22. `playwright.config.ts` defines three projects: `seed` and `integration` run against the MSW-mocked development build (`e2e/seed.spec.ts`, `e2e/integration/`), and `smoke` runs against the `local-backend` configuration (`e2e/smoke/`) with no mocks. Every spec imports `test` from `e2e/fixtures/coverage`, which collects V8 coverage through monocart-reporter; `scripts/check-e2e-coverage.mjs` gates `npm run e2e` on the same thresholds as `angular.json` `coverageThresholds` (80 statements, 75 branches, 80 functions, 80 lines). Only the `playwright-test-planner`, `-generator` and `-healer` agents write specs; the `playwright-tests` skill says how. The `e2e` CI job is skipped (`if: false`) until the first spec under `e2e/integration/` lands.
 
 ## 4. Deterministic scenario catalogue
 
@@ -78,7 +78,7 @@ expect(cart.subtotal).toEqual({amount:679980,currency:'HUF'});
 
 The parameter field spelling must be checked against actual ng-openapi-gen output in T04; do not hand-edit generated names to match a snippet. This illustrates a real SDK request intercepted by MSW, not a stubbed SDK return. The snippet assumes an EMPTY seeded cart; test preconditions must state that explicitly so adding2 does not merge into an existing1.
 
-There is no end-to-end suite in this project by decision (2026-09-20), so there are no browser-driven baseline assertions to plan.
+Browser-driven baseline assertions are written as Playwright specs under `e2e/integration/` by the `playwright-test-*` agents (section 3); none exist yet.
 
 ## 6. Accessibility and visual matrix
 
@@ -102,7 +102,7 @@ npm run format            prettier --write .
 npm run format:check      prettier --check .
 ```
 
-There is no end-to-end suite in this project by decision (2026-09-20).
+The end-to-end suite was reinstated on 2026-09-22: Playwright under `e2e/`, written only by the `playwright-test-*` agents, its CI job skipped until the first spec lands. Section 3 describes it.
 
 There is no CI pipeline and no aggregate release gate. Each command is run directly by whoever does the work, and its exit code is recorded in that task's evidence under docs/mi-bolt/execution/. Two of the checks are configuration rather than commands of their own: bundle budgets are the Angular CLI's own `budgets` array in the `production` build configuration of angular.json, so `ng build` enforces them, and unit coverage thresholds are the `@angular/build:unit-test` builder's own `coverageThresholds`, so `ng test` enforces them. Browser tests use a local STATIC host, not a business backend. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.
 
