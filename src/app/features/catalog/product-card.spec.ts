@@ -376,7 +376,7 @@ describe('T13-AC04 ProductCard', () => {
     expect(root.textContent).not.toContain('DEMÓTERMÉK');
   });
 
-  it('MIM-247: an out-of-stock variant shows the Elfogyott marker', () => {
+  it('decision 10: an out-of-stock variant shows the Elfogyott marker, read in place', () => {
     const { fixture, host } = setup();
     host.product.set(
       makeItem({
@@ -390,10 +390,7 @@ describe('T13-AC04 ProductCard', () => {
     const root = getRootElement(fixture);
     const stock = queryElement(root, '[data-testid="product-card-stock"]');
     expect(stock.textContent.trim()).toBe('Elfogyott');
-    // The visible marker duplicates the state that already rides on the
-    // link and swatch aria-labels, so screen readers should never reach
-    // it; the link aria-labels are the announcement (MIM-247 review).
-    expect(stock.getAttribute('aria-hidden')).toBe('true');
+    expect(stock.getAttribute('aria-hidden')).toBeNull();
   });
 
   it('MIM-247: an in-stock variant shows no marker', () => {
@@ -436,7 +433,7 @@ describe('T13-AC04 ProductCard', () => {
     expect(stock.textContent.trim()).toBe('Elfogyott');
   });
 
-  it('MIM-247: an out-of-stock card names the state in its detail link', () => {
+  it("decision 10: an out-of-stock card's detail link names no state", () => {
     const { fixture, host } = setup();
     host.product.set(
       makeItem({
@@ -449,7 +446,26 @@ describe('T13-AC04 ProductCard', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const cta = queryElement(root, '[data-testid="product-card-cta"]');
-    expect(cta.getAttribute('aria-label')).toBe('Demo One 5G részleteinek megnyitása, elfogyott');
+    expect(cta.getAttribute('aria-label')).toBe('Demo One 5G részleteinek megnyitása');
+  });
+
+  it('decision 10: the name link is named by the product name alone', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-01',
+        slug: 'demo-one-5g',
+        name: 'Demo One 5G',
+        availability: 'out_of_stock',
+      }),
+    );
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const nameLink = queryElement(root, '.name-link');
+    expect(nameLink.getAttribute('aria-label')).toBeNull();
+    expect(nameLink.textContent.trim()).toBe('Demo One 5G');
+    const media = queryElement(root, 'a.media');
+    expect(media.getAttribute('aria-label')).not.toContain('elfogyott');
   });
 
   it("MIM-247: an in-stock card's detail link names no state", () => {
