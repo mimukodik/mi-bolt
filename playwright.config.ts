@@ -3,6 +3,10 @@ import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import type { CoverageResults, V8CoverageEntry } from 'monocart-coverage-reports';
 
+// Resolved from this file's own location, not the cwd: `-c <path>` runs and
+// IDE runs start Playwright from other directories.
+const configDir = __dirname;
+
 // Default port 4400 (or 4410 for the local-backend smoke config) is chosen to
 // avoid collision with the regular dev server on 4200 and the demo-payment
 // dev server on 4210. E2E_PORT overrides the default for a second or third
@@ -38,9 +42,7 @@ const webServer =
 
 // The e2e gate uses the unit thresholds, read from angular.json so the two
 // never drift (owner, 2026-09-22: the threshold lives in configuration, not in a script).
-// Playwright sets the cwd to the directory holding playwright.config.ts, so
-// the cwd-relative read resolves to <root>/angular.json.
-const angularJson = JSON.parse(readFileSync('angular.json', 'utf8')) as {
+const angularJson = JSON.parse(readFileSync(join(configDir, 'angular.json'), 'utf8')) as {
   projects: {
     'mi-bolt': {
       architect: { test: { options: { coverageThresholds: Record<string, number | boolean> } } };
@@ -80,7 +82,8 @@ function hasSpec(dir: string): boolean {
 // The gate arms only for a run that collects coverage (E2E_COVERAGE_GATE=1: the
 // Chromium projects; Firefox and WebKit collect none, e2e/fixtures/coverage.ts)
 // and only once e2e/integration holds a spec; the seed alone is not the suite.
-const gated = process.env['E2E_COVERAGE_GATE'] === '1' && hasSpec('e2e/integration');
+const gated =
+  process.env['E2E_COVERAGE_GATE'] === '1' && hasSpec(join(configDir, 'e2e/integration'));
 const skipReason = 'e2e coverage gate skipped: no spec under e2e/integration yet';
 
 const fullHd = { viewport: { width: 1920, height: 1080 } };
