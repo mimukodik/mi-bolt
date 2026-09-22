@@ -949,7 +949,7 @@ function sampleRequestFixture(op: OperationDescriptor): unknown {
       return { quantity: 1 };
     }
     case 'updateCheckout': {
-      // UpdateCheckoutRequest (docs/api/openapi.yaml:1906-1918):
+      // UpdateCheckoutRequest (docs/api/openapi.yaml:1906-1919):
       // contact, billing, delivery, payment; minProperties: 1.
       return { payment: { methodId: 'card' } };
     }
