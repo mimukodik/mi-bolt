@@ -21,5 +21,13 @@
         (dismissed)="onErrorDismissed()"
       />
     </div>
+  } @else if (success(); as message) {
+    <div class="rail-status">
+      <app-status-message
+        severity="success"
+        [message]="message"
+        (dismissed)="onSuccessDismissed()"
+      />
+    </div>
   }
 </aside>

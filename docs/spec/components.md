@@ -477,13 +477,13 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `money:Money|null; available:boolean; pending:boolean; error:UiProblem|null`.
+**Signal inputs:** `money:Money|null; available:boolean; pending:boolean; error:UiProblem|null; success:string|null`.
 
-**Outputs:** `addRequested:void`.
+**Outputs:** `addRequested:void; errorDismissed:void; successDismissed:void`.
 
-**Functions:** Narrow viewport-only sticky purchase price/action; reserve bottom space and honor safe-area; hidden nonmobile variant not focusable.
+**Functions:** Narrow viewport-only sticky purchase price/action; reserve bottom space and honor safe-area; hidden nonmobile variant not focusable; surfaces the page-level add-to-cart success message via a dismissible banner whose "Bezárás" hands focus back to the rail CTA.
 
-**Required states:** default,loading,disabled,error,focus.
+**Required states:** default,loading,disabled,error,success,focus.
 
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 

@@ -25,8 +25,10 @@ import type { Money } from '../../shared/ui/price-block/price-block';
       [error]="error()"
       [money]="money()"
       [pending]="pending()"
+      [success]="success()"
       (addRequested)="onAddRequested()"
       (errorDismissed)="onErrorDismissed()"
+      (successDismissed)="onSuccessDismissed()"
     />
   `,
 })
@@ -35,8 +37,10 @@ class TestHostComponent {
   readonly available = signal<boolean>(true);
   readonly pending = signal<boolean>(false);
   readonly error = signal<UiProblem | null>(null);
+  readonly success = signal<string | null>(null);
   readonly presses: number[] = [];
   readonly errorDismissals = signal<number>(0);
+  readonly successDismissals = signal<number>(0);
 
   onAddRequested(): void {
     this.presses.push(1);
@@ -44,6 +48,10 @@ class TestHostComponent {
 
   onErrorDismissed(): void {
     this.errorDismissals.update((n) => n + 1);
+  }
+
+  onSuccessDismissed(): void {
+    this.successDismissals.update((n) => n + 1);
   }
 }
 
@@ -183,6 +191,58 @@ describe('MobileBuyRail (FIX-50 extraction from product-page.html)', () => {
     await fixture.whenStable();
 
     expect(host.errorDismissals()).toBe(1);
+    const ctaButton = root.querySelector('[data-testid="purchase-cta"] button');
+    expect(document.activeElement).toBe(ctaButton);
+  });
+
+  it('MIM-216: success non-null renders the success message; error takes precedence when both are set', async () => {
+    const { host, root, fixture } = await createHarness();
+
+    host.success.set('Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    expect(statusEl).not.toBeNull();
+    expect(statusEl?.textContent).toContain('Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.');
+
+    host.error.set({
+      code: 'UNKNOWN',
+      message: 'A termék hozzáadása nem sikerült; a kosár változatlan.',
+      fieldErrors: [],
+      retryable: true,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const errorStatusEl = root.querySelector('[data-testid="status-message"]');
+    expect(errorStatusEl).not.toBeNull();
+    expect(errorStatusEl?.textContent).toContain(
+      'A termék hozzáadása nem sikerült; a kosár változatlan.',
+    );
+    expect(errorStatusEl?.textContent).not.toContain(
+      'Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.',
+    );
+  });
+
+  it('MIM-216: clicking Bezárás on the success message emits successDismissed once and returns focus to the rail CTA', async () => {
+    const { host, root, fixture } = await createHarness();
+    host.success.set('Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const statusEl = root.querySelector('[data-testid="status-message"]');
+    if (!(statusEl instanceof HTMLElement)) {
+      throw new Error('Expected status message element');
+    }
+    const closeBtn = queryButton(statusEl, 'button');
+    expect(closeBtn.textContent).toContain('Bezárás');
+
+    closeBtn.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.successDismissals()).toBe(1);
     const ctaButton = root.querySelector('[data-testid="purchase-cta"] button');
     expect(document.activeElement).toBe(ctaButton);
   });
