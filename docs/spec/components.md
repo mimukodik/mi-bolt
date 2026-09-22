@@ -494,11 +494,11 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Signal inputs:** `item:CartItem; pending:boolean`.
 
-**Outputs:** `quantityChanged:{itemId:string;quantity:number}; removeRequested:string`.
+**Outputs:** `removeRequested:string`.
 
-**Functions:** Media/title/exact variant/unit+line prices and editable quantity/remove; emit intent only, no optimistic overwrite.
+**Functions:** Media/title/exact variant/unit+line prices, the quantity as read-only text and remove; emit intent only, no optimistic overwrite.
 
-**Required states:** default,pending,quantity-error,stock-error,focus.
+**Required states:** default,pending,focus.
 
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
