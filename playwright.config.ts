@@ -25,9 +25,9 @@ export default defineConfig({
     {
       name: 'seed',
       testDir: './e2e',
-      // Anchored so a nested `e2e/integration/seed.spec.ts` does not get
-      // picked up by both this project and the integration project.
-      testMatch: /^seed\.spec\.ts$/,
+      // Matched against the absolute path (Playwright's testMatch rule), anchored on
+      // e2e/seed.spec.ts so a nested seed.spec.ts in a project folder is not picked up twice.
+      testMatch: /[\\/]e2e[\\/]seed\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     { name: 'integration', testDir: './e2e/integration', use: { ...devices['Desktop Chrome'] } },
