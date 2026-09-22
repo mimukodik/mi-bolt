@@ -17,7 +17,7 @@ import { resolve } from 'node:path';
 import { describe, it, expect, beforeAll } from 'vitest';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import Ajv from 'ajv';
+import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
 const SPEC_PATH = resolve(__dirname, '../../docs/api/openapi.yaml');
@@ -107,7 +107,7 @@ let spec: OpenApiSpec;
 let dereferenced: DereferencedSpec;
 let catalog: CatalogFixture;
 let expectedProductCount: number;
-let ajv: Ajv;
+let ajv: Ajv2020;
 
 beforeAll(async () => {
   const [specRaw, catalogRaw, catalogSourceRaw] = await Promise.all([
@@ -119,7 +119,7 @@ beforeAll(async () => {
   dereferenced = (await $RefParser.dereference(SPEC_PATH)) as DereferencedSpec;
   catalog = JSON.parse(catalogRaw) as CatalogFixture;
   expectedProductCount = (JSON.parse(catalogSourceRaw) as SourceFixture).products.length;
-  ajv = new Ajv({ allErrors: true, strict: false });
+  ajv = new Ajv2020({ allErrors: true, strict: false });
   addFormats(ajv);
 });
 
@@ -178,7 +178,7 @@ describe('T03-AC01 operationIds', () => {
     // example with its media type's schema, and validate with ajv. A
     // schema the ajv instance cannot compile is the kind of drift
     // T03-AC01 must catch.
-    const exampleAjv = new Ajv({ allErrors: true, strict: false, validateFormats: false });
+    const exampleAjv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
     addFormats(exampleAjv);
     let checked = 0;
     for (const [pathKey, pathItem] of Object.entries(dereferenced.paths ?? {})) {
@@ -550,9 +550,10 @@ describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
   });
 
   it('every fixture product validates against the OpenAPI Product schema', () => {
-    // Product carries `unevaluatedProperties: false` (docs/api/openapi.yaml:1322),
-    // so a field the fixture adds that no allOf branch declares is a real
-    // failure; do not loosen the check.
+    // Product carries `unevaluatedProperties: false` (docs/api/openapi.yaml:1322).
+    // The contract suite compiles against Ajv 2020 (draft 2020-12) so that
+    // keyword actually fires; default-export Ajv (draft-07) silently ignores
+    // it under `strict: false` and would let unknown fields pass.
     const productSchema = dereferenced.components.schemas.Product as Record<string, unknown>;
     const validate = ajv.compile(productSchema);
     for (const p of catalog.products) {
@@ -562,6 +563,22 @@ describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
         `product ${p.id ?? '(no id)'} failed Product schema: ${JSON.stringify(validate.errors)}`,
       ).toBe(true);
     }
+  });
+
+  it('a fixture product with an unknown field fails the Product schema', () => {
+    // Red proof that the validator above is the 2020-12 one: under
+    // draft-07 Ajv `unevaluatedProperties` is an unknown keyword and
+    // `validate(sample)` returns `true`. With Ajv2020 it must reject
+    // the extra property.
+    const sample = { ...catalog.products[0], notInTheContract: 'x' } as Record<string, unknown>;
+    const productSchema = dereferenced.components.schemas.Product as Record<string, unknown>;
+    const validate = ajv.compile(productSchema);
+    const ok = validate(sample);
+    expect(ok).toBe(false);
+    expect(
+      validate.errors?.some((e: { keyword: string }) => e.keyword === 'unevaluatedProperties'),
+      `expected an unevaluatedProperties error, got ${JSON.stringify(validate.errors)}`,
+    ).toBe(true);
   });
 });
 

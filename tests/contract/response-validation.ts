@@ -24,7 +24,7 @@ import { resolve } from 'node:path';
 
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import Ajv, { type ValidateFunction } from 'ajv';
+import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
 export const REPO_ROOT = resolve(__dirname, '../..');
@@ -130,13 +130,16 @@ export async function loadOpenApiSpec(): Promise<{
   return { raw, dereferenced };
 }
 
-function buildAjv(): Ajv {
+function buildAjv(): Ajv2020 {
   // The contract gates `date-time` and `email` formats at the wire
-  // boundary (Quote.expiresAt, Contact.email). Disabling format
-  // validation entirely would let a malformed timestamp pass, which
-  // is exactly the kind of drift T26-AC05 must catch. Keep all
-  // format checks enabled.
-  const ajv = new Ajv({ allErrors: true, strict: false });
+  // boundary (Cart.expiresAt, PaymentIntent.expiresAt, BillingDetails.contactEmail).
+  // Disabling format validation entirely would let a malformed timestamp
+  // pass, which is exactly the kind of drift T26-AC05 must catch. Keep all
+  // format checks enabled. Compiling against Ajv 2020 (draft 2020-12)
+  // also makes the contract's `unevaluatedProperties: false` actually
+  // enforce — default-export Ajv (draft-07) silently ignores it under
+  // `strict: false`.
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
   addFormats(ajv);
   return ajv;
 }
@@ -225,7 +228,7 @@ export function openApiPathToMswPath(path: string): string {
 /**
  * Builds a `{status: validator}` map for the given operation so the
  * contract suite can validate every documented response status. The
- * cache is shared across the whole process so 16 operations × N
+ * cache is shared across the whole process so 17 operations × N
  * statuses compile exactly once.
  */
 export function compileResponseValidator(
