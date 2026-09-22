@@ -58,6 +58,7 @@ import { extname, join, normalize, resolve, sep, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createServer, request as httpRequest } from 'node:http';
+import { parseProxyTimeout } from './proxy-timeout.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const STATIC_DIR = resolve(
@@ -66,9 +67,7 @@ const STATIC_DIR = resolve(
 );
 const API_PROXY = process.env['MI_BOLT_API_PROXY'] ?? null;
 /** Milliseconds the proxy waits for the backend before answering 502. */
-const parsedTimeout = Number(process.env['MI_BOLT_API_PROXY_TIMEOUT_MS'] ?? '30000');
-const API_PROXY_TIMEOUT_MS =
-  Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 30000;
+const API_PROXY_TIMEOUT_MS = parseProxyTimeout(process.env['MI_BOLT_API_PROXY_TIMEOUT_MS']);
 const PAYMENT_STATIC_DIR = process.env['MI_BOLT_PAYMENT_STATIC_DIR']
   ? resolve(repoRoot, process.env['MI_BOLT_PAYMENT_STATIC_DIR'])
   : null;
