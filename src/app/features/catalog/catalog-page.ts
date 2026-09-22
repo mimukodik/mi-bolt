@@ -208,21 +208,24 @@ export class CatalogPage {
     });
 
     // Mirror the facade back into the URL whenever the canonical
-    // query changes (filter writes, sort, page). We use merge so we
-    // never drop a sibling param the URL might carry in a different
-    // route, and we skip the very first read so we do not bounce.
-    let first = true;
+    // query changes (filter writes, sort, page). `merge` never drops a
+    // sibling param the URL carries, and the first read is skipped so
+    // we do not bounce. A filter, sort, page-size or search change keeps
+    // the scroll offset (`scroll: 'manual'`); only a pager step lets the
+    // router scroll to the top, per `withInMemoryScrolling` in
+    // app.config.ts (https://angular.dev/api/router/NavigationBehaviorOptions#scroll).
+    let previous: CatalogQuery | null = null;
     effect(() => {
       const q = this.facade.query();
-      if (first) {
-        first = false;
-        return;
-      }
+      const before = previous;
+      previous = q;
+      if (before === null) return;
       void this.router.navigate([], {
         relativeTo: this.route,
         queryParams: serializeForRouter(q),
         queryParamsHandling: 'merge',
         replaceUrl: false,
+        scroll: isPageStepOnly(before, q) ? 'after-transition' : 'manual',
       });
     });
 
@@ -378,4 +381,16 @@ function serializeForRouter(q: CatalogQuery): Record<string, string | string[] |
     out[key] = all.length === 0 ? null : all.length > 1 ? all : (all[0] ?? null);
   }
   return out;
+}
+
+/**
+ * True when the only difference between two queries is the page number,
+ * i.e. the shopper used the pager. Every other change (a filter, the sort,
+ * the page size, the search) resets the page too, so it is not a page step.
+ */
+function isPageStepOnly(before: CatalogQuery, after: CatalogQuery): boolean {
+  if (before.page === after.page) return false;
+  const withoutPage = (q: CatalogQuery): string =>
+    serializeCatalogQuery({ ...q, page: 1 }).toString();
+  return withoutPage(before) === withoutPage(after);
 }
