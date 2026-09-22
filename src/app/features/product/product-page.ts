@@ -11,6 +11,8 @@ import {
 import { ActivatedRoute, Router, RouterLink, type ParamMap } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { BREADCRUMB_VISIBLE } from '../../core/navigation/breadcrumb-visibility';
+
 function paramMapToSearchParams(params: ParamMap): URLSearchParams {
   const search = new URLSearchParams();
   for (const key of params.keys) {
@@ -124,7 +126,8 @@ export class ProductPage {
 
   readonly product = computed(() => this.vm().product);
   readonly productName = computed<string>(() => this.vm().product?.name ?? '');
-  readonly brand = computed<string>(() => this.vm().product?.brand ?? '');
+  /** Switched off for now (MIM-234); the nav stays in place behind this flag. */
+  readonly breadcrumbVisible = BREADCRUMB_VISIBLE;
   readonly highlights = computed<readonly string[]>(() => this.vm().product?.highlights ?? []);
 
   /** Marketing description from the wire model. Empty string while the
