@@ -30,13 +30,18 @@
   scroll-margin-top: 80px;
 }
 
+/* The step row reads as a connected path: no pill background, no border
+   radius, items joined by a 2px connector line. The connector after a
+   done step is the brand primary so the eye can follow the walked part
+   of the journey; the connector after a current or upcoming step is the
+   neutral `--color-line`. */
 .steps {
   list-style: none;
   padding: 0;
   margin: 0 0 var(--space-6);
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  flex-wrap: nowrap;
+  gap: 0;
   counter-reset: step;
 }
 
@@ -44,16 +49,31 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface-section);
-  border-radius: var(--radius-control);
+  flex: 0 1 auto;
   color: var(--color-text-secondary);
   font-size: var(--type-helper);
   min-height: var(--size-control);
 }
 
+.steps__item::after {
+  content: '';
+  height: 2px;
+  flex: 1 1 auto;
+  min-width: 16px;
+  margin: 0 var(--space-2);
+  align-self: center;
+  background: var(--color-line);
+}
+
+.steps__item:last-child::after {
+  content: none;
+}
+
+.steps__item.is-done::after {
+  background: var(--color-primary);
+}
+
 .steps__item.is-current {
-  background: var(--color-brand-accent);
   color: var(--color-text-primary);
   font-weight: var(--weight-bold);
 }
@@ -62,21 +82,53 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border: 2px solid var(--color-line);
+  color: var(--color-text-secondary);
   font-weight: var(--weight-bold);
   font-size: var(--type-meta);
+  flex: 0 0 auto;
 }
 
 .steps__item.is-current .steps__index {
-  background: var(--color-text-primary);
+  background: var(--color-brand-accent);
+  border-color: var(--color-brand-accent);
+  color: var(--color-text-primary);
+}
+
+.steps__item.is-done .steps__index {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: var(--color-text-inverse);
 }
 
 .steps__label {
   white-space: nowrap;
+  font-weight: inherit;
+}
+
+.steps__item.is-done .steps__label {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* Below 640px only the current step keeps its visible label; the four
+   circles still fit on one line because the connectors absorb the slack. */
+@media (max-width: 639.98px) {
+  .steps__item:not(.is-current) .steps__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -86,10 +138,6 @@
 
   .layout-main {
     padding: var(--space-7) 0 var(--space-8);
-  }
-
-  .steps {
-    gap: var(--space-4);
   }
 }
 
