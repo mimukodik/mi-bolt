@@ -383,6 +383,8 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
 
     expect(page.addError()).toBeNull();
     expect(addToCart.querySelector('[data-testid="status-message"]')).toBeNull();
+    const addCta = queryButton(addToCart, '[data-testid="add-to-cart-button"] button');
+    expect(document.activeElement).toBe(addCta);
   });
 
   it('MIM-216: success message reports the cart line quantity, not the amount just dispatched', async () => {
