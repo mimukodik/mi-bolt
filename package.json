@@ -11,6 +11,7 @@
     "backend:start": "cd \"${MIBOLT_BACKEND_DIR:-../mi-bolt-backend}\" && ./gradlew bootRun",
     "build": "ng build mi-bolt",
     "build:payment": "ng build demo-payment",
+    "check:payment-boot": "node scripts/check-payment-boot.mjs",
     "build:check": "node scripts/build-check.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

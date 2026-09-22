@@ -100,6 +100,27 @@ p {
   border-radius: inherit;
 }
 
+/* A bordered text control reads border + gap + outline as two rings. The ring
+   hugs the border instead: no offset, and the border takes the ring's colour,
+   so the two merge into one continuous ring around the control. Round and
+   small controls keep the offset above, where the gap is what makes the ring
+   visible, which is why checkboxes and radios are excluded here.
+
+   `:focus-visible` is written twice on purpose. This is a global stylesheet,
+   so Angular's emulated view encapsulation adds no `[_ngcontent-…]` attribute
+   to these selectors, while every component rule that sets a control's border
+   gets one per compound segment and so outranks a single `:focus-visible`.
+   Repeating a pseudo-class is the documented way to raise specificity without
+   changing what the selector matches (W3C Selectors Level 4 §15, "Calculating
+   a selector's specificity"). Component rules that set a resting border are
+   kept below this one deliberately; see the checkout stylesheets. */
+input:not([type='checkbox']):not([type='radio']):focus-visible:focus-visible,
+select:focus-visible:focus-visible,
+textarea:focus-visible:focus-visible {
+  outline-offset: 0;
+  border-color: var(--color-focus-light);
+}
+
 /* Visually-hidden helper for assistive-only labels. */
 .sr-only {
   position: absolute;

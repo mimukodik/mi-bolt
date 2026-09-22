@@ -139,6 +139,12 @@
             "tsConfig": "projects/demo-payment/tsconfig.app.json",
             "baseHref": "/demo-fizetes/",
             "outputPath": { "base": "dist/demo-payment" },
+            "assets": [
+              {
+                "glob": "mockServiceWorker.js",
+                "input": "public"
+              }
+            ],
             "styles": ["projects/demo-payment/src/styles.css"]
           },
           "configurations": {
