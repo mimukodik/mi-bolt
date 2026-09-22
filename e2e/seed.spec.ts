@@ -9,6 +9,5 @@ test.describe('Test group', () => {
     // successful document response (the seed precondition for downstream specs).
     const response = await page.goto('/');
     expect(response?.ok()).toBe(true);
-
   });
 });

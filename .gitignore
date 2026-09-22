@@ -317,3 +317,4 @@ coverage/
 dist/
 node_modules/
 .visual-screenshots/
+.playwright-mcp/

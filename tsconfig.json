@@ -38,6 +38,9 @@
       "path": "./tsconfig.spec.json"
     },
     {
+      "path": "./tsconfig.e2e.json"
+    },
+    {
       "path": "./projects/demo-payment/tsconfig.app.json"
     },
     {
