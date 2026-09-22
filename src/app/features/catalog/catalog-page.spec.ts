@@ -1457,6 +1457,35 @@ describe('pagination focus — reaching a boundary never drops focus on <body>',
 });
 
 // ===========================================================================
+// MIM-239: full-width layout — the catalog page carries no container cap
+// ===========================================================================
+
+describe('MIM-239 full-width layout — the catalog carries no container cap', () => {
+  it('the .catalog selector carries no max-width and no margin: 0 auto (MIM-239)', () => {
+    // jsdom does not resolve `getComputedStyle` against Angular's
+    // processed component CSS, so the assertion runs against the
+    // stylesheet text itself — the same pattern `T13-AC01` uses to
+    // verify the grid template rule. The production line whose removal
+    // fails this test is the deleted `max-width` declaration in
+    // `catalog-page.scss`.
+    //
+    // Angular's view encapsulation appends an attribute selector to every
+    // rule (`[_ngcontent-xxx]`), so the rule regex matches the selector
+    // prefix as well as the body. The `.lede` rule still carries
+    // `max-width: 60ch` for line-length readability — a typography
+    // concern, not a container cap, and out of MIM-239's scope.
+    const css = getComponentStyles(CatalogPage).join('\n');
+    // Strip every media query body so the assertion catches both the
+    // base `.catalog` rule and any breakpoint-specific override.
+    const flat = css.replace(/@media[^{]*\{[\s\S]*?\}/g, '');
+    const catalogRule = /\.catalog[^{]*\{[^}]*\}/.exec(flat);
+    expect(catalogRule).not.toBeNull();
+    expect(catalogRule?.[0]).not.toMatch(/max-width/);
+    expect(catalogRule?.[0]).not.toMatch(/margin:\s*0\s+auto/);
+  });
+});
+
+// ===========================================================================
 // Self-removing control focus: a click that destroys the button it was made on
 // ===========================================================================
 

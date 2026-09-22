@@ -1,11 +1,11 @@
 :host {
   display: block;
-  padding: 0 var(--layout-gutter-mobile);
+  padding: 0 var(--space-4);
 }
 
 @media (min-width: 640px) {
   :host {
-    padding: 0 var(--layout-gutter-tablet);
+    padding: 0 var(--space-6);
   }
 }
 
@@ -19,12 +19,8 @@
   // element into a direct flex item, so width is the cross axis. With
   // `margin: 0 auto` on both cross-axis sides, the flex item's cross
   // size is sized shrink-to-fit instead of stretched, and the auto
-  // margins absorb the remainder — which on the cart and contact steps
-  // read as the page being pushed 129px / 137.66px in from each side
-  // at 1280px. An explicit cross-axis size removes the shrink-to-fit
-  // path and lets `max-width` and `margin: 0 auto` behave as they do
-  // in ordinary block flow. (CSS Flexible Box Layout: a flex item
-  // whose cross-axis margin is auto has the cross-axis stretch
+  // margins absorb the remainder. (CSS Flexible Box Layout: a flex
+  // item whose cross-axis margin is auto has the cross-axis stretch
   // suppressed.)
   width: 100%;
   /* The free space in the shell's flex column belongs to the page, not to
@@ -34,8 +30,6 @@
      a short page. */
   flex: 1 1 auto;
   padding: var(--space-6) 0 var(--space-7);
-  max-width: var(--layout-container-max);
-  margin: 0 auto;
   scroll-margin-top: 80px;
 }
 
@@ -90,7 +84,7 @@
 
 @media (min-width: 1024px) {
   :host {
-    padding: 0 var(--layout-gutter-desktop);
+    padding: 0 var(--space-9);
   }
 
   .layout-main {

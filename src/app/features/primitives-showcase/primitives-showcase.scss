@@ -2,18 +2,16 @@
 
 :host {
   display: block;
-  padding: 0 var(--layout-gutter-mobile);
+  padding: 0 var(--space-4);
 }
 
 @media (min-width: 640px) {
   :host {
-    padding: 0 var(--layout-gutter-tablet);
+    padding: 0 var(--space-6);
   }
 }
 
 .showcase {
-  max-width: var(--layout-container-max);
-  margin: 0 auto;
   padding: var(--space-6) 0;
   background: var(--color-surface-light);
   color: var(--color-text-primary);
@@ -85,7 +83,7 @@
 
 @media (min-width: 1024px) {
   :host {
-    padding: 0 var(--layout-gutter-desktop);
+    padding: 0 var(--space-9);
   }
 
   .showcase {

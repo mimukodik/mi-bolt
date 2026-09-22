@@ -7,7 +7,7 @@
   align-items: center;
   gap: var(--space-2);
   min-height: 28px;
-  padding: 0 var(--layout-gutter-mobile);
+  padding: 0 var(--space-4);
   background: var(--color-shell-dark);
   color: var(--color-text-inverse);
   font-size: var(--type-meta);
@@ -50,7 +50,7 @@
 
 @media (min-width: 768px) {
   .demo-notice {
-    padding: 0 var(--layout-gutter-desktop);
+    padding: 0 var(--space-9);
   }
   .demo-notice__text {
     white-space: nowrap;
