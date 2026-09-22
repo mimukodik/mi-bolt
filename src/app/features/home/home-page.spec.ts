@@ -381,7 +381,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
 
 // ---------------------------------------------------------------------------
 // AC02: Hero CTA opens the catalogue; category shortcuts set valid
-// 5G / inStock filters; featured "Részletek" opens the correct slug.
+// 5G / inStock filters; featured "Megnézem" opens the correct slug.
 // ---------------------------------------------------------------------------
 
 describe('T14-AC02 CTA + category shortcuts + featured details', () => {
@@ -458,7 +458,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     expect(directCards.length).toBe(0);
   });
 
-  it('featured product "Részletek" opens the correct slug and variant', async () => {
+  it('featured product "Megnézem" opens the correct slug and variant', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -473,14 +473,14 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
     const link = root.querySelector<HTMLAnchorElement>(
-      '[data-testid="featured-details-demo-one-5g"]',
+      '[data-testid="featured-card-demo-one-5g"] [data-testid="product-card-cta"]',
     );
     expect(link).not.toBeNull();
-    expect(link?.textContent).toContain('Részletek');
+    expect(link?.textContent).toContain('Megnézem');
     expect(link?.getAttribute('href')).toBe('/telefonok/demo-one-5g?variant=' + items[0].variantId);
   });
 
-  it('FIX-33-AC04: featured section header carries a "Minden telefon" link to the catalogue', async () => {
+  it('FIX-33-AC04: featured section header carries an "Összes telefon" link to the catalogue', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -495,7 +495,7 @@ describe('T14-AC02 CTA + category shortcuts + featured details', () => {
     const root = getRootElement(fixture);
     const link = root.querySelector<HTMLAnchorElement>('[data-testid="featured-all-link"]');
     expect(link).not.toBeNull();
-    expect((link?.textContent ?? '').trim().startsWith('Minden telefon')).toBe(true);
+    expect((link?.textContent ?? '').trim().startsWith('Összes telefon')).toBe(true);
     expect(link?.getAttribute('href')).toBe('/telefonok');
   });
 });
@@ -520,8 +520,12 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     } satisfies FeaturedState);
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    expect(root.textContent.replace(/\u00a0/g, ' ')).toContain('339 990');
-    expect(root.textContent).not.toContain('0 Ft');
+    const amount = root.querySelector(
+      '[data-testid="featured-card-demo-one-5g"] [data-testid="price-amount"]',
+    );
+    expect((amount?.textContent ?? '').replace(/\u00a0/g, ' ')).toContain('339 990');
+    expect(root.querySelector('[data-testid="price-skeleton"]')).toBeNull();
+    expect(root.querySelector('[data-testid="price-empty"]')).toBeNull();
   });
 
   it('home page issues exactly one listProducts({ featured: true }) call and threads four cards in order', async () => {
@@ -570,7 +574,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     });
   });
 
-  it('FeaturedProducts renders four cards in response order with featured-details and price-amount', async () => {
+  it('FeaturedProducts renders four product cards in response order with a "Megnézem" link and a price', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([], withComponentInputBinding())],
     });
@@ -586,11 +590,12 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     const root = getRootElement(fixture);
     for (const item of items) {
       const link = root.querySelector<HTMLAnchorElement>(
-        `[data-testid="featured-details-${item.slug}"]`,
+        `[data-testid="featured-card-${item.slug}"] [data-testid="product-card-cta"]`,
       );
       expect(link).not.toBeNull();
-      expect(link?.textContent).toContain('Részletek');
+      expect(link?.textContent).toContain('Megnézem');
     }
+    expect(root.querySelectorAll('[data-testid="product-card"]').length).toBe(items.length);
     const priceAmounts = root.querySelectorAll('[data-testid="price-amount"]');
     expect(priceAmounts.length).toBe(items.length);
   });

@@ -42,6 +42,9 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
 export class ProductCard {
   readonly product = input.required<CatalogItem>();
 
+  /** When true the card's photo loads eagerly: the first card above the fold must not be lazy (Angular NG0913). */
+  readonly eager = input<boolean>(false);
+
   /** Currently selected variant id. `linkedSignal` re-initialises from
    *  the product's displayed variant whenever the `product` input
    *  changes, so a card swap resets the selection rather than carrying
