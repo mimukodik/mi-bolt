@@ -1,12 +1,5 @@
 :host {
   display: block;
-  padding: 0 var(--space-4);
-}
-
-@media (min-width: 640px) {
-  :host {
-    padding: 0 var(--space-6);
-  }
 }
 
 .layout-main {
@@ -26,8 +19,16 @@
      encapsulation). Without this the footer leaves the viewport bottom on
      a short page. */
   flex: 1 1 auto;
-  padding: var(--space-6) 0 var(--space-7);
+  /* The side inset lives here, not on :host, so the shell's DEMÓ bar, header and footer run edge to edge like the shop's (owner, 2026-09-22). */
+  padding: var(--space-6) var(--space-4) var(--space-7);
   scroll-margin-top: 80px;
+}
+
+@media (min-width: 640px) {
+  .layout-main {
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
+  }
 }
 
 /* The step row reads as a connected path: no pill background, no border
@@ -159,11 +160,7 @@
 }
 
 @media (min-width: 1024px) {
-  :host {
-    padding: 0 var(--space-9);
-  }
-
   .layout-main {
-    padding: var(--space-7) 0 var(--space-8);
+    padding: var(--space-7) var(--space-9) var(--space-8);
   }
 }
