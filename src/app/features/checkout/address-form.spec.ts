@@ -107,8 +107,10 @@ describe('MIM-254: blurring an empty required field marks it invalid', () => {
 
     expect(line2Input.getAttribute('aria-invalid')).toBe('false');
   });
+});
 
-  it('blurring an over-long second line flips its aria-invalid to "true"', () => {
+describe('MIM-254: blurring a non-empty invalid field marks only that field invalid', () => {
+  it('blurring an over-long second line flips its aria-invalid to "true" and leaves the other inputs untouched', () => {
     const fixture = createFixture();
     fixture.componentInstance.line2.set('A'.repeat(121));
     fixture.detectChanges();
@@ -120,6 +122,31 @@ describe('MIM-254: blurring an empty required field marks it invalid', () => {
     fixture.detectChanges();
 
     expect(line2Input.getAttribute('aria-invalid')).toBe('true');
+    // Field-specific blur binding: blurring line2 must not mark the
+    // other inputs touched, so their pristine aria-invalid="false"
+    // is preserved.
+    expect(getInputElement(root, 'address-input-postalCode').getAttribute('aria-invalid')).toBe(
+      'false',
+    );
+    expect(getInputElement(root, 'address-input-city').getAttribute('aria-invalid')).toBe('false');
+    expect(getInputElement(root, 'address-input-line1').getAttribute('aria-invalid')).toBe('false');
+  });
+
+  it('blurring a 120-char second line leaves it valid (the boundary at the length cap)', () => {
+    // The validator is strict `value.length > 120`, so 120 chars must
+    // remain valid; a regression to `>=` would mark this input
+    // invalid.
+    const fixture = createFixture();
+    fixture.componentInstance.line2.set('A'.repeat(120));
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const line2Input = getInputElement(root, 'address-input-line2');
+    expect(line2Input.getAttribute('aria-invalid')).toBe('false');
+
+    line2Input.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(line2Input.getAttribute('aria-invalid')).toBe('false');
   });
 });
 
