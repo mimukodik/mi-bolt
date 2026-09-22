@@ -3,10 +3,11 @@
  *
  * Presentation-only per `docs/spec/components.md:446-458`
  * (`AddToCartControl`): a single primary CTA that emits one intent
- * and owns no cart persistence of its own. `variant`, `quantity`,
- * `pending` and `error` all come from the parent — `ProductPage`,
- * which `components.md:409` names as the container that owns
- * `CartFacade` injection (FIX-50 item 2b).
+ * and owns no cart persistence of its own. `variant`, `pending` and
+ * `error` all come from the parent — `ProductPage`, which
+ * `components.md:409` names as the container that owns `CartFacade`
+ * injection (FIX-50 item 2b). The control adds one piece: there is no
+ * quantity to read or display.
  *
  * The component still renders the pending / error `StatusMessage`
  * banners itself, since both are driven entirely by its own inputs;
@@ -31,9 +32,6 @@ import type { Variant } from '../../api/generated/models/variant';
 export class AddToCart {
   /** The variant to add. Null until the parent has resolved one. */
   readonly variant = input<Variant | null>(null);
-
-  /** Quantity the parent wants added. The component never invents it. */
-  readonly quantity = input<number>(1);
 
   /** In-flight state of the parent's single cart mutation. */
   readonly pending = input<boolean>(false);
@@ -79,7 +77,7 @@ export class AddToCart {
   onAdd(): void {
     const variant = this.variant();
     if (variant === null || this.pending()) return;
-    this.addRequested.emit({ variantId: variant.id, quantity: this.quantity() });
+    this.addRequested.emit({ variantId: variant.id, quantity: 1 });
   }
 
   /** The "Bezárás" on the error banner: tells the parent to clear its

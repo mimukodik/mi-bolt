@@ -847,7 +847,7 @@
       "src/app/features/product/variant-selection.ts",
       "src/app/features/product/variant-selection.spec.ts"
     ],
-    "interface": "ProductFacade.vm: Signal<ProductVm>; selectVariant(id), selectImage(id), setQuantity(n), retry.",
+    "interface": "ProductFacade.vm: Signal<ProductVm>; selectVariant(id), selectImage(id), retry.",
     "deliverable": "Variant selection with atomic price/stock/image state.",
     "acceptanceCriteria": [
       {
