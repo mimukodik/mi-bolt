@@ -303,11 +303,12 @@ describe('T11-AC02 brand-consistent header and footer', () => {
   // override, so `.layout-main` reaches the full width without an
   // explicit `width: 100%`. A re-introduced `max-width` or `margin: 0
   // auto` would suppress that stretch and pull the cart and contact steps
-  // in from the sides at 1280px (the regression MIM-239 fixed). jsdom
-  // does not simulate flex stretch, so the assertion cannot read a
-  // computed width — instead it pins that the centring declarations are
-  // absent from the rule body, which is the invariant MIM-239 cares
-  // about.
+  // in from the sides at 1280px (the regression MIM-239 fixed). A
+  // `width: <anything other than 100%>` is the same container cap under a
+  // different name — the rule body must not carry one either. jsdom does
+  // not simulate flex stretch, so the assertion cannot read a computed
+  // width — instead it pins that the centring declarations are absent
+  // from the rule body, which is the invariant MIM-239 cares about.
   // -------------------------------------------------------------------------
   it('CheckoutLayout .layout-main rule carries no centring declarations (CENTRE-2)', () => {
     const f = TestBed.createComponent(CheckoutLayout);
@@ -322,6 +323,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(ruleBody).not.toBe('');
     expect(ruleBody).not.toMatch(/max-width/);
     expect(ruleBody).not.toMatch(/margin:\s*0\s+auto/);
+    expect(ruleBody).not.toMatch(/(?<![\w-])width:\s*(?!100%)/);
   });
 
   it('FIX-35: on the contact step the first indicator is complete (✓) and the second shows 2', () => {
