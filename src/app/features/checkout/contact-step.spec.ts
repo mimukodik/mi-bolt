@@ -675,6 +675,7 @@ describe('MIM-254: blurring an empty required field marks it invalid', () => {
     const root = getRootElement(fixture);
     const input = root.querySelector<HTMLInputElement>('#contact-fullname-input');
     if (input === null) throw new Error('Expected fullname input');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
 
     input.dispatchEvent(new Event('blur', { bubbles: true }));
     fixture.detectChanges();
