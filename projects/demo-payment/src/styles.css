@@ -41,6 +41,11 @@
   --pay-muted: #5b6670;
   --pay-action: #2f3b45;
   --pay-on-action: #ffffff;
+  --pay-on-card: #f4f5f7;
+  --pay-chip-start: #d8dce1;
+  --pay-chip-end: #9aa3ab;
+  --pay-card-shadow: 0 10px 24px rgba(31, 41, 51, 0.25);
+  --pay-input-border: rgba(244, 245, 247, 0.4);
   --pay-error: #d9534f;
   --pay-warning: #ffd500;
   --pay-on-warning: #332b00;

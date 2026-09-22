@@ -20,6 +20,7 @@ import {
   effect,
   inject,
   input,
+  model,
   signal,
   viewChild,
 } from '@angular/core';
@@ -115,6 +116,16 @@ export class PaymentPage implements OnInit {
    * leaving an alert and coming back to the same alert kind moves focus again.
    */
   private focusedFor: PageState['kind'] | 'card' | null = null;
+
+  /**
+   * The four card fields. They are scenery: they live in component signals,
+   * are never read by `onChoose`, and never reach the wire.
+   * `PaymentOutcomeRequest` still carries exactly one property.
+   */
+  readonly cardNumber = model<string>('');
+  readonly holderName = model<string>('');
+  readonly expiry = model<string>('');
+  readonly cvc = model<string>('');
 
   /** Which of the three renderings the current state asks for. */
   readonly display = computed<Display>(() => {

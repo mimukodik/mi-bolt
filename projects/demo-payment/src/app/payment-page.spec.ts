@@ -95,6 +95,15 @@ function click(fixture: ComponentFixture<PaymentPage>, selector: string): void {
   el.click();
 }
 
+function fill(fixture: ComponentFixture<PaymentPage>, selector: string, value: string): void {
+  const el = hostElement(fixture).querySelector(selector);
+  if (!(el instanceof HTMLInputElement)) {
+    throw new Error(`Expected input element: ${selector}`);
+  }
+  el.value = value;
+  el.dispatchEvent(new Event('input'));
+}
+
 beforeEach(() => {
   captured.length = 0;
   assigned.length = 0;
@@ -411,5 +420,52 @@ describe('PaymentPage', () => {
     const posts = captured.filter((c) => c.method === 'POST');
     expect(posts).toHaveLength(1);
     expect(posts[0]?.body).toBe('{"outcome":"succeeded"}');
+  });
+
+  it('MIM-260: the card fields never reach the posted body', async () => {
+    await configureTestBed();
+    server.use(
+      http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)),
+      http.post(`${BASE_URL}/payment-intents/:id/outcome`, () =>
+        HttpResponse.json(closedWith('succeeded')),
+      ),
+    );
+    const fixture = await render('pi_test_1');
+    await flush();
+
+    fill(fixture, '[data-testid="pay-card-number"]', '1234 5678 9012 3456');
+    fill(fixture, '[data-testid="pay-card-holder"]', 'JOHN DOE');
+    fill(fixture, '[data-testid="pay-card-expiry"]', '12/25');
+    fill(fixture, '[data-testid="pay-card-cvc"]', '123');
+
+    click(fixture, '[data-testid="pay-succeeded"]');
+    await fixture.whenStable();
+    await flush();
+
+    const posts = captured.filter((c) => c.method === 'POST');
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.body).toBe('{"outcome":"succeeded"}');
+  });
+
+  it('MIM-260: no field offers a stored card to the browser', async () => {
+    await configureTestBed();
+    server.use(http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)));
+    const fixture = await render('pi_test_1');
+    const root = hostElement(fixture);
+    await flush();
+
+    const number = root.querySelector<HTMLElement>('[data-testid="pay-card-number"]');
+    const holder = root.querySelector<HTMLElement>('[data-testid="pay-card-holder"]');
+    const expiry = root.querySelector<HTMLElement>('[data-testid="pay-card-expiry"]');
+    const cvc = root.querySelector<HTMLElement>('[data-testid="pay-card-cvc"]');
+
+    expect(number?.getAttribute('autocomplete')).toBe('off');
+    expect(number?.getAttribute('type')).toBe('text');
+    expect(holder?.getAttribute('autocomplete')).toBe('off');
+    expect(holder?.getAttribute('type')).toBe('text');
+    expect(expiry?.getAttribute('autocomplete')).toBe('off');
+    expect(expiry?.getAttribute('type')).toBe('text');
+    expect(cvc?.getAttribute('autocomplete')).toBe('off');
+    expect(cvc?.getAttribute('type')).toBe('text');
   });
 });

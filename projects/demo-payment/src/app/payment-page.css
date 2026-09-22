@@ -33,12 +33,14 @@
 
 .pay-lede,
 .pay-note,
+.pay-notice,
 .pay-status {
   margin: 0;
   color: var(--pay-muted);
 }
 
 .pay-note,
+.pay-notice,
 .pay-status {
   font-size: 14px;
   line-height: 20px;
@@ -146,9 +148,95 @@
   font-weight: 600;
 }
 
+/* The drawn card face. A 1.586:1 ISO ID-1 ratio, full width, capped at 22rem,
+ * painted in the payment app's own palette. Pure CSS: no image asset, no
+ * SVG file, no vendor logo, no bank name. The fields it carries are
+ * scenery — nothing they hold is read, posted or stored. */
+.pay-card-face {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pay-space-3);
+  width: 100%;
+  max-width: 22rem;
+  aspect-ratio: 1.586 / 1;
+  margin: var(--pay-space-4) 0;
+  padding: var(--pay-space-6);
+  border-radius: var(--pay-radius-card);
+  background: linear-gradient(135deg, var(--pay-action), var(--pay-ink));
+  color: var(--pay-on-card);
+  box-shadow: var(--pay-card-shadow);
+}
+
+.pay-chip {
+  width: 2.75rem;
+  height: 2.125rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--pay-chip-start), var(--pay-chip-end));
+}
+
+.pay-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pay-field-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pay-on-card) 70%, transparent);
+}
+
+.pay-field-input {
+  box-sizing: border-box;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--pay-input-border);
+  color: var(--pay-on-card);
+  font: inherit;
+  padding: 2px 0;
+  outline: none;
+}
+
+/* Keyboard focus on the card fields replaces the default outline (removed
+ * by `outline: none` above) with a light ring that reads on the dark
+ * gradient (WCAG 2.4.7). */
+.pay-field-input:focus-visible {
+  outline: 2px solid var(--pay-on-card);
+  outline-offset: 2px;
+}
+
+.pay-field-input[data-testid='pay-card-number'] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+}
+
+.pay-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--pay-space-4);
+}
+
+.pay-sub-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--pay-space-3);
+}
+
 @media (max-width: 480px) {
   .pay-card h1 {
     font-size: 28px;
     line-height: 36px;
+  }
+
+  .pay-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pay-sub-row {
+    grid-template-columns: 1fr 1fr;
   }
 }
