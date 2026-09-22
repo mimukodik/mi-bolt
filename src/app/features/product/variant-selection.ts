@@ -21,13 +21,8 @@
  *          image id on every variant switch so the gallery always
  *          belongs to the active variant.
  *   AC04 — `computeAddToCartState` returns a disabled reason whenever
- *          the selected variant is out of stock, when the user has
- *          not yet resolved an invalid variant query, or when the
- *          requested quantity exceeds the variant's max.
- *   AC05 — `validateQuantity` preserves the user's explicit selection
- *          (no hidden clamping) and exposes an `overMax` flag the UI
- *          uses to surface a "max N" hint rather than silently
- *          rewriting the quantity.
+ *          the selected variant is out of stock or when the user has
+ *          not yet resolved an invalid variant query.
  *
  * The URL codec (`parseVariantQuery` / `serializeVariantQuery`)
  * belongs here because it is also pure and runs alongside the variant
@@ -38,14 +33,6 @@
 import type { Image } from '../../api/generated/models/image';
 import type { Product } from '../../api/generated/models/product';
 import type { Variant } from '../../api/generated/models/variant';
-
-/**
- * Maximum quantity the cart backend accepts for a single line. The
- * server-side cart-domain clamps every line to this value, regardless
- * of the variant's advertised `maxQuantity` — keep this in sync with
- * `MAX_LINE_QUANTITY` in `src/mocks/cart/cart-domain.ts`.
- */
-export const MAX_LINE_QUANTITY = 5;
 
 /** A (colorCode, storageGb) pair that has no matching variant. */
 export interface DisabledCombination {
@@ -78,16 +65,6 @@ export interface VariantLookup {
 export interface ImagePick {
   readonly image: Image | null;
   readonly index: number;
-}
-
-/** Quantity validation result — never silently clamps. */
-export interface QuantityValidation {
-  /** The user's explicit selection (floored and clamped at zero). */
-  readonly quantity: number;
-  /** True when `quantity` is above the variant's `maxQuantity`. */
-  readonly overMax: boolean;
-  /** True when `quantity` is below one. */
-  readonly belowMin: boolean;
 }
 
 /** Whether the "Add to cart" action is currently usable. */
@@ -248,29 +225,6 @@ export function selectImageFromGallery(
 }
 
 // ---------------------------------------------------------------------------
-// Quantity validation — AC05
-// ---------------------------------------------------------------------------
-
-/**
- * Validates the user's quantity against the selected variant's
- * stock. The function deliberately returns the original `quantity`
- * value (floored and floored to non-negative) even when it is
- * outside the allowed range. AC05 requires the page to *display*
- * the validation (e.g. "max 2") rather than silently rewriting the
- * input — callers render the `overMax` / `belowMin` flags as
- * guidance and leave the explicit value untouched.
- */
-export function validateQuantity(quantity: number, maxQuantity: number): QuantityValidation {
-  const safeMax = Math.max(0, Math.floor(maxQuantity));
-  const safeQty = Math.max(0, Math.floor(quantity));
-  return {
-    quantity: safeQty,
-    overMax: safeQty > safeMax,
-    belowMin: safeQty < 1,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Add-to-cart state — AC04 / AC01
 // ---------------------------------------------------------------------------
 
@@ -283,15 +237,12 @@ export function validateQuantity(quantity: number, maxQuantity: number): Quantit
  *   - `invalidQuery` is non-null (the route pointed at an unknown
  *     variant and the user has not yet confirmed a replacement)
  *   - the variant is `out_of_stock`
- *   - the quantity is below one
- *   - the quantity exceeds the variant's `maxQuantity`
  */
 export function computeAddToCartState(input: {
   readonly variant: Variant | null;
-  readonly quantityValidation: QuantityValidation;
   readonly invalidQuery: string | null;
 }): AddToCartState {
-  const { variant, quantityValidation, invalidQuery } = input;
+  const { variant, invalidQuery } = input;
   if (variant === null) {
     return { enabled: false, reason: 'Válassz variánst a kosárhoz adáshoz.' };
   }
@@ -303,21 +254,6 @@ export function computeAddToCartState(input: {
   }
   if (variant.availability === 'out_of_stock') {
     return { enabled: false, reason: 'Ez a változat jelenleg nem elérhető.' };
-  }
-  if (quantityValidation.belowMin) {
-    return { enabled: false, reason: 'A mennyiségnek legalább 1 darabnak kell lennie.' };
-  }
-  if (quantityValidation.overMax) {
-    // Surface the effective cap (the variant's maxQuantity clamped to the
-    // server-side MAX_LINE_QUANTITY) so the message matches the value the
-    // mock actually accepts. Without this, a fixture advertising
-    // maxQuantity > 5 would tell the user "Maximum 10 darab rendelhető"
-    // and the cart would reject the value as QUANTITY_LIMIT.
-    const effectiveMax = Math.min(variant.maxQuantity, MAX_LINE_QUANTITY);
-    return {
-      enabled: false,
-      reason: `Maximum ${String(effectiveMax)} darab rendelhető ebből a változatból.`,
-    };
   }
   return { enabled: true, reason: null };
 }

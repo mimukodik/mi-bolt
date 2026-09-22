@@ -7,8 +7,7 @@
  *      Every exported function gets at least one assertion. The test
  *      is the unit-level acceptance gate for AC01 (invalid variant
  *      query handling), AC02 (disabled combinations), AC03 (atomic
- *      view-model), AC04 (out-of-stock disable) and AC05 (quantity
- *      retention without hidden clamping).
+ *      view-model) and AC04 (out-of-stock disable).
  *
  *   2. `product.facade.ts` — the route-loading + switchMap
  *      cancellation path. The suite wires the facade through the real
@@ -51,7 +50,6 @@ import {
   selectInitialVariant,
   selectVariantByPair,
   serializeVariantQuery,
-  validateQuantity,
 } from '../../../app/features/product/variant-selection';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
@@ -261,60 +259,12 @@ describe('T15 selectImageFromGallery (AC03)', () => {
   });
 });
 
-describe('T15 validateQuantity (AC05)', () => {
-  it('keeps the explicit selection even when it exceeds maxQuantity', () => {
-    const result = validateQuantity(7, 5);
-    expect(result.quantity).toBe(7);
-    expect(result.overMax).toBe(true);
-    expect(result.belowMin).toBe(false);
-  });
-
-  it('marks zero and negative quantities as belowMin', () => {
-    const zero = validateQuantity(0, 5);
-    expect(zero.quantity).toBe(0);
-    expect(zero.belowMin).toBe(true);
-    expect(zero.overMax).toBe(false);
-
-    const negative = validateQuantity(-2, 5);
-    expect(negative.quantity).toBe(0);
-    expect(negative.belowMin).toBe(true);
-    expect(negative.overMax).toBe(false);
-  });
-
-  it('returns a valid selection untouched when 1 <= qty <= max', () => {
-    const result = validateQuantity(3, 5);
-    expect(result.quantity).toBe(3);
-    expect(result.overMax).toBe(false);
-    expect(result.belowMin).toBe(false);
-  });
-
-  it('flags qty equal to max as within bounds (not overMax)', () => {
-    const result = validateQuantity(5, 5);
-    expect(result.quantity).toBe(5);
-    expect(result.overMax).toBe(false);
-    expect(result.belowMin).toBe(false);
-  });
-
-  it('treats fractional input as the floored integer', () => {
-    const result = validateQuantity(2.9, 5);
-    expect(result.quantity).toBe(2);
-    expect(result.overMax).toBe(false);
-    expect(result.belowMin).toBe(false);
-  });
-
-  it('treats a negative maxQuantity as zero', () => {
-    const result = validateQuantity(1, -1);
-    expect(result.overMax).toBe(true);
-  });
-});
-
 describe('T15 computeAddToCartState (AC01 / AC04)', () => {
   const variant = makeVariant('demo-one-5g-graphite-256', 'graphite', 'Grafit', 256, 339_990);
 
   it('disables when the variant is null', () => {
     const state = computeAddToCartState({
       variant: null,
-      quantityValidation: validateQuantity(1, 5),
       invalidQuery: null,
     });
     expect(state.enabled).toBe(false);
@@ -324,7 +274,6 @@ describe('T15 computeAddToCartState (AC01 / AC04)', () => {
   it('disables when an invalid variant query has not been resolved', () => {
     const state = computeAddToCartState({
       variant,
-      quantityValidation: validateQuantity(1, 5),
       invalidQuery: 'demo-bogus',
     });
     expect(state.enabled).toBe(false);
@@ -335,37 +284,15 @@ describe('T15 computeAddToCartState (AC01 / AC04)', () => {
     const oos = { ...variant, availability: 'out_of_stock' as const };
     const state = computeAddToCartState({
       variant: oos,
-      quantityValidation: validateQuantity(1, 5),
       invalidQuery: null,
     });
     expect(state.enabled).toBe(false);
     expect(state.reason).toMatch(/nem elérhető/i);
   });
 
-  it('disables when quantity is below one', () => {
-    const state = computeAddToCartState({
-      variant,
-      quantityValidation: validateQuantity(0, 5),
-      invalidQuery: null,
-    });
-    expect(state.enabled).toBe(false);
-    expect(state.reason).toMatch(/1 darab/);
-  });
-
-  it('disables when quantity is over the variant max with a max-hint reason', () => {
-    const state = computeAddToCartState({
-      variant,
-      quantityValidation: validateQuantity(7, 5),
-      invalidQuery: null,
-    });
-    expect(state.enabled).toBe(false);
-    expect(state.reason).toMatch(/Maximum 5/);
-  });
-
   it('enables when every gate passes', () => {
     const state = computeAddToCartState({
       variant,
-      quantityValidation: validateQuantity(3, 5),
       invalidQuery: null,
     });
     expect(state.enabled).toBe(true);
@@ -599,7 +526,7 @@ describe('T15 ProductFacade — route loading via the SDK', () => {
   });
 });
 
-describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / selectImage / setQuantity', () => {
+describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / selectImage', () => {
   it('selectVariant switches the atomic state (price, stock, gallery) and resets the gallery index to 0 (AC03)', async () => {
     const product = makeProduct();
     const firstVariant = product.variants[0];
@@ -686,38 +613,6 @@ describe('T15 ProductFacade — selectVariant / selectColor / selectStorage / se
     const vm = facade.vm();
     expect(vm.galleryIndex).toBe(2);
     expect(vm.selectedImage?.id).toBe('img-3');
-  });
-
-  it('setQuantity keeps the explicit selection and surfaces quantityOverMax (AC05)', async () => {
-    const { facade, flushMicrotasks } = buildFacade();
-    facade.load('demo-one-5g', new URLSearchParams());
-    await flushMicrotasks();
-
-    facade.setQuantity(3);
-    let vm = facade.vm();
-    expect(vm.quantity).toBe(3);
-    expect(vm.quantityOverMax).toBe(false);
-    expect(vm.addToCart.enabled).toBe(true);
-
-    // User had 3; the new selected variant allows only 2 -> display
-    // "max 2" rather than silently rewriting the quantity.
-    facade.selectVariant('demo-one-5g-graphite-512');
-    facade.setQuantity(3);
-    vm = facade.vm();
-    expect(vm.selectedVariant?.maxQuantity).toBe(5);
-    // The selected variant still allows 3 -> still valid for maxQuantity 5.
-    // Force an over-max scenario by selecting the variant whose
-    // maxQuantity is 2 via a direct mocked payload: but our fixture is 5.
-    // Instead simulate by hand-crafting the validation through setQuantity
-    // when stock drops: the rule is "store the value, flag overMax".
-    // Direct test of validateQuantity already covers the rule; here we
-    // assert that over-max is visible when it does happen.
-    facade.setQuantity(7);
-    vm = facade.vm();
-    expect(vm.quantity).toBe(7);
-    expect(vm.quantityOverMax).toBe(true);
-    expect(vm.addToCart.enabled).toBe(false);
-    expect(vm.addToCart.reason).toMatch(/Maximum 5/);
   });
 
   it('out-of-stock selection disables add-to-cart (AC04)', async () => {
