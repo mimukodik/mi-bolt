@@ -191,6 +191,10 @@ describe('CatalogToolbar', () => {
       expect(base).toContain('flex-direction: row');
       expect(base).toContain('align-items: flex-end');
       expect(base).toContain('flex-wrap: nowrap');
+      const media = css.indexOf('@media (min-width: 1024px)');
+      const desktop = ruleBody(css, '.toolbar__selects[_ngcontent-%COMP%]', media);
+      expect(desktop).toContain('align-items: center');
+      expect(desktop).toContain('flex-wrap: wrap');
     });
 
     it('each select field takes half of the row below 1024px and its own width from 1024px', () => {
@@ -206,7 +210,16 @@ describe('CatalogToolbar', () => {
           '.toolbar__selects[_ngcontent-%COMP%]   .select-field[_ngcontent-%COMP%]',
           media,
         ),
-      ).toContain('flex: 0 0 auto');
+      ).toContain('flex: 0 1 auto');
+    });
+
+    it('a select value too long for its half of the row ends in an ellipsis', () => {
+      if (!hasStyles(CatalogToolbar)) throw new Error('Expected CatalogToolbar to have styles');
+      const css = CatalogToolbar.ɵcmp.styles.join('\n');
+      const select = ruleBody(css, '.select[_ngcontent-%COMP%]');
+      expect(select).toContain('text-overflow: ellipsis');
+      expect(select).toContain('overflow: hidden');
+      expect(select).toContain('white-space: nowrap');
     });
   });
 });
