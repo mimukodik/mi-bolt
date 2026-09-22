@@ -198,15 +198,13 @@ describe('MobileBuyRail (FIX-50 extraction from product-page.html)', () => {
   it('MIM-216: success non-null renders the success message; error takes precedence when both are set', async () => {
     const { host, root, fixture } = await createHarness();
 
-    host.success.set('Motorola Edge 50 Fusion, Zöld, 256 GB – 1 darab a kosárban.');
+    host.success.set('Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.');
     fixture.detectChanges();
     await fixture.whenStable();
 
     const statusEl = root.querySelector('[data-testid="status-message"]');
     expect(statusEl).not.toBeNull();
-    expect(statusEl?.textContent).toContain(
-      'Motorola Edge 50 Fusion, Zöld, 256 GB – 1 darab a kosárban.',
-    );
+    expect(statusEl?.textContent).toContain('Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.');
 
     host.error.set({
       code: 'UNKNOWN',
@@ -218,17 +216,18 @@ describe('MobileBuyRail (FIX-50 extraction from product-page.html)', () => {
     await fixture.whenStable();
 
     const errorStatusEl = root.querySelector('[data-testid="status-message"]');
+    expect(errorStatusEl).not.toBeNull();
     expect(errorStatusEl?.textContent).toContain(
       'A termék hozzáadása nem sikerült; a kosár változatlan.',
     );
     expect(errorStatusEl?.textContent).not.toContain(
-      'Motorola Edge 50 Fusion, Zöld, 256 GB – 1 darab a kosárban.',
+      'Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.',
     );
   });
 
   it('MIM-216: clicking Bezárás on the success message emits successDismissed once and returns focus to the rail CTA', async () => {
     const { host, root, fixture } = await createHarness();
-    host.success.set('Motorola Edge 50 Fusion, Zöld, 256 GB – 1 darab a kosárban.');
+    host.success.set('Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.');
     fixture.detectChanges();
     await fixture.whenStable();
 

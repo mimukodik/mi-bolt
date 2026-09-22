@@ -365,6 +365,7 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     const message = 'Demo One 5G, Grafit, 128 GB – 1 darab a kosárban.';
     page.addSuccessMessage.set(message);
     fixture.detectChanges();
+    await fixture.whenStable();
 
     const rail = queryElement(root, '[data-testid="purchase-rail"]');
     const railStatus = queryElement(rail, '.rail-status');
@@ -382,6 +383,11 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     await fixture.whenStable();
 
     expect(page.addSuccessMessage()).toBeNull();
+    // Both the rail and the desktop success toasts are driven by the
+    // same `addSuccessMessage` signal, so dismissing either one clears
+    // both — confirm no stale toast survives on the page side.
+    expect(rail.querySelector('[data-testid="status-message"]')).toBeNull();
+    expect(desktopCta.querySelector('[data-testid="status-message"]')).toBeNull();
   });
 
   it('MIM-216: Bezárás on the add-to-cart error banner clears addError through errorDismissed', async () => {
