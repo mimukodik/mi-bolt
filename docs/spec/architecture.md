@@ -49,7 +49,7 @@ No component imports mocks, fixtures, repository, API `HttpClient` directly or a
 | AppConfigFacade | root | getConfig response | config/status | load, retry |
 | CatalogFacade | catalogue route | canonical Router query + listProducts response | query, vm, resultCount | setSearch, setFilters, setSort, setPage, retry |
 | ProductFacade | product route | getProduct + exact variant query | selectedVariant, gallery, vm | selectVariant, selectImage, retry |
-| CartFacade | root | current mock Cart DTO | cart, itemCount, subtotal, pending, error | ensureCart, addItem, setQuantity, removeItem, refresh |
+| CartFacade | root | current mock Cart DTO | cart, itemCount, subtotal, pending, error | ensureCart, addItem, removeItem, refresh |
 | CheckoutFacade | /penztar parent | volatile Signal Form model + checkout API draft + Quote | currentStep, canContinue, quote, submitState | saveContact, saveDelivery, refreshQuote, submit, retryUnknownOutcome |
 | Dialog/Menu | local component/service | opened flag/trigger reference | opened | open, close |
 | MockRepository | each demo tab/test context | domain catalogue/cart/draft/intents/orders/idempotency maps | handlers only | atomic mutation, reset, snapshot |

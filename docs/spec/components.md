@@ -158,21 +158,6 @@ All interactive states additionally require visible hover/focus and native disab
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
 
-### QuantityControl — shared / T10
-
-**Owner:** local presentation.
-
-**Signal inputs:** `value:number; min:number; max:number; disabled:boolean`.
-
-**Outputs:** `quantityChanged:number`.
-
-**Functions:** Accessible decrement/increment/input; validate integer range, announce limit, emit intended absolute value.
-
-**Required states:** default,hover,focus,disabled,invalid,pending.
-
-All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
-
-
 ### AccessibleDialog — shared / T10
 
 **Owner:** local presentation.
