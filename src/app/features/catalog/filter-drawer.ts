@@ -1,4 +1,16 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import type { ElementRef } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  effect,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
 import { ALLOWED_STORAGE_GB, isStorageBucket } from './catalog-query';
@@ -35,10 +47,10 @@ interface StorageBucket {
  * Required states:
  *   - closed       — nothing mounted, focus returns to the trigger.
  *   - open         — drawer visible, focus inside.
- *   - draft-changed— a control was modified; Apply becomes enabled
- *                    only when the draft is valid.
- *   - invalid      — the price range fails the local validation; the
- *                    draft is held but Apply stays disabled.
+ *   - draft-changed— a control was modified; Apply is always active.
+ *   - invalid      — the price range fails the local validation; a
+ *                    click on Apply applies nothing and focuses the
+ *                    invalid price input (owner, 2026-09-22).
  *   - disabled     — the parent disables Apply during a refresh.
  */
 @Component({
@@ -119,7 +131,8 @@ export class FilterDrawer {
   /** The brand list collapses to the first five rows behind a
    *  `Még több gyártó` text link. A brand selected beyond the first
    *  five keeps the list expanded so the chip the user picked stays
-   *  visible. */
+   *  visible. It survives closing and reopening the drawer
+   *  (owner, 2026-09-22). */
   readonly brandsExpanded = signal(false);
 
   /** Brands to render: the first five when collapsed, otherwise the
@@ -161,17 +174,37 @@ export class FilterDrawer {
 
   readonly maxDraft = computed<string>(() => this.draftMax());
 
-  readonly priceError = computed<string | null>(() => {
+  /** Single source of truth for the price validation: the message that
+   *  renders under the fieldset, and which input the error belongs to
+   *  (used by `aria-invalid`/`aria-describedby` and by `focusPrice`).
+   *  Two computeds reading one validation keeps the two outputs from
+   *  drifting apart when the rules change. */
+  private readonly priceValidation = computed<{
+    readonly field: 'min' | 'max' | null;
+    readonly message: string | null;
+  }>(() => {
     const min = this.parsePrice(this.draftMin());
     const max = this.parsePrice(this.draftMax());
-    if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
-    if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    if (min !== null && max !== null && min > max)
-      return 'A minimum nem lehet nagyobb a maximum árnál.';
-    return null;
+    if (min !== null && min < 0) {
+      return { field: 'min', message: 'A minimum ár nem lehet negatív.' };
+    }
+    if (max !== null && max < 0) {
+      return { field: 'max', message: 'A maximum ár nem lehet negatív.' };
+    }
+    if (min !== null && max !== null && min > max) {
+      return { field: 'min', message: 'A minimum nem lehet nagyobb a maximum árnál.' };
+    }
+    return { field: null, message: null };
   });
 
-  readonly canApply = computed<boolean>(() => !this.disabled() && this.priceError() === null);
+  readonly priceError = computed<string | null>(() => this.priceValidation().message);
+
+  /** Which price input the current error belongs to, in page order. */
+  readonly priceInvalidField = computed<'min' | 'max' | null>(() => this.priceValidation().field);
+
+  private readonly minPriceInput = viewChild<ElementRef<HTMLInputElement>>('minPrice');
+  private readonly maxPriceInput = viewChild<ElementRef<HTMLInputElement>>('maxPrice');
+  private readonly injector = inject(Injector);
 
   readonly applyLabel = computed<string>(() =>
     this.disabled() ? 'Alkalmazás…' : 'Szűrők alkalmazása',
@@ -192,7 +225,6 @@ export class FilterDrawer {
       this.draftFiveG.set(a.is5g === true);
       this.draftMin.set(a.minPrice === undefined ? '' : String(a.minPrice));
       this.draftMax.set(a.maxPrice === undefined ? '' : String(a.maxPrice));
-      this.brandsExpanded.set(false);
     });
   }
 
@@ -243,7 +275,12 @@ export class FilterDrawer {
   }
 
   applyDraft(): void {
-    if (!this.canApply()) return;
+    if (this.disabled()) return;
+    const invalid = this.priceInvalidField();
+    if (invalid !== null) {
+      this.focusPrice(invalid);
+      return;
+    }
     const min = this.parsePrice(this.draftMin());
     const max = this.parsePrice(this.draftMax());
     const draft: CatalogQuery = {
@@ -258,6 +295,19 @@ export class FilterDrawer {
     };
     this.filtersChanged.emit(draft);
     this.closed.emit();
+  }
+
+  /** After the next render, focuses the invalid price input with a
+   *  visible ring (WAI forms tutorial: move focus to the first
+   *  invalid field). */
+  private focusPrice(field: 'min' | 'max'): void {
+    afterNextRender(
+      () => {
+        const ref = field === 'min' ? this.minPriceInput() : this.maxPriceInput();
+        ref?.nativeElement.focus({ focusVisible: true });
+      },
+      { injector: this.injector },
+    );
   }
 
   cancelDraft(): void {

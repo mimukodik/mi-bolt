@@ -48,6 +48,7 @@ function queryElement(selector: string): HTMLElement {
   imports: [FilterDrawer, DialogModule],
   template: `<app-filter-drawer
     [applied]="applied()"
+    [disabled]="disabled()"
     [facets]="facets()"
     [opened]="opened()"
     (closed)="onClosed()"
@@ -58,9 +59,11 @@ class HostComponent {
   readonly applied = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
   readonly facets = signal<Facets | null>(null);
   readonly opened = signal(true);
+  readonly disabled = signal(false);
+  readonly emitted: CatalogQuery[] = [];
 
-  onFiltersChanged(_next: CatalogQuery): void {
-    // No-op: the drawer applies the draft through this output.
+  onFiltersChanged(next: CatalogQuery): void {
+    this.emitted.push(next);
   }
 
   onClosed(): void {
@@ -154,7 +157,7 @@ describe('FilterDrawer — facets wire-up', () => {
     expect(max.getAttribute('placeholder')).toBe('699990');
   });
 
-  it('the brand list collapses again when the drawer reopens (MIM-210)', () => {
+  it('the expanded brand list stays expanded when the drawer reopens (owner 2026-09-22)', () => {
     const { fixture, host } = setup();
     host.facets.set({
       brands: [
@@ -185,9 +188,10 @@ describe('FilterDrawer — facets wire-up', () => {
     host.opened.set(true);
     fixture.detectChanges();
 
-    expect(document.body.querySelectorAll('[data-testid="drawer-group-brand"] li').length).toBe(5);
+    expect(document.body.querySelectorAll('[data-testid="drawer-group-brand"] li').length).toBe(7);
     const moreAfter = queryElement('[data-testid="drawer-group-brand"] .more');
-    expect(moreAfter.textContent.trim()).toBe('Még több gyártó');
+    expect(moreAfter.textContent.trim()).toBe('Kevesebb gyártó');
+    expect(moreAfter.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('the "more" toggle label follows the same condition as its aria-expanded (MIM-210)', () => {
@@ -258,5 +262,71 @@ describe('MIM-228: a selected facet row with a zero count stays clickable (drawe
     expect(samsung.disabled).toBe(true);
     expect(black.disabled).toBe(false);
     expect(white.disabled).toBe(true);
+  });
+});
+
+describe('owner 2026-09-22: Szűrők alkalmazása is always active', () => {
+  function applyButton(): HTMLButtonElement {
+    const el = document.body.querySelector('[data-testid="drawer-apply"] button');
+    if (!(el instanceof HTMLButtonElement)) throw new Error('Expected the apply button');
+    return el;
+  }
+
+  function typePrice(testId: string, value: string): void {
+    const input = queryInput(`[data-testid="${testId}"]`);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  it('with min above max the button stays active; a click applies nothing and focuses the min price', async () => {
+    const { fixture, host } = setup();
+    typePrice('drawer-min-price', '5000');
+    typePrice('drawer-max-price', '1000');
+    fixture.detectChanges();
+
+    const min = queryInput('[data-testid="drawer-min-price"]');
+    expect(applyButton().disabled).toBe(false);
+    expect(min.getAttribute('aria-invalid')).toBe('true');
+    expect(min.getAttribute('aria-describedby')).toBe('drawer-price-message');
+    expect(queryInput('[data-testid="drawer-max-price"]').getAttribute('aria-invalid')).toBeNull();
+
+    applyButton().click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.emitted.length).toBe(0);
+    expect(document.activeElement).toBe(min);
+  });
+
+  it('a negative max marks and focuses the max price', async () => {
+    const { fixture } = setup();
+    typePrice('drawer-max-price', '-1');
+    fixture.detectChanges();
+
+    applyButton().click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const max = queryInput('[data-testid="drawer-max-price"]');
+    expect(max.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(max);
+  });
+
+  it('the button is disabled only while the parent refreshes', () => {
+    const { fixture, host } = setup();
+    expect(applyButton().disabled).toBe(false);
+    host.disabled.set(true);
+    fixture.detectChanges();
+    expect(applyButton().disabled).toBe(true);
+  });
+
+  it('a valid draft still applies once', () => {
+    const { fixture, host } = setup();
+    typePrice('drawer-min-price', '1000');
+    fixture.detectChanges();
+    applyButton().click();
+    fixture.detectChanges();
+    expect(host.emitted.length).toBe(1);
+    expect(host.emitted[0]?.minPrice).toBe(1000);
   });
 });
