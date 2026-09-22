@@ -681,6 +681,45 @@ describe('MIM-254: blurring an empty required field marks it invalid', () => {
 
     expect(input.getAttribute('aria-invalid')).toBe('true');
   });
+
+  it('blurring the e-mail input flips its aria-invalid to "true"', () => {
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    const root = getRootElement(fixture);
+    const input = root.querySelector<HTMLInputElement>('#contact-email-input');
+    if (input === null) throw new Error('Expected email input');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+
+    input.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('blurring the phone input flips its aria-invalid to "true"', () => {
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    const root = getRootElement(fixture);
+    const input = root.querySelector<HTMLInputElement>('#contact-phone-input');
+    if (input === null) throw new Error('Expected phone input');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+
+    input.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('blurring one empty field marks only that field', () => {
+    const { fixture } = createContactStep(EMPTY_CONTACT);
+    const root = getRootElement(fixture);
+    const email = root.querySelector<HTMLInputElement>('#contact-email-input');
+    if (email === null) throw new Error('Expected email input');
+
+    email.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(root.querySelector('#contact-fullname-input')?.getAttribute('aria-invalid')).toBeNull();
+    expect(root.querySelector('#contact-phone-input')?.getAttribute('aria-invalid')).toBeNull();
+  });
 });
 
 describe('MIM-254: submitting marks every empty required field invalid', () => {

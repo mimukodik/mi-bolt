@@ -71,6 +71,39 @@ describe('MIM-254: blurring an empty required field marks it invalid', () => {
 
     expect(postalCodeInput.getAttribute('aria-invalid')).toBe('true');
   });
+
+  it('blurring the city input flips its aria-invalid to "true"', () => {
+    const fixture = createFixture();
+    const root = getRootElement(fixture);
+    const cityInput = getInputElement(root, 'address-input-city');
+
+    cityInput.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cityInput.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('blurring the street input flips its aria-invalid to "true"', () => {
+    const fixture = createFixture();
+    const root = getRootElement(fixture);
+    const line1Input = getInputElement(root, 'address-input-line1');
+
+    line1Input.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(line1Input.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('blurring the empty optional second line leaves it valid', () => {
+    const fixture = createFixture();
+    const root = getRootElement(fixture);
+    const line2Input = getInputElement(root, 'address-input-line2');
+
+    line2Input.dispatchEvent(new Event('blur', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(line2Input.getAttribute('aria-invalid')).toBe('false');
+  });
 });
 
 describe('MIM-254: submitting marks every empty required field invalid', () => {
