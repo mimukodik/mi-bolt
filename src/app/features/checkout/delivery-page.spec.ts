@@ -396,10 +396,8 @@ describe('DP-05..DP-06 initial model from session', () => {
     expect(fields.address.line1().value()).toBe('Fő utca 1.');
     expect(fields.paymentMethod().value()).toBe('card');
     expect(fields.billingName().value()).toBe('Teszt Elek Billing');
-    // The session carries a saved billing section, so the
-    // billing-same-as-delivery checkbox starts unchecked (§6.2's
-    // deliberate "we cannot assume the saved billing address
-    // still matches" rule).
+    // The saved billing address (Debrecen) differs from the saved
+    // delivery address (Budapest), so the checkbox starts unchecked.
     expect(fields.billingSameAsDelivery().value()).toBe(false);
   });
 
@@ -413,6 +411,48 @@ describe('DP-05..DP-06 initial model from session', () => {
     // No saved billing section → the billing-same-as-delivery checkbox
     // stays at its initial-model default of true.
     expect(fields.billingSameAsDelivery().value()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DP-13..DP-14 — the same-as-delivery tick comes back from the saved session
+// ---------------------------------------------------------------------------
+
+describe('DP-13..DP-14 same-as-delivery tick from the saved session', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('DP-13 a saved billing address equal to the saved home-delivery address restores the tick', async () => {
+    const fixture = await createWithSession({
+      ...buildFullSession(),
+      billing: { name: 'Teszt Elek Billing', address: { ...SAVED_ADDRESS } },
+    });
+
+    const { fields } = fixture.componentInstance;
+    expect(fields.billingSameAsDelivery().value()).toBe(true);
+    const root = getRootElement(fixture);
+    const checkbox = queryOne(root, '[data-testid="billing-same-as-delivery"]');
+    if (!(checkbox instanceof HTMLInputElement))
+      throw new Error('Expected the same-as-delivery checkbox');
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it('DP-14 pin: a saved billing section with a pickup-point delivery keeps the tick off and the saved billing address', async () => {
+    // A pin, not a red-first test: the pickup variant carries no address,
+    // so the home-delivery check in buildInitialModel is enforced by the
+    // type system and the tick was off here before the change too. It
+    // guards against a later rewrite that ticks the box without a
+    // delivery address to compare.
+    const fixture = await createWithSession({
+      ...buildFullSession(),
+      delivery: { optionId: 'pickup_point' },
+      billing: { name: 'Teszt Elek Billing', address: { ...SAVED_ADDRESS } },
+    });
+
+    const { fields } = fixture.componentInstance;
+    expect(fields.billingSameAsDelivery().value()).toBe(false);
+    expect(fields.billingAddress.postalCode().value()).toBe('1051');
   });
 });
 

@@ -183,9 +183,10 @@ export class DeliveryPage {
    *  synchronously here. The billing name defaults to the contact
    *  step's `fullName` when nothing was saved yet (§6.2's "prefilled,
    *  editable"); once a billing section exists, its own saved values
-   *  win and the "same as delivery" checkbox defaults to unchecked,
-   *  since the saved billing address cannot be assumed to still match
-   *  the delivery address without comparing every field. */
+   *  win, and the "same as delivery" checkbox is ticked exactly when
+   *  the saved delivery is home delivery and the saved billing address
+   *  equals it field by field (owner, 2026-09-22: the tick is restored
+   *  from the saved data). */
   private buildInitialModel(): CheckoutFormModel {
     const model = createInitialCheckoutFormModel();
     const session = this.checkoutFacade.session();
@@ -214,7 +215,9 @@ export class DeliveryPage {
     if (billing !== undefined) {
       model.billingName = billing.name;
       model.billingAddress = mergeAddress(model.billingAddress, billing.address);
-      model.billingSameAsDelivery = false;
+      const homeAddress = delivery?.optionId === 'home_delivery' ? delivery.address : undefined;
+      model.billingSameAsDelivery =
+        homeAddress !== undefined && sameAddress(billing.address, homeAddress);
     }
 
     return model;
@@ -229,6 +232,17 @@ function mergeAddress(base: CheckoutFormAddress, wire: Address): CheckoutFormAdd
     line1: wire.line1,
     line2: wire.line2 ?? base.line2,
   };
+}
+
+/** Whether two wire addresses name the same place, field by field; a
+ *  missing `line2` equals an empty one. */
+function sameAddress(a: Address, b: Address): boolean {
+  return (
+    a.postalCode === b.postalCode &&
+    a.city === b.city &&
+    a.line1 === b.line1 &&
+    (a.line2 ?? '') === (b.line2 ?? '')
+  );
 }
 
 function toWireAddress(address: CheckoutFormAddress): Address {
