@@ -507,7 +507,11 @@ describe('ST-01 the conflict state renders its fixed sentence and a retry contro
     fixture.componentInstance.retryRequested.subscribe(() => (retryCount += 1));
 
     const root = getRootElement(fixture);
-    const status = getElement(root, '[data-testid="status-message"]');
+    // Scope to `review-status`: MIM-240b1 added another status message
+    // primitive on the page (the demo notice), so a root-wide query
+    // now picks up two elements instead of one.
+    const statusRow = getElement(root, '[data-testid="review-status"]');
+    const status = getElement(statusRow, '[data-testid="status-message"]');
     expect(status.textContent).toBe(
       'Az adatok időközben megváltoztak. Ellenőrizd és próbáld újra.',
     );
@@ -527,24 +531,24 @@ describe('ST-02 the stock-error and error states each render their own fixed sen
   it('renders each sentence and no control inside the status row', () => {
     const stockFixture = createFixture({ state: 'stock-error' });
     const stockRoot = getRootElement(stockFixture);
-    const stockMessages = stockRoot.querySelectorAll('[data-testid="status-message"]');
+    // MIM-240b1: scope to the status row; the demo notice is another
+    // status-message primitive on the page now.
+    const stockRow = getElement(stockRoot, '[data-testid="review-status"]');
+    const stockMessages = stockRow.querySelectorAll('[data-testid="status-message"]');
     expect(stockMessages.length).toBe(1);
     expect(stockMessages[0].textContent).toBe(
       'Egy vagy több változat elfogyott. Visszavonulhatsz a kosárhoz a cikk korrigálásához.',
     );
-    expect(
-      getElement(stockRoot, '[data-testid="review-status"]').querySelectorAll('app-button').length,
-    ).toBe(0);
+    expect(stockRow.querySelectorAll('app-button').length).toBe(0);
 
     TestBed.resetTestingModule();
     const errorFixture = createFixture({ state: 'error' });
     const errorRoot = getRootElement(errorFixture);
-    const errorMessages = errorRoot.querySelectorAll('[data-testid="status-message"]');
+    const errorRow = getElement(errorRoot, '[data-testid="review-status"]');
+    const errorMessages = errorRow.querySelectorAll('[data-testid="status-message"]');
     expect(errorMessages.length).toBe(1);
     expect(errorMessages[0].textContent).toBe('A rendelés leadása nem sikerült.');
-    expect(
-      getElement(errorRoot, '[data-testid="review-status"]').querySelectorAll('app-button').length,
-    ).toBe(0);
+    expect(errorRow.querySelectorAll('app-button').length).toBe(0);
   });
 });
 

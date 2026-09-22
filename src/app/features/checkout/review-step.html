@@ -9,15 +9,12 @@
     >
       Minden rendben?
     </h1>
-    <p
-      class="demo-notice m-0 py-(--space-3) px-(--space-4) bg-(--color-brand-accent-soft) border border-(--color-brand-ink) rounded-(--radius-card) text-(length:--type-helper) leading-(--line-height-body)"
+    <app-status-message
       data-testid="review-demo-notice"
-      role="note"
-    >
-      <strong>Demó pénztár.</strong>
-      A rendelés leadása nem küld valódi megrendelést, nem indít valódi fizetést, és nem küld
-      e-mailt. Az adatok a böngésző memóriájában maradnak.
-    </p>
+      severity="info"
+      [message]="demoNoticeMessage"
+      [persistent]="true"
+    />
   </app-checkout-step-header>
 
   <div

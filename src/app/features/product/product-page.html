@@ -68,22 +68,6 @@
               [variants]="variants()"
               (variantSelected)="onVariantSelected($event)"
             />
-
-            <div class="quantity flex flex-col gap-2">
-              <span aria-hidden="true" class="qty-label m-0">Darabszám</span>
-              <app-quantity-control
-                label="Darabszám"
-                [max]="maxQuantity()"
-                [min]="1"
-                [value]="quantity()"
-                (quantityChanged)="onQuantityChanged($event)"
-              />
-              @if (quantityOverMax()) {
-                <p class="hint hint--error m-0" role="status">
-                  Maximum {{ maxQuantity() }} darab rendelhető ebből a változatból.
-                </p>
-              }
-            </div>
           </div>
 
           <div class="buy flex flex-col min-w-0">
@@ -114,7 +98,6 @@
                   <app-add-to-cart
                     [error]="addError()"
                     [pending]="addPending()"
-                    [quantity]="quantity()"
                     [variant]="addableVariant()"
                     (addRequested)="onAddRequested($event)"
                     (errorDismissed)="addError.set(null)"

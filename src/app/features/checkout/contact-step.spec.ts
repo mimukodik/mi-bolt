@@ -415,6 +415,28 @@ describe('T20-AC03 demo notice, no marketing, no account affordance', () => {
     expect(text.includes('create account')).toBe(false);
     expect(text.includes('regisztráció')).toBe(false);
   });
+
+  // MIM-240b1: the notice is now `app-status-message` with the primitive's
+  // own message string and `[persistent]` true, so the dismiss button is
+  // hidden. The data-testid stays on the primitive's host so existing
+  // queries keep working.
+  it('renders the exact message string the primitive carries (MIM-240b1)', () => {
+    const { fixture } = createContactStep();
+    const root = getRootElement(fixture);
+    const demoNotice = root.querySelector('[data-testid="contact-demo-notice"]');
+    expect(demoNotice).not.toBeNull();
+    expect(demoNotice?.textContent.trim()).toBe(
+      'Demó pénztár. Kérlek, ne használj valós személyes adatokat — ez egy működési bemutató, nem küldünk valódi rendelést vagy e-mailt.',
+    );
+  });
+
+  it('renders no "Bezárás" dismiss button because the primitive is persistent (MIM-240b1)', () => {
+    const { fixture } = createContactStep();
+    const root = getRootElement(fixture);
+    const demoNotice = root.querySelector('[data-testid="contact-demo-notice"]');
+    expect(demoNotice).not.toBeNull();
+    expect(demoNotice?.textContent ?? '').not.toContain('Bezárás');
+  });
 });
 
 // ---------------------------------------------------------------------------

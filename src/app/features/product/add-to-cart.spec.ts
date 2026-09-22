@@ -67,7 +67,7 @@ function registerComponentMetadata(
 }
 
 registerComponentMetadata(AddToCart, {
-  inputs: ['variant', 'quantity', 'pending', 'error'],
+  inputs: ['variant', 'pending', 'error'],
   outputs: ['addRequested', 'errorDismissed'],
 });
 registerComponentMetadata(Button, {
@@ -104,7 +104,6 @@ beforeAll(async () => {
     <app-add-to-cart
       [error]="error()"
       [pending]="pending()"
-      [quantity]="quantity()"
       [variant]="variant()"
       (addRequested)="onAddRequested($event)"
       (errorDismissed)="onErrorDismissed()"
@@ -113,7 +112,6 @@ beforeAll(async () => {
 })
 class TestHostComponent {
   readonly variant = signal<Variant | null>(sampleVariant);
-  readonly quantity = signal<number>(2);
   readonly pending = signal<boolean>(false);
   readonly error = signal<UiProblem | null>(null);
   readonly requests: { variantId: string; quantity: number }[] = [];
@@ -185,7 +183,7 @@ describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
     expect(host.requests.length).toBe(0);
   });
 
-  it('with a variant, a click emits exactly one addRequested carrying that variant id and the quantity input', async () => {
+  it('with a variant, a click emits exactly one addRequested carrying that variant id', async () => {
     const { host, root, fixture } = await createHarness();
 
     const button = queryButton(root, '[data-testid="add-to-cart-button"] button');
@@ -194,7 +192,7 @@ describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
     fixture.detectChanges();
 
     expect(host.requests.length).toBe(1);
-    expect(host.requests[0]).toEqual({ variantId: 'demo-one-5g-graphite-256', quantity: 2 });
+    expect(host.requests[0]).toEqual({ variantId: 'demo-one-5g-graphite-256', quantity: 1 });
   });
 
   it('with pending true the control shows its in-flight label and a second click emits nothing', async () => {

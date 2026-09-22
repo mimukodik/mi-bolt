@@ -847,7 +847,7 @@
       "src/app/features/product/variant-selection.ts",
       "src/app/features/product/variant-selection.spec.ts"
     ],
-    "interface": "ProductFacade.vm: Signal<ProductVm>; selectVariant(id), selectImage(id), setQuantity(n), retry.",
+    "interface": "ProductFacade.vm: Signal<ProductVm>; selectVariant(id), selectImage(id), retry.",
     "deliverable": "Variant selection with atomic price/stock/image state.",
     "acceptanceCriteria": [
       {
@@ -868,7 +868,7 @@
       },
       {
         "id": "T15-AC05",
-        "text": "Quantity retains only a valid explicit selection; display validation rather than hidden clamping when variant stock becomes insufficient."
+        "text": "The product page selects no quantity; every add requests exactly one piece, and quantity is changed afterwards on the cart line."
       }
     ],
     "commonAcceptanceCriteria": [
