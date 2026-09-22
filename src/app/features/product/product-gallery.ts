@@ -21,8 +21,9 @@ import type { Image } from '../../api/generated/models/image';
  * thumbnail, or pressing the arrow keys on the keyboard.
  *
  * Required states:
- * - default     — the active image is on screen, the count reads
- *     "current / total", the prev/next buttons are visible.
+ * - default     — the active image is on screen; with two or more
+ *     images the count reads "current / total" and the prev/next
+ *     buttons are visible, with one image neither is rendered.
  * - zoom-open   — the active image is mounted inside an
  *     AccessibleDialog with role=dialog and a CDK-managed focus trap.
  *     Escape and the dialog's close button both close it.
@@ -95,6 +96,11 @@ export class ProductGallery {
     return this.effectiveIndex() < list.length - 1;
   });
 
+  /** Prev/next and the "current / total" counter only when there is
+   *  somewhere to go: a single photo gets neither (MIM-233, owner
+   *  2026-09-22). */
+  readonly hasSeveral = computed(() => this.images().length > 1);
+
   constructor() {
     // Clear the stale image-load flag whenever the active image
     // changes (variant switch or a new selection), so a fallback
@@ -156,11 +162,13 @@ export class ProductGallery {
       event.preventDefault();
       this.closeZoom();
     } else if (event.key === 'Home' && list.length > 0) {
+      // Home and End never scroll the page from the gallery; with one
+      // image there is nothing to move to, so nothing is emitted.
       event.preventDefault();
-      this.imageSelected.emit(list[0].id);
+      if (this.hasSeveral()) this.imageSelected.emit(list[0].id);
     } else if (event.key === 'End' && list.length > 0) {
       event.preventDefault();
-      this.imageSelected.emit(list[list.length - 1].id);
+      if (this.hasSeveral()) this.imageSelected.emit(list[list.length - 1].id);
     }
   }
 

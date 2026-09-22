@@ -6,16 +6,18 @@
   (keydown)="onKeydown($event)"
 >
   <div aria-label="Termékképek" class="frame" data-testid="gallery-main" tabindex="0">
-    <button
-      aria-label="Előző kép"
-      class="step step--prev"
-      data-testid="gallery-prev"
-      type="button"
-      [disabled]="!canPrev()"
-      (click)="prev()"
-    >
-      ‹
-    </button>
+    @if (hasSeveral()) {
+      <button
+        aria-label="Előző kép"
+        class="step step--prev"
+        data-testid="gallery-prev"
+        type="button"
+        [disabled]="!canPrev()"
+        (click)="prev()"
+      >
+        ‹
+      </button>
+    }
     @if (activeImage(); as img) {
       <app-product-image
         aspectRatio="4 / 3"
@@ -24,16 +26,18 @@
         (loadFailed)="onImageFailed()"
       />
     }
-    <button
-      aria-label="Következő kép"
-      class="step step--next"
-      data-testid="gallery-next"
-      type="button"
-      [disabled]="!canNext()"
-      (click)="next()"
-    >
-      ›
-    </button>
+    @if (hasSeveral()) {
+      <button
+        aria-label="Következő kép"
+        class="step step--next"
+        data-testid="gallery-next"
+        type="button"
+        [disabled]="!canNext()"
+        (click)="next()"
+      >
+        ›
+      </button>
+    }
     <button
       aria-label="Kép nagyítása"
       class="zoom"
@@ -54,9 +58,11 @@
         />
       </svg>
     </button>
-    <p aria-live="polite" class="count" data-testid="gallery-count">
-      {{ activePosition() }} / {{ images().length }}
-    </p>
+    @if (hasSeveral()) {
+      <p aria-live="polite" class="count" data-testid="gallery-count">
+        {{ activePosition() }} / {{ images().length }}
+      </p>
+    }
     @if (idUnresolved()) {
       <p class="image-error" data-testid="gallery-image-error" role="status">
         A kiválasztott kép nem található; az első kép látható helyette.
