@@ -181,8 +181,17 @@ const handlers = [
     return HttpResponse.json(MINIMAL_PAYMENT_INTENT);
   }),
   http.post(`${BASE_URL}/payment-intents/:paymentIntentId/outcome`, async ({ request }) => {
-    capture(request, await request.text());
-    return HttpResponse.json(MINIMAL_PAYMENT_INTENT);
+    const bodyText = await request.text();
+    capture(request, bodyText);
+    // The contract says the response carries the resolved status (succeeded /
+    // declined / pending). Reflect the caller's outcome so a contract suite
+    // exercising resolvePaymentIntent sees the post-resolution PaymentIntent.
+    const outcome = (JSON.parse(bodyText) as { outcome?: string }).outcome ?? 'requires_action';
+    const status =
+      outcome === 'succeeded' || outcome === 'declined' || outcome === 'pending'
+        ? outcome
+        : 'requires_action';
+    return HttpResponse.json({ ...MINIMAL_PAYMENT_INTENT, status });
   }),
   http.post(`${BASE_URL}/orders`, async ({ request }) => {
     capture(request, await request.text());
@@ -252,7 +261,12 @@ function MINIMAL_CART(version: number): Cart {
 function MINIMAL_CHECKOUT(version: number): Record<string, unknown> {
   return {
     version,
-    sections: { contact: null, billing: null, delivery: null, payment: null },
+    summary: {
+      subtotal: { amount: 0, currency: 'HUF' },
+      shippingFee: { amount: 0, currency: 'HUF' },
+      paymentFee: { amount: 0, currency: 'HUF' },
+      total: { amount: 0, currency: 'HUF' },
+    },
     complete: false,
   };
 }
@@ -385,7 +399,7 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
     await callOperation(
       api,
       'createPaymentIntent',
-      { 'Idempotency-Key': 'idem-pi-001', body: { method: 'card' } },
+      { 'Idempotency-Key': 'idem-pi-001' },
       withIfMatch('1'),
     );
     await callOperation(api, 'getPaymentIntent', { paymentIntentId: 'pi-001' });
@@ -542,6 +556,24 @@ describe('T04-AC05 Idempotency-Key is passed by the createOrder caller', () => {
     });
     expect(call, 'POST /api/v1/orders never reached MSW').toBeDefined();
     expect(call!.headers.get('Idempotency-Key')).toBe('idem-contract-001');
+    expect(call!.headers.get('If-Match')).toBe('"1"');
+  });
+
+  it('createPaymentIntent carries the Idempotency-Key header value the caller supplied', async () => {
+    const { api } = makeSdk();
+    await callOperation(
+      api,
+      'createPaymentIntent',
+      { 'Idempotency-Key': 'idem-contract-002' },
+      withIfMatch('1'),
+    );
+
+    const call = [...captures.values()].find((c) => {
+      const u = new URL(c.url);
+      return c.method === 'POST' && u.pathname === '/api/v1/payment-intents';
+    });
+    expect(call, 'POST /api/v1/payment-intents never reached MSW').toBeDefined();
+    expect(call!.headers.get('Idempotency-Key')).toBe('idem-contract-002');
     expect(call!.headers.get('If-Match')).toBe('"1"');
   });
 });
