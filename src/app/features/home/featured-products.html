@@ -7,9 +7,15 @@
     <header
       class="featured__header flex flex-col gap-2 min-[720px]:flex-row min-[720px]:items-baseline min-[720px]:justify-between"
     >
-      <h2 class="featured__title" id="featured-heading">Készülékek, amiket érdemes megnézni</h2>
-      <a class="featured__all-link" data-testid="featured-all-link" routerLink="/telefonok"
-        >Minden telefon</a
+      <div class="featured__heading flex flex-col gap-1">
+        <h2 class="featured__title" id="featured-heading">Készülékek</h2>
+        <p class="featured__lead">Válassz kiemelt készülékeink közül</p>
+      </div>
+      <a
+        class="featured__all-link inline-flex min-h-12 min-w-12 items-center justify-center self-start no-underline"
+        data-testid="featured-all-link"
+        routerLink="/telefonok"
+        >Összes telefon</a
       >
     </header>
     @if (allErrored()) {
@@ -55,42 +61,8 @@
           }
         } @else {
           @for (item of items(); track item.variantId) {
-            <li
-              class="featured__card flex flex-col overflow-hidden"
-              [attr.data-testid]="`featured-card-${item.slug}`"
-            >
-              <a
-                class="featured__media"
-                [attr.aria-label]="`${item.name} — részletek`"
-                [queryParams]="{ variant: item.variantId }"
-                [routerLink]="['/telefonok', item.slug]"
-              >
-                <span class="featured__tag">DEMÓTERMÉK</span>
-                <div class="featured__image block overflow-hidden">
-                  <app-product-image
-                    aspectRatio="4 / 5"
-                    [decorative]="true"
-                    [eager]="$first"
-                    [image]="item.image"
-                    [productName]="item.name"
-                  />
-                </div>
-              </a>
-              <div class="featured__body flex flex-col gap-2 p-5">
-                <p class="featured__brand">{{ item.brand }}</p>
-                <h3 class="featured__name">{{ item.name }}</h3>
-                <p class="featured__price" data-testid="price-amount">
-                  <span class="featured__price-amount">{{ formatPrice(item.price) }}</span>
-                  <span aria-hidden="true" class="featured__price-currency">Ft</span>
-                </p>
-                <a
-                  class="featured__details mt-2 inline-flex min-h-12 min-w-12 items-center justify-center self-start no-underline"
-                  [attr.data-testid]="`featured-details-${item.slug}`"
-                  [queryParams]="{ variant: item.variantId }"
-                  [routerLink]="['/telefonok', item.slug]"
-                  >Részletek</a
-                >
-              </div>
+            <li class="featured__card" [attr.data-testid]="`featured-card-${item.slug}`">
+              <app-product-card [eager]="$first" [product]="item" />
             </li>
           }
         }

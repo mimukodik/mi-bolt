@@ -150,4 +150,4 @@ flowchart LR
   O01 -. "only when approved" .-> T29
 ```
 
-A gráf interaktívan is megnyitható az [áttekintő riportban](../index.html#tasks). A topológiai hullám nem időbecslés és önmagában nem engedély párhuzamos fájlmódosításra. Közös fájl vagy még nem rögzített interfész esetén soros integráció szükséges.
+A topológiai hullám nem időbecslés és önmagában nem engedély párhuzamos fájlmódosításra. Közös fájl vagy még nem rögzített interfész esetén soros integráció szükséges.

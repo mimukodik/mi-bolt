@@ -53,6 +53,17 @@
                   "with": "src/environments/environment.development.ts"
                 }
               ]
+            },
+            "local-backend": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local-backend.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -66,6 +77,10 @@
             },
             "development": {
               "buildTarget": "mi-bolt:build:development"
+            },
+            "local-backend": {
+              "buildTarget": "mi-bolt:build:local-backend",
+              "proxyConfig": "proxy.local-backend.conf.json"
             }
           },
           "defaultConfiguration": "development"
@@ -97,6 +112,7 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
+            "eslintConfig": "eslint.config.mjs",
             "lintFilePatterns": [
               "src/**/*.ts",
               "src/**/*.html",
@@ -180,7 +196,7 @@
               "projects/demo-payment/**/*.ts",
               "projects/demo-payment/**/*.html"
             ],
-            "eslintConfig": "eslint.config.js"
+            "eslintConfig": "eslint.config.mjs"
           }
         }
       }

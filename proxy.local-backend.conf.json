@@ -1,0 +1,11 @@
+{
+  "/api": {
+    "target": "http://localhost:8080",
+    "secure": false
+  },
+  "/demo-fizetes": {
+    "target": "http://localhost:4210",
+    "secure": false,
+    "ws": true
+  }
+}

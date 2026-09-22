@@ -57,7 +57,7 @@ export default defineConfig([
     ],
   },
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'projects/**/*.ts'],
     extends: [
       eslint.configs.recommended,
       tseslint.configs.strictTypeChecked,
@@ -79,7 +79,7 @@ export default defineConfig([
         'error',
         {
           type: 'attribute',
-          prefix: 'app',
+          prefix: ['app', 'pay'],
           style: 'camelCase',
         },
       ],
@@ -87,7 +87,7 @@ export default defineConfig([
         'error',
         {
           type: 'element',
-          prefix: 'app',
+          prefix: ['app', 'pay'],
           style: 'kebab-case',
         },
       ],
@@ -114,6 +114,9 @@ export default defineConfig([
       // pattern above, and the brief said to keep that pattern rather
       // than replace it.
       'unused-imports/no-unused-imports': 'error',
+      // An Angular component or layout with a template and no members is an
+      // empty class by design; the decorator is the exemption (MIM-220).
+      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       // Type-aware rules ported from example-eslint.config.mjs. These
       // live only in this src/**/*.ts block (which has `projectService`)
       // and are deliberately NOT added to the tests/**/*.ts block below:
@@ -157,7 +160,7 @@ export default defineConfig([
     // to this app's two TypeScript trees (there are no .tsx/.js/.jsx
     // source files here). The Nx-only `@nx/enforce-module-boundaries` rule
     // from that block is dropped entirely: this is not an Nx workspace.
-    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    files: ['src/**/*.ts', 'projects/**/*.ts', 'tests/**/*.ts'],
     rules: {
       '@typescript-eslint/consistent-type-imports': [
         'error',
@@ -339,7 +342,7 @@ export default defineConfig([
     // templates, and a repo-wide glob sent the Angular template parser
     // into a multi-minute stall on docs/index.html (654 KB) during the
     // MIM-209 inventory run.
-    files: ['src/**/*.html'],
+    files: ['src/**/*.html', 'projects/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {
       // Disallow the legacy `*ngIf` / `*ngFor` / `*ngSwitch` structural

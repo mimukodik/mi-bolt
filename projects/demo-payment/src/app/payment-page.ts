@@ -15,7 +15,6 @@ import { CurrencyPipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
-  ElementRef,
   InjectionToken,
   computed,
   effect,
@@ -24,7 +23,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { OnInit } from '@angular/core';
+import type { OnInit, ElementRef } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { Api } from '@mi-bolt/api/api';
