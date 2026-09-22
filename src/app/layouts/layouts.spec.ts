@@ -195,7 +195,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     const has1 = text.includes('Mobiltelefonok');
     expect(has1).toBe(true);
     expect(text.includes('A demóról')).toBe(false);
-    expect(nav?.querySelectorAll('a').length).toBe(1);
+    expect(nav?.querySelectorAll('a').length ?? 0).toBe(1);
   });
 
   it('MarketingLayout renders the single-bar footer with the demo-explainer CTA', () => {
