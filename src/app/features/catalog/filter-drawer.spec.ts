@@ -261,7 +261,7 @@ describe('MIM-228: busy input keeps the facet rows stable', () => {
         document.body.querySelector(`[data-testid="drawer-color-${color.value}"]`),
       ).not.toBeNull();
       const chip = document.body.querySelector(`[data-testid="drawer-color-${color.value}"]`);
-      expect(chip?.querySelector('.option__count')).toBeNull();
+      expect(chip?.querySelector('.color-chip__count')).toBeNull();
       expect(chip?.querySelector('.count-skeleton')).not.toBeNull();
     }
   });
@@ -280,5 +280,166 @@ describe('MIM-228: busy input keeps the facet rows stable', () => {
     expect(colorList?.querySelectorAll('li').length).toBe(1);
     expect(colorList?.querySelectorAll('li.row-skeleton').length).toBe(1);
     expect(colorList?.querySelectorAll('button.color-chip').length).toBe(0);
+  });
+});
+
+describe('MIM-228-fix3: drawer scroll preservation', () => {
+  let scrollCalls: { x: number; y: number }[];
+
+  beforeEach(() => {
+    // Stub the two timing / scroll primitives the drawer's scroll
+    // preservation reaches for: `setTimeout` (the close restore waits
+    // 100 ms) and `window.scrollTo` (the restore writes directly to
+    // the window, which jsdom does not move).
+    vi.useFakeTimers();
+    Object.defineProperty(window, 'scrollY', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+    scrollCalls = [];
+    vi.spyOn(window, 'scrollTo').mockImplementation((x: number, y: number) => {
+      scrollCalls.push({ x, y });
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('the close restore writes the highest scrollY seen, not the last', () => {
+    const { host, fixture } = setup();
+    // The constructor attaches the scroll listener and seeds
+    // `preservedWindowY` from `window.scrollY` (0 in jsdom); from
+    // there the listener only moves the mark upward.
+
+    Object.defineProperty(window, 'scrollY', {
+      value: 100,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('scroll'));
+
+    Object.defineProperty(window, 'scrollY', {
+      value: 200,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('scroll'));
+
+    Object.defineProperty(window, 'scrollY', {
+      value: 300,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('scroll'));
+
+    // Decreases must NOT lower the captured high-water mark.
+    Object.defineProperty(window, 'scrollY', {
+      value: 250,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('scroll'));
+
+    Object.defineProperty(window, 'scrollY', {
+      value: 150,
+      writable: true,
+      configurable: true,
+    });
+    window.dispatchEvent(new Event('scroll'));
+
+    host.opened.set(false);
+    // Flush the close-restore effect so its 100 ms timer is queued.
+    fixture.detectChanges();
+    vi.advanceTimersByTime(100);
+
+    expect(scrollCalls).toEqual([{ x: 0, y: 300 }]);
+  });
+
+  it('the close restore defers window.scrollTo through setTimeout(100)', () => {
+    const { host, fixture } = setup();
+    const setTimeoutSpy = vi.spyOn(window, 'setTimeout');
+
+    host.opened.set(false);
+    fixture.detectChanges();
+
+    // The close effect scheduled a 100 ms timer.
+    const callsWith100 = setTimeoutSpy.mock.calls.filter((args) => args[1] === 100);
+    expect(callsWith100.length).toBeGreaterThanOrEqual(1);
+    // No scrollTo has run yet — the restore is deferred.
+    expect(scrollCalls).toEqual([]);
+
+    vi.advanceTimersByTime(100);
+
+    expect(scrollCalls).toEqual([{ x: 0, y: 0 }]);
+  });
+
+  it('afterToggle captures form.scrollTop and window.scrollY and restores them', () => {
+    const { fixture } = setup();
+    const form = document.body.querySelector('form.drawer');
+    expect(form).not.toBeNull();
+    if (!(form instanceof HTMLElement)) return;
+
+    Object.defineProperty(form, 'scrollTop', {
+      value: 42,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'scrollY', {
+      value: 99,
+      writable: true,
+      configurable: true,
+    });
+
+    const button = document.body.querySelector('[data-testid="drawer-is5g"]');
+    expect(button).not.toBeNull();
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.click();
+    fixture.detectChanges();
+
+    // The schedule hasn't fired yet.
+    expect(scrollCalls).toEqual([]);
+    expect(form.scrollTop).toBe(42);
+
+    vi.advanceTimersByTime(100);
+
+    expect(scrollCalls).toEqual([{ x: 0, y: 99 }]);
+    expect(form.scrollTop).toBe(42);
+  });
+
+  it('pointerdown captures form.scrollTop and focusin restores it', () => {
+    const { fixture } = setup();
+    const form = document.body.querySelector('form.drawer');
+    expect(form).not.toBeNull();
+    if (!(form instanceof HTMLElement)) return;
+
+    // The form's own scrollTop goes through the prototype getter/setter
+    // in jsdom; install a writable own property so the handler's
+    // `form.scrollTop = savedFormTop` write actually lands.
+    let currentScrollTop = 50;
+    Object.defineProperty(form, 'scrollTop', {
+      get(): number {
+        return currentScrollTop;
+      },
+      set(value: number) {
+        currentScrollTop = value;
+      },
+      configurable: true,
+    });
+
+    // The pointerdown listener fires in the capture phase, before any
+    // focus shift the click would cause, and writes form.scrollTop
+    // into the closure's `savedFormTop`.
+    document.dispatchEvent(new Event('pointerdown'));
+
+    // Simulate the focus-driven scroll that follows the click.
+    currentScrollTop = 99;
+
+    form.dispatchEvent(new FocusEvent('focusin', { bubbles: false }));
+    fixture.detectChanges();
+
+    expect(form.scrollTop).toBe(50);
   });
 });

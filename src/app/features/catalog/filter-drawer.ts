@@ -1,4 +1,5 @@
 import {
+  afterRenderEffect,
   Component,
   computed,
   DestroyRef,
@@ -23,13 +24,15 @@ import { isHTMLInputElement } from '../../shared/utils/event-target';
 /** Save `window.scrollY` and the drawer form's `scrollTop` at the moment a
  *  user-driven focus would scroll either of them, then restore them after
  *  the focus-driven scroll has settled. The CDK dialog focuses its first
- *  heading on open and the browser focuses a clicked button on click; both
- *  default to `focus()` without `preventScroll`, and on this branch that
- *  pulls the page back to the top on open and resets the drawer's own
- *  scroll on every pending toggle. The double-rAF waits for the focus
+ *  heading on open and the browser would focus a clicked button on click;
+ *  on this branch that pull the page back to the top on open and resets
+ *  the drawer's own scroll on every pending toggle. The template's
+ *  `(mousedown)`, `(pointerdown)` and `(touchstart)` `preventDefault()`
+ *  handlers on each chip button suppress the click-to-focus
+ *  scroll-into-view; the 100 ms `setTimeout` then waits for the focus
  *  call (which lives in a follow-up microtask / paint frame) to finish
- *  before the restore writes, so the captured value is what the user
- *  sees after the dust has settled. */
+ *  before the restore writes, so the captured value is what the user sees
+ *  after the dust has settled. */
 function scheduleScrollRestore(opts: { readonly windowY: number; readonly formTop: number }): void {
   if (typeof window === 'undefined') return;
   window.setTimeout(() => {
@@ -292,23 +295,72 @@ export class FilterDrawer {
     // therefore BEFORE the focus-driven scroll — and rewrite
     // `form.scrollTop` on the next `focusin` so the captured value
     // is what the user sees after the click has settled.
+    //
+    // The form lives inside the CDK dialog's overlay, which renders
+    // only after `opened()` is true and destroys the form on every
+    // close-then-open cycle, so a one-shot `afterNextRender` only
+    // catches the form on the very first render — and even when it
+    // does, the listeners stay attached to a detached node on every
+    // subsequent reopen, silently breaking the restore. An
+    // `afterRenderEffect` keyed to `opened` runs after every render
+    // where the dialog has finished mounting its body, so the form
+    // is in the DOM by the time we search for it; the same-element
+    // check makes repeats a no-op.
     if (typeof document !== 'undefined') {
-      const form = document.querySelector<HTMLElement>('form.drawer');
-      if (form !== null) {
-        let savedFormTop = form.scrollTop;
-        const onPointerDownCapture = (): void => {
-          savedFormTop = form.scrollTop;
+      let attachedForm: HTMLElement | null = null;
+      let savedFormTop = 0;
+      let onPointerDownCapture: (() => void) | null = null;
+      let onFormFocusIn: (() => void) | null = null;
+
+      const refit = (onCleanup: (fn: () => void) => void): void => {
+        const form = document.querySelector<HTMLElement>('form.drawer');
+        if (form === attachedForm) return;
+        if (onPointerDownCapture !== null) {
+          document.removeEventListener('pointerdown', onPointerDownCapture, true);
+        }
+        if (onFormFocusIn !== null && attachedForm !== null) {
+          attachedForm.removeEventListener('focusin', onFormFocusIn);
+        }
+        onCleanup(() => {
+          if (onPointerDownCapture !== null) {
+            document.removeEventListener('pointerdown', onPointerDownCapture, true);
+            onPointerDownCapture = null;
+          }
+          if (onFormFocusIn !== null && attachedForm !== null) {
+            attachedForm.removeEventListener('focusin', onFormFocusIn);
+            onFormFocusIn = null;
+          }
+          attachedForm = null;
+        });
+        attachedForm = null;
+        onPointerDownCapture = null;
+        onFormFocusIn = null;
+        if (form === null) return;
+        attachedForm = form;
+        savedFormTop = form.scrollTop;
+        onPointerDownCapture = (): void => {
+          if (attachedForm !== null) savedFormTop = attachedForm.scrollTop;
         };
-        const onFormFocusIn = (): void => {
-          form.scrollTop = savedFormTop;
+        onFormFocusIn = (): void => {
+          if (attachedForm !== null) attachedForm.scrollTop = savedFormTop;
         };
         document.addEventListener('pointerdown', onPointerDownCapture, true);
         form.addEventListener('focusin', onFormFocusIn);
-        this.destroyRef.onDestroy(() => {
+      };
+
+      afterRenderEffect((onCleanup) => {
+        this.opened();
+        refit(onCleanup);
+      });
+
+      this.destroyRef.onDestroy(() => {
+        if (onPointerDownCapture !== null) {
           document.removeEventListener('pointerdown', onPointerDownCapture, true);
-          form.removeEventListener('focusin', onFormFocusIn);
-        });
-      }
+        }
+        if (onFormFocusIn !== null && attachedForm !== null) {
+          attachedForm.removeEventListener('focusin', onFormFocusIn);
+        }
+      });
     }
   }
 
@@ -354,13 +406,12 @@ export class FilterDrawer {
   }
 
   /** Restore `window.scrollY` and `form.scrollTop` after a pending
-   *  toggle, then re-focus the clicked button with `preventScroll: true`
-   *  so the browser does not scroll the form back to the top to bring
-   *  scrollTop. The template's `(mousedown)="$event.preventDefault()"`
-   *  on each chip button suppresses the browser's default click-to-focus
-   *  scroll-into-view, so the rAF's write to `form.scrollTop` is what
-   *  the user ends up seeing; keyboard focus (Tab / Enter) is
-   *  unaffected because `preventDefault` on mousedown does not change
+   *  toggle. The template's `(mousedown)`, `(pointerdown)` and
+   *  `(touchstart)` `preventDefault()` handlers on each chip button
+   *  suppress the browser's default click-to-focus scroll-into-view so
+   *  the deferred write to `form.scrollTop` (in `scheduleScrollRestore`)
+   *  is what the user ends up seeing; keyboard focus (Tab / Enter) is
+   *  unaffected because `preventDefault` on those events does not change
    *  the keyboard path. */
   private afterToggle(): void {
     const form =

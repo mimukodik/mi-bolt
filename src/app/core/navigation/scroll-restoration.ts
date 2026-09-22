@@ -74,6 +74,10 @@ export function provideScrollRestoration(): EnvironmentProviders {
      *  decide whether the path changed. */
     let lastPath: string | null = null;
 
+    /** Query string the most recent navigation landed on, so the next
+     *  same-path navigation can tell a page step from a filter change. */
+    let lastQuery: string | null = null;
+
     /** Set by the most recent `NavigationStart`, read by the matching
      *  `Scroll`. A `NavigationEnd` does not carry the popstate flag the
      *  way `NavigationStart` does, so the flag has to ride from one to
@@ -113,6 +117,7 @@ export function provideScrollRestoration(): EnvironmentProviders {
         // needs to act on, so the listener leaves `lastPath` alone.
         if (!(event.routerEvent instanceof NavigationEnd)) return;
         const path = pathOf(event.routerEvent.urlAfterRedirects);
+        const nextQuery = queryOf(event.routerEvent.urlAfterRedirects);
         const isPopstate = lastStartWasPopstate;
         if (event.position !== null) {
           // The router's `RouterScroller.scheduleScrollEvent` emits a
@@ -124,11 +129,13 @@ export function provideScrollRestoration(): EnvironmentProviders {
             scroller.scrollToPosition(event.position);
           }
           lastPath = path;
+          lastQuery = nextQuery;
           return;
         }
         if (event.anchor !== null) {
           scroller.scrollToAnchor(event.anchor);
           lastPath = path;
+          lastQuery = nextQuery;
           return;
         }
         if (isPopstate) {
@@ -138,6 +145,7 @@ export function provideScrollRestoration(): EnvironmentProviders {
           // when the page cannot hold the full offset.
           const saved = storedPositions.get(path);
           lastPath = path;
+          lastQuery = nextQuery;
           if (saved === undefined) return;
           if (typeof window === 'undefined') return;
           window.requestAnimationFrame(() => {
@@ -148,6 +156,25 @@ export function provideScrollRestoration(): EnvironmentProviders {
         if (path !== lastPath) {
           scroller.scrollToPosition([0, 0]);
           lastPath = path;
+          lastQuery = nextQuery;
+          return;
+        }
+        // Same-path forward. Could be a filter click or a page step.
+        // A page step is a same-path navigation whose only changed
+        // parameter is `page`. Before this branch the router's own
+        // `scrollPositionRestoration: 'enabled'` reset every forward
+        // navigation, so "next page" always opened at the top; keep
+        // that, because the pagination control sits under the grid and
+        // restoring the click's own offset would drop the shopper
+        // part-way down the new page. A filter, sort or page-size
+        // change also rewrites `page` (the facade resets it to 1), so
+        // the comparison has to drop `page` from both sides first —
+        // otherwise every filter click would look like a page step.
+        if (isPageStep(lastQuery, nextQuery)) {
+          pendingRestore = null;
+          lastPath = path;
+          lastQuery = nextQuery;
+          scroller.scrollToPosition([0, 0]);
           return;
         }
         // Same-path forward (a filter click). The chip the shopper just
@@ -162,6 +189,7 @@ export function provideScrollRestoration(): EnvironmentProviders {
         const y = pendingRestore;
         pendingRestore = null;
         lastPath = path;
+        lastQuery = nextQuery;
         if (y === null || y <= 0) return;
         if (typeof window === 'undefined') return;
         window.requestAnimationFrame(() => {
@@ -182,4 +210,28 @@ export function provideScrollRestoration(): EnvironmentProviders {
 function pathOf(url: string): string {
   const q = url.indexOf('?');
   return q < 0 ? url : url.slice(0, q);
+}
+
+/** The query component of a URL — everything after the first `?`, empty
+ *  when there is none. */
+function queryOf(url: string): string {
+  const q = url.indexOf('?');
+  return q < 0 ? '' : url.slice(q + 1);
+}
+
+/** True when `next` differs from `prev` in the `page` parameter and in
+ *  nothing else. Both sides are compared with `page` removed and the
+ *  remaining parameters sorted, so parameter order never decides the
+ *  answer. A missing `prev` (the first navigation of the session) is
+ *  never a page step. */
+function isPageStep(prev: string | null, next: string): boolean {
+  if (prev === null) return false;
+  const a = new URLSearchParams(prev);
+  const b = new URLSearchParams(next);
+  if ((a.get('page') ?? '') === (b.get('page') ?? '')) return false;
+  a.delete('page');
+  b.delete('page');
+  a.sort();
+  b.sort();
+  return a.toString() === b.toString();
 }

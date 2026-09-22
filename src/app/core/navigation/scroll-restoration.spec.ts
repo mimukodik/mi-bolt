@@ -269,3 +269,72 @@ describe('MIM-228-fix2: branches the reviewer found untested', () => {
     expect(scroller.calls()).toEqual({ positionCalls: [], anchorCalls: [] });
   });
 });
+
+describe('MIM-228-fix3: a page step scrolls to the top', () => {
+  it('MIM-228-AC09: a page step scrolls to the top', () => {
+    const { router, scroller, rafCallbacks, scrollToCalls } = setup();
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+    router.scrollByPath('/telefonok?brand=apple&page=1');
+    // The shopper scrolls down before paging.
+    Object.defineProperty(window, 'scrollY', {
+      value: 1000,
+      writable: true,
+      configurable: true,
+    });
+    router.scrollByPath('/telefonok?brand=apple&page=2');
+    expect(scroller.calls()).toEqual({
+      positionCalls: [
+        [0, 0],
+        [0, 0],
+      ],
+      anchorCalls: [],
+    });
+    flush(rafCallbacks);
+    expect(scrollToCalls).toEqual([]);
+  });
+
+  it('MIM-228-AC10: a filter change that also resets the page keeps the offset', () => {
+    const { router, scroller, rafCallbacks, scrollToCalls } = setup();
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+    router.scrollByPath('/telefonok?brand=apple&page=3');
+    Object.defineProperty(window, 'scrollY', {
+      value: 850,
+      writable: true,
+      configurable: true,
+    });
+    router.scrollByPath('/telefonok?brand=apple&brand=samsung&page=1');
+    expect(scroller.calls()).toEqual({ positionCalls: [[0, 0]], anchorCalls: [] });
+    flush(rafCallbacks);
+    expect(scrollToCalls).toEqual([{ x: 0, y: 850 }]);
+  });
+
+  it('MIM-228-AC11: parameter order does not make a filter change look like a page step', () => {
+    const { router, scroller, rafCallbacks, scrollToCalls } = setup();
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+    router.scrollByPath('/telefonok?page=1&brand=apple');
+    Object.defineProperty(window, 'scrollY', {
+      value: 600,
+      writable: true,
+      configurable: true,
+    });
+    router.scrollByPath('/telefonok?brand=apple&page=2');
+    expect(scroller.calls()).toEqual({
+      positionCalls: [
+        [0, 0],
+        [0, 0],
+      ],
+      anchorCalls: [],
+    });
+    flush(rafCallbacks);
+    expect(scrollToCalls).toEqual([]);
+  });
+
+  it('MIM-228-AC12: the first navigation of the session is never a page step', () => {
+    const { router, scroller, rafCallbacks, scrollToCalls } = setup();
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+    router.scrollByPath('/telefonok?page=2');
+    expect(scroller.calls()).toEqual({ positionCalls: [[0, 0]], anchorCalls: [] });
+    flush(rafCallbacks);
+    expect(scrollToCalls).toEqual([]);
+  });
+});
