@@ -82,7 +82,7 @@ H1 “Átvétel és fizetés”. Radio cards: Házhoz szállítás – demó (19
 
 ### S4.4 Final review
 
-H1 “Minden rendben?”. Item/variant/quantity/price list, contact summary with Módosítás, delivery/method with Módosítás. Current Quote drives subtotal+shipping+total. Two **unchecked** confirmations: “Elfogadom a demó rendelési feltételeit.” and “Tudomásul veszem, hogy ez egy demó, nem valódi vásárlás.” The demo terms dialog explains no payment/email/shipment and reset/persistence behavior; it is not a production contract.
+H1 “Minden rendben?”. Item/variant/quantity/price list, contact summary with Módosítás, delivery/method with Módosítás. Current Quote drives subtotal+shipping+total. One **unchecked** confirmation, “Elfogadom a demó rendelési feltételeit.”, followed by the plain note “Tudomásul veszem, hogy ez egy demó, nem valódi vásárlás.” (a checkbox until the 2.0.0 contract, MIM-212, 2026-09-21, which sends `acceptedTerms` alone). The demo terms dialog explains no payment/email/shipment and reset/persistence behavior; it is not a production contract.
 
 Primary “Demórendelés véglegesítése” disabled until quote complete/current and both acknowledgements true. Pending stays on same view with meaningful text. Failed payment offers Retry/change method; stale quote offers refresh and re-review; stock loss links cart correction. An uncertain response says processing outcome not known, not definitive rejection. Same request/key retry is mandatory.
 
