@@ -37,7 +37,7 @@
 
 /* yettel's warning is a dark-on-yellow pair, .alert-warning{background-color:
    #ffd500;color:#332b00} (docs/design/yettel.md §9), so the memory bar is the
-   yellow ground with #332b00 text, hairline and badge. */
+   yellow ground with #332b00 text and an inverted badge. */
 .demo-notice--memory {
   background: var(--color-status-warning);
   color: var(--color-status-warning-text);
