@@ -16,7 +16,7 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   buildCheckoutForm,
@@ -574,34 +574,91 @@ describe('DS-19 the address setters write straight through to the shared field t
 // DS-20 / DS-21 / DS-22 — canConfirm gating
 // ---------------------------------------------------------------------------
 
-describe('DS-20 the confirm control is disabled until an option, a payment method, a complete address and a billing name are all present', () => {
-  it('the button stays disabled after each of the four steps and enables only after the fourth', () => {
+describe('DS-20 the confirm control stays enabled and a click on an incomplete step marks every missing field', () => {
+  it('a fresh step: enabled; a click emits nothing, shows both choice messages, marks the billing name and focuses the first delivery radio', async () => {
     const fixture = createFixture();
-    const fields = fixture.componentInstance.fields();
-
-    expect(confirmButton(fixture).disabled).toBe(true);
-
-    selectDelivery(fixture, 'home_delivery');
-    expect(confirmButton(fixture).disabled).toBe(true);
-
-    fillHomeAddress(fixture);
-    expect(confirmButton(fixture).disabled).toBe(true);
-
-    selectPayment(fixture, 'card');
-    expect(confirmButton(fixture).disabled).toBe(true);
-
-    fields.billingName().value.set('Teszt Elek');
-    fixture.detectChanges();
+    let emitted = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => {
+      emitted += 1;
+    });
     expect(confirmButton(fixture).disabled).toBe(false);
+
+    const root = getRootElement(fixture);
+    const paymentGroup = getElement(root, '[data-testid="payment-selector"]');
+    expect(paymentGroup.getAttribute('aria-describedby')).toBeNull();
+
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+    try {
+      document.body.focus();
+      confirmButton(fixture).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await Promise.resolve();
+
+      expect(emitted).toBe(0);
+      expect(getElement(root, '#delivery-option-message').textContent.trim()).toBe(
+        'Válassz szállítási módot.',
+      );
+      expect(getElement(root, '#payment-method-message').textContent.trim()).toBe(
+        'Válassz fizetési módot.',
+      );
+      // Inside the payment card, after its options, like the delivery message.
+      expect(paymentGroup.contains(getElement(root, '#payment-method-message'))).toBe(true);
+      expect(paymentGroup.lastElementChild?.tagName).toBe('APP-FORM-FIELD-MESSAGE');
+      expect(
+        getInputElement(root, '[data-testid="billing-name-input"]').getAttribute('aria-invalid'),
+      ).toBe('true');
+      expect(document.activeElement?.id).toBe('delivery-option-home_delivery');
+      expect(paymentGroup.getAttribute('aria-describedby')).toBe('payment-method-message');
+      expect(focusSpy).toHaveBeenLastCalledWith({ focusVisible: true });
+    } finally {
+      focusSpy.mockRestore();
+    }
+  });
+
+  it('home delivery with an empty address: a click marks the address fields and focuses the first of them', async () => {
+    const fixture = createFixture();
+    selectDelivery(fixture, 'home_delivery');
+    selectPayment(fixture, 'card');
+    fixture.componentInstance.fields().billingName().value.set('Teszt Elek');
+    fixture.detectChanges();
+
+    confirmButton(fixture).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const root = getRootElement(fixture);
+    const addressForm = getElement(root, 'app-address-form');
+    const invalid = addressForm.querySelectorAll('[aria-invalid="true"]');
+    expect(invalid.length).toBe(3);
+    expect(document.activeElement).toBe(invalid[0]);
+    expect(root.querySelector('#delivery-option-message')).toBeNull();
+    expect(root.querySelector('#payment-method-message')).toBeNull();
+  });
+
+  it('once everything is filled the same click emits continueRequested once', () => {
+    const fixture = createFixture();
+    let emitted = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => {
+      emitted += 1;
+    });
+    selectDelivery(fixture, 'home_delivery');
+    fillHomeAddress(fixture);
+    selectPayment(fixture, 'card');
+    fixture.componentInstance.fields().billingName().value.set('Teszt Elek');
+    fixture.detectChanges();
+
+    confirmButton(fixture).click();
+    expect(emitted).toBe(1);
   });
 });
 
-describe('DS-21 an invalid postal code keeps the confirm control disabled', () => {
-  it('postal code 0511 leaves the button disabled; 1051 enables it', () => {
+describe('DS-21 an invalid postal code blocks the confirm and is marked on click', () => {
+  it('postal code 0511: the click emits nothing and marks the postal code; 1051: the click emits once', async () => {
     const fixture = createFixture();
     selectDelivery(fixture, 'home_delivery');
     const fields = fixture.componentInstance.fields();
-
     fields.address.postalCode().value.set('0511');
     fields.address.city().value.set('Budapest');
     fields.address.line1().value.set('Fő utca 1.');
@@ -609,33 +666,62 @@ describe('DS-21 an invalid postal code keeps the confirm control disabled', () =
     selectPayment(fixture, 'card');
     fields.billingName().value.set('Teszt Elek');
     fixture.detectChanges();
+    let emitted = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => {
+      emitted += 1;
+    });
 
-    expect(confirmButton(fixture).disabled).toBe(true);
+    expect(confirmButton(fixture).disabled).toBe(false);
+    confirmButton(fixture).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const root = getRootElement(fixture);
+    const invalid = getElement(root, 'app-address-form').querySelectorAll('[aria-invalid="true"]');
+    expect(invalid.length).toBe(1);
+    expect(document.activeElement).toBe(invalid[0]);
+    expect(emitted).toBe(0);
 
     fields.address.postalCode().value.set('1051');
     fixture.detectChanges();
-    expect(confirmButton(fixture).disabled).toBe(false);
+    confirmButton(fixture).click();
+    expect(emitted).toBe(1);
   });
 });
 
-describe('DS-22 an incomplete billing address keeps the confirm control disabled while those fields are shown', () => {
-  it('pickup with empty billing city disables the button; filling it enables it', () => {
+describe('DS-22 an incomplete billing address is marked on click while its fields are shown', () => {
+  it('pickup with an empty billing city: the click marks the billing city and focuses it; filling it lets the click through', async () => {
     const fixture = createFixture();
     selectDelivery(fixture, 'pickup_point');
     const fields = fixture.componentInstance.fields();
-
     selectPayment(fixture, 'card');
     fields.billingName().value.set('Teszt Elek');
     fields.billingAddress.postalCode().value.set('1051');
     fields.billingAddress.line1().value.set('Fő utca 1.');
     fields.billingAddress.line2().value.set('');
     fixture.detectChanges();
+    let emitted = 0;
+    fixture.componentInstance.continueRequested.subscribe(() => {
+      emitted += 1;
+    });
 
-    expect(confirmButton(fixture).disabled).toBe(true);
+    confirmButton(fixture).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    const root = getRootElement(fixture);
+    const billing = getElement(root, '[data-testid="billing-address-form"]');
+    const invalid = billing.querySelectorAll('[aria-invalid="true"]');
+    expect(invalid.length).toBe(1);
+    expect(document.activeElement).toBe(invalid[0]);
+    expect(emitted).toBe(0);
 
     fields.billingAddress.city().value.set('Budapest');
     fixture.detectChanges();
-    expect(confirmButton(fixture).disabled).toBe(false);
+    confirmButton(fixture).click();
+    expect(emitted).toBe(1);
   });
 });
 

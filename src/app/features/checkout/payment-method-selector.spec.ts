@@ -351,4 +351,20 @@ describe('PaymentMethodSelector', () => {
       getElement(absentRow, '[data-testid="payment-unavailable-reason"]').textContent.trim(),
     ).toBe('Ez az opció jelenleg nem elérhető.');
   });
+
+  // -------------------------------------------------------------------------
+  // PM-10
+  // -------------------------------------------------------------------------
+  it('describedBy lands on the group fieldset as aria-describedby, and is absent by default', () => {
+    const fixture = createFixture([makeOption('card')]);
+    const root = getRootElement(fixture);
+
+    const group = getElement(root, '[data-testid="payment-selector"]');
+    expect(group.getAttribute('aria-describedby')).toBeNull();
+
+    fixture.componentRef.setInput('describedBy', 'payment-method-message');
+    fixture.detectChanges();
+
+    expect(group.getAttribute('aria-describedby')).toBe('payment-method-message');
+  });
 });

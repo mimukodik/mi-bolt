@@ -1,6 +1,7 @@
 <fieldset
   class="payment m-0 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card) text-(color:--color-text-primary)"
   data-testid="payment-selector"
+  [attr.aria-describedby]="describedBy()"
 >
   <legend
     class="legend px-(--space-2) text-(length:--type-card-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
@@ -68,4 +69,5 @@
       </li>
     }
   </ul>
+  <ng-content />
 </fieldset>
