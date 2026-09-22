@@ -48,6 +48,8 @@ jobs:
       - run: npm ci
       - name: Vitest with coverage
         run: npm run test
+      - name: Contract specs (tests/contract)
+        run: npm run test:contract
       - name: Coverage summary
         if: always()
         run: node scripts/coverage-summary.mjs coverage/unit/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"

@@ -15,7 +15,19 @@
   </div>
   @if (error(); as problem) {
     <div class="rail-status">
-      <app-status-message severity="error" [message]="problem.message" />
+      <app-status-message
+        severity="error"
+        [message]="problem.message"
+        (dismissed)="onErrorDismissed()"
+      />
+    </div>
+  } @else if (success(); as message) {
+    <div class="rail-status">
+      <app-status-message
+        severity="success"
+        [message]="message"
+        (dismissed)="onSuccessDismissed()"
+      />
     </div>
   }
 </aside>

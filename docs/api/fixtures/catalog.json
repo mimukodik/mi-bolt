@@ -649,7 +649,7 @@
           "swatchHex": "#D5D5D5",
           "storageGb": 256,
           "price": {
-            "amount": 599990,
+            "amount": 608990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -672,7 +672,7 @@
           "swatchHex": "#D5D5D5",
           "storageGb": 512,
           "price": {
-            "amount": 699990,
+            "amount": 708990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -695,7 +695,7 @@
           "swatchHex": "#000000",
           "storageGb": 256,
           "price": {
-            "amount": 599990,
+            "amount": 617990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -718,7 +718,7 @@
           "swatchHex": "#000000",
           "storageGb": 512,
           "price": {
-            "amount": 699990,
+            "amount": 717990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -741,7 +741,7 @@
           "swatchHex": "#ABB7C7",
           "storageGb": 256,
           "price": {
-            "amount": 599990,
+            "amount": 626990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -2723,7 +2723,7 @@
           "swatchHex": "#181D26",
           "storageGb": 256,
           "price": {
-            "amount": 235990,
+            "amount": 242990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -4466,7 +4466,7 @@
           "swatchHex": "#676781",
           "storageGb": 256,
           "price": {
-            "amount": 457990,
+            "amount": 462990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -5973,7 +5973,7 @@
           "swatchHex": "#000000",
           "storageGb": 128,
           "price": {
-            "amount": 266990,
+            "amount": 273990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -6854,7 +6854,7 @@
           "swatchHex": "#C4B5D6",
           "storageGb": 512,
           "price": {
-            "amount": 1003990,
+            "amount": 1006990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -7173,7 +7173,7 @@
           "swatchHex": "#EACADC",
           "storageGb": 512,
           "price": {
-            "amount": 680989,
+            "amount": 687989,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -7800,7 +7800,7 @@
           "swatchHex": "#BFB6B0",
           "storageGb": 256,
           "price": {
-            "amount": 143990,
+            "amount": 148990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -8440,7 +8440,7 @@
           "swatchHex": "#D1E6F3",
           "storageGb": 256,
           "price": {
-            "amount": 362990,
+            "amount": 367990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -8486,7 +8486,7 @@
           "swatchHex": "#FFFFFF",
           "storageGb": 256,
           "price": {
-            "amount": 362990,
+            "amount": 372990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -8509,7 +8509,7 @@
           "swatchHex": "#EBDBBD",
           "storageGb": 256,
           "price": {
-            "amount": 362990,
+            "amount": 377990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -9096,7 +9096,7 @@
           "swatchHex": "#000000",
           "storageGb": 256,
           "price": {
-            "amount": 419990,
+            "amount": 428990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -9119,7 +9119,7 @@
           "swatchHex": "#E6D5F1",
           "storageGb": 256,
           "price": {
-            "amount": 419990,
+            "amount": 437990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -9142,7 +9142,7 @@
           "swatchHex": "#B4C294",
           "storageGb": 256,
           "price": {
-            "amount": 419990,
+            "amount": 446990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -11281,7 +11281,7 @@
           "swatchHex": "#F08A4C",
           "storageGb": 256,
           "price": {
-            "amount": 254989,
+            "amount": 257989,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -12452,7 +12452,7 @@
           "swatchHex": "#000000",
           "storageGb": 256,
           "price": {
-            "amount": 206990,
+            "amount": 211990,
             "currency": "HUF"
           },
           "availability": "in_stock",
@@ -14658,7 +14658,7 @@
           "swatchHex": "#F4F7F8",
           "storageGb": 128,
           "price": {
-            "amount": 294989,
+            "amount": 297989,
             "currency": "HUF"
           },
           "availability": "out_of_stock",

@@ -165,7 +165,12 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": { "port": 4210, "servePath": "/demo-fizetes", "hmr": false },
+          "options": {
+            "port": 4210,
+            "servePath": "/demo-fizetes",
+            "hmr": false,
+            "proxyConfig": "proxy.payment.conf.json"
+          },
           "configurations": {
             "production": { "buildTarget": "demo-payment:build:production" },
             "development": { "buildTarget": "demo-payment:build:development" }

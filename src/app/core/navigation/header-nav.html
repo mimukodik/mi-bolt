@@ -66,6 +66,7 @@
       <nav aria-label="Fő navigáció" class="header__nav hidden gap-4 flex-1 justify-center lg:flex">
         @for (link of navLinks(); track link.label) {
           <a
+            ariaCurrentWhenActive="page"
             class="relative inline-flex items-center no-underline min-h-11 px-3"
             routerLinkActive="is-active"
             [routerLink]="link.routerLink"
@@ -156,9 +157,14 @@
     (closed)="closeDrawer()"
   >
     @for (link of navLinks(); track link.label) {
-      <a class="block no-underline" [routerLink]="link.routerLink" (click)="closeDrawer()">{{
-        link.label
-      }}</a>
+      <a
+        ariaCurrentWhenActive="page"
+        class="block no-underline"
+        routerLinkActive="is-active"
+        [routerLink]="link.routerLink"
+        (click)="closeDrawer()"
+        >{{ link.label }}</a
+      >
     }
   </app-mobile-drawer>
 }

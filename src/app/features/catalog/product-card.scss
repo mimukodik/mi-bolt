@@ -4,9 +4,6 @@
 }
 
 .card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
   height: 100%;
   padding: var(--space-4);
   background: var(--color-surface-light);
@@ -44,9 +41,6 @@
 }
 
 .body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
   flex: 1 1 auto;
 }
 

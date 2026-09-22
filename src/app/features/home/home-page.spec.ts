@@ -275,13 +275,14 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     const normalised = css
       .replaceAll('%NS%', '')
       .replace(/\[[^\]]*\]/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1');
     const at = normalised.indexOf('.hero__cta{');
     expect(at).toBeGreaterThan(-1);
     const cta = normalised.slice(at, normalised.indexOf('}', at));
     expect(cta).toContain('background:var(--color-brand-accent)');
     expect(cta).toContain('color:var(--color-text-primary)');
-    expect(cta).toContain('padding:12pxvar(--space-6)');
+    expect(cta).toContain('padding:12px var(--space-6)');
     // Both CTAs share the yettel .btn box: portal-font-bold, 16/24 and the
     // 24px pill (docs/design/yettel.md §5).
     const boxAt = normalised.indexOf('.hero__cta,.hero__cta-secondary{');
@@ -298,7 +299,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
     expect(secAt).toBeGreaterThan(-1);
     const secondary = normalised.slice(secAt + 1, normalised.indexOf('}', secAt + 1));
     expect(secondary).toContain('color:var(--color-brand-accent)');
-    expect(secondary).toContain('border:1pxsolidvar(--color-brand-accent)');
+    expect(secondary).toContain('border:1px solid var(--color-brand-accent)');
     expect(secondary).toContain('background:transparent');
   });
 

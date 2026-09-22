@@ -1,16 +1,15 @@
-// tests/contract/schema.spec.ts — T03-AC01/AC02/AC03/AC04 contract-level
-// assertions, plus a package.json contract check for the api:generate
-// script T04 wires.
+// tests/contract/schema.spec.ts — contract-level assertions over
+// docs/api/openapi.yaml (the OpenAPI 2.0.0 wire contract) and the
+// generated catalogue fixture under docs/api/fixtures/catalog.json.
 //
-// Vitest suite that reads docs/api/openapi.yaml (the wire contract), the
-// products fixture and package.json, dereferences $refs with
-// @apidevtools/json-schema-ref-parser, and asserts the schema-level and
-// business-invariant constraints the spec document imposes. This suite is
-// the sole enforcement of these invariants: the hand-rolled CLI duplicate,
-// scripts/validate-contract.mjs, is deleted (FIX-13) because every check it
-// performed already had a vitest case here or gained one in the same change.
-// The two it gained are the package.json api:generate declaration and the schema-level
-// example validation (T03-AC01's third clause).
+// Vitest suite that dereferences the spec with
+// @apidevtools/json-schema-ref-parser, walks `paths` and
+// `components.schemas`/`components.parameters`, and asserts the
+// invariants the spec document imposes. The fixture is produced by
+// `scripts/build-catalog-fixture.mjs` (the `fixtures:catalog` npm
+// script); its drift guard is `fixtures:catalog:check`. The T04 wiring
+// the package.json `api:generate` script drives regenerates the SDK
+// from the same contract.
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -18,11 +17,32 @@ import { resolve } from 'node:path';
 import { describe, it, expect, beforeAll } from 'vitest';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import Ajv from 'ajv';
+import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
 const SPEC_PATH = resolve(__dirname, '../../docs/api/openapi.yaml');
-const PRODUCTS_PATH = resolve(__dirname, '../../docs/api/fixtures/products.json');
+const CATALOG_PATH = resolve(__dirname, '../../docs/api/fixtures/catalog.json');
+const CATALOG_SOURCE_PATH = resolve(__dirname, '../../docs/api/fixtures/catalog-source.json');
+
+interface CatalogVariant {
+  id?: string;
+  availability?: string;
+  maxQuantity?: number;
+}
+
+interface CatalogProduct {
+  id?: string;
+  brand?: string;
+  variants?: CatalogVariant[];
+}
+
+interface CatalogFixture {
+  products: CatalogProduct[];
+}
+
+interface SourceFixture {
+  products: unknown[];
+}
 
 interface OpenApiSpec {
   openapi: string;
@@ -45,31 +65,66 @@ interface OpenApiSpec {
 }
 
 interface DereferencedSpec {
+  paths: Record<
+    string,
+    Record<
+      string,
+      {
+        operationId?: string;
+        parameters?: unknown[];
+        responses?: Record<string, unknown>;
+        requestBody?: unknown;
+      }
+    >
+  >;
   components: {
     schemas: Record<string, unknown>;
     parameters: Record<string, unknown>;
   };
 }
 
+const EXPECTED_OPERATION_IDS = [
+  'addCartItem',
+  'clearCart',
+  'createOrder',
+  'createPaymentIntent',
+  'getCart',
+  'getCheckout',
+  'getCheckoutOptions',
+  'getMedia',
+  'getOrder',
+  'getPaymentIntent',
+  'getProduct',
+  'listProducts',
+  'listRelatedProducts',
+  'removeCartItem',
+  'resolvePaymentIntent',
+  'setCartItemQuantity',
+  'updateCheckout',
+] as const;
+
 let spec: OpenApiSpec;
 let dereferenced: DereferencedSpec;
-let products: Record<string, unknown>[];
-let ajv: Ajv;
+let catalog: CatalogFixture;
+let expectedProductCount: number;
+let ajv: Ajv2020;
 
 beforeAll(async () => {
-  const [specRaw, productsRaw] = await Promise.all([
+  const [specRaw, catalogRaw, catalogSourceRaw] = await Promise.all([
     readFile(SPEC_PATH, 'utf8'),
-    readFile(PRODUCTS_PATH, 'utf8'),
+    readFile(CATALOG_PATH, 'utf8'),
+    readFile(CATALOG_SOURCE_PATH, 'utf8'),
   ]);
   spec = yaml.load(specRaw) as OpenApiSpec;
   dereferenced = (await $RefParser.dereference(SPEC_PATH)) as DereferencedSpec;
-  products = JSON.parse(productsRaw) as Record<string, unknown>[];
-  ajv = new Ajv({ allErrors: true, strict: false });
+  catalog = JSON.parse(catalogRaw) as CatalogFixture;
+  expectedProductCount = (JSON.parse(catalogSourceRaw) as SourceFixture).products.length;
+  ajv = new Ajv2020({ allErrors: true, strict: false });
   addFormats(ajv);
 });
 
 describe('T03-AC01 operationIds', () => {
-  it('declares exactly 16 operationIds', () => {
+  it('declares exactly the 17 operationIds of the 2.0.0 contract', () => {
     const ids: string[] = [];
     for (const pathItem of Object.values(spec.paths)) {
       for (const op of Object.values(pathItem)) {
@@ -78,7 +133,7 @@ describe('T03-AC01 operationIds', () => {
         }
       }
     }
-    expect(ids).toHaveLength(16);
+    expect([...ids].sort()).toEqual([...EXPECTED_OPERATION_IDS]);
   });
 
   it('every operationId is unique', () => {
@@ -97,41 +152,92 @@ describe('T03-AC01 operationIds', () => {
     }
   });
 
-  it('every $ref in the spec dereferences successfully', () => {
-    // If dereference() did not throw, every $ref resolved. The dereferenced
-    // spec also contains no $ref objects at the leaf paths we exercise.
-    expect(dereferenced.components.schemas).toBeDefined();
-    expect(dereferenced.components.schemas.Money).toBeDefined();
-    expect(dereferenced.components.schemas.Product).toBeDefined();
-    expect(dereferenced.components.schemas.Cart).toBeDefined();
-    expect(dereferenced.components.schemas.Quote).toBeDefined();
+  it('every component $ref in the spec dereferences successfully', () => {
+    // If $RefParser.dereference() did not throw above, every $ref
+    // resolved. The dereferenced spec exposes the resolved objects
+    // directly, so iterate the keys of `components.schemas` and
+    // `components.parameters` and assert each one is defined.
+    const schemas = dereferenced.components.schemas ?? {};
+    for (const name of Object.keys(spec.components.schemas ?? {})) {
+      expect(schemas[name], `components.schemas.${name} did not dereference`).toBeDefined();
+    }
+    const parameters = dereferenced.components.parameters ?? {};
+    for (const name of Object.keys(spec.components.parameters ?? {})) {
+      expect(parameters[name], `components.parameters.${name} did not dereference`).toBeDefined();
+    }
   });
 
-  it('every schema-level example validates against its own schema', () => {
-    // Ported from scripts/validate-contract.mjs's assertExamplesValidate
-    // (buildAjv at :246, the schema-level loop at :304-312), deleted by
-    // FIX-13. Its Ajv is built with validateFormats: false; this instance
-    // repeats that exactly, so the moved check is the same check and not a
-    // stricter one. The operation media-type half of that function is not
-    // carried over: docs/api/openapi.yaml declares eight `examples:` blocks
-    // and all eight are schema-level (grep -c "example:" returns 0).
-    const exampleAjv = new Ajv({ allErrors: true, strict: false, validateFormats: false });
+  it('every media-type example on responses and requestBodies validates against its own schema', () => {
+    // docs/api/openapi.yaml declares `examples:` blocks at the media
+    // type level on seven operations (`grep -n 'examples:' docs/api/openapi.yaml` →
+    // 337, 558, 621, 654, 739, 808, 851; the eighth hit at line 247 is
+    // a header-schema array, not a media-type named map and so is not
+    // walked here). Walk every operation response and requestBody on
+    // the dereferenced spec so the media schemas no longer carry $ref
+    // nodes (ajv would otherwise fail to resolve them), collect each
+    // example with its media type's schema, and validate with ajv. A
+    // schema the ajv instance cannot compile is the kind of drift
+    // T03-AC01 must catch.
+    const exampleAjv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
     addFormats(exampleAjv);
-    const schemas = dereferenced.components.schemas;
     let checked = 0;
-    for (const [name, schema] of Object.entries(schemas)) {
-      const examples = (schema as { examples?: unknown[] }).examples;
-      if (!Array.isArray(examples)) continue;
-      const validate = exampleAjv.compile(schema as Record<string, unknown>);
-      examples.forEach((example, index) => {
-        checked += 1;
-        expect(
-          validate(example),
-          `${name}.examples[${index}] failed its own schema: ${JSON.stringify(validate.errors)}`,
-        ).toBe(true);
-      });
+    for (const [pathKey, pathItem] of Object.entries(dereferenced.paths ?? {})) {
+      for (const [method, op] of Object.entries(pathItem)) {
+        if (!op || typeof op !== 'object') continue;
+        if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue;
+        const typed = op as {
+          responses?: Record<
+            string,
+            {
+              content?: Record<
+                string,
+                { schema?: unknown; examples?: Record<string, { value?: unknown }> }
+              >;
+            }
+          >;
+          requestBody?: {
+            content?: Record<
+              string,
+              { schema?: unknown; examples?: Record<string, { value?: unknown }> }
+            >;
+          };
+        };
+        const groups: [
+          string,
+          {
+            content?: Record<
+              string,
+              { schema?: unknown; examples?: Record<string, { value?: unknown }> }
+            >;
+          },
+        ][] = [];
+        for (const [status, payload] of Object.entries(typed.responses ?? {})) {
+          groups.push([status, payload]);
+        }
+        if (typed.requestBody) groups.push(['', typed.requestBody]);
+        for (const [status, payload] of groups) {
+          for (const [mediaType, media] of Object.entries(payload.content ?? {})) {
+            const schema = media.schema;
+            if (!schema || typeof schema !== 'object') continue;
+            const examples = media.examples;
+            if (!examples || typeof examples !== 'object') continue;
+            const validate = exampleAjv.compile(schema as Record<string, unknown>);
+            for (const [exampleKey, example] of Object.entries(examples)) {
+              if (!example || typeof example !== 'object') continue;
+              if (!('value' in example)) continue;
+              checked += 1;
+              const where =
+                `${method.toUpperCase()} ${pathKey} ${status || ''} ${mediaType} ${exampleKey}`.trim();
+              expect(
+                validate(example.value),
+                `${where} failed its media-type schema: ${JSON.stringify(validate.errors)}`,
+              ).toBe(true);
+            }
+          }
+        }
+      }
     }
-    expect(checked, 'no schema-level example was found to validate').toBeGreaterThan(0);
+    expect(checked, 'no media-type example was found to validate').toBeGreaterThan(0);
   });
 });
 
@@ -178,28 +284,10 @@ describe('T03-AC02 Money invariant', () => {
 
 describe('T03-AC02 status codes & repeated query arrays', () => {
   it('every operation response is one of the documented status codes', () => {
-    const known = new Set([
-      '200',
-      '201',
-      '202',
-      '203',
-      '204',
-      '206',
-      '400',
-      '401',
-      '403',
-      '404',
-      '409',
-      '410',
-      '413',
-      '415',
-      '422',
-      '429',
-      '500',
-      '502',
-      '503',
-      '504',
-    ]);
+    // Measured from the spec:
+    //   grep -oE "^\s+'[0-9]{3}':" docs/api/openapi.yaml | sort -u
+    // → 200, 201, 400, 404, 409, 410, 412, 422, 503.
+    const known = new Set(['200', '201', '400', '404', '409', '410', '412', '422', '503']);
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
         if (
@@ -248,138 +336,196 @@ describe('T03-AC02 status codes & repeated query arrays', () => {
 });
 
 describe('T03-AC04 schema constraints', () => {
-  it('Variant.maxQuantity is integer 0..5', () => {
+  it('Variant.maxQuantity is integer 0..10', () => {
+    // docs/api/openapi.yaml:1207-1210
     const variant = dereferenced.components.schemas.Variant as {
       properties: { maxQuantity: { type: string; minimum: number; maximum: number } };
     };
     expect(variant.properties.maxQuantity.type).toBe('integer');
     expect(variant.properties.maxQuantity.minimum).toBe(0);
-    expect(variant.properties.maxQuantity.maximum).toBe(5);
+    expect(variant.properties.maxQuantity.maximum).toBe(10);
   });
 
-  it('CartItem.quantity is integer 1..5', () => {
+  it('CatalogItem.maxQuantity is integer 0..10', () => {
+    // docs/api/openapi.yaml:1309-1312 (CatalogItem is allOf [ProductBase, ...]).
+    const catalogItem = dereferenced.components.schemas.CatalogItem as {
+      allOf: {
+        properties?: { maxQuantity?: { type: string; minimum: number; maximum: number } };
+      }[];
+    };
+    const own = catalogItem.allOf[1]?.properties?.maxQuantity;
+    expect(own, 'CatalogItem must declare maxQuantity on its own allOf branch').toBeDefined();
+    expect(own?.type).toBe('integer');
+    expect(own?.minimum).toBe(0);
+    expect(own?.maximum).toBe(10);
+  });
+
+  it('CartItem.quantity is integer 1..10', () => {
+    // docs/api/openapi.yaml:1583-1586
     const cartItem = dereferenced.components.schemas.CartItem as {
       properties: { quantity: { type: string; minimum: number; maximum: number } };
     };
     expect(cartItem.properties.quantity.type).toBe('integer');
     expect(cartItem.properties.quantity.minimum).toBe(1);
-    expect(cartItem.properties.quantity.maximum).toBe(5);
+    expect(cartItem.properties.quantity.maximum).toBe(10);
   });
 
-  it('Product.highlights is 1..2 entries (per spec)', () => {
-    const product = dereferenced.components.schemas.Product as {
+  it('Product.highlights is 1..6 entries on ProductBase, and Product dereferences to it', () => {
+    // The `highlights` array lives on ProductBase
+    // (docs/api/openapi.yaml:1267-1272: minItems 1, maxItems 6).
+    // Product is allOf [ProductBase, ...] and dereferences the base.
+    const productBase = dereferenced.components.schemas.ProductBase as {
       properties: { highlights: { type: string; minItems: number; maxItems: number } };
     };
-    expect(product.properties.highlights.minItems).toBe(1);
-    expect(product.properties.highlights.maxItems).toBe(2);
+    expect(productBase.properties.highlights.type).toBe('array');
+    expect(productBase.properties.highlights.minItems).toBe(1);
+    expect(productBase.properties.highlights.maxItems).toBe(6);
+
+    const product = dereferenced.components.schemas.Product as {
+      allOf: { properties?: { highlights?: unknown } }[];
+    };
+    expect(
+      Array.isArray(product.allOf) && product.allOf.length >= 1,
+      'Product must be allOf with at least one branch',
+    ).toBe(true);
+    expect(
+      product.allOf[0]?.properties?.highlights,
+      'Product.allOf[0] must dereference to ProductBase, which carries highlights',
+    ).toBeDefined();
+    expect(product.allOf[0].properties.highlights).toEqual(productBase.properties.highlights);
   });
 });
 
 describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
   it('cart-version-monotonic: every mutating cart operation requires If-Match', () => {
-    const mutatingMethods = new Set(['post', 'put', 'patch', 'delete']);
+    // Measured: `grep -n "parameters/IfMatch" -B25 docs/api/openapi.yaml |
+    //  grep operationId` returns the exact set below
+    // (addCartItem, clearCart, setCartItemQuantity, removeCartItem,
+    // updateCheckout, createPaymentIntent, createOrder).
+    const expected = new Set([
+      'addCartItem',
+      'clearCart',
+      'setCartItemQuantity',
+      'removeCartItem',
+      'updateCheckout',
+      'createPaymentIntent',
+      'createOrder',
+    ]);
+
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
-        if (!op || typeof op !== 'object' || !mutatingMethods.has(method)) continue;
-        // Skip POST /carts (no cart yet) and POST /orders (atomic commit uses
-        // idempotency, not If-Match) and POST /payment-intents (no cart yet).
-        const isCartless =
-          (method === 'post' && (pathKey === '/carts' || pathKey === '/payment-intents')) ||
-          (method === 'post' && pathKey === '/orders');
-        if (isCartless) continue;
-        const parameters = (op.parameters ?? []) as {
+        if (!op || typeof op !== 'object') continue;
+        if (!['post', 'put', 'patch', 'delete'].includes(method)) continue;
+        const operationId = (op as { operationId?: string }).operationId;
+        if (!operationId) continue;
+        const parameters = ((op as { parameters?: unknown[] }).parameters ?? []) as {
           $ref?: string;
-          name?: string;
           in?: string;
+          name?: string;
         }[];
         const hasIfMatch = parameters.some(
           (p) => p.$ref?.endsWith('/IfMatch') || (p.in === 'header' && p.name === 'If-Match'),
         );
+        const shouldHave = expected.has(operationId);
         expect(
           hasIfMatch,
-          `${method.toUpperCase()} ${pathKey} requires If-Match for cart-version-monotonic compare-and-swap`,
-        ).toBe(true);
+          `${method.toUpperCase()} ${pathKey} (${operationId}) requires If-Match — expected ${shouldHave}`,
+        ).toBe(shouldHave);
       }
     }
   });
 
-  it('quote-ttl-300s: Quote.expiresAt is a date-time field and createCheckoutQuote pins the 5-minute TTL', () => {
-    const quote = dereferenced.components.schemas.Quote as {
+  it('expiresAt fields are date-time on Cart and PaymentIntent', () => {
+    // The `Quote` schema is retired in 2.0.0; the date-time invariant
+    // survives on Cart.expiresAt (docs/api/openapi.yaml:1635-1637) and
+    // PaymentIntent.expiresAt (docs/api/openapi.yaml:1956-1958).
+    const cart = dereferenced.components.schemas.Cart as {
       properties: { expiresAt: { type: string; format: string } };
     };
-    expect(quote.properties.expiresAt.type).toBe('string');
-    expect(quote.properties.expiresAt.format).toBe('date-time');
+    expect(cart.properties.expiresAt.type).toBe('string');
+    expect(cart.properties.expiresAt.format).toBe('date-time');
 
-    const quoteOp = spec.paths['/checkout/{cartId}/quote']?.post as
-      { description?: string } | undefined;
-    expect(quoteOp, 'createCheckoutQuote operation must be defined').toBeDefined();
-    const opDescription = (quoteOp?.description ?? '').toLowerCase();
-    expect(
-      opDescription.includes('5 minutes'),
-      `createCheckoutQuote description must mention "5 minutes" TTL; got: ${quoteOp?.description}`,
-    ).toBe(true);
+    const paymentIntent = dereferenced.components.schemas.PaymentIntent as {
+      properties: { expiresAt: { type: string; format: string } };
+    };
+    expect(paymentIntent.properties.expiresAt.type).toBe('string');
+    expect(paymentIntent.properties.expiresAt.format).toBe('date-time');
   });
 
-  it('idempotency-key-required-on-mutations: every POST/PUT/PATCH/DELETE lists Idempotency-Key', () => {
-    const mutatingMethods = new Set(['post', 'put', 'patch', 'delete']);
+  it('idempotency-key-required-on-mutations: createPaymentIntent and createOrder list Idempotency-Key', () => {
+    // Measured: `grep -n "parameters/IdempotencyKey" docs/api/openapi.yaml`
+    // → references at lines 599 (createPaymentIntent) and 780
+    // (createOrder). Those are the only two operations that require
+    // Idempotency-Key in 2.0.0; the previous "every POST/PUT/PATCH/DELETE"
+    // expectation is retired because 2.0.0 narrows the contract to the
+    // two operations whose side-effects have to be replay-safe
+    // (creating a payment intent that may have side effects on the
+    // gateway and creating an order that decrements stock).
+    const expected = new Set(['createPaymentIntent', 'createOrder']);
+
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
-        if (!op || typeof op !== 'object' || !mutatingMethods.has(method)) continue;
-        const parameters = (op.parameters ?? []) as {
+        if (!op || typeof op !== 'object') continue;
+        if (!['post', 'put', 'patch', 'delete'].includes(method)) continue;
+        const operationId = (op as { operationId?: string }).operationId;
+        if (!operationId) continue;
+        const parameters = ((op as { parameters?: unknown[] }).parameters ?? []) as {
           $ref?: string;
-          name?: string;
           in?: string;
+          name?: string;
         }[];
         const hasIdempotency = parameters.some(
           (p) =>
             p.$ref?.endsWith('/IdempotencyKey') ||
             (p.in === 'header' && p.name === 'Idempotency-Key'),
         );
+        const shouldHave = expected.has(operationId);
         expect(
           hasIdempotency,
-          `${method.toUpperCase()} ${pathKey} must declare Idempotency-Key`,
-        ).toBe(true);
+          `${method.toUpperCase()} ${pathKey} (${operationId}) must declare Idempotency-Key — expected ${shouldHave}`,
+        ).toBe(shouldHave);
       }
     }
   });
 });
 
-describe('T03-AC03 fixture shape', () => {
-  it('products.json contains exactly 16 fictional products', () => {
-    expect(products).toHaveLength(16);
+describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
+  it('catalog.json contains one product per entry of catalog-source.json', () => {
+    expect(catalog.products).toHaveLength(expectedProductCount);
   });
 
   it('every product has at least one variant', () => {
-    for (const p of products) {
-      const variants = (p as { variants?: unknown[] }).variants;
-      expect(Array.isArray(variants), `product ${(p as { id: string }).id} missing variants`).toBe(
-        true,
-      );
-      expect(variants?.length ?? 0).toBeGreaterThanOrEqual(1);
+    for (const p of catalog.products) {
+      const variants = p.variants ?? [];
+      expect(
+        variants.length,
+        `product ${p.id ?? '(no id)'} has no variants`,
+      ).toBeGreaterThanOrEqual(1);
     }
   });
 
   it('at least one product has multiple variants', () => {
-    const multi = products.filter((p) => {
-      const v = (p as { variants?: unknown[] }).variants ?? [];
-      return v.length > 1;
-    });
+    const multi = catalog.products.filter((p) => (p.variants ?? []).length > 1);
     expect(multi.length).toBeGreaterThan(0);
   });
 
   it('at least one out-of-stock combination exists', () => {
-    const oos = products
-      .flatMap((p) => (p as { variants?: { availability?: string }[] }).variants ?? [])
+    // docs/api/openapi.yaml:1096-1101: Availability enum = in_stock,
+    // out_of_stock. The fixture marks 5 variants as out_of_stock
+    // (measured: count of availability === 'out_of_stock').
+    const oos = catalog.products
+      .flatMap((p) => p.variants ?? [])
       .filter((v) => v.availability === 'out_of_stock');
     expect(oos.length).toBeGreaterThan(0);
   });
 
-  it('at least one low-stock scenario exists (maxQuantity in (0..2] and in_stock)', () => {
-    const low = products
-      .flatMap(
-        (p) =>
-          (p as { variants?: { availability?: string; maxQuantity?: number }[] }).variants ?? [],
-      )
+  it('at least one low-stock scenario exists (in_stock, maxQuantity in (0..2])', () => {
+    // The Availability enum does not carry low_stock; the contract
+    // expresses low stock through Variant.maxQuantity (in_stock with a
+    // small positive cap). Field names: availability, maxQuantity
+    // (Variant schema, openapi.yaml:1207-1210).
+    const low = catalog.products
+      .flatMap((p) => p.variants ?? [])
       .filter(
         (v) =>
           v.availability === 'in_stock' &&
@@ -392,35 +538,54 @@ describe('T03-AC03 fixture shape', () => {
 
   it('every product brand avoids a real Hungarian operator name', () => {
     const forbidden = new Set(['yettel', 'telekom', 'magyar telekom', 'vodafone', 'digi']);
-    for (const p of products) {
-      const brand = String((p as { brand?: string }).brand ?? '')
+    for (const p of catalog.products) {
+      const brand = String(p.brand ?? '')
         .trim()
         .toLowerCase();
       expect(
         forbidden.has(brand),
-        `product ${(p as { id: string }).id} uses operator brand "${brand}"`,
+        `product ${p.id ?? '(no id)'} uses operator brand "${brand}"`,
       ).toBe(false);
     }
   });
 
   it('every fixture product validates against the OpenAPI Product schema', () => {
+    // Product carries `unevaluatedProperties: false` (docs/api/openapi.yaml:1322).
+    // The contract suite compiles against Ajv 2020 (draft 2020-12) so that
+    // keyword actually fires; default-export Ajv (draft-07) silently ignores
+    // it under `strict: false` and would let unknown fields pass.
     const productSchema = dereferenced.components.schemas.Product as Record<string, unknown>;
     const validate = ajv.compile(productSchema);
-    for (const p of products) {
+    for (const p of catalog.products) {
       const ok = validate(p);
       expect(
         ok,
-        `product ${(p as { id: string }).id} failed Product schema: ${JSON.stringify(validate.errors)}`,
+        `product ${p.id ?? '(no id)'} failed Product schema: ${JSON.stringify(validate.errors)}`,
       ).toBe(true);
     }
+  });
+
+  it('a fixture product with an unknown field fails the Product schema', () => {
+    // Red proof that the validator above is the 2020-12 one: under
+    // draft-07 Ajv `unevaluatedProperties` is an unknown keyword and
+    // `validate(sample)` returns `true`. With Ajv2020 it must reject
+    // the extra property.
+    const sample = { ...catalog.products[0], notInTheContract: 'x' } as Record<string, unknown>;
+    const productSchema = dereferenced.components.schemas.Product as Record<string, unknown>;
+    const validate = ajv.compile(productSchema);
+    const ok = validate(sample);
+    expect(ok).toBe(false);
+    expect(
+      validate.errors?.some((e: { keyword: string }) => e.keyword === 'unevaluatedProperties'),
+      `expected an unevaluatedProperties error, got ${JSON.stringify(validate.errors)}`,
+    ).toBe(true);
   });
 });
 
 /**
- * The deleted scripts/validate-contract.mjs checked this inline
- * (assertApiGenerateScript, :395-413). It is a predicate here so the
- * negative arm is a case rather than a hand-performed rename of a
- * package.json key in the same commit that rewrites devDependencies.
+ * The T04 wiring the package.json `api:generate` script drives
+ * regenerates `src/app/api/generated/` from this contract. The script
+ * name is part of the contract, not an implementation detail.
  */
 function declaresApiGenerate(scripts: Record<string, string> | undefined): boolean {
   return Object.prototype.hasOwnProperty.call(scripts ?? {}, 'api:generate');

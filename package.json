@@ -14,6 +14,7 @@
     "build:check": "node scripts/build-check.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:contract": "vitest run --config vitest.contract.config.ts",
     "e2e": "playwright test --project=seed --project=integration && node scripts/check-e2e-coverage.mjs coverage/e2e/coverage/coverage-summary.json",
     "e2e:smoke": "E2E_TARGET=local-backend playwright test --project=smoke",
     "e2e:install": "playwright install --with-deps chromium",

@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, ElementRef, computed, inject, input, output } from '@angular/core';
 
 import { Button } from '../../shared/ui/button/button';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
@@ -32,7 +32,22 @@ export class MobileBuyRail {
   readonly pending = input<boolean>(false);
   readonly error = input<UiProblem | null>(null);
 
+  /** The page's add-to-cart success message, shown above the rail on narrow
+   *  viewports where the desktop CTA column is hidden. */
+  readonly success = input<string | null>(null);
+
   readonly addRequested = output();
+
+  /** Emitted when the user closes the error banner via the StatusMessage
+   *  primitive's "Bezárás" button. The parent clears its `error` input;
+   *  the rail itself stays mounted so the next press keeps working. */
+  readonly errorDismissed = output();
+
+  /** Emitted when the user closes the success message; the parent clears
+   *  its `success` input. */
+  readonly successDismissed = output();
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly priceStatus = computed<'idle' | 'success'>(() =>
     this.money() === null ? 'idle' : 'success',
@@ -41,5 +56,22 @@ export class MobileBuyRail {
   onPress(): void {
     if (!this.available() || this.pending()) return;
     this.addRequested.emit();
+  }
+
+  /** The "Bezárás" on the error toast: tells the parent to clear its
+   *  error and returns focus to the rail's primary CTA so a keyboard
+   *  user keeps their place. */
+  onErrorDismissed(): void {
+    this.errorDismissed.emit();
+    this.focusButton();
+  }
+
+  onSuccessDismissed(): void {
+    this.successDismissed.emit();
+    this.focusButton();
+  }
+
+  focusButton(): void {
+    this.host.nativeElement.querySelector('button')?.focus();
   }
 }

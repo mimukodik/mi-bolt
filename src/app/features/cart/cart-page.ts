@@ -24,7 +24,8 @@
  * layouts duplicating it.
  */
 
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import type { ElementRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { NavigationReasonBanner } from '../checkout/navigation-reason-banner';
@@ -122,6 +123,11 @@ export class CartPage {
   /** `true` while the "Kosár ürítése" call is in flight. */
   readonly clearing = signal<boolean>(false);
 
+  /** Template ref for the cart page `<h1>` so a dismiss of the
+   *  transient status banner returns focus to the page heading rather
+   *  than dropping to `<body>`. */
+  private readonly pageTitle = viewChild<ElementRef<HTMLElement>>('pageTitle');
+
   /** Variant id of the line whose mutation is currently in flight, or null.
    *  Only that line is disabled while the facade dispatches. */
   private readonly mutatingVariantId = signal<string | null>(null);
@@ -210,24 +216,32 @@ export class CartPage {
    * "Retry", and a transient "Sikeres frissítés." after that would
    * tell them the conflict was cleared when actually nothing was.
    */
-  readonly statusMessage = computed<{ text: string; severity: StatusSeverity } | null>(() => {
+  readonly statusMessage = computed<{
+    text: string;
+    severity: StatusSeverity;
+    dismissible: boolean;
+  } | null>(() => {
     const error = this.facade.error();
     if (error !== null) {
-      return { text: error.detail, severity: 'error' };
+      return { text: error.detail, severity: 'error', dismissible: false };
     }
     if (this.facade.conflict() !== null) {
       return {
         text: 'A kosár időközben megváltozott; frissítsd az oldalt, vagy próbáld újra a műveletet.',
         severity: 'error',
+        dismissible: false,
       };
     }
     if (this.facade.cartExpired()) {
       return {
         text: 'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.',
         severity: 'error',
+        dismissible: false,
       };
     }
-    return this.transientStatus();
+    const transient = this.transientStatus();
+    if (transient === null) return null;
+    return { ...transient, dismissible: true };
   });
 
   private readonly transientStatus = signal<{ text: string; severity: StatusSeverity } | null>(
@@ -356,6 +370,7 @@ export class CartPage {
 
   dismissStatusMessage(): void {
     this.transientStatus.set(null);
+    this.pageTitle()?.nativeElement.focus();
   }
 
   /** `true` when the facade holds no failure signal after a mutation settled. */

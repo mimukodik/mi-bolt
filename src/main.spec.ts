@@ -251,4 +251,59 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     expect(serve?.['proxyConfig']).toBe('proxy.local-backend.conf.json');
     expect(existsSync(join(REPO_ROOT, 'proxy.local-backend.conf.json'))).toBe(true);
   });
+
+  it('the demo-payment dev server proxies /api to the local backend (MIM-251)', () => {
+    // The payment app runs on its own origin (4210); on the real backend its
+    // API calls hit that origin, so the dev server has to forward them.
+    // Naming the file is not the same as wiring it: a copy of `proxy.conf.json`
+    // (which targets the shop's dev server on 4210) would still satisfy the
+    // string check below, so the test reads the proxy file and asserts the
+    // mapping itself.
+    const parsed: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'angular.json'), 'utf8'));
+    let optionsNode: unknown = parsed;
+    for (const key of ['projects', 'demo-payment', 'architect', 'serve', 'options']) {
+      optionsNode = isRecord(optionsNode) ? optionsNode[key] : undefined;
+    }
+    expect(isRecord(optionsNode) ? optionsNode['proxyConfig'] : undefined).toBe(
+      'proxy.payment.conf.json',
+    );
+    expect(existsSync(join(REPO_ROOT, 'proxy.payment.conf.json'))).toBe(true);
+
+    // The default serve configuration must resolve to the same proxy file;
+    // an override on `serve.configurations.<defaultConfiguration>.proxyConfig`
+    // would win at runtime even when `options.proxyConfig` still names the
+    // intended file.
+    let defaultNode: unknown = parsed;
+    for (const key of ['projects', 'demo-payment', 'architect', 'serve', 'defaultConfiguration']) {
+      defaultNode = isRecord(defaultNode) ? defaultNode[key] : undefined;
+    }
+    const defaultConfiguration = typeof defaultNode === 'string' ? defaultNode : '';
+    expect(defaultConfiguration).toBe('development');
+    let devNode: unknown = parsed;
+    for (const key of [
+      'projects',
+      'demo-payment',
+      'architect',
+      'serve',
+      'configurations',
+      'development',
+      'proxyConfig',
+    ]) {
+      devNode = isRecord(devNode) ? devNode[key] : undefined;
+    }
+    const effectiveProxyConfig =
+      typeof devNode === 'string'
+        ? devNode
+        : isRecord(optionsNode)
+          ? optionsNode['proxyConfig']
+          : undefined;
+    expect(effectiveProxyConfig).toBe('proxy.payment.conf.json');
+
+    // The proxy file must route `/api` to the Spring backend on 8080.
+    const proxy: unknown = JSON.parse(
+      readFileSync(join(REPO_ROOT, 'proxy.payment.conf.json'), 'utf8'),
+    );
+    const apiEntry = isRecord(proxy) ? proxy['/api'] : undefined;
+    expect(isRecord(apiEntry) ? apiEntry['target'] : undefined).toBe('http://localhost:8080');
+  });
 });
