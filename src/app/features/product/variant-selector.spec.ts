@@ -228,4 +228,11 @@ describe('MIM-233: variant chips follow the yettel.hu device page', () => {
     const focused = ruleBody(css, ':focus-visible');
     expect(focused).toContain('outline-color: var(--%NS%color-focus-input)');
   });
+
+  it('the group label sits 12px above its chips and a following group starts 22px below the chips, as on yettel.hu', () => {
+    if (!hasStyles(VariantSelector)) throw new Error('Expected VariantSelector to have styles');
+    const css = VariantSelector.ɵcmp.styles.join('\n');
+    expect(ruleBody(css, '.legend[')).toContain('margin-bottom: 12px');
+    expect(ruleBody(css, '.group[_ngcontent-%COMP%]    + .group[')).toContain('margin-top: 22px');
+  });
 });
