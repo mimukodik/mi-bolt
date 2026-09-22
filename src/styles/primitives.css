@@ -208,4 +208,10 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
   body:has(app-mobile-buy-rail) app-footer-nav .footer {
     padding-bottom: calc(env(safe-area-inset-bottom) + var(--rail-height));
   }
+
+  /* A focused element scrolled into view lands above the rail rather than
+     under it (WCAG 2.2 SC 2.4.11; W3C technique C43, scroll-padding). */
+  html:has(app-mobile-buy-rail) {
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom) + var(--rail-height));
+  }
 }
