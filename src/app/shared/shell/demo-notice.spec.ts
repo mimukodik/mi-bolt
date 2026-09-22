@@ -96,4 +96,12 @@ describe('DemoNotice', () => {
     expect(bar).toContain('min-height:28px');
     expect(badge).toContain('background:var(--color-brand-accent)');
   });
+
+  it('decision 16: the strip is not a live region', () => {
+    const { fixture } = setup();
+    const aside = getNativeElement(fixture).querySelector('[data-testid="demo-notice"]');
+    expect(aside).not.toBeNull();
+    expect(aside?.getAttribute('role')).toBeNull();
+    expect(aside?.getAttribute('aria-live')).toBeNull();
+  });
 });

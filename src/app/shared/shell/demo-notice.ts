@@ -8,8 +8,10 @@ import { Component, input } from '@angular/core';
  * Hungarian and repeats the no-real-purchase guarantee that the
  * project brief requires (`R15`).
  *
- * The element uses `role="status"` so screen readers announce it once
- * when the page renders without hijacking subsequent updates; the
+ * The element carries no `role` and no `aria-live`: the demo texts are
+ * read in place when the user reaches them rather than announced on
+ * load, where several live regions at once drown out each other and the
+ * real announcements (the owner's decision 16, 2026-09-22). The
  * visible text is the source of truth, not a redundant aria-label.
  *
  * `persistenceMode` drives the second, `'memory'` state

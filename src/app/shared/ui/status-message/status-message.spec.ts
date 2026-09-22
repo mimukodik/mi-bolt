@@ -8,6 +8,7 @@ import type { StatusSeverity } from './status-message';
   imports: [StatusMessage],
   template: `
     <app-status-message
+      [live]="live()"
       [message]="message()"
       [persistent]="persistent()"
       [severity]="severity()"
@@ -19,6 +20,7 @@ class HostComponent {
   readonly message = signal('A művelet sikeres volt.');
   readonly severity = signal<StatusSeverity>('success');
   readonly persistent = signal(false);
+  readonly live = signal(true);
   readonly dismissCount = signal(0);
 }
 
@@ -68,6 +70,27 @@ describe('StatusMessage primitive', () => {
     const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
     expect(root?.getAttribute('role')).toBe('alert');
     expect(root?.getAttribute('aria-live')).toBe('assertive');
+  });
+
+  it('decision 16: live=false renders the message with no role and no aria-live', () => {
+    const { fixture, host } = setup();
+    host.severity.set('info');
+    host.live.set(false);
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBeNull();
+    expect(root?.getAttribute('aria-live')).toBeNull();
+    expect(root?.textContent).toContain('A művelet sikeres volt.');
+  });
+
+  it('decision 16: live defaults to true, so an unbound message stays a live region', () => {
+    TestBed.configureTestingModule({ imports: [StatusMessage] });
+    const fixture = TestBed.createComponent(StatusMessage);
+    fixture.componentRef.setInput('message', 'Szöveg');
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    expect(root?.getAttribute('role')).toBe('status');
+    expect(root?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('emits dismissed when the close button is clicked', () => {
