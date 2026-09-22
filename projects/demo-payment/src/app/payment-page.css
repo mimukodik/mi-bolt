@@ -213,14 +213,20 @@
   outline-offset: 2px;
 }
 
-.pay-field-input[data-testid='pay-card-number'] {
+.pay-field-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.08em;
 }
 
+/* The holder and the expiry/CVC pair share the second row in two equal
+ * columns. At 1fr 2fr the holder column (about 96px) was narrower than
+ * its label, which wrapped and pushed the holder's underline below the
+ * other two; align-items: end keeps the three underlines on one line
+ * should a label ever wrap in another font. */
 .pay-row {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
   gap: var(--pay-space-4);
 }
 
