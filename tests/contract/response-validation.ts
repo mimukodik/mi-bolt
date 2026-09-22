@@ -30,7 +30,7 @@ import addFormats from 'ajv-formats';
 export const REPO_ROOT = resolve(__dirname, '../..');
 export const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
 
-export const REQUIRED_OPERATION_COUNT = 16;
+export const REQUIRED_OPERATION_COUNT = 17;
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
