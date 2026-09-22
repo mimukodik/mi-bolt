@@ -343,10 +343,7 @@ describe('T16-AC01 product-page responsive layout and chrome', () => {
     const toast = queryElement(cta, '[data-testid="status-message"]');
     expect(toast.textContent).toContain('1 darab a kosárban.');
 
-    const close = toast.querySelector('button');
-    if (!(close instanceof HTMLButtonElement)) {
-      throw new Error('Expected the Bezárás button');
-    }
+    const close = queryButton(toast, 'button');
     close.click();
     fixture.detectChanges();
 
