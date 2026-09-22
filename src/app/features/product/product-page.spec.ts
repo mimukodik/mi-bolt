@@ -813,6 +813,7 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     expect(breadcrumb.textContent).toContain('Mobiltelefonok');
     expect(breadcrumb.textContent).toContain('Demo One 5G');
 
+    expect(root.querySelector('[data-testid="product-demo-tag"]')).toBeNull();
     expect(root.textContent).not.toContain('DEMÓTERMÉK');
 
     const description = queryElement(root, '[data-testid="product-description"]');
