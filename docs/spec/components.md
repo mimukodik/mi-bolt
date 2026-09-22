@@ -655,7 +655,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 ## Shared focus styling
 
-A component never declares its own focus ring: the two :focus-visible rules in src/styles/primitives.css own it, one for text-like controls and one for everything else.
+The two :focus-visible rules in src/styles/primitives.css own the focus ring: one for text-like controls (input, select, textarea) and one for everything else. A component overrides the shared rule only when the standard lime ring would be unreadable on its surface — a lime-on-lime button on the accent strip, a lime-on-navy CTA on a hero band — and the override names that case in a comment beside it.
 
 
 ## Example: precise signal input/output boundary
