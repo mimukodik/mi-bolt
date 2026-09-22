@@ -1,10 +1,16 @@
 <section class="catalog">
   <header class="heading flex flex-col gap-2 pb-6 border-b border-[var(--color-line)]">
-    <nav aria-label="Navigáció" class="breadcrumbs flex gap-2 items-center">
-      <a class="breadcrumb no-underline" routerLink="/">Főoldal</a>
-      <span aria-hidden="true" class="breadcrumb__sep">/</span>
-      <span aria-current="page" class="breadcrumb is-current">Mobiltelefonok</span>
-    </nav>
+    @if (breadcrumbVisible) {
+      <nav
+        aria-label="Navigáció"
+        class="breadcrumbs flex gap-2 items-center"
+        data-testid="catalog-breadcrumb"
+      >
+        <a class="breadcrumb no-underline" routerLink="/">Főoldal</a>
+        <span aria-hidden="true" class="breadcrumb__sep">/</span>
+        <span aria-current="page" class="breadcrumb is-current">Mobiltelefonok</span>
+      </nav>
+    }
     <h1 class="title m-0">Mobiltelefonok</h1>
     <p class="lede m-0 max-w-prose">
       Válaszd ki a hozzád illő készüléket a demó kínálatból – minden termék kipróbálható a

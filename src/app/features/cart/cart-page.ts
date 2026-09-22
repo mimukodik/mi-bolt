@@ -31,6 +31,7 @@ import { Router, RouterLink } from '@angular/router';
 import { NavigationReasonBanner } from '../checkout/navigation-reason-banner';
 import { CartFacade } from './cart.facade';
 import { CartLine } from './cart-line';
+import { BREADCRUMB_VISIBLE } from '../../core/navigation/breadcrumb-visibility';
 import { OrderSummary } from './order-summary';
 
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -110,6 +111,8 @@ export class CartPage {
   /** Read by the template for the pending state; mutations go through the methods below. */
   readonly facade = inject(CartFacade);
   private readonly router = inject(Router);
+  /** Switched off for now (MIM-234); the nav stays in place behind this flag. */
+  protected readonly breadcrumbVisible = BREADCRUMB_VISIBLE;
 
   /** Snapshot of the cart once it has loaded. */
   readonly cart = signal<Cart | null>(null);

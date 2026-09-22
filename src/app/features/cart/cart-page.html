@@ -1,10 +1,16 @@
 <section class="cart flex flex-col gap-6" data-testid="cart-page">
   <header class="heading flex flex-col gap-3">
-    <nav aria-label="Navigáció" class="breadcrumbs flex flex-wrap gap-2">
-      <a class="breadcrumb no-underline" routerLink="/">Főoldal</a>
-      <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
-      <span aria-current="page" class="breadcrumb is-current font-medium">Kosár</span>
-    </nav>
+    @if (breadcrumbVisible) {
+      <nav
+        aria-label="Navigáció"
+        class="breadcrumbs flex flex-wrap gap-2"
+        data-testid="cart-breadcrumb"
+      >
+        <a class="breadcrumb no-underline" routerLink="/">Főoldal</a>
+        <span aria-hidden="true" class="breadcrumb__sep mx-1">/</span>
+        <span aria-current="page" class="breadcrumb is-current font-medium">Kosár</span>
+      </nav>
+    }
     <h1 #pageTitle class="title m-0" tabindex="-1">A kosarad</h1>
   </header>
 

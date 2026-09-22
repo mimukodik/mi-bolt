@@ -1,20 +1,15 @@
 /**
- * CheckoutStepHeader — extracted from the four checkout-step pages
- * (contact / delivery / review / success) to keep each of their component
- * stylesheets under the 4 kB `anyComponentStyle` budget. The component
- * renders the breadcrumb trail and projects the step's heading + notice
- * + (for success) the checkmark through `<ng-content />`.
+ * CheckoutStepHeader: the shared header of the four checkout steps. The
+ * breadcrumb trail is switched off for now (MIM-234, BREADCRUMB_VISIBLE),
+ * so the header renders only the projected heading and notice.
  *
- * Three tests, one per production line:
+ * One test:
  *
- *   1. `[routerLink]="crumb.link"`            → `nav.breadcrumbs a` anchors
- *                                               carry the configured hrefs.
- *   2. `aria-current="page"` on the current    → the trailing span is
- *      crumb                                   reachable through that attr,
- *                                               is not an anchor, and no
- *                                               anchor carries the attr.
- *   3. `<ng-content />`                        → projected content follows
- *                                               the breadcrumb in DOM order.
+ *   MIM-234: the breadcrumb is held out of the DOM.
+ *
+ * Helper functions:
+ *
+ *   createHeader, getRootElement, HostForCheckoutStepHeader, CRUMBS.
  */
 
 import { provideZonelessChangeDetection, Component } from '@angular/core';
@@ -65,30 +60,17 @@ class HostForCheckoutStepHeader {
   readonly crumbs: readonly CheckoutCrumb[] = [{ label: 'Főoldal', link: '/' }];
 }
 
-describe('CheckoutStepHeader breadcrumbs', () => {
-  it('renders one anchor per crumb with the routerLink href', () => {
+describe('CheckoutStepHeader (MIM-234: breadcrumb switched off)', () => {
+  it('MIM-234: the breadcrumb is held out of the DOM', () => {
     const fixture = createHeader();
     const root = getRootElement(fixture);
 
-    const anchors = root.querySelectorAll<HTMLAnchorElement>('nav.breadcrumbs a');
-    expect(anchors.length).toBe(2);
-    expect(anchors.item(1).getAttribute('href')).toBe('/penztar/kosar');
-    expect(anchors.item(1).textContent.trim()).toBe('Kosár');
+    expect(root.querySelector('[data-testid="checkout-breadcrumb"]')).toBeNull();
+    expect(root.querySelector('nav.breadcrumbs')).toBeNull();
+    expect(root.querySelector('[aria-current="page"]')).toBeNull();
   });
 
-  it('marks the current crumb with aria-current="page" and no link', () => {
-    const fixture = createHeader();
-    const root = getRootElement(fixture);
-
-    const current = root.querySelector('[aria-current="page"]');
-    expect(current).not.toBeNull();
-    if (current === null) throw new Error('expected [aria-current="page"] element');
-    expect(current.textContent.trim()).toBe('Adatok');
-    expect(current.tagName).not.toBe('A');
-    expect(root.querySelector('nav.breadcrumbs a[aria-current]')).toBeNull();
-  });
-
-  it('projects its content after the breadcrumbs', () => {
+  it("projects its content as the header's first child", () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([])],
     });
@@ -96,9 +78,8 @@ describe('CheckoutStepHeader breadcrumbs', () => {
     fixture.detectChanges();
     const root = getRootElement(fixture);
 
-    const nav = root.querySelector('nav.breadcrumbs');
     const heading = root.querySelector<HTMLElement>('header.heading > h1.title');
     expect(heading).not.toBeNull();
-    expect(nav?.nextElementSibling).toBe(heading);
+    expect(heading?.parentElement?.firstElementChild).toBe(heading);
   });
 });
