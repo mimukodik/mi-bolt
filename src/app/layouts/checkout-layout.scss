@@ -17,6 +17,9 @@
   // whose `:host` is `display: flex; flex-direction: column` and whose
   // `<ng-content>` carries `display: contents`. The unwrap turns this
   // element into a direct flex item, so width is the cross axis.
+  // No explicit `width` is set: the shell's default `align-items: stretch`
+  // fills the cross axis, and a `max-width` or `margin: 0 auto` here would
+  // suppress that stretch and pull the page in from the viewport sides.
   /* The free space in the shell's flex column belongs to the page, not to
      the DEMÓ notice: this <main> is projected through <ng-content>, so only
      the layout that declares it can reach it (Angular emulated style

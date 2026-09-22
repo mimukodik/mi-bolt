@@ -309,7 +309,7 @@ describe('T11-AC02 brand-consistent header and footer', () => {
   // absent from the rule body, which is the invariant MIM-239 cares
   // about.
   // -------------------------------------------------------------------------
-  it("CheckoutLayout main.layout-main stretches to the shell's full width (CENTRE-2)", () => {
+  it('CheckoutLayout .layout-main rule carries no centring declarations (CENTRE-2)', () => {
     const f = TestBed.createComponent(CheckoutLayout);
     f.componentRef.setInput('step', 'cart');
     f.detectChanges();
