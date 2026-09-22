@@ -438,7 +438,12 @@ describe('DP-13..DP-14 same-as-delivery tick from the saved session', () => {
     expect(checkbox.checked).toBe(true);
   });
 
-  it('DP-14 a saved billing section with a pickup-point delivery leaves the tick off', async () => {
+  it('DP-14 pin: a saved billing section with a pickup-point delivery keeps the tick off and the saved billing address', async () => {
+    // A pin, not a red-first test: the pickup variant carries no address,
+    // so the home-delivery check in buildInitialModel is enforced by the
+    // type system and the tick was off here before the change too. It
+    // guards against a later rewrite that ticks the box without a
+    // delivery address to compare.
     const fixture = await createWithSession({
       ...buildFullSession(),
       delivery: { optionId: 'pickup_point' },
