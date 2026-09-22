@@ -148,15 +148,12 @@
     </dl>
   </section>
 
-  <p
-    aria-live="polite"
-    class="receipt__notice m-0 p-3 px-4 rounded leading-relaxed"
+  <app-status-message
     data-testid="receipt-simulation-notice"
-    role="status"
-  >
-    <strong>Demo figyelmeztetés.</strong>
-    {{ simulationNotice() }}
-  </p>
+    severity="info"
+    [message]="noticeMessage()"
+    [persistent]="true"
+  />
 
   <div class="receipt__actions flex flex-wrap gap-3" data-testid="receipt-actions">
     <ng-content />

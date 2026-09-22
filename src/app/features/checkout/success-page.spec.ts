@@ -403,6 +403,21 @@ describe('OrderReceiptComponent', () => {
     );
   });
 
+  it('SP-03b the receipt notice renders through the StatusMessage primitive', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt({ notice: '' }));
+    fixture.detectChanges();
+
+    const notice = queryHTMLElement(document, '[data-testid="receipt-simulation-notice"]');
+    const inner = notice?.querySelector('[data-testid="status-message"]');
+    expect(inner).not.toBeNull();
+    expect(inner?.getAttribute('role')).toBe('status');
+    expect(inner?.classList.contains('is-info')).toBe(true);
+    expect(notice?.querySelector('app-button')).toBeNull();
+    expect(notice?.textContent).toContain('Demó figyelmeztetés.');
+  });
+
   it('SP-04 the receipt is presentational: it renders from its input with no facade and no router provided', () => {
     // TestBed was already configured with only `provideZonelessChangeDetection`
     // in the outer `beforeEach`. The component has no constructor dependencies

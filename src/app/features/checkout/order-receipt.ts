@@ -14,8 +14,9 @@
  *     line items come from `items[]`; the totals come from `subtotal`,
  *     `shippingFee` and `total`; the payment method is mapped from
  *     `paymentMethod` to a Hungarian label.
- *   - The simulation notice is rendered as a prominent live region so
- *     keyboard and screen-reader users hear it once the receipt
+ *   - The simulation notice is rendered through the shared
+ *     `StatusMessage` primitive (`severity: info`, `persistent: true`)
+ *     so keyboard and screen-reader users hear it once the receipt
  *     loads. The wording is fixed Hungarian ("demó") and explicitly
  *     states that no real payment, dispatch or e-mail took place.
  *   - The component never invents a price: every price is routed
@@ -29,6 +30,7 @@
 import { Component, computed, input } from '@angular/core';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { Address } from '../../api/generated/models/address';
 import type { OrderLine } from '../../api/generated/models/order-line';
@@ -56,7 +58,7 @@ const SIMULATION_NOTICE =
 
 @Component({
   selector: 'app-order-receipt',
-  imports: [PriceBlock],
+  imports: [PriceBlock, StatusMessage],
   templateUrl: './order-receipt.html',
   styleUrl: './order-receipt.scss',
 })
@@ -86,6 +88,13 @@ export class OrderReceiptComponent {
     const fromWire = this.receipt().notice.trim();
     return fromWire.length > 0 ? fromWire : SIMULATION_NOTICE;
   });
+
+  /** The notice as the primitive renders it: the primitive takes a single
+   *  plain string, so the bold lead-in of the old hand-rolled paragraph
+   *  becomes the first sentence of the message. */
+  readonly noticeMessage = computed<string>(
+    () => `Demó figyelmeztetés. ${this.simulationNotice()}`,
+  );
 
   /** Exported so unit-style assertions and other consumers can count items. */
   readonly lineItems = computed<readonly OrderLine[]>(() => this.receipt().items);
