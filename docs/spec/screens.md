@@ -70,7 +70,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 ### S4.1 Cart
 
-H1 “A kosarad”. Each line: product image, name, color/storage, unit price, the quantity as read-only text (“2 db”), a “Törlöm” remove action and line total (no quantity control, like yettel.hu; owner, 2026-09-22). Subtotal, shipping “A következő lépésben választod ki”, provisional total only if labeled subtotal. CTA “Tovább az adatokhoz”. Empty H1+message+“Telefonokat nézek”. No free shipping promise or discounts. Pending disables only affected controls and contradictory continue. Remove last item returns empty state.
+H1 “A kosarad”. Each line: product image, name, color/storage, the quantity as read-only text (“2 db”), a “Törlöm” remove action and line total (no quantity control, like yettel.hu; owner, 2026-09-22). Subtotal, shipping “A következő lépésben választod ki”, provisional total only if labeled subtotal. CTA “Tovább az adatokhoz”. Empty H1+message+“Telefonokat nézek”. No free shipping promise or discounts. Pending disables only affected controls and contradictory continue. Remove last item returns empty state.
 
 ### S4.2 Contact
 
