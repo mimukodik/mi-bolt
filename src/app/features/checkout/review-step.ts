@@ -23,7 +23,17 @@
  * every navigation, and drives this component through inputs.
  */
 
-import { Component, computed, input, output, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -59,7 +69,7 @@ interface ReviewLineDisplay {
   readonly productName: string;
   readonly variantLabel: string;
   readonly quantity: number;
-  readonly unitPrice: Money;
+  readonly unitPriceText: string;
   readonly lineTotal: Money;
 }
 
@@ -119,15 +129,19 @@ export class ReviewStep {
   readonly submitted = signal<boolean>(false);
 
   /** Local presentation state. The wire body sends `acceptedTerms`
-   *  as the literal `true` (`order-submission.ts:208`) because the
-   *  CTA is dead until this is checked. It starts from the tick kept
-   *  in sessionStorage (`checkoutKeys.termsAccepted()`), because the
-   *  card payment returns by a full page load that rebuilds this step. */
+   *  as the literal `true` (`order-submission.ts:208`) because
+   *  `onSubmit` never emits until this is checked. It starts from
+   *  the tick kept in sessionStorage (`checkoutKeys.termsAccepted()`),
+   *  because the card payment returns by a full page load that
+   *  rebuilds this step. */
   readonly acceptedTerms = signal<boolean>(checkoutKeys.termsAccepted());
   private readonly termsTouched = signal<boolean>(false);
 
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   protected readonly crumbs: readonly CheckoutCrumb[] = [
     { label: 'Főoldal', link: '/' },
@@ -144,7 +158,7 @@ export class ReviewStep {
       productName: item.productName,
       variantLabel: `${item.colorName} · ${String(item.storageGb)} GB`,
       quantity: item.quantity,
-      unitPrice: item.unitPrice,
+      unitPriceText: PriceBlock.formatHuf(item.unitPrice.amount),
       lineTotal: item.lineTotal,
     })),
   );
@@ -342,9 +356,33 @@ export class ReviewStep {
     this.termsTouched.set(true);
   }
 
+  /** The CTA is never disabled for an unmet condition (owner,
+   *  2026-09-22: "Mindig aktív, kattintásra hibák"): a click that
+   *  cannot submit marks the terms and, when they are unticked,
+   *  moves focus to them. Disabled only while submitting. */
   onSubmit(): void {
+    if (this.state() === 'submitting') return;
     this.submitted.set(true);
-    if (!this.canSubmit()) return;
+    if (!this.canSubmit()) {
+      if (!this.acceptedTerms()) this.focusTerms();
+      return;
+    }
     this.submitRequested.emit();
+  }
+
+  /** After the next render, focuses the terms checkbox, the one
+   *  control on this step the shopper can fix here (WAI forms
+   *  tutorial: move focus to the first invalid field).
+   *  `focusVisible` forces the ring a script focus after a mouse
+   *  click would not show. */
+  private focusTerms(): void {
+    afterNextRender(
+      () => {
+        this.host.nativeElement
+          .querySelector<HTMLElement>('#review-consent-terms-input')
+          ?.focus({ focusVisible: true });
+      },
+      { injector: this.injector },
+    );
   }
 }

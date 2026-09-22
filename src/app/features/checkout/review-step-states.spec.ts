@@ -596,6 +596,7 @@ describe('ST-03 the submitting and loading states each render their own loader, 
 
     const loadingSubmit = getButton(loadingRoot, 'review-submit');
     expect(loadingSubmit.textContent.trim()).toBe('Demórendelés véglegesítése');
+    expect(loadingSubmit.disabled).toBe(false);
 
     const loadingExplanation = getElement(loadingRoot, '[data-testid="review-cta-explanation"]');
     expect(loadingExplanation.textContent.trim()).toBe(

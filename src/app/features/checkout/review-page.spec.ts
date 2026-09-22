@@ -132,9 +132,6 @@ afterEach(() => {
   vi.restoreAllMocks();
   TestBed.resetTestingModule();
   sessionStorage.clear();
-  // The terms tick is kept in sessionStorage (checkout-keys.ts), so a case
-  // that ticks it must not leak the tick into the next case.
-  sessionStorage.removeItem('mi-bolt.checkout.terms-accepted');
 });
 
 function captureRequests(log: string[]): void {
