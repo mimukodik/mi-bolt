@@ -198,6 +198,50 @@ describe('T11-AC02 brand-consistent header and footer', () => {
     expect(nav?.querySelectorAll('a').length ?? 0).toBe(1);
   });
 
+  it('MIM-220: the active nav link carries aria-current="page"', async () => {
+    document.body.innerHTML = '';
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [
+        MarketingLayout,
+        ShopLayout,
+        CheckoutLayout,
+        AppShell,
+        HeaderNav,
+        FooterNav,
+        MobileDrawer,
+        AccessibleDialog,
+      ],
+      // Stub routes — the catalog route at `/telefonok` instantiates
+      // `CatalogPage`, which calls `window.matchMedia` and explodes in
+      // jsdom; routing to `/` and `/telefonok` against empty route
+      // records is enough for `routerLinkActive` to flip.
+      providers: [
+        provideRouter([
+          { path: '', children: [] },
+          { path: 'telefonok', children: [] },
+        ]),
+        provideZonelessChangeDetection(),
+      ],
+    });
+    await TestBed.compileComponents();
+    const f = TestBed.createComponent(MarketingLayout);
+    f.detectChanges();
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const nav = raw.querySelector('nav');
+    if (!(nav instanceof HTMLElement)) throw new Error('Expected <nav>');
+
+    await TestBed.inject(Router).navigateByUrl('/telefonok');
+    f.detectChanges();
+    const active = nav.querySelector('a[aria-current="page"]');
+    expect(active?.textContent ?? '').toContain('Mobiltelefonok');
+
+    await TestBed.inject(Router).navigateByUrl('/');
+    f.detectChanges();
+    expect(nav.querySelector('a[aria-current]')).toBeNull();
+  });
+
   it('MarketingLayout renders the single-bar footer with the demo-explainer CTA', () => {
     const f = TestBed.createComponent(MarketingLayout);
     f.detectChanges();
