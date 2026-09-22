@@ -7,11 +7,10 @@ A dokumentáció már a projekt `docs/` mappájában van, lapos elrendezésben:
 ```text
 docs/
 ├── README.md        ez a belépő
-├── index.html       magyar interaktív áttekintő
 ├── spec/            architektúra, képernyők, komponensek, tesztek,
 │                    elfogadás és technológiai döntések
 ├── api/             OpenAPI YAML, generátorminta, fixture-k
-├── design/          prototípus, képernyőtervek, helyi demóképek
+├── design/          yettel design reference, screenshots, demo images
 └── tasks/           géppel olvasható task-, követelmény- és
                      elfogadási leírók, függőségi gráf
 ```
@@ -26,8 +25,6 @@ This needs repository access, command execution, real subagent spawning, a brows
 
 | Cél | Belépő |
 |---|---|
-| Áttekinteni az egész tervet | [Interaktív riport](index.html) |
-| Kipróbálni a látványtervet | [Kattintható prototípus](design/prototype.html) |
 | Architektúra és komponenskommunikáció | [Architektúra](spec/architecture.md), [komponensek](spec/components.md) |
 | Pontos képernyők és reszponzív állapotok | [Képernyő-specifikáció](spec/screens.md), [design belépő](design/README.md) |
 | API és SDK-generálás | [API belépő](api/README.md), [OpenAPI](api/openapi.yaml) |
@@ -36,7 +33,7 @@ This needs repository access, command execution, real subagent spawning, a brows
 | Kötelező végrehajtási szabályok | [Execution rules](spec/execution-rules.md) |
 | Kutatásból átvett és kizárt technológiák | [Döntések](spec/technology-decisions.md), [forrásjegyzék](spec/sources.md) |
 
-A riport a csomag helyi képeire és fájljaira hivatkozik: **a teljes `mi-bolt/` mappát tartsd együtt**. Nem tölt be külső JavaScriptet, fontot vagy képet. A `design/prototype.html` külön is megnyitható, és változatlan maradt az előző átadáshoz képest.
+The interactive handover report (`index.html`) and the clickable prototype (`design/prototype.html`) were removed on 2026-09-22: they showed the pre-yettel plan, and the spec files under `spec/` and `design/yettel.md` are the live source.
 
 ## Miért maradt néhány JSON-fájl?
 
