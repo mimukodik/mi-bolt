@@ -29,41 +29,12 @@ export default defineConfig({
         name: 'MiBolt e2e coverage',
         outputFile: './coverage/e2e/index.html',
         coverage: {
+          // Coverage is collected here and gated by scripts/check-e2e-coverage.mjs (the e2e npm script chains it), the one place the thresholds live.
           entryFilter: (entry: V8CoverageEntry) =>
             entry.url.includes('/main') || entry.url.includes('/chunk-'),
           sourceFilter: (sourcePath: string) =>
             sourcePath.includes('src/') && !sourcePath.includes('src/app/api/generated/'),
           reports: ['v8', 'console-summary', 'lcovonly', 'json-summary'],
-          onEnd: (coverageResults: {
-            summary?: Record<string, { pct: number | '' } | undefined>;
-          }) => {
-            const summary = coverageResults.summary;
-            // Mirrors angular.json coverageThresholds (lines 102-108):
-            // statements 80, branches 75, functions 80, lines 80.
-            // User decision 2026-09-22: the e2e gate follows the unit gate.
-            const thresholds = {
-              statements: 80,
-              branches: 75,
-              functions: 80,
-              lines: 80,
-            } as const;
-            if (!summary) {
-              console.error('e2e coverage gate failed: no coverage collected');
-              return;
-            }
-            const failed: string[] = [];
-            for (const [metric, threshold] of Object.entries(thresholds)) {
-              const entry = summary[metric];
-              const pct = entry && typeof entry.pct === 'number' ? entry.pct : 0;
-              console.log(`e2e coverage ${metric} ${pct.toFixed(1)}% (threshold ${threshold}%)`);
-              if (pct < threshold) {
-                failed.push(`${metric}=${pct.toFixed(1)}%<${threshold}%`);
-              }
-            }
-            if (failed.length > 0) {
-              console.error(`e2e coverage gate failed: ${failed.join(', ')}`);
-            }
-          },
         },
       },
     ],
