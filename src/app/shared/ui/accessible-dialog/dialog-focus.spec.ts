@@ -7,11 +7,11 @@
  * which restores focus to whatever had it before the dialog opened.
  *
  * Item 3 of this task's own "Regression test" plan is covered where the
- * component lives: `MobileDrawer` (`src/app/layouts/layouts.spec.ts`)
- * passes `initialFocus` as `'first-heading'` and its spec asserts the
- * heading has the focus. `FilterDrawer`, `TermsDialog` and the gallery's
- * dialog keep the `'first-tabbable'` default — only MobileDrawer is
- * wired with the heading focus in this round.
+ * components live: `MobileDrawer` (`src/app/layouts/layouts.spec.ts`) and
+ * `FilterDrawer` (`filter-drawer.spec.ts`) pass `initialFocus` as
+ * `'first-heading'` and their specs assert the heading has the focus;
+ * `TermsDialog` and the gallery's dialog keep the `'first-tabbable'`
+ * default.
  */
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
