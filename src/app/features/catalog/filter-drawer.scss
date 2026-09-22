@@ -54,11 +54,6 @@
   line-height: 1;
 }
 
-.option:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .option:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -116,11 +111,6 @@
   cursor: pointer;
 }
 
-.more:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .color-options {
   display: flex;
   flex-wrap: wrap;
@@ -148,11 +138,6 @@
 
 .color-chip:hover:not(:disabled) {
   border-color: var(--color-primary);
-}
-
-.color-chip:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 .color-chip.is-selected {
@@ -214,11 +199,6 @@
   font-family: var(--font-family-light);
   font-size: 16px;
   line-height: 24px;
-}
-
-.input:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 .input:disabled {

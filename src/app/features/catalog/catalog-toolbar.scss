@@ -39,11 +39,6 @@
   cursor: pointer;
 }
 
-.trigger:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .toolbar__selects {
   display: flex;
   flex-direction: column;
@@ -78,11 +73,6 @@
   font-size: 16px;
   line-height: 24px;
   cursor: pointer;
-}
-
-.select:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 @media (min-width: 1024px) {
