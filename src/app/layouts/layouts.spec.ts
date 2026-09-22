@@ -173,7 +173,8 @@ describe('T11-AC02 brand-consistent header and footer', () => {
       .join(' ')
       .replaceAll('%NS%', '')
       .replace(/\[[^\]]*\]/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1');
     // .portal-header__bar{height:72px;background:#b4ff00} with navy text —
     // the header no longer takes the navy shell token, which still grounds
     // the footer, the hero and the drawer.
@@ -669,7 +670,8 @@ describe('S0-G2 item D: .layout-main carries the shell fill', () => {
       .join(' ')
       .replaceAll('%NS%', '')
       .replace(/\[[^\]]*\]/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1');
   }
 
   function layoutMainBody(comp: unknown): string {
@@ -684,14 +686,14 @@ describe('S0-G2 item D: .layout-main carries the shell fill', () => {
   });
 
   it('MarketingLayout .layout-main is flex: 1 1 auto', () => {
-    expect(layoutMainBody(MarketingLayout)).toContain('flex:11auto');
+    expect(layoutMainBody(MarketingLayout)).toContain('flex:1 1 auto');
   });
 
   it('ShopLayout .layout-main is flex: 1 1 auto', () => {
-    expect(layoutMainBody(ShopLayout)).toContain('flex:11auto');
+    expect(layoutMainBody(ShopLayout)).toContain('flex:1 1 auto');
   });
 
   it('CheckoutLayout .layout-main is flex: 1 1 auto', () => {
-    expect(layoutMainBody(CheckoutLayout)).toContain('flex:11auto');
+    expect(layoutMainBody(CheckoutLayout)).toContain('flex:1 1 auto');
   });
 });

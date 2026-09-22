@@ -81,7 +81,8 @@ describe('DemoNotice', () => {
       .join(' ')
       .replace(/\[[^\]]*\]/g, '')
       .replace(/%NS%/g, '')
-      .replace(/\s+/g, '');
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([{}:;,])\s*/g, '$1');
     const bar = css.slice(
       css.indexOf('.demo-notice{'),
       css.indexOf('}', css.indexOf('.demo-notice{')),
