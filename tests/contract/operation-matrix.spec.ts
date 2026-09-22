@@ -77,7 +77,7 @@ const API_ROOT = '/api/v1';
 // checkout, payment and orders. response-validation.ts still carries the
 // retired 16 in REQUIRED_OPERATION_COUNT and is out of scope for this
 // rewrite, so the suite asserts the literal 17 here. Schema facts at
-// docs/api/openapi.yaml:55-911 (paths block) and 1453-1475 (ProblemCode).
+// docs/api/openapi.yaml:55-933 (paths block) and 1453-1470 (ProblemCode).
 const REQUIRED_OPERATION_COUNT = 17;
 
 let dereferencedSpec: OpenApiSpec;
@@ -174,7 +174,7 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
     for (const op of operationsById.values()) {
       const validator = compileResponseValidator(op.operationId, op.successStatus);
       // getMedia returns binary content (image/webp, image/jpeg,
-      // image/png) under docs/api/openapi.yaml:216-264; no JSON
+      // image/png) under docs/api/openapi.yaml:216-265; no JSON
       // schema applies, so a missing validator is the expected shape
       // for that one operation.
       if (!validator) {
@@ -219,7 +219,7 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
       for (const status of op.documentedStatuses) {
         if (!status.startsWith('4') && !status.startsWith('5')) continue;
         const drift = {
-          status: 200, // wrong: Problem requires status minimum 400 (docs/api/openapi.yaml:1500-1501)
+          status: 200, // wrong: Problem requires status minimum 400 (docs/api/openapi.yaml:1509-1511)
           code: 'NOT_A_REAL_CODE',
           detail: 'no type, no traceId, no fieldErrors',
         };
@@ -239,7 +239,7 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
         for (const code of codes) documentedCodes.add(code);
       }
     }
-    // docs/api/openapi.yaml:1453-1475 declares fifteen ProblemCode
+    // docs/api/openapi.yaml:1453-1470 declares fifteen ProblemCode
     // values: INVALID_REQUEST, VALIDATION_FAILED, NOT_FOUND,
     // CART_EXPIRED, CART_VERSION_CONFLICT, OUT_OF_STOCK,
     // QUANTITY_LIMIT, PRICE_CHANGED, CHECKOUT_INCOMPLETE,
@@ -291,8 +291,8 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('mutation without If-Match returns 412 CART_VERSION_CONFLICT', async () => {
-    // docs/api/openapi.yaml:994-999 declares If-Match required on
-    // every mutation; docs/api/openapi.yaml:1052-1064 binds 412 to
+    // docs/api/openapi.yaml:993-1001 declares If-Match required on
+    // every mutation; docs/api/openapi.yaml:1050-1066 binds 412 to
     // CART_VERSION_CONFLICT. The cart handler
     // (src/mocks/cart/cart.handlers.ts:277-291) checks the header
     // and returns 412 CART_VERSION_CONFLICT when it is missing.
@@ -309,8 +309,8 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('wrong type (quantity as string) returns 400 INVALID_REQUEST', async () => {
-    // docs/api/openapi.yaml:967-970 maps 400 BadRequest to code
-    // INVALID_REQUEST (line 1014-1015). Cart handler
+    // docs/api/openapi.yaml:1015-1018 maps 400 BadRequest to code
+    // INVALID_REQUEST. Cart handler
     // (src/mocks/cart/cart.handlers.ts:205-227) emits 400 when
     // quantity is not an integer in 1..10.
     const sessionId = 'session-test-12345678';
@@ -329,7 +329,7 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('quantity overflow (above 10) is refused by the schema', () => {
-    // docs/api/openapi.yaml:1640-1643 caps AddCartItemRequest.quantity
+    // docs/api/openapi.yaml:1656 caps AddCartItemRequest.quantity
     // at maximum 10; the contract enforcement here is independent
     // of the handler's runtime check at cart.handlers.ts:215-220.
     const validator = compileRequestValidator('addCartItem');
@@ -340,7 +340,7 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('stock conflict (OUT_OF_STOCK) is reachable from addCartItem', () => {
-    // docs/api/openapi.yaml:331-345 documents 409 with code
+    // docs/api/openapi.yaml:331-347 documents 409 with code
     // OUT_OF_STOCK on addCartItem. The contract inventory must
     // therefore list addCartItem as a valid emitter of 409.
     const op = operationsById.get('addCartItem');
@@ -349,9 +349,9 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('stale If-Match (CART_VERSION_CONFLICT) is reachable from addCartItem and updateCheckout', () => {
-    // docs/api/openapi.yaml:391 (addCartItem) and 568 (updateCheckout)
+    // docs/api/openapi.yaml:363 (addCartItem) and 550 (updateCheckout)
     // both bind 412 to the PreconditionFailed response, which the
-    // ProblemCode list (docs/api/openapi.yaml:1453-1475) names
+    // ProblemCode list (docs/api/openapi.yaml:1453-1470) names
     // CART_VERSION_CONFLICT. The cart and checkout handlers
     // (cart.handlers.ts:308-317, checkout.handlers.ts) emit 412.
     const cart = operationsById.get('addCartItem');
@@ -362,8 +362,8 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('IDEMPOTENCY_CONFLICT is bound to createPaymentIntent and createOrder', () => {
-    // docs/api/openapi.yaml:646-660 (createPaymentIntent) and
-    // 837-851 (createOrder) both surface 409 IDEMPOTENCY_CONFLICT.
+    // docs/api/openapi.yaml:615-628 (createPaymentIntent) and
+    // 830-840 (createOrder) both surface 409 IDEMPOTENCY_CONFLICT.
     const intent = operationsById.get('createPaymentIntent');
     const order = operationsById.get('createOrder');
     expect(intent?.documentedStatuses).toContain('409');
@@ -374,7 +374,7 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('IDEMPOTENCY_CONFLICT is reachable end-to-end through createOrder with a complete checkout', async () => {
-    // docs/api/openapi.yaml:1002-1010 binds the Idempotency-Key
+    // docs/api/openapi.yaml:1002-1013 binds the Idempotency-Key
     // header to "same key, different body → 409". The handler
     // (order.handlers.ts:60-77) replays the cached receipt before
     // any state check, so the only way to surface the divergence is
@@ -455,7 +455,7 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('a section rejected by updateCheckout returns 422 VALIDATION_FAILED', () => {
-    // docs/api/openapi.yaml:563-587 documents 422 with code
+    // docs/api/openapi.yaml:552-572 documents 422 with code
     // VALIDATION_FAILED on updateCheckout when a section is
     // syntactically valid but not acceptable. The checkout handler
     // surfaces the same code on rejected sections.
@@ -467,7 +467,7 @@ describe('T26-AC03 business-error code coverage', () => {
   });
 
   it('createOrder documents PAYMENT_PENDING at 422', () => {
-    // docs/api/openapi.yaml:924-936 lists PAYMENT_PENDING at 422 on
+    // docs/api/openapi.yaml:887-893 lists PAYMENT_PENDING at 422 on
     // createOrder for a card order whose payment intent has not
     // settled. The contract inventory must surface the code at the
     // documented status.
@@ -496,7 +496,7 @@ describe('T26-AC04 demo and node mock share the domain', () => {
   });
 
   it('a GET /checkout/options response is identical whether invoked through the browser or node handler factory', async () => {
-    // docs/api/openapi.yaml:467-489 documents /checkout/options as
+    // docs/api/openapi.yaml:467-490 documents /checkout/options as
     // session-scoped (sessionCookie). The handler emits CheckoutOptions
     // on success; a missing X-Demo-Session returns the per-request
     // traceId via the Problem wrapper (problem-response.ts:34-40),
@@ -530,11 +530,11 @@ describe('T26-AC04 demo and node mock share the domain', () => {
 
 describe('T26-AC05 schema fixtures are enforced at runtime', () => {
   it('a CatalogItem that omits the required ProductPage facets is rejected', () => {
-    // docs/api/openapi.yaml:1357-1389 lists the Facets required set
+    // docs/api/openapi.yaml:1380-1394 lists the Facets required set
     // (brands, storageGb, colors, is5g, inStock, priceRange); a list
     // entry missing any one of them must fail the response
     // validator. The validator compiles against ProductPage
-    // (docs/api/openapi.yaml:1413-1441), which requires
+    // (docs/api/openapi.yaml:1419-1452), which requires
     // totalPages and facets alongside items, total, page, pageSize.
     const validator = compileResponseValidator('listProducts', '200');
     if (!validator) throw new Error('listProducts response validator missing');
@@ -612,7 +612,7 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
   });
 
   it('a Cart.expiresAt not in date-time format is rejected', () => {
-    // docs/api/openapi.yaml:1630-1631 declares Cart.expiresAt as
+    // docs/api/openapi.yaml:1635-1637 declares Cart.expiresAt as
     // date-time; Quote is retired in 2.0.0, so the contract
     // enforcement moves to Cart (the wire shape every cart-mutation
     // operation returns).
@@ -633,8 +633,8 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
   });
 
   it('a Variant.maxQuantity of 11 violates the documented cart-line invariant', () => {
-    // docs/api/openapi.yaml:1228-1231 caps Variant.maxQuantity at 10
-    // (CartItem.maxQuantity shares the same bound at line 1591-1594);
+    // docs/api/openapi.yaml:1207-1210 caps Variant.maxQuantity at 10
+    // (CartItem.maxQuantity shares the same bound at line 1593-1596);
     // a fixture that breaks either cap fails the response validator
     // independent of the handler's runtime check.
     const validator = compileResponseValidator('getProduct', '200');
@@ -735,9 +735,9 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
   const schemas = (spec.components?.schemas ?? {}) as Record<string, Record<string, unknown>>;
   switch (op.operationId) {
     case 'listProducts': {
-      // ProductPage (docs/api/openapi.yaml:1413-1441) requires
+      // ProductPage (docs/api/openapi.yaml:1419-1452) requires
       // items, total, page, pageSize, totalPages, facets; Facets
-      // (docs/api/openapi.yaml:1357-1389) requires brands,
+      // (docs/api/openapi.yaml:1380-1394) requires brands,
       // storageGb, colors, is5g, inStock, priceRange.
       return {
         items: [],
@@ -756,8 +756,8 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
       };
     }
     case 'getProduct': {
-      // Product (docs/api/openapi.yaml:1336-1342) uses allOf with
-      // ProductBase (line 1290-1325) and an inner object. AJV does
+      // Product (docs/api/openapi.yaml:1320-1342) uses allOf with
+      // ProductBase (docs/api/openapi.yaml:1246-1280) and an inner object. AJV does
       // not gather required keys across allOf members, so the
       // schema-level example must surface every required field by
       // hand. The schema-level ProductBase required set is id,
@@ -790,7 +790,7 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
       };
     }
     case 'listRelatedProducts': {
-      // docs/api/openapi.yaml:192-214 caps the array at maxItems=4
+      // docs/api/openapi.yaml:192-215 caps the array at maxItems=4
       // and each item at CatalogItem (which itself allOf's
       // ProductBase). The empty array satisfies the contract.
       return [];
@@ -806,7 +806,7 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
     case 'removeCartItem':
     case 'addCartItem':
     case 'clearCart': {
-      // Cart (docs/api/openapi.yaml:1599-1667) requires id, version,
+      // Cart (docs/api/openapi.yaml:1599-1643) requires id, version,
       // items, lineCount, totalQuantity, subtotal, expiresAt, notices.
       return (
         schemas['Cart']?.['examples']?.[0] ?? {
@@ -822,7 +822,7 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
       );
     }
     case 'getCheckoutOptions': {
-      // CheckoutOptions (docs/api/openapi.yaml:1796-1837) requires
+      // CheckoutOptions (docs/api/openapi.yaml:1796-1816) requires
       // deliveryOptions (DeliveryOption[], minItems 1), paymentMethods
       // (PaymentMethodOption[], minItems 1), termsVersion. A
       // single-entry shape exercises every required branch without
@@ -852,7 +852,7 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
     }
     case 'getCheckout':
     case 'updateCheckout': {
-      // CheckoutSession (docs/api/openapi.yaml:1877-1907) requires
+      // CheckoutSession (docs/api/openapi.yaml:1877-1905) requires
       // version, summary, complete; summary (CheckoutSummary)
       // requires subtotal, shippingFee, paymentFee, total.
       return {
@@ -869,10 +869,10 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
     case 'createPaymentIntent':
     case 'getPaymentIntent':
     case 'resolvePaymentIntent': {
-      // PaymentIntent (docs/api/openapi.yaml:1927-1956) requires
+      // PaymentIntent (docs/api/openapi.yaml:1927-1959) requires
       // id, status, amount, redirectUrl, returnUrl, createdAt,
       // expiresAt; status is one of requires_action, succeeded,
-      // declined, pending (line 1920-1925).
+      // declined, pending (docs/api/openapi.yaml:1920-1926).
       return {
         id: 'pi-fixture',
         status: 'succeeded',
@@ -885,7 +885,7 @@ function buildHappyPathFixture(op: OperationDescriptor, spec: OpenApiSpec): unkn
     }
     case 'createOrder':
     case 'getOrder': {
-      // OrderReceipt (docs/api/openapi.yaml:2049-2152) requires id,
+      // OrderReceipt (docs/api/openapi.yaml:2049-2110) requires id,
       // orderNumber (DEMO-XXXXXX), createdAt, status (confirmed),
       // items (OrderLine[], minItems 1), subtotal, shippingFee,
       // paymentFee, total, paymentMethod, delivery (DeliverySelection),
@@ -945,26 +945,26 @@ function breakRequestFixture(op: OperationDescriptor): unknown {
 function sampleRequestFixture(op: OperationDescriptor): unknown {
   switch (op.operationId) {
     case 'addCartItem': {
-      // AddCartItemRequest (docs/api/openapi.yaml:1669-1680): variantId, quantity (1..10).
+      // AddCartItemRequest (docs/api/openapi.yaml:1644-1656): variantId, quantity (1..10).
       return { variantId: 'demo-one-5g-graphite-256', quantity: 1 };
     }
     case 'setCartItemQuantity': {
-      // SetCartItemQuantityRequest (docs/api/openapi.yaml:1681-1694): quantity (1..10).
+      // SetCartItemQuantityRequest (docs/api/openapi.yaml:1657-1667): quantity (1..10).
       return { quantity: 1 };
     }
     case 'updateCheckout': {
-      // UpdateCheckoutRequest (docs/api/openapi.yaml:1888-1906):
+      // UpdateCheckoutRequest (docs/api/openapi.yaml:1906-1909):
       // contact, billing, delivery, payment; minProperties: 1.
       return { payment: { methodId: 'card' } };
     }
     case 'resolvePaymentIntent': {
-      // PaymentOutcomeRequest (docs/api/openapi.yaml:1957-1970):
+      // PaymentOutcomeRequest (docs/api/openapi.yaml:1960-1972):
       // outcome is one of succeeded, declined, pending.
       return { outcome: 'succeeded' };
     }
     case 'createOrder': {
       // OrderRequest is oneOf CardOrderRequest | CashOnDeliveryOrderRequest;
-      // CardOrderRequest (docs/api/openapi.yaml:1971-1991) requires
+      // CardOrderRequest (docs/api/openapi.yaml:1973-1992) requires
       // paymentMethod: card, paymentIntentId, termsVersion, acceptedTerms.
       return {
         paymentMethod: 'card',
@@ -995,7 +995,7 @@ function buildDriftedFixture(op: OperationDescriptor): unknown {
       break;
     }
     case 'listRelatedProducts': {
-      // docs/api/openapi.yaml:192-214 caps the array at maxItems=4;
+      // docs/api/openapi.yaml:192-215 caps the array at maxItems=4;
       // a five-item array crosses that ceiling and the validator
       // must reject it. Returning a fresh array replaces the empty
       // happy-path with a contract violation.
