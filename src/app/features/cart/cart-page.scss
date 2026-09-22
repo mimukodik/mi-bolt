@@ -2,6 +2,37 @@
   display: block;
 }
 
+.breadcrumbs {
+  font-size: var(--type-helper);
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb {
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb:hover,
+.breadcrumb:focus-visible {
+  text-decoration: underline;
+}
+
+.breadcrumb.is-current {
+  color: var(--color-text-primary);
+}
+
+.title {
+  font-family: var(--font-family-bold);
+  font-size: var(--type-page-title-mobile);
+  line-height: 1.2;
+  color: var(--color-primary);
+}
+
+@media (min-width: 640px) {
+  .title {
+    font-size: var(--type-page-title);
+  }
+}
+
 .section-label {
   margin: 0 0 var(--space-4);
   font-family: var(--font-family-light);
