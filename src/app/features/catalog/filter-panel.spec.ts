@@ -546,3 +546,32 @@ describe('FilterPanel — facets wire-up', () => {
     expect(more.textContent.trim()).toBe('Kevesebb gyártó');
   });
 });
+
+describe('MIM-228: a selected facet row with a zero count stays clickable', () => {
+  it('a selected brand and colour at count 0 are enabled; unselected ones at count 0 are disabled', () => {
+    const { fixture, host } = setup();
+    const root = getRootElement(fixture);
+
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, brands: ['apple'], colors: ['black'] });
+    host.facets.set({
+      brands: [
+        { value: 'apple', label: 'Apple', count: 0 },
+        { value: 'samsung', label: 'Samsung', count: 0 },
+      ],
+      colors: [
+        { value: 'black', label: 'Fekete', count: 0, swatchHex: '#000000' },
+        { value: 'white', label: 'Fehér', count: 0, swatchHex: '#FFFFFF' },
+      ],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+
+    expect(queryButton(root, '[data-testid="filter-brand-apple"]').disabled).toBe(false);
+    expect(queryButton(root, '[data-testid="filter-brand-samsung"]').disabled).toBe(true);
+    expect(queryButton(root, '[data-testid="filter-color-black"]').disabled).toBe(false);
+    expect(queryButton(root, '[data-testid="filter-color-white"]').disabled).toBe(true);
+  });
+});
