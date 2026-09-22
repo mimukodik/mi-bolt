@@ -640,7 +640,7 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     const fixture = createFixture();
     const root = getRoot(fixture);
     const demoNotice = getByTestId(root, 'review-demo-notice');
-    expect(demoNotice.textContent?.trim()).toBe(
+    expect(demoNotice.textContent.trim()).toBe(
       'Demó pénztár. A rendelés leadása nem küld valódi megrendelést, nem indít valódi fizetést, és nem küld e-mailt. Az adatok a böngésző memóriájában maradnak.',
     );
   });
@@ -649,6 +649,6 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     const fixture = createFixture();
     const root = getRoot(fixture);
     const demoNotice = getByTestId(root, 'review-demo-notice');
-    expect(demoNotice.textContent ?? '').not.toContain('Bezárás');
+    expect(demoNotice.textContent).not.toContain('Bezárás');
   });
 });

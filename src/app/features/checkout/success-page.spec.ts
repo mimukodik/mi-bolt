@@ -711,7 +711,7 @@ describe('SuccessStep', () => {
     await mountSuccessPage(placed.orderId);
 
     const demoNotice = queryHTMLElement(document, '[data-testid="success-demo-notice"]');
-    expect(demoNotice?.textContent?.trim()).toBe(
+    expect(demoNotice?.textContent.trim()).toBe(
       'Demó pénztár. A sikeroldal csupán a működést mutatja be — nem történt valódi fizetés, szállítás vagy e-mail-küldés.',
     );
   });

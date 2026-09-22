@@ -425,7 +425,7 @@ describe('T20-AC03 demo notice, no marketing, no account affordance', () => {
     const root = getRootElement(fixture);
     const demoNotice = root.querySelector('[data-testid="contact-demo-notice"]');
     expect(demoNotice).not.toBeNull();
-    expect(demoNotice?.textContent?.trim()).toBe(
+    expect(demoNotice?.textContent.trim()).toBe(
       'Demó pénztár. Kérlek, ne használj valós személyes adatokat — ez egy működési bemutató, nem küldünk valódi rendelést vagy e-mailt.',
     );
   });
