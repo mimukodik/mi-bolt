@@ -7,7 +7,8 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -467,5 +468,38 @@ describe('PaymentPage', () => {
     expect(expiry?.getAttribute('type')).toBe('text');
     expect(cvc?.getAttribute('autocomplete')).toBe('off');
     expect(cvc?.getAttribute('type')).toBe('text');
+  });
+
+  it('MIM-260: every card field starts empty when the router binds the inputs', async () => {
+    await TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
+        provideApiConfiguration(BASE_URL),
+        provideRouter(
+          [{ path: ':paymentIntentId', component: PaymentPage }],
+          withComponentInputBinding(),
+        ),
+        {
+          provide: LOCATION_ASSIGN,
+          useValue: (url: string): void => {
+            assigned.push(url);
+          },
+        },
+      ],
+    }).compileComponents();
+    server.use(http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)));
+
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/pi_test_1', PaymentPage);
+    await harness.fixture.whenStable();
+    await flush();
+    await harness.fixture.whenStable();
+
+    const root = harness.routeNativeElement;
+    const values = ['pay-card-number', 'pay-card-holder', 'pay-card-expiry', 'pay-card-cvc'].map(
+      (id) => root?.querySelector<HTMLInputElement>(`[data-testid="${id}"]`)?.value,
+    );
+    expect(values).toEqual(['', '', '', '']);
   });
 });

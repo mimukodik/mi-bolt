@@ -20,7 +20,6 @@ import {
   effect,
   inject,
   input,
-  model,
   signal,
   viewChild,
 } from '@angular/core';
@@ -118,14 +117,17 @@ export class PaymentPage implements OnInit {
   private focusedFor: PageState['kind'] | 'card' | null = null;
 
   /**
-   * The four card fields. They are scenery: they live in component signals,
-   * are never read by `onChoose`, and never reach the wire.
-   * `PaymentOutcomeRequest` still carries exactly one property.
+   * The four card fields. They are scenery: plain component signals, never
+   * read by `onChoose` and never put on the wire, so
+   * `PaymentOutcomeRequest` still carries exactly one property. They are
+   * signals, not `model()` inputs, because `withComponentInputBinding()`
+   * writes every input the route does not carry, which turned all four
+   * into `undefined`.
    */
-  readonly cardNumber = model<string>('');
-  readonly holderName = model<string>('');
-  readonly expiry = model<string>('');
-  readonly cvc = model<string>('');
+  readonly cardNumber = signal<string>('');
+  readonly holderName = signal<string>('');
+  readonly expiry = signal<string>('');
+  readonly cvc = signal<string>('');
 
   /** Which of the three renderings the current state asks for. */
   readonly display = computed<Display>(() => {
