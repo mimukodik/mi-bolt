@@ -22,7 +22,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 | S4 Cart | `/penztar/kosar` | CheckoutLayout | can be empty; next requires valid nonempty cart |
 | S4 Contact | `/penztar/adatok` | CheckoutLayout | active valid cart |
 | S4 Delivery/payment | `/penztar/szallitas` | CheckoutLayout | valid saved contact |
-| S4 Review | `/penztar/ellenorzes` | CheckoutLayout | valid contact/delivery/method + fresh quote |
+| S4 Review | `/penztar/ellenorzes` | CheckoutLayout | saved contact, billing, delivery and payment sections |
 | S4 Success | `/penztar/siker/:orderId` | CheckoutLayout | authoritative receipt lookup, not guard-generated fake data |
 | Utility | `**` | ShopLayout | 404 with Home/Catalogue links |
 
@@ -78,13 +78,13 @@ H1 “Kapcsolattartási adatok”. Full name, email, phone; visible synthetic-da
 
 ### S4.3 Delivery and simulated payment
 
-H1 “Átvétel és fizetés”. Radio cards: Házhoz szállítás – demó (1990Ft) or Demó átvételi pont (0Ft, no real physical location). Conditional address for home delivery: country HU, postcode, city, address line1, optional line2. Payment radios “Utánvét – szimuláció” and “Bankkártya – szimuláció”; neither asks for actual card details. CTA “Tovább az ellenőrzéshez”. Defaults must not represent a paid addon. Any selected method is explicitly visible before final review.
+H1 “Átvétel és fizetés”. Radio cards: Házhoz szállítás (1490 Ft) or Átvételi pont (990 Ft, no real physical location); both are free from a 30 000 Ft cart subtotal, which every phone in the demo catalogue reaches (`FREE_SHIPPING_THRESHOLD_HUF`, mirrored from the backend). Conditional address for home delivery: country HU, postcode, city, address line1, optional line2. Payment radios “Bankkártya” and “Utánvét” (490 Ft fee; unavailable above a 300 000 Ft subtotal, with the reason shown, `CASH_ON_DELIVERY_MAX_CART_HUF`); neither asks for actual card details. CTA “Tovább az ellenőrzéshez”. Defaults must not represent a paid addon. Any selected method is explicitly visible before final review.
 
 ### S4.4 Final review
 
-H1 “Minden rendben?”. Item/variant/quantity/price list, contact summary with Módosítás, delivery/method with Módosítás. Current Quote drives subtotal+shipping+total. One **unchecked** confirmation, “Elfogadom a demó rendelési feltételeit.”, followed by the plain note “Tudomásul veszem, hogy ez egy demó, nem valódi vásárlás.” (a checkbox until the 2.0.0 contract, MIM-212, 2026-09-21, which sends `acceptedTerms` alone). The demo terms dialog explains no payment/email/shipment and reset/persistence behavior; it is not a production contract.
+H1 “Minden rendben?”. Item/variant/quantity/price list, contact summary with Módosítás, delivery/method with Módosítás. The server's checkout summary, recomputed on every read (the 2.0.0 contract has no separate quote step), drives subtotal, shipping fee, payment fee and total. One **unchecked** confirmation, “Elfogadom a demó rendelési feltételeit.”, followed by the plain note “Tudomásul veszem, hogy ez egy demó, nem valódi vásárlás.” (a checkbox until the 2.0.0 contract, MIM-212, 2026-09-21, which sends `acceptedTerms` alone). The demo terms dialog explains no payment/email/shipment and reset/persistence behavior; it is not a production contract.
 
-Primary “Demórendelés véglegesítése” is always active and disabled only while the order is submitting (owner, 2026-09-22, in English: "always active, errors on click"). A click that cannot submit marks the terms confirmation and moves focus to it when it is unticked; in the conflict, stock-error and error states focus moves instead to that state's banner so the failure's own explanation is read first. The text under the button names the first unmet condition (quote incomplete or not current, terms not accepted, card payment not approved). Pending stays on same view with meaningful text. Failed payment offers Retry/change method; stale quote offers refresh and re-review; stock loss links cart correction. An uncertain response says processing outcome not known, not definitive rejection. Same request/key retry is mandatory.
+Primary “Demórendelés véglegesítése” is always active and disabled only while the order is submitting (owner, 2026-09-22, in English: "always active, errors on click"). A click that cannot submit marks the terms confirmation and moves focus to it when it is unticked; in the conflict, stock-error and error states focus moves instead to that state's banner so the failure's own explanation is read first. The text under the button names the first unmet condition (a changed total to confirm, missing checkout data, terms not accepted, card payment not approved). Pending stays on same view with meaningful text. Failed payment offers Retry/change method; a changed total shows the old and new amounts and asks for confirmation; stock loss links cart correction. An uncertain response says processing outcome not known, not definitive rejection. Same request/key retry is mandatory.
 
 ### S4.5 Successful simulated order
 

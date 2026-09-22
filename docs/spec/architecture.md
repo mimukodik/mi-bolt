@@ -50,11 +50,11 @@ No component imports mocks, fixtures, repository, API `HttpClient` directly or a
 | CatalogFacade | catalogue route | canonical Router query + listProducts response | query, vm, resultCount | setSearch, setFilters, setSort, setPage, retry |
 | ProductFacade | product route | getProduct + exact variant query | selectedVariant, gallery, vm | selectVariant, selectImage, retry |
 | CartFacade | root | current mock Cart DTO | cart, itemCount, subtotal, pending, error | ensureCart, addItem, removeItem, refresh |
-| CheckoutFacade | /penztar parent | volatile Signal Form model + checkout API draft + Quote | currentStep, canContinue, quote, submitState | saveContact, saveDelivery, refreshQuote, submit, retryUnknownOutcome |
+| CheckoutFacade | /penztar parent | volatile Signal Form model + CheckoutSession (its server-computed CheckoutSummary) | session, options, summary, complete, pending, error, conflict, priceChange, paymentIntent, order | ensureOptions, ensureSession, updateContact, updateBilling, updateDelivery, updatePayment, createPaymentIntent, readPaymentIntent, submitOrder, fetchOrder, retry, confirmPriceChange, resetAfterOrder, startNewPurchase |
 | Dialog/Menu | local component/service | opened flag/trigger reference | opened | open, close |
 | MockRepository | each demo tab/test context | domain catalogue/cart/draft/intents/orders/idempotency maps | handlers only | atomic mutation, reset, snapshot |
 
-Derived totals displayed in purchase screens come from the returned Cart/Quote/OrderReceipt; UI may compute quantity sum for presentation only if tested against authoritative DTO. Do not maintain two independently writable totals. DTOs are readonly inputs to views; facades own immutable replacements.
+Derived totals displayed in purchase screens come from the returned Cart/CheckoutSummary/OrderReceipt; UI may compute quantity sum for presentation only if tested against authoritative DTO. Do not maintain two independently writable totals. DTOs are readonly inputs to views; facades own immutable replacements.
 
 ## 6. Communication contracts
 
@@ -62,7 +62,7 @@ Derived totals displayed in purchase screens come from the returned Cart/Quote/O
 
 `AsyncState<T>` is a tagged union: `{status:'idle'|'loading'}`, `{status:'success',data:T,refreshing:boolean}`, `{status:'empty',data:T}`, `{status:'error',problem:UiProblem,previous?:T}`. A network error is never recoded as `[]`. Error state may preserve the previous rendered list with an explicit warning and disabled unsafe actions.
 
-`CatalogFacade.setFilters(next: CatalogFilters): void` changes Router query, not an unrelated BehaviorSubject. `ProductFacade.selectVariant(id: string): void` updates the exact variant query and resets invalid gallery index. `CartFacade.addItem(command: {variantId:string;quantity:number}): void` enqueues a serialized write and owns its single managed subscription. A private Observable pipeline performs the SDK request; page event handlers invoke the void command, never subscribe to a second cold request. `CheckoutFacade.submit(): void` exhausts a concurrent second click and advances the state machine only on authoritative responses.
+`CatalogFacade.setFilters(next: CatalogFilters): void` changes Router query, not an unrelated BehaviorSubject. `ProductFacade.selectVariant(id: string): void` updates the exact variant query and resets invalid gallery index. `CartFacade.addItem(command: {variantId:string;quantity:number}): void` enqueues a serialized write and owns its single managed subscription. A private Observable pipeline performs the SDK request; page event handlers invoke the void command, never subscribe to a second cold request. `CheckoutFacade.submitOrder(body)` runs once per accepted click: the review step disables its CTA and ignores a second click while the state is `submitting`, and advances only on authoritative responses.
 
 Read requests use switchMap to cancel obsolete HTTP and prevent late results. Cart writes are serialized with concatMap and take expected version when dispatched. Order submission uses exhaust semantics: never switchMap a transactional write. Every subscription is bounded by completion or takeUntilDestroyed. Effects are limited to genuine side effects such as title/focus/persistence; computed values are not propagated with cascading effects. [S05,S06]
 
@@ -105,19 +105,19 @@ Tests live beside feature units where useful; top-level tests owns shared/contra
 
 Use a minimal dependency-free sessionStorage snapshot adapter for tab-scoped demo persistence, behind a typed interface. Memory implementation serves tests and storage-denied mode. Snapshot allowlist: schemaVersion, providerId, simulatedSessionId, savedAt/expiresAt, cart identity/items/version, simulated inventory, privacy-minimized receipts, safe order intent references/key digests and terminal order replay result. Never serialize contact, address, full checkout draft, raw request bodies or arbitrary registry maps.
 
-Cart TTL and committed-order idempotency retention: 24 mock-clock hours. Quote TTL: 5 minutes. Any stale/schema-invalid persisted snapshot is discarded with a user-visible recovery. Before ordinary full reload, contact/address remain volatile by design: the cart restores, earliest incomplete checkout step reopens and explains the reset. Within one SPA session an HTTP/validation failure preserves all typed fields. Storage denied still supports a complete in-memory demo but explicitly warns that reload cannot restore it.
+Cart TTL and committed-order idempotency retention: 24 mock-clock hours. Any stale/schema-invalid persisted snapshot is discarded with a user-visible recovery. Before ordinary full reload, contact/address remain volatile by design: the cart restores, earliest incomplete checkout step reopens and explains the reset. Within one SPA session an HTTP/validation failure preserves all typed fields. Storage denied still supports a complete in-memory demo but explicitly warns that reload cannot restore it.
 
 X-Demo-Session is an opaque namespace, NOT security. Distinct browser contexts have separate sessionStorage and repositories. A duplicated browser tab may copy sessionStorage; each page still uses isolated mock memory. True multi-tab concurrent commerce, authentication and server trust are outside scope; do not market session IDs as an authorization scheme.
 
-## 9. Cart, quote, payment, order invariants
+## 9. Cart, checkout summary, payment, order invariants
 
-All prices originate from fixture catalogue values, not incoming requests. Money.amount is **whole HUF**, not ISO minor units. Avoid decimal multiplication. Item quantity 1..5 and <= available stock; reject rather than clamp. Same variant merges into one cart line. A successful cart mutation increments its version once and invalidates quote and intent. Draft updates invalidate quote/intent without changing cart version; UI serializes draft writes.
+All prices originate from fixture catalogue values, not incoming requests. Money.amount is **whole HUF**, not ISO minor units. Avoid decimal multiplication. Item quantity 1..5 and <= available stock; reject rather than clamp. Same variant merges into one cart line. A successful cart mutation or checkout update increments the one shared session version once (`docs/api/openapi.yaml:16-19`). The checkout summary is recomputed on every read, so no total is cached between steps. UI serializes checkout writes.
 
-For mutations use `If-Match: "<cart.version>"` and `Idempotency-Key`. Idempotency lookup happens before comparing current cart status/version: a replay after success must not become a conflict. Scope key to session+method+path and canonical request fingerprint, including semantically relevant version precondition. A retry sends the identical body/precondition. Reusing a key with a different payload returns 409. Store terminal success or domain-conflict outcome for replay; transport errors before execution have no commit; failed schema validation mutates nothing. A PRICE_CHANGED quote response may atomically update cart/version and stores that conflict outcome so a retry cannot update it again.
+For mutations use `If-Match: "<cart.version>"` and `Idempotency-Key`. Idempotency lookup happens before comparing current cart status/version: a replay after success must not become a conflict. Scope key to session+method+path and canonical request fingerprint, including semantically relevant version precondition. A retry sends the identical body/precondition. Reusing a key with a different payload returns 409. Store terminal success or domain-conflict outcome for replay; transport errors before execution have no commit; failed schema validation mutates nothing. An order whose card payment intent amount differs from the current summary total is refused with 409 PRICE_CHANGED (`params.intentAmount`, `params.total`) and mutates nothing; the shopper confirms the new total before submitting again.
 
-Quotes do NOT reserve stock. Commit rechecks current inventory atomically. Price changes refresh authoritative cart and require explicit review. Quote cannot be used after an earlier step changes or 5 minutes pass. Card simulation accepts no card fields: createPaymentIntent is a same-origin MSW request, with deterministic succeeded/declined/pending status. Pending GET polling: 1s interval, maximum 10 attempts; surface unknown outcome on timeout.
+Nothing reserves stock before the order. Commit rechecks current inventory atomically. Price changes refresh the authoritative summary and require explicit review. Card simulation accepts no card fields: createPaymentIntent is a same-origin MSW request, with deterministic succeeded/declined/pending status. Pending GET polling: 1s interval, maximum 10 attempts; surface unknown outcome on timeout.
 
-For order commit: revalidate quote/session/cart/stock, require current demo terms+simulation acknowledgement, require matching succeeded intent only for demo_card, persist receipt and idempotency result, mark cart ordered, decrement stock exactly once, then clear volatile PII. Full rollback on conflict; never a partially stored receipt. A timeout-after-commit retries the same key/body. Successful replay uses persisted receipt before examining cleared volatile draft. Recovery without an actual commit returns to data entry because personal fields were intentionally not persisted.
+For order commit: revalidate session/cart/stock and the summary total, require current demo terms acceptance, require a matching succeeded intent only for card, persist receipt and idempotency result, mark cart ordered, decrement stock exactly once, then clear volatile PII. Full rollback on conflict; never a partially stored receipt. A timeout-after-commit retries the same key/body. Successful replay uses persisted receipt before examining cleared volatile draft. Recovery without an actual commit returns to data entry because personal fields were intentionally not persisted.
 
 ## 10. Checkout transition model
 
@@ -126,14 +126,14 @@ stateDiagram-v2
   [*] --> Cart
   Cart --> Contact: nonempty valid cart
   Contact --> Delivery: validated contact saved
-  Delivery --> Review: valid delivery/method saved + fresh quote
+  Delivery --> Review: valid delivery/method saved
   Review --> Contact: edit contact
   Review --> Delivery: edit delivery
-  Review --> Review: refreshed quote / correction
-  Review --> Payment: valid consent + demo_card
+  Review --> Review: price change confirmed / correction
+  Review --> Payment: valid consent + card
   Payment --> Review: declined / unresolved / recoverable error
   Payment --> Commit: matching intent succeeded
-  Review --> Commit: valid consent + demo_cod
+  Review --> Commit: valid consent + cash_on_delivery
   Commit --> Review: definite pre-commit error
   Commit --> Recover: uncertain network outcome
   Recover --> Commit: exact same key and body

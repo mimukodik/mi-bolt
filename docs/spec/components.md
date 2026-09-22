@@ -4,7 +4,7 @@ Every component execution and verification cites `docs/design/yettel.md`, the de
 
 ## Shared types
 
-`CatalogFilters = {brands: readonly string[]; storageGb: readonly (128|256|512)[]; minPrice?:number; maxPrice?:number; inStock:boolean; is5g:boolean}`. `CatalogQuery = CatalogFilters & {q:string; sort:Sort; page:number; pageSize:12|24; featured?:boolean}`. `Sort = recommended | price_asc | price_desc | name_asc`. `Facets` is the ProductPage.facets schema. `FilterIdentity = {name: keyof CatalogFilters | 'q' | 'featured'; value?:string|number}`. `CheckoutStep = cart | contact | delivery | review | success`. `AsyncStatus = idle | loading | success | empty | error`. `UiProblem = {code:string; message:string; fieldErrors:FieldError[]; retryable:boolean}`. `CheckoutDraft` composes optional Contact, DeliverySelection and paymentMethod. `ReviewState = quoting | ready | expired | price-changed | stock-error | submitting | error`. `PaymentStatus = idle | pending | succeeded | declined | unknown | error`. `CategoryShortcut = {label:string; query:Partial<CatalogQuery>}`. `LicensedLocalModel = {src:string; licenseReference:string; variantId:string}`. `ViewerError = load | decode | unsupported`. `FieldTree<T>` is Angular Signal Forms typed field-tree API, not a handwritten replacement. Wire types Money,Cart,Variant,Quote,Image,FieldError are generated from OpenAPI.
+`CatalogFilters = {brands: readonly string[]; storageGb: readonly (128|256|512)[]; minPrice?:number; maxPrice?:number; inStock:boolean; is5g:boolean}`. `CatalogQuery = CatalogFilters & {q:string; sort:Sort; page:number; pageSize:12|24; featured?:boolean}`. `Sort = recommended | price_asc | price_desc | name_asc`. `Facets` is the ProductPage.facets schema. `FilterIdentity = {name: keyof CatalogFilters | 'q' | 'featured'; value?:string|number}`. `CheckoutStep = cart | contact | delivery | review | success`. `AsyncStatus = idle | loading | success | empty | error`. `UiProblem = {code:string; message:string; fieldErrors:FieldError[]; retryable:boolean}`. `CheckoutSession` (generated) carries the optional contact, billing, delivery and payment sections, `complete` and the server-computed `summary`. `CheckoutViewState = loading | ready | price-changed | stock-error | conflict | submitting | error` (`review-step.ts`). `PaymentStatus = idle | pending | succeeded | declined | unknown | error`. `CategoryShortcut = {label:string; query:Partial<CatalogQuery>}`. `LicensedLocalModel = {src:string; licenseReference:string; variantId:string}`. `ViewerError = load | decode | unsupported`. `FieldTree<T>` is Angular Signal Forms typed field-tree API, not a handwritten replacement. Wire types Money,Cart,Variant,CheckoutSession,CheckoutSummary,Image,FieldError are generated from OpenAPI.
 
 ## Component catalogue
 
@@ -507,11 +507,11 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `subtotal:Money|null; shipping:Money|null; total:Money|null; itemCount:number; final:boolean`.
+**Signal inputs:** `subtotal:Money; shipping:Money|null; paymentFee:Money|null; serverTotal:Money|null; footnote:string|null; inverse:boolean`.
 
 **Outputs:** `none`.
 
-**Functions:** Read-only one-time summary. Shipping before selection says calculated next step, not fake 0; final amount only from Quote/Receipt.
+**Functions:** Read-only one-time summary. Shipping before selection says calculated next step, not fake 0; final amount only from the server's checkout summary (`serverTotal`) or the receipt.
 
 **Required states:** loading,provisional,final,error.
 
@@ -582,11 +582,11 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `value:demo_card|demo_cod|null; disabled:boolean`.
+**Signal inputs:** `options:readonly PaymentMethodOption[]; describedBy:string|null`.
 
-**Outputs:** `methodChanged:demo_card|demo_cod`.
+**Outputs:** `paymentChanged:PaymentMethodId` (`card` | `cash_on_delivery`).
 
-**Functions:** Two radio options with explicit simulation copy; no fee or real payment widget.
+**Functions:** Two radio options, “Bankkártya” and “Utánvét”, from the server's options with their fee (Utánvét 490 Ft, unavailable above a 300 000 Ft subtotal with its reason shown); no real payment widget.
 
 **Required states:** default,selected,focus,disabled.
 
@@ -597,13 +597,13 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** page container.
 
-**Signal inputs:** `quote:Quote|null; cart:Cart; draft:CheckoutDraft; state:ReviewState`.
+**Signal inputs:** `summary:CheckoutSummary|null; cart:Cart; draft:CheckoutSession; options:CheckoutOptions|null; state:CheckoutViewState; paymentIntent:PaymentIntent|null; priceChange:PriceChange|null; paymentIntentMissing:boolean; paymentStarted:boolean`.
 
-**Outputs:** `editRequested:contact|delivery; refreshQuote:void; submitRequested:void`.
+**Outputs:** `editRequested:contact|delivery; submitRequested:void; retryRequested:void; priceChangeConfirmed:void; paymentRetryRequested:void; paymentChangeMethodRequested:void; paymentCheckRequested:void; backToPaymentRequested:void; newPaymentRequested:void`.
 
-**Functions:** Full order review, current quote, both unchecked consents and terms dialog; distinct stale/changed/stock feedback.
+**Functions:** Full order review from the server-computed summary, one unchecked terms confirmation with the terms dialog and a plain demo note; distinct price-changed/conflict/stock feedback.
 
-**Required states:** quoting,ready,expired,price-changed,stock-error,submitting.
+**Required states:** loading,ready,price-changed,conflict,stock-error,submitting,error.
 
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
@@ -685,4 +685,4 @@ Parent: `[variant]="product.vm().selectedVariant" [pending]="cart.pending()" (ad
 
 1. **Filter change:** FilterPanel output → CatalogPage → CatalogFacade Router write → generated listProducts Observable → MSW → immutable vm signal → toolbar/cards/chips. URL is the shared state, not events between sibling cards.
 2. **Variant add:** VariantSelector output → ProductFacade exact selection → ProductGallery/PriceBlock inputs → AddToCartControl intent → CartFacade mutation queue → SDK/MSW → Cart signal → header/cart/summary. No unrelated component writes the badge.
-3. **Submit:** ReviewStep output → CheckoutFacade verifies Signal Form/consent/current Quote → order orchestrator → optional mock intent → createOrder → returned receipt → Router success → SuccessStep getOrder. A UI click alone cannot produce a success state.
+3. **Submit:** ReviewStep output → CheckoutFacade verifies Signal Form/consent → order orchestrator → optional mock intent → createOrder → returned receipt → Router success → SuccessStep getOrder. A UI click alone cannot produce a success state.

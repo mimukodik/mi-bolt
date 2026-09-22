@@ -13,7 +13,7 @@ These are RELEASE GATES for the future Angular implementation, not results of th
 - [ ] **AC09** Product choice keeps media/color/storage/stock/price synchronized; unavailable combinations never silently substitute another variant; gallery works without 3D.
 - [ ] **AC10** A single global authoritative mock cart supports add/merge/change/remove, stock/quantity limits, expiry and scoped reload persistence with exact whole-HUF arithmetic.
 - [ ] **AC11** Contact/delivery/payment selection/review create a real in-memory mock transaction and durable demo receipt; no placeholder success screen unrelated to API state.
-- [ ] **AC12** COD and mock-card success, decline, pending, timeout, server error, stale quote, stock/price change and unknown outcome have tested recovery paths.
+- [ ] **AC12** COD and mock-card success, decline, pending, timeout, server error, stock/price change (409 PRICE_CHANGED on order) and unknown outcome have tested recovery paths.
 - [ ] **AC13** Duplicate clicks, repeated requests and timeout-after-commit produce one order and one stock decrement through atomic idempotent processing.
 - [ ] **AC14** No payment card data, real fulfillment, external order submission or email is collected/performed; demo labels truthfully describe simulation throughout.
 - [ ] **AC15** OpenAPI 3.1.0 defines all 16 operations and all wire models/errors/headers; validators enforce schemas and documented domain invariants.
