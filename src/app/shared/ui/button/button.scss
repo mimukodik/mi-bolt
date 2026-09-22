@@ -68,11 +68,6 @@
   transform: translateY(1px);
 }
 
-.root:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 /* The pill sits on a navy surface, where both the navy ring and a lime one
    (the pill's own colour) disappear; white is the only ring that reads there
    (docs/design/yettel.md §9). */

@@ -46,7 +46,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 **Filters:** q search in header/list toolbar; brands (three fixture brands), storage128/256/512, inclusive whole-HUF min/max,5G,stock. Price range needs two labeled number fields, not a slider requiring a new library. Filter controls expose invalid range and do not send it. 300ms search debounce, immediate desktop filter changes, page reset to1. Sorting: Ajánlott sorrend, Ár szerint növekvő, Ár szerint csökkenő, Név szerint. Page sizes12/24.
 
-**Card:** 4:3 neutral media surface with small DEMÓTERMÉK tag; live name, max2 features, exact selected storage/color, one-time price with “Egyszeri készülékár • demóadat”, outlined “Részletek →”. Entire card need not be clickable; make image/title/detail link consistent without nested controls.
+**Card:** 4:3 neutral media surface; live name, max2 features, exact selected storage/color, one-time price with “Egyszeri készülékár • demóadat”, outlined “Részletek →”. A card whose shown variant is out of stock carries the text “Elfogyott” under the price, and the card stays clickable. Entire card need not be clickable; make image/title/detail link consistent without nested controls.
 
 **Mobile filter drawer:** header title+named44px close; scrollable fields; footer “Mégse” and “Szűrők alkalmazása”. Copy of applied state remains transient until Apply. Escape/backdrop behaves as cancel; applied URL unchanged. Initial focus=drawer heading, return=filter trigger. Filter counts computed by API, not stale CSS labels.
 
@@ -54,7 +54,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 ## S3 — Product details
 
-**Purpose:** inspect media/specifications, select exact configuration, add an available quantity. Shared shop shell/breadcrumb. Desktop left7 columns gallery, right5 columns product/configuration; light shopping canvas, no hero. Right: small DEMÓTERMÉK marker, H1 Demo One5G, description, stock, color/storage selectors, unit price, quantity, primary “Kosárba teszem”, simulation note. More specifications below main content in disclosures. No subscription configurator.
+**Purpose:** inspect media/specifications, select exact configuration, add an available quantity. Shared shop shell/breadcrumb. Desktop left7 columns gallery, right5 columns product/configuration; light shopping canvas, no hero. Right: H1 Demo One5G, description, stock, color/storage selectors, unit price, quantity, primary “Kosárba teszem”, simulation note. More specifications below main content in disclosures. No subscription configurator.
 
 **Gallery:** reserved main stage, previous/next44px targets, live counter, thumbnail row. Zoom opens real modal with named close and contained focus. The demo uses authorized/user-provided artwork as illustrative device media; mock data must never describe it as a verified real phone. Asset manifest links each view/variant to an explicit media source. A back-view image cannot be replaced by a front image while labeled back.
 

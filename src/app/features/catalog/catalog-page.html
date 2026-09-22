@@ -48,7 +48,7 @@
         (retryRequested)="onRetry()"
       >
         @for (item of facade.vm().items; track item.variantId) {
-          <app-product-card [product]="item" />
+          <app-product-card [eager]="true" [product]="item" />
         }
         <app-button
           data-async-empty-action

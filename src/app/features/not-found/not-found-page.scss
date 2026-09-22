@@ -3,9 +3,7 @@
   flex-direction: column;
   gap: var(--space-4);
   align-items: flex-start;
-  max-width: var(--layout-container-max);
-  margin: 0 auto;
-  padding: var(--space-9) var(--layout-gutter-mobile);
+  padding: var(--space-9) var(--space-4);
 }
 
 .title {
@@ -60,14 +58,9 @@
   color: var(--color-brand-ink);
 }
 
-.link:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 @media (min-width: 1024px) {
   .not-found {
-    padding: var(--space-10) var(--layout-gutter-desktop);
+    padding: var(--space-10) var(--space-9);
   }
 
   .title {

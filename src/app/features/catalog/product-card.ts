@@ -42,7 +42,14 @@ import { ProductImage, type ImageLike } from '../../shared/ui/product-image/prod
 export class ProductCard {
   readonly product = input.required<CatalogItem>();
 
-  /** When true the card's photo loads eagerly: the first card above the fold must not be lazy (Angular NG0913). */
+  /** When true the card's photo loads eagerly. The catalogue grid passes
+   *  `true` for every card because a page holds at most 24 of them and a
+   *  lazy card past the browser's native threshold renders as an empty
+   *  box with no network request issued. The home page's featured grid
+   *  is the first card only, since above-the-fold is what matters there.
+   *  The related products grid on the product page leaves it at the
+   *  default (`false`): four cards stacked below the fold, where lazy
+   *  is the right choice. */
   readonly eager = input<boolean>(false);
 
   /** Currently selected variant id. `linkedSignal` re-initialises from
@@ -85,6 +92,24 @@ export class ProductCard {
     this.product().highlights.slice(0, 2),
   );
 
+  /** True when the shown variant is out of stock — drives the muted
+   *  "Elfogyott" marker under the price (MIM-247). The selected variant's
+   *  own `ColorOption.availability` wins; the item-level
+   *  `CatalogItem.availability` is the defensive fallback for the rare
+   *  case where no matching colour option is found. */
+  readonly isOutOfStock = computed<boolean>(() => {
+    const color = this.selectedColor();
+    const availability = color?.availability ?? this.product().availability;
+    return availability === 'out_of_stock';
+  });
+
+  /** The stock state as it reads inside an accessible name, empty when the
+   *  shown variant is available. The marker under the price is visual only;
+   *  a screen-reader user navigating by links or swatches never reaches it,
+   *  so the same word rides on the accessible names instead of a live region
+   *  (MIM-247 review, 2026-09-22). */
+  readonly stockSuffix = computed<string>(() => (this.isOutOfStock() ? ', elfogyott' : ''));
+
   /** Router link to the product page; the variant goes in `detailsQuery`. */
   readonly detailsLink = computed(() => {
     const item = this.product();
@@ -94,9 +119,16 @@ export class ProductCard {
   /** The selected variant travels as `?variant=`, which the product page reads. */
   readonly detailsQuery = computed(() => ({ variant: this.selectedVariantId() }));
 
+  /** Accessible name for the name link and the "Megnézem" CTA, both of
+   *  which lead to the same product page (the image link uses the more
+   *  descriptive `ariaLabel()` instead). */
+  readonly detailsAriaLabel = computed(
+    () => `${this.product().name} részleteinek megnyitása${this.stockSuffix()}`,
+  );
+
   /** Concatenated accessible name for the image link. */
   readonly ariaLabel = computed(() => {
     const item = this.product();
-    return `${item.name}, ${this.colorName()}, ${String(item.storageGb)} GB - részletek megnyitása`;
+    return `${item.name}, ${this.colorName()}, ${String(item.storageGb)} GB - részletek megnyitása${this.stockSuffix()}`;
   });
 }

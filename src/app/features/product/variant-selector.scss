@@ -63,11 +63,6 @@
   box-shadow: 0 0 0 1px var(--color-primary) inset;
 }
 
-.option:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 .option.is-selected {
   font-family: var(--font-family-bold);
   box-shadow: 0 0 0 2px var(--color-accent) inset;

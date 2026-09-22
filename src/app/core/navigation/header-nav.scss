@@ -13,10 +13,6 @@
   color: var(--color-primary);
 }
 
-.header__inner {
-  max-width: var(--layout-container-max);
-}
-
 .brand__word,
 .brand__mark,
 .header__nav a,
@@ -76,12 +72,6 @@
   background: var(--color-accent);
 }
 
-.menu-trigger:focus-visible,
-.mobile-search input:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
-}
-
 /* Checkout header variant --------------------------------------------- */
 
 /* Row items cannot shrink (button.scss white-space: nowrap), so the
@@ -101,11 +91,6 @@
 .header__back:hover {
   background: var(--color-primary);
   color: var(--color-text-inverse);
-}
-
-.header__back:focus-visible {
-  outline: 2px solid var(--color-focus-light);
-  outline-offset: 2px;
 }
 
 /* Desktop layout ----------------------------------------------------- */
