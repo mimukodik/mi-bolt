@@ -221,4 +221,11 @@ describe('MIM-233: variant chips follow the yettel.hu device page', () => {
     const css = VariantSelector.ɵcmp.styles.join('\n');
     expect(ruleBody(css, '.option[')).toContain('line-height: 24px');
   });
+
+  it('a focused chip uses the input-focus blue outline, not the navy of the selected ring', () => {
+    if (!hasStyles(VariantSelector)) throw new Error('Expected VariantSelector to have styles');
+    const css = VariantSelector.ɵcmp.styles.join('\n');
+    const focused = ruleBody(css, ':focus-visible');
+    expect(focused).toContain('outline-color: var(--%NS%color-focus-input)');
+  });
 });

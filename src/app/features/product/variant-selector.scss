@@ -70,6 +70,12 @@
   box-shadow: 0 0 0 2px var(--color-primary) inset;
 }
 
+/* Keyboard focus on a chip is the input-focus blue, not the global navy
+   ring, so a focused chip never reads as the navy selected one (MIM-233). */
+.option:focus-visible {
+  outline-color: var(--color-focus-input);
+}
+
 .option:disabled {
   opacity: 0.6;
   cursor: not-allowed;
