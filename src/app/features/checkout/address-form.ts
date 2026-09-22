@@ -116,6 +116,16 @@ export class AddressForm {
     return [{ ...result, pointer: `${this.pointerBase()}/${field}` }];
   }
 
+  /** `aria-invalid` is gated on touched/submitted: the message under
+   *  the field already uses the same gate, and the border rule keys
+   *  off `[aria-invalid='true']`. A pristine required field stays
+   *  idle until the shopper has either left it or the parent has
+   *  submitted. The validators themselves stay as they are; this
+   *  only decides when the value is announced and painted. */
+  showsInvalid(field: AddressField): boolean {
+    return this.errors(field).length > 0 && (this.isTouched(field) || this.submitted());
+  }
+
   fieldId(field: AddressField): string {
     return `${this.idPrefix()}-${field}`;
   }

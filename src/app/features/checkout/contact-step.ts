@@ -205,6 +205,13 @@ export class ContactStep {
   ]);
   readonly fullNameInvalid = computed(() => this.fullNameErrors().length > 0);
   readonly fullNameTouched = computed(() => this.contactFields().fullName().touched());
+  /** `aria-invalid` is gated on touched/submitted: the message under
+   *  the field already uses the same gate, and the border rule keys
+   *  off `[aria-invalid='true']`. A pristine required field stays
+   *  idle until the shopper has either left it or tried to submit. */
+  readonly fullNameShowsInvalid = computed<boolean>(
+    () => this.fullNameInvalid() && (this.fullNameTouched() || this.submitted()),
+  );
 
   readonly emailErrors = computed<readonly FieldError[]>(() => [
     ...toFieldErrors(this.contactFields().email().errors()),
@@ -212,6 +219,9 @@ export class ContactStep {
   ]);
   readonly emailInvalid = computed(() => this.emailErrors().length > 0);
   readonly emailTouched = computed(() => this.contactFields().email().touched());
+  readonly emailShowsInvalid = computed<boolean>(
+    () => this.emailInvalid() && (this.emailTouched() || this.submitted()),
+  );
 
   readonly phoneErrors = computed<readonly FieldError[]>(() => [
     ...toFieldErrors(this.contactFields().phone().errors()),
@@ -219,6 +229,9 @@ export class ContactStep {
   ]);
   readonly phoneInvalid = computed(() => this.phoneErrors().length > 0);
   readonly phoneTouched = computed(() => this.contactFields().phone().touched());
+  readonly phoneShowsInvalid = computed<boolean>(
+    () => this.phoneInvalid() && (this.phoneTouched() || this.submitted()),
+  );
 
   readonly fullNameFieldState = computed(() =>
     this.computeFieldState(this.fullNameInvalid(), this.fullNameTouched()),
