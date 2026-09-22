@@ -46,8 +46,10 @@ export class ProductCard {
    *  `true` for every card because a page holds at most 24 of them and a
    *  lazy card past the browser's native threshold renders as an empty
    *  box with no network request issued. The home page's featured grid
-   *  is the first card only, since above-the-fold is what matters there;
-   *  this is the same Angular NG0913 rule, applied to the whole grid. */
+   *  is the first card only, since above-the-fold is what matters there.
+   *  The related products grid on the product page leaves it at the
+   *  default (`false`): four cards stacked below the fold, where lazy
+   *  is the right choice. */
   readonly eager = input<boolean>(false);
 
   /** Currently selected variant id. `linkedSignal` re-initialises from
