@@ -51,7 +51,7 @@ export default defineConfig({
         name: 'MiBolt e2e coverage',
         outputFile: './coverage/e2e/index.html',
         coverage: {
-          // Coverage is collected here and gated by scripts/check-e2e-coverage.mjs (the e2e npm script chains it), the one place the thresholds live.
+          // Coverage is collected here and gated by scripts/check-e2e-coverage.mjs (the e2e npm script chains it). The script's thresholds mirror the unit coverageThresholds in angular.json (lines 102-108); keep both in sync.
           entryFilter: (entry: V8CoverageEntry) =>
             entry.url.includes('/main') || entry.url.includes('/chunk-'),
           sourceFilter: (sourcePath: string) =>
