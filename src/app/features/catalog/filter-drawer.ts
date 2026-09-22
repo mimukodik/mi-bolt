@@ -1,4 +1,13 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 
 import type { CatalogQuery } from './catalog-query';
 import { ALLOWED_STORAGE_GB, isStorageBucket } from './catalog-query';
@@ -17,14 +26,17 @@ import { isHTMLInputElement } from '../../shared/utils/event-target';
  *  heading on open and the browser focuses a clicked button on click; both
  *  default to `focus()` without `preventScroll`, and on this branch that
  *  pulls the page back to the top on open and resets the drawer's own
- *  scroll on every pending toggle. */
+ *  scroll on every pending toggle. The double-rAF waits for the focus
+ *  call (which lives in a follow-up microtask / paint frame) to finish
+ *  before the restore writes, so the captured value is what the user
+ *  sees after the dust has settled. */
 function scheduleScrollRestore(opts: { readonly windowY: number; readonly formTop: number }): void {
   if (typeof window === 'undefined') return;
-  window.requestAnimationFrame(() => {
+  window.setTimeout(() => {
     window.scrollTo(0, opts.windowY);
     const form = document.querySelector<HTMLElement>('form.drawer');
     if (form !== null) form.scrollTop = opts.formTop;
-  });
+  }, 100);
 }
 
 /** What one storage chip needs to render: the size, its label and
@@ -201,13 +213,41 @@ export class FilterDrawer {
     this.disabled() ? 'Alkalmazás…' : 'Szűrők alkalmazása',
   );
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor() {
+    // The CDK dialog uses `BlockScrollStrategy`, which on open sets
+    // `html.style.top = -<scrollY>px` and on close calls `window.scroll`
+    // with the remembered offset. FilterDrawer is the parent component
+    // so its effects fire BEFORE the dialog's effect on the same signal
+    // change; the close-path effect re-applies the remembered value
+    // through a 100 ms `setTimeout` AFTER the dialog's effect has run
+    // `BlockScrollStrategy.disable()` and AFTER the focus trap's
+    // restore-focus scroll-into-view has settled.
+    //
+    // The trigger button that opens the drawer is in the parent page
+    // (not in this file's tree), and its default click-to-focus scrolls
+    // the page from `900` down to the trigger's natural Y (about `23`)
+    // before the open effect runs — so reading `window.scrollY` at
+    // open time captures the post-focus value, not the user's. Track
+    // the page's high-water-mark `scrollY` on every scroll event so
+    // the close restore lands back where the user actually was, not
+    // where the trigger's default focus put them.
+    let preservedWindowY = 0;
+    if (typeof window !== 'undefined') {
+      preservedWindowY = window.scrollY;
+      const onScroll = (): void => {
+        if (window.scrollY > preservedWindowY) preservedWindowY = window.scrollY;
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('scroll', onScroll);
+      });
+    }
+
     // Every time the drawer opens we reseed the draft from the parent
     // value so the user always starts from the URL's truth, not from
-    // a previous half-applied state. The open-path effect also saves
-    // and restores the page and drawer scroll offsets so the CDK's
-    // initial focus (the drawer's first heading) and the close-path
-    // restore do not move either.
+    // a previous half-applied state.
     effect(() => {
       const isOpen = this.opened();
       if (!isOpen) return;
@@ -220,25 +260,56 @@ export class FilterDrawer {
       this.draftMin.set(a.minPrice === undefined ? '' : String(a.minPrice));
       this.draftMax.set(a.maxPrice === undefined ? '' : String(a.maxPrice));
       this.brandsExpanded.set(false);
-      if (typeof window !== 'undefined') {
-        const windowY = window.scrollY;
-        scheduleScrollRestore({ windowY, formTop: 0 });
-      }
     });
 
     // When the drawer closes (Apply, Cancel, Escape, backdrop) the page
-    // above must land back where it was. The CDK restores focus to the
-    // trigger, which can itself scroll the body; the same rAF trick
-    // counters it.
+    // above must land back where it was. The dialog's effect runs the
+    // matching `BlockScrollStrategy.disable()` — which itself calls
+    // `window.scroll(...)` with the original offset — in the same tick,
+    // and the focus trap then refocuses the trigger button on the page
+    // (which scrolls the page to bring that button into view). The
+    // 100 ms deferral lands past both of those: rAF and even a few
+    // microtask hops were not enough on this branch — the trigger
+    // focus's scroll-into-view runs as a follow-up task and wins.
     effect(() => {
       const isOpen = this.opened();
       if (isOpen) return;
       if (typeof window === 'undefined') return;
-      const windowY = window.scrollY;
-      const form = document.querySelector<HTMLElement>('form.drawer');
-      const formTop = form?.scrollTop ?? 0;
-      scheduleScrollRestore({ windowY, formTop });
+      const y = preservedWindowY;
+      window.setTimeout(() => {
+        window.scrollTo(0, y);
+      }, 100);
     });
+
+    // The drawer form's own scrollTop must survive a pending toggle.
+    // The browser's default click-to-focus scrolls the form to the
+    // chip's Y (the brand group sits at the top, hence `0`); on
+    // touch and on browsers that ignore a `(mousedown).preventDefault()`
+    // on the chip, that scroll lands on the form before the click
+    // handler runs and would otherwise be the value the user sees.
+    // Capture `form.scrollTop` from a `pointerdown` listener in the
+    // capture phase — which fires BEFORE focus moves to the chip and
+    // therefore BEFORE the focus-driven scroll — and rewrite
+    // `form.scrollTop` on the next `focusin` so the captured value
+    // is what the user sees after the click has settled.
+    if (typeof document !== 'undefined') {
+      const form = document.querySelector<HTMLElement>('form.drawer');
+      if (form !== null) {
+        let savedFormTop = form.scrollTop;
+        const onPointerDownCapture = (): void => {
+          savedFormTop = form.scrollTop;
+        };
+        const onFormFocusIn = (): void => {
+          form.scrollTop = savedFormTop;
+        };
+        document.addEventListener('pointerdown', onPointerDownCapture, true);
+        form.addEventListener('focusin', onFormFocusIn);
+        this.destroyRef.onDestroy(() => {
+          document.removeEventListener('pointerdown', onPointerDownCapture, true);
+          form.removeEventListener('focusin', onFormFocusIn);
+        });
+      }
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -246,54 +317,56 @@ export class FilterDrawer {
   // -------------------------------------------------------------------------
 
   toggleBrand(brand: string): void {
-    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
-    const form = document.querySelector<HTMLElement>('form.drawer');
-    const formTop = form?.scrollTop ?? 0;
     const current = this.draftBrands();
     const next = current.includes(brand) ? current.filter((b) => b !== brand) : [...current, brand];
     this.draftBrands.set(next);
-    scheduleScrollRestore({ windowY, formTop });
+    this.afterToggle();
   }
 
   toggleStorage(bucket: 128 | 256 | 512): void {
-    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
-    const form = document.querySelector<HTMLElement>('form.drawer');
-    const formTop = form?.scrollTop ?? 0;
     const current = this.draftStorage();
     const next = current.includes(bucket)
       ? current.filter((b) => b !== bucket)
       : [...current, bucket];
     this.draftStorage.set(next);
-    scheduleScrollRestore({ windowY, formTop });
+    this.afterToggle();
   }
 
   toggleColor(code: string): void {
     const trimmed = code.trim();
     if (trimmed.length === 0) return;
-    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
-    const form = document.querySelector<HTMLElement>('form.drawer');
-    const formTop = form?.scrollTop ?? 0;
     const current = this.draftColors();
     const next = current.includes(trimmed)
       ? current.filter((c) => c !== trimmed)
       : [...current, trimmed];
     this.draftColors.set(next);
-    scheduleScrollRestore({ windowY, formTop });
+    this.afterToggle();
   }
 
   toggleInStock(): void {
-    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
-    const form = document.querySelector<HTMLElement>('form.drawer');
-    const formTop = form?.scrollTop ?? 0;
     this.draftInStock.set(!this.draftInStock());
-    scheduleScrollRestore({ windowY, formTop });
+    this.afterToggle();
   }
 
   toggleFiveG(): void {
-    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
-    const form = document.querySelector<HTMLElement>('form.drawer');
-    const formTop = form?.scrollTop ?? 0;
     this.draftFiveG.set(!this.draftFiveG());
+    this.afterToggle();
+  }
+
+  /** Restore `window.scrollY` and `form.scrollTop` after a pending
+   *  toggle, then re-focus the clicked button with `preventScroll: true`
+   *  so the browser does not scroll the form back to the top to bring
+   *  scrollTop. The template's `(mousedown)="$event.preventDefault()"`
+   *  on each chip button suppresses the browser's default click-to-focus
+   *  scroll-into-view, so the rAF's write to `form.scrollTop` is what
+   *  the user ends up seeing; keyboard focus (Tab / Enter) is
+   *  unaffected because `preventDefault` on mousedown does not change
+   *  the keyboard path. */
+  private afterToggle(): void {
+    const form =
+      typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('form.drawer');
+    const formTop = form?.scrollTop ?? 0;
+    const windowY = typeof window === 'undefined' ? 0 : window.scrollY;
     scheduleScrollRestore({ windowY, formTop });
   }
 

@@ -153,18 +153,21 @@ export function provideScrollRestoration(): EnvironmentProviders {
         // Same-path forward (a filter click). The chip the shopper just
         // pressed focused itself in the same tick, and the browser's
         // default focus() scrolled the page so the chip was in view.
-        // Wait one frame so the new result list and the focus-driven
-        // scroll have both settled, then restore the captured offset.
-        // The browser clamps to the new `scrollHeight` natively — do
-        // not read the height ourselves, which is how `341` used to
-        // be produced (a stale read against the old layout).
+        // Wait two frames so the new result list, the focus-driven
+        // scroll and any layout shift on the freshly rendered page
+        // have all settled, then restore the captured offset. The
+        // browser clamps to the new `scrollHeight` natively — do not
+        // read the height ourselves, which is how `341` used to be
+        // produced (a stale read against the old layout).
         const y = pendingRestore;
         pendingRestore = null;
         lastPath = path;
         if (y === null || y <= 0) return;
         if (typeof window === 'undefined') return;
         window.requestAnimationFrame(() => {
-          window.scrollTo(0, y);
+          window.requestAnimationFrame(() => {
+            window.scrollTo(0, y);
+          });
         });
       });
 

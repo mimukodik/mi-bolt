@@ -32,6 +32,9 @@
                 [class.is-selected]="isBrandSelected(brand.value)"
                 [disabled]="disabled() || brand.count === 0"
                 (click)="toggleBrand(brand.value)"
+                (mousedown)="$event.preventDefault()"
+                (pointerdown)="$event.preventDefault()"
+                (touchstart)="$event.preventDefault()"
               >
                 <span aria-hidden="true" class="check">{{
                   isBrandSelected(brand.value) ? '✓' : ''
@@ -83,6 +86,9 @@
                 [class.is-selected]="isColorSelected(color.value)"
                 [disabled]="disabled() || color.count === 0"
                 (click)="toggleColor(color.value)"
+                (mousedown)="$event.preventDefault()"
+                (pointerdown)="$event.preventDefault()"
+                (touchstart)="$event.preventDefault()"
               >
                 <span
                   aria-hidden="true"
@@ -119,6 +125,9 @@
               [class.is-selected]="isStorageSelected(bucket.gb)"
               [disabled]="disabled()"
               (click)="toggleStorage(bucket.gb)"
+              (mousedown)="$event.preventDefault()"
+              (pointerdown)="$event.preventDefault()"
+              (touchstart)="$event.preventDefault()"
             >
               <span aria-hidden="true" class="check">{{
                 isStorageSelected(bucket.gb) ? '✓' : ''
@@ -198,6 +207,9 @@
             [class.is-selected]="isInStockSelected()"
             [disabled]="disabled()"
             (click)="toggleInStock()"
+            (mousedown)="$event.preventDefault()"
+            (pointerdown)="$event.preventDefault()"
+            (touchstart)="$event.preventDefault()"
           >
             <span aria-hidden="true" class="check">{{ isInStockSelected() ? '✓' : '' }}</span>
             <span class="option__label"
@@ -223,6 +235,9 @@
             [class.is-selected]="isFiveGSelected()"
             [disabled]="disabled()"
             (click)="toggleFiveG()"
+            (mousedown)="$event.preventDefault()"
+            (pointerdown)="$event.preventDefault()"
+            (touchstart)="$event.preventDefault()"
           >
             <span aria-hidden="true" class="check">{{ isFiveGSelected() ? '✓' : '' }}</span>
             <span class="option__label"
