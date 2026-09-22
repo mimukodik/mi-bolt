@@ -54,11 +54,11 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 ## S3 — Product details
 
-**Purpose:** inspect media/specifications, select exact configuration, add an available quantity. Shared shop shell/breadcrumb. Desktop left7 columns gallery, right5 columns product/configuration; light shopping canvas, no hero. Right: H1 Demo One5G, description, stock, color/storage selectors, unit price, quantity, primary “Kosárba teszem”, simulation note. More specifications below main content in disclosures. No subscription configurator.
+**Purpose:** inspect media/specifications, select exact configuration, add one piece to the cart. Shared shop shell/breadcrumb. Desktop left7 columns gallery, right5 columns product/configuration; light shopping canvas, no hero. Right: H1 Demo One5G, description, stock, color/storage selectors, unit price, primary “Kosárba teszem”, simulation note. More specifications below main content in disclosures. No subscription configurator.
 
 **Gallery:** reserved main stage, previous/next44px targets, live counter, thumbnail row. Zoom opens real modal with named close and contained focus. The demo uses authorized/user-provided artwork as illustrative device media; mock data must never describe it as a verified real phone. Asset manifest links each view/variant to an explicit media source. A back-view image cannot be replaced by a front image while labeled back.
 
-**Variant matrix:** exact combination is chosen, with color name beside swatch and selected check. Unavailable combinations disabled with reason. A variant change updates image, price, capacity, stock and max quantity atomically. Invalid deep-link variant yields explanation and blocked add until valid selection. Noninteger/out-of-limit quantity rejected, not silently changed.
+**Variant matrix:** exact combination is chosen, with color name beside swatch and selected check. Unavailable combinations disabled with reason. A variant change updates image, price, capacity and stock atomically. Invalid deep-link variant yields explanation and blocked add until valid selection. Each “Kosárba teszem” adds one piece; the page has no quantity field (owner, 2026-09-22).
 
 **Mobile:** one column gallery then product info/options; specs follow. A compact sticky rail shows price+same add action and status; only one responsive primary control is focusable at a time. Scroll padding, safe-area and keyboard focus are validated. No auto-rotating carousel or baseline3D placeholder button.
 
