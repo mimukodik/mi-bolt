@@ -36,11 +36,12 @@
         Demórendelés betöltése…
       }
     </h1>
-    <p class="demo-notice" data-testid="success-demo-notice" role="note">
-      <strong>Demó pénztár.</strong>
-      A sikeroldal csupán a működést mutatja be — nem történt valódi fizetés, szállítás vagy
-      e-mail-küldés.
-    </p>
+    <app-status-message
+      data-testid="success-demo-notice"
+      severity="info"
+      [message]="demoNoticeMessage"
+      [persistent]="true"
+    />
   </app-checkout-step-header>
 
   @switch (loadState().kind) {

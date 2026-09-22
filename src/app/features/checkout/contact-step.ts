@@ -177,6 +177,12 @@ export class ContactStep {
    *  component only reports the outcome R15 allows it to show. */
   readonly saveErrorMessage = 'A mentés sikertelen. Próbáld újra.';
 
+  /** Standing "this is a demo" notice rendered as `app-status-message` on
+   *  this screen. Persistent: the primitive hides its dismiss button
+   *  when `[persistent]` is true (MIM-240b1). */
+  readonly demoNoticeMessage =
+    'Demó pénztár. Kérlek, ne használj valós személyes adatokat — ez egy működési bemutató, nem küldünk valódi rendelést vagy e-mailt.';
+
   /** Submit gating. Disabled while a save is pending so a rapid
    *  second click does not fire the action twice. */
   readonly canSubmit = computed<boolean>(() => this.saveState() !== 'loading');

@@ -17,17 +17,6 @@
   color: var(--color-status-success);
 }
 
-.demo-notice {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-section);
-  border-left: 4px solid var(--color-brand-ink);
-  border-radius: var(--radius-card);
-  color: var(--color-text-primary);
-  font-size: var(--type-helper);
-  line-height: var(--line-height-body);
-}
-
 .loading,
 .recovery {
   display: flex;

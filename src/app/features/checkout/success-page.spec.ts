@@ -700,6 +700,31 @@ describe('SuccessStep', () => {
 
     expect(TestBed.inject(CheckoutFacade).order()).toBeNull();
   });
+
+  // MIM-240b1: the demo notice is `app-status-message` with the primitive's
+  // own message string and `[persistent]` true. The data-testid stays on
+  // the primitive's host so any existing query keeps working.
+  it('SP-19 renders the exact message string the primitive carries (MIM-240b1)', async () => {
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+
+    await mountSuccessPage(placed.orderId);
+
+    const demoNotice = queryHTMLElement(document, '[data-testid="success-demo-notice"]');
+    expect(demoNotice?.textContent.trim()).toBe(
+      'Demó pénztár. A sikeroldal csupán a működést mutatja be — nem történt valódi fizetés, szállítás vagy e-mail-küldés.',
+    );
+  });
+
+  it('SP-20 renders no "Bezárás" dismiss button because the primitive is persistent (MIM-240b1)', async () => {
+    await seedCompleteCashDraft();
+    const placed = await placeCodOrder();
+
+    await mountSuccessPage(placed.orderId);
+
+    const demoNotice = queryHTMLElement(document, '[data-testid="success-demo-notice"]');
+    expect(demoNotice?.textContent ?? '').not.toContain('Bezárás');
+  });
 });
 
 // ---------------------------------------------------------------------------
