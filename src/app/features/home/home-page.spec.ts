@@ -381,7 +381,7 @@ describe('T14-AC01 brand-consistent hero, Hungarian copy, no raster CTA', () => 
 
 // ---------------------------------------------------------------------------
 // AC02: Hero CTA opens the catalogue; category shortcuts set valid
-// 5G / inStock filters; featured "Részletek" opens the correct slug.
+// 5G / inStock filters; featured "Megnézem" opens the correct slug.
 // ---------------------------------------------------------------------------
 
 describe('T14-AC02 CTA + category shortcuts + featured details', () => {
