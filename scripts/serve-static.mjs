@@ -233,7 +233,10 @@ function sendSpaFallback(res, baseDir = STATIC_DIR) {
  *   6. Everything else falls back to `index.html`.
  */
 function handle(request, res) {
-  const urlPath = request.url ?? '/';
+  const rawPath = request.url ?? '/';
+  const parsedUrl = new URL(rawPath, 'http://localhost');
+  const urlPath = parsedUrl.pathname.replace(/\/+/g, '/') || '/';
+  const forwardPath = parsedUrl.search ? urlPath + parsedUrl.search : urlPath;
 
   // 1. Proxied API traffic: forward before the method guard so non-GET
   // methods are preserved for the backend.
@@ -244,7 +247,7 @@ function handle(request, res) {
       {
         hostname: target.hostname,
         port: target.port || 80,
-        path: urlPath,
+        path: forwardPath,
         method: request.method,
         headers,
       },
