@@ -7,7 +7,8 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -93,6 +94,15 @@ function click(fixture: ComponentFixture<PaymentPage>, selector: string): void {
     throw new Error(`Expected clickable element: ${selector}`);
   }
   el.click();
+}
+
+function fill(fixture: ComponentFixture<PaymentPage>, selector: string, value: string): void {
+  const el = hostElement(fixture).querySelector(selector);
+  if (!(el instanceof HTMLInputElement)) {
+    throw new Error(`Expected input element: ${selector}`);
+  }
+  el.value = value;
+  el.dispatchEvent(new Event('input'));
 }
 
 beforeEach(() => {
@@ -411,5 +421,85 @@ describe('PaymentPage', () => {
     const posts = captured.filter((c) => c.method === 'POST');
     expect(posts).toHaveLength(1);
     expect(posts[0]?.body).toBe('{"outcome":"succeeded"}');
+  });
+
+  it('MIM-260: the card fields never reach the posted body', async () => {
+    await configureTestBed();
+    server.use(
+      http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)),
+      http.post(`${BASE_URL}/payment-intents/:id/outcome`, () =>
+        HttpResponse.json(closedWith('succeeded')),
+      ),
+    );
+    const fixture = await render('pi_test_1');
+    await flush();
+
+    fill(fixture, '[data-testid="pay-card-number"]', '1234 5678 9012 3456');
+    fill(fixture, '[data-testid="pay-card-holder"]', 'JOHN DOE');
+    fill(fixture, '[data-testid="pay-card-expiry"]', '12/25');
+    fill(fixture, '[data-testid="pay-card-cvc"]', '123');
+
+    click(fixture, '[data-testid="pay-succeeded"]');
+    await fixture.whenStable();
+    await flush();
+
+    const posts = captured.filter((c) => c.method === 'POST');
+    expect(posts).toHaveLength(1);
+    expect(posts[0]?.body).toBe('{"outcome":"succeeded"}');
+  });
+
+  it('MIM-260: no field offers a stored card to the browser', async () => {
+    await configureTestBed();
+    server.use(http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)));
+    const fixture = await render('pi_test_1');
+    const root = hostElement(fixture);
+    await flush();
+
+    const number = root.querySelector<HTMLElement>('[data-testid="pay-card-number"]');
+    const holder = root.querySelector<HTMLElement>('[data-testid="pay-card-holder"]');
+    const expiry = root.querySelector<HTMLElement>('[data-testid="pay-card-expiry"]');
+    const cvc = root.querySelector<HTMLElement>('[data-testid="pay-card-cvc"]');
+
+    expect(number?.getAttribute('autocomplete')).toBe('off');
+    expect(number?.getAttribute('type')).toBe('text');
+    expect(holder?.getAttribute('autocomplete')).toBe('off');
+    expect(holder?.getAttribute('type')).toBe('text');
+    expect(expiry?.getAttribute('autocomplete')).toBe('off');
+    expect(expiry?.getAttribute('type')).toBe('text');
+    expect(cvc?.getAttribute('autocomplete')).toBe('off');
+    expect(cvc?.getAttribute('type')).toBe('text');
+  });
+
+  it('MIM-260: every card field starts empty when the router binds the inputs', async () => {
+    await TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
+        provideApiConfiguration(BASE_URL),
+        provideRouter(
+          [{ path: ':paymentIntentId', component: PaymentPage }],
+          withComponentInputBinding(),
+        ),
+        {
+          provide: LOCATION_ASSIGN,
+          useValue: (url: string): void => {
+            assigned.push(url);
+          },
+        },
+      ],
+    }).compileComponents();
+    server.use(http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)));
+
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/pi_test_1', PaymentPage);
+    await harness.fixture.whenStable();
+    await flush();
+    await harness.fixture.whenStable();
+
+    const root = harness.routeNativeElement;
+    const values = ['pay-card-number', 'pay-card-holder', 'pay-card-expiry', 'pay-card-cvc'].map(
+      (id) => root?.querySelector<HTMLInputElement>(`[data-testid="${id}"]`)?.value,
+    );
+    expect(values).toEqual(['', '', '', '']);
   });
 });
