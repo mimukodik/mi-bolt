@@ -1179,5 +1179,6 @@ describe('MIM-228: facet universe', () => {
     expect(merged.priceRange).toEqual(priceRange);
     expect(merged.storageGb).toBe(fresh.storageGb);
     expect(merged.colors.map((c) => [c.value, c.count])).toEqual([['a', 0]]);
+    expect(merged.colors[0]?.swatchHex).toBe('#111111');
   });
 });

@@ -164,7 +164,6 @@ function describeError(err: unknown): string {
  * brand or colour list shrink and grow; a value new in the response is
  * appended; a value present takes the response's entry. `storageGb`,
  * `inStock`, `is5g` and `priceRange` pass through from the response.
- * Exported so the spec drives the same function the facade calls.
  */
 export function mergeFacetsIntoUniverse(universe: FacetUniverse, fresh: Facets): Facets {
   return {
