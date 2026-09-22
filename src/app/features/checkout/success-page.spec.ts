@@ -412,7 +412,8 @@ describe('OrderReceiptComponent', () => {
     const notice = queryHTMLElement(document, '[data-testid="receipt-simulation-notice"]');
     const inner = notice?.querySelector('[data-testid="status-message"]');
     expect(inner).not.toBeNull();
-    expect(inner?.getAttribute('role')).toBe('status');
+    expect(inner?.getAttribute('role')).toBeNull();
+    expect(inner?.getAttribute('aria-live')).toBeNull();
     expect(inner?.classList.contains('is-info')).toBe(true);
     expect(notice?.querySelector('app-button')).toBeNull();
     expect(notice?.textContent).toContain('Demó figyelmeztetés.');

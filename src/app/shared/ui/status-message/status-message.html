@@ -1,8 +1,8 @@
 <div
   class="root flex items-center justify-between gap-3 px-4 py-3 rounded"
   data-testid="status-message"
-  [attr.aria-live]="severity() === 'error' ? 'assertive' : 'polite'"
-  [attr.role]="severity() === 'error' ? 'alert' : 'status'"
+  [attr.aria-live]="live() ? (severity() === 'error' ? 'assertive' : 'polite') : null"
+  [attr.role]="live() ? (severity() === 'error' ? 'alert' : 'status') : null"
   [class.is-error]="severity() === 'error'"
   [class.is-info]="severity() === 'info'"
   [class.is-success]="severity() === 'success'"
