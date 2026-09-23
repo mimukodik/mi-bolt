@@ -6,17 +6,21 @@ description: >-
   orchestrator's part around it, and the stuck-agent watch. Load it for any
   Playwright or e2e work: "write an e2e test", "add a Playwright spec", "the
   e2e suite is red", "a test is failing under e2e/", "npm run e2e", a plan
-  under `specs/`, or a `test.fixme()` question. Not for unit tests (`npm run
-  test`) and not for a browser verification pass, which stays
-  `real-browser-sonnet` through the chrome-devtools MCP.
+  under `specs/`, or a `test.fixme()` question. Not for unit tests
+  (`npm --prefix frontend run test`) and not for a browser verification pass,
+  which stays `real-browser-sonnet` through the chrome-devtools MCP.
 ---
 
 # Playwright tests
 
+Every path in this skill is relative to `frontend/`, the Angular workspace,
+which is also the directory `.mcp.json` starts the `playwright-test` server
+in, so the agents name these paths the same way.
+
 ## 1. When this skill runs
 
-Any end-to-end work in this repository. Unit tests (`npm run test`) are not
-this skill's, and neither is browser verification: a change to a rendered
+Any end-to-end work in this repository. Unit tests
+(`npm --prefix frontend run test`) are not this skill's, and neither is browser verification: a change to a rendered
 surface is still verified by `real-browser-sonnet` through the chrome-devtools
 MCP under `.claude/rules/frontend-browser.md`. Playwright specs do not replace
 that pass; they are regression tests that outlive the change.
@@ -43,16 +47,17 @@ a `coder-agent.sh` runner and every other agent keep out of those files.
   through monocart-reporter, because `page.coverage` is Chromium-only. The
   `smoke` project (`e2e/smoke/**`) starts the `local-backend` configuration
   on 4410 and needs the backend running.
-- Commands: `npm run e2e` runs `seed` plus the two Chromium projects with
-  the V8 coverage gate armed via the `onEnd` hook inside `playwright.config.ts`
-  (Firefox and WebKit projects run without coverage); `npm run e2e:all` runs
-  the seed and every `integration-*` project; `npm run e2e:smoke` runs the
-  `smoke` project; `npm run e2e:install` installs all three browsers. The CI
-  matrix in `.github/workflows/pr-check.yml` installs each matrix entry's
-  browser per-job.
-- The backend of `e2e/integration/**` is MSW inside the page. There is no
-  server to seed: `src/mocks/repository.ts` is page-side memory (AGENTS.md).
-  `e2e/smoke/**` waits on the `local-backend` configuration.
+- Commands, from the repository root: `npm --prefix frontend run e2e` runs
+  `seed` plus the two Chromium projects with the V8 coverage gate armed via the
+  `onEnd` hook inside `playwright.config.ts` (Firefox and WebKit projects run
+  without coverage); `npm --prefix frontend run e2e:all` runs the seed and every
+  `integration-*` project; `npm --prefix frontend run e2e:smoke` runs the
+  `smoke` project; `npm --prefix frontend run e2e:install` installs all three
+  browsers. The CI matrix in `.github/workflows/pr-check.yml` installs each
+  matrix entry's browser per-job.
+- The backend of `e2e/integration/**` is MSW inside the page. There is no server
+  to seed: `projects/storefront/src/mocks/repository.ts` is page-side memory
+  (AGENTS.md). `e2e/smoke/**` waits on the `local-backend` configuration.
 
 ## 3. Flow A: writing tests
 
@@ -75,9 +80,9 @@ tests".
    generator writes one test per file with `generator_write_test`, into
    `e2e/integration/` (or `e2e/smoke/`), and nothing else.
 4. `playwright-test-healer` only when a generated test is red (flow B).
-5. The orchestrator runs `npm run e2e` itself and reads the exit code and the
-   four `e2e coverage` lines. A subagent's green report is not a run
-   (`.claude/rules/code-standards.md`).
+5. The orchestrator runs `npm --prefix frontend run e2e` itself and reads the
+   exit code and the four `e2e coverage` lines. A subagent's green report is not
+   a run (`.claude/rules/code-standards.md`).
 
 ## 4. Flow B: fixing a failure
 

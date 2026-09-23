@@ -196,7 +196,7 @@ angular.dev at the major version its own `version` argument names and never
 reads `angular.json`; with the argument left off it falls back to the CLI's
 latest known index, 22 on 22.1.8 (`version ?? LATEST_KNOWN_DOCS_VERSION`,
 clamped to a floor of 17, in
-`node_modules/@angular/cli/src/commands/mcp/tools/doc-search.js`, read
+`frontend/node_modules/@angular/cli/src/commands/mcp/tools/doc-search.js`, read
 2026-09-19). That fallback is silent, so an answer about the wrong Angular
 reads exactly like a right one: measured 2026-09-19, one `linkedSignal` query
 returned `"searchedVersion":22` with the argument omitted and

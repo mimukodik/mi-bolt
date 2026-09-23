@@ -438,9 +438,9 @@ work") force constant clarification.
 index into the main session, so I have already seen the topic list; the
 topic files themselves are never injected.
 
-- Never open these files directly. Pull in one topic through the CLI instead
-  of the directory: `pnpm claude:memory search "<term>"`,
-  `pnpm claude:memory read <topic>`, `pnpm claude:memory list`. Search returns
+- Never open these files directly. Pull in one topic through the CLI instead of
+  the directory: `mise run claude:memory search "<term>"`, `mise run
+  claude:memory read <topic>`, `mise run claude:memory list`. Search returns
   ranked `path:line` plus a one-line snippet, so I decide what to open.
 - **`search` also reads `.claude/retrospectives/`, and a hit there is
   evidence, not a rule.** Memory hits print first and retrospective hits after
@@ -458,14 +458,14 @@ topic files themselves are never injected.
 - On a hit, read the topic. If it contradicts what I currently believe,
   measure before concluding the entry is stale, and report a wrong entry to
   the user rather than ignoring it.
-- Only the retrospective skill proposes an entry and only the user approves
-  it, then `pnpm claude:memory write` applies it. I never add an entry on my
-  own judgment; rules still go in `.claude/CLAUDE.md` or `.claude/rules/`.
+- Only the retrospective skill proposes an entry and only the user approves it,
+  then `mise run claude:memory write` applies it. I never add an entry on my own
+  judgment; rules still go in `.claude/CLAUDE.md` or `.claude/rules/`.
 - Reaches the main session and every custom agent under `.claude/agents/`,
   not the built-in Explore and Plan agents; when I delegate to those I
   restate anything from memory they need directly in the delegation prompt.
 - `/memory-review` exists to prune this store and is the user's to run;
-  `pnpm claude:memory status` says whether one is due.
+  `mise run claude:memory status` says whether one is due.
 
 ## Rules split out into `.claude/rules/`
 
@@ -488,12 +488,12 @@ launch, which is why the SessionStart hook does not re-inject them.
 - `browser-verification.md`: the mandatory real-browser verification loop
   through the `real-browser-sonnet` agent, the exemption rule, what does not
   count as verification, and the HTML report verification steps.
-- `session-lifecycle.md`: the npm scripts that exist and the dev server,
-  commit points and the `git-commit` skill, when a push and a pull
-  request may run, the three ways the `/retrospective` skill runs, hooks, what
-  an agent definition and a subagent prompt may carry, the second-reader review
-  every instruction file change gets, working beside a parallel session, and
-  the English-only language rule.
+- `session-lifecycle.md`: the root `mise` tasks and where each workspace's
+  commands run, the dev servers and the database, commit points and the
+  `git-commit` skill, when a push and a pull request may run, the three ways the
+  `/retrospective` skill runs, hooks, what an agent definition and a subagent
+  prompt may carry, the second-reader review every instruction file change gets,
+  working beside a parallel session, and the English-only language rule.
 - `framework-facts.md`: that a fact about Angular, the CLI, the build or any
   other tool in this stack is read from its documentation rather than
   discovered by a probe, which tools answer such a question and how they are
@@ -520,4 +520,4 @@ launch, which is why the SessionStart hook does not re-inject them.
 
 ## Design authority
 
-`docs/design/yettel.md` is the design reference for every rendered surface: colour tokens, typography, radii, the button, card, filter, header and gallery recipes with the yettel.hu selectors they came from, and the feature inventories against the backend contract. Every implementation and every review of a rendered surface cites it for each value used or checked, and a value it does not carry is measured on `docs/design/yettel/css/portal.css` and added there first. The `mi-bolt-design` skill, its R01–R26 audit table and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20 (user, in English: "retire it, the yettel document"); nothing cites them any more.
+`frontend/docs/design/yettel.md` is the design reference for every rendered surface: colour tokens, typography, radii, the button, card, filter, header and gallery recipes with the yettel.hu selectors they came from, and the feature inventories against the backend contract. Every implementation and every review of a rendered surface cites it for each value used or checked, and a value it does not carry is measured on `frontend/docs/design/yettel/css/portal.css` and added there first. The `mi-bolt-design` skill, its R01–R26 audit table and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20 (user, in English: "retire it, the yettel document"); nothing cites them any more.

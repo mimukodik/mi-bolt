@@ -83,7 +83,7 @@ Look for:
   `kötelező mindig commitolni` is a standing rule, so a working tree full of
   the session's own output is a finding, not background noise. Report it in
   the summary even when it produces no proposal.
-- Run `mise exec -- pnpm claude:memory status`. When it reports a review is
+- Run `mise run claude:memory status`. When it reports a review is
   due, say so in the Session summary with the reason the command gave, and
   tell the user that `/memory-review` is theirs to run: the skill is
   user-invoked only, so this retrospective never starts one itself. This is a
@@ -158,7 +158,7 @@ conditions. The file must start with the heading
 
   A `memory` proposal gives the topic name, the one-line summary that goes in
   the index, and the body of the topic file. Applying it is
-  `pnpm claude:memory write <topic> --summary "<one line>" --content "<body>"`,
+  `mise run claude:memory write <topic> --summary "<one line>" --content "<body>"`,
   run by the caller only after the user approved that proposal with
   AskUserQuestion, never by this skill.
 
@@ -223,7 +223,7 @@ rather than repeating the proposal bodies.
 Under `## What was verified`: what this run ran and what came back, namely the
 transcript reader, any subagent transcripts you sampled,
 `git status --porcelain` and `git log --oneline -3`,
-`mise exec -- pnpm claude:memory status`, the
+`mise run claude:memory status`, the
 `grep -rn "approved, not applied" .claude/retrospectives` scan, and the rule
 files you read a finding against. Those are the whole of this run's evidence,
 and the caller has no other way to tell a proposal drawn from the transcript

@@ -492,16 +492,13 @@ For each derived entry, in order:
 
 ## The gates
 
-The orchestrator runs these in the workspace's mise environment
+The orchestrator runs these from the repository root
 (`.claude/rules/session-lifecycle.md`, "Tools and startup", which also owns the
-scripts that start the app and the database).
+tasks that start the apps and the database).
 
-- **Typecheck.** `mise exec -- pnpm typecheck` at the root, or
-  `mise exec -- pnpm --filter <package> typecheck` for one package.
-- **The package suite.** `mise exec -- pnpm --filter <package> test`.
-- **Changed-line coverage.** `mise exec -- pnpm coverage:changed-lines`.
-  `.claude/rules/code-standards.md` owns the bar, what counts as covered, and
-  the `--skip-run` path for a suite that was already red.
+- **The workspace gates.** `.claude/rules/code-standards.md` ("A subagent's
+  green report is not a run") names the commands for a frontend change and for
+  a backend change, and owns the coverage floor each of them enforces.
 - **A real browser run for anything a person can see.** This is the one gate
   the orchestrator does not drive personally:
   `.claude/rules/browser-verification.md` puts the browser steps in the
@@ -525,8 +522,8 @@ scripts that start the app and the database).
 - **A gate believed from a report.** `.claude/CLAUDE.md` ("Verification and
   evidence") already requires a measurement this session ran; the workflow's
   contribution is putting that measurement between the spawn and the commit.
-- **A managed resource reached directly.** The app and the database have
-  wrapper scripts and no other entry point. See
+- **A managed resource reached directly.** The apps and the database have
+  root `mise` tasks and no other entry point. See
   `.claude/rules/session-lifecycle.md` ("Tools and startup").
 - **Instruction-file work routed to a coding tier.** `model-routing` ("Do not")
   lists which files count as one and where they go instead.

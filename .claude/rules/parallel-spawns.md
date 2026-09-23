@@ -91,44 +91,42 @@ because the user asked.
 This list is here so no batch has to recall it. Each entry is something more
 than one agent can reach at once while their file lists stay disjoint.
 
-- **The coverage report.** `coverage/unit/coverage-final.json` is written by
-  every `npm run test` run and read by the next, so two agents running the
-  suite in the same checkout overwrite each other's evidence. **A git worktree
-  removes this one**: measured 2026-09-19, a worktree made with
-  `git worktree add` plus a `node_modules` symlink to the main checkout builds
-  and tests with its own `coverage/`, so agents in separate worktrees do not
-  contend here at all. Two agents in the same checkout still do, and there the
-  resolution is that only one of them runs the suite.
-- **The generated API client.** `npm run api:generate` rewrites
-  `src/app/api/generated/`, and `npm run api:drift` fails when that output
+- **The coverage report.** `frontend/coverage/unit/coverage-final.json` is
+  written by every `npm --prefix frontend run test` run and read by the next, so
+  two agents running the suite in the same checkout overwrite each other's
+  evidence. **A git worktree removes this one**: measured 2026-09-19, a worktree
+  made with `git worktree add` plus a `node_modules` symlink to the main
+  checkout builds and tests with its own `coverage/`, so agents in separate
+  worktrees do not contend here at all. Two agents in the same checkout still
+  do, and there the resolution is that only one of them runs the suite.
+- **The generated API client.** `mise run api:generate` rewrites
+  `frontend/projects/storefront/src/app/api/generated/`, and
+  `mise run api:drift` fails when that output
   differs from what is committed. One agent regenerating underneath another's
   build is the same contention the coverage report has, and a worktree does not
-  escape it when both work from the same `ng-openapi-gen.json`.
-- **The dev server and its port.** `npm start` (`ng serve`) binds one port, and
-  a browser verification driving it is invalidated by any restart underneath.
-  Name the server rather than one command that touches it: a restart, a rebuild
-  and a second `ng serve` on the same port all break the same thing. An agent
-  that needs a built artifact served uses `scripts/serve-static.mjs` on a port
-  of its own, names that port in its report, and stops it. Ports leak: measured
-  2026-09-20, a static server started three days earlier was still holding one,
-  its own script file already deleted from disk.
-- **There is no database.** The backend is MSW, served in-process, so no
-  container and no rows are shared. `src/mocks/` state lives and dies with each
-  suite run.
+  escape it when both work from the same `frontend/ng-openapi-gen.json`.
+- **The dev server and its port.** `mise run storefront` (`ng serve`) binds one
+  port, and a browser verification driving it is invalidated by any restart
+  underneath. Name the server rather than one command that touches it: a
+  restart, a rebuild and a second `ng serve` on the same port all break the same
+  thing. An agent that needs a built artifact served uses
+  `frontend/scripts/serve-static.mjs` on a port of its own, names that port in
+  its report, and stops it. Ports leak: measured 2026-09-20, a static server
+  started three days earlier was still holding one, its own script file already
+  deleted from disk.
+- **The database, once the backend runs.** The frontend's own backend is MSW,
+  served in-process, so a frontend suite shares no container and no rows, and
+  `frontend/projects/storefront/src/mocks/` state lives and dies with each
+  suite run. The root tasks that start PostgreSQL (`mise run db`,
+  `mise run backend`, `mise run dev`) share one container and its data, which
+  the orchestrator starts and stops.
 - **The live browser session** a `real-browser-sonnet` agent is driving, which
   any restart of the app underneath it invalidates.
 - **A leftover spec file, which the suite collects and the gate does not.** A
   `*.spec.*` file a finished agent left behind matches the `include` glob in
-  `angular.json`'s unit-test target, so the next suite run executes it, while
-  `coverageExclude` in that same target excludes `**/*.spec.ts`, so the
+  `frontend/angular.json`'s unit-test target, so the next suite run executes it,
+  while `coverageExclude` in that same target excludes `**/*.spec.ts`, so the
   coverage figures never account for it.
-- **A leftover probe file, which the gate collects and the suite does not.** A
-  `zz-probe.mts` misses that `include`, which needs a `.test.` or a `.spec.`
-  segment, so no suite run touches it; `.mts` is in `COVERABLE_EXTENSIONS`, so
-  the gate does look at it, and an untracked file with no coverage report behind
-  it comes back `no-coverage-data` on every line and fails the gate outright.
-  Each of these two is invisible to the check that catches the other, so a tree
-  grepped for `*.spec.*` alone reads as clean right up to the gate failure.
 - **The session scratchpad directory**, which every agent in the session writes
   into, under names each chooses without seeing what its siblings chose.
   `.claude/CLAUDE.md` ("Cleanup") makes a temporary file its author's to
@@ -139,7 +137,8 @@ than one agent can reach at once while their file lists stay disjoint.
   `glob-check.mjs` while that sibling was still running; it reported the
   deletion and had nothing to restore the file from. Such a loss leaves nothing
   in the tree, so the `git status --short` read after the batch cannot find it.
-- **The dependency files**: `package.json` and `package-lock.json`. An install
+- **The dependency files**: `frontend/package.json` and
+  `frontend/package-lock.json`. An install
   rewrites them for everyone, and every worktree here shares one `node_modules`
   through a symlink, so an install in one reaches all of them. They are one
   agent's at a time whatever files that agent otherwise owns.

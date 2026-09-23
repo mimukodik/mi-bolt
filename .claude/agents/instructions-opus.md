@@ -5,7 +5,7 @@ description: >-
   instructions: `SKILL.md`, the rule files under `.claude/rules/`, `CLAUDE.md`,
   `AGENTS.md`, and agent definitions. Also runs `/memory-review`'s mapping and
   verification phases and drafts the shared-memory entry that
-  `pnpm claude:memory write` applies. Use when the deliverable is wording that
+  `mise run claude:memory write` applies. Use when the deliverable is wording that
   steers later sessions and nothing tests it.
 model: opus
 effort: high
@@ -91,7 +91,7 @@ Rules:
   rather than a second copy created.
 - **A shared-memory entry is drafted, not written.** Return the topic name, the
   one-line summary, and the body as text in the final report, and let
-  `pnpm claude:memory write` put them in the file; `.claude/CLAUDE.md`
+  `mise run claude:memory write` put them in the file; `.claude/CLAUDE.md`
   ("Shared memory") owns why that store is only ever changed through the CLI.
 - An instruction file has no rendered surface, so this tier always takes the
   exemption in `.claude/rules/browser-verification.md`, which also says how to

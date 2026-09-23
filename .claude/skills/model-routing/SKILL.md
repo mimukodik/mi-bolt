@@ -316,7 +316,7 @@ missed something.
 | Adversarial verification, code review | opus | high | `reviewer-opus` | `reviewer-opus-xhigh` when the review surface is large or long-running, when a first pass left the question open, and, through step 3's one exception, for a security-relevant diff whatever its size. |
 | Binary rubric grading, listing, counting, extraction | haiku | none | `scout-haiku` | `researcher-sonnet` as soon as an item needs a judgment call. |
 | Docs and summaries from given material | sonnet | high | `researcher-sonnet` | `reviewer-opus` when the material contradicts itself and has to be reconciled. |
-| Writing or editing an instruction file (`SKILL.md`, a rule file, `CLAUDE.md`, `AGENTS.md`, an agent definition), or drafting a shared-memory entry for `pnpm claude:memory write` to apply | opus | high | `instructions-opus` | Never down to `coder-sonnet`, however precise the spec; when the wording itself is contested, `reviewer-opus` reviews it instead of a second authoring pass. The end-of-work read-back that `.claude/rules/session-lifecycle.md` requires is a fresh `instructions-opus` on a task of its own, not that second pass. |
+| Writing or editing an instruction file (`SKILL.md`, a rule file, `CLAUDE.md`, `AGENTS.md`, an agent definition), or drafting a shared-memory entry for `mise run claude:memory write` to apply | opus | high | `instructions-opus` | Never down to `coder-sonnet`, however precise the spec; when the wording itself is contested, `reviewer-opus` reviews it instead of a second authoring pass. The end-of-work read-back that `.claude/rules/session-lifecycle.md` requires is a fresh `instructions-opus` on a task of its own, not that second pass. |
 | Real-browser task execution or spec verification with screenshots | sonnet | high | `real-browser-sonnet` | `debugger-opus` when the run exposes a bug with an unknown cause; the browser report is its input. |
 
 Each row's effort is the effort pinned in that agent's definition. There is no
@@ -593,7 +593,7 @@ Every prompt to a routed agent states, in this order:
    spawn and of what. On every other agent the line is wasted, because it cannot
    spawn whatever a prompt tells it.
 6. For a split unit, which half this spawn is. The implementation half is told
-   it does not write the tests: the changed-line coverage rule in
+   it does not write the tests: the coverage rule in
    `.claude/rules/code-standards.md` is loaded into that agent and binds the
    commit rather than its own run, so without this line it reads that rule as an
    instruction to write the tests *Size the task before you route it* gave to

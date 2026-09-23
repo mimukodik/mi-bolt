@@ -33,7 +33,7 @@ inside them, so deleting a file can put its session back on the pending list
 and rewriting one can take it off.
 
 The reports here are also a searchable corpus, not only an archive:
-`pnpm claude:memory search "<term>"` matches them alongside the shared memory,
+`mise run claude:memory search "<term>"` matches them alongside the shared memory,
 so a session can find what an earlier one learned without knowing which
 session produced it. `.claude/shared-memory/CLAUDE.md`, under
 "What `search` reads", owns how those hits are ranked, paged and filtered, and
@@ -44,7 +44,7 @@ That search deliberately skips two kinds of file in this directory. This
 `README.md` is documentation about the archive rather than a record of any
 session, and a `.skipped.md` marker records only that an offer was declined,
 so neither carries session evidence a search could usefully match.
-`isRetrospectiveReport` in `scripts/agent-memory/store/retrospective.ts`
+`isRetrospectiveReport` in `tools/agent-memory/store/retrospective.ts`
 is what excludes them, so any further kind of non-report file added here has
 to be excluded there too, or it starts turning up as a hit.
 
@@ -52,14 +52,13 @@ The `.skipped.md` suffix itself is spelled out twice, so renaming it means
 changing both places: `SKIPPED_MARKER_SUFFIX` in
 `.claude/hooks/common/pending-sessions.ts`, which the SessionStart hook matches
 decline markers by, and `SKIPPED_SUFFIX` in the same
-`scripts/agent-memory/store/retrospective.ts`, which `isRetrospectiveReport`
+`tools/agent-memory/store/retrospective.ts`, which `isRetrospectiveReport`
 excludes them by. Collapsing the two into one shared constant was tried and
 rejected: the hooks package cannot import the memory tool's code, and the memory
 tool's store layer is pure, so the store will not reach into hook code either.
 Only the memory tool's test suite does, and that is what keeps the two spellings
-in step: `scripts/agent-memory/store/retrospective.test.ts` imports the hook's
+in step: `tools/agent-memory/store/retrospective.test.ts` imports the hook's
 exported constant and asserts `isRetrospectiveReport` still rejects a name built
 from it, in the case named "rejects the exact suffix the SessionStart hook
 writes a decline as". Change one copy alone and that test goes red naming the
-other. Run it with
-`pnpm vitest run scripts/agent-memory/store/retrospective.test.ts`.
+other. Run it with the `tools/` workspace's own `test` task.

@@ -184,7 +184,7 @@ a row here first.
 | Check | Result |
 | --- | --- |
 | Typecheck | ✅ |
-| Changed-line coverage | ✅ |
+| Coverage floor | ✅ |
 | Browser verification | ✅ Chrome, console clean |
 ```
 

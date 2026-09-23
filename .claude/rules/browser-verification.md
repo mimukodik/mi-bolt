@@ -16,9 +16,10 @@ of the diff are necessary but never sufficient.
 
 **Required for every user-facing change:**
 
-1. Orchestrator: start the app with `npm start` (`ng serve`). There is no
-   database — the backend is MSW, served in-process. A spawned agent neither
-   starts nor stops that server; the port is a shared resource per
+1. Orchestrator: start the app with `mise run storefront` (`mise run admin` or
+   `mise run payment` for the other two apps). There is no database behind it:
+   the storefront and the admin run on MSW in the browser. A spawned agent
+   neither starts nor stops that server; the port is a shared resource per
    `.claude/rules/parallel-spawns.md`.
 2. Open the affected screen with `new_page` + `navigate_page`.
 3. Drive the actual changed behavior with `click`, `fill`, `press_key`:
@@ -47,8 +48,8 @@ If I think a change is exempt, I say so explicitly and say why.
   the diff back.
 - A green typecheck, unit test, or vitest run.
 - An HTTP 200 from `curl` or a smoke-test request.
-- A grep of the stylesheet for a `docs/design/yettel.md` token or recipe
-  value.
+- A grep of the stylesheet for a `frontend/docs/design/yettel.md` token or
+  recipe value.
 - A subagent asserting it "should work" without a snapshot, a screenshot, and
   a console-message check to show for it.
 
