@@ -7,13 +7,42 @@
           <mat-card-header>
             <mat-card-title>
               {{ card.title }}
-              @if (card.subtitle) {
-                <span> {{ card.subtitle }}</span>
+              @if (card.key === 'featured') {
+                <span> {{ featuredTotal() }}</span>
               }
             </mat-card-title>
           </mat-card-header>
           <mat-card-content class="dashboard-card-content">
-            <p class="adm-count">–</p>
+            @if (card.key === 'featured') {
+              @let state = featured();
+              @if (state.kind === 'loading') {
+                <p aria-busy="true" class="adm-count">–</p>
+              } @else if (state.kind === 'error') {
+                <p class="adm-card-error" role="alert">A betöltés nem sikerült.</p>
+                <button matButton type="button" (click)="load(card.key)">Újra</button>
+              } @else if (state.value.names.length > 0) {
+                <mat-list>
+                  @for (name of state.value.names; track name) {
+                    <mat-list-item>
+                      <mat-icon matListItemIcon>star</mat-icon>
+                      <span matListItemTitle>{{ name }}</span>
+                    </mat-list-item>
+                  }
+                </mat-list>
+              } @else {
+                <p>Nincs kiemelt termék.</p>
+              }
+            } @else {
+              @let count = countOf(card.key);
+              @if (count.kind === 'loading') {
+                <p aria-busy="true" class="adm-count">–</p>
+              } @else if (count.kind === 'error') {
+                <p class="adm-card-error" role="alert">A betöltés nem sikerült.</p>
+                <button matButton type="button" (click)="load(card.key)">Újra</button>
+              } @else {
+                <p class="adm-count">{{ count.value }}</p>
+              }
+            }
           </mat-card-content>
           <mat-card-actions>
             <a matButton [queryParams]="card.queryParams" [routerLink]="card.link">Megnyitás</a>

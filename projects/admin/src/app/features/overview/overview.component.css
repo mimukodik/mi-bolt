@@ -22,3 +22,7 @@
 .adm-count {
   font: var(--mat-sys-display-small);
 }
+
+.adm-card-error {
+  color: var(--mat-sys-error);
+}
