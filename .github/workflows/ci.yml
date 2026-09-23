@@ -17,6 +17,7 @@ jobs:
   changes:
     name: Changes
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
     permissions:
       contents: read
       pull-requests: read
@@ -51,12 +52,19 @@ jobs:
     needs: [changes, frontend, backend, contracts]
     if: always()
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
     steps:
       - name: Every needed branch passed or was skipped
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "results: ${RESULTS}"
-          case " ${RESULTS} " in
-            *" failure "*|*" cancelled "*) exit 1 ;;
-          esac
+          for result in ${RESULTS}; do
+            case "${result}" in
+              success|skipped) ;;
+              *)
+                echo "::error::unexpected job result: ${result}"
+                exit 1
+                ;;
+            esac
+          done
