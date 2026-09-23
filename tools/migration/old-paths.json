@@ -1,0 +1,78 @@
+{
+  "frontend-config": [
+    {
+      "paths": ["frontend/angular.json"],
+      "pattern": "\"mi-bolt\"|mi-bolt:(build|serve|test)|\"sourceRoot\": \"src\"|\"(src|public)/|\"input\": \"public\"|dist/mi-bolt"
+    },
+    {
+      "paths": ["frontend/tsconfig.json", "frontend/tsconfig.e2e.json"],
+      "pattern": "\"(\\./)?src/"
+    },
+    {
+      "paths": ["frontend/eslint.config.mjs"],
+      "pattern": "'src/|\"src/"
+    },
+    {
+      "paths": ["frontend/playwright.config.ts", "frontend/vitest.contract.config.ts"],
+      "pattern": "\\['mi-bolt'\\]|'mi-bolt': \\{|'src/|dist/mi-bolt"
+    },
+    {
+      "paths": ["frontend/ng-openapi-gen.json", "frontend/ng-openapi-gen.admin.json"],
+      "pattern": "docs/api/openapi\\.yaml|\"(\\./)?src/"
+    },
+    {
+      "paths": ["frontend/.prettierignore"],
+      "pattern": "^(src|public)/"
+    }
+  ],
+  "frontend-scripts": [
+    {
+      "paths": ["frontend/package.json"],
+      "pattern": "dist/mi-bolt|api-sync|api:sync|catalog-source\\.json|ng (test|build|serve) mi-bolt"
+    },
+    {
+      "paths": ["frontend/scripts"],
+      "pattern": "dist/mi-bolt|catalog-source\\.json|docs/api/openapi\\.yaml|'mi-bolt'",
+      "allow": [
+        "frontend/scripts/fixtures/build-clean.log",
+        "frontend/scripts/fixtures/build-warn.log"
+      ]
+    }
+  ],
+  "frontend-source": [
+    {
+      "paths": ["frontend/projects", "frontend/tests", "frontend/e2e"],
+      "pattern": "catalog-source\\.json|cwd\\(\\), 'src(/|')|docs/api/openapi\\.yaml"
+    },
+    {
+      "paths": ["frontend/projects/storefront/src/main.spec.ts"],
+      "pattern": "^ *'mi-bolt',$"
+    },
+    {
+      "paths": ["frontend/tests", "frontend/e2e"],
+      "pattern": "(\\.\\./)+src/"
+    }
+  ],
+  "ci": [
+    {
+      "paths": [".github/workflows"],
+      "pattern": "dist/mi-bolt|mi-bolt-backend-0\\.0\\.1-SNAPSHOT\\.jar|java -jar build/"
+    }
+  ],
+  "backend-build": [
+    {
+      "paths": ["backend/services/commerce/build.gradle"],
+      "pattern": "['\"]api/openapi\\.yaml|['\"]config/pmd/"
+    }
+  ],
+  "backend-code": [
+    {
+      "paths": ["backend/services/commerce/src"],
+      "pattern": "Path\\.of\\(\"api/openapi\\.yaml\"\\)|mibolt\\.catalog\\.path:data/catalog"
+    },
+    {
+      "paths": ["backend/services/commerce/scripts/smoke.sh"],
+      "pattern": "ls data/catalog/"
+    }
+  ]
+}
