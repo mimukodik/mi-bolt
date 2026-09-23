@@ -190,6 +190,16 @@ describe('SpecGroupsSection', () => {
   it('reorders groups through the first group menu and disables the edge items', async () => {
     // Fails if moveGroup stops swapping groups, or firstGroup/lastGroup stop
     // gating the menu buttons.
+    // Fails if the two groups' first-row menu buttons share a name, which
+    // would leave a screen reader unable to tell them apart.
+    const rowMenuAriaLabels = Array.from(
+      element().querySelectorAll<HTMLButtonElement>('button[aria-label$=", sor 1: műveletek"]'),
+    ).map((btn) => btn.getAttribute('aria-label'));
+    expect(rowMenuAriaLabels).toEqual([
+      'Csoport 1, sor 1: műveletek',
+      'Csoport 2, sor 1: műveletek',
+    ]);
+
     const groupMenuButton = element().querySelector<HTMLButtonElement>(
       'button[aria-label="Csoport 1: műveletek"]',
     );
@@ -248,7 +258,7 @@ describe('SpecGroupsSection', () => {
     await fixture.whenStable();
 
     const rowMenuButton = element().querySelector<HTMLButtonElement>(
-      'button[aria-label="Sor 1: műveletek"]',
+      'button[aria-label="Csoport 1, sor 1: műveletek"]',
     );
     if (rowMenuButton === null) throw new Error('Expected the first row menu button');
     await openMenu(rowMenuButton);
