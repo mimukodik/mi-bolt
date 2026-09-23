@@ -1,6 +1,6 @@
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import type { HttpEvent } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import { EMPTY, mergeMap, of, throwError } from 'rxjs';
 
@@ -43,7 +43,7 @@ function toUploadProgress(event: HttpEvent<UploadedImage>): Observable<UploadPro
  * `uploadAdminMedia` function, because that function's `HttpResponse` filter
  * drops the upload-progress events this control needs.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class MediaUploader {
   private readonly http = inject(HttpClient);
   private readonly apiConfiguration = inject(ApiConfiguration);
