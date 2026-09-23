@@ -1,0 +1,253 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.openapi.generator' version '7.25.0'
+	id 'jacoco'
+	id 'pmd'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-liquibase'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	runtimeOnly 'org.postgresql:postgresql'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+	testImplementation 'com.atlassian.oai:openapi-request-validator-mockmvc:3.0.0'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
+}
+
+// Flattens the four single-value enum discriminator properties in api/openapi.yaml
+// (home_delivery, pickup_point, card, cash_on_delivery) to plain strings. The 7.25.0
+// Spring generator produces a String getter on the parent interface and an OptionIdEnum-
+// like getter on each subtype, and the two do not match; see
+// docs/decisions/0001-openapi-generator-and-discriminator-workaround.md.
+// Each replacement is the whole block, including the line that follows the enum value, so
+// a second value added under one of these enums (or a re-indented block) makes the
+// exactly-once check fail and surfaces the drift before the generator can swallow it.
+// The PickupPointSelection literal is anchored on the next schema header
+// ("    DeliverySelection:") so inserting an unrelated schema or renaming DeliverySelection
+// also fails the guard, with a message that names PickupPointSelection.optionId.
+def discriminatorReplacements = [
+	['name' : 'HomeDeliverySelection.optionId',
+	 'from' : "        optionId:\n          type: string\n          enum:\n          - home_delivery\n        address:\n",
+	 'to'   : "        optionId:\n          type: string\n        address:\n"],
+	['name' : 'PickupPointSelection.optionId',
+	 'from' : "        optionId:\n          type: string\n          enum:\n          - pickup_point\n    DeliverySelection:\n",
+	 'to'   : "        optionId:\n          type: string\n    DeliverySelection:\n"],
+	['name' : 'CardOrderRequest.paymentMethod',
+	 'from' : "        paymentMethod:\n          type: string\n          enum:\n          - card\n        paymentIntentId:\n",
+	 'to'   : "        paymentMethod:\n          type: string\n        paymentIntentId:\n"],
+	['name' : 'CashOnDeliveryOrderRequest.paymentMethod',
+	 'from' : "        paymentMethod:\n          type: string\n          enum:\n          - cash_on_delivery\n        termsVersion:\n",
+	 'to'   : "        paymentMethod:\n          type: string\n        termsVersion:\n"]
+]
+
+tasks.register('prepareOpenApiSpec') {
+	def sourceSpec = file('api/openapi.yaml')
+	def derivedSpec = layout.buildDirectory.file('openapi/openapi.yaml')
+	inputs.file(sourceSpec)
+	outputs.file(derivedSpec)
+	doLast {
+		def text = sourceSpec.getText('UTF-8')
+		discriminatorReplacements.each { r ->
+			def count = text.count(r.from as CharSequence)
+			if (count != 1) {
+				throw new GradleException(
+					"prepareOpenApiSpec: expected the ${r.name} block to appear exactly " +
+					"once in ${sourceSpec.path}, found ${count}. The spec changed; update " +
+					"the build-time copy in build.gradle.")
+			}
+			text = text.replace(r.from as CharSequence, r.to as CharSequence)
+		}
+		def dst = derivedSpec.get().asFile
+		dst.parentFile.mkdirs()
+		dst.write(text, 'UTF-8')
+	}
+}
+
+openApiGenerate {
+	generatorName = 'spring'
+	inputSpec = layout.buildDirectory.file('openapi/openapi.yaml').get().asFile.toString()
+	outputDir = layout.buildDirectory.dir('generated/openapi').get().asFile.toString()
+	apiPackage = 'com.example.mi_bolt_backend.api'
+	modelPackage = 'com.example.mi_bolt_backend.api.model'
+	configOptions = [
+		interfaceOnly: 'true',
+		useSpringBoot4: 'true',
+		documentationProvider: 'none',
+		annotationLibrary: 'none',
+		openApiNullable: 'false',
+		useTags: 'true'
+	]
+	generateApiTests = false
+	generateModelTests = false
+	generateApiDocumentation = false
+	generateModelDocumentation = false
+	// configPackage lives under the @SpringBootApplication scan root so Spring Boot picks
+	// up EnumConverterConfiguration, which registers converters for the enums the generator
+	// emits for query parameters (ProductSort, StorageGb, ...). Without this the converters
+	// land under org.openapitools.configuration and are never registered.
+	additionalProperties = [
+		configPackage: 'com.example.mi_bolt_backend.api.config'
+	]
+}
+
+// Wipe the previous run's output so a renamed or removed schema does not leave a ghost
+// class behind. The generator's incremental mode merges into existing files; for the
+// generation we control, a clean output is the safer default.
+tasks.named('openApiGenerate').configure {
+	doFirst {
+		def out = layout.buildDirectory.dir('generated/openapi').get().asFile
+		if (out.exists()) {
+			out.deleteDir()
+		}
+	}
+	dependsOn tasks.named('prepareOpenApiSpec')
+}
+
+sourceSets {
+	main {
+		java {
+			srcDirs += layout.buildDirectory.dir('generated/openapi/src/main/java')
+		}
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	dependsOn tasks.named('openApiGenerate')
+}
+
+tasks.named('test') {
+	useJUnitPlatform {
+		excludeTags 'integration'
+	}
+}
+
+tasks.register('integrationTest', Test) {
+	description = 'Runs the Spring context tests (JUnit tag "integration").'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
+	shouldRunAfter tasks.named('test')
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('integrationTest')
+}
+
+// Coverage gate at 90% line on hand-written code. Generated interfaces, models and config
+// are excluded because they are not hand-written; MiBoltBackendApplication is excluded
+// because its main never runs under tests. See docs/decisions/0004.
+def coverageExclusions = [
+	'com/example/mi_bolt_backend/api/**',
+	'**/MiBoltBackendApplication.class'
+]
+
+def jacocoExecFiles = fileTree(layout.buildDirectory.dir('jacoco')) { include '*.exec' }
+
+tasks.named('jacocoTestReport') {
+	dependsOn tasks.named('classes')
+	mustRunAfter tasks.named('test'), tasks.named('integrationTest')
+	executionData.setFrom(jacocoExecFiles)
+	classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, exclude: coverageExclusions) }))
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+	dependsOn tasks.named('classes')
+	mustRunAfter tasks.named('test'), tasks.named('integrationTest')
+	executionData.setFrom(jacocoExecFiles)
+	classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, exclude: coverageExclusions) }))
+	violationRules {
+		rule {
+			enabled = true
+			element = 'BUNDLE'
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.90
+			}
+		}
+		rule {
+			enabled = true
+			element = 'CLASS'
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+		}
+	}
+}
+
+tasks.named('test') {
+	finalizedBy tasks.named('jacocoTestReport')
+}
+
+tasks.named('integrationTest') {
+	finalizedBy tasks.named('jacocoTestReport')
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+pmd {
+	toolVersion = '7.24.0'
+	ruleSets = []
+	ruleSetFiles = files('config/pmd/ruleset.xml')
+	consoleOutput = true
+	ignoreFailures = false
+}
+
+// Only the generated OpenAPI sources (build/generated/openapi, package …api) are
+// skipped, and only on pmdMain: the hand-written tests under the same package
+// name in src/test stay inside the gate.
+tasks.named('pmdMain') {
+	exclude '**/com/example/mi_bolt_backend/api/**'
+}
+
+tasks.withType(Test).configureEach {
+	def taskName = name
+	def resultsDir = reports.junitXml.outputLocation
+	testLogging {
+		events = ['failed']
+		exceptionFormat = 'full'
+	}
+	doLast {
+		def tests = 0
+		def failures = 0
+		def errors = 0
+		def skipped = 0
+		resultsDir.get().asFile.eachFileMatch(~/TEST-.*\.xml/) { file ->
+			def suite = new groovy.xml.XmlSlurper().parse(file)
+			tests += suite.@tests.text().toInteger()
+			failures += suite.@failures.text().toInteger()
+			errors += suite.@errors.text().toInteger()
+			skipped += suite.@skipped.text().toInteger()
+		}
+		def passed = tests - failures - errors - skipped
+		logger.lifecycle("${taskName}: ${tests} tests, ${passed} passed, ${failures + errors} failed, ${skipped} skipped")
+	}
+}

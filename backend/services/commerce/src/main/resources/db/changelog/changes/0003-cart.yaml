@@ -1,0 +1,100 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0003-cart
+      author: mi-bolt
+      comment: |
+        One active cart per session and one line per variant (docs/02-backend.md
+        §4.2 rules 13 and 22, §5; docs/04-adatbazis.md §4). The unique constraint
+        on (cart_id, variant_id) is what stops two concurrent adds from creating
+        two lines. unit_price_huf is the price snapshot the PRICE_CHANGED notice
+        compares against (docs/02-backend.md §4.6).
+      changes:
+        - createTable:
+            tableName: cart
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: session_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_cart_session
+                    references: shop_session(id)
+                    deleteCascade: true
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: cart_item
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cart_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cart_item_cart
+                    references: cart(id)
+                    deleteCascade: true
+              - column:
+                  name: variant_id
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cart_item_variant
+                    references: product_variant(id)
+              - column:
+                  name: quantity
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unit_price_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: cart_item
+            columnNames: cart_id, variant_id
+            constraintName: uq_cart_item_cart_variant
+        - createIndex:
+            tableName: cart_item
+            indexName: ix_cart_item_variant
+            columns:
+              - column:
+                  name: variant_id

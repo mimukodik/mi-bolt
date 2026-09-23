@@ -1,0 +1,61 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Spring Tools MCP (language server JAR + log)
+.spring-tools/
+
+# Environment
+.env
+.env.*
+!.env.example
+.docker-compose.*.env
+
+node_modules
+
+# yettel.hu catalogue import (MIM-205 T3)
+data/catalog/catalog.invalid.json
+data/catalog/catalog.partial.json
+scripts/catalog-import/node_modules/
+scripts/catalog-import/dist/
+scripts/catalog-import/.cache/
+
+# Hook state files are runtime artefacts that do not belong in version control.
+.claude/hooks/.state/
+
+# Screenshots of the orchestrator's real-browser passes (.claude/rules/frontend-browser.md).
+.visual-screenshots/

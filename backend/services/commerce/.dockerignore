@@ -1,0 +1,16 @@
+.git
+.gradle
+.idea
+.claude
+.spring-tools
+.github
+build
+node_modules
+data
+docs
+scripts
+*.md
+.docker-compose.*
+docker-compose*.yml
+Dockerfile
+.dockerignore
