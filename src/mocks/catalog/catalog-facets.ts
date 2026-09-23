@@ -3,13 +3,12 @@
  *
  * Every facet removes its own selection before counting, so a
  * `brands=[X]` filter still reports every other brand the active
- * filters would unlock. The facet counts follow the same
- * filter / sort / cap pipeline as the entries, so a `featured=true`
- * selection also caps the counts at 4 entries: every count is
- * computed on `capFeatured(sortEntries(applyFilters(entries, x)), filter)`
- * so a `featured=true` selection that truncates the visible list to
- * 4 entries also truncates each brand / storage / colour count to
- * the same 4.
+ * filters would unlock. Like the backend (CatalogService.java
+ * `computeFacets` and `capCount`), each count is taken over every
+ * matching entry, and under `featured=true` each value's count is
+ * then capped at the featured size: a value whose entries rank below
+ * the fourth still counts (owner, 2026-09-22: the mock matches the
+ * backend).
  */
 
 import type {
@@ -30,56 +29,55 @@ import {
   type CatalogFilter as Filter,
 } from './catalog-filter';
 
-/** Cap the list at 4 entries when `featured=true`. Used by every facet count
- *  so a featured selection bounds the counts the same way it bounds the
- *  visible entries. */
-function capFeatured(items: readonly CatalogEntry[], filter: Filter): readonly CatalogEntry[] {
-  return filter.featured === true ? items.slice(0, 4) : items;
+/** The featured list's size (CatalogService.java `FEATURED_CAP`). */
+const FEATURED_SIZE = 4;
+
+/** Caps a facet count at the featured size when `featured=true`,
+ *  after counting, like the backend's `capCount`. */
+function capCount(count: number, filter: Filter): number {
+  return filter.featured === true ? Math.min(count, FEATURED_SIZE) : count;
 }
 
-/** Builds the `brands` facet. Removes the `brand` filter before counting,
- *  then sorts and caps under `featured=true` before tallying per-brand.
- *  The `value` is the lowercased brand key (the identifier the URL and
- *  the panel filter on); the `label` is the brand's display name as it
- *  appears on a product page, so the filter row reads "Apple (17)" and
- *  not "apple (17)" — the demo copy and the API contract both expect
- *  the display name. */
+/** Builds the `brands` facet. Removes the `brand` filter, counts every
+ *  matching entry per brand and caps each count (`capCount`). The `value`
+ *  is the lowercased brand key (the identifier the URL and the panel
+ *  filter on); the `label` is the brand's display name as it appears
+ *  on a product page, so the filter row reads "Apple (17)" and not
+ *  "apple (17)" — the demo copy and the API contract both expect the
+ *  display name. */
 function buildBrandFacet(entries: readonly CatalogEntry[], filter: Filter): FacetValue[] {
   const noBrand: Filter = { ...filter, brands: [] };
-  const capped = capFeatured(
-    sortEntries(applyFilters(entries, noBrand), filter.sort, filter.q),
-    filter,
-  );
+  const matched = sortEntries(applyFilters(entries, noBrand), filter.sort, filter.q);
   const counts = new Map<string, number>();
   const displayNames = new Map<string, string>();
-  for (const entry of capped) {
+  for (const entry of matched) {
     counts.set(entry.brandKey, (counts.get(entry.brandKey) ?? 0) + 1);
     if (!displayNames.has(entry.brandKey)) {
       displayNames.set(entry.brandKey, entry.product.brand);
     }
   }
   return [...counts.entries()]
-    .map(([value, count]) => ({ value, label: displayNames.get(value) ?? value, count }))
+    .map(([value, count]) => ({
+      value,
+      label: displayNames.get(value) ?? value,
+      count: capCount(count, filter),
+    }))
     .sort((a, b) => a.label.localeCompare(b.label, 'hu'));
 }
 
-/** Builds the `storageGb` facet. Counts the sizes present, in fixed order,
- *  on the sorted + featured-capped list so a featured cap bounds each
- *  storage count. */
+/** Builds the `storageGb` facet. Counts every matching entry per size,
+ *  in fixed order, and caps each count (`capCount`). */
 function buildStorageFacet(entries: readonly CatalogEntry[], filter: Filter): FacetValue[] {
   const noStorage: Filter = { ...filter, storageGb: [] };
-  const capped = capFeatured(
-    sortEntries(applyFilters(entries, noStorage), filter.sort, filter.q),
-    filter,
-  );
+  const matched = sortEntries(applyFilters(entries, noStorage), filter.sort, filter.q);
   const counts = new Map<number, number>();
-  for (const entry of capped) {
+  for (const entry of matched) {
     counts.set(entry.storageGb, (counts.get(entry.storageGb) ?? 0) + 1);
   }
   const out: FacetValue[] = [];
   for (const gb of ALLOWED_STORAGES) {
     const value = String(gb);
-    out.push({ value, label: `${value} GB`, count: counts.get(gb) ?? 0 });
+    out.push({ value, label: `${value} GB`, count: capCount(counts.get(gb) ?? 0, filter) });
   }
   return out;
 }
@@ -90,17 +88,16 @@ function buildStorageFacet(entries: readonly CatalogEntry[], filter: Filter): Fa
  * preserves the source `colors[]` order). The count mirrors the
  * backend's `matchesColorFacet`: an entry counts for a colour when it
  * has a variant of that colour at its storage passing every other
- * active filter, the colour selection removed.
+ * active filter, the colour selection removed. Every count is then
+ * capped (`capCount`) so a value ranked below the featured size still
+ * counts.
  */
 function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): ColorFacetValue[] {
   const noColor: Filter = { ...filter, colors: [] };
-  const capped = capFeatured(
-    sortEntries(applyFilters(entries, noColor), filter.sort, filter.q),
-    filter,
-  );
+  const matched = sortEntries(applyFilters(entries, noColor), filter.sort, filter.q);
   const samples = new Map<string, ColorOption>();
   const counts = new Map<string, number>();
-  for (const entry of capped) {
+  for (const entry of matched) {
     for (const option of entry.colors) {
       const variant = entry.product.variants.find((v) => v.id === option.variantId);
       if (variant === undefined || !variantMatches(variant, noColor)) continue;
@@ -111,7 +108,7 @@ function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): Colo
   // Walk products by recommended order (preserved by `applyFilters`),
   // then colorOrder within the product.
   const firstEntryBySlug = new Map<string, CatalogEntry>();
-  for (const entry of capped) {
+  for (const entry of matched) {
     if (!firstEntryBySlug.has(entry.product.slug)) {
       firstEntryBySlug.set(entry.product.slug, entry);
     }
@@ -128,31 +125,30 @@ function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): Colo
         value: code,
         label: sample.colorName,
         swatchHex: sample.swatchHex,
-        count: counts.get(code) ?? 0,
+        count: capCount(counts.get(code) ?? 0, filter),
       });
     }
   }
   return out;
 }
 
-/** `is5g` facet count: cap the post-filter list to featured-size first,
- *  then count how many of the capped entries carry `is5g = true`. */
+/** `is5g` facet count: every entry matching the other filters that
+ *  is 5G, capped after counting (`capCount`). */
 function buildIs5gCount(entries: readonly CatalogEntry[], filter: Filter): number {
   const noIs5g: Filter = { ...filter, is5g: undefined };
   const matched = applyFilters(entries, noIs5g);
   const sorted = sortEntries(matched, filter.sort, filter.q);
-  const capped = capFeatured(sorted, filter);
-  return capped.filter((e) => e.product.is5g).length;
+  return capCount(sorted.filter((e) => e.product.is5g).length, filter);
 }
 
 /** `inStock` facet count: the entries that would match with `inStock=true`
- *  (an in-stock variant passing every other filter), sorted and capped to
- *  the featured size first. Mirrors the backend's in-stock count. */
+ *  (an in-stock variant passing every other filter), capped after counting
+ *  (`capCount`). Mirrors the backend's in-stock count. */
 function buildInStockCount(entries: readonly CatalogEntry[], filter: Filter): number {
   const withInStock: Filter = { ...filter, inStock: true };
   const matched = applyFilters(entries, withInStock);
   const sorted = sortEntries(matched, filter.sort, filter.q);
-  return capFeatured(sorted, filter).length;
+  return capCount(sorted.length, filter);
 }
 
 /** Build the `priceRange` from the post-filter, post-sort, post-cap list. */
@@ -176,11 +172,9 @@ function buildPriceRange(items: readonly CatalogEntry[]): PriceRange {
 
 /**
  * Build the whole `Facets` bundle for the supplied filter. Every count
- * is computed on the same sorted, featured-capped list (`capFeatured`
- * truncates the visible list at 4 when `featured=true`), so the
- * `brands` / `storageGb` / `colors` / `is5g` / `inStock` counts and
- * the `priceRange` bounds all reflect the same 4 entries the page
- * renders.
+ * is taken over all matching entries and capped per value under
+ * `featured=true` (`capCount`); the `priceRange` bounds come from the
+ * entries the page renders, like the backend.
  */
 export function buildFacets(entries: readonly CatalogEntry[], filter: CatalogFilter): Facets {
   const sorted = filterSort(entries, filter);

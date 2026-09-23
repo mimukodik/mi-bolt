@@ -485,11 +485,12 @@ describe('GET /products filters', () => {
     }
   });
 
-  it('featured=true caps the list to 4 entries and bounds every facet count', async () => {
+  it('featured=true caps the list to 4 entries and caps each facet count after counting (backend capCount)', async () => {
     // The featured list is the first 4 (product, storage) entries by
-    // recommended order (rank asc, id asc, storage asc), and every
-    // facet count is computed on the same sorted, featured-capped list.
-    //   node -e "const f=JSON.parse(require('fs').readFileSync('./docs/api/fixtures/catalog.json','utf8')); const e=[]; f.products.forEach(p=>{const r=f.ranking.find(x=>x.slug===p.slug); const s=new Set(p.variants.map(v=>v.storageGb));[...s].forEach(st=>e.push({slug:p.slug,brand:p.brand,storage:st,is5g:p.is5g,featured:r.featured,ranking:r,av:p.variants.find(x=>x.storageGb===st).availability,price:p.variants.find(x=>x.storageGb===st).price.amount}))}); const F=e.filter(x=>x.featured).sort((a,b)=>{if(a.ranking.rank!==b.ranking.rank)return a.ranking.rank-b.ranking.rank; const iA=Number(a.slug.match(/\\d+/)[0]); const iB=Number(b.slug.match(/\\d+/)[0]); if(iA!==iB)return iA-iB; return a.storage-b.storage}).slice(0,4); const bc={}; F.forEach(x=>{bc[x.brand.toLowerCase().normalize('NFC')]=(bc[x.brand.toLowerCase().normalize('NFC')]||0)+1}); const sc={}; F.forEach(x=>{sc[x.storage]=(sc[x.storage]||0)+1}); console.log({brands:bc,storage:sc,is5g:F.filter(x=>x.is5g).length,inStock:F.filter(x=>x.av==='in_stock').length,priceRange:[Math.min(...F.map(x=>x.price)),Math.max(...F.map(x=>x.price))]});"
+    // recommended order (rank asc, id asc, storage asc). Like the backend
+    // (CatalogService.java capCount), each facet count is taken over all
+    // six featured entries and then capped at 4; priceRange comes from
+    // the 4 entries shown.
     const body = await loadJson('/api/v1/products?featured=true');
     expect(readNumber(body, 'total')).toBe(4);
     const items = readItems(body);
@@ -498,16 +499,16 @@ describe('GET /products filters', () => {
     const facets = body['facets'];
     expectRecord(facets);
     expect(facets['brands']).toEqual([
-      { value: 'apple', label: 'Apple', count: 2 },
+      { value: 'apple', label: 'Apple', count: 4 },
       { value: 'honor', label: 'HONOR', count: 1 },
       { value: 'motorola', label: 'Motorola', count: 1 },
     ]);
     expect(facets['storageGb']).toEqual([
       { value: '128', label: '128 GB', count: 1 },
-      { value: '256', label: '256 GB', count: 2 },
-      { value: '512', label: '512 GB', count: 1 },
+      { value: '256', label: '256 GB', count: 3 },
+      { value: '512', label: '512 GB', count: 2 },
     ]);
-    expect(readNumber(facets, 'is5g')).toBe(3);
+    expect(readNumber(facets, 'is5g')).toBe(4);
     expect(readNumber(facets, 'inStock')).toBe(4);
     const priceRange = facets['priceRange'];
     expectRecord(priceRange);
@@ -517,14 +518,6 @@ describe('GET /products filters', () => {
     expectRecord(priceMax);
     expect(readNumber(priceMin, 'amount')).toBe(69990);
     expect(readNumber(priceMax, 'amount')).toBe(699990);
-    // Sum of brand counts equals the total: 4 entries, 4 brand hits.
-    const brands = facets['brands'];
-    expectArray(brands);
-    const sum = brands.reduce<number>((acc, b) => {
-      expectRecord(b);
-      return acc + readNumber(b, 'count');
-    }, 0);
-    expect(sum).toBe(4);
   });
 
   it('inStock facet count is capped at the featured size, like the backend capCount', async () => {
@@ -657,11 +650,10 @@ describe('GET /products filters', () => {
     }
   });
 
-  it('is5g facet count is taken inside the featured cap, not before it', async () => {
-    // Build a 5-entry featured catalogue where the cap changes the
-    // answer. Entries 1, 2, 4, 5 are 5G; entry 3 is not. Counting
-    // before the cap would give 4; the formula caps at 4 first, then
-    // counts 5G, giving 3.
+  it('is5g facet count counts every featured entry, then caps at the featured size (backend capCount)', async () => {
+    // Five featured entries; entries 1, 2, 4, 5 are 5G, entry 3 is not.
+    // The backend counts every 5G entry (4) and then caps at 4, so the
+    // facet reads 4. Capping the entries first would read 3.
     const variantOf = (id: string): Product['variants'][number] => ({
       id: `${id}--szin--128`,
       slug: 'szin-128gb',
@@ -756,9 +748,8 @@ describe('GET /products filters', () => {
       const body = await loadJson('/api/v1/products?featured=true');
       const facets = body['facets'];
       expectRecord(facets);
-      // New formula: cap at 4, then count 5G → 3.
-      // Old formula would have given 4 (5 entries − 1 non-5G).
-      expect(readNumber(facets, 'is5g')).toBe(3);
+      // Count first (4 are 5G), then cap at the featured size: 4.
+      expect(readNumber(facets, 'is5g')).toBe(4);
     } finally {
       // Restore the committed fixture so subsequent tests see the
       // 48-product catalogue. The type guard narrows the JSON's
@@ -767,6 +758,104 @@ describe('GET /products filters', () => {
       const committed: CatalogFixture = ((): CatalogFixture => {
         if (isCatalogFixtureShape(catalogFixture)) return catalogFixture;
         throw new Error('[is5g facet test] committed fixture failed shape check');
+      })();
+      loadCatalogFixture(committed);
+    }
+  });
+
+  it('brand, storage and colour counts are taken over every featured entry, then capped (backend capCount)', async () => {
+    // Six featured entries. 1-4: brand Alfa, colour piros, 128 GB, no 5G.
+    // 5: Alfa, kek, 256 GB, 5G. 6: Beta, kek, 256 GB, 5G. The page shows
+    // entries 1-4 only, but the backend counts all six and caps each
+    // count at 4: Alfa 5 → 4, Beta 1; 128 GB 4, 256 GB 2; piros 4, kek 2;
+    // 5G 2. Counting on the 4 shown entries would drop Beta and kek and
+    // read 0 for 256 GB and 5G.
+    const variantOf = (
+      id: string,
+      colorCode: string,
+      colorName: string,
+      storageGb: 128 | 256,
+    ): Product['variants'][number] => ({
+      id: `${id}--${colorCode}--${String(storageGb)}`,
+      slug: `${colorCode}-${String(storageGb)}gb`,
+      colorCode,
+      colorName,
+      swatchHex: '#000000',
+      storageGb,
+      price: { amount: 100_000, currency: 'HUF' as const },
+      availability: 'in_stock',
+      maxQuantity: 5,
+      images: [
+        {
+          id: `${id}--${colorCode}--${String(storageGb)}-front`,
+          src: '/api/v1/media/img',
+          alt: id,
+          width: 100,
+          height: 100,
+        },
+      ],
+    });
+    const product = (
+      n: number,
+      brand: string,
+      is5g: boolean,
+      variant: Product['variants'][number],
+    ): Product => ({
+      id: String(n),
+      slug: `feat-${String(n)}`,
+      brand,
+      name: `Featured ${String(n)}`,
+      highlights: [],
+      is5g,
+      releasedAt: '2026-01-01',
+      description: 'd',
+      variants: [variant],
+      specGroups: [],
+    });
+    const products: Product[] = [
+      product(1, 'Alfa', false, variantOf('feat-1', 'piros', 'Piros', 128)),
+      product(2, 'Alfa', false, variantOf('feat-2', 'piros', 'Piros', 128)),
+      product(3, 'Alfa', false, variantOf('feat-3', 'piros', 'Piros', 128)),
+      product(4, 'Alfa', false, variantOf('feat-4', 'piros', 'Piros', 128)),
+      product(5, 'Alfa', true, variantOf('feat-5', 'kek', 'Kék', 256)),
+      product(6, 'Beta', true, variantOf('feat-6', 'kek', 'Kék', 256)),
+    ];
+    const ranking: ProductRanking[] = products.map((p, i) => ({
+      slug: p.slug,
+      rank: i + 1,
+      popularityScore: 100 - i,
+      featured: true,
+      colorOrder: [p.variants[0].colorCode],
+    }));
+    loadCatalogFixture({ products, ranking });
+    try {
+      const body = await loadJson('/api/v1/products?featured=true');
+      expect(readNumber(body, 'total')).toBe(4);
+      const facets = body['facets'];
+      expectRecord(facets);
+      expect(facets['brands']).toEqual([
+        { value: 'alfa', label: 'Alfa', count: 4 },
+        { value: 'beta', label: 'Beta', count: 1 },
+      ]);
+      expect(facets['storageGb']).toEqual([
+        { value: '128', label: '128 GB', count: 4 },
+        { value: '256', label: '256 GB', count: 2 },
+        { value: '512', label: '512 GB', count: 0 },
+      ]);
+      const colors = facets['colors'];
+      expectArray(colors);
+      const countOf = (code: string): number | undefined => {
+        const found = colors.find((c) => isRecord(c) && c['value'] === code);
+        return isRecord(found) ? readNumber(found, 'count') : undefined;
+      };
+      expect(countOf('piros')).toBe(4);
+      expect(countOf('kek')).toBe(2);
+      expect(readNumber(facets, 'is5g')).toBe(2);
+      expect(readNumber(facets, 'inStock')).toBe(4);
+    } finally {
+      const committed: CatalogFixture = ((): CatalogFixture => {
+        if (isCatalogFixtureShape(catalogFixture)) return catalogFixture;
+        throw new Error('[featured facet test] committed fixture failed shape check');
       })();
       loadCatalogFixture(committed);
     }
