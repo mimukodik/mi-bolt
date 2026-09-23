@@ -528,9 +528,11 @@ describe('GET /products filters', () => {
   });
 
   it('inStock facet count is capped at the featured size, like the backend capCount', async () => {
-    // Five featured entries, all in stock. The backend counts every
-    // in-stock entry and caps the count at the featured size
-    // (CatalogService.java capCount), so the facet reads 4, not 5.
+    // Six featured entries; entry 3 is out of stock, the other five are
+    // in stock. The backend counts every in-stock entry (5) and then caps
+    // the count at the featured size (CatalogService.java capCount), so
+    // the facet reads 4. Capping the entries first and counting after
+    // would read 3, since entries 1-4 hold the one out of stock.
     const variantOf = (
       availability: 'in_stock' | 'out_of_stock',
       id: string,
@@ -588,7 +590,7 @@ describe('GET /products filters', () => {
         is5g: false,
         releasedAt: '2026-01-01',
         description: 'd',
-        variants: [variantOf('in_stock', 'feat-3')],
+        variants: [variantOf('out_of_stock', 'feat-3')],
         specGroups: [],
       },
       {
@@ -615,6 +617,18 @@ describe('GET /products filters', () => {
         variants: [variantOf('in_stock', 'feat-5')],
         specGroups: [],
       },
+      {
+        id: '6',
+        slug: 'feat-6',
+        brand: 'Brand',
+        name: 'Featured 6',
+        highlights: [],
+        is5g: false,
+        releasedAt: '2026-01-01',
+        description: 'd',
+        variants: [variantOf('in_stock', 'feat-6')],
+        specGroups: [],
+      },
     ];
     const ranking: ProductRanking[] = products.map((p, i) => ({
       slug: p.slug,
@@ -628,8 +642,7 @@ describe('GET /products filters', () => {
       const body = await loadJson('/api/v1/products?featured=true');
       const facets = body['facets'];
       expectRecord(facets);
-      // New formula: cap at 4, then count in_stock → 3.
-      // Old formula would have given 4 (5 entries − 1 OOS).
+      // Count first (5 in stock), then cap at the featured size: 4.
       expect(readNumber(facets, 'inStock')).toBe(4);
     } finally {
       // Restore the committed fixture so subsequent tests see the
