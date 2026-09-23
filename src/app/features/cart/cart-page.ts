@@ -23,7 +23,17 @@
  * layouts duplicating it.
  */
 
-import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  effect,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import type { ElementRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
@@ -125,6 +135,11 @@ export class CartPage {
    *  transient status banner returns focus to the page heading rather
    *  than dropping to `<body>`. */
   private readonly pageTitle = viewChild<ElementRef<HTMLElement>>('pageTitle');
+
+  /** Every rendered cart line, in list order, so focus can move to the
+   *  line that takes a removed line's place. */
+  private readonly lines = viewChildren(CartLine);
+  private readonly injector = inject(Injector);
 
   /** Variant id of the line whose mutation is currently in flight, or null.
    *  Only that line is disabled while the facade dispatches. */
@@ -273,6 +288,7 @@ export class CartPage {
   onRemoveRequested(variantId: string): void {
     this.transientStatus.set({ text: 'A termék eltávolítása…', severity: 'info' });
     this.mutatingVariantId.set(variantId);
+    const index = this.items().findIndex((item) => item.variantId === variantId);
     void this.facade
       .removeItem(variantId)
       .then(() => {
@@ -287,6 +303,7 @@ export class CartPage {
       })
       .finally(() => {
         this.mutatingVariantId.set(null);
+        this.restoreFocus(index);
       });
   }
 
@@ -298,6 +315,7 @@ export class CartPage {
       .then(() => {
         if (this.mutationLanded()) {
           this.transientStatus.set({ text: 'A kosár kiürítve.', severity: 'success' });
+          this.restoreFocus(0);
         } else {
           this.transientStatus.set(null);
         }
@@ -350,6 +368,27 @@ export class CartPage {
   dismissStatusMessage(): void {
     this.transientStatus.set(null);
     this.pageTitle()?.nativeElement.focus();
+  }
+
+  /**
+   * After the next render, focuses the remove button of the line now at
+   * `index` (the last line when `index` is past the end), or the page
+   * heading when no line is left. The removed or disabled control had the
+   * focus, and without this it would drop to `<body>`.
+   */
+  private restoreFocus(index: number): void {
+    afterNextRender(
+      () => {
+        const lines = this.lines();
+        if (lines.length === 0) {
+          this.pageTitle()?.nativeElement.focus();
+          return;
+        }
+        const target = lines[Math.min(index, lines.length - 1)];
+        target.focusRemove();
+      },
+      { injector: this.injector },
+    );
   }
 
   /** `true` when the facade holds no failure signal after a mutation settled. */

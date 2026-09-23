@@ -22,7 +22,8 @@
  * If-Match binding rules apply uniformly.
  */
 
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, viewChild } from '@angular/core';
+import type { ElementRef } from '@angular/core';
 
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
@@ -43,6 +44,8 @@ export class CartLine {
 
   readonly lineTotal = computed<Money>(() => this.line().lineTotal);
 
+  private readonly removeButton = viewChild.required<ElementRef<HTMLButtonElement>>('removeButton');
+
   /**
    * `ProductImage` takes an `ImageLike` (alt/src/width/height).
    * The wire-shaped `CartItem.image` already has those fields, so
@@ -60,5 +63,11 @@ export class CartLine {
 
   onRemoveRequested(): void {
     this.removeRequested.emit(this.line().variantId);
+  }
+
+  /** Moves focus to this line's remove button. The cart page calls it
+   *  after a removal settles, so focus does not drop to `<body>`. */
+  focusRemove(): void {
+    this.removeButton().nativeElement.focus();
   }
 }

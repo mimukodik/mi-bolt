@@ -76,6 +76,7 @@ const BASE_URL = 'http://localhost/api/v1';
 
 const VARIANT_MOTO_256 = 'motorola-edge-50-fusion--zold--256';
 const VARIANT_HONOR_128 = 'honor-x7d--fekete--128';
+const VARIANT_IPHONE_PRO_MAX_256 = 'apple-iphone-18-pro-max--burgundi--256';
 const UNIT_PRICE_MOTO = 89_990;
 
 const DEMO_CART_ITEM: CartItem = {
@@ -1288,5 +1289,126 @@ describe('MIM-212 S3-C8 cart page renders the guard redirect banner', () => {
     fixture.detectChanges();
 
     expect(queryElement(getRootElement(fixture), '[data-testid="navigation-reason"]')).toBeNull();
+  });
+});
+
+describe('focus after a cart line is removed ("következő sorra/címre")', () => {
+  function removeButtons(root: HTMLElement): HTMLButtonElement[] {
+    return [...root.querySelectorAll('[data-testid="cart-line-remove"]')].filter(
+      (el): el is HTMLButtonElement => el instanceof HTMLButtonElement,
+    );
+  }
+
+  it("removing a middle line focuses the next line's remove button", async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    await cartFacade.addItem(VARIANT_HONOR_128, 1);
+    await cartFacade.addItem(VARIANT_IPHONE_PRO_MAX_256, 1);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    expect(removeButtons(root).length).toBe(3);
+
+    removeButtons(root)[1]?.click();
+    await settleMutation(fixture);
+    await fixture.whenStable();
+
+    const buttons = removeButtons(root);
+    expect(buttons.length).toBe(2);
+    expect(document.activeElement).toBe(buttons[1]);
+    expect(buttons[1]?.getAttribute('aria-label')).toBe('Törlöm: Apple iPhone 18 Pro Max');
+  });
+
+  it("removing the last of two lines focuses the remaining line's remove button", async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    await cartFacade.addItem(VARIANT_HONOR_128, 1);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+
+    removeButtons(root)[1]?.click();
+    await settleMutation(fixture);
+    await fixture.whenStable();
+
+    const buttons = removeButtons(root);
+    expect(buttons.length).toBe(1);
+    expect(document.activeElement).toBe(buttons[0]);
+    expect(buttons[0]?.getAttribute('aria-label')).toBe('Törlöm: Motorola Edge 50 Fusion');
+  });
+
+  it('removing the only line focuses the cart heading', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+
+    removeButtons(root)[0]?.click();
+    await settleMutation(fixture);
+    await fixture.whenStable();
+
+    expect(removeButtons(root).length).toBe(0);
+    expect(document.activeElement).toBe(root.querySelector('h1'));
+  });
+
+  it('a failed removal returns focus to the same, re-enabled remove button', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    await cartFacade.addItem(VARIANT_HONOR_128, 1);
+    server.use(
+      http.delete('*/api/v1/cart/items/:variantId', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:service-unavailable',
+            title: 'Service unavailable',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'Simulated failure',
+            traceId: 'spec-trace-503-remove',
+            fieldErrors: [],
+          },
+          { status: 503, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+
+    removeButtons(root)[0]?.click();
+    await settleMutation(fixture);
+    await fixture.whenStable();
+
+    const buttons = removeButtons(root);
+    expect(buttons.length).toBe(2);
+    expect(buttons[0]?.disabled).toBe(false);
+    expect(document.activeElement).toBe(buttons[0]);
+    expect(buttons[0]?.getAttribute('aria-label')).toBe('Törlöm: Motorola Edge 50 Fusion');
+  });
+
+  it('a successful clear focuses the cart heading', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+
+    getButtonElement(root, '[data-testid="cart-clear"] button').click();
+    await settleMutation(fixture);
+    await fixture.whenStable();
+
+    expect(queryElement(root, 'app-empty-state')).not.toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('h1'));
   });
 });
