@@ -13,6 +13,7 @@ import angular from 'angular-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import unusedImports from 'eslint-plugin-unused-imports';
 import security from 'eslint-plugin-security';
+import playwright from 'eslint-plugin-playwright';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -297,8 +298,15 @@ export default defineConfig([
     files: ['e2e/**/*.ts', 'playwright.config.ts'],
     ignores: ['e2e/seed.spec.ts'],
     extends: [eslint.configs.recommended, tseslint.configs.recommended],
+    plugins: { playwright },
     languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: __dirname } },
     rules: {
+      // A focused or unconditionally skipped e2e test lets a failing
+      // requirement pass. `test.skip(condition, reason)` and `test.fixme()`
+      // stay allowed: Playwright's conditional skip, and the healer's
+      // tracked outcome (playwright-tests skill).
+      'playwright/no-focused-test': 'error',
+      'playwright/no-skipped-test': ['error', { allowConditional: true }],
       'no-restricted-imports': [
         'error',
         {
@@ -335,20 +343,54 @@ export default defineConfig([
   },
   {
     // Test policy: a focused, skipped, placeholder or expected-to-fail
-    // unit test lets a failing requirement pass the suite silently.
-    // `no-restricted-properties` rather than `no-restricted-syntax`,
-    // which the src/** block switches off.
+    // unit test lets a failing requirement pass silently. The src/**
+    // block switches no-restricted-syntax off; this block sets it again
+    // for the spec files only.
     files: ['src/**/*.spec.ts', 'projects/**/*.spec.ts', 'tests/**/*.ts'],
     rules: {
-      'no-restricted-properties': [
+      'no-restricted-syntax': [
         'error',
-        ...['describe', 'suite', 'it', 'test'].flatMap((object) =>
-          ['only', 'skip', 'todo', 'fails', 'skipIf', 'runIf'].map((property) => ({
-            object,
-            property,
-            message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
-          })),
-        ),
+        {
+          // On the property name, whatever the object: catches chains
+          // (test.concurrent.only), aliases (t.only) and a runtime
+          // ctx.skip().
+          selector: 'MemberExpression[property.name=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+        },
+        {
+          // A string key, whatever the object: it['only'],
+          // describe.concurrent['skip'].
+          selector:
+            'MemberExpression[computed=true][property.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+        },
+        {
+          // Any other computed key on the test API itself: it[`skip`],
+          // test[key]. A computed key on an alias or a chain (t[key]) is
+          // out of reach of a syntax rule.
+          selector:
+            "MemberExpression[computed=true][property.type!='Literal'][object.name=/^(describe|suite|it|test|bench)$/]",
+          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+        },
+        {
+          // Destructuring: const { only } = it, const { 'only': x } = it,
+          // and a test context taken apart as ({ skip }) => skip().
+          selector:
+            'ObjectPattern > Property[key.name=/^(only|skip|todo|fails|skipIf|runIf)$/], ObjectPattern > Property[key.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+        },
+      ],
+    },
+  },
+  {
+    // A coverage-ignore pragma removes lines from the coverage denominator
+    // without a test; the deleted scripts/check-test-policy.mjs rejected
+    // them, and production files are where they would count.
+    files: ['src/**/*.ts', 'projects/**/*.ts', 'tests/**/*.ts', 'e2e/**/*.ts'],
+    rules: {
+      'no-warning-comments': [
+        'error',
+        { terms: ['v8 ignore', 'istanbul ignore', 'c8 ignore'], location: 'anywhere' },
       ],
     },
   },
