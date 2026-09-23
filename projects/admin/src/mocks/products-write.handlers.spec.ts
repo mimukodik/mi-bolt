@@ -255,7 +255,7 @@ describe('productsWriteHandlers', () => {
 
       const body = await expectProblem(response, 422, 'VALIDATION_FAILED');
       const errors = fieldErrorsOf(body);
-      expect(errors).toEqual([{ path: '/slug', code: 'PATTERN' }]);
+      expect(errors).toEqual([{ path: '/slug', code: 'PATTERN', params: {} }]);
     });
 
     it('rejects a duplicated colour code (422, /colors/2/code DUPLICATE_COLOR_CODE)', async () => {
@@ -272,10 +272,12 @@ describe('productsWriteHandlers', () => {
 
       const body = await expectProblem(response, 422, 'VALIDATION_FAILED');
       const errors = fieldErrorsOf(body);
-      expect(errors).toEqual([{ path: '/colors/2/code', code: 'DUPLICATE_COLOR_CODE' }]);
+      expect(errors).toEqual([
+        { path: '/colors/2/code', code: 'DUPLICATE_COLOR_CODE', params: {} },
+      ]);
     });
 
-    it('rejects a duplicated variant (422, /variants/2/storageGb DUPLICATE_VARIANT)', async () => {
+    it('rejects a duplicated variant (422, /variants/2 DUPLICATE_VARIANT_SLUG and DUPLICATE_VARIANT)', async () => {
       const db = setup();
       const product5 = requireProduct(db, 5);
       const base = inputOf(product5);
@@ -289,7 +291,12 @@ describe('productsWriteHandlers', () => {
 
       const body = await expectProblem(response, 422, 'VALIDATION_FAILED');
       const errors = fieldErrorsOf(body);
-      expect(errors).toEqual([{ path: '/variants/2/storageGb', code: 'DUPLICATE_VARIANT' }]);
+      // An appended clone repeats both its slug and its (colorCode, storageGb) pair, and the
+      // validator checks each independently, in that order.
+      expect(errors).toEqual([
+        { path: '/variants/2/slug', code: 'DUPLICATE_VARIANT_SLUG', params: {} },
+        { path: '/variants/2/storageGb', code: 'DUPLICATE_VARIANT', params: {} },
+      ]);
     });
 
     it('rejects a taken slug (422, /slug SLUG_TAKEN)', async () => {
@@ -301,7 +308,7 @@ describe('productsWriteHandlers', () => {
 
       const body = await expectProblem(response, 422, 'VALIDATION_FAILED');
       const errors = fieldErrorsOf(body);
-      expect(errors).toEqual([{ path: '/slug', code: 'SLUG_TAKEN' }]);
+      expect(errors).toEqual([{ path: '/slug', code: 'SLUG_TAKEN', params: {} }]);
     });
 
     it('rejects featured past the limit (422, /featured FEATURED_LIMIT max:4)', async () => {
@@ -323,14 +330,16 @@ describe('productsWriteHandlers', () => {
       const input = {
         ...base,
         slug: 'honor-600-lite-copy',
-        colors: [{ ...base.colors[0], imageId: 'no-such-image' }, ...base.colors.slice(1)],
+        // 64 lowercase hex digits: passes the bean-validation PATTERN so the request reaches
+        // stage 3, where it is not a registered image.
+        colors: [{ ...base.colors[0], imageId: '0'.repeat(64) }, ...base.colors.slice(1)],
       };
 
       const response = await post(productsUrl(), db, input);
 
       const body = await expectProblem(response, 422, 'VALIDATION_FAILED');
       const errors = fieldErrorsOf(body);
-      expect(errors).toEqual([{ path: '/colors/0/imageId', code: 'UNKNOWN_IMAGE' }]);
+      expect(errors).toEqual([{ path: '/colors/0/imageId', code: 'UNKNOWN_IMAGE', params: {} }]);
     });
   });
 
@@ -377,7 +386,7 @@ describe('productsWriteHandlers', () => {
       expect(readNumber(params, 'received')).toBe(7);
     });
 
-    it('rejects a malformed If-Match (400, parameter If-Match)', async () => {
+    it('rejects a malformed If-Match (400, parameter ifMatch, reason PATTERN)', async () => {
       const db = setup();
       const product5 = requireProduct(db, 5);
       const input = inputOf(product5);
@@ -387,7 +396,8 @@ describe('productsWriteHandlers', () => {
       const body = await expectProblem(response, 400, 'INVALID_REQUEST');
       const params = body['params'];
       expectRecord(params);
-      expect(readString(params, 'parameter')).toBe('If-Match');
+      expect(readString(params, 'parameter')).toBe('ifMatch');
+      expect(readString(params, 'reason')).toBe('PATTERN');
     });
 
     it('rejects an unknown product id (404, params.productId 999)', async () => {
@@ -439,7 +449,7 @@ describe('productsWriteHandlers', () => {
 
       const body = await expectProblem(response, 422, 'VALIDATION_FAILED');
       const errors = fieldErrorsOf(body);
-      expect(errors).toEqual([{ path: '/slug', code: 'SLUG_IMMUTABLE' }]);
+      expect(errors).toEqual([{ path: '/slug', code: 'SLUG_IMMUTABLE', params: {} }]);
     });
 
     it('rejects featured past the limit on an active product (422, FEATURED_LIMIT)', async () => {
