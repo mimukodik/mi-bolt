@@ -112,21 +112,9 @@ export class SpecGroupsSection {
     this.openKeys.update((keys) => new Set(keys).add(group.key));
   }
 
-  /**
-   * The removed group held the menu that focus would return to, so focus moves
-   * to the add-group button after the next render: `mat-menu` restores focus to
-   * the removed item's trigger during the same click, and for a real (trusted)
-   * click that restore runs in its own listener with a microtask checkpoint
-   * before it, so a microtask here would run first and be overridden.
-   */
   protected removeGroup(index: number, addGroupButton: MatButton): void {
     this.field()().value.update((groups) => groups.filter((_, i) => i !== index));
-    afterNextRender(
-      () => {
-        addGroupButton.focus();
-      },
-      { injector: this.injector },
-    );
+    this.focusAfterRemoval(addGroupButton);
   }
 
   protected moveGroup(index: number, delta: -1 | 1): void {
@@ -141,25 +129,13 @@ export class SpecGroupsSection {
     group.rows().value.update((rows) => [...rows, emptySpecRow()]);
   }
 
-  /**
-   * The removed row held the menu that focus would return to, so focus moves
-   * to the add-row button after the next render: `mat-menu` restores focus to
-   * the removed item's trigger during the same click, and for a real (trusted)
-   * click that restore runs in its own listener with a microtask checkpoint
-   * before it, so a microtask here would run first and be overridden.
-   */
   protected removeRow(
     group: FieldTree<SpecGroupModel>,
     index: number,
     addRowButton: MatButton,
   ): void {
     group.rows().value.update((rows) => rows.filter((_, i) => i !== index));
-    afterNextRender(
-      () => {
-        addRowButton.focus();
-      },
-      { injector: this.injector },
-    );
+    this.focusAfterRemoval(addRowButton);
   }
 
   protected moveRow(group: FieldTree<SpecGroupModel>, index: number, delta: -1 | 1): void {
@@ -168,5 +144,21 @@ export class SpecGroupsSection {
       moveItemInArray(copy, index, index + delta);
       return copy;
     });
+  }
+
+  /**
+   * The removed item held the menu that focus would return to, so focus moves
+   * to the given add button after the next render: `mat-menu` restores focus to
+   * the removed item's trigger during the same click, and for a real (trusted)
+   * click that restore runs in its own listener with a microtask checkpoint
+   * before it, so a microtask here would run first and be overridden.
+   */
+  private focusAfterRemoval(button: MatButton): void {
+    afterNextRender(
+      () => {
+        button.focus();
+      },
+      { injector: this.injector },
+    );
   }
 }
