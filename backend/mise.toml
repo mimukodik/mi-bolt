@@ -1,0 +1,19 @@
+# Workspace tasks of the Gradle build; the root mise.toml calls them.
+[tasks.setup]
+run = "./gradlew --version"
+
+[tasks.lint]
+run = "./gradlew :services:commerce:pmdMain :services:commerce:pmdTest"
+
+[tasks.test]
+run = "./gradlew :services:commerce:test :services:commerce:integrationTest"
+
+[tasks.build]
+depends = ["test"]
+run = "./gradlew :services:commerce:build"
+
+[tasks.run]
+run = "./gradlew :services:commerce:bootRun"
+
+[tasks."api:generate"]
+run = "./gradlew :services:commerce:openApiGenerate"

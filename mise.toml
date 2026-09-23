@@ -1,0 +1,98 @@
+# Root commands of the monorepo: run every command from the repository root as
+# `mise run <task>`. The workspace tasks behind them live in frontend/mise.toml,
+# backend/mise.toml, tools/mise.toml and contracts/mise.toml; the containers in
+# deploy/compose.yaml.
+min_version = "2026.7.11"
+monorepo_root = true
+
+[monorepo]
+config_roots = ["frontend", "backend", "tools", "contracts"]
+
+[tools]
+node = "26.10.0"
+java = "temurin-21.0.12+101.0.LTS"
+
+[tasks.frontend]
+description = "The three apps with ng serve and the MSW mock: storefront 4200, payment 4210, admin 4220"
+depends = ["//frontend:start:storefront", "//frontend:start:payment", "//frontend:start:admin"]
+
+[tasks.storefront]
+description = "The storefront alone with the MSW mock, on 4200"
+depends = ["//frontend:start:storefront"]
+
+[tasks.admin]
+description = "The admin alone with the MSW mock, on 4220"
+depends = ["//frontend:start:admin"]
+
+[tasks.payment]
+description = "The demo payment app alone, on 4210"
+depends = ["//frontend:start:payment"]
+
+[tasks.db]
+description = "PostgreSQL alone, in its container on 55433"
+run = "deploy/compose.sh up -d --wait postgres"
+
+[tasks.backend]
+description = "The backend natively (Gradle bootRun) on 8080, PostgreSQL in its container"
+depends = ["db"]
+run = "mise run //backend:run"
+
+[tasks."backend:docker"]
+description = "The backend in its container (the mi-bolt-commerce image) on 8080, PostgreSQL in its container"
+run = "deploy/compose.sh up -d --build --wait postgres commerce"
+
+[tasks.dev]
+description = "The three apps against the native backend, PostgreSQL in its container"
+depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment", "backend"]
+
+[tasks."dev:docker"]
+description = "The three apps against the backend container, PostgreSQL in its container"
+depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment", "backend:docker"]
+
+[tasks.stack]
+description = "The whole system in containers: web on 4200, backend on 8080, PostgreSQL on 55433"
+# The web container serves the payment app too, so the backend's payment redirect
+# and return point at the web origin instead of the dev servers' 4210 and 4200.
+run = 'MIBOLT_PAYMENT_ORIGIN="${MIBOLT_PAYMENT_ORIGIN:-http://localhost:${MIBOLT_WEB_PORT:-4200}}" MIBOLT_SHOP_ORIGIN="${MIBOLT_SHOP_ORIGIN:-http://localhost:${MIBOLT_WEB_PORT:-4200}}" deploy/compose.sh up -d --build --wait'
+
+[tasks.stop]
+description = "Stop every container of the stack; the database volume keeps its data"
+run = "deploy/compose.sh down"
+
+[tasks.setup]
+description = "Install every workspace's dependencies"
+depends = ["//frontend:setup", "//backend:setup", "//tools:setup"]
+run = "npm --prefix .claude/hooks ci"
+
+[tasks.verify]
+description = "Lint, test and build every workspace, and check the contract"
+depends = [
+  "//frontend:lint", "//frontend:test", "//frontend:build",
+  "//backend:build",
+  "//tools:lint", "//tools:test", "//tools:build",
+  "contracts:check", "api:drift", "claude:hooks:test", "claude:hooks:typecheck",
+]
+
+[tasks."api:generate"]
+description = "Regenerate the frontend API clients and the backend server stubs from the contract"
+depends = ["//frontend:api:generate", "//backend:api:generate"]
+
+[tasks."api:drift"]
+description = "Fail when the committed frontend API clients differ from the contract"
+depends = ["//frontend:api:drift"]
+
+[tasks."contracts:check"]
+description = "Lint the contract, validate the samples, check the sequence diagrams"
+depends = ["//contracts:check"]
+
+[tasks."claude:memory"]
+description = "The shared agent memory CLI; pass its arguments after the task name"
+run = "npm --prefix tools run --silent claude:memory --"
+
+[tasks."claude:hooks:test"]
+description = "Test the Claude Code hooks"
+run = "npm --prefix .claude/hooks test"
+
+[tasks."claude:hooks:typecheck"]
+description = "Typecheck the Claude Code hooks"
+run = "npm --prefix .claude/hooks run typecheck"

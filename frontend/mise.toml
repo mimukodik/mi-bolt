@@ -1,0 +1,42 @@
+# Workspace tasks of the Angular CLI workspace; the root mise.toml calls them.
+[tasks.setup]
+run = "npm ci"
+
+[tasks.lint]
+run = ["npm run lint", "npm run format:check"]
+
+[tasks.test]
+run = ["npm run test -- --watch=false", "npm run test:contract"]
+
+[tasks.build]
+run = [
+  "npm run build:check",
+  "npm run build:payment",
+  "npm run build:admin",
+  "npm run check:admin-dist",
+  "npm run check:storefront-dist",
+  "npm run check:payment-dist",
+  "npm run check:payment-boot",
+  "npm run check:admin-boot",
+]
+
+[tasks."api:generate"]
+run = "npm run api:generate"
+
+[tasks."api:drift"]
+run = "npm run api:drift"
+
+[tasks."start:storefront"]
+run = "npm start"
+
+[tasks."start:storefront:local-backend"]
+run = "npm run start:local-backend"
+
+[tasks."start:admin"]
+run = "npm run start:admin"
+
+[tasks."start:admin:local-backend"]
+run = "npm run start:admin:local-backend"
+
+[tasks."start:payment"]
+run = "npm run start:payment"
