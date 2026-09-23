@@ -10,8 +10,8 @@
  * brand: the 8-point spacing rhythm, the two dominant radii, the 44px
  * control height on a 48px touch floor, and the type steps the page needs.
  * The palette and the typeface are deliberately NOT the shop's; that is
- * this application's own choice, apart from the error red and the demo
- * banner's warning pair, which are the shop's
+ * this application's own choice, apart from white, the error red and the
+ * demo banner's warning pair, which are the shop's
  * (`frontend/docs/design/yettel.md` §2, §9). On identity the contract asks
  * only that this page be clearly marked as a demo, under a generic name,
  * and never carry a real payment provider's name or identity
@@ -37,7 +37,8 @@
   --pay-control-height: 44px;
   --pay-touch-floor: 48px;
 
-  /* Palette — neutral grey and slate, declared here and nowhere else. */
+  /* Palette — neutral grey and slate plus the shop's white, error red and
+   * warning pair (see the header), declared here and nowhere else. */
   --pay-page: #f4f5f7;
   --pay-card: #ffffff;
   --pay-border: #d8dce1;
@@ -69,7 +70,7 @@ body {
 }
 
 /* The demo warning is the first element in the document and the first
- * thing a screen reader reaches. #ffd500 on #332b00 is a 12.6:1 pair. */
+ * thing a screen reader reaches. #ffd500 on #332b00 is a 9.9:1 pair. */
 .pay-banner {
   position: sticky;
   top: 0;
