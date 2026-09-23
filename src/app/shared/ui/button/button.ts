@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 
 /**
  * MiBolt Button primitive.
@@ -17,12 +17,14 @@ import { Component, input, output } from '@angular/core';
  *
  * State contracts (where applicable):
  * - default, hover, focus-visible, active, disabled, loading.
- * - `loading` swaps the label to the loading label and makes the button inert
- *   (`aria-busy`, `aria-disabled`, the disabled look, the click dropped by
- *   `onClick`) without changing its outer width. It never sets native
- *   `disabled`: a focused button that becomes disabled hands the focus to
- *   `<body>`, and the shopper who pressed it would lose their place. Only the
- *   `disabled` input sets native `disabled`.
+ * - `loading` swaps the label to the loading label and makes the button
+ *   appear and behave as inert (`aria-busy`, `aria-disabled`, the disabled
+ *   look, the click dropped by `onClick`) without changing its outer width.
+ *   It never sets native `disabled`: a focused, enabled button that
+ *   transitions to native `disabled` hands the focus to `<body>`, and the
+ *   shopper who pressed it would lose their place. Loading keeps the native
+ *   focusable state so the focus stays put. Only the `disabled` input sets
+ *   native `disabled`.
  *
  * Selection is not conveyed by color alone: the focus ring, the disabled state
  * and the loading label are all textual/structural, not chromatic.
@@ -44,10 +46,14 @@ export class Button {
   /** Full-width button for a card's action column. */
   readonly block = input(false);
 
+  /** Shared by the aria-disabled attribute, the is-disabled class and the
+   *  click guard so the three stay in lock-step. */
+  readonly inert = computed<boolean>(() => this.disabled() || this.loading());
+
   readonly pressed = output<MouseEvent>();
 
   onClick(event: MouseEvent): void {
-    if (this.disabled() || this.loading()) {
+    if (this.inert()) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;

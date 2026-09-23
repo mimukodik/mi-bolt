@@ -192,11 +192,26 @@ describe('Button primitive', () => {
     expect(host.clickCount()).toBe(0);
   });
 
-  it('is neither aria-disabled nor styled disabled when idle', () => {
+  it('is neither aria-disabled, aria-busy, nor styled disabled when idle', () => {
     const { root } = setup();
     const btn = root.querySelector<HTMLButtonElement>('button');
     expect(btn?.hasAttribute('aria-disabled')).toBe(false);
+    expect(btn?.hasAttribute('aria-busy')).toBe(false);
     expect(btn?.classList.contains('is-disabled')).toBe(false);
+  });
+
+  it('combines disabled and loading: native disabled wins, inert styling still applies, click is dropped', () => {
+    const { fixture, host, root } = setup();
+    host.disabled.set(true);
+    host.loading.set(true);
+    fixture.detectChanges();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.disabled).toBe(true);
+    expect(btn?.getAttribute('aria-disabled')).toBe('true');
+    expect(btn?.getAttribute('aria-busy')).toBe('true');
+    expect(btn?.classList.contains('is-disabled')).toBe(true);
+    btn?.click();
+    expect(host.clickCount()).toBe(0);
   });
 
   it('uses a button (not an a-tag) for actions', () => {

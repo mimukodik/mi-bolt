@@ -84,8 +84,10 @@
 
 /* Disabled and loading share this look. Loading keeps the native button
    enabled, so a focused button keeps its focus (a focused control that
-   becomes disabled hands the focus to <body>); `aria-disabled` and the
-   click guard in button.ts make it inert. */
+   becomes disabled hands the focus to <body>); `aria-disabled` announces
+   the state, and the click guard in button.ts drops the `pressed` event
+   so an Enter/Space/click does nothing. The button itself is still
+   focusable and clickable. */
 .root.is-disabled {
   color: var(--color-disabled-text);
   background: var(--color-disabled-bg);

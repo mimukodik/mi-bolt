@@ -1,8 +1,8 @@
 <button
   class="root inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-3 text-base leading-6 whitespace-nowrap select-none"
   [attr.aria-busy]="loading() ? 'true' : null"
-  [attr.aria-disabled]="disabled() || loading() ? 'true' : null"
-  [class.is-disabled]="disabled() || loading()"
+  [attr.aria-disabled]="inert() ? 'true' : null"
+  [class.is-disabled]="inert()"
   [class.is-navy]="variant() === 'navy'"
   [class.is-primary]="variant() === 'primary'"
   [class.is-primary-on-dark]="variant() === 'primaryOnDark'"
