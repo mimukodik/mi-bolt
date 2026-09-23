@@ -120,9 +120,9 @@ export default defineConfig({
           // angular.json so the two coverage gates never drift.
           entryFilter: (entry: V8CoverageEntry) =>
             entry.url.includes('/main') || entry.url.includes('/chunk-'),
-          sourceFilter: (sourcePath: string) =>
-            sourcePath.includes('projects/storefront/src/') &&
-            !sourcePath.includes('projects/shop-api/src/generated/'),
+          // The shop SDK is generated into `projects/shop-api/src/generated/`,
+          // outside the storefront source, so it never reaches this filter.
+          sourceFilter: (sourcePath: string) => sourcePath.includes('projects/storefront/src/'),
           reports: ['v8', 'console-summary', 'lcovonly', 'json-summary'],
           onEnd: (coverageResults: CoverageResults | undefined) => {
             if (process.env['E2E_COVERAGE_GATE'] !== '1') return;

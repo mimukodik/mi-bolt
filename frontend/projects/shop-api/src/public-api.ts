@@ -7,4 +7,5 @@
 
 export * from './generated/api';
 export * from './generated/api-configuration';
+export * from './generated/functions';
 export * from './generated/models';
