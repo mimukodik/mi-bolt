@@ -130,6 +130,15 @@ export class CatalogPage {
    *  under explicit refresh warning"). */
   readonly hasPrevious = computed<boolean>(() => this.facade.vm().status === 'refreshing');
 
+  /** True while any catalogue request is in flight (loading or refreshing).
+   *  The brand and colour lists show skeleton rows before the first
+   *  response; on every refresh the existing counts show a shimmer
+   *  (MIM-228). */
+  readonly facetsBusy = computed<boolean>(() => {
+    const status = this.facade.vm().status;
+    return status === 'loading' || status === 'refreshing';
+  });
+
   /** `AsyncContent`'s `problem` — the facade only ever surfaces a plain
    *  message string, so it is adapted into the documented `UiProblem`
    *  shape at the call site, the same way `asyncStatus` adapts the

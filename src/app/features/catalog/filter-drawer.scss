@@ -171,6 +171,16 @@
   font-weight: var(--weight-regular);
 }
 
+// A count being re-fetched keeps its text for its width; the text is
+// hidden and the global `.facet-count-busy` shimmer shows (MIM-228).
+// Scoped here because `.option__count` and `.color-chip__count` set
+// `color` with the component's attribute and would win over a global
+// class.
+.option__count.facet-count-busy,
+.color-chip__count.facet-count-busy {
+  color: transparent;
+}
+
 .price {
   display: grid;
   grid-template-columns: 1fr 1fr;

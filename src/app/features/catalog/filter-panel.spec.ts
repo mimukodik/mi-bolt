@@ -87,6 +87,7 @@ function fireInput(el: HTMLInputElement, value: string): void {
 @Component({
   imports: [FilterPanel],
   template: `<app-filter-panel
+    [busy]="busy()"
     [facets]="facets()"
     [value]="query()"
     (filtersChanged)="onFiltersChanged($event)"
@@ -95,6 +96,7 @@ function fireInput(el: HTMLInputElement, value: string): void {
 class HostComponent {
   readonly query = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
   readonly facets = signal<Facets | null>(null);
+  readonly busy = signal(false);
 
   onFiltersChanged(next: CatalogQuery): void {
     this.query.set(next);
@@ -661,5 +663,137 @@ describe('FilterPanel — the price error is tied to the invalid price field', (
     expect(min.getAttribute('aria-describedby')).toBeNull();
     expect(min.getAttribute('aria-invalid')).toBeNull();
     expect(root.querySelector('[data-testid="filter-price-error"]')).toBeNull();
+  });
+});
+
+describe('MIM-228 facet skeleton', () => {
+  // Fixture: at least 2 brands, 3 colours, all three storage buckets with
+  // counts, and non-null inStock and is5g — every count cell rendered.
+  function loadedFacets(): Facets {
+    return {
+      brands: [
+        { value: 'apple', label: 'Apple', count: 12 },
+        { value: 'samsung', label: 'Samsung', count: 7 },
+      ],
+      colors: [
+        { value: 'black', label: 'Fekete', count: 9, swatchHex: '#000000' },
+        { value: 'white', label: 'Fehér', count: 5, swatchHex: '#ffffff' },
+        { value: 'blue', label: 'Kék', count: 3, swatchHex: '#1e6fff' },
+      ],
+      storageGb: [
+        { value: '128', label: '128 GB', count: 3 },
+        { value: '256', label: '256 GB', count: 5 },
+        { value: '512', label: '512 GB', count: 1 },
+      ],
+      inStock: 11,
+      is5g: 14,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    };
+  }
+
+  it('a count being re-fetched keeps its text and its box, and is hidden from assistive tech', () => {
+    const { fixture, host } = setup();
+    const panel = getRootElement(fixture);
+    host.facets.set(loadedFacets());
+    fixture.detectChanges();
+
+    const beforeSpans = Array.from(
+      panel.querySelectorAll<HTMLElement>('.option__count, .color-chip__count'),
+    );
+    expect(beforeSpans.length).toBeGreaterThan(0);
+    const beforeTexts = beforeSpans.map((el) => el.textContent);
+    const beforeBrandLi = panel.querySelectorAll('[data-testid="filter-group-brand"] li').length;
+    const beforeColorLi = panel.querySelectorAll('[data-testid="filter-group-color"] li').length;
+
+    host.busy.set(true);
+    fixture.detectChanges();
+
+    const afterSpans = Array.from(
+      panel.querySelectorAll<HTMLElement>('.option__count, .color-chip__count'),
+    );
+    expect(afterSpans.length).toBe(beforeSpans.length);
+    afterSpans.forEach((el, idx) => {
+      expect(el.classList.contains('facet-count-busy')).toBe(true);
+      expect(el.getAttribute('aria-hidden')).toBe('true');
+      expect(el.textContent).toBe(beforeTexts[idx]);
+    });
+    expect(panel.querySelectorAll('[data-testid="filter-group-brand"] li').length).toBe(
+      beforeBrandLi,
+    );
+    expect(panel.querySelectorAll('[data-testid="filter-group-color"] li').length).toBe(
+      beforeColorLi,
+    );
+
+    host.busy.set(false);
+    fixture.detectChanges();
+
+    const settledSpans = Array.from(
+      panel.querySelectorAll<HTMLElement>('.option__count, .color-chip__count'),
+    );
+    settledSpans.forEach((el) => {
+      expect(el.classList.contains('facet-count-busy')).toBe(false);
+      expect(el.getAttribute('aria-hidden')).toBeNull();
+    });
+  });
+
+  it('before the first response the brand and colour lists show skeleton rows', () => {
+    const { fixture, host } = setup();
+    const panel = getRootElement(fixture);
+    host.facets.set(null);
+    host.busy.set(true);
+    fixture.detectChanges();
+
+    const brandSkeletons = panel.querySelectorAll(
+      '[data-testid="filter-group-brand"] [data-testid="brand-skeleton-row"]',
+    );
+    const colorSkeletons = panel.querySelectorAll(
+      '[data-testid="filter-group-color"] [data-testid="color-skeleton-row"]',
+    );
+    expect(brandSkeletons.length).toBe(5);
+    expect(colorSkeletons.length).toBe(1);
+    expect(panel.querySelectorAll('[data-testid="filter-group-brand"] button.option').length).toBe(
+      0,
+    );
+    expect(
+      panel.querySelectorAll('[data-testid="filter-group-color"] button.color-chip').length,
+    ).toBe(0);
+
+    Array.from(brandSkeletons).forEach((el) => {
+      expect(el.getAttribute('aria-hidden')).toBe('true');
+    });
+    Array.from(colorSkeletons).forEach((el) => {
+      expect(el.getAttribute('aria-hidden')).toBe('true');
+    });
+  });
+
+  it('no skeleton rows while no request runs', () => {
+    const { fixture, host } = setup();
+    const panel = getRootElement(fixture);
+    host.facets.set(null);
+    host.busy.set(false);
+    fixture.detectChanges();
+
+    expect(panel.querySelectorAll('[data-testid="brand-skeleton-row"]').length).toBe(0);
+    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(0);
+  });
+
+  it('the skeleton rows leave once the first response lands', () => {
+    const { fixture, host } = setup();
+    const panel = getRootElement(fixture);
+    host.facets.set(null);
+    host.busy.set(true);
+    fixture.detectChanges();
+    expect(panel.querySelectorAll('[data-testid="brand-skeleton-row"]').length).toBe(5);
+    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(1);
+
+    host.facets.set(loadedFacets());
+    host.busy.set(false);
+    fixture.detectChanges();
+
+    expect(panel.querySelectorAll('[data-testid="brand-skeleton-row"]').length).toBe(0);
+    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(0);
+    expect(panel.querySelectorAll('[data-testid="filter-group-brand"] button.option').length).toBe(
+      2,
+    );
   });
 });
