@@ -1,0 +1,17 @@
+.sidenav {
+  width: 200px;
+}
+
+.sidenav .mat-toolbar {
+  background: inherit;
+}
+
+/*
+ * Material's unlayered `.mat-drawer-content { display: block }` beats Tailwind's
+ * layered `flex` utility, so the column is set here, where it wins; `main` then
+ * takes the remaining height and the routed page can fill it.
+ */
+mat-sidenav-content {
+  display: flex;
+  flex-direction: column;
+}

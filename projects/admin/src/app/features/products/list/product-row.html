@@ -1,0 +1,82 @@
+@if (item(); as row) {
+  @if (handset()) {
+    <img
+      alt=""
+      class="adm-thumb"
+      height="40"
+      loading="lazy"
+      role="cell"
+      width="40"
+      [src]="row.thumbnail.src"
+    />
+    <div class="flex flex-col min-w-0" role="cell">
+      <span class="adm-name">{{ row.name }}</span>
+      <span class="adm-slug"
+        >{{ row.brand }} · {{ price() }} ·
+        <span [class.adm-stock-out]="row.totalStock === 0">{{ row.totalStock }}</span> db</span
+      >
+    </div>
+    <div role="cell">
+      <mat-chip-set>
+        <mat-chip>{{ row.status === 'active' ? 'Aktív' : 'Archivált' }}</mat-chip>
+      </mat-chip-set>
+    </div>
+    <div role="cell">
+      <a
+        matIconButton
+        [attr.aria-label]="`Szerkesztés: ${row.name}`"
+        [routerLink]="['/termekek', row.id]"
+      >
+        <mat-icon>edit</mat-icon>
+      </a>
+    </div>
+  } @else {
+    <img
+      alt=""
+      class="adm-thumb"
+      height="40"
+      loading="lazy"
+      role="cell"
+      width="40"
+      [src]="row.thumbnail.src"
+    />
+    <div class="flex flex-col min-w-0" role="cell">
+      <span class="adm-name">{{ row.name }}</span>
+      <span class="adm-slug">{{ row.slug }}</span>
+    </div>
+    <div role="cell">{{ row.brand }}</div>
+    <div class="flex items-center gap-1" role="cell">
+      @for (colour of row.colors; track colour.name) {
+        <span class="adm-swatch" [style.background-color]="colour.swatchHex"></span>
+        <span class="sr-only">{{ colour.name }}</span>
+      }
+    </div>
+    <div class="justify-self-end" role="cell">{{ row.variantCount }}</div>
+    <div class="justify-self-end" role="cell">{{ price() }}</div>
+    <div class="justify-self-end" role="cell">
+      <span [class.adm-stock-out]="row.totalStock === 0">{{ row.totalStock }}</span>
+    </div>
+    <div role="cell">
+      @if (row.featured) {
+        <mat-icon aria-hidden="false" aria-label="Kiemelt">star</mat-icon>
+      }
+    </div>
+    <div role="cell">
+      <mat-chip-set>
+        <mat-chip>{{ row.status === 'active' ? 'Aktív' : 'Archivált' }}</mat-chip>
+      </mat-chip-set>
+    </div>
+    <div role="cell">
+      <a
+        matIconButton
+        [attr.aria-label]="`Szerkesztés: ${row.name}`"
+        [routerLink]="['/termekek', row.id]"
+      >
+        <mat-icon>edit</mat-icon>
+      </a>
+    </div>
+  }
+} @else {
+  <div class="adm-placeholder size-10" role="cell"></div>
+  <div role="cell"><span class="adm-placeholder"></span></div>
+}

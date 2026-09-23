@@ -42,6 +42,8 @@ export default defineConfig([
       // Generated OpenAPI client; carries its own `/* eslint-disable */`
       // and is never hand-edited (MIM-209 step 3).
       'src/app/api/generated/**',
+      // The admin application's own generated OpenAPI client, same rules.
+      'projects/admin/src/app/api/generated/**',
       'vitest.config.*',
       'vitest.*.config.*',
       'vitest.config.*.timestamp*',
@@ -80,7 +82,7 @@ export default defineConfig([
         'error',
         {
           type: 'attribute',
-          prefix: ['app', 'pay'],
+          prefix: ['app', 'pay', 'adm'],
           style: 'camelCase',
         },
       ],
@@ -88,7 +90,7 @@ export default defineConfig([
         'error',
         {
           type: 'element',
-          prefix: ['app', 'pay'],
+          prefix: ['app', 'pay', 'adm'],
           style: 'kebab-case',
         },
       ],
@@ -334,6 +336,35 @@ export default defineConfig([
   },
   { files: ['e2e/fixtures/**/*.ts'], rules: { 'no-restricted-imports': 'off' } },
   { files: ['e2e/seed.spec.ts'], rules: {} },
+  {
+    // The admin has its own SDK and mocks (MIM-331); the root tsconfig's shop
+    // aliases stay visible to it, so the linter keeps them out. The admin
+    // also takes no type assertion at all (`as const` stays allowed).
+    files: ['projects/admin/**/*.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@mi-bolt/api/*', '@mi-bolt/mocks/*', '**/src/app/api/generated/**'],
+              message:
+                'The shop SDK and mocks are not for the admin: use projects/admin/src/app/api/generated.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The admin tag helper and the SDK-split spec (MIM-331) take no type
+    // assertion either; the older contract suites are not covered yet.
+    files: ['tests/contract/admin-tags.ts', 'tests/contract/sdk-split.spec.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+    },
+  },
   {
     files: ['**/*.spec.ts'],
     rules: {

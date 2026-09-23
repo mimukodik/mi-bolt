@@ -9,5 +9,6 @@
   "enumStyle": "alias",
   "enumArray": true,
   "ignoreUnusedModels": true,
-  "excludeParameters": ["If-Match"]
+  "excludeParameters": ["If-Match"],
+  "excludeTags": ["AdminAuth", "AdminUsers", "AdminProducts", "AdminMedia"]
 }

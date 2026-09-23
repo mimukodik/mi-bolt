@@ -1,0 +1,71 @@
+@let isHandset = this.isHandset();
+
+<mat-sidenav-container class="sidenav-container h-dvh">
+  <mat-sidenav
+    #drawer
+    class="sidenav"
+    fixedInViewport
+    [attr.role]="isHandset ? 'dialog' : 'navigation'"
+    [mode]="isHandset ? 'over' : 'side'"
+    [opened]="isHandset === false"
+  >
+    <mat-toolbar>Menü</mat-toolbar>
+    <mat-nav-list>
+      <a
+        #rlaAttekintes="routerLinkActive"
+        mat-list-item
+        routerLink="/attekintes"
+        routerLinkActive
+        [activated]="rlaAttekintes.isActive"
+        >Áttekintés</a
+      >
+      <a
+        #rlaTermekek="routerLinkActive"
+        mat-list-item
+        routerLink="/termekek"
+        routerLinkActive
+        [activated]="rlaTermekek.isActive"
+        >Termékek</a
+      >
+      <a
+        #rlaAdminok="routerLinkActive"
+        mat-list-item
+        routerLink="/adminok"
+        routerLinkActive
+        [activated]="rlaAdminok.isActive"
+        >Adminok</a
+      >
+    </mat-nav-list>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <mat-toolbar color="primary">
+      @if (isHandset) {
+        <button aria-label="Menü megnyitása" matIconButton type="button" (click)="drawer.toggle()">
+          <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
+        </button>
+      }
+      <span>MiBolt Admin</span>
+      <span class="flex-1"></span>
+      @if (session.current(); as admin) {
+        <button aria-label="Fiók menü" matButton type="button" [matMenuTriggerFor]="accountMenu">
+          <mat-icon>account_circle</mat-icon>
+          {{ admin.username }}
+          <mat-icon iconPositionEnd>expand_more</mat-icon>
+        </button>
+        <mat-menu #accountMenu="matMenu">
+          <button mat-menu-item type="button" (click)="openPasswordChange()">
+            <mat-icon>lock_reset</mat-icon>
+            <span>Jelszó módosítása</span>
+          </button>
+          <button mat-menu-item type="button" (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Kijelentkezés</span>
+          </button>
+        </mat-menu>
+      }
+    </mat-toolbar>
+    <main cdkScrollable class="flex-1 min-h-0 overflow-auto scroll-pt-16">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

@@ -10,7 +10,7 @@ Rejected for this MVP: a full NgRx entity/effects architecture (extra framework 
 
 ## 2. Fixed scope
 
-One fictional MiBolt provider and 16 fictional device products. One-time prices only in whole HUF. No subscriptions, monthly plans, installments, insurance, login, user profiles, real checkout provider, email, account verification, admin UI, product comparison, CMS, localization framework, analytics/social, chat or provider switcher. The supplied research describes operators, but does not authorize their assets, data or proprietary software. Optional O01 adds one licensed/local 3D model only after approval.
+One fictional MiBolt provider and 16 fictional device products. One-time prices only in whole HUF. No subscriptions, monthly plans, installments, insurance, login, user profiles, real checkout provider, email, account verification, admin UI, product comparison, CMS, localization framework, analytics/social, chat or provider switcher. The supplied research describes operators, but does not authorize their assets, data or proprietary software. Optional O01 adds one licensed/local 3D model only after approval. The separate admin application under projects/admin (MIM-296) is outside this shop specification; its plan is tracked in Linear.
 
 Four commerce page families: home, product catalogue, product details, purchase flow. The purchase family owns cart, contact, delivery/payment method, final review and confirmed demo receipt; these are routeable states, not additional unrelated visual systems.
 

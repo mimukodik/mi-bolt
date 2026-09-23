@@ -1,17 +1,26 @@
 #!/usr/bin/env node
 /**
- * Boots the demo-payment application under `ng serve` and asserts that the
- * mock service-worker script is served at the app's own base path. This is
- * the gate MIM-254 adds: the `demo-payment` project had no `assets` entry
- * in `angular.json`, so the MSW worker bundle was never copied into
+ * Boots an Angular application under `ng serve` and asserts that the mock
+ * service-worker script is served at the app's own base path. This is the
+ * gate MIM-254 adds: the `demo-payment` project had no `assets` entry in
+ * `angular.json`, so the MSW worker bundle was never copied into
  * `dist/demo-payment/**`, and `src/mocks/browser.ts` hard-coded a
- * root-absolute URL that the dev server's base-path middleware 404s.
+ * root-absolute URL that the dev server's base-path middleware 404s. MIM-332
+ * (unit F5) reuses the same gate for the `admin` project via `--project` and
+ * `--base-path`, since the failure mode — an `assets` entry missing from the
+ * project's build configuration — is the same one for any project with a
+ * non-root base path.
  *
  * A unit test cannot catch either: jsdom has no Service Worker, the
- * production build skips MSW behind `isDevMode()`, and the failure lives
+ * production build skips MSW behind its environment guard, and the failure lives
  * in the dev server's asset and base-path handling — not in any code the
  * test suite imports. Port 4299 is this script's alone and is outside the
- * ranges the workspace reserves for runners and browser verification.
+ * ranges the workspace reserves for runners and browser verification; both
+ * the `demo-payment` and `admin` runs use it, sequentially, never at once.
+ *
+ * Usage: node scripts/check-app-boot.mjs [--project <name>] [--base-path <path>]
+ *   --project    ng serve project name (default: demo-payment)
+ *   --base-path  the app's served base path (default: /demo-fizetes)
  *
  * Exit code:
  *   0  - the worker bundle is served at the app's base path and the index
@@ -28,9 +37,18 @@
  */
 import { spawn } from 'node:child_process';
 import { writeSync } from 'node:fs';
+import { parseArgs } from 'node:util';
+
+const { values: args } = parseArgs({
+  options: {
+    project: { type: 'string', default: 'demo-payment' },
+    'base-path': { type: 'string', default: '/demo-fizetes' },
+  },
+});
 
 const PORT = 4299;
-const BASE_PATH = '/demo-fizetes';
+const PROJECT = args.project;
+const BASE_PATH = args['base-path'];
 const SERVE_URL = `http://localhost:${PORT}${BASE_PATH}`;
 const WORKER_URL = `${SERVE_URL}/mockServiceWorker.js`;
 const READY_TIMEOUT_MS = 180_000; // orchestrator's choice: ceiling on the dev-server startup wait.
@@ -58,7 +76,7 @@ class GateFailure extends Error {
 }
 
 function startServe() {
-  return spawn('npx', ['ng', 'serve', 'demo-payment', '--port', String(PORT)], {
+  return spawn('npx', ['ng', 'serve', PROJECT, '--port', String(PORT)], {
     stdio: ['ignore', 'pipe', 'pipe'],
     // Ask the CLI for uncoloured output so the ready marker is byte-stable
     // across CI and local runs; stripAnsi above is what makes the gate
@@ -180,7 +198,7 @@ async function main() {
     try {
       writeSync(
         process.stderr.fd,
-        `check-payment-boot: total budget of ${TOTAL_BUDGET_MS / 1000} seconds reached, exiting\n`,
+        `check-app-boot: total budget of ${TOTAL_BUDGET_MS / 1000} seconds reached, exiting\n`,
       );
     } catch {
       // stderr closed; nothing to report.
@@ -204,12 +222,12 @@ async function main() {
     await assertOk(WORKER_URL, { requireContentType: 'javascript' });
     process.stdout.write(`checking ${SERVE_URL}\n`);
     await assertOk(SERVE_URL);
-    process.stdout.write('check-payment-boot: OK\n');
+    process.stdout.write('check-app-boot: OK\n');
   } catch (error) {
     if (error instanceof GateFailure) {
       process.stderr.write(`${error.message}\n`);
     } else {
-      process.stderr.write(`check-payment-boot: ${error.stack ?? error}\n`);
+      process.stderr.write(`check-app-boot: ${error.stack ?? error}\n`);
     }
     process.exitCode = 1;
   } finally {

@@ -1,0 +1,146 @@
+<adm-section-card title="Specifikáció" [errorCount]="errorCount()" [number]="5">
+  <button
+    #addGroupButton="matButton"
+    admSectionActions
+    matButton
+    type="button"
+    (click)="addGroup()"
+  >
+    <mat-icon>add</mat-icon>
+    Csoport
+  </button>
+  <mat-accordion multi>
+    @for (
+      group of field();
+      track group;
+      let groupIndex = $index, firstGroup = $first, lastGroup = $last
+    ) {
+      <mat-expansion-panel
+        [expanded]="isOpen(group)"
+        (closed)="markClosed(group)"
+        (opened)="markOpen(group)"
+      >
+        <mat-expansion-panel-header>
+          <mat-panel-title>{{
+            group.title().value() || `Új csoport ${groupIndex + 1}`
+          }}</mat-panel-title>
+          <mat-panel-description>{{ describe(group) }}</mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="flex items-start gap-2">
+          <mat-form-field class="min-w-0 flex-1" subscriptSizing="dynamic">
+            <mat-label>Csoport neve</mat-label>
+            <input matInput [formField]="group.title" />
+            <mat-error>{{ group.title().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <button
+            matIconButton
+            type="button"
+            [attr.aria-label]="`Csoport ${groupIndex + 1}: műveletek`"
+            [matMenuTriggerFor]="groupMenu"
+          >
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #groupMenu="matMenu">
+            <button
+              mat-menu-item
+              type="button"
+              [disabled]="firstGroup"
+              (click)="moveGroup(groupIndex, -1)"
+            >
+              <mat-icon>arrow_upward</mat-icon>
+              <span>Feljebb</span>
+            </button>
+            <button
+              mat-menu-item
+              type="button"
+              [disabled]="lastGroup"
+              (click)="moveGroup(groupIndex, 1)"
+            >
+              <mat-icon>arrow_downward</mat-icon>
+              <span>Lejjebb</span>
+            </button>
+            <button mat-menu-item type="button" (click)="removeGroup(groupIndex, addGroupButton)">
+              <mat-icon>delete</mat-icon>
+              <span>Csoport törlése</span>
+            </button>
+          </mat-menu>
+        </div>
+        @for (
+          row of group.rows;
+          track row;
+          let rowIndex = $index, firstRow = $first, lastRow = $last
+        ) {
+          <div
+            class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
+          >
+            <mat-form-field subscriptSizing="dynamic">
+              <mat-label>Megnevezés</mat-label>
+              <input matInput [formField]="row.label" />
+              <mat-error>{{ row.label().errors()[0]?.message }}</mat-error>
+            </mat-form-field>
+            <mat-form-field class="col-span-2 sm:col-span-1" subscriptSizing="dynamic">
+              <mat-label>Érték</mat-label>
+              <textarea
+                cdkAutosizeMaxRows="6"
+                cdkAutosizeMinRows="1"
+                cdkTextareaAutosize
+                matInput
+                [formField]="row.value"
+              ></textarea>
+              <mat-error>{{ row.value().errors()[0]?.message }}</mat-error>
+            </mat-form-field>
+            <button
+              class="col-start-2 row-start-1 sm:col-start-3"
+              matIconButton
+              type="button"
+              [attr.aria-label]="`Csoport ${groupIndex + 1}, sor ${rowIndex + 1}: műveletek`"
+              [matMenuTriggerFor]="rowMenu"
+            >
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #rowMenu="matMenu">
+              <button
+                mat-menu-item
+                type="button"
+                [disabled]="firstRow"
+                (click)="moveRow(group, rowIndex, -1)"
+              >
+                <mat-icon>arrow_upward</mat-icon>
+                <span>Feljebb</span>
+              </button>
+              <button
+                mat-menu-item
+                type="button"
+                [disabled]="lastRow"
+                (click)="moveRow(group, rowIndex, 1)"
+              >
+                <mat-icon>arrow_downward</mat-icon>
+                <span>Lejjebb</span>
+              </button>
+              <button
+                mat-menu-item
+                type="button"
+                (click)="removeRow(group, rowIndex, addRowButton)"
+              >
+                <mat-icon>delete</mat-icon>
+                <span>Sor törlése</span>
+              </button>
+            </mat-menu>
+          </div>
+        }
+        <p class="adm-array-error" role="alert">{{ rowsError(group) }}</p>
+        <button
+          #addRowButton="matButton"
+          matButton
+          type="button"
+          [attr.aria-label]="`Csoport ${groupIndex + 1}: sor hozzáadása`"
+          (click)="addRow(group)"
+        >
+          <mat-icon>add</mat-icon>
+          Sor
+        </button>
+      </mat-expansion-panel>
+    }
+  </mat-accordion>
+  <p class="adm-array-error" role="alert">{{ arrayError() }}</p>
+</adm-section-card>
