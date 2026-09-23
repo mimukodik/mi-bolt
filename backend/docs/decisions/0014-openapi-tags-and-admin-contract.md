@@ -92,3 +92,7 @@ already runs.
 
 2026-09-23 — Valid. Settled on 2026-09-22 (Q1 on the issue) and applied
 2026-09-23 by unit MIM-322-B1.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- The gate `grep -rn -E 'ProductsApi\b|PaymentIntentsApi\b' src/main/java` ran from the backend repository root; from the git root it is `grep -rn -E 'ProductsApi\b|PaymentIntentsApi\b' backend/services/commerce/src/main/java`.

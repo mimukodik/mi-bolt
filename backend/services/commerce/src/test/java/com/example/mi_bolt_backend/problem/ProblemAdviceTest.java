@@ -243,7 +243,7 @@ class ProblemAdviceTest {
 	@Test
 	void missingRequiredBodyMemberReturns400InvalidRequest() throws Exception {
 		// Contact.phone carries @NotNull; a member that is absent is a schema
-		// violation (docs/01 §5.1), so the handler answers 400 rather than 422.
+		// violation (contracts/commerce/kommunikacio.md §5.1), so the handler answers 400 rather than 422.
 		mockMvc.perform(post("/probe/__body")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"fullName\":\"Anna\",\"email\":\"anna@example.com\"}"))

@@ -37,7 +37,7 @@ import type { PaymentOutcomeRequest } from '@mi-bolt/api/models/payment-outcome-
  * The browser's own navigation call, behind an injectable seam.
  *
  * The return to the shop must be a full page load with a GET navigation
- * (`docs/01-kommunikacio.md:236-238`), so it cannot go through the Router;
+ * (`contracts/commerce/kommunikacio.md` §8.3), so it cannot go through the Router;
  * the seam exists so the page spec can observe the navigation instead of
  * losing its test runner to it.
  */
@@ -249,7 +249,7 @@ export class PaymentPage implements OnInit {
   /**
    * Read the intent named by the route. An intent that is already terminal
    * goes straight to the closed state, so the common back-button case never
-   * reaches the POST at all (`docs/01-kommunikacio.md:242-244`).
+   * reaches the POST at all (`contracts/commerce/kommunikacio.md` §8.3).
    */
   private async load(): Promise<void> {
     const id = this.paymentIntentId();
@@ -309,7 +309,7 @@ export class PaymentPage implements OnInit {
    * A 409 means the intent was resolved already, by this shopper's earlier
    * click or by a retry whose answer was lost. The POST is never repeated:
    * the page re-reads the intent and shows the outcome the server booked
-   * (`docs/01-kommunikacio.md:243-244`). A failed re-read leaves a retry that
+   * (`contracts/commerce/kommunikacio.md` §8.3). A failed re-read leaves a retry that
    * re-reads rather than one that re-posts.
    */
   private async showBookedOutcome(intent: PaymentIntent): Promise<void> {

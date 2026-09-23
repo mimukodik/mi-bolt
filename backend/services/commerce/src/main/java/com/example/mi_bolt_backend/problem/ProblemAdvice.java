@@ -156,7 +156,7 @@ public class ProblemAdvice {
 	/**
 	 * Bean-validation failures on a request body. A missing required member
 	 * ({@code @NotNull}, reported as {@code REQUIRED}) is a schema violation,
-	 * so the answer is 400 INVALID_REQUEST per docs/01 §5.1; every other
+	 * so the answer is 400 INVALID_REQUEST per contracts/commerce/kommunikacio.md §5.1; every other
 	 * failure is 422 VALIDATION_FAILED. Both carry a JSON-pointer {@code path}
 	 * for each field, plus a {@code "/"} entry for each class-level
 	 * (cross-field) error so the user interface can mark the offending control
@@ -184,7 +184,7 @@ public class ProblemAdvice {
 
 	/**
 	 * Bean-validation on a method (query or path) parameter: 400 INVALID_REQUEST
-	 * per docs/01 §5.1 and docs/02 §4.1/9 — formally wrong query input is a
+	 * per contracts/commerce/kommunikacio.md §5.1 and docs/02 §4.1/9 — formally wrong query input is a
 	 * client error, not a business rejection. The body carries the parameter
 	 * name and a constraint code in {@code params}; {@code fieldErrors} is
 	 * empty because a JSON pointer in the body would mislead the form into
