@@ -625,6 +625,37 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(fixture.componentInstance.acceptedTerms()).toBe(true);
   });
 
+  it('RS-19g a cart that changes and changes back stays unticked (owner 2026-09-23)', () => {
+    const fixture = createFixture();
+    checkTermsConsent(fixture);
+    fixture.componentRef.setInput('cart', {
+      ...CART,
+      items: [{ ...CART_ITEM, quantity: 2 }],
+      totalQuantity: 2,
+    });
+    fixture.detectChanges();
+    fixture.componentRef.setInput('cart', CART);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.acceptedTerms()).toBe(false);
+    expect(getCheckbox(getRoot(fixture), 'review-consent-terms-input').checked).toBe(false);
+  });
+
+  it('RS-19h a cart change does not flag the cleared tick as an error', () => {
+    const fixture = createFixture();
+    checkTermsConsent(fixture);
+    const root = getRoot(fixture);
+    getCheckbox(root, 'review-consent-terms-input').dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    fixture.componentRef.setInput('cart', {
+      ...CART,
+      items: [{ ...CART_ITEM, quantity: 2 }],
+      totalQuantity: 2,
+    });
+    fixture.detectChanges();
+    expect(getByTestId(root, 'review-consent-terms').getAttribute('data-state')).toBe('default');
+    expect(root.querySelectorAll('[data-testid="review-consent-terms-message"]').length).toBe(0);
+  });
+
   it('RS-20 blurring the unchecked checkbox moves it to the touched-invalid state and shows the message', () => {
     const fixture = createFixture();
     const root = getRoot(fixture);

@@ -146,7 +146,13 @@ export class ReviewStep {
     source: this.cartLines,
     computation: (lines) => checkoutKeys.termsAccepted(lines),
   });
-  private readonly termsTouched = signal<boolean>(false);
+  /** Whether the shopper left the terms checkbox. It resets with the
+   *  cart lines, like the tick, so a tick cleared by a cart change is
+   *  not flagged as an error the shopper never made on these lines. */
+  private readonly termsTouched = linkedSignal<string, boolean>({
+    source: this.cartLines,
+    computation: () => false,
+  });
 
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);

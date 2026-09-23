@@ -192,11 +192,20 @@ export const checkoutKeys = {
 
   /** Whether the shopper ticked the demo terms for these cart lines
    *  (`cartLinesKey`); false when nothing is stored, when the lines
-   *  differ, or when storage is denied. */
+   *  differ (a tick stored for other lines is removed), or when storage
+   *  is denied. */
   termsAccepted(cartLines: string): boolean {
     const storage = readableStorage();
     try {
-      return storage?.getItem(TERMS_ACCEPTED_STORAGE) === cartLines;
+      const stored = storage?.getItem(TERMS_ACCEPTED_STORAGE) ?? null;
+      if (stored !== null && stored !== cartLines) {
+        // A tick given for other lines is dropped, so it does not come
+        // back when the cart returns to those lines (owner, 2026-09-23:
+        // the tick clears when the cart changes).
+        storage?.removeItem(TERMS_ACCEPTED_STORAGE);
+        return false;
+      }
+      return stored === cartLines;
     } catch {
       // Storage read denied — the review step starts unticked.
       return false;

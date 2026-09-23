@@ -24,6 +24,13 @@ describe('checkoutKeys: the accepted demo terms survive the cold return from the
     expect(checkoutKeys.termsAccepted('v1:2')).toBe(false);
   });
 
+  it('a read for other lines drops the stored tick, so returning to the old lines stays unticked (owner 2026-09-23)', () => {
+    checkoutKeys.setTermsAccepted('v1:1');
+    expect(checkoutKeys.termsAccepted('v1:2')).toBe(false);
+    expect(sessionStorage.getItem(TERMS_SLOT)).toBeNull();
+    expect(checkoutKeys.termsAccepted('v1:1')).toBe(false);
+  });
+
   it('an untick removes the stored tick', () => {
     checkoutKeys.setTermsAccepted('v1:1');
     checkoutKeys.setTermsAccepted(null);
