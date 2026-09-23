@@ -4,7 +4,7 @@ Every component execution and verification cites `docs/design/yettel.md`, the de
 
 ## Shared types
 
-`CatalogFilters = {brands: readonly string[]; storageGb: readonly (128|256|512)[]; minPrice?:number; maxPrice?:number; inStock:boolean; is5g:boolean}`. `CatalogQuery = CatalogFilters & {q:string; sort:Sort; page:number; pageSize:12|24; featured?:boolean}`. `Sort = recommended | price_asc | price_desc | name_asc`. `Facets` is the ProductPage.facets schema. `FilterIdentity = {name: keyof CatalogFilters | 'q' | 'featured'; value?:string|number}`. `CheckoutStep = cart | contact | delivery | review | success`. `AsyncStatus = idle | loading | success | empty | error`. `UiProblem = {code:string; message:string; fieldErrors:FieldError[]; retryable:boolean}`. `CheckoutSession` (generated) carries the optional contact, billing, delivery and payment sections, `complete` and the server-computed `summary`. `CheckoutViewState = loading | ready | price-changed | stock-error | conflict | submitting | error` (`review-step.ts`). `PaymentStatus = idle | pending | succeeded | declined | unknown | error`. `CategoryShortcut = {label:string; query:Partial<CatalogQuery>}`. `LicensedLocalModel = {src:string; licenseReference:string; variantId:string}`. `ViewerError = load | decode | unsupported`. `FieldTree<T>` is Angular Signal Forms typed field-tree API, not a handwritten replacement. Wire types Money,Cart,Variant,CheckoutSession,CheckoutSummary,Image,FieldError are generated from OpenAPI.
+`CatalogFilters = {brands: readonly string[]; storageGb: readonly (128|256|512)[]; minPrice?:number; maxPrice?:number; inStock:boolean; is5g:boolean}`. `CatalogQuery = CatalogFilters & {q:string; sort:Sort; page:number; pageSize:12|24; featured?:boolean}`. `Sort = recommended | price_asc | price_desc | name_asc`. `Facets` is the ProductPage.facets schema. `FilterIdentity = {name: keyof CatalogFilters | 'q' | 'featured'; value?:string|number}`. `CheckoutStep = cart | contact | delivery | review | success`. `AsyncStatus = idle | loading | success | empty | error`. `UiProblem = {code:string; message:string; fieldErrors:FieldError[]; retryable:boolean}`. `CheckoutSession` (generated) carries `version` (shared with the cart), the optional contact, billing, delivery and payment sections, `complete` and the server-computed `summary`. `CheckoutViewState = loading | ready | price-changed | stock-error | conflict | submitting | error` (`review-step.ts`). `PaymentStatus = idle | pending | succeeded | declined | unknown | error`. `CategoryShortcut = {label:string; query:Partial<CatalogQuery>}`. `LicensedLocalModel = {src:string; licenseReference:string; variantId:string}`. `ViewerError = load | decode | unsupported`. `FieldTree<T>` is Angular Signal Forms typed field-tree API, not a handwritten replacement. Wire types Money,Cart,Variant,CheckoutSession,CheckoutSummary,Image,FieldError are generated from OpenAPI.
 
 ## Component catalogue
 
@@ -582,7 +582,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `options:readonly PaymentMethodOption[]; describedBy:string|null`.
+**Signal inputs:** `options:readonly PaymentMethodOption[]; value:PaymentMethodId|null` (a `model()`); `describedBy:string|null`.
 
 **Outputs:** `paymentChanged:PaymentMethodId` (`card` | `cash_on_delivery`).
 

@@ -50,7 +50,7 @@ No component imports mocks, fixtures, repository, API `HttpClient` directly or a
 | CatalogFacade | catalogue route | canonical Router query + listProducts response | query, vm, resultCount | setSearch, setFilters, setSort, setPage, retry |
 | ProductFacade | product route | getProduct + exact variant query | selectedVariant, gallery, vm | selectVariant, selectImage, retry |
 | CartFacade | root | current mock Cart DTO | cart, itemCount, subtotal, pending, error | ensureCart, addItem, removeItem, refresh |
-| CheckoutFacade | /penztar parent | volatile Signal Form model + CheckoutSession (its server-computed CheckoutSummary) | session, options, summary, complete, pending, error, conflict, priceChange, paymentIntent, order | ensureOptions, ensureSession, updateContact, updateBilling, updateDelivery, updatePayment, createPaymentIntent, readPaymentIntent, submitOrder, fetchOrder, retry, confirmPriceChange, resetAfterOrder, startNewPurchase |
+| CheckoutFacade | /penztar parent | volatile Signal Form model + CheckoutSession (its server-computed CheckoutSummary) | session, options, summary, complete, version, cartExpired, pending, error, conflict, priceChange, paymentIntent, order | ensureOptions, ensureSession, updateContact, updateBilling, updateDelivery, updatePayment, createPaymentIntent, readPaymentIntent, submitOrder, fetchOrder, retry, confirmPriceChange, resetAfterOrder, startNewPurchase |
 | Dialog/Menu | local component/service | opened flag/trigger reference | opened | open, close |
 | MockRepository | each demo tab/test context | domain catalogue/cart/draft/intents/orders/idempotency maps | handlers only | atomic mutation, reset, snapshot |
 
