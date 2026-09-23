@@ -198,8 +198,9 @@ export class CartPage {
    * Continue button gating. The button is enabled only when:
    *   - at least one item is in the cart;
    *   - the facade is not currently dispatching a mutation;
-   *   - there is no live conflict or expiry signal. A failed remove or
-   *     clear leaves the cart unchanged, so it does not block Continue;
+   *   - there is no live conflict or expiry signal. A failed mutation
+   *     (add, remove, clear) leaves the cart unchanged, so it does not
+   *     block Continue;
    *   - the page itself is not mid-`ensureCart` revalidation.
    */
   readonly canContinue = computed<boolean>(() => {
