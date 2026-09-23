@@ -66,7 +66,7 @@ export interface CatalogEntry {
   searchKey: string;
   /** Lowercased brand name for stable equality. */
   brandKey: string;
-  /** Display name for name sorts, case-insensitively comparable. */
+  /** "brand name", the name sorts' key; compared with `compareCaseInsensitive`. */
   nameKey: string;
   /** Position of the entry inside the recommended order before filtering. */
   recommendedIndex: number;
@@ -232,7 +232,7 @@ export function load(fixture: CatalogFixture): CatalogStore {
         colors,
         searchKey,
         brandKey: product.brand.toLowerCase().normalize('NFC'),
-        nameKey: product.name.toLowerCase(),
+        nameKey: `${product.brand} ${product.name}`,
         recommendedIndex: recommendedIndex++,
         releasedAt: product.releasedAt,
       });

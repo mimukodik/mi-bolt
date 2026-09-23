@@ -22,6 +22,7 @@ import { ALLOWED_STORAGES, type CatalogEntry } from './catalog-store';
 import type { CatalogFilter } from './catalog-filter';
 import {
   applyFilters,
+  compareCaseInsensitive,
   filterSort,
   sortEntries,
   variantMatches,
@@ -35,18 +36,6 @@ const FEATURED_SIZE = 4;
  *  after counting, like the backend's `capCount`. */
 function capCount(count: number, filter: Filter): number {
   return filter.featured === true ? Math.min(count, FEATURED_SIZE) : count;
-}
-
-/** Java's `String.CASE_INSENSITIVE_ORDER`, the backend's brand order:
- *  the code-unit order of the lowercased names, not a locale collation
- *  (a Hungarian collation sorts "Zte" before "Zsolt"; the backend does
- *  not). */
-function compareCaseInsensitive(a: string, b: string): number {
-  const x = a.toLowerCase();
-  const y = b.toLowerCase();
-  if (x < y) return -1;
-  if (x > y) return 1;
-  return 0;
 }
 
 /** Builds the `brands` facet. Lists every brand of the whole catalogue,
