@@ -16,6 +16,7 @@ import {
   firstQueryKey,
   hasOnlyMembers,
   isTextual,
+  javaTrimAllWhitespace,
   malformedBody,
   notAcceptable,
   readJsonObject,
@@ -193,5 +194,22 @@ describe('backend answers', () => {
   it('reads the first query key in query-string order, undefined with none', () => {
     expect(firstQueryKey(new Request('http://x/api/v1/admin/users?b=1&a=2&b=3'))).toBe('b');
     expect(firstQueryKey(new Request('http://x/api/v1/admin/users'))).toBeUndefined();
+  });
+
+  // Fails if javaTrimAllWhitespace misses a Character.isWhitespace code point or removes a no-break space.
+  it('removes Java whitespace everywhere and keeps the three no-break spaces', () => {
+    const removed = [
+      0x0009, 0x000a, 0x001c, 0x001f, 0x0020, 0x1680, 0x2000, 0x2003, 0x2006, 0x2008, 0x200a,
+      0x2028, 0x2029, 0x205f, 0x3000,
+    ];
+    for (const code of removed) {
+      const c = String.fromCharCode(code);
+      expect(javaTrimAllWhitespace(`1${c}2`)).toBe('12');
+    }
+    const kept = [0x00a0, 0x2007, 0x202f, 0xfeff, 0x0085, 0x0001];
+    for (const code of kept) {
+      const c = String.fromCharCode(code);
+      expect(javaTrimAllWhitespace(`1${c}2`)).toBe(`1${c}2`);
+    }
   });
 });
