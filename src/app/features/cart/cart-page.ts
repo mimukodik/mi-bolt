@@ -211,7 +211,11 @@ export class CartPage {
    *   - there is no live conflict or expiry signal. A failed mutation
    *     (add, remove, clear) leaves the cart unchanged, so it does not
    *     block Continue;
-   *   - the page is not reading the cart again (Continue, retry).
+   *   - the page is not reading the cart again (Continue, retry);
+   *   - the page is not currently clearing the cart (the local
+   *     `clearing` flag is true across the microtask between the
+   *     clear response settling and the reset, so `pending()` alone
+   *     would let Continue slip through).
    */
   readonly canContinue = computed<boolean>(() => {
     const cart = this.cart();
