@@ -1,0 +1,82 @@
+<section class="flex h-full min-h-0 flex-col gap-4 p-6">
+  @let total = store.total();
+  <div class="flex flex-wrap items-center gap-4">
+    <h1 class="m-0">Termékek</h1>
+    @if (total !== null) {
+      <span class="adm-count">{{ total }} termék</span>
+    }
+    <a class="ms-auto" matButton="filled" routerLink="/termekek/uj">
+      <mat-icon>add</mat-icon>
+      Új termék
+    </a>
+  </div>
+
+  <div
+    aria-label="Termékek"
+    class="adm-table flex min-h-0 flex-1 flex-col"
+    role="table"
+    [attr.aria-rowcount]="rowCount()"
+    [class.adm-handset]="handset()"
+  >
+    <div
+      aria-rowindex="1"
+      class="adm-header"
+      matSort
+      matSortDisableClear
+      role="row"
+      [matSortActive]="sortActive()"
+      [matSortDirection]="sortDirection()"
+      (matSortChange)="onSortChange($event)"
+    >
+      @if (handset()) {
+        <div role="columnheader"></div>
+        <div mat-sort-header="name" role="columnheader">Név</div>
+        <div role="columnheader">Státusz</div>
+        <div role="columnheader"></div>
+      } @else {
+        <div role="columnheader"><span class="sr-only">Kép</span></div>
+        <div mat-sort-header="name" role="columnheader">Név</div>
+        <div mat-sort-header="brand" role="columnheader">Márka</div>
+        <div role="columnheader">Színek</div>
+        <div role="columnheader">Változatok</div>
+        <div mat-sort-header="minPrice" role="columnheader">Ár</div>
+        <div mat-sort-header="totalStock" role="columnheader">Készlet</div>
+        <div mat-sort-header="featured" role="columnheader" start="desc">Kiemelt</div>
+        <div role="columnheader">Státusz</div>
+        <div role="columnheader">Műveletek</div>
+      }
+    </div>
+    @if (store.status() === 'loading') {
+      <mat-progress-bar aria-label="Termékek betöltése" mode="indeterminate" />
+    }
+    @if (store.status() === 'empty') {
+      @if (filtered()) {
+        <p class="m-0 p-4">Nincs a szűrésnek megfelelő termék.</p>
+        <button matButton type="button" (click)="clearFilters()">Szűrők törlése</button>
+      } @else {
+        <p class="m-0 p-4">Még nincs aktív termék.</p>
+      }
+    }
+    @if (store.status() === 'error') {
+      <p class="m-0 p-4" role="alert">A termékek betöltése nem sikerült.</p>
+      <button matButton type="button" (click)="store.retry()">Újra</button>
+    }
+    <cdk-virtual-scroll-viewport
+      class="min-h-0 flex-1"
+      itemSize="52"
+      maxBufferPx="1040"
+      minBufferPx="520"
+    >
+      <adm-product-row
+        *cdkVirtualFor="let item of store.dataSource(); let index = index"
+        [handset]="handset()"
+        [item]="item"
+        [rowIndex]="index + 2"
+      />
+    </cdk-virtual-scroll-viewport>
+  </div>
+
+  @if (total !== null) {
+    <p class="m-0">{{ store.loadedCount() }} / {{ total }} termék betöltve</p>
+  }
+</section>
