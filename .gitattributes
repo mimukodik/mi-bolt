@@ -1,2 +1,3 @@
 # Line endings the builds compare byte for byte, for the whole monorepo.
 *.yaml text eol=lf
+*.yml text eol=lf
