@@ -21,7 +21,7 @@ import type { http, HttpResponse } from 'msw';
 
 import { server, useMswServer } from '../msw-server';
 import type { HttpClient, HttpContext } from '@angular/common/http';
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
   BrowserDynamicTestingModule,
@@ -278,7 +278,7 @@ describe('T26-AC03 business-error code coverage', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+        provideHttpClient(withInterceptors([demoSessionInterceptor])),
         provideApiConfig(BASE_URL),
       ],
       teardown: { destroyAfterEach: true },

@@ -228,7 +228,7 @@ export class CheckoutFacade {
     // primitives that ARE injectable: `HttpClient` and
     // `ApiConfiguration`. The same `new Api(...)` call sees the live
     // `HttpClient` in a real browser, supplied by
-    // `provideHttpClient(withFetch(), withInterceptors(...))`.
+    // `provideHttpClient(withInterceptors(...))`.
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
   }
 

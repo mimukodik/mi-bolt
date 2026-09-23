@@ -18,7 +18,7 @@ import '@angular/compiler';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import yaml from 'js-yaml';
 import type { HttpContext } from '@angular/common/http';
-import { HttpClient, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
   BrowserDynamicTestingModule,
@@ -326,7 +326,7 @@ beforeEach(() => {
   server.use(...handlers);
   TestBed.configureTestingModule({
     providers: [
-      provideHttpClient(withFetch(), withInterceptors([demoSessionInterceptor])),
+      provideHttpClient(withInterceptors([demoSessionInterceptor])),
       provideApiConfig(BASE_URL),
     ],
     teardown: { destroyAfterEach: true },
