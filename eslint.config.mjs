@@ -373,9 +373,10 @@ export default defineConfig([
           message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
         },
         {
-          // Destructuring: const { only } = it, and a test context taken
-          // apart as ({ skip }) => skip().
-          selector: 'ObjectPattern > Property[key.name=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+          // Destructuring: const { only } = it, const { 'only': x } = it,
+          // and a test context taken apart as ({ skip }) => skip().
+          selector:
+            'ObjectPattern > Property[key.name=/^(only|skip|todo|fails|skipIf|runIf)$/], ObjectPattern > Property[key.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
           message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
         },
       ],
