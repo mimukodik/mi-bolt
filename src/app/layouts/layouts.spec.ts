@@ -522,6 +522,14 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     f.componentInstance.opened.set(true);
     f.detectChanges();
     await f.whenStable();
+    // The CDK's first-heading autoFocus lands the focus on the heading
+    // when the dialog opens. Pin it here so the rest of the test cannot
+    // pass vacuously if the first-open autoFocus regresses — the close
+    // and reopen would still refocus the heading even from <body>.
+    const initial = document.activeElement;
+    expect(initial?.tagName).toBe('H2');
+    expect(initial?.textContent.trim()).toBe('Menü');
+
     // Move the focus off the heading, so the reopen has to put it back.
     const link = document.body.querySelector<HTMLAnchorElement>('[role="dialog"] a');
     link?.focus();
