@@ -14,6 +14,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } fro
 import { filter, map } from 'rxjs/operators';
 
 import { AdminSession } from '../core/auth/admin-session';
+import { LOGIN_PATH } from '../core/auth/login-path';
 import { PasswordChangeDialog } from '../features/account/password-change-dialog';
 
 /**
@@ -84,7 +85,7 @@ export class ShellComponent {
   async logout(): Promise<void> {
     try {
       await this.session.logout();
-      await this.router.navigateByUrl('/bejelentkezes');
+      await this.router.navigateByUrl(LOGIN_PATH);
     } catch {
       this.snackBar.open('A kijelentkezés nem sikerült. Próbáld újra.', undefined, {
         duration: 4000,

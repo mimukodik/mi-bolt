@@ -12,7 +12,7 @@ import type { BreakpointState } from '@angular/cdk/layout';
 import { HttpResponse, http } from 'msw';
 import { of } from 'rxjs';
 import { MatSidenav } from '@angular/material/sidenav';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
 
@@ -102,6 +102,13 @@ function snackBarText(): string {
 describe('ShellComponent', () => {
   let fixture: ComponentFixture<ShellComponent>;
   let native: HTMLElement;
+
+  afterEach(() => {
+    // The XSRF cookie is a real `document.cookie` entry, not TestBed state,
+    // so it survives a test module reset; a stale value from a previous
+    // test's token would fail the next test's CSRF check.
+    document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
+  });
 
   describe('with empty router', () => {
     beforeEach(() => {

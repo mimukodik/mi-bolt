@@ -81,6 +81,13 @@ function parsedProblemResponse(err: HttpErrorResponse): HttpErrorResponse {
     MatSuffix,
   ],
   providers: [SubmitAttempt],
+  styles: `
+    .adm-dialog-error {
+      color: var(--mat-sys-error);
+      font: var(--mat-sys-body-small);
+      margin: 4px 0 0;
+    }
+  `,
 })
 export class PasswordChangeDialog {
   private readonly session = inject(AdminSession);
