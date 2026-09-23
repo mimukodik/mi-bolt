@@ -1,21 +1,27 @@
 /**
- * Spec for `adminHandlers` (projects/admin/src/mocks/handlers.ts).
- *
- * Today every slice stub returns `[]`, so the combined list is
- * empty; F6 (MIM-333, auth+users), F7 (MIM-334, products-read),
- * F8 (MIM-335, products-write) and F9 (MIM-336, media) each fill
- * their slice and the array grows. The assertion below pins the
- * starting point of the slice, not the steady state.
+ * Spec for `adminHandlers` (projects/admin/src/mocks/handlers.ts): the
+ * combined list is every slice's handlers.
  */
 import { describe, expect, it } from 'vitest';
 
+import { authHandlers } from './auth.handlers';
 import { createDb } from './db';
 import { adminHandlers } from './handlers';
+import { mediaHandlers } from './media.handlers';
+import { productsReadHandlers } from './products-read.handlers';
+import { productsWriteHandlers } from './products-write.handlers';
+import { usersHandlers } from './users.handlers';
 
 describe('adminHandlers', () => {
-  it('returns an empty array today (F6-F9 fill the slice)', () => {
-    const handlers = adminHandlers(createDb());
-    expect(Array.isArray(handlers)).toBe(true);
-    expect(handlers).toHaveLength(0);
+  it('combines every slice', () => {
+    const db = createDb();
+    const slices = [
+      ...authHandlers(db),
+      ...usersHandlers(db),
+      ...productsReadHandlers(db),
+      ...productsWriteHandlers(db),
+      ...mediaHandlers(db),
+    ];
+    expect(adminHandlers(db)).toHaveLength(slices.length);
   });
 });
