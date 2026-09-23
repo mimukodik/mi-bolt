@@ -33,7 +33,7 @@ export function isAdminOperation(operation: unknown): boolean {
 }
 
 const NON_OPERATION_KEYS: readonly string[] = ['parameters', 'summary', 'description', '$ref'];
-const HTTP_METHOD_KEYS: readonly string[] = [
+export const HTTP_METHOD_KEYS: readonly string[] = [
   'get',
   'put',
   'post',
@@ -54,6 +54,12 @@ const HTTP_METHOD_KEYS: readonly string[] = [
  * are. The input is never mutated.
  */
 export function withoutAdminOperations<T extends object>(spec: T): T {
+  // Callers (schema.spec.ts / response-validation.ts / sdk-transport.spec.ts)
+  // hand in a yaml.load(...) result cast to an OpenAPI-like shape; a malformed
+  // YAML file can yield null/undefined back. `Reflect.get` throws on those,
+  // so guard before the indexed access and degrade to the input (matching
+  // the OLD defensive behaviour) instead of crashing the suite.
+  if (spec === null || spec === undefined) return spec;
   const paths: unknown = Reflect.get(spec, 'paths');
   if (!isRecord(paths)) return spec;
   const filteredPaths: Record<string, Record<string, unknown>> = {};

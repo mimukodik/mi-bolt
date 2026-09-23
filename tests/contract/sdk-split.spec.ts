@@ -25,7 +25,7 @@ import { describe, it, expect } from 'vitest';
 import yaml from 'js-yaml';
 
 import { isRecord } from '../../src/mocks/is-record';
-import { ADMIN_TAGS, isAdminTag } from './admin-tags';
+import { ADMIN_TAGS, HTTP_METHOD_KEYS, isAdminTag } from './admin-tags';
 import * as shopOperations from '../../src/app/api/generated/functions';
 import * as adminOperations from '../../projects/admin/src/app/api/generated/functions';
 
@@ -40,8 +40,6 @@ const REPO_ROOT = resolve(__dirname, '../..');
 const SHOP_CONFIG_PATH = resolve(REPO_ROOT, 'ng-openapi-gen.json');
 const ADMIN_CONFIG_PATH = resolve(REPO_ROOT, 'ng-openapi-gen.admin.json');
 const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
-
-const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'] as const;
 
 function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -60,7 +58,7 @@ async function loadOperations(): Promise<SpecOperation[]> {
   const operations: SpecOperation[] = [];
   for (const [path, pathItem] of Object.entries(paths)) {
     if (!isRecord(pathItem)) continue;
-    for (const method of HTTP_METHODS) {
+    for (const method of HTTP_METHOD_KEYS) {
       const operation = pathItem[method];
       if (!isRecord(operation)) continue;
       const operationId = operation['operationId'];
