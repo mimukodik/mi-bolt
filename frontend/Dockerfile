@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1
 # mi-bolt-web: the storefront, the admin and the demo payment app behind one NGINX.
+# The demo catalogue comes in as the named build context `catalog`, copied to
+# /data/catalog so the admin mock seed's `../../../../../data/catalog/catalog.json`
+# resolves here as it does in the repository. Only Compose supplies it
+# (deploy/compose.yaml), so a plain `docker build frontend/` cannot build this file.
 FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
