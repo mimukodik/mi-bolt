@@ -57,7 +57,7 @@ a `coder-agent.sh` runner and every other agent keep out of those files.
   without coverage); `npm --prefix frontend run e2e:all` runs the seed and every
   `integration-*` project; `npm --prefix frontend run e2e:smoke` runs the
   `smoke` project; `npm --prefix frontend run e2e:install` installs all three
-  browsers. The CI matrix in `.github/workflows/pr-check.yml` installs each
+  browsers. The CI matrix in `.github/workflows/frontend.yml` installs each
   matrix entry's browser per-job.
 - The backend of `e2e/integration/**` is MSW inside the page. There is no server
   to seed: `projects/storefront/src/mocks/repository.ts` is page-side memory.
