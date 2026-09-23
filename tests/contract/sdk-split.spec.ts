@@ -24,36 +24,16 @@ import '@angular/compiler';
 import { describe, it, expect } from 'vitest';
 import yaml from 'js-yaml';
 
-import { ADMIN_TAGS } from './admin-tags';
+import { isRecord } from '../../src/mocks/is-record';
+import { ADMIN_TAGS, isAdminTag } from './admin-tags';
 import * as shopOperations from '../../src/app/api/generated/functions';
 import * as adminOperations from '../../projects/admin/src/app/api/generated/functions';
 
-interface ShopConfig {
-  excludeTags?: unknown;
-}
-
-interface AdminConfig {
-  includeTags?: unknown;
-}
-
-interface OperationObject {
-  operationId?: unknown;
-  tags?: unknown;
-}
-
-interface PathItem {
-  get?: OperationObject;
-  put?: OperationObject;
-  post?: OperationObject;
-  delete?: OperationObject;
-  options?: OperationObject;
-  head?: OperationObject;
-  patch?: OperationObject;
-  trace?: OperationObject;
-}
-
-interface OpenApiSpec {
-  paths?: Record<string, PathItem>;
+interface SpecOperation {
+  readonly path: string;
+  readonly method: string;
+  readonly operationId: string | undefined;
+  readonly tags: readonly string[];
 }
 
 const REPO_ROOT = resolve(__dirname, '../..');
@@ -61,24 +41,55 @@ const SHOP_CONFIG_PATH = resolve(REPO_ROOT, 'ng-openapi-gen.json');
 const ADMIN_CONFIG_PATH = resolve(REPO_ROOT, 'ng-openapi-gen.admin.json');
 const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
 
-const HTTP_METHODS: (keyof Omit<PathItem, never>)[] = [
-  'get',
-  'put',
-  'post',
-  'delete',
-  'options',
-  'head',
-  'patch',
-  'trace',
-];
+const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'] as const;
 
 function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is string => typeof entry === 'string');
 }
 
-function operationMatches(operation: OperationObject): string[] {
-  return asStringList(operation.tags);
+async function configList(path: string, key: string): Promise<string[]> {
+  const config: unknown = JSON.parse(await readFile(path, 'utf8'));
+  return asStringList(isRecord(config) ? config[key] : undefined);
+}
+
+async function loadOperations(): Promise<SpecOperation[]> {
+  const spec: unknown = yaml.load(await readFile(SPEC_PATH, 'utf8'));
+  const paths = isRecord(spec) ? spec['paths'] : undefined;
+  if (!isRecord(paths)) return [];
+  const operations: SpecOperation[] = [];
+  for (const [path, pathItem] of Object.entries(paths)) {
+    if (!isRecord(pathItem)) continue;
+    for (const method of HTTP_METHODS) {
+      const operation = pathItem[method];
+      if (!isRecord(operation)) continue;
+      const operationId = operation['operationId'];
+      operations.push({
+        path,
+        method,
+        operationId: typeof operationId === 'string' ? operationId : undefined,
+        tags: asStringList(operation['tags']),
+      });
+    }
+  }
+  return operations;
+}
+
+function isAdminTagged(operation: SpecOperation): boolean {
+  return operation.tags.some(isAdminTag);
+}
+
+function adminOperationIds(operations: readonly SpecOperation[]): string[] {
+  return operations
+    .filter(isAdminTagged)
+    .map((operation) => operation.operationId)
+    .filter((id): id is string => id !== undefined);
+}
+
+function exportsFor(moduleExports: object, operationId: string): string[] {
+  return Object.keys(moduleExports).filter(
+    (name) => name === operationId || name.startsWith(`${operationId}$`),
+  );
 }
 
 function isAdminPath(path: string): boolean {
@@ -87,124 +98,50 @@ function isAdminPath(path: string): boolean {
 
 describe('sdk-split: tag lists and admin coverage', () => {
   it('the shop excludeTags, the admin includeTags, and ADMIN_TAGS are equal', async () => {
-    const [shopRaw, adminRaw] = await Promise.all([
-      readFile(SHOP_CONFIG_PATH, 'utf8'),
-      readFile(ADMIN_CONFIG_PATH, 'utf8'),
-    ]);
-    const shopConfig = JSON.parse(shopRaw) as ShopConfig;
-    const adminConfig = JSON.parse(adminRaw) as AdminConfig;
-    expect(asStringList(shopConfig.excludeTags)).toEqual([...ADMIN_TAGS]);
-    expect(asStringList(adminConfig.includeTags)).toEqual([...ADMIN_TAGS]);
+    expect(await configList(SHOP_CONFIG_PATH, 'excludeTags')).toEqual([...ADMIN_TAGS]);
+    expect(await configList(ADMIN_CONFIG_PATH, 'includeTags')).toEqual([...ADMIN_TAGS]);
   });
 
   it('every /admin/ operation carries exactly one admin tag and that tag is in ADMIN_TAGS', async () => {
-    const specRaw = await readFile(SPEC_PATH, 'utf8');
-    const spec = yaml.load(specRaw) as OpenApiSpec;
-    const paths = spec.paths ?? {};
-    for (const [pathKey, pathItem] of Object.entries(paths)) {
-      if (!isAdminPath(pathKey)) continue;
-      for (const method of HTTP_METHODS) {
-        const op = pathItem[method];
-        if (!op) continue;
-        const tags = operationMatches(op);
-        const adminTagHits = tags.filter((tag) => (ADMIN_TAGS as readonly string[]).includes(tag));
-        expect(
-          adminTagHits.length,
-          `${method.toUpperCase()} ${pathKey} should carry exactly one admin tag; saw ${JSON.stringify(tags)}`,
-        ).toBe(1);
-      }
+    for (const operation of await loadOperations()) {
+      if (!isAdminPath(operation.path)) continue;
+      expect(
+        operation.tags.filter(isAdminTag).length,
+        `${operation.method.toUpperCase()} ${operation.path} should carry exactly one admin tag; saw ${JSON.stringify(operation.tags)}`,
+      ).toBe(1);
     }
   });
 
   it('every operation carrying an ADMIN_TAGS tag sits under /admin/', async () => {
-    const specRaw = await readFile(SPEC_PATH, 'utf8');
-    const spec = yaml.load(specRaw) as OpenApiSpec;
-    const paths = spec.paths ?? {};
-    for (const [pathKey, pathItem] of Object.entries(paths)) {
-      for (const method of HTTP_METHODS) {
-        const op = pathItem[method];
-        if (!op) continue;
-        const tags = operationMatches(op);
-        if (!tags.some((tag) => (ADMIN_TAGS as readonly string[]).includes(tag))) continue;
-        expect(
-          isAdminPath(pathKey),
-          `${method.toUpperCase()} ${pathKey} is admin-tagged but not under /admin/`,
-        ).toBe(true);
-      }
+    for (const operation of await loadOperations()) {
+      if (!isAdminTagged(operation)) continue;
+      expect(
+        isAdminPath(operation.path),
+        `${operation.method.toUpperCase()} ${operation.path} is admin-tagged but not under /admin/`,
+      ).toBe(true);
     }
   });
 
   it('declares exactly 15 admin operations and 17 others', async () => {
-    const specRaw = await readFile(SPEC_PATH, 'utf8');
-    const spec = yaml.load(specRaw) as OpenApiSpec;
-    const paths = spec.paths ?? {};
-    let adminCount = 0;
-    let otherCount = 0;
-    for (const pathItem of Object.values(paths)) {
-      for (const method of HTTP_METHODS) {
-        const op = pathItem[method];
-        if (!op) continue;
-        const tags = operationMatches(op);
-        if (tags.some((tag) => (ADMIN_TAGS as readonly string[]).includes(tag))) {
-          adminCount += 1;
-        } else {
-          otherCount += 1;
-        }
-      }
-    }
-    expect(adminCount).toBe(15);
-    expect(otherCount).toBe(17);
+    const operations = await loadOperations();
+    expect(operations.filter(isAdminTagged)).toHaveLength(15);
+    expect(operations.filter((operation) => !isAdminTagged(operation))).toHaveLength(17);
   });
 });
 
 describe('sdk-split: SDK exports', () => {
   it('no admin operationId is exported by the shop functions module', async () => {
-    const specRaw = await readFile(SPEC_PATH, 'utf8');
-    const spec = yaml.load(specRaw) as OpenApiSpec;
-    const paths = spec.paths ?? {};
-    const adminIds = new Set<string>();
-    for (const pathItem of Object.values(paths)) {
-      for (const method of HTTP_METHODS) {
-        const op = pathItem[method];
-        if (!op) continue;
-        const tags = operationMatches(op);
-        if (!tags.some((tag) => (ADMIN_TAGS as readonly string[]).includes(tag))) continue;
-        if (typeof op.operationId === 'string') adminIds.add(op.operationId);
-      }
-    }
-    const shopExports = shopOperations as unknown as Record<string, unknown>;
-    const offenders: string[] = [];
-    for (const id of adminIds) {
-      const matches = Object.keys(shopExports).filter(
-        (name) => name === id || name.startsWith(`${id}$`),
-      );
-      if (matches.length > 0) offenders.push(`${id} -> ${matches.join(',')}`);
-    }
+    const offenders = adminOperationIds(await loadOperations())
+      .map((id) => ({ id, matches: exportsFor(shopOperations, id) }))
+      .filter(({ matches }) => matches.length > 0)
+      .map(({ id, matches }) => `${id} -> ${matches.join(',')}`);
     expect(offenders, `shop SDK exports admin operationId(s): ${offenders.join('; ')}`).toEqual([]);
   });
 
   it('every admin operationId is exported by the admin functions module', async () => {
-    const specRaw = await readFile(SPEC_PATH, 'utf8');
-    const spec = yaml.load(specRaw) as OpenApiSpec;
-    const paths = spec.paths ?? {};
-    const adminIds: string[] = [];
-    for (const pathItem of Object.values(paths)) {
-      for (const method of HTTP_METHODS) {
-        const op = pathItem[method];
-        if (!op) continue;
-        const tags = operationMatches(op);
-        if (!tags.some((tag) => (ADMIN_TAGS as readonly string[]).includes(tag))) continue;
-        if (typeof op.operationId === 'string') adminIds.push(op.operationId);
-      }
-    }
-    const adminExports = adminOperations as unknown as Record<string, unknown>;
-    const missing: string[] = [];
-    for (const id of adminIds) {
-      const matches = Object.keys(adminExports).filter(
-        (name) => name === id || name.startsWith(`${id}$`),
-      );
-      if (matches.length === 0) missing.push(id);
-    }
+    const ids = adminOperationIds(await loadOperations());
+    expect(ids).toHaveLength(15);
+    const missing = ids.filter((id) => exportsFor(adminOperations, id).length === 0);
     expect(missing, `admin SDK functions missing for: ${missing.join(', ')}`).toEqual([]);
   });
 });

@@ -352,6 +352,14 @@ export default defineConfig([
     },
   },
   {
+    // The admin tag helper and the SDK-split spec (MIM-331) take no type
+    // assertion either; the older contract suites are not covered yet.
+    files: ['tests/contract/admin-tags.ts', 'tests/contract/sdk-split.spec.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+    },
+  },
+  {
     files: ['**/*.spec.ts'],
     rules: {
       // Relaxed for the demo (MIM-209, docs/lint-relaxations.md).
