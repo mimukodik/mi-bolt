@@ -304,6 +304,7 @@ beforeEach(async () => {
 afterEach(() => {
   server.resetHandlers();
   TestBed.resetTestingModule();
+  vi.restoreAllMocks();
 });
 
 // ---------------------------------------------------------------------------
@@ -1424,7 +1425,7 @@ describe('focus after a cart line is removed ("következő sorra/címre")', () =
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    vi.spyOn(cartFacade, 'removeItem').mockReturnValue(held);
+    const removeSpy = vi.spyOn(cartFacade, 'removeItem').mockReturnValue(held);
     const rejections: unknown[] = [];
     const onRejection = (reason: unknown): void => {
       rejections.push(reason);
@@ -1440,6 +1441,7 @@ describe('focus after a cart line is removed ("következő sorra/címre")', () =
       await new Promise<void>((resolve) => {
         setImmediate(resolve);
       });
+      expect(removeSpy).toHaveBeenCalledWith(VARIANT_MOTO_256);
       expect(rejections).toEqual([]);
     } finally {
       process.off('unhandledRejection', onRejection);
@@ -1458,7 +1460,7 @@ describe('focus after a cart line is removed ("következő sorra/címre")', () =
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    vi.spyOn(cartFacade, 'clear').mockReturnValue(held);
+    const clearSpy = vi.spyOn(cartFacade, 'clear').mockReturnValue(held);
     const rejections: unknown[] = [];
     const onRejection = (reason: unknown): void => {
       rejections.push(reason);
@@ -1472,6 +1474,7 @@ describe('focus after a cart line is removed ("következő sorra/címre")', () =
       await new Promise<void>((resolve) => {
         setImmediate(resolve);
       });
+      expect(clearSpy).toHaveBeenCalled();
       expect(rejections).toEqual([]);
     } finally {
       process.off('unhandledRejection', onRejection);
