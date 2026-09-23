@@ -195,4 +195,33 @@ describe('unauthorizedInterceptor', () => {
       throw new Error('expected a UrlTree');
     }
   });
+
+  it('case 12: a 401 on a page that merely shares the /bejelentkezes prefix still carries vissza', async () => {
+    const db = createDb();
+    server?.use(...authHandlers(db));
+    server?.use(http.get('*/api/v1/admin/users', () => HttpResponse.json({}, { status: 401 })));
+
+    const router = TestBed.inject(Router);
+    Object.defineProperty(router, 'url', {
+      value: '/bejelentkezes-info',
+      configurable: true,
+    });
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const httpClient = TestBed.inject(HttpClient);
+
+    let caught: unknown;
+    try {
+      await firstValueFrom(httpClient.get(usersUrl()));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught instanceof HttpErrorResponse).toBe(true);
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    const tree = navigateSpy.mock.calls[0][0];
+    if (tree instanceof UrlTree) {
+      expect(router.serializeUrl(tree)).toBe('/bejelentkezes?vissza=%2Fbejelentkezes-info');
+    } else {
+      throw new Error('expected a UrlTree');
+    }
+  });
 });

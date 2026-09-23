@@ -4,9 +4,8 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
 import { AdminSession } from './admin-session';
+import { isLoginPath, LOGIN_PATH } from './login-path';
 import { SKIP_UNAUTHORIZED_REDIRECT } from './skip-unauthorized-redirect';
-
-const LOGIN_PATH = '/bejelentkezes';
 
 /**
  * A 401 from any request that did not opt out with
@@ -28,7 +27,7 @@ export const unauthorizedInterceptor: HttpInterceptorFn = (request, next) => {
       ) {
         session.clear();
         const currentUrl = router.url;
-        const tree = currentUrl.startsWith(LOGIN_PATH)
+        const tree = isLoginPath(currentUrl)
           ? router.createUrlTree([LOGIN_PATH])
           : router.createUrlTree([LOGIN_PATH], { queryParams: { vissza: currentUrl } });
         void router.navigateByUrl(tree);

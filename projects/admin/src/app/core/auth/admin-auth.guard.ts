@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
 
 import { AdminSession } from './admin-session';
+import { LOGIN_PATH } from './login-path';
 
 /**
  * Requires a signed-in admin. The app initializer guarantees `current`
@@ -15,5 +16,5 @@ export const adminAuthGuard: CanActivateFn = (_route, state) => {
   const current = session.current();
   if (current !== null && current !== undefined) return true;
 
-  return router.createUrlTree(['/bejelentkezes'], { queryParams: { vissza: state.url } });
+  return router.createUrlTree([LOGIN_PATH], { queryParams: { vissza: state.url } });
 };
