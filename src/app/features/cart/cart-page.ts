@@ -1,13 +1,3 @@
-/** The same lines as on screen: every variant, quantity and unit price, in any order. */
-function sameLines(onScreen: Cart, fresh: Cart): boolean {
-  if (onScreen.items.length !== fresh.items.length) return false;
-  return onScreen.items.every((line) => {
-    const match = fresh.items.find((item) => item.variantId === line.variantId);
-    if (match === undefined) return false;
-    return match.quantity === line.quantity && match.unitPrice.amount === line.unitPrice.amount;
-  });
-}
-
 /**
  * T18 — cart screen (S4.1).
  *
@@ -25,8 +15,8 @@ function sameLines(onScreen: Cart, fresh: Cart): boolean {
  *     success);
  *   - forward `removeRequested` from each line to `removeItem`;
  *   - disable Continue while the cart is empty, pending or in
- *     error, and re-validate through `ensureCart()` before the
- *     actual navigation (AC04).
+ *     error, and read the cart from the server again (`refetch()`)
+ *     before the actual navigation (AC04).
  *
  * The header chrome (`<h1>`, breadcrumbs, layout) lives in the
  * page itself so the cart does not depend on the shop / checkout
@@ -105,6 +95,16 @@ function readNumberParam(notice: CartNotice, key: string): number | null {
   }
   const value = params[key];
   return typeof value === 'number' ? value : null;
+}
+
+/** The same lines as on screen: every variant, quantity and unit price, in any order. */
+function sameLines(onScreen: Cart, fresh: Cart): boolean {
+  if (onScreen.items.length !== fresh.items.length) return false;
+  return onScreen.items.every((line) => {
+    const match = fresh.items.find((item) => item.variantId === line.variantId);
+    if (match === undefined) return false;
+    return match.quantity === line.quantity && match.unitPrice.amount === line.unitPrice.amount;
+  });
 }
 
 @Component({
@@ -211,7 +211,7 @@ export class CartPage {
    *   - there is no live conflict or expiry signal. A failed mutation
    *     (add, remove, clear) leaves the cart unchanged, so it does not
    *     block Continue;
-   *   - the page itself is not mid-`ensureCart` revalidation.
+   *   - the page is not reading the cart again (Continue, retry).
    */
   readonly canContinue = computed<boolean>(() => {
     const cart = this.cart();
