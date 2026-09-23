@@ -312,13 +312,13 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `value:CatalogFilters; facets:Facets; disabled:boolean`.
+**Signal inputs:** `value:CatalogFilters; facets:Facets; disabled:boolean; busy:boolean`.
 
 **Outputs:** `filtersChanged:CatalogFilters`.
 
-**Functions:** Control brand/storage/min/max/stock/5G; validate local price range; emit complete filter value, never query HTTP itself.
+**Functions:** Control brand/storage/min/max/stock/5G; validate local price range; emit complete filter value, never query HTTP itself. While `busy` (a catalogue request in flight), the counts show a skeleton in their own box, and before the first facets the brand and colour lists show placeholder rows at the real rows' heights.
 
-**Required states:** default,selected,focus,disabled,invalid.
+**Required states:** default,selected,focus,disabled,invalid,loading.
 
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
@@ -327,13 +327,13 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `applied:CatalogFilters; facets:Facets; opened:boolean`.
+**Signal inputs:** `applied:CatalogFilters; facets:Facets; opened:boolean; busy:boolean`.
 
 **Outputs:** `applied:CatalogFilters; closed:void`.
 
-**Functions:** Own a transient copy while open; Apply commits once, Cancel/Escape discard. Sticky footer remains accessible within scrolling dialog.
+**Functions:** Own a transient copy while open; Apply commits once, Cancel/Escape discard. Sticky footer remains accessible within scrolling dialog. While `busy`, the counts and the first-load option rows show the same skeleton as FilterPanel.
 
-**Required states:** closed,open,draft-changed,invalid,disabled.
+**Required states:** closed,open,draft-changed,invalid,disabled,loading.
 
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
