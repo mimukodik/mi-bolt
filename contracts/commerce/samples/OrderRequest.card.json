@@ -1,0 +1,6 @@
+{
+  "paymentMethod": "card",
+  "paymentIntentId": "demo-payment-intent-001",
+  "termsVersion": "2026-09-01",
+  "acceptedTerms": true
+}

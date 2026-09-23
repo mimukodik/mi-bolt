@@ -1,0 +1,41 @@
+{
+  "id": "demo-cart-001",
+  "version": 1,
+  "items": [
+    {
+      "variantId": "demo-variant-001",
+      "variantSlug": "demo-phone-128gb-black",
+      "productId": "demo-product-001",
+      "productSlug": "demo-phone-128gb",
+      "productName": "Példa Telefon 128 GB",
+      "colorName": "Fekete",
+      "storageGb": 128,
+      "image": {
+        "id": "demo-image-001",
+        "src": "/api/v1/media/demo-image-001",
+        "alt": "Példa Telefon 128 GB",
+        "width": 800,
+        "height": 800
+      },
+      "quantity": 1,
+      "unitPrice": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "lineTotal": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "availability": "in_stock",
+      "maxQuantity": 5
+    }
+  ],
+  "lineCount": 1,
+  "totalQuantity": 1,
+  "subtotal": {
+    "amount": 149990,
+    "currency": "HUF"
+  },
+  "expiresAt": "2026-09-23T18:30:00Z",
+  "notices": []
+}

@@ -1,0 +1,30 @@
+@startuml admin-product-edit
+title Admin product edit, then seen on the storefront
+actor Admin
+participant "Admin\n/admin/" as ADM
+participant "Commerce API\n/api/v1" as API
+participant "Storefront\n/" as SF
+actor Shopper
+
+Admin -> ADM : sign in
+ADM -> API : POST /admin/auth/login (X-XSRF-TOKEN, AdminLoginRequest)
+API --> ADM : 200 AdminUser + session cookie
+ADM -> API : GET /admin/products?…
+API --> ADM : 200 AdminProductPage
+ADM -> API : GET /admin/products/{productId}
+API --> ADM : 200 AdminProduct + ETag
+opt a new image
+  ADM -> API : POST /admin/media (multipart, X-XSRF-TOKEN)
+  API --> ADM : 200 or 201 UploadedImage
+end
+Admin -> ADM : edit and save
+ADM -> API : PUT /admin/products/{productId} (If-Match, X-XSRF-TOKEN, AdminProductInput)
+alt the ETag is current
+  API --> ADM : 200 AdminProduct + new ETag
+else another edit came first
+  API --> ADM : 412 Problem PRODUCT_VERSION_CONFLICT
+end
+Shopper -> SF : open the product
+SF -> API : GET /products/{slug}
+API --> SF : 200 Product with the edited values
+@enduml

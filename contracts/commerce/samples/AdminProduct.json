@@ -1,0 +1,57 @@
+{
+  "id": 1,
+  "slug": "demo-phone-128gb",
+  "brand": "Példa",
+  "name": "Példa Telefon 128 GB",
+  "description": "Példa telefon a katalógusbemutatóhoz.",
+  "is5g": true,
+  "releasedAt": "2026-01-15",
+  "rank": 0,
+  "popularityScore": 0,
+  "featured": false,
+  "status": "active",
+  "version": 1,
+  "highlights": [
+    "5G-képes",
+    "128 GB tárhely",
+    "Példa kamerarendszer"
+  ],
+  "colors": [
+    {
+      "code": "black",
+      "name": "Fekete",
+      "swatchHex": "#000000",
+      "image": {
+        "id": "demo-image-001",
+        "src": "/api/v1/media/demo-image-001",
+        "alt": "Példa Telefon 128 GB",
+        "width": 800,
+        "height": 800
+      }
+    }
+  ],
+  "variants": [
+    {
+      "id": "demo-variant-001",
+      "slug": "demo-phone-128gb-black",
+      "colorCode": "black",
+      "storageGb": 128,
+      "price": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "stock": 10
+    }
+  ],
+  "specGroups": [
+    {
+      "title": "Kijelző",
+      "rows": [
+        {
+          "label": "Méret",
+          "value": "6,1\""
+        }
+      ]
+    }
+  ]
+}

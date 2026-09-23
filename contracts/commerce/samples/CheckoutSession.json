@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "contact": {
+    "fullName": "Példa Vásárló",
+    "email": "vasarlo@example.com",
+    "phone": "+36301234567"
+  },
+  "billing": {
+    "name": "Példa Vásárló",
+    "address": {
+      "countryCode": "HU",
+      "postalCode": "1111",
+      "city": "Budapest",
+      "line1": "Példa utca 1."
+    }
+  },
+  "delivery": {
+    "optionId": "home_delivery",
+    "address": {
+      "countryCode": "HU",
+      "postalCode": "1111",
+      "city": "Budapest",
+      "line1": "Példa utca 1."
+    }
+  },
+  "payment": {
+    "method": "card"
+  },
+  "summary": {
+    "subtotal": {
+      "amount": 149990,
+      "currency": "HUF"
+    },
+    "shippingFee": {
+      "amount": 1990,
+      "currency": "HUF"
+    },
+    "paymentFee": {
+      "amount": 0,
+      "currency": "HUF"
+    },
+    "total": {
+      "amount": 151980,
+      "currency": "HUF"
+    }
+  },
+  "complete": true
+}

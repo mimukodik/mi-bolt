@@ -1,0 +1,17 @@
+{
+  "type": "https://example.com/problems/validation-failed",
+  "title": "Validation failed",
+  "status": 422,
+  "code": "VALIDATION_FAILED",
+  "detail": "One or more fields are invalid.",
+  "traceId": "demo-trace-0001",
+  "fieldErrors": [
+    {
+      "path": "/contact/phone",
+      "code": "INVALID_PHONE",
+      "params": {
+        "pattern": "^\\+36[0-9]{8,9}$"
+      }
+    }
+  ]
+}

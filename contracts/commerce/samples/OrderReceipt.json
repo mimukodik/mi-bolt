@@ -1,0 +1,60 @@
+{
+  "id": "demo-order-001",
+  "orderNumber": "DEMO-000001",
+  "createdAt": "2026-09-23T17:35:00Z",
+  "status": "confirmed",
+  "items": [
+    {
+      "productName": "Példa Telefon 128 GB",
+      "variantId": "demo-variant-001",
+      "colorName": "Fekete",
+      "storageGb": 128,
+      "quantity": 1,
+      "unitPrice": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "lineTotal": {
+        "amount": 149990,
+        "currency": "HUF"
+      }
+    }
+  ],
+  "subtotal": {
+    "amount": 149990,
+    "currency": "HUF"
+  },
+  "shippingFee": {
+    "amount": 1990,
+    "currency": "HUF"
+  },
+  "paymentFee": {
+    "amount": 0,
+    "currency": "HUF"
+  },
+  "total": {
+    "amount": 151980,
+    "currency": "HUF"
+  },
+  "paymentMethod": "card",
+  "delivery": {
+    "optionId": "home_delivery",
+    "address": {
+      "countryCode": "HU",
+      "postalCode": "1111",
+      "city": "Budapest",
+      "line1": "Példa utca 1."
+    }
+  },
+  "billing": {
+    "name": "Példa Vásárló",
+    "address": {
+      "countryCode": "HU",
+      "postalCode": "1111",
+      "city": "Budapest",
+      "line1": "Példa utca 1."
+    }
+  },
+  "contactEmail": "vasarlo@example.com",
+  "notice": "Példa rendelés — nem történt valódi fizetés, szállítás vagy e-mail."
+}
