@@ -45,6 +45,24 @@
         </button>
       }
       <span>MiBolt Admin</span>
+      <span class="flex-1"></span>
+      @if (session.current(); as admin) {
+        <button aria-label="Fiók menü" matButton type="button" [matMenuTriggerFor]="accountMenu">
+          <mat-icon>account_circle</mat-icon>
+          {{ admin.username }}
+          <mat-icon iconPositionEnd>expand_more</mat-icon>
+        </button>
+        <mat-menu #accountMenu="matMenu">
+          <button mat-menu-item type="button" (click)="openPasswordChange()">
+            <mat-icon>lock_reset</mat-icon>
+            <span>Jelszó módosítása</span>
+          </button>
+          <button mat-menu-item type="button" (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Kijelentkezés</span>
+          </button>
+        </mat-menu>
+      }
     </mat-toolbar>
     <main class="flex-1 min-h-0 overflow-auto scroll-pt-16">
       <router-outlet />

@@ -1,16 +1,35 @@
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
+import { ANIMATION_MODULE_TYPE, Component } from '@angular/core';
 import { APP_BASE_HREF } from '@angular/common';
-import { Component } from '@angular/core';
+import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
+import { MOCK_PLATFORM_LOCATION_CONFIG } from '@angular/common/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import type { Observable } from 'rxjs';
 import type { BreakpointState } from '@angular/cdk/layout';
+import { HttpResponse, http } from 'msw';
 import { of } from 'rxjs';
 import { MatSidenav } from '@angular/material/sidenav';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
+
+import { provideApiConfiguration } from '../api/generated/api-configuration';
+import { authHandlers } from '../../mocks/auth.handlers';
+import { createDb } from '../../mocks/db';
+import { SEED_ADMIN } from '../../mocks/seed';
+import { server, useMswServer } from '../../testing/msw-server';
+import { AdminSession } from '../core/auth/admin-session';
+import { unauthorizedInterceptor } from '../core/auth/unauthorized.interceptor';
 
 import { ShellComponent } from './shell.component';
+
+useMswServer();
+
+/** See `confirm-dialog.spec.ts` (shared/confirm-dialog) for why NoopAnimations is required in jsdom. */
+const NOOP_ANIMATIONS = { provide: ANIMATION_MODULE_TYPE, useValue: 'NoopAnimations' } as const;
 
 @Component({ selector: 'adm-stub', template: '' })
 class StubComponent {}
@@ -37,6 +56,49 @@ function hostOf(fixture: ComponentFixture<ShellComponent>): HTMLElement {
   return element;
 }
 
+/** Providers every shell test needs: `ShellComponent` injects `AdminSession`, which needs `HttpClient`. */
+function baseProviders(): unknown[] {
+  return [
+    provideHttpClient(withXhr(), withInterceptors([unauthorizedInterceptor])),
+    provideApiConfiguration(resolveApiRoot()),
+    { provide: MOCK_PLATFORM_LOCATION_CONFIG, useValue: { startUrl: document.baseURI } },
+    NOOP_ANIMATIONS,
+  ];
+}
+
+/** Signs in the seeded admin directly on the mock db, then syncs `AdminSession`. */
+async function signIn(db: ReturnType<typeof createDb>): Promise<void> {
+  db.sessionAdminId = SEED_ADMIN.id;
+  await TestBed.inject(AdminSession).refresh();
+}
+
+function accountTrigger(native: HTMLElement): HTMLButtonElement | null {
+  const found = Array.from(native.querySelectorAll<HTMLButtonElement>('button')).find(
+    (button) => button.getAttribute('aria-label') === 'Fiók menü',
+  );
+  return found ?? null;
+}
+
+function overlay(): HTMLElement {
+  const found = document.querySelector('.cdk-overlay-container');
+  if (!(found instanceof HTMLElement)) {
+    throw new Error('Expected the overlay container');
+  }
+  return found;
+}
+
+/** Each menu item's label, read from its `<span>` so the icon's ligature text is excluded. */
+function menuItemLabels(): string[] {
+  return Array.from(overlay().querySelectorAll('.mat-mdc-menu-item')).map(
+    (item) => item.querySelector('span')?.textContent.trim() ?? '',
+  );
+}
+
+function snackBarText(): string {
+  const found = document.querySelector('.mat-mdc-snack-bar-label');
+  return found === null ? '' : found.textContent.trim();
+}
+
 describe('ShellComponent', () => {
   let fixture: ComponentFixture<ShellComponent>;
   let native: HTMLElement;
@@ -49,6 +111,7 @@ describe('ShellComponent', () => {
           provideRouter([]),
           { provide: APP_BASE_HREF, useValue: '/admin/' },
           { provide: BreakpointObserver, useValue: breakpointStub(false) },
+          ...baseProviders(),
         ],
       });
       fixture = TestBed.createComponent(ShellComponent);
@@ -86,6 +149,7 @@ describe('ShellComponent', () => {
           provideRouter([{ path: 'x', component: StubComponent }]),
           { provide: APP_BASE_HREF, useValue: '/admin/' },
           { provide: BreakpointObserver, useValue: breakpointStub(false) },
+          ...baseProviders(),
         ],
       });
       fixture = TestBed.createComponent(ShellComponent);
@@ -102,6 +166,7 @@ describe('ShellComponent', () => {
           provideRouter([{ path: 'x', component: StubComponent }]),
           { provide: APP_BASE_HREF, useValue: '/admin/' },
           { provide: BreakpointObserver, useValue: breakpointStub(true) },
+          ...baseProviders(),
         ],
       });
       fixture = TestBed.createComponent(ShellComponent);
@@ -114,6 +179,140 @@ describe('ShellComponent', () => {
       await TestBed.inject(Router).navigateByUrl('/x');
       await fixture.whenStable();
       expect(sidenav.opened).toBe(false);
+    });
+  });
+
+  describe('the account menu (MIM-339)', () => {
+    beforeEach(() => {
+      TestBed.configureTestingModule({
+        imports: [ShellComponent],
+        providers: [
+          provideRouter([
+            { path: 'x', component: StubComponent },
+            { path: 'bejelentkezes', component: StubComponent },
+          ]),
+          { provide: APP_BASE_HREF, useValue: '/admin/' },
+          { provide: BreakpointObserver, useValue: breakpointStub(false) },
+          ...baseProviders(),
+        ],
+      });
+    });
+
+    it("shows the signed-in admin's username, and the menu lists exactly Jelszó módosítása and Kijelentkezés", async () => {
+      const db = createDb();
+      server?.use(...authHandlers(db));
+      fixture = TestBed.createComponent(ShellComponent);
+      native = hostOf(fixture);
+      fixture.detectChanges();
+      await signIn(db);
+      await fixture.whenStable();
+
+      const trigger = accountTrigger(native);
+      expect(trigger).not.toBeNull();
+      expect(trigger?.textContent).toContain(SEED_ADMIN.username);
+
+      trigger?.click();
+      await fixture.whenStable();
+
+      expect(menuItemLabels()).toEqual(['Jelszó módosítása', 'Kijelentkezés']);
+    });
+
+    it('Kijelentkezés sends the logout POST and navigates to /bejelentkezes', async () => {
+      const db = createDb();
+      server?.use(...authHandlers(db));
+      fixture = TestBed.createComponent(ShellComponent);
+      native = hostOf(fixture);
+      fixture.detectChanges();
+      await signIn(db);
+      await fixture.whenStable();
+
+      let logoutRequests = 0;
+      const listener = ({ request }: { request: Request }): void => {
+        if (request.method === 'POST' && request.url.includes('/admin/auth/logout')) {
+          logoutRequests += 1;
+        }
+      };
+      server?.events.on('request:start', listener);
+
+      accountTrigger(native)?.click();
+      await fixture.whenStable();
+      const kijelentkezes = menuItemLabels().indexOf('Kijelentkezés');
+      const items = Array.from(overlay().querySelectorAll<HTMLElement>('.mat-mdc-menu-item'));
+      items[kijelentkezes].click();
+      await fixture.whenStable();
+
+      server?.events.removeListener('request:start', listener);
+      expect(logoutRequests).toBe(1);
+      expect(TestBed.inject(Router).url).toBe('/bejelentkezes');
+    });
+
+    it('shows a snack-bar and does not navigate when logout fails once', async () => {
+      const db = createDb();
+      server?.use(...authHandlers(db));
+      server?.use(
+        http.post('*/api/v1/admin/auth/logout', () => HttpResponse.json({}, { status: 503 }), {
+          once: true,
+        }),
+      );
+      fixture = TestBed.createComponent(ShellComponent);
+      native = hostOf(fixture);
+      fixture.detectChanges();
+      await signIn(db);
+      await fixture.whenStable();
+
+      const startUrl = TestBed.inject(Router).url;
+
+      accountTrigger(native)?.click();
+      await fixture.whenStable();
+      const items = Array.from(overlay().querySelectorAll<HTMLElement>('.mat-mdc-menu-item'));
+      items[menuItemLabels().indexOf('Kijelentkezés')].click();
+      await fixture.whenStable();
+
+      expect(snackBarText()).toBe('A kijelentkezés nem sikerült. Próbáld újra.');
+      expect(TestBed.inject(Router).url).toBe(startUrl);
+    });
+
+    it('Jelszó módosítása opens the dialog, and closing it with true shows Jelszó módosítva', async () => {
+      const db = createDb();
+      server?.use(...authHandlers(db));
+      fixture = TestBed.createComponent(ShellComponent);
+      native = hostOf(fixture);
+      fixture.detectChanges();
+      await signIn(db);
+      await fixture.whenStable();
+
+      accountTrigger(native)?.click();
+      await fixture.whenStable();
+      const items = Array.from(overlay().querySelectorAll<HTMLElement>('.mat-mdc-menu-item'));
+      items[menuItemLabels().indexOf('Jelszó módosítása')].click();
+      await fixture.whenStable();
+
+      expect(overlay().querySelector('h2[mat-dialog-title]')?.textContent).toBe(
+        'Jelszó módosítása',
+      );
+
+      const inputs = Array.from(overlay().querySelectorAll<HTMLInputElement>('input'));
+      inputs[0].value = 'mibolt-admin-demo';
+      inputs[0].dispatchEvent(new Event('input'));
+      inputs[1].value = 'a-brand-new-password';
+      inputs[1].dispatchEvent(new Event('input'));
+      inputs[2].value = 'a-brand-new-password';
+      inputs[2].dispatchEvent(new Event('input'));
+      const submit = Array.from(overlay().querySelectorAll<HTMLButtonElement>('button')).find(
+        (button) => button.type === 'submit',
+      );
+      submit?.click();
+      await fixture.whenStable();
+
+      expect(snackBarText()).toBe('Jelszó módosítva.');
+    });
+
+    it('shows no account trigger when signed out', () => {
+      fixture = TestBed.createComponent(ShellComponent);
+      native = hostOf(fixture);
+      fixture.detectChanges();
+
+      expect(accountTrigger(native)).toBeNull();
     });
   });
 });
