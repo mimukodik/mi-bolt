@@ -73,8 +73,18 @@ export class FilterDrawer {
   /** Whether the controls are inert (loading / error). */
   readonly disabled = input<boolean>(false);
 
+  /** True while a catalogue request is in flight, the first one and
+   *  every refresh. The counts then show a skeleton in their own box,
+   *  and before the first response the brand and colour lists show
+   *  placeholder rows at the real rows' heights (MIM-228). */
+  readonly busy = input<boolean>(false);
+
   /** Emits the committed draft exactly once per Apply press. */
   readonly filtersChanged = output<CatalogQuery>();
+
+  /** One placeholder brand row per visible brand slot (the list shows
+   *  at most five before "more"). */
+  protected readonly brandSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
 
   /** Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop). */
   readonly closed = output();

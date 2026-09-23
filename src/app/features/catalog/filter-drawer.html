@@ -16,6 +16,14 @@
     <fieldset class="group" data-testid="drawer-group-brand">
       <legend class="legend">Gyártó</legend>
       <ul class="options" role="list">
+        @if (facets() === null && busy()) {
+          @for (row of brandSkeletonRows; track row) {
+            <li aria-hidden="true" class="facet-skeleton-row" data-testid="brand-skeleton-row">
+              <span class="facet-skeleton-bar facet-skeleton-bar--label"></span>
+              <span class="facet-skeleton-bar facet-skeleton-bar--count"></span>
+            </li>
+          }
+        }
         @for (brand of visibleBrandFacets(); track brand.value) {
           <li>
             <button
@@ -32,7 +40,11 @@
               }}</span>
               <span class="option__label"
                 >{{ brand.label
-                }}<span aria-label="találatok száma" class="option__count"
+                }}<span
+                  aria-label="találatok száma"
+                  class="option__count"
+                  [attr.aria-hidden]="busy() ? 'true' : null"
+                  [class.facet-count-busy]="busy()"
                   >&nbsp;({{ brand.count }})</span
                 ></span
               >
@@ -56,6 +68,16 @@
     <fieldset class="group" data-testid="drawer-group-color">
       <legend class="legend">Szín</legend>
       <ul class="color-options" role="list">
+        @if (facets() === null && busy()) {
+          <li
+            aria-hidden="true"
+            class="facet-skeleton-row facet-skeleton-row--chip"
+            data-testid="color-skeleton-row"
+          >
+            <span class="facet-skeleton-bar facet-skeleton-bar--label"></span>
+            <span class="facet-skeleton-bar facet-skeleton-bar--count"></span>
+          </li>
+        }
         @for (color of colorFacets(); track color.value) {
           <li>
             <button
@@ -74,7 +96,11 @@
               ></span>
               <span class="color-chip__label"
                 >{{ color.label
-                }}<span aria-label="találatok száma" class="color-chip__count"
+                }}<span
+                  aria-label="találatok száma"
+                  class="color-chip__count"
+                  [attr.aria-hidden]="busy() ? 'true' : null"
+                  [class.facet-count-busy]="busy()"
                   >&nbsp;({{ color.count }})</span
                 ></span
               >
@@ -104,7 +130,11 @@
               <span class="option__label"
                 >{{ bucket.label }}
                 @if (bucket.count !== null) {
-                  <span aria-label="találatok száma" class="option__count"
+                  <span
+                    aria-label="találatok száma"
+                    class="option__count"
+                    [attr.aria-hidden]="busy() ? 'true' : null"
+                    [class.facet-count-busy]="busy()"
                     >&nbsp;({{ bucket.count }})</span
                   >
                 }
@@ -183,7 +213,11 @@
             <span class="option__label"
               >Csak raktáron
               @if (inStockCount() !== null) {
-                <span aria-label="találatok száma" class="option__count"
+                <span
+                  aria-label="találatok száma"
+                  class="option__count"
+                  [attr.aria-hidden]="busy() ? 'true' : null"
+                  [class.facet-count-busy]="busy()"
                   >&nbsp;({{ inStockCount() }})</span
                 >
               }
@@ -204,7 +238,11 @@
             <span class="option__label"
               >Csak 5G
               @if (fiveGCount() !== null) {
-                <span aria-label="találatok száma" class="option__count"
+                <span
+                  aria-label="találatok száma"
+                  class="option__count"
+                  [attr.aria-hidden]="busy() ? 'true' : null"
+                  [class.facet-count-busy]="busy()"
                   >&nbsp;({{ fiveGCount() }})</span
                 >
               }

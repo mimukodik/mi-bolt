@@ -116,8 +116,18 @@ export class FilterPanel {
   /** True when the panel should be inert (loading or error refresh). */
   readonly disabled = input<boolean>(false);
 
+  /** True while a catalogue request is in flight, the first one and
+   *  every refresh. The counts then show a skeleton in their own box,
+   *  and before the first response the brand and colour lists show
+   *  placeholder rows at the real rows' heights (MIM-228). */
+  readonly busy = input<boolean>(false);
+
   /** Emits the next complete CatalogQuery when the user changes a control. */
   readonly filtersChanged = output<CatalogQuery>();
+
+  /** One placeholder brand row per visible brand slot (the list shows
+   *  at most five before "more"). */
+  protected readonly brandSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
 
   /** Storage buckets exposed by the documented storage enum, paired with
    *  the facet count so the chip can show "128 GB (3)". Falls back to

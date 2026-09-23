@@ -238,3 +238,62 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
     );
   }
 }
+
+/* Filter facet skeletons (MIM-228). A count being re-fetched keeps its own
+   text, so its box keeps the width and height it had and the colour chips
+   do not re-wrap; the box shows the same shimmer as the LoadingState
+   primitive, and the component stylesheets turn its text transparent
+   (their count rules outrank a global class). Before the first response
+   the brand and colour lists show placeholder rows at the real rows'
+   heights: 40px for an `.option` row (`min-h-10`) and 44px for a
+   `.color-chip`. */
+.facet-count-busy,
+.facet-skeleton-bar {
+  border-radius: var(--radius-badge);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-section) 0%,
+    var(--color-border-subtle) 50%,
+    var(--color-surface-section) 100%
+  );
+  background-size: 200% 100%;
+  animation: facet-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.facet-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-light);
+}
+
+.facet-skeleton-row--chip {
+  width: 100%;
+  min-height: 44px;
+}
+
+.facet-skeleton-bar {
+  display: block;
+  height: 1em;
+}
+
+.facet-skeleton-bar--label {
+  width: 60%;
+}
+
+.facet-skeleton-bar--count {
+  width: 2.5rem;
+  margin-left: auto;
+}
+
+@keyframes facet-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

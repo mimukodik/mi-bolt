@@ -27,6 +27,7 @@ import {
   Router,
   type Params,
 } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { BehaviorSubject } from 'rxjs';
@@ -38,6 +39,8 @@ import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor'
 import { CatalogFacade } from './catalog.facade';
 import { CatalogPage } from './catalog-page';
 import { AsyncContent } from '../../shared/ui/async-content/async-content';
+import { FilterPanel } from './filter-panel';
+import { FilterDrawer } from './filter-drawer';
 import type { Variant } from '../../api/generated/models/variant';
 import type { ProductPage as ProductPageDTO } from '../../api/generated/models/product-page';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
@@ -1796,6 +1799,57 @@ describe('MIM-228 a filter change keeps the scroll position; paging opens at the
       successPage([buildItem('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
     );
     await harness.waitForStatus('success');
+    harness.cleanup();
+  });
+});
+
+describe('MIM-228 facet skeleton — busy flag follows the facade status', () => {
+  it('the filter panel and drawer are busy while a request runs and not after', async () => {
+    const harness = await setupHarness();
+    // The harness holds the first request, so the page lands in `loading`.
+    expect(harness.facade.vm().status).toBe('loading');
+
+    const panelInstance = harness.fixture.debugElement.query(By.directive(FilterPanel))
+      .componentInstance as FilterPanel;
+    const drawerInstance = harness.fixture.debugElement.query(By.directive(FilterDrawer))
+      .componentInstance as FilterDrawer;
+
+    // First load — `loading`. The skeleton flags are on.
+    expect(panelInstance.busy()).toBe(true);
+    expect(drawerInstance.busy()).toBe(true);
+
+    harness.respond(
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One 5G', 339990, true, 256)], 1),
+    );
+    await harness.waitForStatus('success');
+    harness.fixture.detectChanges();
+
+    expect(harness.facade.vm().status).toBe('success');
+    expect(panelInstance.busy()).toBe(false);
+    expect(drawerInstance.busy()).toBe(false);
+
+    // A filter mutation puts a refresh in flight — `refreshing`. The
+    // flags flip back on while the request is held. `setSearch` is
+    // debounced; `setInStock` writes through synchronously, so the
+    // very next change-detection pass observes `refreshing`. The
+    // harness's `tick()` waits for MSW to register the new HTTP
+    // request so the next `respond` call lands on it, not on the
+    // first request's already-resolved promise.
+    harness.facade.setInStock(true);
+    harness.fixture.detectChanges();
+    expect(harness.facade.vm().status).toBe('refreshing');
+    expect(panelInstance.busy()).toBe(true);
+    expect(drawerInstance.busy()).toBe(true);
+    await harness.tick();
+
+    harness.respond(successPage([], 0));
+    await harness.waitForStatus('empty');
+    harness.fixture.detectChanges();
+
+    expect(harness.facade.vm().status).toBe('empty');
+    expect(panelInstance.busy()).toBe(false);
+    expect(drawerInstance.busy()).toBe(false);
+
     harness.cleanup();
   });
 });
