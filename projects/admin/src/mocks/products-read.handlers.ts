@@ -30,6 +30,7 @@ import type { Money } from '../app/api/generated/models/money';
 import type { Problem } from '../app/api/generated/models/problem';
 import type { SortDirection } from '../app/api/generated/models/sort-direction';
 import {
+  javaTrim,
   notAcceptable,
   serviceUnavailable,
   unknownQueryParameter,
@@ -172,12 +173,6 @@ function convertLong(raw: string): ConversionResult<bigint> {
 function convertQ(searchParams: URLSearchParams): string | undefined {
   const values = searchParams.getAll('q');
   return values.length === 0 ? undefined : values.join(',');
-}
-
-/** Java's `String.trim()`: removes every character up to U+0020 at both ends, nothing else. */
-function javaTrim(value: string): string {
-  // eslint-disable-next-line no-control-regex -- U+0000-U+001F are what Java's trim() removes
-  return value.replace(/^[\u0000-\u0020]+|[\u0000-\u0020]+$/g, '');
 }
 
 /** None → `[]`; one value → split on `,`, each element trimmed like Java's `String.trim()` (Spring's `StringToCollectionConverter`); two or more → as given. Never fails. */

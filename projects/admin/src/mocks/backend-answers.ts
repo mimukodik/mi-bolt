@@ -33,6 +33,15 @@ export function bodyViolations(fieldErrors: readonly FieldError[]): HttpResponse
   });
 }
 
+/** Java's `String.trim()`: strips leading and trailing characters whose code is at most `0x20`. */
+export function javaTrim(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value.charCodeAt(start) <= 0x20) start += 1;
+  while (end > start && value.charCodeAt(end - 1) <= 0x20) end -= 1;
+  return value.slice(start, end);
+}
+
 /** The first query key in query-string order, or `undefined` when there is none. */
 export function firstQueryKey(request: Request): string | undefined {
   return [...new URL(request.url).searchParams.keys()][0];
