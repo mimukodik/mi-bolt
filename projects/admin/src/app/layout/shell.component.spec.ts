@@ -7,6 +7,7 @@ import { MOCK_PLATFORM_LOCATION_CONFIG } from '@angular/common/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { ScrollDispatcher } from '@angular/cdk/scrolling';
 import type { Observable } from 'rxjs';
 import type { BreakpointState } from '@angular/cdk/layout';
 import { HttpResponse, http } from 'msw';
@@ -155,6 +156,24 @@ describe('ShellComponent', () => {
       const brandBar = toolbars[1];
       const text = brandBar.textContent;
       expect(text).toContain('MiBolt Admin');
+    });
+
+    it('lays the content area out as a column, so main can take the remaining height', () => {
+      const content = native.querySelector('mat-sidenav-content');
+      if (!(content instanceof HTMLElement)) {
+        throw new Error('expected mat-sidenav-content');
+      }
+      expect(getComputedStyle(content).display).toBe('flex');
+      expect(getComputedStyle(content).flexDirection).toBe('column');
+    });
+
+    it('registers main as a CDK scroll container, so overlays follow its scrolling', () => {
+      const main = native.querySelector('main');
+      if (!(main instanceof HTMLElement)) throw new Error('expected main');
+      const registered = Array.from(TestBed.inject(ScrollDispatcher).scrollContainers.keys()).map(
+        (scrollable) => scrollable.getElementRef().nativeElement,
+      );
+      expect(registered).toContain(main);
     });
   });
 

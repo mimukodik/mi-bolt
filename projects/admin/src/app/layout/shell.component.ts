@@ -1,6 +1,7 @@
 import { Component, DestroyRef, inject, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -39,6 +40,7 @@ import type { PasswordChangeDialog } from '../features/account/password-change-d
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
+    CdkScrollable,
   ],
 })
 export class ShellComponent {
