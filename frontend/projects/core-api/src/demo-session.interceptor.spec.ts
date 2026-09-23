@@ -55,11 +55,16 @@ const stubThrowingSessionStorage = (): void => {
   };
 };
 
-/** Makes crypto.randomUUID() return `value`, whatever the platform would emit. */
-const stubRandomUuid = (value: string): void => {
-  vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
-    value as ReturnType<Crypto['randomUUID']>,
-  );
+/**
+ * Makes crypto.randomUUID() return `value` and returns the spy, so a case can
+ * assert how often the id was generated. The `crypto` global is stubbed rather
+ * than the method spied on: `randomUUID` is typed as a UUID, which a `value`
+ * outside the contract pattern cannot be without a type assertion.
+ */
+const stubRandomUuid = (value: string): Mock => {
+  const randomUUID = vi.fn(() => value);
+  vi.stubGlobal('crypto', { randomUUID });
+  return randomUUID;
 };
 
 /** Runs one GET through the interceptor and returns the request it passed on. */
@@ -90,7 +95,7 @@ describe('demoSessionInterceptor', () => {
 
   it('reuses a valid stored session id', async () => {
     const setItem = stubSessionStorage('abcdefgh-1234');
-    const randomUUID = vi.spyOn(globalThis.crypto, 'randomUUID');
+    const randomUUID = stubRandomUuid(GENERATED_ID);
 
     const module = await loadInterceptorModule();
     const request = interceptedRequest(module, new HttpContext());
@@ -102,8 +107,7 @@ describe('demoSessionInterceptor', () => {
 
   it('generates and stores an id when sessionStorage holds nothing', async () => {
     const setItem = stubSessionStorage(null);
-    const randomUUID = vi.spyOn(globalThis.crypto, 'randomUUID');
-    randomUUID.mockReturnValue(GENERATED_ID);
+    const randomUUID = stubRandomUuid(GENERATED_ID);
 
     const module = await loadInterceptorModule();
     const request = interceptedRequest(module, new HttpContext());
@@ -149,8 +153,7 @@ describe('demoSessionInterceptor', () => {
 
   it('resolves the id once for every request on the same module', async () => {
     stubSessionStorage(null);
-    const randomUUID = vi.spyOn(globalThis.crypto, 'randomUUID');
-    randomUUID.mockReturnValue(GENERATED_ID);
+    const randomUUID = stubRandomUuid(GENERATED_ID);
 
     const module = await loadInterceptorModule();
     const first = interceptedRequest(module, new HttpContext());
