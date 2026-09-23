@@ -10,26 +10,38 @@ afterEach(() => {
 
 describe('checkoutKeys: the accepted demo terms survive the cold return from the payment page', () => {
   it('reads false when nothing is stored', () => {
-    expect(checkoutKeys.termsAccepted()).toBe(false);
+    expect(checkoutKeys.termsAccepted('v1:1')).toBe(false);
   });
 
-  it('stores a tick and reads it back', () => {
-    checkoutKeys.setTermsAccepted(true);
-    expect(sessionStorage.getItem(TERMS_SLOT)).toBe('true');
-    expect(checkoutKeys.termsAccepted()).toBe(true);
+  it('stores a tick under the cart lines and reads it back for the same lines', () => {
+    checkoutKeys.setTermsAccepted('v1:1');
+    expect(sessionStorage.getItem(TERMS_SLOT)).toBe('v1:1');
+    expect(checkoutKeys.termsAccepted('v1:1')).toBe(true);
   });
 
-  it('stores an untick as false', () => {
-    checkoutKeys.setTermsAccepted(true);
-    checkoutKeys.setTermsAccepted(false);
-    expect(sessionStorage.getItem(TERMS_SLOT)).toBe('false');
-    expect(checkoutKeys.termsAccepted()).toBe(false);
+  it('reads false for other cart lines (owner 2026-09-23: the tick clears when the cart changes)', () => {
+    checkoutKeys.setTermsAccepted('v1:1');
+    expect(checkoutKeys.termsAccepted('v1:2')).toBe(false);
+  });
+
+  it('a read for other lines drops the stored tick, so returning to the old lines stays unticked (owner 2026-09-23)', () => {
+    checkoutKeys.setTermsAccepted('v1:1');
+    expect(checkoutKeys.termsAccepted('v1:2')).toBe(false);
+    expect(sessionStorage.getItem(TERMS_SLOT)).toBeNull();
+    expect(checkoutKeys.termsAccepted('v1:1')).toBe(false);
+  });
+
+  it('an untick removes the stored tick', () => {
+    checkoutKeys.setTermsAccepted('v1:1');
+    checkoutKeys.setTermsAccepted(null);
+    expect(sessionStorage.getItem(TERMS_SLOT)).toBeNull();
+    expect(checkoutKeys.termsAccepted('v1:1')).toBe(false);
   });
 
   it('clearAll drops the stored tick, so the next checkout starts unticked', () => {
-    checkoutKeys.setTermsAccepted(true);
+    checkoutKeys.setTermsAccepted('v1:1');
     checkoutKeys.clearAll();
     expect(sessionStorage.getItem(TERMS_SLOT)).toBeNull();
-    expect(checkoutKeys.termsAccepted()).toBe(false);
+    expect(checkoutKeys.termsAccepted('v1:1')).toBe(false);
   });
 });

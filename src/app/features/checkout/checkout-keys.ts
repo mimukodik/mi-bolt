@@ -20,10 +20,22 @@
 import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 import { isRecord } from '../../shared/utils/is-record';
 
+import type { Cart } from '../../api/generated/models/cart';
+
 const INTENT_KEY_STORAGE = 'mi-bolt.checkout.intent-key';
 const ORDER_KEY_STORAGE = 'mi-bolt.checkout.order-key';
 const INTENT_ID_STORAGE = 'mi-bolt.checkout.intent-id';
 const TERMS_ACCEPTED_STORAGE = 'mi-bolt.checkout.terms-accepted';
+
+/** The cart's lines as one string (`variantId:quantity`, sorted, comma
+ *  joined): the key the demo-terms tick is stored under, so the tick
+ *  reads false once the lines change (owner, 2026-09-23). */
+export function cartLinesKey(cart: Cart): string {
+  return cart.items
+    .map((item) => `${item.variantId}:${String(item.quantity)}`)
+    .sort((a, b) => a.localeCompare(b))
+    .join(',');
+}
 
 interface KeyedRecord {
   readonly fingerprint: string;
@@ -178,23 +190,38 @@ export const checkoutKeys = {
     }
   },
 
-  /** Whether the shopper ticked the demo terms on the review step; false
-   *  when nothing is stored or storage is denied. */
-  termsAccepted(): boolean {
+  /** Whether the shopper ticked the demo terms for these cart lines
+   *  (`cartLinesKey`); false when nothing is stored, when the lines
+   *  differ (a tick stored for other lines is removed), or when storage
+   *  is denied. */
+  termsAccepted(cartLines: string): boolean {
     const storage = readableStorage();
     try {
-      return storage?.getItem(TERMS_ACCEPTED_STORAGE) === 'true';
+      const stored = storage?.getItem(TERMS_ACCEPTED_STORAGE) ?? null;
+      if (stored !== null && stored !== cartLines) {
+        // A tick given for other lines is dropped, so it does not come
+        // back when the cart returns to those lines (owner, 2026-09-23:
+        // the tick clears when the cart changes).
+        storage?.removeItem(TERMS_ACCEPTED_STORAGE);
+        return false;
+      }
+      return stored === cartLines;
     } catch {
       // Storage read denied — the review step starts unticked.
       return false;
     }
   },
 
-  /** Persists the demo-terms tick for the cold return from the payment page. */
-  setTermsAccepted(accepted: boolean): void {
+  /** Persists the demo-terms tick for the cold return from the payment
+   *  page, under the cart lines it was given for; `null` removes it. */
+  setTermsAccepted(cartLines: string | null): void {
     const storage = readableStorage();
     try {
-      storage?.setItem(TERMS_ACCEPTED_STORAGE, String(accepted));
+      if (cartLines === null) {
+        storage?.removeItem(TERMS_ACCEPTED_STORAGE);
+      } else {
+        storage?.setItem(TERMS_ACCEPTED_STORAGE, cartLines);
+      }
     } catch {
       // Storage denied — the in-memory tick satisfies this page but is
       // lost on reload.

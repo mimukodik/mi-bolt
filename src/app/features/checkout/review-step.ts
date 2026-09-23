@@ -30,6 +30,7 @@ import {
   inject,
   Injector,
   input,
+  linkedSignal,
   output,
   signal,
   viewChild,
@@ -43,7 +44,7 @@ import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 import { OrderSummary } from '../cart/order-summary';
-import { checkoutKeys } from './checkout-keys';
+import { cartLinesKey, checkoutKeys } from './checkout-keys';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { TermsDialog } from './terms-dialog';
 
@@ -126,24 +127,43 @@ export class ReviewStep {
   /** No intent: start one. */
   readonly newPaymentRequested = output();
 
-  /** Whether the shopper has pressed the CTA at least once — flips
-   *  the consent from "default" to "submitted-invalid". */
-  readonly submitted = signal<boolean>(false);
+  /** The cart's lines as the key the terms tick is stored under. */
+  private readonly cartLines = computed<string>(() => cartLinesKey(this.cart()));
 
   /** Local presentation state. The wire body sends `acceptedTerms`
    *  as the literal `true` (`order-submission.ts:208`) because
    *  `onSubmit` never emits until this is checked. It starts from
-   *  the tick kept in sessionStorage (`checkoutKeys.termsAccepted()`),
-   *  because the card payment returns by a full page load that
-   *  rebuilds this step. */
-  readonly acceptedTerms = signal<boolean>(checkoutKeys.termsAccepted());
-  private readonly termsTouched = signal<boolean>(false);
+   *  the tick kept in sessionStorage for these cart lines, because
+   *  the card payment returns by a full page load that rebuilds this
+   *  step, and it clears when the lines change (owner, 2026-09-23:
+   *  "Kosárváltozáskor törlődjön";
+   *  https://angular.dev/guide/signals/linked-signal). */
+  readonly acceptedTerms = linkedSignal<string, boolean>({
+    source: this.cartLines,
+    computation: (lines) => checkoutKeys.termsAccepted(lines),
+  });
+  /** Whether the shopper left the terms checkbox. It resets with the
+   *  cart lines, like the tick, so a tick cleared by a cart change is
+   *  not flagged as an error the shopper never made on these lines. */
+  private readonly termsTouched = linkedSignal<string, boolean>({
+    source: this.cartLines,
+    computation: () => false,
+  });
+  /** Whether the shopper has pressed the CTA on these cart lines —
+   *  flips the consent from "default" to "submitted-invalid". It
+   *  resets with the cart lines, like the tick, so a click on the old
+   *  lines does not flag a tick the cart change cleared. */
+  readonly submitted = linkedSignal<string, boolean>({
+    source: this.cartLines,
+    computation: () => false,
+  });
 
   /** Whether the demo terms dialog is open. */
   readonly termsOpened = signal<boolean>(false);
 
   private readonly termsInput = viewChild<ElementRef<HTMLInputElement>>('termsInput');
   private readonly stateBanner = viewChild<ElementRef<HTMLElement>>('stateBanner');
+  private readonly ctaExplanationEl = viewChild<ElementRef<HTMLElement>>('ctaExplanation');
   private readonly injector = inject(Injector);
 
   protected readonly crumbs: readonly CheckoutCrumb[] = [
@@ -352,7 +372,7 @@ export class ReviewStep {
   onAcceptedTermsChange(event: Event): void {
     if (!isHTMLInputElement(event.target)) return;
     this.acceptedTerms.set(event.target.checked);
-    checkoutKeys.setTermsAccepted(event.target.checked);
+    checkoutKeys.setTermsAccepted(event.target.checked ? this.cartLines() : null);
   }
 
   onAcceptedTermsBlur(): void {
@@ -363,7 +383,8 @@ export class ReviewStep {
    *  2026-09-22: "Mindig aktív, kattintásra hibák"): a click that
    *  cannot submit marks the terms and, in the conflict, stock-error
    *  and error states moves focus to that state's banner (its
-   *  explanation), otherwise to the unticked terms. Disabled only
+   *  explanation), otherwise to the unticked terms, and with the
+   *  terms ticked to the explanation under the button. Disabled only
    *  while submitting. */
   onSubmit(): void {
     if (this.state() === 'submitting') return;
@@ -379,7 +400,9 @@ export class ReviewStep {
     }
     if (!this.acceptedTerms()) {
       this.focusAfterRender(() => this.termsInput()?.nativeElement.focus({ focusVisible: true }));
+      return;
     }
+    this.focusAfterRender(() => this.ctaExplanationEl()?.nativeElement.focus());
   }
 
   /** Runs `focus` after the next render, once the marking the click
