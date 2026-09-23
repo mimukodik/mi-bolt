@@ -388,7 +388,7 @@ Az API tesztek a HTTP réteget mérik: útvonal, státuszkód, fejléc, törzs.
 
 ### 7.4 Szerződés-ellenőrzés
 
-Minden válasznak meg kell felelnie az `contracts/commerce/openapi.yaml`-nek, és ezt **géppel** kell
+Minden válasznak meg kell felelnie a `contracts/commerce/openapi.yaml`-nek, és ezt **géppel** kell
 ellenőrizni, nem szemre. Ez fogja el azt az esetet, amikor a kód és a szerződés észrevétlenül
 elválik egymástól — ami contract-first projektben a legdrágább hiba.
 
@@ -425,7 +425,7 @@ rossz, hiányos vagy megvalósíthatatlan, azt **nem csendben kell megkerülni**
 tenni: bejegyzést írni róla a `docs/decisions/` alá, és **javítani az érintett dokumentumot** —
 különben ez a csomag elavul, és a következő menet már hazugságból dolgozik.
 
-**A szerződés külön eset.** Ha a hiba az `contracts/commerce/openapi.yaml`-ben van, a specet **nem** az
+**A szerződés külön eset.** Ha a hiba a `contracts/commerce/openapi.yaml`-ben van, a specet **nem** az
 implementáció írja át magától. Jelezni kell, mert a szerződés módosítása a frontendet is
 érinti — és a specnek van saját kiadási rendje, git taggel.
 
