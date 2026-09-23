@@ -45,7 +45,8 @@ export const cartStore: { current: CartStore | null } = { current: null };
 
 /** `?mi-scenario=cart-mutation-fails`: removing a line and clearing the
  *  cart answer 503 and leave the cart as it was, so a browser pass can
- *  drive the cart page's failed-mutation path. */
+ *  drive the cart page's failed-mutation path. Quantity updates (PATCH)
+ *  and additions (POST) still succeed in this scenario. */
 export const CART_MUTATION_FAILS_SCENARIO = 'cart-mutation-fails';
 
 function simulatedMutationFailure(options: CreateHandlersOptions): HttpResponse<DefaultBodyType> {
