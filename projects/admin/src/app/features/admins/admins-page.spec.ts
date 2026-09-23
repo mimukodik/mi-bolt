@@ -144,6 +144,21 @@ function dialogButtonByLabel(label: string): HTMLButtonElement {
   return found;
 }
 
+function ujAdminButton(host: HTMLElement): HTMLButtonElement {
+  const found = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+    button.textContent.includes('Új admin'),
+  );
+  if (found === undefined) throw new Error('no Új admin button in the header row');
+  return found;
+}
+
+/** The single input of whichever dialog the overlay currently holds. */
+function dialogInput(): HTMLInputElement {
+  const found = document.querySelector<HTMLInputElement>('.cdk-overlay-container input');
+  if (found === null) throw new Error('no input in the open dialog');
+  return found;
+}
+
 function snackBarText(): string {
   const element = document.querySelector('.mat-mdc-snack-bar-container, .mat-mdc-simple-snack-bar');
   if (element === null) throw new Error('no snack-bar container in the document');
@@ -465,5 +480,93 @@ describe('AdminsPage', () => {
     fixture.detectChanges();
     // The first GET counts as one; the Újra click triggers a second.
     expect(userGetCount).toBeGreaterThanOrEqual(2);
+  });
+
+  // Fails if openNewAdmin stops reloading the list after a 201, if the
+  // generated-password dialog stops opening with disableClose, if the
+  // password shown there stops matching what the mock db stored, or if
+  // AdminsStore starts holding the password anywhere in its state.
+  it('case 9: Új admin creates an admin, refreshes the list and shows the password once', async () => {
+    const db = signedInDb();
+    primeXsrf(db);
+    server?.use(...authHandlers(db), ...usersHandlers(db));
+    await signInAndRefresh(db);
+
+    let getCount = 0;
+    const getListener = ({ request }: { request: Request }): void => {
+      if (request.method === 'GET' && request.url.includes('/admin/users')) getCount++;
+    };
+    server?.events.on('request:start', getListener);
+
+    try {
+      const fixture = TestBed.createComponent(AdminsPage);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const host = hostOf(fixture);
+
+      const opening = vi.spyOn(fixture.componentInstance, 'openNewAdmin');
+      ujAdminButton(host).click();
+      await fixture.whenStable();
+
+      const usernameField = dialogInput();
+      usernameField.value = 'kovacs.anna';
+      usernameField.dispatchEvent(new Event('input'));
+      dialogButtonByLabel('Létrehozás').click();
+      await fixture.whenStable();
+
+      const stored = [...db.admins.values()].find((admin) => admin.user.username === 'kovacs.anna');
+      if (stored === undefined) throw new Error('expected kovacs.anna to exist in the mock db');
+      expect(dialogInput().value).toBe(stored.password);
+      expect(TestBed.inject(MatDialog).openDialogs[0]?.disableClose).toBe(true);
+      expect(getCount).toBe(2);
+      fixture.detectChanges();
+      expect(rowByUsername(host, 'kovacs.anna')).not.toBeUndefined();
+
+      const store = fixture.debugElement.injector.get(AdminsStore);
+      expect(JSON.stringify(store.admins())).not.toContain(stored.password);
+
+      dialogButtonByLabel('Bezárás').click();
+      await returnedPromise(opening.mock.results[0]);
+    } finally {
+      server?.events.removeListener('request:start', getListener);
+    }
+  });
+
+  // Fails if Mégse on Új admin stops closing without a value, if
+  // openNewAdmin runs the reload or opens the password dialog anyway.
+  it('case 10: Mégse on Új admin sends nothing', async () => {
+    const db = signedInDb();
+    server?.use(...authHandlers(db), ...usersHandlers(db));
+    await signInAndRefresh(db);
+
+    let getCount = 0;
+    let postCount = 0;
+    const requestListener = ({ request }: { request: Request }): void => {
+      if (!request.url.includes('/admin/users')) return;
+      if (request.method === 'GET') getCount++;
+      if (request.method === 'POST') postCount++;
+    };
+    server?.events.on('request:start', requestListener);
+
+    try {
+      const fixture = TestBed.createComponent(AdminsPage);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const host = hostOf(fixture);
+
+      const opening = vi.spyOn(fixture.componentInstance, 'openNewAdmin');
+      ujAdminButton(host).click();
+      await fixture.whenStable();
+
+      dialogButtonByLabel('Mégse').click();
+      await returnedPromise(opening.mock.results[0]);
+      await fixture.whenStable();
+
+      expect(postCount).toBe(0);
+      expect(getCount).toBe(1);
+      expect(TestBed.inject(MatDialog).openDialogs.length).toBe(0);
+    } finally {
+      server?.events.removeListener('request:start', requestListener);
+    }
   });
 });
