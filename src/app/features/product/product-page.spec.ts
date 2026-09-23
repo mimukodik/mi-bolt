@@ -19,36 +19,7 @@ import { CartFacade } from '../cart/cart.facade';
 import type { UiProblem } from '../../shared/types/ui-problem';
 import { isProductNotFound, ProductFacade, type ProductVm } from './product.facade';
 import { ProductPage } from './product-page';
-import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
-import type { Product } from '../../api/generated/models/product';
-import type { Variant } from '../../api/generated/models/variant';
-
-/**
- * `src/mocks/repository`'s `Product`/`Variant` types declare their
- * array fields `readonly`; the generated SDK's `Product` (which
- * `ProductVm.product` is typed against) declares the same fields
- * mutable. The two are structurally incompatible for direct
- * assignment, so a stubbed `ProductVm` needs a fresh object built
- * with mutable copies of every array `DEMO_PRODUCT` carries.
- */
-function toGeneratedProduct(source: typeof DEMO_PRODUCT): Product {
-  const toVariant = (v: (typeof source.variants)[number]): Variant => ({
-    ...v,
-    slug: `${v.id}-variant`,
-    images: [...v.images],
-  });
-  // Drop the fields the mock fixture still carries but the
-  // 2.0.0 Product type no longer accepts, and supply the `releasedAt`
-  // field ProductBase requires but the mock fixture omits.
-  const { isDemo: _isDemo, defaultVariant: _defaultVariant, ...rest } = source;
-  return {
-    ...rest,
-    releasedAt: '2026-01-01',
-    highlights: [...source.highlights],
-    variants: source.variants.map(toVariant),
-    specGroups: source.specGroups.map((g) => ({ ...g, rows: [...g.rows] })),
-  };
-}
+import { DEMO_PRODUCT } from './demo-product.fixture';
 
 /**
  * T16 - Product detail page (S3).
@@ -856,7 +827,7 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
     // page in the one state where `?? null` and `?? 'in_stock'` differ.
     const vm = signal<ProductVm>({
       status: 'success',
-      product: toGeneratedProduct(DEMO_PRODUCT),
+      product: DEMO_PRODUCT,
       selectedVariant: null,
       selectedImage: null,
       gallery: [],

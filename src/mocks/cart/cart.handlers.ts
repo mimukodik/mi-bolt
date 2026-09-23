@@ -30,7 +30,6 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { isRecord } from '../is-record';
-import type { Product } from '../repository';
 
 import { buildTraceId, CartStore, problemType } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
@@ -60,121 +59,6 @@ function simulatedMutationFailure(options: CreateHandlersOptions): HttpResponse<
     },
   });
 }
-
-const VARIANTS: Product['variants'] = [
-  {
-    id: 'demo-one-5g-graphite-256',
-    colorCode: 'graphite',
-    colorName: 'Grafit',
-    swatchHex: '#343B43',
-    storageGb: 256,
-    price: { amount: 339_990, currency: 'HUF' },
-    availability: 'in_stock',
-    maxQuantity: 5,
-    images: [
-      {
-        id: 'demo-one-5g-graphite-256-front',
-        src: '/assets/products/graphite-front.webp',
-        alt: 'Demo One 5G, Grafit, 256 GB, elölnézet',
-        width: 320,
-        height: 400,
-      },
-    ],
-  },
-  {
-    id: 'demo-one-5g-graphite-512',
-    colorCode: 'graphite',
-    colorName: 'Grafit',
-    swatchHex: '#343B43',
-    storageGb: 512,
-    price: { amount: 378_390, currency: 'HUF' },
-    availability: 'in_stock',
-    maxQuantity: 5,
-    images: [
-      {
-        id: 'demo-one-5g-graphite-512-front',
-        src: '/assets/products/graphite-front.webp',
-        alt: 'Demo One 5G, Grafit, 512 GB, elölnézet',
-        width: 320,
-        height: 400,
-      },
-    ],
-  },
-  {
-    id: 'demo-one-5g-silver-256',
-    colorCode: 'silver',
-    colorName: 'Ezüst',
-    swatchHex: '#C6C9CB',
-    storageGb: 256,
-    price: { amount: 344_990, currency: 'HUF' },
-    availability: 'in_stock',
-    maxQuantity: 5,
-    images: [
-      {
-        id: 'demo-one-5g-silver-256-front',
-        src: '/assets/products/silver-front.webp',
-        alt: 'Demo One 5G, Ezüst, 256 GB, elölnézet',
-        width: 320,
-        height: 400,
-      },
-    ],
-  },
-  {
-    id: 'demo-one-5g-silver-512',
-    colorCode: 'silver',
-    colorName: 'Ezüst',
-    swatchHex: '#C6C9CB',
-    storageGb: 512,
-    price: { amount: 383_390, currency: 'HUF' },
-    availability: 'in_stock',
-    maxQuantity: 5,
-    images: [
-      {
-        id: 'demo-one-5g-silver-512-front',
-        src: '/assets/products/silver-front.webp',
-        alt: 'Demo One 5G, Ezüst, 512 GB, elölnézet',
-        width: 320,
-        height: 400,
-      },
-    ],
-  },
-];
-
-/**
- * Demo device fixture in the mock-local `Product` shape. The product
- * page specs render it as plain data; no handler serves it.
- */
-export const DEMO_PRODUCT: Product = {
-  id: 'p-01',
-  slug: 'demo-one-5g',
-  brand: 'MiBolt Demo',
-  name: 'Demo One 5G',
-  highlights: ['6,7″ kijelző', '50 MP kamera'],
-  is5g: true,
-  isDemo: true,
-  description:
-    'Fiktív készülék a MiBolt webshop működésének bemutatásához. A kép illusztráció, az ár demóadat.',
-  specGroups: [
-    {
-      id: 'display',
-      title: 'Kijelző és kialakítás',
-      rows: [
-        { label: 'Kijelző', value: '6,7″ • demóadat' },
-        { label: 'Képfrissítés', value: '120 Hz • demóadat' },
-      ],
-    },
-    {
-      id: 'connection',
-      title: 'Kapcsolat és memória',
-      rows: [
-        { label: 'Kapcsolat', value: '5G / Wi-Fi / Bluetooth • demóadat' },
-        { label: 'Tárhely', value: 'Változattól függő • demóadat' },
-      ],
-    },
-  ],
-  variants: VARIANTS,
-  defaultVariant: VARIANTS[0],
-};
 
 /**
  * Resolve the loaded catalogue store; throw when no fixture was
