@@ -18,6 +18,11 @@ import playwright from 'eslint-plugin-playwright';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// One app never imports another (MIM-414, requirement A-6): code two apps
+// share lives in a library under projects/ and is imported through its alias.
+const CROSS_APP_IMPORT_MESSAGE =
+  'One app never imports another: move the shared code into a library under projects/ and import it through its alias.';
+
 export default defineConfig([
   // Shared baseline ported from example-eslint.config.mjs (MIM-209): every
   // rule the source repo sets, at the same severity, minus the Nx-only
@@ -352,8 +357,30 @@ export default defineConfig([
               message:
                 'The shop SDK and mocks are not for the admin: use projects/admin/src/app/api/generated.',
             },
+            {
+              regex: '(^|/)(storefront|demo-payment)/',
+              message: CROSS_APP_IMPORT_MESSAGE,
+            },
           ],
         },
+      ],
+    },
+  },
+  {
+    files: ['projects/storefront/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ regex: '(^|/)(admin|demo-payment)/', message: CROSS_APP_IMPORT_MESSAGE }] },
+      ],
+    },
+  },
+  {
+    files: ['projects/demo-payment/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ regex: '(^|/)(storefront|admin)/', message: CROSS_APP_IMPORT_MESSAGE }] },
       ],
     },
   },
