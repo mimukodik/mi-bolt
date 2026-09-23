@@ -36,8 +36,8 @@ Example planned angular.json test target:
   "builder": "@angular/build:unit-test",
   "options": {
     "coverage": true,
-    "coverageInclude": ["src/**/*.ts"],
-    "coverageExclude": ["**/*.spec.ts", "**/*.test.ts", "**/*.d.ts", "src/app/api/generated/**"],
+    "coverageInclude": ["projects/storefront/src/**/*.ts"],
+    "coverageExclude": ["**/*.spec.ts", "**/*.test.ts", "**/*.d.ts", "projects/storefront/src/app/api/generated/**", "tests/**"],
     "coverageThresholds": {"perFile":false,"statements":80,"branches":75,"functions":80,"lines":80},
     "coverageReporters": ["html","lcov","json","json-summary"]
   }
@@ -88,7 +88,7 @@ Visual reference is the unchanged reference image in the separately installed sk
 
 ## 7. Project commands
 
-Implement these exact package scripts in their owning tasks; they are not commands claimed executed for an absent app:
+These are the exact package scripts the application defines; they are not commands claimed executed for an absent app:
 
 ```text
 npm ci
@@ -96,15 +96,13 @@ npm run lint              ng lint — TS, templates, and the test-policy rules
 npm run test              ng test — Vitest through @angular/build:unit-test, with coverage and the 80/75/80/80 thresholds
 npm run build              ng build — the optimized production artifact
 npm start                 ng serve — the local development server
-npm run api:generate      ng-openapi-gen --config ng-openapi-gen.json
-npm run api:drift         api:generate, then git diff --exit-code on the generated SDK
+npm run api:generate      ng-openapi-gen --config ng-openapi-gen.json, then --config ng-openapi-gen.admin.json
+npm run api:drift         api:generate, then git diff --exit-code and git ls-files --others --exclude-standard on both generated SDKs
 npm run format            prettier --write .
 npm run format:check      prettier --check .
 ```
 
-The end-to-end suite was reinstated on 2026-09-22: Playwright under `e2e/`, written only by the `playwright-test-*` agents, its CI job skipped until the first spec lands. Section 3 describes it.
-
-There is no CI pipeline and no aggregate release gate. Each command is run directly by whoever does the work, and its exit code is recorded in that task's evidence under docs/mi-bolt/execution/. Two of the checks are configuration rather than commands of their own: bundle budgets are the Angular CLI's own `budgets` array in the `production` build configuration of angular.json, so `ng build` enforces them, and unit coverage thresholds are the `@angular/build:unit-test` builder's own `coverageThresholds`, so `ng test` enforces them. Browser tests use a local STATIC host, not a business backend. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.
+The pull-request workflow (`.github/workflows/pr-check.yml`) runs these gates: `lint`, `unit-tests` with coverage, `build` and `api-drift`; its `e2e` and `e2e-report` jobs carry `if: false` until the first spec under `e2e/integration/` lands. Every command is also run directly by whoever does the work, and its exit code is recorded with that task's evidence under docs/mi-bolt/execution/. Two of the checks are configuration rather than commands of their own: bundle budgets are the Angular CLI's own `budgets` array in the `production` build configuration of angular.json, so `ng build` enforces them, and unit coverage thresholds are the `@angular/build:unit-test` builder's own `coverageThresholds`, so `ng test` enforces them. Browser tests use a local STATIC host, not a business backend. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.
 
 ## 8. Required evidence
 

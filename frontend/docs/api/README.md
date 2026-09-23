@@ -1,21 +1,21 @@
-# API-szerződés és mock-adatok
+# API contract and mock data
 
-Az egyetlen normatív wire-szerződés a git gyökerében lévő [`contracts/commerce/openapi.yaml`](../../../contracts/commerce/openapi.yaml); a backend és a frontend is ebből generál. Ez a mappa a frontend oldali leírást és a mock-fixture-t tartja.
+The single normative wire contract is [`contracts/commerce/openapi.yaml`](../../../contracts/commerce/openapi.yaml) at the git root; the backend and the frontend both generate from it. This folder holds the frontend-side description and the mock fixture.
 
-## Helye a projektben
+## Where it sits in the project
 
-- Szerződés: `contracts/commerce/openapi.yaml` (a git gyökeréből). Második, kézzel karbantartott példány nem lehet.
-- Generátorkonfiguráció: `frontend/ng-openapi-gen.json` (bolt) és `frontend/ng-openapi-gen.admin.json` (admin); mindkettő `input` mezője `../contracts/commerce/openapi.yaml`.
-- SDK-kimenet: `frontend/projects/storefront/src/app/api/generated/` és `frontend/projects/admin/src/app/api/generated/`. Kézzel nem módosítható.
-- Mock-adatok: `fixtures/catalog.json`, a generált MSW-fixture. A forrása a gyökér `data/catalog/catalog.json`; az `npm run fixtures:catalog` állítja elő, az `npm run fixtures:catalog:check` ellenőrzi, hogy nem tért el.
+- Contract: `contracts/commerce/openapi.yaml` (from the git root). A second, hand-maintained copy is not permitted.
+- Generator configuration: `frontend/ng-openapi-gen.json` (shop) and `frontend/ng-openapi-gen.admin.json` (admin); both take `../contracts/commerce/openapi.yaml` in their `input` field.
+- SDK output: `frontend/projects/storefront/src/app/api/generated/` and `frontend/projects/admin/src/app/api/generated/`. Never edited by hand.
+- Mock data: `fixtures/catalog.json`, the generated MSW fixture. Its source is `data/catalog/catalog.json` at the git root; `npm run fixtures:catalog` generates it and `npm run fixtures:catalog:check` verifies that it has not drifted.
 
-A generálás a `frontend/` mappából:
+Generation runs from the `frontend/` folder:
 
 ```sh
 npm run api:generate
 ```
 
-Az `npm run api:drift` ugyanezt a generálást futtatja, majd `git diff --exit-code`-dal és `git ls-files --others --exclude-standard`-dal ellenőrzi, hogy a commitolt SDK megfelel a commitolt szerződésnek. A szerződést a `frontend/tests/contract/` alatti vitest-tesztek is olvassák. A teszt- és release-parancsok teljes listája: [tesztstratégia](../spec/testing.md).
+`npm run api:drift` runs the same generation and then checks with `git diff --exit-code` and `git ls-files --others --exclude-standard` that the committed SDK matches the committed contract. The vitest tests under `frontend/tests/contract/` read the contract too. The full list of test and release commands is in the [test strategy](../spec/testing.md).
 
 ## Two SDKs, one spec (MIM-331)
 

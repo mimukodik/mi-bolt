@@ -1,46 +1,46 @@
-# MiBolt MVP — projektbe helyezhető dokumentáció
+# MiBolt MVP — documentation ready to be placed in the project
 
-## Hová kerüljön?
+## Where it lives
 
-A dokumentáció a monorepó `frontend/docs/` mappájában van, lapos elrendezésben:
+The documentation is in the monorepo's `frontend/docs/` folder, in a flat layout:
 
 ```text
 docs/
-├── README.md        ez a belépő
-├── spec/            architektúra, képernyők, komponensek, tesztek,
-│                    elfogadás és technológiai döntések
-├── api/             SDK-generálás, fixture-k
+├── README.md        this entry point
+├── spec/            architecture, screens, components, tests,
+│                    acceptance and technology decisions
+├── api/             SDK generation, fixtures
 ├── design/          yettel design reference, demo images
-└── briefs/          a korábbi runner-briefek archívuma
+└── briefs/          the archive of the earlier runner briefs
 ```
 
-Ez tervezési és végrehajtási dokumentáció, **nem kész Angular alkalmazás**.
+This is design and execution documentation, **not a finished Angular application**.
 
-## Fejlesztés indítása
+## Starting development
 
-This needs repository access, command execution, real subagent spawning, a browser tool and the design reference [`design/yettel.md`](design/yettel.md). A [végrehajtási szabályok](spec/execution-rules.md) tartalmazzák a felderítést, a szerepköröket, a kötelező review-/javítási ciklust, a dependency-alapú sorrendet, a tesztkapukat és a végső átadást.
+This needs repository access, command execution, real subagent spawning, a browser tool and the design reference [`design/yettel.md`](design/yettel.md). The [execution rules](spec/execution-rules.md) carry the reconnaissance, the roles, the mandatory review/fix cycle, the dependency-based order, the test gates and the final handover.
 
-## Hol mit találsz?
+## What is where
 
-| Cél | Belépő |
+| Goal | Entry point |
 |---|---|
-| Architektúra és komponenskommunikáció | [Architektúra](spec/architecture.md), [komponensek](spec/components.md) |
-| Pontos képernyők és reszponzív állapotok | [Képernyő-specifikáció](spec/screens.md), [design belépő](design/README.md) |
-| API és SDK-generálás | [API belépő](api/README.md), [OpenAPI](../../contracts/commerce/openapi.yaml) |
-| Tesztek és teljes projektelfogadás | [Tesztstratégia](spec/testing.md), [elfogadás](spec/acceptance.md) |
-| Kötelező végrehajtási szabályok | [Execution rules](spec/execution-rules.md) |
-| Kutatásból átvett és kizárt technológiák | [Döntések](spec/technology-decisions.md), [forrásjegyzék](spec/sources.md) |
+| Architecture and component communication | [Architecture](spec/architecture.md), [components](spec/components.md) |
+| Exact screens and responsive states | [Screen specification](spec/screens.md), [design entry](design/README.md) |
+| API and SDK generation | [API entry](api/README.md), [OpenAPI](../../contracts/commerce/openapi.yaml) |
+| Tests and overall project acceptance | [Test strategy](spec/testing.md), [acceptance](spec/acceptance.md) |
+| Mandatory execution rules | [Execution rules](spec/execution-rules.md) |
+| Technologies adopted from the research and excluded | [Decisions](spec/technology-decisions.md), [source list](spec/sources.md) |
 
 The interactive handover report (`index.html`) and the clickable prototype (`design/prototype.html`) were removed on 2026-09-22: they showed the pre-yettel plan, and the spec files under `spec/` and `design/yettel.md` are the live source.
 
-## Mi került ki?
+## What was removed
 
-A gépi task-, követelmény- és elfogadási leírók (`tasks/`) és a rájuk épülő `spec/traceability.md` a monorepó-migrációban kikerültek; a nyilvántartás a Linear. A prózai párjuk (`spec/acceptance.md`, `spec/test-scenarios.md`, `spec/testing.md`) marad. Korábban kikerült a skill másolata, a nyers kutatások és eredeti ZIP-ek, a régi validációs logok/segédszkriptek, a generált OpenAPI JSON, a task-CSV és a redundáns exportok. A forrásazonosítás és a kutatásból levont döntések a `spec/` alatt megmaradnak.
+The machine-readable task, requirement and acceptance descriptors (`tasks/`) and the `spec/traceability.md` built on them were removed; the register is Linear. Their prose counterparts (`spec/acceptance.md`, `spec/test-scenarios.md`, `spec/testing.md`) stay. Removed earlier were the skill copy, the raw research and the original ZIPs, the old validation logs/helper scripts, the generated OpenAPI JSON, the task CSV and the redundant exports. Source identification and the decisions taken from the research stay under `spec/`.
 
-## Fontos végrehajtási részletek
+## Important execution details
 
-A csomag minden `docs/...` hivatkozása az Angular workspace gyökeréhez (`frontend/`) képest értendő; a `src/...` útvonalak a bolt forrására (`frontend/projects/storefront/src/...`) mutatnak. Az OpenAPI forrása a git gyökerében lévő `contracts/commerce/openapi.yaml`; a bolt SDK-ja a `frontend/projects/storefront/src/app/api/generated/` mappába generálódik. A részleteket az [API belépő](api/README.md) rögzíti.
+Every `docs/...` reference in this package is relative to the Angular workspace root (`frontend/`); `src/...` paths point at the shop's source (`frontend/projects/storefront/src/...`). The OpenAPI source is `contracts/commerce/openapi.yaml` at the git root; the shop SDK is generated into `frontend/projects/storefront/src/app/api/generated/`. The [API entry](api/README.md) records the details.
 
-A végrehajtás a `docs/mi-bolt/execution/` alatt hozza majd létre a valós munkanaplót, skill-helyet, reviewer-jelentéseket és bizonyítékokat. Üres vagy előre „PASS”-ra állított evidence nincs a csomagban. A régi látványprototípus nem helyettesíti a készülő Angular alkalmazás friss tesztjeit és böngészős ellenőrzését.
+Execution creates the real work log, skill location, reviewer reports and evidence under `docs/mi-bolt/execution/`. The package contains no empty or pre-set "PASS" evidence. The old visual prototype does not replace the fresh tests and browser verification of the Angular application being built.
 
-Az O01 3D külön jóváhagyás nélkül nem része a baseline-nak. A unit-lefedettség küszöbe projektenként 80/75/80/80 (statements/branches/functions/lines), és az e2e-csomag 2026-09-22 óta újra része a projektnek; a hiteles leírás a [tesztstratégia](spec/testing.md). A verziókat végrehajtáskor ismét ellenőrizni kell; a dokumentáció dátumozott verzióadatai nem automatikusan aktuálisak.
+O01 3D is not part of the baseline without separate approval. The unit coverage threshold is 80/75/80/80 per project (statements/branches/functions/lines), and the e2e suite has been part of the project again since 2026-09-22; the authoritative description is the [test strategy](spec/testing.md). Versions must be checked again at execution time; the documentation's dated version data is not automatically current.
