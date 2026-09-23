@@ -13,6 +13,7 @@ import {
   asText,
   bodyViolations,
   fieldError,
+  firstQueryKey,
   hasOnlyMembers,
   isTextual,
   malformedBody,
@@ -22,6 +23,9 @@ import {
   unknownQueryParameter,
   wrongType,
 } from './backend-answers';
+
+/** The random `traceId` of every Problem body, typed `unknown` so an object literal may carry it. */
+const ANY_TRACE_ID: unknown = expect.any(String);
 
 async function bodyOf(response: Response): Promise<Record<string, unknown>> {
   const body: unknown = await response.json();
@@ -56,11 +60,13 @@ describe('backend answers', () => {
   it('answers a malformed body as a 400 with no field errors', async () => {
     const response = malformedBody();
     expect(response.status).toBe(400);
-    expect(await bodyOf(response)).toMatchObject({
+    expect(await bodyOf(response)).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
-      title: 'Invalid request',
       detail: 'Malformed request body',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [],
     });
   });
@@ -70,11 +76,13 @@ describe('backend answers', () => {
     const errors = [fieldError('/username', 'SIZE'), fieldError('/password', 'SIZE')];
     const response = bodyViolations(errors);
     expect(response.status).toBe(422);
-    expect(await bodyOf(response)).toMatchObject({
+    expect(await bodyOf(response)).toEqual({
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
       status: 422,
       code: 'VALIDATION_FAILED',
-      title: 'Section rejected',
       detail: 'One or more supplied fields are not acceptable',
+      traceId: ANY_TRACE_ID,
       fieldErrors: errors,
     });
   });
@@ -84,33 +92,47 @@ describe('backend answers', () => {
     const errors = [fieldError('/newPassword', 'SIZE'), fieldError('/currentPassword', 'REQUIRED')];
     const response = bodyViolations(errors);
     expect(response.status).toBe(400);
-    expect(await bodyOf(response)).toMatchObject({
+    expect(await bodyOf(response)).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
-      title: 'Invalid request',
       detail: 'Missing required member',
+      traceId: ANY_TRACE_ID,
       fieldErrors: errors,
     });
   });
 
   // Fails if the parameter rejections drift from ProblemAdvice's details and params.
   it('words the three parameter rejections as the backend does', async () => {
-    expect(await bodyOf(unknownQueryParameter('colour'))).toMatchObject({
+    expect(await bodyOf(unknownQueryParameter('colour'))).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
       params: { parameter: 'colour' },
     });
-    expect(await bodyOf(wrongType('page', 'Integer'))).toMatchObject({
+    expect(await bodyOf(wrongType('page', 'Integer'))).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Query or path parameter has the wrong type',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
       params: { parameter: 'page', reason: 'type Integer' },
     });
-    expect(await bodyOf(notAcceptable('pageSize', 'MAX'))).toMatchObject({
+    expect(await bodyOf(notAcceptable('pageSize', 'MAX'))).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Query or path parameter is not acceptable',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
       params: { parameter: 'pageSize', reason: 'MAX' },
     });
   });
@@ -119,11 +141,14 @@ describe('backend answers', () => {
   it('answers an unexpected failure with the backend 503 detail', async () => {
     const response = serviceUnavailable();
     expect(response.status).toBe(503);
-    expect(await bodyOf(response)).toMatchObject({
+    expect(await bodyOf(response)).toEqual({
+      type: 'urn:mi-bolt:problem:service-unavailable',
+      title: 'Service unavailable',
       status: 503,
       code: 'SERVICE_UNAVAILABLE',
-      title: 'Service unavailable',
       detail: 'The service is temporarily unavailable',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
     });
   });
 
@@ -162,5 +187,11 @@ describe('backend answers', () => {
     expect(asText(true)).toBe('true');
     expect(asText(null)).toBeUndefined();
     expect(asText(undefined)).toBeUndefined();
+  });
+
+  // Fails if firstQueryKey stops reading the first key in query-string order, or the no-query case.
+  it('reads the first query key in query-string order, undefined with none', () => {
+    expect(firstQueryKey(new Request('http://x/api/v1/admin/users?b=1&a=2&b=3'))).toBe('b');
+    expect(firstQueryKey(new Request('http://x/api/v1/admin/users'))).toBeUndefined();
   });
 });

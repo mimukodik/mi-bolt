@@ -20,6 +20,7 @@ import {
   asText,
   bodyViolations,
   fieldError,
+  firstQueryKey,
   hasOnlyMembers,
   isTextual,
   malformedBody,
@@ -663,11 +664,6 @@ async function readAndBeanValidate(request: Request): Promise<BeanValidationResu
 }
 
 // --- Query key, path id and If-Match (the brief's §2 and §6) -------------------------------
-
-function firstQueryKey(request: Request): string | undefined {
-  const url = new URL(request.url);
-  return Array.from(url.searchParams.keys())[0];
-}
 
 const DECIMAL_ID_PATTERN = /^([+-]?)([0-9]+)$/;
 const HEX_ID_PATTERN = /^(-?)(?:0[xX]|#)([0-9a-fA-F]+)$/;

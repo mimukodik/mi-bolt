@@ -5,6 +5,7 @@ import {
   asText,
   bodyViolations,
   fieldError,
+  firstQueryKey,
   isTextual,
   malformedBody,
   readJsonObject,
@@ -38,28 +39,54 @@ function generatePassword(): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** The first query key in query-string order, or `undefined` when there is none. */
-function firstQueryKey(request: Request): string | undefined {
-  const url = new URL(request.url);
-  return [...url.searchParams.keys()][0];
+const ADMIN_ID_GROUP_WIDTHS = [8, 4, 4, 4, 12] as const;
+const ADMIN_ID_GROUP_PATTERN = /^\+?([0-9a-fA-F]+)$/;
+const LONG_MAX = 0x7fffffffffffffffn;
+
+/** Java's `String.trim()`: strips leading and trailing characters whose code is at most `0x20`. */
+function javaTrim(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value.charCodeAt(start) <= 0x20) start += 1;
+  while (end > start && value.charCodeAt(end - 1) <= 0x20) end -= 1;
+  return value.slice(start, end);
 }
 
-const ADMIN_ID_PATTERN =
-  /^[0-9a-fA-F]{1,8}-[0-9a-fA-F]{1,4}-[0-9a-fA-F]{1,4}-[0-9a-fA-F]{1,4}-[0-9a-fA-F]{1,12}$/;
-const ADMIN_ID_GROUP_WIDTHS = [8, 4, 4, 4, 12];
+/**
+ * One `-`-separated group the way `Long.parseLong(group, 16)` reads it: an
+ * optional leading `+`, one or more hex digits, masked to the group's width
+ * in bits and printed lower-case, zero-padded to that many hex digits.
+ * `undefined` where the group does not match or its value overflows a Long.
+ */
+function normalizeAdminIdGroup(group: string, width: number): string | undefined {
+  const match = ADMIN_ID_GROUP_PATTERN.exec(group);
+  if (match === null) return undefined;
+  const [, digits] = match;
+  const value = BigInt('0x' + digits);
+  if (value > LONG_MAX) return undefined;
+  const mask = (1n << BigInt(width * 4)) - 1n;
+  return (value & mask).toString(16).padStart(width, '0');
+}
 
 /**
- * The path id the way Spring's `UUID.fromString` reads and re-prints it
- * (trimmed, each group zero-padded to 8-4-4-4-12 and lower-cased), or
- * `undefined` when it does not match a UUID's shape.
+ * The path id the way Java 21's `UUID.fromString` reads and re-prints it
+ * after `trim()` (`StringToUUIDConverter` calls
+ * `UUID.fromString(source.trim())`): at most 36 characters, exactly five
+ * `-`-separated groups, each read and re-printed by `normalizeAdminIdGroup`,
+ * or `undefined` where `UUID.fromString` would throw.
  */
 function normalizeAdminId(raw: string): string | undefined {
-  const trimmed = raw.trim();
-  if (trimmed.length > 36 || !ADMIN_ID_PATTERN.test(trimmed)) return undefined;
+  const trimmed = javaTrim(raw);
+  if (trimmed.length > 36) return undefined;
   const groups = trimmed.split('-');
-  return groups
-    .map((group, index) => group.toLowerCase().padStart(ADMIN_ID_GROUP_WIDTHS[index] ?? 0, '0'))
-    .join('-');
+  if (groups.length !== ADMIN_ID_GROUP_WIDTHS.length) return undefined;
+  const normalized: string[] = [];
+  for (let index = 0; index < groups.length; index += 1) {
+    const group = normalizeAdminIdGroup(groups[index], ADMIN_ID_GROUP_WIDTHS[index]);
+    if (group === undefined) return undefined;
+    normalized.push(group);
+  }
+  return normalized.join('-');
 }
 
 /** The three `AdminUsers` operations: list, create, delete. */

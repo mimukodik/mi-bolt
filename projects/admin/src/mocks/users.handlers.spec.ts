@@ -460,6 +460,81 @@ describe('DELETE /admin/users/:adminId', () => {
     expect(body['params']).toEqual({ adminId: 'abcdef01-0002-0003-0004-000000000005' });
   });
 
+  // Fails if normalizeAdminId stops converting the path id the way Java 21's
+  // UUID.fromString does after trim() (measured on OpenJDK 21.0.12): a
+  // success row answers 404 with the exact printed UUID in `params.adminId`.
+  const NORMALIZE_CASES: readonly (readonly [string, string])[] = [
+    ['123456789-1-1-1-1', '23456789-0001-0001-0001-000000000001'],
+    ['+1-1-1-1-1', '00000001-0001-0001-0001-000000000001'],
+    ['ABCDEF01-2-3-4-5', 'abcdef01-0002-0003-0004-000000000005'],
+    ['1-1-1-1-1234567890123', '00000001-0001-0001-0001-234567890123'],
+    ['7fffffffffffffff-1-1-1-1', 'ffffffff-0001-0001-0001-000000000001'],
+    ['00000000000000000001-1-1-1-1', '00000001-0001-0001-0001-000000000001'],
+    [' 1-1-1-1-1 ', '00000001-0001-0001-0001-000000000001'],
+    ['11111111-2222-3333-4444-555555555555', '11111111-2222-3333-4444-555555555555'],
+  ];
+
+  it.each(NORMALIZE_CASES)(
+    'normalizes %s to %s, answering 404 with the normalised id in params',
+    async (raw, expected) => {
+      const db = createDb();
+      signIn(db);
+      const token = primeToken(db);
+      server?.use(...usersHandlers(db));
+
+      const res = await fetch(userUrl(encodeURIComponent(raw)), {
+        method: 'DELETE',
+        headers: { 'X-XSRF-TOKEN': token },
+      });
+      expect(res.status).toBe(404);
+      const body = await jsonRecord(res);
+      expect(body['code']).toBe('NOT_FOUND');
+      expect(body['params']).toEqual({ adminId: expected });
+    },
+  );
+
+  // Fails if a shape UUID.fromString would reject (overflow, wrong group
+  // count, an empty group, a non-hex character) stops being answered as
+  // wrongType('adminId', 'UUID').
+  const NOT_UUID_CASES: readonly string[] = [
+    '1-1-1-1-10000000000000000',
+    '8000000000000000-1-1-1-1',
+    '-1-1-1-1',
+    '1-1-1-1',
+    '1-1-1-1-1-1',
+    '1--1-1-1',
+    '+-1-1-1-1',
+    '0x1-1-1-1-1',
+    '1-1-1-1-',
+    '1-1-1-1-+',
+    'g-1-1-1-1',
+    '123456789012345678901234567890123456-',
+  ];
+
+  it.each(NOT_UUID_CASES)('rejects %s as not a UUID with the wrongType body', async (raw) => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+
+    const res = await fetch(userUrl(encodeURIComponent(raw)), {
+      method: 'DELETE',
+      headers: { 'X-XSRF-TOKEN': token },
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Query or path parameter has the wrong type',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
+      params: { parameter: 'adminId', reason: 'type UUID' },
+    });
+  });
+
   it('deletes a non-self admin: 204, and it is removed', async () => {
     const db = createDb();
     signIn(db);

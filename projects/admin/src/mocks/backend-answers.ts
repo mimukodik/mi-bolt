@@ -33,6 +33,11 @@ export function bodyViolations(fieldErrors: readonly FieldError[]): HttpResponse
   });
 }
 
+/** The first query key in query-string order, or `undefined` when there is none. */
+export function firstQueryKey(request: Request): string | undefined {
+  return [...new URL(request.url).searchParams.keys()][0];
+}
+
 /** A query key the operation does not declare. */
 export function unknownQueryParameter(parameter: string): HttpResponse<Problem> {
   return problem(400, 'INVALID_REQUEST', 'Invalid request', {
