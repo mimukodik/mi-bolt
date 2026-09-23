@@ -16,3 +16,6 @@ backend:
   - 'tools/ci/**'
 contracts:
   - 'contracts/**'
+tools:
+  - 'tools/**'
+  - 'mise.toml'

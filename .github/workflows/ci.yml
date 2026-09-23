@@ -2,7 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
@@ -25,6 +24,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       contracts: ${{ steps.filter.outputs.contracts }}
+      tools: ${{ steps.filter.outputs.tools }}
     steps:
       - uses: actions/checkout@v7
       - id: filter
@@ -47,9 +47,14 @@ jobs:
     if: needs.changes.outputs.contracts == 'true'
     uses: ./.github/workflows/contracts.yml
 
+  tools:
+    needs: changes
+    if: needs.changes.outputs.tools == 'true'
+    uses: ./.github/workflows/tools.yml
+
   ci-ok:
     name: ci-ok
-    needs: [changes, frontend, backend, contracts]
+    needs: [changes, frontend, backend, contracts, tools]
     if: always()
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
