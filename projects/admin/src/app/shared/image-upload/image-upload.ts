@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   inject,
   input,
@@ -10,7 +11,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { ElementRef } from '@angular/core';
 import type { FormValueControl } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatProgressBar } from '@angular/material/progress-bar';
@@ -106,7 +106,10 @@ export class ImageUpload implements FormValueControl<Image | null> {
   readonly describedBy = input<string | null>(null);
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
-  private readonly chooseButton = viewChild.required<ElementRef<HTMLButtonElement>>('chooseButton');
+  private readonly chooseButton = viewChild.required<string, ElementRef<HTMLButtonElement>>(
+    'chooseButton',
+    { read: ElementRef },
+  );
 
   protected readonly previewUrl = signal<string | null>(null);
   protected readonly uploading = signal(false);

@@ -4,6 +4,7 @@ import type { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { FormField, disabled, form } from '@angular/forms/signals';
+import { By } from '@angular/platform-browser';
 import { Subject } from 'rxjs';
 
 import type { Image } from '../../api/generated/models/image';
@@ -81,6 +82,14 @@ function chooseButton(fixture: ComponentFixture<unknown>): HTMLButtonElement {
   const found = hostElement(fixture).querySelector('button');
   if (!(found instanceof HTMLButtonElement)) {
     throw new Error('missing choose button');
+  }
+  return found;
+}
+
+function imageUploadInstance(fixture: ComponentFixture<unknown>): ImageUpload {
+  const found: unknown = fixture.debugElement.query(By.directive(ImageUpload)).componentInstance;
+  if (!(found instanceof ImageUpload)) {
+    throw new Error('missing ImageUpload instance');
   }
   return found;
 }
@@ -391,5 +400,99 @@ describe('ImageUpload', () => {
     await fixture.whenStable();
 
     expect(tracker.busy()).toBe(false);
+  });
+
+  it('13. a 422 with no field errors shows the generic upload-failed message', async () => {
+    // Fails if uploadErrorMessage stops returning UPLOAD_FAILED_MESSAGE for an
+    // empty fieldErrors array (image-upload.ts:42-43).
+    const fixture = await createFixture(ImageUploadTestHost);
+
+    chooseFile(fixture, pngFile());
+    await fixture.whenStable();
+    uploaderStub.subjects[0].error(problemError(422, []));
+    await fixture.whenStable();
+
+    expect(alertText(fixture)).toBe('A feltöltés nem sikerült. Próbáld újra.');
+    expect(fixture.componentInstance.form.image().value()).toBeNull();
+  });
+
+  it('14. a 422 with an unknown field error code shows the fallback message', async () => {
+    // Fails if uploadErrorMessage stops falling back to SERVER_FIELD_FALLBACK for
+    // a field error code that is not a key of SERVER_FIELD_MESSAGES (image-upload.ts:45).
+    const fixture = await createFixture(ImageUploadTestHost);
+
+    chooseFile(fixture, pngFile());
+    await fixture.whenStable();
+    uploaderStub.subjects[0].error(
+      problemError(422, [{ path: '/file', code: 'SOME_UNKNOWN_CODE' }]),
+    );
+    await fixture.whenStable();
+
+    expect(alertText(fixture)).toBe('Ellenőrizd a mező értékét.');
+    expect(fixture.componentInstance.form.image().value()).toBeNull();
+  });
+
+  it('15. a bare cancelable dragover on the drop zone calls preventDefault exactly once', async () => {
+    // Fails if onDragOver stops calling `event.preventDefault()` (image-upload.ts:152).
+    const fixture = await createFixture(ImageUploadTestHost);
+    const event = new Event('dragover', { cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+    dropzone(fixture).dispatchEvent(event);
+    await fixture.whenStable();
+
+    expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('16. focus() moves activeElement to the choose button, whose click clicks the hidden input once', async () => {
+    // Fails if focus() stops calling `this.chooseButton().nativeElement.focus(...)`
+    // (image-upload.ts:129), or if openFilePicker() stops calling
+    // `this.fileInput().nativeElement.click()` (image-upload.ts:133).
+    const fixture = await createFixture(ImageUploadTestHost);
+    const instance = imageUploadInstance(fixture);
+
+    instance.focus();
+    expect(document.activeElement).toBe(chooseButton(fixture));
+
+    const clickSpy = vi.spyOn(fileInput(fixture), 'click');
+    chooseButton(fixture).dispatchEvent(new Event('click'));
+    await fixture.whenStable();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("17. a control whose value already carries an alt keeps it after a new upload's done", async () => {
+    // Fails if onUploadProgress stops reading `this.value()?.alt` before building
+    // the new Image (image-upload.ts:205).
+    const fixture = await createFixture(ImageUploadTestHost);
+    fixture.componentInstance.model.update((current) => ({
+      ...current,
+      image: { id: 'old', src: '/api/v1/media/old', width: 5, height: 5, alt: 'Kék póló' },
+    }));
+    await fixture.whenStable();
+
+    chooseFile(fixture, pngFile());
+    await fixture.whenStable();
+    uploaderStub.subjects[0].next({
+      kind: 'done',
+      image: {
+        id: 'img-2',
+        src: '/api/v1/media/img-2',
+        contentType: 'image/png',
+        width: 10,
+        height: 20,
+        sizeBytes: 10,
+      },
+    });
+    uploaderStub.subjects[0].complete();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.form.image().value()).toEqual({
+      id: 'img-2',
+      src: '/api/v1/media/img-2',
+      width: 10,
+      height: 20,
+      alt: 'Kék póló',
+    });
   });
 });

@@ -122,4 +122,24 @@ describe('MediaUploader', () => {
     }
     expect(receivedError.status).toBe(413);
   });
+
+  it('errors with "Upload answered without a body" on a 201 with a null body', () => {
+    // Fails if the `event.body === null` check (media-uploader.ts:32-34) is removed.
+    const file = new File(['abc'], 'a.png', { type: 'image/png' });
+    let receivedError: unknown;
+    uploader.upload(file).subscribe({
+      next: () => undefined,
+      error: (error: unknown) => {
+        receivedError = error;
+      },
+    });
+
+    const request = controller.expectOne(UPLOAD_URL);
+    request.flush(null, { status: 201, statusText: 'Created' });
+
+    if (!(receivedError instanceof Error)) {
+      throw new Error('expected an Error');
+    }
+    expect(receivedError.message).toBe('Upload answered without a body');
+  });
 });
