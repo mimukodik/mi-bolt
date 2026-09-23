@@ -5,15 +5,58 @@
       <mat-grid-tile [colspan]="card.cols" [rowspan]="card.rows">
         <mat-card class="dashboard-card">
           <mat-card-header>
-            <mat-card-title>
+            <mat-card-title #cardTitle tabindex="-1">
               {{ card.title }}
-              @if (card.subtitle) {
-                <span> {{ card.subtitle }}</span>
+              @if (card.key === 'featured') {
+                <span> {{ featuredTotal() }}</span>
               }
             </mat-card-title>
           </mat-card-header>
           <mat-card-content class="dashboard-card-content">
-            <p class="adm-count">–</p>
+            @if (card.key === 'featured') {
+              @let state = featured();
+              @if (state.kind === 'loading') {
+                <p aria-busy="true" class="adm-count">–</p>
+              } @else if (state.kind === 'error') {
+                <p class="adm-card-error" role="alert">A betöltés nem sikerült.</p>
+                <button
+                  matButton
+                  type="button"
+                  [attr.aria-label]="`Újra: ${card.title}`"
+                  (click)="retry(card.key, cardTitle)"
+                >
+                  Újra
+                </button>
+              } @else if (state.value.items.length > 0) {
+                <mat-list>
+                  @for (item of state.value.items; track item.id) {
+                    <mat-list-item>
+                      <mat-icon matListItemIcon>star</mat-icon>
+                      <span matListItemTitle>{{ item.name }}</span>
+                    </mat-list-item>
+                  }
+                </mat-list>
+              } @else {
+                <p>Nincs kiemelt termék.</p>
+              }
+            } @else {
+              @let count = countOf(card.key);
+              @if (count.kind === 'loading') {
+                <p aria-busy="true" class="adm-count">–</p>
+              } @else if (count.kind === 'error') {
+                <p class="adm-card-error" role="alert">A betöltés nem sikerült.</p>
+                <button
+                  matButton
+                  type="button"
+                  [attr.aria-label]="`Újra: ${card.title}`"
+                  (click)="retry(card.key, cardTitle)"
+                >
+                  Újra
+                </button>
+              } @else {
+                <p class="adm-count">{{ count.value }}</p>
+              }
+            }
           </mat-card-content>
           <mat-card-actions>
             <a matButton [queryParams]="card.queryParams" [routerLink]="card.link">Megnyitás</a>
