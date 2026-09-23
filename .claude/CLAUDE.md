@@ -135,8 +135,9 @@ This section applies to the orchestrating main session only.
   check that the referenced package, file, or path exists and resolves from
   where the command would run. Where possible I run the read-only variant
   myself first and hand over only a command proven to work. In this monorepo I
-  also check the scope: root or workspace package, and whether `-r` or
-  `--filter` is needed.
+  also check the scope: a root `mise` task, a `frontend/` script or a
+  `backend/` Gradle task, in the form `.claude/rules/session-lifecycle.md`
+  ("Tools and startup") gives each.
 - When an analysis looks suspicious, I demand the evidence: "I'm not sure
   about this. Which specific file and line number supports your claim that
   the authentication check is missing? Quote the exact code."

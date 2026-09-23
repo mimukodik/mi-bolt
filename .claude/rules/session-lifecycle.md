@@ -15,7 +15,11 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   `frontend/`, with `frontend/package-lock.json` as its lockfile, and one of
   its scripts runs as `npm --prefix frontend run <script>`; the backend is the
   Gradle build under `backend/`, and one of its tasks runs as
-  `backend/gradlew -p backend :services:commerce:<task>`. There is no `pnpm`.
+  `backend/gradlew -p backend :services:commerce:<task>`. The one exception to
+  the root is a package binary run with `npx` against the Angular workspace,
+  such as `npx eslint` or `npx prettier`: `node_modules` exists only in
+  `frontend/`, and `npx` looks for the local binary from the directory it runs
+  in, so it runs from `frontend/`. There is no `pnpm`.
   A command that is neither a `mise` task, nor a script in
   `frontend/package.json`, nor a Gradle task does not exist here however
   familiar it looks. Read the list rather than recalling it; several rules in
@@ -25,10 +29,11 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   `mise run storefront`, `mise run admin` and `mise run payment` serve one app
   each with `ng serve`, and `mise run frontend` serves all three; the
   storefront and the admin run on MSW in the browser, so nothing needs
-  bringing up beside them. `mise run db` starts PostgreSQL, `mise run backend`
-  and `mise run dev` start the backend with it, and `mise run stop` stops
-  them. A spawned agent neither starts nor stops any of these:
-  `.claude/rules/parallel-spawns.md` makes the port a shared resource, and
+  bringing up beside them. `mise run db` starts PostgreSQL alone;
+  `mise run backend`, `mise run backend:docker`, `mise run dev`,
+  `mise run dev:docker` and `mise run stack` start the backend with it; and
+  `mise run stop` stops them. A spawned agent neither starts nor stops any of
+  these: `.claude/rules/parallel-spawns.md` makes the port a shared resource, and
   `.claude/rules/browser-verification.md` puts starting and stopping with the
   orchestrator. An agent that needs a built artifact served uses
   `frontend/scripts/serve-static.mjs` on a port of its own, names the port in

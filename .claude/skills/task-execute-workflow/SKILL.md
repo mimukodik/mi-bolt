@@ -324,10 +324,8 @@ of what happened, when what it was needed for was deciding what to do next.
    wait on is read from `.github/workflows/` rather than remembered**: where a
    workflow triggers on `pull_request`, they wait on its result as well as on
    the push, because a pull request whose checks have not run is not yet in a
-   mergeable state. No workflow there does as of 2026-09-05: the repository's
-   one workflow, `.github/workflows/deploy.yaml`, triggers on a push to `main`
-   and on manual dispatch, so nothing waits on a check today and no run invents
-   one that does not exist. **The pull request's URL goes into the closing
+   mergeable state, and where none does, no run invents a check to wait on.
+   **The pull request's URL goes into the closing
    report**, whether `gh pr create` printed it or `gh pr view` read it back
    from a pull request already open, and on both ways in: on the free-text way
    entry 12 is not in the list, so the closing report is the only place this

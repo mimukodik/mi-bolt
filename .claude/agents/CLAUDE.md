@@ -28,7 +28,7 @@ Which unit reaches which rung is decided in `model-routing` rather than here.
 `instructions-opus` is the only opus role with no sibling, and a large
 instruction job is not a reason to add one: a unit it cannot hold is split
 rather than promoted. The routing skill owns that rule, and
-`agent.md` says why the rung is wrong for this work.
+`instructions-opus.md` says why the rung is wrong for this work.
 
 ## Tools
 
@@ -147,7 +147,9 @@ Grant `angular-cli`'s `get_best_practices`, `search_documentation` and
 `list_projects`, three of the nine tools it exposes on Angular CLI 22.1.8, to
 every definition whose work turns on how Angular itself behaves, whether it
 writes the code, reviews it, plans it, researches it or documents the rules for
-it, and to no other. Today that is every definition here but two. `scout-haiku`
+it, and to no other. Today that is every definition here but two, beside the
+three `playwright-test-*` definitions, which carry `playwright-test` tools and
+no other server's. `scout-haiku`
 is out because a documentation lookup is a judgment call and the cheapest tier
 takes none; with `search_documentation` out, `list_projects` goes with it,
 since all it adds over the `angular.json` that tier can already open with
@@ -235,7 +237,12 @@ them answers the same three sections, whatever else its template adds.**
 What was done: what the agent changed, found or decided, with absolute paths.
 What was verified: each claim with the command, path or URL that settles it.
 What is uncertain: what the agent could not settle, and any decision that is
-the user's to make.
+the user's to make. The three `playwright-test-*` definitions are outside
+this section: Playwright generates them (`npx playwright init-agents
+--loop=claude`, https://playwright.dev/docs/test-agents, which has them
+regenerated whenever Playwright is updated), and what each hands back is a
+plan, a spec file or a repaired test on disk, which the `playwright-tests`
+skill has the orchestrator read itself.
 
 **"What was verified" is the section that does the work.** A claim with no
 command, path or URL behind it is what this shape exists to make visible, and

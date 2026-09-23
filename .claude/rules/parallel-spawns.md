@@ -117,9 +117,9 @@ than one agent can reach at once while their file lists stay disjoint.
 - **The database, once the backend runs.** The frontend's own backend is MSW,
   served in-process, so a frontend suite shares no container and no rows, and
   `frontend/projects/storefront/src/mocks/` state lives and dies with each
-  suite run. The root tasks that start PostgreSQL (`mise run db`,
-  `mise run backend`, `mise run dev`) share one container and its data, which
-  the orchestrator starts and stops.
+  suite run. Every root task that starts PostgreSQL, which
+  `.claude/rules/session-lifecycle.md` ("Tools and startup") lists, shares one
+  container and its data, which the orchestrator starts and stops.
 - **The live browser session** a `real-browser-sonnet` agent is driving, which
   any restart of the app underneath it invalidates.
 - **A leftover spec file, which the suite collects and the gate does not.** A
@@ -155,7 +155,7 @@ agent and comes out of every other prompt; the units run in sequence rather than
 at once; or the orchestrator performs the contending step itself, between the
 two halves of the batch. The third is not a general licence to take work back
 from an agent, since `.claude/CLAUDE.md` ("How I work") leaves the orchestrator
-only the pre-commit gates and the push with its pull request; it is available
+only the exceptions it names; it is available
 for a step another rule has already put there, which covers most of the list
 above: the gates (`.claude/rules/code-standards.md`, "A subagent's green report
 is not a run") and starting and stopping the app and the database

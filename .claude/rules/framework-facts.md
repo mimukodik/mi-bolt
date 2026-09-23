@@ -33,7 +33,8 @@ The instruments, in order:
   (`"content projection ng-content"`), not a sentence: a natural-language
   query returns `{"results":[]}` where the keyword form returns the page.
   Every agent definition under `.claude/agents/` carries this tool except
-  `real-browser-sonnet` and `scout-haiku`, so an agent that writes or reviews
+  `real-browser-sonnet`, `scout-haiku` and the three `playwright-test-*`
+  definitions, so an agent that writes or reviews
   code here has it; grep the definitions rather than trusting this sentence
   once they change.
 - **`mcp__angular-cli__get_best_practices`**, for the version-specific coding

@@ -6,12 +6,12 @@ path-scoped rules trigger only on a read.
 
 - Well-documented codebase, not over-explained.
 - A `CLAUDE.md` belongs at the top of an area, not in every subdirectory
-  under it. `tools/CLAUDE.md` and `.claude/hooks/CLAUDE.md` each document
-  their own tool's layer split and modules; those tools' `cli/`, `io/`,
-  `analysis/`, `store/` and `search/` directories get no file of their own, so
-  there is one place to read and one place to keep current. The file that
-  exists is kept maintained. `.claude/rules/` has none because every `.md`
-  there is loaded as a rule; it is documented in `.claude/CLAUDE.md` instead.
+  under it. `.claude/hooks/CLAUDE.md` documents that package's modules, and
+  its `common/`, `session-start/` and `stop-guard/` directories get no file of
+  their own, so there is one place to read and one place to keep current.
+  The file that exists is kept maintained. `.claude/rules/` has none because
+  every `.md` there is loaded as a rule; it is documented in
+  `.claude/CLAUDE.md` instead.
 - Modern TypeScript: proper use of functional and OOP programming; generic
   interfaces are mandatory.
 - Strict generics. `as` is forbidden; use `satisfies`. `any` is forbidden; use
@@ -85,16 +85,17 @@ path-scoped rules trigger only on a read.
   pull request, or take `git merge-base origin/main HEAD` where the work came
   straight off `main`.
 - **A subagent's green report is not a run.** Before every commit the
-  orchestrator itself runs `npm --prefix frontend run test`, from `frontend/`
+  orchestrator itself runs `npm --prefix frontend run test` and
+  `npm --prefix frontend run build`, and, from `frontend/`,
   `npx eslint <the changed files>` and `npx prettier --check <the changed
-  files>`, and `npm --prefix frontend run build`, and reads the exit codes; for
-  a change under `backend/` the gate is
+  files>`, and reads the exit codes; for a change under `backend/` the gate is
   `backend/gradlew -p backend :services:commerce:build`, which runs the unit
-  and integration tests, PMD and the coverage verification. One agent reported a typecheck green while it was
-  exiting 1 with two TS2322 errors in a spec file that same agent had just
-  written; the next agent called those errors pre-existing after checking only
-  that its own files were not the cause. Both reports were sincere, both were
-  wrong, and the error reached the orchestrator twice.
+  and integration tests, PMD and the coverage verification. One agent reported
+  a typecheck green while it was exiting 1 with two TS2322 errors in a spec
+  file that same agent had just written; the next agent called those errors
+  pre-existing after checking only that its own files were not the cause.
+  Both reports were sincere, both were wrong, and the error reached the
+  orchestrator twice.
 - Layers a unit test cannot reach are excluded in the coverage configuration,
   never by ignore comments scattered through the source: shell scripts, docker
   compose files, docs, generated files, and the spec files themselves. The
@@ -134,10 +135,11 @@ path-scoped rules trigger only on a read.
 - **Only the `playwright-test-*` agents write end-to-end tests.** Every
   `*.spec.ts` under `frontend/e2e/` is written by `playwright-test-generator`
   or repaired by `playwright-test-healer`, from a plan
-  `playwright-test-planner` saved under `frontend/specs/`. No other agent, no `coder-agent.sh` runner and
-  not the orchestrator creates or edits one: a spec written by anything else was
-  never executed against a real page while it was being written, and that
-  execution is the whole of what those three agents add. Everything else under
+  `playwright-test-planner` saved under `frontend/specs/`. No other agent, no
+  `coder-agent.sh` runner and not the orchestrator creates or edits one: a
+  spec written by anything else was never executed against a real page while
+  it was being written, and that execution is the whole of what those three
+  agents add. Everything else under
   `frontend/e2e/`, `frontend/playwright.config.ts`, `frontend/e2e/fixtures/**`
   and `frontend/e2e/seed.spec.ts`, which is the conventions file rather than a
   test, is ordinary repository code under the ordinary rules. A production

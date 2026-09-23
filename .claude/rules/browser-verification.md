@@ -18,8 +18,11 @@ of the diff are necessary but never sufficient.
 
 1. Orchestrator: start the app with `mise run storefront` (`mise run admin` or
    `mise run payment` for the other two apps). There is no database behind it:
-   the storefront and the admin run on MSW in the browser. A spawned agent
-   neither starts nor stops that server; the port is a shared resource per
+   the storefront and the admin run on MSW in the browser. A change whose
+   result comes from the backend is verified on `mise run dev` instead, which
+   serves the three apps on the `local-backend` configuration with the backend
+   and PostgreSQL behind them. A spawned agent neither starts nor stops that
+   server; the port is a shared resource per
    `.claude/rules/parallel-spawns.md`.
 2. Open the affected screen with `new_page` + `navigate_page`.
 3. Drive the actual changed behavior with `click`, `fill`, `press_key`:

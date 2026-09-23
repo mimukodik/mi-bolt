@@ -411,10 +411,13 @@ close the task now that we have finished!"). It became PX-756 under PX-488.
 **Who writes it.** A subagent doing the work never writes to a related issue
 on its own initiative; it reports the finding upward and stops there. Both the
 check and the write belong to the orchestrator's closing step, and the
-orchestrator does not write it inline either: it asks the user first, and then
-spawns a dedicated agent for that one comment. Writing to a related issue is
-an outward-facing action, so it is named in the question text itself and never
-carried inside an option's description of some larger question. That rule is
+orchestrator does not write it unasked either: it asks the user first, and
+then writes that one comment itself, since a write to Linear is one of the
+exceptions `.claude/CLAUDE.md` ("How I work") keeps with the orchestrator and
+no definition in `.claude/agents/` carries the Linear tools. Writing to a
+related issue is an outward-facing action, so it is named in the question text
+itself and never carried inside an option's description of some larger
+question. That rule is
 in `.claude/CLAUDE.md` under "Asking the user" and is not restated here.
 
 ## Where this came from
