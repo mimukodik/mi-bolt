@@ -1252,7 +1252,7 @@
       },
       {
         "id": "T22-AC05",
-        "text": "Render loading, ready, conflict, stock-error, price-change and field-error states without erasing the order summary."
+        "text": "Render loading, ready, conflict, stock-error, price-changed and error states without erasing the order summary."
       }
     ],
     "commonAcceptanceCriteria": [
