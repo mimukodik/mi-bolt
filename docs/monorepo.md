@@ -14,7 +14,7 @@ deployment compose file, and the import/agent tooling. This page is the map;
 | `contracts/commerce/` | The one OpenAPI contract (`openapi.yaml`), its `samples/`, its `sequences/` (PlantUML), and `kommunikacio.md`.                                                                          |
 | `data/catalog/`       | The tracked product catalogue: `catalog.json`, `catalog.schema.json`, and the product `images/`.                                                                                        |
 | `deploy/`             | The container stack: `compose.yaml` and the `compose.sh` wrapper.                                                                                                                       |
-| `tools/`              | The import script and agent tooling that run outside the frontend and backend workspaces (`catalog-import/`, `agent-memory/`, `migration/`).                                            |
+| `tools/`              | The import script and agent tooling that run outside the frontend and backend workspaces (`catalog-import/`, `agent-memory/`).                                                          |
 | `.github/`            | The CI workflows and the `components.yml` path filters they read.                                                                                                                       |
 | `.claude/`            | The agent rules, skills, agent definitions and shared memory for this workspace.                                                                                                        |
 | `mise.toml`           | The root command list; see "Root commands" below.                                                                                                                                       |
