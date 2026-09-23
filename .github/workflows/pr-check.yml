@@ -120,6 +120,8 @@ jobs:
       - run: npm run build:admin
         timeout-minutes: 5
       - run: npm run check:admin-dist
+      - run: npm run check:storefront-dist
+      - run: npm run check:payment-dist
       - run: npm run check:payment-boot
         timeout-minutes: 6
       - run: npm run check:admin-boot
