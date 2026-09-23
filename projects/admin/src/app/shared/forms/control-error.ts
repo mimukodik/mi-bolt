@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import type { FieldTree } from '@angular/forms/signals';
 
 /**
@@ -7,17 +7,14 @@ import type { FieldTree } from '@angular/forms/signals';
  * uses inside a form field: the first error of a field that was touched and is
  * invalid, so an untouched form still shows nothing (R1, R2).
  *
- * `role="alert"` is what announces the message; bind the control's
- * `aria-describedby` to `errorId`.
+ * The paragraph stays in the DOM, empty while there is nothing to show, so an
+ * `aria-describedby` bound to `errorId` always resolves and the `role="alert"`
+ * live region exists before its text changes, which is what makes the message
+ * announced.
  */
 @Component({
   selector: 'adm-control-error',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `@if (field()().touched() && field()().invalid()) {
-    <p class="adm-control-error" role="alert" [id]="errorId()">
-      {{ field()().errors()[0]?.message }}
-    </p>
-  }`,
+  template: `<p class="adm-control-error" role="alert" [id]="errorId()">{{ message() }}</p>`,
   styles: `
     .adm-control-error {
       color: var(--mat-sys-error);
@@ -29,4 +26,10 @@ import type { FieldTree } from '@angular/forms/signals';
 export class ControlError {
   readonly field = input.required<FieldTree<unknown>>();
   readonly errorId = input.required<string>();
+
+  /** The first error of a touched, invalid field, and an empty string otherwise. */
+  protected readonly message = computed(() => {
+    const state = this.field()();
+    return state.touched() && state.invalid() ? (state.errors()[0]?.message ?? '') : '';
+  });
 }

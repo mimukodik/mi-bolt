@@ -20,18 +20,14 @@ export interface WireFieldError {
 /** A `{name}` placeholder inside a message template. */
 const PLACEHOLDER = /\{(\w+)\}/g;
 
-/** A JSON pointer segment that addresses an array item. */
-const ARRAY_INDEX = /^\d+$/;
-
 /**
  * Reads a child field off a field tree. A field tree is a callable proxy whose
- * property access resolves a child field by key (an array item included), so
- * the indexed read below is the documented way to walk one; the cast only says
- * what the proxy returns.
+ * property access resolves a child field by key (an array item included, by its
+ * index as the key); `Reflect.get` performs that property access without a type
+ * assertion.
  */
 function childOf(field: FieldTree<unknown>, segment: string): FieldTree<unknown> | undefined {
-  const children = field as unknown as Record<string, unknown>;
-  const child: unknown = ARRAY_INDEX.test(segment) ? children[Number(segment)] : children[segment];
+  const child: unknown = Reflect.get(field, segment);
   return isFieldTree(child) ? child : undefined;
 }
 

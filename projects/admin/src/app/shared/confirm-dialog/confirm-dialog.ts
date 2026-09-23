@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -28,7 +28,6 @@ export interface ConfirmDialogData {
  */
 @Component({
   selector: 'adm-confirm-dialog',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose, MatButton],
   template: `
     <h2 mat-dialog-title>{{ data.title }}</h2>

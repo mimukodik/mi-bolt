@@ -45,35 +45,39 @@ describe('ControlError', () => {
     return found instanceof HTMLParagraphElement ? found : null;
   }
 
-  it('renders nothing while the invalid field is untouched', () => {
-    // Fails if control-error.ts drops the `touched()` half of the render
-    // predicate: the required error is already present on load.
-    expect(alert()).toBeNull();
+  it('keeps an empty alert under the given id while the invalid field is untouched', () => {
+    // Fails if control-error.ts drops the `touched()` half of the predicate
+    // (the required error is already present on load), or renders the
+    // paragraph conditionally again.
+    const paragraph = alert();
+    expect(paragraph).not.toBeNull();
+    expect(paragraph?.id).toBe('name-error');
+    expect(paragraph?.getAttribute('role')).toBe('alert');
+    expect(paragraph?.textContent.trim()).toBe('');
   });
 
-  it('renders the first message under the given id once the field was touched', async () => {
-    // Fails if control-error.ts stops binding `[id]="errorId()"`, drops
-    // `role="alert"`, or reads a different message than `errors()[0]`.
+  it('shows the first message once the field was touched', async () => {
+    // Fails if the message reads anything other than `errors()[0]`.
     host.f.name().markAsTouched();
     await fixture.whenStable();
 
     const paragraph = alert();
     expect(paragraph).not.toBeNull();
-    expect(paragraph?.id).toBe('name-error');
-    expect(paragraph?.getAttribute('role')).toBe('alert');
     expect(paragraph?.textContent.trim()).toBe('Kötelező mező.');
+    expect(paragraph?.id).toBe('name-error');
   });
 
-  it('renders nothing once the touched field becomes valid', async () => {
-    // Fails if control-error.ts drops the `invalid()` half of the render
-    // predicate: the paragraph would stay after the field was filled.
+  it('empties the alert once the touched field becomes valid', async () => {
+    // Fails if control-error.ts drops the `invalid()` half of the predicate.
     host.f.name().markAsTouched();
     await fixture.whenStable();
-    expect(alert()).not.toBeNull();
+    expect(alert()?.textContent.trim()).toBe('Kötelező mező.');
 
     host.model.set({ name: 'Kispad' });
     await fixture.whenStable();
 
-    expect(alert()).toBeNull();
+    const paragraph = alert();
+    expect(paragraph).not.toBeNull();
+    expect(paragraph?.textContent.trim()).toBe('');
   });
 });
