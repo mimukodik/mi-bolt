@@ -1,0 +1,42 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "version": 1,
+      "slug": "demo-phone-128gb",
+      "brand": "Példa",
+      "name": "Példa Telefon 128 GB",
+      "status": "active",
+      "featured": false,
+      "rank": 0,
+      "releasedAt": "2026-01-15",
+      "minPrice": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "maxPrice": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "totalStock": 10,
+      "variantCount": 1,
+      "thumbnail": {
+        "id": "demo-image-001",
+        "src": "/api/v1/media/demo-image-001",
+        "alt": "Példa Telefon 128 GB",
+        "width": 800,
+        "height": 800
+      },
+      "colors": [
+        {
+          "name": "Fekete",
+          "swatchHex": "#000000"
+        }
+      ]
+    }
+  ],
+  "totalElements": 1,
+  "page": 1,
+  "pageSize": 24,
+  "totalPages": 1
+}
