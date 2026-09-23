@@ -67,7 +67,7 @@ docker run -d --name mi-bolt-backend \
 ```
 
 A `/opt/mi-bolt/catalog` a repó `data/catalog` könyvtárának másolata a
-szerveren. Ugyanez a `docker-compose.yml`-lel is megy, ha a szerveren az
+szerveren. Ugyanez a `deploy/compose.yaml`-lel is megy, ha a szerveren az
 adatbázis is konténer a `mi-bolt-local` hálózaton: akkor a compose fájl
 alapértékei érvényesek, és csak a jelszót kell környezeti változóban
 megadni.

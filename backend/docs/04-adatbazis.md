@@ -2,13 +2,11 @@
 
 ## 1. Kötelező szabály
 
-**Az adatbázis-konténert kizárólag a `scripts/local-database-docker.sh` szkripten keresztül
-szabad kezelni.**
-
-Tilos közvetlenül `docker`, `docker compose`, `docker exec` vagy külső `psql` parancsot kiadni a
-konténerre. Nem azért, mert nem működne, hanem mert a szkript kezeli az env fájlt, a
-projektnevet, az egészségellenőrzést és a hibás állapotokat — a mellette elmenő beavatkozás ezt
-megkerüli, és olyan állapotot hagy hátra, amit a szkript már nem ismer fel.
+**A helyi adatbázist a git gyökeréből futó mise-taskok kezelik**, a `deploy/compose.yaml`
+`postgres` szolgáltatásaként. Minden más Compose-parancs is a `deploy/compose.sh` burkolón át
+megy, soha nem közvetlenül `docker`, `docker compose` vagy külső `psql` paranccsal: a burkoló
+hozza létre első futáskor a `deploy/.env` fájlt, és azt a Compose-t használja, amelyik a gépen
+van (`docker compose` vagy `docker-compose`).
 
 Ez a szabály a fejlesztőre és minden automatizált ügynökre egyaránt vonatkozik.
 
@@ -16,35 +14,35 @@ Ez a szabály a fejlesztőre és minden automatizált ügynökre egyaránt vonat
 nem szabad hozzá tesztből: a tesztek mockolva vagy memóriában futó adatbázissal futnak. A
 részletek és az ebből fakadó feszültség a `02-backend.md` 7.0 szakaszában.
 
-### A szkript parancsai
+### A parancsok
+
+A git gyökeréből:
 
 ```
-./scripts/local-database-docker.sh start      # vagy: up
-./scripts/local-database-docker.sh stop       # vagy: down
-./scripts/local-database-docker.sh restart
-./scripts/local-database-docker.sh reset
-./scripts/local-database-docker.sh status
-./scripts/local-database-docker.sh check      # vagy: ping, check-run
-./scripts/local-database-docker.sh logs
-./scripts/local-database-docker.sh psql       # vagy: cli — SQL-konzol a konténerben
-./scripts/local-database-docker.sh --help
+mise run db                  # csak a PostgreSQL; megvárja, amíg egészséges
+mise run backend             # az adatbázis, majd a backend natívan (bootRun)
+mise run backend:docker      # az adatbázis és a backend konténerben
+mise run stop                # minden konténer leáll; a kötet megtartja az adatot
+deploy/compose.sh ps         # a konténerek állapota
+deploy/compose.sh logs -f postgres
+deploy/compose.sh exec postgres psql -U mi_bolt -d mi_bolt   # SQL-konzol a konténerben
 ```
 
-SQL futtatásához a `psql` alparancs való, nem saját kliens.
+SQL futtatásához a konténerben futó `psql` való, nem saját kliens.
 
 ---
 
 ## 2. Amit a konténer ad
 
-Ezek a repó jelenlegi beállításai, nem javaslatok:
+Ezek a `deploy/compose.yaml` és a `deploy/.env.example` beállításai, nem javaslatok:
 
 | | |
 |---|---|
-| Kép | `postgres:16.15-alpine3.24` |
-| Compose projekt | `mi-bolt-local` |
-| Konténer | `mi-bolt-postgres` |
-| Port | **55433** a gazdagépen → 5432 a konténerben |
-| Kötet | `mi-bolt-postgres-data` — **szándékosan Docker named volume** |
+| Kép | `postgres:16.15-alpine3.24`, digesttel rögzítve |
+| Compose projekt | `mi-bolt-local` (`COMPOSE_PROJECT_NAME`) |
+| Szolgáltatás | `postgres` |
+| Port | **55433** a gazdagépen (`MIBOLT_POSTGRES_PORT`) → 5432 a konténerben |
+| Kötet | `mi-bolt-postgres-data` (`MIBOLT_POSTGRES_VOLUME`) — **szándékosan Docker named volume** |
 | Kapcsolatok | `max_connections=250` |
 | Egészségellenőrzés | `pg_isready`, 2 másodpercenként |
 
@@ -53,8 +51,13 @@ Alapértelmezett hitelesítés (helyi, eldobható értékek, nem titok):
 
 Kapcsolati URL: `postgresql://mi_bolt:mi_bolt_local@localhost:55433/mi_bolt`
 
-A hitelesítés a `.docker-compose.local-database.env` fájlból jön, ami **gitignore-olt**; első
-futáskor a szkript másolja a példafájlból. Ebbe a fájlba semmilyen valódi titok nem kerülhet.
+A hitelesítés a `deploy/.env` fájlból jön, ami **gitignore-olt**; első futáskor a
+`deploy/compose.sh` másolja a `deploy/.env.example` fájlból. Ebbe a fájlba semmilyen valódi
+titok nem kerülhet.
+
+Egy második stack a fejlesztőé mellett saját `COMPOSE_PROJECT_NAME`, `MIBOLT_POSTGRES_VOLUME`
+és portok mellett fut; a `deploy/compose.sh` megtagadja, hogy egy másik projekt a fejlesztő
+kötetét használja.
 
 **Adatmentés és költöztetés:** a kötet szándékosan named volume, ezért az adat mozgatása
 `pg_dump` / `pg_restore` útján történik, nem a kötet másolásával.
@@ -63,15 +66,17 @@ futáskor a szkript másolja a példafájlból. Ebbe a fájlba semmilyen valódi
 
 ## 3. Alkalmazás-oldali elvárások
 
-A `src/main/resources/application.properties` jelenleg csak az alkalmazás nevét tartalmazza. Az
-adatforrás beállítása még hiányzik, és a fenti porthoz és hitelesítéshez kell illeszkednie.
+A `backend/services/commerce/src/main/resources/application.properties` a kapcsolatot három
+környezeti változóból olvassa, a fenti értékekkel mint helyi alapértelmezéssel:
+`MIBOLT_DB_URL` (`jdbc:postgresql://localhost:55433/mi_bolt`), `MIBOLT_DB_USER` (`mi_bolt`),
+`MIBOLT_DB_PASSWORD` (`mi_bolt_local`).
 
-- A kapcsolati adatok **környezeti változóból** jöjjenek, a fenti értékekkel mint helyi
-  alapértelmezés. Jelszó nem kerülhet a verziókezelőbe.
-- A sémát **nem** a JPA generálja. Az `spring.jpa.hibernate.ddl-auto` értéke fejlesztésben
-  legfeljebb `validate` lehet, `update` és `create` semmiképp — a séma forrása a migráció.
-- Az alkalmazásnak **nem szabad elindulnia** olyan adatbázissal, aminek a sémája nem egyezik az
-  elvárttal. A néma továbbfutás rosszabb, mint a korai leállás.
+- A kapcsolati adatok **környezeti változóból** jönnek. Valódi jelszó nem kerülhet a
+  verziókezelőbe.
+- A sémát **nem** a JPA generálja: a `spring.jpa.hibernate.ddl-auto` értéke `validate`,
+  `update` és `create` semmiképp — a séma forrása a migráció.
+- Az alkalmazásnak **nem szabad elindulnia** olyan adatbázissal, aminek a sémája nem egyezik
+  az elvárttal. A néma továbbfutás rosszabb, mint a korai leállás.
 
 ---
 

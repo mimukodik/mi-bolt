@@ -1,9 +1,19 @@
 # Kommunikációs elvárások
 
-A frontend és a backend közti szerződés. Mindkét repónak ugyanezt kell teljesítenie.
+A frontend és a backend közti szerződés. Mindkét oldalnak, a frontendnek és a backendnek, ugyanezt kell teljesítenie.
 
 Az alábbiak mindegyike levezethető az `openapi.yaml`-ből; ez a dokumentum azt mondja el, amit a
 gépi leíró önmagában nem tud kikényszeríteni.
+
+---
+
+## Az igazság forrása
+
+A `contracts/commerce/openapi.yaml` a szerződés. Ha bármelyik dokumentum és a specfájl
+ellentmond egymásnak, **a specfájl az érvényes**, és a dokumentumot kell javítani.
+
+Ebből következik: sem a backend, sem a frontend nem definiálhat olyan végpontot, mezőt vagy
+státuszkódot, ami nincs a specben. Ha valami hiányzik, előbb a spec bővül.
 
 ---
 

@@ -66,6 +66,8 @@ Derived totals displayed in purchase screens come from the returned Cart/Checkou
 
 Read requests use switchMap to cancel obsolete HTTP and prevent late results. Cart writes are serialized with concatMap and take expected version when dispatched. Order submission uses exhaust semantics: never switchMap a transactional write. Every subscription is bounded by completion or takeUntilDestroyed. Effects are limited to genuine side effects such as title/focus/persistence; computed values are not propagated with cascading effects. [S05,S06]
 
+SDK generator facts (`ng-openapi-gen`): a `oneOf` branch whose discriminator is a single-value `enum` becomes a literal type, so the generated union is a real discriminated union; every operation also gets a `$Response` variant that returns the whole `HttpResponse`, which gives access to response headers such as `ETag`; `unevaluatedProperties: false` is ignored, so a generated type does not forbid unexpected fields; `allOf` becomes an intersection type (`Base & { … }`), not interface inheritance; the cookie entry of `securitySchemes` generates nothing, because a same-origin browser sends the cookie itself.
+
 ## 7. Suggested source structure
 
 ```text
