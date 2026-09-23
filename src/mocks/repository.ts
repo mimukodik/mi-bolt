@@ -1,16 +1,13 @@
 /**
  * T05 — in-memory mock repository.
  *
- * The repository is the single source of truth for the demo
- * catalogue, carts, checkout drafts, payment intents, idempotency
- * keys and committed order receipts. Each scenario owns its own
- * Repository instance (created via `new Repository(scenario, ids)`)
- * so two scenario instances cannot leak state into each other.
- *
- * T06 expanded the Product shape to the full variant matrix so
- * filter/sort/facet predicates can operate on every fixture field.
- * T07–T09 extend the surface with cart/checkout/payment/order
- * mutation methods.
+ * Holds one scenario's demo carts, committed order receipts and
+ * idempotency keys, plus the mock-local wire types those records
+ * use. Each scenario owns its own Repository instance (created via
+ * `new Repository(scenario, ids, clock)`) so two scenario instances
+ * cannot leak state into each other. The product catalogue is not
+ * here: the handlers read it from `catalogStore`
+ * (`catalog/catalog.handlers.ts`).
  */
 
 /** Money in whole HUF, no minor units. */
