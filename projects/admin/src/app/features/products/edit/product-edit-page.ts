@@ -174,6 +174,9 @@ export class ProductEditPage {
         } else {
           this.attempt.attempted.set(false);
           this.form().reset(toFormModel(result.product));
+          // A save may have changed this product's own `featured`/`status`, and
+          // `featuredOthers()` assumes `featuredCount` already accounts for it.
+          void this.store.loadFeaturedCount();
         }
         return undefined;
       case 'invalid':
