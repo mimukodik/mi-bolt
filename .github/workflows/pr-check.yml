@@ -2,7 +2,7 @@ name: PR check
 
 on:
   pull_request:
-    branches: [main, eggprojec/mim-210-s1-sdk, eggprojec/mim-296-admin]
+    branches: [main, eggprojec/mim-210-s1-sdk, eggprojec/mim-296-admin, eggprojec/mim-411-monorepo-foundation]
   push:
     branches: [main]
 
