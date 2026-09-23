@@ -4,7 +4,8 @@ import type { Variant } from '../../api/generated/models/variant';
 /**
  * The demo device the product page specs serve from their own MSW
  * handlers, in the contract's `Product` shape (`docs/api/openapi.yaml`).
- * No application code imports it.
+ * Only the spec files (`product-page.spec.ts`,
+ * `product-page-responsive.spec.ts`) import it; no application code does.
  */
 
 const VARIANTS: Variant[] = [
