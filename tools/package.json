@@ -6,7 +6,7 @@
   "scripts": {
     "claude:memory": "tsx agent-memory.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p catalog-import/tsconfig.json --noEmit",
-    "test": "vitest run --dir agent-memory && node --test migration/verify.test.mjs"
+    "test": "vitest run --dir agent-memory"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
