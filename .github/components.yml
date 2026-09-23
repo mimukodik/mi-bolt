@@ -16,3 +16,8 @@ backend:
   - 'tools/ci/**'
 contracts:
   - 'contracts/**'
+tools:
+  - 'tools/**'
+  - 'mise.toml'
+  - '.github/**'
+  - '.claude/hooks/**'
