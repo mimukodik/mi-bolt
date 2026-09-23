@@ -173,6 +173,7 @@ describe('productsWriteHandlers free-text stripping', () => {
     const stored = requireProduct(db, 49);
     expect(stored.slug).toBe('honor-600-lite-strip');
     expect(stored.colors.map((c) => c.code)).toEqual(product5.colors.map((c) => c.code));
+    expect(stored.variants.map((v) => v.slug)).toEqual(product5.variants.map((v) => v.slug));
   });
 
   it('replace stores the nine free-text members stripped', async () => {
