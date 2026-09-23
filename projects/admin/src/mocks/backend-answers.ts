@@ -59,6 +59,24 @@ export function javaTrimAllWhitespace(value: string): string {
   return kept;
 }
 
+/** Java's `String.isBlank()`: empty, or every character `Character.isWhitespace`. */
+export function javaIsBlank(value: string): boolean {
+  for (const character of value) {
+    if (!isJavaWhitespace(character.codePointAt(0) ?? 0)) return false;
+  }
+  return true;
+}
+
+/** Java's `String.strip()`: leading and trailing `Character.isWhitespace` characters removed; a no-break space survives. */
+export function javaStrip(value: string): string {
+  const characters = Array.from(value);
+  let start = 0;
+  let end = characters.length;
+  while (start < end && isJavaWhitespace(characters[start]?.codePointAt(0) ?? 0)) start += 1;
+  while (end > start && isJavaWhitespace(characters[end - 1]?.codePointAt(0) ?? 0)) end -= 1;
+  return characters.slice(start, end).join('');
+}
+
 /** The first query key in query-string order, or `undefined` when there is none. */
 export function firstQueryKey(request: Request): string | undefined {
   return [...new URL(request.url).searchParams.keys()][0];

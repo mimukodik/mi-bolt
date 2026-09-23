@@ -37,7 +37,7 @@
       >
     </mat-nav-list>
   </mat-sidenav>
-  <mat-sidenav-content class="flex flex-col h-full">
+  <mat-sidenav-content>
     <mat-toolbar color="primary">
       @if (isHandset) {
         <button aria-label="Menü megnyitása" matIconButton type="button" (click)="drawer.toggle()">
@@ -64,7 +64,7 @@
         </mat-menu>
       }
     </mat-toolbar>
-    <main class="flex-1 min-h-0 overflow-auto scroll-pt-16">
+    <main cdkScrollable class="flex-1 min-h-0 overflow-auto scroll-pt-16">
       <router-outlet />
     </main>
   </mat-sidenav-content>
