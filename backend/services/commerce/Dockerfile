@@ -13,7 +13,7 @@ COPY services/commerce/build.gradle ./services/commerce/
 COPY services/commerce/src ./services/commerce/src
 COPY --from=contracts commerce/openapi.yaml /src/contracts/commerce/openapi.yaml
 RUN --mount=type=cache,target=/root/.gradle ./gradlew :services:commerce:bootJar --no-daemon
-RUN cp services/commerce/build/libs/commerce-0.0.1-SNAPSHOT.jar /application.jar
+RUN cp services/commerce/build/libs/*.jar /application.jar
 WORKDIR /
 RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
