@@ -1727,7 +1727,7 @@
     "testGroups": [
       "3d"
     ],
-    "status": "planned",
+    "status": "rejected",
     "optional": true,
     "titleEnglish": "A self-hosted 3D proof for ONE fictional/authorized device, not Binkies SaaS cloning.",
     "wave": 7
