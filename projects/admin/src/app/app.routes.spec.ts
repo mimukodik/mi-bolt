@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import type { LoadChildren, Route, Routes } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -98,7 +99,13 @@ describe('admin routes', () => {
     await harness.navigateByUrl('/termekek/42');
     const main = shellInner(harness);
     expect(main?.querySelector('adm-product-edit-page')).not.toBeNull();
-    expect(main?.textContent ?? '').toContain('42');
+    const page: unknown = harness.fixture.debugElement.query(
+      By.directive(ProductEditPage),
+    ).componentInstance;
+    if (!(page instanceof ProductEditPage)) {
+      throw new Error('Expected the product edit page');
+    }
+    expect(page.productId()).toBe('42');
   });
 
   it('redirects an unknown path through the shell to /attekintes', async () => {

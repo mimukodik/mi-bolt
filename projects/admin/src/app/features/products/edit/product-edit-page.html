@@ -1,0 +1,95 @@
+<header class="adm-edit-header">
+  <a aria-label="Vissza a termékekhez" matIconButton routerLink="/termekek"
+    ><mat-icon>arrow_back</mat-icon></a
+  >
+  <h1 #pageTitle class="adm-edit-title" tabindex="-1">{{ title() }}</h1>
+  @if (!isCreate()) {
+    @if (store.product(); as product) {
+      <mat-chip-set aria-label="Státusz" class="adm-edit-status">
+        <mat-chip>{{ product.status === 'active' ? 'Aktív' : 'Archivált' }}</mat-chip>
+      </mat-chip-set>
+    }
+  }
+  <button matButton type="button" (click)="cancel()">Mégse</button>
+  <button form="product-form" matButton="filled" type="submit" [disabled]="saveDisabled()">
+    Mentés
+  </button>
+</header>
+
+@switch (view()) {
+  @case ('loading') {
+    <mat-progress-bar aria-label="Termék betöltése" mode="indeterminate" />
+  }
+  @case ('not-found') {
+    <div class="flex flex-col items-start gap-2 p-4">
+      <p class="m-0" role="alert">Ez a termék nem létezik.</p>
+      <a matButton routerLink="/termekek">Vissza a termékekhez</a>
+    </div>
+  }
+  @case ('error') {
+    <div class="flex flex-col items-start gap-2 p-4">
+      <p class="m-0" role="alert">A termék betöltése nem sikerült.</p>
+      <button matButton type="button" (click)="retry(pageTitle)">Újra</button>
+    </div>
+  }
+  @case ('form') {
+    <form
+      class="grid gap-4 p-4 xl:grid-cols-3"
+      id="product-form"
+      novalidate
+      (submit)="onSubmit($event)"
+    >
+      <div class="flex min-w-0 flex-col gap-4 xl:col-span-2">
+        <adm-basics-section
+          [attempted]="attempt.attempted()"
+          [brands]="store.brands()"
+          [form]="form"
+        />
+        <adm-highlights-section [attempted]="attempt.attempted()" [field]="form.highlights" />
+        <adm-colors-section [attempted]="attempt.attempted()" [field]="form.colors" />
+        <adm-variants-section [attempted]="attempt.attempted()" [form]="form" />
+        <adm-spec-groups-section [attempted]="attempt.attempted()" [field]="form.specGroups" />
+      </div>
+      <aside
+        class="order-first flex min-w-0 flex-col gap-4 self-start xl:sticky xl:top-20 xl:order-none"
+      >
+        <adm-display-card
+          [attempted]="attempt.attempted()"
+          [featuredOthers]="featuredOthers()"
+          [form]="form"
+        />
+        <adm-section-card title="Előnézet">
+          @if (preview(); as image) {
+            <img
+              class="adm-edit-preview"
+              [alt]="image.alt"
+              [height]="image.height"
+              [src]="image.src"
+              [width]="image.width"
+            />
+          } @else {
+            <p class="m-0">Még nincs kép.</p>
+          }
+        </adm-section-card>
+        <adm-section-card title="Adatok">
+          @if (store.product(); as product) {
+            <dl class="adm-edit-meta">
+              <dt>Azonosító</dt>
+              <dd>{{ product.id }}</dd>
+              <dt>Slug</dt>
+              <dd>{{ product.slug }}</dd>
+              <dt>Verzió</dt>
+              <dd>{{ product.version }}</dd>
+              @if (product.updatedAt; as updatedAt) {
+                <dt>Utolsó mentés</dt>
+                <dd>{{ updatedAt | date: 'yyyy. MM. dd. HH:mm' }}</dd>
+              }
+            </dl>
+          } @else {
+            <p class="m-0">Új termék, még nincs mentve.</p>
+          }
+        </adm-section-card>
+      </aside>
+    </form>
+  }
+}

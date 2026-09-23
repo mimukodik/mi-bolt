@@ -6,6 +6,7 @@ import {
   min,
   minLength,
   pattern,
+  readonly,
   required,
   schema,
   validate,
@@ -34,6 +35,8 @@ function isSlugLike(value: string): boolean {
 export interface ProductFormSchemaContext {
   /** Active featured products other than the one being edited; `null` while unknown. */
   readonly featuredOthers: Signal<number | null>;
+  /** True when the product already exists: the backend rejects a changed slug (422 SLUG_IMMUTABLE). */
+  readonly slugLocked?: Signal<boolean>;
 }
 
 function variantIdTooLongMessage(): string {
@@ -51,6 +54,7 @@ export function productFormSchema(context: ProductFormSchemaContext): Schema<Pro
         ? { kind: 'slugPattern', message: MESSAGES.slugPattern }
         : null;
     });
+    readonly(path.slug, { when: () => context.slugLocked?.() ?? false });
 
     validate(path.brand, ({ value }) =>
       value().trim() === '' ? { kind: 'required', message: MESSAGES.required } : null,
