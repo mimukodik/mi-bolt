@@ -343,7 +343,8 @@ export default defineConfig([
           patterns: [
             {
               group: ['@mi-bolt/api/*', '@mi-bolt/mocks/*', '**/src/app/api/generated/**'],
-              message: 'The shop SDK and mocks are not for the admin: use projects/admin/src/app/api/generated.',
+              message:
+                'The shop SDK and mocks are not for the admin: use projects/admin/src/app/api/generated.',
             },
           ],
         },

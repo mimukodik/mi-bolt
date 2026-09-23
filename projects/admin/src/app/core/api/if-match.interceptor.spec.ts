@@ -38,9 +38,7 @@ describe('ifMatchInterceptor', () => {
   });
 
   it('writes If-Match: W/"x" verbatim when withIfMatch("x") is passed', () => {
-    http
-      .get('/api/v1/admin/products/abc', { context: withIfMatch('W/"x"') })
-      .subscribe();
+    http.get('/api/v1/admin/products/abc', { context: withIfMatch('W/"x"') }).subscribe();
     const request = controller.expectOne('/api/v1/admin/products/abc');
     expect(request.request.headers.get('If-Match')).toBe('W/"x"');
     request.flush({});

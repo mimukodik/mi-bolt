@@ -1,8 +1,4 @@
-import {
-  HttpContext,
-  HttpContextToken,
-  type HttpInterceptorFn,
-} from '@angular/common/http';
+import { HttpContext, HttpContextToken, type HttpInterceptorFn } from '@angular/common/http';
 
 const IF_MATCH = new HttpContextToken<string | null>(() => null);
 

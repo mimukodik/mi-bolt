@@ -77,9 +77,7 @@ describe('fieldErrorsOf', () => {
         type: 'about:blank',
       },
     });
-    expect(fieldErrorsOf(error)).toEqual([
-      { path: '/variants/1/priceHuf', code: 'REQUIRED' },
-    ]);
+    expect(fieldErrorsOf(error)).toEqual([{ path: '/variants/1/priceHuf', code: 'REQUIRED' }]);
   });
 
   it('returns an empty array otherwise', () => {

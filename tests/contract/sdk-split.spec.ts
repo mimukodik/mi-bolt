@@ -107,9 +107,7 @@ describe('sdk-split: tag lists and admin coverage', () => {
         const op = pathItem[method];
         if (!op) continue;
         const tags = operationMatches(op);
-        const adminTagHits = tags.filter((tag) =>
-          (ADMIN_TAGS as readonly string[]).includes(tag),
-        );
+        const adminTagHits = tags.filter((tag) => (ADMIN_TAGS as readonly string[]).includes(tag));
         expect(
           adminTagHits.length,
           `${method.toUpperCase()} ${pathKey} should carry exactly one admin tag; saw ${JSON.stringify(tags)}`,
@@ -142,7 +140,7 @@ describe('sdk-split: tag lists and admin coverage', () => {
     const paths = spec.paths ?? {};
     let adminCount = 0;
     let otherCount = 0;
-    for (const [pathKey, pathItem] of Object.entries(paths)) {
+    for (const pathItem of Object.values(paths)) {
       for (const method of HTTP_METHODS) {
         const op = pathItem[method];
         if (!op) continue;
@@ -182,9 +180,7 @@ describe('sdk-split: SDK exports', () => {
       );
       if (matches.length > 0) offenders.push(`${id} -> ${matches.join(',')}`);
     }
-    expect(offenders, `shop SDK exports admin operationId(s): ${offenders.join('; ')}`).toEqual(
-      [],
-    );
+    expect(offenders, `shop SDK exports admin operationId(s): ${offenders.join('; ')}`).toEqual([]);
   });
 
   it('every admin operationId is exported by the admin functions module', async () => {
@@ -209,9 +205,6 @@ describe('sdk-split: SDK exports', () => {
       );
       if (matches.length === 0) missing.push(id);
     }
-    expect(
-      missing,
-      `admin SDK functions missing for: ${missing.join(', ')}`,
-    ).toEqual([]);
+    expect(missing, `admin SDK functions missing for: ${missing.join(', ')}`).toEqual([]);
   });
 });
