@@ -102,3 +102,9 @@ integration tests (`./gradlew integrationTest`).
   `SetCartItemQuantityRequest`).
 - `docs/02-backend.md` §4.2, §4.6, §5.
 - `docs/04-adatbazis.md` §4.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- `api/openapi.yaml` is now `contracts/commerce/openapi.yaml` at the git root; the build reads it as `../../../contracts/commerce/openapi.yaml` from `backend/services/commerce/`.
+- The contract line numbers cited above are those of the file when this record was written; the move kept the file byte for byte.
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.

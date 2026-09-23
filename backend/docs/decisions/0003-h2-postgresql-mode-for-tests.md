@@ -67,3 +67,7 @@ Take option 1.
 - https://docs.spring.io/spring-boot/reference/features/sql.html —
   H2 driver coordinates and the `spring-boot-starter-data-jpa-test`
   relationship with the running profile.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.
