@@ -35,7 +35,7 @@ import {
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { http, HttpResponse } from 'msw';
+import { type DefaultBodyType, http, HttpResponse } from 'msw';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -935,7 +935,7 @@ describe('S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/
 // T18-AC04: Continue is disabled when cart cannot be advanced, navigates to /penztar/adatok
 // ---------------------------------------------------------------------------
 describe('T18-AC04 Continue gating and authoritative revalidation', () => {
-  it('exposes a continue button disabled when the cart is empty, pending, or in error', async () => {
+  it('exposes a continue button disabled while the cart is empty and active once it has a line', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
 
@@ -985,6 +985,69 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     await fixture.whenStable();
 
     expect(router.url).toBe('/penztar/adatok');
+  });
+
+  // A failed remove or clear leaves the cart unchanged, so the shopper
+  // can still go on to checkout (owner: "Igen, aktív marad").
+  function serverError(detail: string, traceId: string): HttpResponse<DefaultBodyType> {
+    return HttpResponse.json(
+      {
+        type: 'about:blank',
+        title: 'Szerverhiba',
+        status: 500,
+        code: 'INTERNAL_SERVER_ERROR',
+        detail,
+        traceId,
+        fieldErrors: [],
+      },
+      { status: 500, headers: { 'content-type': 'application/problem+json' } },
+    );
+  }
+
+  it('keeps "Tovább az adatokhoz" active after a failed remove', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    server.use(
+      http.delete('*/api/v1/cart/items/:variantId', () =>
+        serverError('A termék eltávolítása nem sikerült.', 'spec-trace-500-continue-remove'),
+      ),
+    );
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="cart-line-remove"]').click();
+    await settleMutation(fixture);
+
+    expect(cartFacade.error()?.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(queryElement(root, '[data-testid="cart-line"]')).not.toBeNull();
+    expect(fixture.componentInstance.canContinue()).toBe(true);
+    expect(getButtonElement(root, '[data-testid="cart-continue"] button').disabled).toBe(false);
+  });
+
+  it('keeps "Tovább az adatokhoz" active after a failed clear', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    server.use(
+      http.delete('*/api/v1/cart/items', () =>
+        serverError('A kosár ürítése nem sikerült.', 'spec-trace-500-continue-clear'),
+      ),
+    );
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="cart-clear"] button').click();
+    await settleMutation(fixture);
+
+    expect(cartFacade.error()?.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(queryElement(root, '[data-testid="cart-line"]')).not.toBeNull();
+    expect(fixture.componentInstance.canContinue()).toBe(true);
+    expect(getButtonElement(root, '[data-testid="cart-continue"] button').disabled).toBe(false);
   });
 });
 
@@ -1236,6 +1299,9 @@ describe('MIM-216: every dismissible status message closes and returns focus', (
     const banner = queryElement(root, '[data-testid="status-message"]');
     expect(banner).not.toBeNull();
     expect(banner?.querySelector('button')).toBeNull();
+    expect(banner?.querySelector('p.message')?.textContent.trim()).toBe(
+      'A kosár módosítása nem sikerült; a kosár változatlan.',
+    );
   });
 
   it('dismissing the transient status banner moves focus to the page h1', async () => {
