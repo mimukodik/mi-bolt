@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,13 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (existsSync(stateDir)) {
+    for (const name of readdirSync(stateDir)) {
+      if (name.endsWith(".pid")) {
+        script(["stop", name.slice(0, -".pid".length)]);
+      }
+    }
+  }
   rmSync(stateDir, { recursive: true, force: true });
 });
 
