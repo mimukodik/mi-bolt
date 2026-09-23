@@ -378,7 +378,7 @@ export class ProductPage {
     }
   }
 
-  /** The mobile rail emits `void` per components.md:478, so the page
+  /** The mobile rail emits `void` per components.md:467, so the page
    *  supplies the intent from its own view model. */
   onRailAddRequested(): void {
     const v = this.vm();
