@@ -49,10 +49,12 @@ import type { Variant } from '../../api/generated/models/variant';
 
 /** The add-to-cart refusal copy. A per-product limit is named with its
  *  number (owner, 2026-09-22: "Igen, nevezze meg"); every other refusal
- *  keeps the generic text. */
+ *  keeps the generic text. `max` is treated as a positive integer: a
+ *  0, NaN or fractional value from a misbehaving backend would render
+ *  a nonsensical sentence, so the generic text falls through. */
 function describeAddFailure(failure: CartError | null): string {
   const max = failure?.code === 'QUANTITY_LIMIT' ? failure.params?.['max'] : undefined;
-  if (typeof max === 'number') {
+  if (typeof max === 'number' && Number.isInteger(max) && max > 0) {
     return `Ebből a termékből legfeljebb ${String(max)} db lehet a kosárban.`;
   }
   return 'A termék hozzáadása nem sikerült; a kosár változatlan.';
