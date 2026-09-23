@@ -410,7 +410,7 @@ export function run(argv: readonly string[], io: AgentMemoryIo): number {
     return EXIT_OK;
   }
   if (parsed.kind === "error") {
-    io.log(`${parsed.message}\n\nRun pnpm claude:memory --help for usage.`);
+    io.log(`${parsed.message}\n\nRun mise run claude:memory --help for usage.`);
     return EXIT_USAGE;
   }
 

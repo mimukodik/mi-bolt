@@ -19,7 +19,7 @@ import { isTopicName } from "../store/topic";
 
 /**
  * The repository root, derived from this file's own location: it sits at
- * scripts/agent-memory/io/, three directories below the root. Derived at
+ * tools/agent-memory/io/, three directories below the root. Derived at
  * runtime so no machine-specific path is committed and so the tool works from
  * any working directory. `import.meta.url` rather than `import.meta.dirname`,
  * because vitest transforms this module and only guarantees the former.

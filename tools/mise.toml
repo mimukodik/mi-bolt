@@ -1,0 +1,12 @@
+# Workspace tasks of tools/; the root mise.toml calls them.
+[tasks.setup]
+run = "npm ci"
+
+[tasks.lint]
+run = "npm run typecheck"
+
+[tasks.test]
+run = "npm test"
+
+[tasks.build]
+run = "echo 'tools: nothing to build, the tools run from source with tsx'"

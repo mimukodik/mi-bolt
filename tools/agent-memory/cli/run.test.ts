@@ -735,12 +735,12 @@ describe("the CLI shim", () => {
     const repoRoot = nodePath.resolve(here, "..", "..", "..");
 
     const output = execFileSync(
-      nodePath.join(repoRoot, "node_modules", ".bin", "tsx"),
-      [nodePath.join(repoRoot, "scripts", "agent-memory.ts"), "--help"],
+      nodePath.join(repoRoot, "tools", "node_modules", ".bin", "tsx"),
+      [nodePath.join(repoRoot, "tools", "agent-memory.ts"), "--help"],
       { cwd: repoRoot, encoding: "utf8" },
     );
 
     expect(output).toContain("Usage:");
-    expect(output).toContain("pnpm claude:memory");
+    expect(output).toContain("mise run claude:memory");
   });
 });

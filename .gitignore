@@ -316,3 +316,9 @@ node_modules/
 blob-report/
 /.spring-tools/
 /deploy/.env
+
+# tools/: the yettel.hu catalogue import
+/tools/catalog-import/dist/
+/tools/catalog-import/.cache/
+/data/catalog/catalog.invalid.json
+/data/catalog/catalog.partial.json

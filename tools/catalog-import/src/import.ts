@@ -1,8 +1,8 @@
 // Helper script that downloads the yettel.hu phone catalogue and writes
 // data/catalog/{catalog.json,catalog.schema.json,images/<sha256>.<ext>}.
 //
-// Usage (run from scripts/catalog-import/):
-//   pnpm exec tsx src/import.ts [--limit N] [--source URL]
+// Usage (run from tools/catalog-import/):
+//   npm exec tsx src/import.ts [--limit N] [--source URL]
 //                                [--refresh] [--refresh-urls u1,u2,…]
 //                                [--verify-cache <url>]
 //
@@ -45,7 +45,7 @@ const SCHEMA_PATH = join(DATA_DIR, "catalog.schema.json");
 const OUTPUT_PATH = join(DATA_DIR, "catalog.json");
 const PARTIAL_OUTPUT_PATH = join(DATA_DIR, "catalog.partial.json");
 const INVALID_OUTPUT_PATH = join(DATA_DIR, "catalog.invalid.json");
-const CACHE_DIR = join(REPO_ROOT, "scripts/catalog-import/.cache");
+const CACHE_DIR = join(REPO_ROOT, "tools/catalog-import/.cache");
 const PAGE_CACHE_DIR = join(CACHE_DIR, "pages");
 const IMAGE_INDEX_PATH = join(CACHE_DIR, "images.json");
 const IMPORT_LOG_PATH = join(CACHE_DIR, "import.log");

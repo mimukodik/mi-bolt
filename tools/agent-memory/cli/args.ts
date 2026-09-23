@@ -55,7 +55,7 @@ export type ParseResult =
   | { readonly kind: "error"; readonly message: string };
 
 export const HELP = `Usage:
-  pnpm claude:memory <command> [options]
+  mise run claude:memory <command> [options]
 
 The workspace's shared memory: an index at .claude/shared-memory/MEMORY.md
 plus one file per topic beside it. The SessionStart hook injects only the

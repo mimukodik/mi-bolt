@@ -1,4 +1,3 @@
 node_modules/
 dist/
 .cache/
-data/catalog/catalog.partial.json
