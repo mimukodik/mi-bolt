@@ -30,12 +30,12 @@ import { HttpClient, HttpErrorResponse, type HttpContext } from '@angular/common
 import { DestroyRef, Service, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom, type Observable } from 'rxjs';
 
-import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
-import { addCartItem, clearCart, getCart, removeCartItem } from '../../api/generated/functions';
+import { Api } from '@mi-bolt/api/api';
+import { ApiConfiguration } from '@mi-bolt/api/api-configuration';
+import { addCartItem, clearCart, getCart, removeCartItem } from '@mi-bolt/api/functions';
 import { withIfMatch } from '@mi-bolt/core-api/demo-session.interceptor';
-import type { Cart } from '../../api/generated/models/cart';
-import type { Money } from '../../api/generated/models/money';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { Money } from '@mi-bolt/api/models/money';
 import { isRecord } from '../../shared/utils/is-record';
 
 import {

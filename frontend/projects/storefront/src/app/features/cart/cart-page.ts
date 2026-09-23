@@ -51,10 +51,10 @@ import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
 import { isRecord } from '../../shared/utils/is-record';
 
-import type { Cart } from '../../api/generated/models/cart';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { CartNotice } from '../../api/generated/models/cart-notice';
-import type { Money } from '../../api/generated/models/money';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { CartItem } from '@mi-bolt/api/models/cart-item';
+import type { CartNotice } from '@mi-bolt/api/models/cart-notice';
+import type { Money } from '@mi-bolt/api/models/money';
 
 type ScreenState = 'loading' | 'error' | 'empty' | 'ready';
 

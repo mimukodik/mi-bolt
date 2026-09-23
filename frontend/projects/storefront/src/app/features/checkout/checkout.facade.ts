@@ -28,8 +28,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Service, computed, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { Api } from '../../api/generated/api';
-import { ApiConfiguration } from '../../api/generated/api-configuration';
+import { Api } from '@mi-bolt/api/api';
+import { ApiConfiguration } from '@mi-bolt/api/api-configuration';
 import {
   createOrder,
   createPaymentIntent,
@@ -38,23 +38,23 @@ import {
   getOrder,
   getPaymentIntent,
   updateCheckout,
-} from '../../api/generated/functions';
+} from '@mi-bolt/api/functions';
 import { withIfMatch } from '@mi-bolt/core-api/demo-session.interceptor';
 import { isRecord } from '../../shared/utils/is-record';
 
-import type { BillingDetails } from '../../api/generated/models/billing-details';
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
-import type { Contact } from '../../api/generated/models/contact';
-import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
-import type { FieldError } from '../../api/generated/models/field-error';
-import type { Money } from '../../api/generated/models/money';
-import type { OrderReceipt } from '../../api/generated/models/order-receipt';
-import type { OrderRequest } from '../../api/generated/models/order-request';
-import type { PaymentIntent } from '../../api/generated/models/payment-intent';
-import type { PaymentSelection } from '../../api/generated/models/payment-selection';
-import type { UpdateCheckoutRequest } from '../../api/generated/models/update-checkout-request';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { FieldError } from '@mi-bolt/api/models/field-error';
+import type { Money } from '@mi-bolt/api/models/money';
+import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
+import type { OrderRequest } from '@mi-bolt/api/models/order-request';
+import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
+import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
+import type { UpdateCheckoutRequest } from '@mi-bolt/api/models/update-checkout-request';
 
 import { CartFacade } from '../cart/cart.facade';
 import { checkoutKeys } from './checkout-keys';

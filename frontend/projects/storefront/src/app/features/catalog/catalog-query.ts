@@ -18,7 +18,7 @@
  * a stray storage value never breaks the page.
  */
 
-import type { ProductSort } from '../../api/generated/models/product-sort';
+import type { ProductSort } from '@mi-bolt/api/models/product-sort';
 import type { FilterIdentity } from '../../shared/types/filter-identity';
 
 /** Documented sort modes. Re-exported from the generated `ProductSort`

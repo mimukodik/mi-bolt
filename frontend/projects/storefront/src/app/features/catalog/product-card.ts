@@ -1,8 +1,8 @@
 import { Component, computed, input, linkedSignal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
-import type { ColorOption } from '../../api/generated/models/color-option';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { ColorOption } from '@mi-bolt/api/models/color-option';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';

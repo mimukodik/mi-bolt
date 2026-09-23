@@ -1,8 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { take } from 'rxjs';
 
-import { Api } from '../../api/generated/api';
-import { listProducts } from '../../api/generated/fn/catalog/list-products';
+import { Api } from '@mi-bolt/api/api';
+import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
 
 import { Hero } from './hero';
 import { FeaturedProducts, type FeaturedState } from './featured-products';

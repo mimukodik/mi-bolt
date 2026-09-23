@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/ng-openapi-gen/ng-openapi-gen-schema.json",
   "input": "../contracts/commerce/openapi.yaml",
-  "output": "projects/storefront/src/app/api/generated",
+  "output": "projects/shop-api/src/generated",
   "module": false,
   "services": false,
   "apiService": "Api",

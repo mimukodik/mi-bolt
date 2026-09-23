@@ -26,8 +26,8 @@ import { provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
-import type { ColorOption } from '../../api/generated/models/color-option';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { ColorOption } from '@mi-bolt/api/models/color-option';
 import type { Money } from '../../shared/ui/price-block/price-block';
 
 import { ProductCard } from './product-card';

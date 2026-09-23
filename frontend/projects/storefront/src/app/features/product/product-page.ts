@@ -42,10 +42,10 @@ import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { UiProblem } from '../../shared/types/ui-problem';
 
-import type { Availability } from '../../api/generated/models/availability';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
-import type { Variant } from '../../api/generated/models/variant';
+import type { Availability } from '@mi-bolt/api/models/availability';
+import type { CartItem } from '@mi-bolt/api/models/cart-item';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { Variant } from '@mi-bolt/api/models/variant';
 
 /** The add-to-cart refusal copy. A per-product limit is named with its
  *  number (owner, 2026-09-22: "Igen, nevezze meg"); every other refusal

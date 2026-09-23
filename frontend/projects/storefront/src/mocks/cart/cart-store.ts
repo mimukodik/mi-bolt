@@ -20,13 +20,7 @@
  * follows the contract's own examples via `problemType`.
  */
 
-import type {
-  Cart,
-  CartItem,
-  CartNotice,
-  Problem,
-  ProblemCode,
-} from '../../app/api/generated/models';
+import type { Cart, CartItem, CartNotice, Problem, ProblemCode } from '@mi-bolt/api/models';
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { VariantLookup } from '../catalog/catalog-store';
 import type { PersistedCart } from '../persistence';

@@ -12,7 +12,7 @@
  * responses (the 400 list lives in `catalog.handlers.ts`).
  */
 
-import type { CatalogItem, ProductSort, StorageGb, Variant } from '../../app/api/generated/models';
+import type { CatalogItem, ProductSort, StorageGb, Variant } from '@mi-bolt/api/models';
 import { ALLOWED_STORAGES, PRODUCT_SORTS, type CatalogEntry, toCatalogItem } from './catalog-store';
 import { isProductSort, isStorageGb } from './catalog-store';
 

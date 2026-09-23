@@ -589,7 +589,7 @@ describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
 
 /**
  * The T04 wiring the package.json `api:generate` script drives
- * regenerates `src/app/api/generated/` from this contract. The script
+ * regenerates `projects/shop-api/src/generated/` from this contract. The script
  * name is part of the contract, not an implementation detail.
  */
 function declaresApiGenerate(scripts: Record<string, string> | undefined): boolean {

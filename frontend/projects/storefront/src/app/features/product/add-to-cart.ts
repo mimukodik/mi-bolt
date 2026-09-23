@@ -21,7 +21,7 @@ import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
 import type { UiProblem } from '../../shared/types/ui-problem';
 
-import type { Variant } from '../../api/generated/models/variant';
+import type { Variant } from '@mi-bolt/api/models/variant';
 
 @Component({
   selector: 'app-add-to-cart',

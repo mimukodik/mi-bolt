@@ -45,11 +45,11 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { Observable } from 'rxjs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { Api } from '../../api/generated/api';
-import { listProducts } from '../../api/generated/fn/catalog/list-products';
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
-import type { Image } from '../../api/generated/models/image';
-import type { ProductPage } from '../../api/generated/models/product-page';
+import { Api } from '@mi-bolt/api/api';
+import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { Image } from '@mi-bolt/api/models/image';
+import type { ProductPage } from '@mi-bolt/api/models/product-page';
 
 import { Hero } from './hero';
 import { HowDemoWorks } from './how-demo-works';

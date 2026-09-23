@@ -29,10 +29,10 @@ import {
 } from '@angular/platform-browser-dynamic/testing';
 import type { firstValueFrom } from 'rxjs';
 
-import type { Api } from '../../projects/storefront/src/app/api/generated/api';
-import type { ApiConfiguration as ApiConfig } from '../../projects/storefront/src/app/api/generated/api-configuration';
-import { provideApiConfiguration as provideApiConfig } from '../../projects/storefront/src/app/api/generated/api-configuration';
-import * as operations from '../../projects/storefront/src/app/api/generated/functions';
+import type { Api } from '../../projects/shop-api/src/generated/api';
+import type { ApiConfiguration as ApiConfig } from '../../projects/shop-api/src/generated/api-configuration';
+import { provideApiConfiguration as provideApiConfig } from '../../projects/shop-api/src/generated/api-configuration';
+import * as operations from '../../projects/shop-api/src/generated/functions';
 import {
   createHandlers,
   createStrictHandlers,
@@ -116,7 +116,7 @@ describe('T26-AC01 operation inventory parity', () => {
   it('exposes every operationId in the generated SDK functions module', () => {
     for (const op of operationsById.values()) {
       // getMedia is generated as three content-type overloads
-      // (src/app/api/generated/functions.ts:11-15) so the contract
+      // (projects/shop-api/src/generated/functions.ts:11-15) so the contract
       // maps one operationId to any function whose name starts with
       // the operationId. Every other operationId matches exactly.
       const prefix = op.operationId;

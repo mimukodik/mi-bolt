@@ -22,7 +22,7 @@ import type {
   ProductSort,
   StorageGb,
   Variant,
-} from '../../app/api/generated/models';
+} from '@mi-bolt/api/models';
 import { isRecord } from '../is-record';
 
 /** Fixture shape produced by `scripts/build-catalog-fixture.mjs`. */

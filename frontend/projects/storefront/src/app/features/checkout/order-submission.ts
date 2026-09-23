@@ -11,12 +11,12 @@
 
 import { Service, computed, inject, signal, type Signal } from '@angular/core';
 
-import type { CardOrderRequest } from '../../api/generated/models/card-order-request';
-import type { CashOnDeliveryOrderRequest } from '../../api/generated/models/cash-on-delivery-order-request';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { FieldError } from '../../api/generated/models/field-error';
-import type { Money } from '../../api/generated/models/money';
-import type { OrderRequest } from '../../api/generated/models/order-request';
+import type { CardOrderRequest } from '@mi-bolt/api/models/card-order-request';
+import type { CashOnDeliveryOrderRequest } from '@mi-bolt/api/models/cash-on-delivery-order-request';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { FieldError } from '@mi-bolt/api/models/field-error';
+import type { Money } from '@mi-bolt/api/models/money';
+import type { OrderRequest } from '@mi-bolt/api/models/order-request';
 
 import { CheckoutFacade } from './checkout.facade';
 

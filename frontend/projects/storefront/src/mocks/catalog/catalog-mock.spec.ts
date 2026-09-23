@@ -22,7 +22,7 @@ import {
 } from './catalog.handlers';
 import { sortEntries } from './catalog-filter';
 import type { CatalogEntry, CatalogFixture, ProductRanking } from './catalog-store';
-import type { Product } from '../../app/api/generated/models/product';
+import type { Product } from '@mi-bolt/api/models/product';
 import type { CreateHandlersOptions } from '../create-handlers';
 import { Repository } from '../repository';
 import { isRecord } from '../is-record';

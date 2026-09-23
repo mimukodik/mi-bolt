@@ -4,7 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
-import { provideApiConfiguration } from './api/generated/api-configuration';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 

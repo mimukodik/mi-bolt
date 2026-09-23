@@ -14,7 +14,7 @@ import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import type { Facets } from '../../api/generated/models/facets';
+import type { Facets } from '@mi-bolt/api/models/facets';
 
 import { DEFAULT_CATALOG_QUERY, type CatalogQuery } from './catalog-query';
 import { FilterDrawer } from './filter-drawer';

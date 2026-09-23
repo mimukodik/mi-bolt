@@ -31,13 +31,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import type { Subscription } from 'rxjs';
 import { catchError, distinctUntilChanged, map, of, Subject, switchMap, take, tap } from 'rxjs';
 
-import { Api } from '../../api/generated/api';
-import { getProduct } from '../../api/generated/fn/catalog/get-product';
-import { listRelatedProducts } from '../../api/generated/fn/catalog/list-related-products';
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
-import type { Image } from '../../api/generated/models/image';
-import type { Product } from '../../api/generated/models/product';
-import type { Variant } from '../../api/generated/models/variant';
+import { Api } from '@mi-bolt/api/api';
+import { getProduct } from '@mi-bolt/api/fn/catalog/get-product';
+import { listRelatedProducts } from '@mi-bolt/api/fn/catalog/list-related-products';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { Image } from '@mi-bolt/api/models/image';
+import type { Product } from '@mi-bolt/api/models/product';
+import type { Variant } from '@mi-bolt/api/models/variant';
 
 import {
   computeAddToCartState,

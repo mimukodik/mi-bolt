@@ -25,15 +25,15 @@ import { BehaviorSubject } from 'rxjs';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
-import { Api } from './api/generated/api';
-import { ApiConfiguration, provideApiConfiguration } from './api/generated/api-configuration';
+import { Api } from '@mi-bolt/api/api';
+import { ApiConfiguration, provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
-import type { CatalogItem } from './api/generated/models/catalog-item';
-import type { ProductPage as ProductPageDTO } from './api/generated/models/product-page';
-import type { Variant } from './api/generated/models/variant';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { ProductPage as ProductPageDTO } from '@mi-bolt/api/models/product-page';
+import type { Variant } from '@mi-bolt/api/models/variant';
 import type { Money } from './shared/ui/price-block/price-block';
-import type { CheckoutOptions } from './api/generated/models/checkout-options';
-import type { OrderReceipt } from './api/generated/models/order-receipt';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 
 import { CatalogPage } from './features/catalog/catalog-page';
 import { CatalogFacade } from './features/catalog/catalog.facade';
