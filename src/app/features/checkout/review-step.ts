@@ -127,10 +127,6 @@ export class ReviewStep {
   /** No intent: start one. */
   readonly newPaymentRequested = output();
 
-  /** Whether the shopper has pressed the CTA at least once — flips
-   *  the consent from "default" to "submitted-invalid". */
-  readonly submitted = signal<boolean>(false);
-
   /** The cart's lines as the key the terms tick is stored under. */
   private readonly cartLines = computed<string>(() => cartLinesKey(this.cart()));
 
@@ -150,6 +146,14 @@ export class ReviewStep {
    *  cart lines, like the tick, so a tick cleared by a cart change is
    *  not flagged as an error the shopper never made on these lines. */
   private readonly termsTouched = linkedSignal<string, boolean>({
+    source: this.cartLines,
+    computation: () => false,
+  });
+  /** Whether the shopper has pressed the CTA on these cart lines —
+   *  flips the consent from "default" to "submitted-invalid". It
+   *  resets with the cart lines, like the tick, so a click on the old
+   *  lines does not flag a tick the cart change cleared. */
+  readonly submitted = linkedSignal<string, boolean>({
     source: this.cartLines,
     computation: () => false,
   });

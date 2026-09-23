@@ -656,6 +656,22 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(root.querySelectorAll('[data-testid="review-consent-terms-message"]').length).toBe(0);
   });
 
+  it('RS-19i a cart change does not flag the cleared tick after a CTA click on the old lines', () => {
+    const fixture = createFixture({ draft: CASH_DRAFT_COMPLETE });
+    checkTermsConsent(fixture);
+    const root = getRoot(fixture);
+    getButton(root, 'review-submit').click();
+    fixture.detectChanges();
+    fixture.componentRef.setInput('cart', {
+      ...CART,
+      items: [{ ...CART_ITEM, quantity: 2 }],
+      totalQuantity: 2,
+    });
+    fixture.detectChanges();
+    expect(getByTestId(root, 'review-consent-terms').getAttribute('data-state')).toBe('default');
+    expect(root.querySelectorAll('[data-testid="review-consent-terms-message"]').length).toBe(0);
+  });
+
   it('RS-20 blurring the unchecked checkbox moves it to the touched-invalid state and shows the message', () => {
     const fixture = createFixture();
     const root = getRoot(fixture);
