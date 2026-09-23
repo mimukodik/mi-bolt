@@ -19,7 +19,14 @@
                 <p aria-busy="true" class="adm-count">–</p>
               } @else if (state.kind === 'error') {
                 <p class="adm-card-error" role="alert">A betöltés nem sikerült.</p>
-                <button matButton type="button" (click)="load(card.key)">Újra</button>
+                <button
+                  matButton
+                  type="button"
+                  [attr.aria-label]="`Újra: ${card.title}`"
+                  (click)="load(card.key)"
+                >
+                  Újra
+                </button>
               } @else if (state.value.items.length > 0) {
                 <mat-list>
                   @for (item of state.value.items; track item.id) {
@@ -38,7 +45,14 @@
                 <p aria-busy="true" class="adm-count">–</p>
               } @else if (count.kind === 'error') {
                 <p class="adm-card-error" role="alert">A betöltés nem sikerült.</p>
-                <button matButton type="button" (click)="load(card.key)">Újra</button>
+                <button
+                  matButton
+                  type="button"
+                  [attr.aria-label]="`Újra: ${card.title}`"
+                  (click)="load(card.key)"
+                >
+                  Újra
+                </button>
               } @else {
                 <p class="adm-count">{{ count.value }}</p>
               }

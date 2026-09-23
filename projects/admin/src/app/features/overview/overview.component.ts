@@ -109,16 +109,6 @@ export class OverviewComponent {
 
   private readonly api = inject(AdminApi);
 
-  /** Bumped at the start of every `load(key)`; a resolution whose count no longer
-   *  matches is a stale response from a superseded call (e.g. two Újra clicks
-   *  before the first repaints) and is dropped instead of overwriting a newer one. */
-  private readonly requestGeneration: Record<CardKey, number> = {
-    active: 0,
-    archived: 0,
-    featured: 0,
-    admins: 0,
-  };
-
   readonly activeCount = signal<Loadable<number>>(LOADING);
   readonly archivedCount = signal<Loadable<number>>(LOADING);
   readonly featured = signal<Loadable<FeaturedSummary>>(LOADING);
@@ -146,9 +136,6 @@ export class OverviewComponent {
 
   /** Loads one card; the Újra button calls it too. Never rejects. */
   async load(key: CardKey): Promise<void> {
-    const generation = ++this.requestGeneration[key];
-    const isStale = (): boolean => this.requestGeneration[key] !== generation;
-
     if (key === 'featured') {
       this.featured.set(LOADING);
       try {
@@ -160,7 +147,6 @@ export class OverviewComponent {
             pageSize: 4,
           }),
         );
-        if (isStale()) return;
         this.featured.set({
           kind: 'ready',
           value: {
@@ -169,7 +155,7 @@ export class OverviewComponent {
           },
         });
       } catch {
-        if (!isStale()) this.featured.set(FAILED);
+        this.featured.set(FAILED);
       }
       return;
     }
@@ -177,10 +163,9 @@ export class OverviewComponent {
       this.adminCount.set(LOADING);
       try {
         const admins = await firstValueFrom(this.api.invoke(listAdminUsers, undefined));
-        if (isStale()) return;
         this.adminCount.set({ kind: 'ready', value: admins.length });
       } catch {
-        if (!isStale()) this.adminCount.set(FAILED);
+        this.adminCount.set(FAILED);
       }
       return;
     }
@@ -190,10 +175,9 @@ export class OverviewComponent {
       const page = await firstValueFrom(
         this.api.invoke(listAdminProducts, { status: key, pageSize: 1 }),
       );
-      if (isStale()) return;
       target.set({ kind: 'ready', value: page.totalElements });
     } catch {
-      if (!isStale()) target.set(FAILED);
+      target.set(FAILED);
     }
   }
 }

@@ -182,6 +182,7 @@ describe('OverviewComponent', () => {
         throw new Error('Expected the Újra button');
       }
       expect(retryButton.textContent.trim()).toBe('Újra');
+      expect(retryButton.getAttribute('aria-label')).toBe('Újra: Adminok');
       retryButton.click();
       await fresh.whenStable();
       fresh.detectChanges();
