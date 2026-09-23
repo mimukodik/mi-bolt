@@ -1,10 +1,10 @@
 /**
  * T04-AC05: the SDK root URL derived from document.baseURI.
  *
- * Pins the three behaviours the storefront's generated client depends on:
- * a base-href subpath is stripped, a path is stripped, and a baseURI that is
- * not a URL or a document that is not there fails loudly instead of shipping
- * a hard-coded origin.
+ * Pins what every app's generated client depends on: a base-href subpath
+ * and a path are dropped, the live document is the default, and a baseURI
+ * that is not a URL or has an opaque origin, or a missing document, fails
+ * loudly instead of shipping a hard-coded origin.
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -45,13 +45,13 @@ describe('resolveApiRoot', () => {
     const error = captureError(() => resolveApiRoot({ baseURI: 'not a url' }));
 
     expect(error.message).toContain('cannot parse document.baseURI "not a url"');
-    expect(error.cause).toBeDefined();
+    expect(error.cause).toBeInstanceOf(TypeError);
   });
 
   it('falls back to the live document when no argument is passed', () => {
-    const root = resolveApiRoot();
+    vi.stubGlobal('document', { baseURI: 'https://live.example/app/' });
 
-    expect(root).toBe(`${new URL(document.baseURI).origin}/api/v1`);
+    expect(resolveApiRoot()).toBe('https://live.example/api/v1');
   });
 
   it('throws when no document exists at all', () => {
