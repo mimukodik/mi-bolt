@@ -125,7 +125,6 @@ export async function loadOpenApiSpec(): Promise<{
   const rawYaml = await readFile(SPEC_PATH, 'utf8');
   // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
   const raw = withoutAdminOperations(yaml.load(rawYaml) as OpenApiSpec);
-  // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
   const dereferenced = withoutAdminOperations(
     (await $RefParser.dereference(SPEC_PATH)) as OpenApiSpec,
   );

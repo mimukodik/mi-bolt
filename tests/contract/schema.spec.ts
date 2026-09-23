@@ -119,7 +119,6 @@ beforeAll(async () => {
   ]);
   // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
   spec = withoutAdminOperations(yaml.load(specRaw) as OpenApiSpec);
-  // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
   dereferenced = withoutAdminOperations(
     (await $RefParser.dereference(SPEC_PATH)) as DereferencedSpec,
   );
