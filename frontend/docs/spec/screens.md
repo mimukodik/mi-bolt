@@ -50,7 +50,7 @@ Every purchase target >=44x44px. Normal controls48px height. Layout must be veri
 
 **Mobile filter drawer:** header title+named44px close; scrollable fields; footer “Mégse” and “Szűrők alkalmazása”. Copy of applied state remains transient until Apply. Escape/backdrop behaves as cancel; applied URL unchanged. Initial focus=drawer heading, return=filter trigger. Filter counts computed by API, not stale CSS labels.
 
-**States:** initial loading; current data refreshing with small progress; empty with current filters+Reset;503/network failure with Retry and retained query; invalid price; image error; out-of-range page canonicalization; back/forward restoration. Loading/error/no-results are not the same component message. Complete rows are listed in docs/tasks/test-scenarios.json.
+**States:** initial loading; current data refreshing with small progress; empty with current filters+Reset;503/network failure with Retry and retained query; invalid price; image error; out-of-range page canonicalization; back/forward restoration. Loading/error/no-results are not the same component message. Complete rows are listed in docs/spec/test-scenarios.md.
 
 ## S3 — Product details
 
