@@ -357,6 +357,27 @@ export default defineConfig([
           selector: 'MemberExpression[property.name=/^(only|skip|todo|fails|skipIf|runIf)$/]',
           message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
         },
+        {
+          // A string key, whatever the object: it['only'],
+          // describe.concurrent['skip'].
+          selector:
+            'MemberExpression[computed=true][property.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+        },
+        {
+          // Any other computed key on the test API itself: it[`skip`],
+          // test[key]. A computed key on an alias or a chain (t[key]) is
+          // out of reach of a syntax rule.
+          selector:
+            "MemberExpression[computed=true][property.type!='Literal'][object.name=/^(describe|suite|it|test|bench)$/]",
+          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+        },
+        {
+          // Destructuring: const { only } = it, and a test context taken
+          // apart as ({ skip }) => skip().
+          selector: 'ObjectPattern > Property[key.name=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+        },
       ],
     },
   },
