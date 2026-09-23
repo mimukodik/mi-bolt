@@ -5,6 +5,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
+# The admin mock seed imports the root catalogue (projects/admin/src/mocks/seed.ts).
+COPY --from=catalog catalog.json /data/catalog/catalog.json
 RUN npx ng build storefront --configuration production \
  && npx ng build demo-payment --configuration production \
  && npx ng build admin --configuration production
