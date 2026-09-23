@@ -4,7 +4,7 @@ These files under docs/ are a planning handoff inside the application repository
 
 ## Design authority
 
-`docs/design/yettel.md` is the design reference for every implementation and every verification or review of a rendered surface: it carries the colour tokens, typography, radii and recipes captured from yettel.hu under `docs/design/yettel/`, and the feature inventories against the backend contract. Cite it for each value used or checked; a value it does not carry is measured on `docs/design/yettel/css/portal.css` and added there before use. The earlier design skill and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20; the task packets under `docs/tasks/` that cite them are the original planning record, not current instructions.
+`docs/design/yettel.md` is the design reference for every implementation and every verification or review of a rendered surface: it carries the colour tokens, typography, radii and recipes captured from yettel.hu under `docs/design/yettel/`, and the feature inventories against the backend contract. Cite it for each value used or checked; a value it does not carry is measured on `docs/design/yettel/css/portal.css` and added there before use. The earlier design skill and `docs/mi-bolt/execution/skill-location.json` were retired on 2026-09-20, and the task packets that cited them were deleted with `docs/tasks/`.
 
 Public demo UI stays Hungarian; everything else committed to this repository is English. The original reference raster still contains superseded brand text; it remains immutable evidence, not live website text. Render the current brand as MiBolt in all functional UI.
 
@@ -20,6 +20,6 @@ Never claim a planned test has run. Evidence must name commands, revisions, view
 
 ## Package paths and runtime output
 
-All `docs/...` paths are relative to the application repository root. Source-code paths such as `src/...`, `tests/...`, `scripts/...`, `public/...` and `AGENTS.md` also refer to that root, never to this docs folder. Do not scaffold an application inside `docs/`. The OpenAPI source of truth stays at `docs/api/openapi.yaml`. Copy the configuration blueprint `docs/api/ng-openapi-gen.json` to the repository root as `ng-openapi-gen.json` in T04; run the generator from that root. No second hand-maintained OpenAPI file is permitted.
+All `docs/...` paths are relative to the Angular workspace root, `frontend/`. `tests/...` and `scripts/...` also refer to that root; `src/...` and `public/...` refer to the storefront project, `frontend/projects/storefront/`; never to this docs folder. Do not scaffold an application inside `docs/`. The OpenAPI source of truth is `contracts/commerce/openapi.yaml` at the git root, read by `frontend/ng-openapi-gen.json` and `frontend/ng-openapi-gen.admin.json`; run the generator from `frontend/`. No second hand-maintained OpenAPI file is permitted.
 
 Task packets and acceptance IDs remain the scope authority; the prompt adds independent subagent review and real browser verification gates. Runtime records go under `docs/mi-bolt/execution/`, created during execution. A planning status or old prototype screenshot is not application evidence.

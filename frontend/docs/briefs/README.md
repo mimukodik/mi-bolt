@@ -51,40 +51,9 @@ being wrong.
 | `brief-centreline.md` | the checkout centreline | landed |
 | `brief-guard-reason.md` | unknown cart vs empty cart in the guards | landed |
 | `brief-focus-handoff.md` + `resume-focus-handoff.md` | focus hand-off to the results counter, then the label fix | landed |
-| `brief-deeplink-wait.md` | the checkout deep-link must not bounce | **not landed — see `docs/HANDOVER.md` §1** |
+| `brief-deeplink-wait.md` | the checkout deep-link must not bounce | superseded (MIM-212) |
 
 `resume-*.md` files are fix rounds: what went back to a runner after a
 verification found a blocking problem. `resume-focus-handoff.md` is the better
 example — it opens by saying what in the previous commit is correct and must
 not be reworked, which is what keeps a fix round from turning into a rewrite.
-
-## `watch-runner-scope.sh`
-
-The monitor script used to supervise each runner, alongside
-`coder-agent.sh watch-status`. It emits only what the orchestrator would act
-on: a tool result with `is_error`, a refused permission, a build failure, a
-non-zero test failure count, and — every four minutes — any path in the
-runner's tree the brief did not list.
-
-Two things in it were learned the hard way and are the reason it is worth
-keeping rather than rewriting from scratch:
-
-- **Scan only lines containing `"toolUseResult"`.** The runner's transcript also
-  contains everything it *read*, including the launch-time copy of
-  `.claude/rules/orchestrated-coding.md`, which contains the literal string
-  `BUILD FAILED`. Scanning every line fires a false alarm on every runner, once
-  per monitor start.
-- **Start from the transcript's current end, not from line 0.** Otherwise every
-  re-arm, and every `resume` turn, replays failures the earlier turns already
-  reported.
-
-Paths are derived rather than hardcoded: the runner's directory comes from
-`coder-agent.sh status --json`, and the Claude transcript slug is that
-directory with every `/` replaced by `-`. Run it as
-
-```
-docs/briefs/watch-runner-scope.sh <runner-name> <session-id> <allow-regex> [repo-root]
-```
-
-where the allow-regex lists exactly the paths the brief gave that runner, for
-example `'^src/app/features/checkout/(checkout\.guards\.ts|checkout-state\.spec\.ts)$'`.
