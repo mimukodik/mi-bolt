@@ -20,7 +20,7 @@ import { LoadingState } from '../loading-state/loading-state';
  * `hasPrevious` at the call site: `refreshing` becomes
  * `status: 'loading', hasPrevious: true`. `hasPrevious` is what tells
  * `loading` apart from a refresh — "previous usable data can remain
- * under explicit refresh warning" (`components.md:176`'s Functions
+ * under explicit refresh warning" (`components.md:184`'s Functions
  * line) — by keeping the caller's projected content on screen instead
  * of swapping it for a skeleton.
  *
