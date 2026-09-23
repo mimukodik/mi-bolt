@@ -9,16 +9,26 @@ shell and the screens are later units.
 
 ## Commands
 
-| Command                             | What it does                                                                                                                   |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run start:admin`               | Dev server on **http://localhost:4220/admin/**; the in-page mock worker lands with unit F5, so nothing answers an API call yet |
-| `npm run start:admin:local-backend` | Dev server on the same port, proxied by `proxy.local-backend.conf.json` to the Spring backend on http://localhost:8080         |
-| `npm run build:admin`               | Production build into `dist/admin`, served from `/admin/`                                                                      |
-| `npx ng test admin`                 | Unit tests; coverage goes to `coverage/admin`                                                                                  |
-| `npx ng lint admin`                 | ESLint over `projects/admin/**/*.{ts,html}`                                                                                    |
+| Command                             | What it does                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `npm run start:admin`               | Dev server on **http://localhost:4220/admin/**, backed by the in-page mock worker (see "Mock backend" below)           |
+| `npm run start:admin:local-backend` | Dev server on the same port, proxied by `proxy.local-backend.conf.json` to the Spring backend on http://localhost:8080 |
+| `npm run build:admin`               | Production build into `dist/admin`, served from `/admin/`                                                              |
+| `npx ng test admin`                 | Unit tests; coverage goes to `coverage/admin`                                                                          |
+| `npx ng lint admin`                 | ESLint over `projects/admin/**/*.{ts,html}`                                                                            |
 
 `npm start` (`ng serve`) still serves the shop, and `ng build` still builds it;
 the admin application has its own targets.
+
+## Mock backend
+
+`npm run start:admin` runs on the in-page mock (`src/mocks/browser.ts`); no
+Spring backend is needed. Sign in with the development admin account,
+`admin` / `mibolt-admin-demo` (`SEED_ADMIN_PASSWORD` in `src/mocks/seed.ts`),
+also printed to the browser console once the worker starts. `?mi-scenario=`
+selects one of the scenarios in `src/mocks/scenario.ts`'s `SCENARIOS`:
+`default`, `empty-catalog`, `list-error`, `save-conflict`, `upload-error`. A
+reload resets the mock data, since it lives only in memory for the tab.
 
 ## Fonts
 

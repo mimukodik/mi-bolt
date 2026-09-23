@@ -15,6 +15,7 @@
     "build:payment": "ng build demo-payment",
     "build:admin": "ng build admin",
     "check:payment-boot": "node scripts/check-payment-boot.mjs",
+    "check:admin-boot": "node scripts/check-payment-boot.mjs --project admin --base-path /admin",
     "build:check": "node scripts/build-check.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
