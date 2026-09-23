@@ -1,13 +1,13 @@
 # Backend elvárások
 
-Repó: `mi-bolt-backend`. A `01-kommunikacio.md` és a `04-adatbazis.md` ennek a dokumentumnak a
+Hely: `backend/services/commerce/`. A `contracts/commerce/kommunikacio.md` és a `04-adatbazis.md` ennek a dokumentumnak a
 része — az ott leírt szabályok itt is kötelezőek.
 
 ---
 
 ## 1. Technológiai keret
 
-Ez a repó jelenlegi állapota, ehhez kell illeszkedni:
+Ez a szolgáltatás jelenlegi állapota, ehhez kell illeszkedni:
 
 | | |
 |---|---|
@@ -19,8 +19,7 @@ Ez a repó jelenlegi állapota, ehhez kell illeszkedni:
 | Adatbázis | PostgreSQL 16, Dockerben — lásd `04-adatbazis.md` |
 | Teszt | `spring-boot-starter-webmvc-test`, `spring-boot-starter-data-jpa-test` |
 
-A gyökércsomag `com.example.mi_bolt_backend`. A repó egyébként üres váz: egyetlen
-`MiBoltBackendApplication` osztály és egy üres teszt.
+A gyökércsomag `com.example.mi_bolt_backend`.
 
 ---
 
@@ -34,8 +33,6 @@ A gyökércsomag `com.example.mi_bolt_backend`. A repó egyébként üres váz: 
 - A fordítás függ a generálástól: `compileJava` csak a generálás után futhat.
 - A generált interfészeket `@RestController` osztályok **implementálják**. A kontroller nem
   deklarál saját útvonalat, HTTP metódust vagy státuszkódot — mindaz a szerződésből jön.
-
-A beüzemelés lépéseit a `05-backend-generator-prompt.md` tartalmazza.
 
 **Miért egyelemű `enum` a `const` helyett.** A szerződésben a `oneOf`-ágak diszkriminátor mezői
 egyelemű `enum`-ot használnak, nem `const`-ot. Ez tudatos: a `const` kulcsszót a Java generátor
@@ -300,9 +297,9 @@ Docker-adatbázisra épülő tesztet ír, az egy olyan függőséget hoz be, ami
 minden automatizált futtatásban kiszámíthatatlanul viselkedik.
 
 **Egy kivétel van, és az nem teszt.** A CI `postgres-smoke` jobja
-(`.github/workflows/pr-check.yml`, `docs/decisions/0013`) valódi PostgreSQL 16
+(`.github/workflows/backend.yml`, `docs/decisions/0013`) valódi PostgreSQL 16
 service-konténer ellen indítja el a lefordított jar-t üres adatbázison, és
-lefuttatja a `scripts/smoke.sh` végponti smoke-kört. Ez nem Gradle-teszt: a
+lefuttatja a `backend/services/commerce/scripts/smoke.sh` végponti smoke-kört. Ez nem Gradle-teszt: a
 `test` és `integrationTest` feladatok továbbra sem érhetik el, és a job csak
 azt bizonyítja, hogy az alkalmazás a valódi adatbázison elindul és a fő
 útvonal végigmegy. A kivétel oka: 2026-09-20-án négy összeolvasztott egységen
@@ -380,7 +377,7 @@ azonosítóval. *Akkor* 200, kép `Content-Type`, és hosszú élettartamú `Cac
 Az API tesztek a HTTP réteget mérik: útvonal, státuszkód, fejléc, törzs.
 
 - **Minden művelet** sikeres útja.
-- **Minden dokumentált hibakód** a hozzá tartozó státusszal. A `docs/01-kommunikacio.md` 5.3-as
+- **Minden dokumentált hibakód** a hozzá tartozó státusszal. A `contracts/commerce/kommunikacio.md` 5.3-as
   táblázata a lista: ha egy kód nincs tesztelve, nem tudjuk, hogy egyáltalán előáll-e.
 - **Fejlécek**: az `ETag` jelenléte és értéke a mutációk után; az `If-Match` hiányának és
   eltérésének kezelése; a `Location` a 201-es válaszokon; a `Set-Cookie` az első munkamenetes
@@ -391,7 +388,7 @@ Az API tesztek a HTTP réteget mérik: útvonal, státuszkód, fejléc, törzs.
 
 ### 7.4 Szerződés-ellenőrzés
 
-Minden válasznak meg kell felelnie az `api/openapi.yaml`-nek, és ezt **géppel** kell
+Minden válasznak meg kell felelnie a `contracts/commerce/openapi.yaml`-nek, és ezt **géppel** kell
 ellenőrizni, nem szemre. Ez fogja el azt az esetet, amikor a kód és a szerződés észrevétlenül
 elválik egymástól — ami contract-first projektben a legdrágább hiba.
 
@@ -428,7 +425,7 @@ rossz, hiányos vagy megvalósíthatatlan, azt **nem csendben kell megkerülni**
 tenni: bejegyzést írni róla a `docs/decisions/` alá, és **javítani az érintett dokumentumot** —
 különben ez a csomag elavul, és a következő menet már hazugságból dolgozik.
 
-**A szerződés külön eset.** Ha a hiba az `api/openapi.yaml`-ben van, a specet **nem** az
+**A szerződés külön eset.** Ha a hiba a `contracts/commerce/openapi.yaml`-ben van, a specet **nem** az
 implementáció írja át magától. Jelezni kell, mert a szerződés módosítása a frontendet is
 érinti — és a specnek van saját kiadási rendje, git taggel.
 
