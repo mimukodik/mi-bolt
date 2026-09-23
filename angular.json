@@ -313,6 +313,7 @@
           "options": {
             "buildTarget": "admin:build:test",
             "runnerConfig": "projects/admin/vitest.config.ts",
+            "setupFiles": ["projects/admin/src/testing/setup-msw.ts"],
             "coverage": true,
             "coverageInclude": ["projects/admin/src/**/*.ts"],
             "coverageExclude": [
