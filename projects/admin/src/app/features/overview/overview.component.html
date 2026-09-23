@@ -20,12 +20,12 @@
               } @else if (state.kind === 'error') {
                 <p class="adm-card-error" role="alert">A betöltés nem sikerült.</p>
                 <button matButton type="button" (click)="load(card.key)">Újra</button>
-              } @else if (state.value.names.length > 0) {
+              } @else if (state.value.items.length > 0) {
                 <mat-list>
-                  @for (name of state.value.names; track name) {
+                  @for (item of state.value.items; track item.id) {
                     <mat-list-item>
                       <mat-icon matListItemIcon>star</mat-icon>
-                      <span matListItemTitle>{{ name }}</span>
+                      <span matListItemTitle>{{ item.name }}</span>
                     </mat-list-item>
                   }
                 </mat-list>
