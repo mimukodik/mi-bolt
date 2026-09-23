@@ -1,4 +1,4 @@
-name: PR check
+name: Backend PR check
 
 on:
   pull_request:
@@ -18,6 +18,9 @@ jobs:
     name: Unit tests
     # Blacksmith runner (docs.blacksmith.sh quickstart, read 2026-09-19); the Ubuntu 24.04 image is pinned in the label.
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    defaults:
+      run:
+        working-directory: backend
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -39,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: jacoco-unit
-          path: build/jacoco/test.exec
+          path: backend/services/commerce/build/jacoco/test.exec
           if-no-files-found: error
           overwrite: true
         timeout-minutes: 5
@@ -49,14 +52,17 @@ jobs:
         with:
           name: unit-test-reports
           path: |
-            build/reports/tests/test/
-            build/test-results/test/
+            backend/services/commerce/build/reports/tests/test/
+            backend/services/commerce/build/test-results/test/
           overwrite: true
         timeout-minutes: 5
 
   integration-tests:
     name: Integration tests
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    defaults:
+      run:
+        working-directory: backend
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -78,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: jacoco-integration
-          path: build/jacoco/integrationTest.exec
+          path: backend/services/commerce/build/jacoco/integrationTest.exec
           if-no-files-found: error
           overwrite: true
         timeout-minutes: 5
@@ -88,14 +94,17 @@ jobs:
         with:
           name: integration-test-reports
           path: |
-            build/reports/tests/integrationTest/
-            build/test-results/integrationTest/
+            backend/services/commerce/build/reports/tests/integrationTest/
+            backend/services/commerce/build/test-results/integrationTest/
           overwrite: true
         timeout-minutes: 5
 
   lint:
     name: Lint (PMD)
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    defaults:
+      run:
+        working-directory: backend
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -118,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pmd-reports
-          path: build/reports/pmd/
+          path: backend/services/commerce/build/reports/pmd/
           overwrite: true
         timeout-minutes: 5
 
@@ -126,6 +135,9 @@ jobs:
     name: Coverage gate and build
     needs: [unit-tests, integration-tests]
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    defaults:
+      run:
+        working-directory: backend
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -144,11 +156,11 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           pattern: jacoco-*
-          path: build/jacoco
+          path: backend/services/commerce/build/jacoco
           merge-multiple: true
         timeout-minutes: 5
       - name: Check coverage data is present
-        run: test -s build/jacoco/test.exec && test -s build/jacoco/integrationTest.exec
+        run: test -s services/commerce/build/jacoco/test.exec && test -s services/commerce/build/jacoco/integrationTest.exec
         timeout-minutes: 2
       - name: Coverage gate and build
         run: ./gradlew build jacocoTestReport -x test -x integrationTest --continue
@@ -158,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
-          path: build/reports/jacoco/
+          path: backend/services/commerce/build/reports/jacoco/
           if-no-files-found: error
           overwrite: true
         timeout-minutes: 5
@@ -167,6 +179,9 @@ jobs:
     name: PostgreSQL boot and smoke
     needs: [unit-tests, integration-tests, lint]
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    defaults:
+      run:
+        working-directory: backend/services/commerce
     timeout-minutes: 15
     env:
       # CI-only throwaway, like POSTGRES_PASSWORD below; the policy needs 15 or more characters (ADR 0016).
@@ -202,12 +217,13 @@ jobs:
         timeout-minutes: 5
       - name: Build the jar
         run: ./gradlew bootJar
+        working-directory: backend
         timeout-minutes: 8
       - name: Start the application on PostgreSQL
         env:
           MIBOLT_DB_URL: jdbc:postgresql://localhost:5432/mi_bolt
         run: |
-          nohup java -jar build/libs/mi-bolt-backend-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
+          nohup java -jar build/libs/commerce-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
           for _ in $(seq 1 60); do
             grep -qE 'catalogue (loaded|present)' app.log && break
             sleep 2
@@ -223,6 +239,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: postgres-smoke-app-log
-          path: app.log
+          path: backend/services/commerce/app.log
           overwrite: true
         timeout-minutes: 5
