@@ -41,8 +41,17 @@ services:
       MIBOLT_DB_URL: "jdbc:postgresql://postgres:5432/${POSTGRES_DB:-mi_bolt}"
       MIBOLT_DB_USER: "${POSTGRES_USER:-mi_bolt}"
       MIBOLT_DB_PASSWORD: "${POSTGRES_PASSWORD:?copy deploy/.env.example to deploy/.env}"
+      MIBOLT_PAYMENT_REDIRECT_URL_PREFIX: "${MIBOLT_PAYMENT_ORIGIN:-http://localhost:4210}/demo-fizetes/"
+      MIBOLT_PAYMENT_RETURN_URL_PREFIX: "${MIBOLT_SHOP_ORIGIN:-http://localhost:4200}/penztar?paymentIntentId="
+      MIBOLT_ADMIN_INITIAL_PASSWORD: "${MIBOLT_ADMIN_INITIAL_PASSWORD:-}"
     ports:
       - "${MIBOLT_BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/api/v1/products"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
 
   web:
     image: mi-bolt-web
@@ -50,7 +59,8 @@ services:
       context: ../frontend
     restart: unless-stopped
     depends_on:
-      - commerce
+      commerce:
+        condition: service_healthy
     environment:
       BACKEND_ORIGIN: "http://commerce:8080"
     ports:
