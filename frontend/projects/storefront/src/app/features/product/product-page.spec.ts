@@ -10,7 +10,7 @@ import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
@@ -1325,7 +1325,7 @@ describe('MIM-233: the stock line on the navy buy box is white, as on yettel.hu'
 describe('owner 2026-09-22: a refused add names the per-product limit', () => {
   function refuseAdd(code: string, params?: Record<string, unknown>): void {
     // The contract derives the `type` URI from the code the same way
-    // `docs/api/openapi.yaml:341-360` and `cart-store.ts:88`
+    // `contracts/commerce/openapi.yaml:341-360` and `cart-store.ts:88`
     // (`problemType`) do. Hardcoding it to `quantity-limit` here made
     // the OUT_OF_STOCK case below send a body whose `type` and `code`
     // disagreed with the contract.

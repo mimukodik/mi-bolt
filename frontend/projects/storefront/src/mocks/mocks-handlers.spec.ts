@@ -40,8 +40,8 @@ import './orders/order.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
 import { isRecord } from './is-record';
 import type { VariantLookup } from './catalog/catalog-store';
-import { server, useMswServer } from '../../tests/msw-server';
-import catalogFixture from '../../docs/api/fixtures/catalog.json';
+import { server, useMswServer } from '../../../../tests/msw-server';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
 
 // Stand-in literals typed directly against `VariantLookup`'s own
 // shape — the generated SDK types — and shared by every `describe`

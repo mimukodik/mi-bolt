@@ -32,7 +32,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { BehaviorSubject } from 'rxjs';
 
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration, provideApiConfiguration } from '../../api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';

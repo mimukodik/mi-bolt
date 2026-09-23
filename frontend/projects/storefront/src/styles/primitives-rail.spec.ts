@@ -16,7 +16,10 @@ import { describe, expect, it } from 'vitest';
  * browser pass measures the Tab walk.
  */
 describe('MIM-238: focus and the footer clear the fixed purchase rail', () => {
-  const css = readFileSync(pathResolve(process.cwd(), 'src/styles/primitives.css'), 'utf8');
+  const css = readFileSync(
+    pathResolve(process.cwd(), 'projects/storefront/src/styles/primitives.css'),
+    'utf8',
+  );
   const railHeight =
     'var(--rail-block-size, calc(env(safe-area-inset-bottom) + var(--rail-height)))';
 

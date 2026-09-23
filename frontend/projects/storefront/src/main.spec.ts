@@ -30,13 +30,13 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 /** The `src/` tree, derived from the runner's working directory. */
-const SRC_ROOT = resolve(process.cwd(), 'src');
+const SRC_ROOT = resolve(process.cwd(), 'projects/storefront/src');
 
 /** The repository root, which is where `angular.json` lives. */
-const REPO_ROOT = resolve(SRC_ROOT, '..');
+const REPO_ROOT = process.cwd();
 
 /** The module every source file imports, and the one `fileReplacements` swaps. */
-const DEFAULT_ENVIRONMENT_MODULE = 'src/environments/environment.ts';
+const DEFAULT_ENVIRONMENT_MODULE = 'projects/storefront/src/environments/environment.ts';
 
 /** `src/main.ts` without its extension — the shape `importsEntryPoint` compares against. */
 const ENTRY_POINT = join(SRC_ROOT, 'main');
@@ -141,7 +141,7 @@ function readFileReplacements(configuration: string): FileReplacement[] {
   let node: unknown = parsed;
   for (const key of [
     'projects',
-    'mi-bolt',
+    'storefront',
     'architect',
     'build',
     'configurations',
@@ -159,7 +159,7 @@ function readServeConfiguration(configuration: string): Record<string, unknown> 
   let node: unknown = parsed;
   for (const key of [
     'projects',
-    'mi-bolt',
+    'storefront',
     'architect',
     'serve',
     'configurations',
@@ -213,7 +213,9 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
   it('reads the replacement list out of angular.json', () => {
     // The fallback in `environmentModuleFor` hides a parse failure, so
     // a configuration that has always declared one is read first.
-    expect(environmentModuleFor('development')).toBe('src/environments/environment.development.ts');
+    expect(environmentModuleFor('development')).toBe(
+      'projects/storefront/src/environments/environment.development.ts',
+    );
     expect(existsSync(join(REPO_ROOT, environmentModuleFor('development')))).toBe(true);
   });
 
@@ -241,13 +243,13 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     // The frontend on the real local backend: no optimisation, no mock
     // worker; `npm start` stays on the mock (the owner's rule, 2026-09-22).
     const module = environmentModuleFor('local-backend');
-    expect(module).toBe('src/environments/environment.local-backend.ts');
+    expect(module).toBe('projects/storefront/src/environments/environment.local-backend.ts');
     expect(existsSync(join(REPO_ROOT, module))).toBe(true);
     const flags = parseEnvironmentFlags(readFileSync(join(REPO_ROOT, module), 'utf8'));
     expect(flags.production).toBe(false);
     expect(flags.demo).toBe(false);
     const serve = readServeConfiguration('local-backend');
-    expect(serve?.['buildTarget']).toBe('mi-bolt:build:local-backend');
+    expect(serve?.['buildTarget']).toBe('storefront:build:local-backend');
     expect(serve?.['proxyConfig']).toBe('proxy.local-backend.conf.json');
     expect(existsSync(join(REPO_ROOT, 'proxy.local-backend.conf.json'))).toBe(true);
   });

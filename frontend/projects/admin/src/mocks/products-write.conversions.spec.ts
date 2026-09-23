@@ -6,7 +6,7 @@
  *
  * Every expected value in the tables below is the orchestrator's own
  * measurement on the booted backend at the integration head
- * (`docs/api/fixtures/catalog-source.json` seed): `PUT
+ * (`data/catalog/catalog.json` seed): `PUT
  * /api/v1/admin/products/{id}` and `POST
  * /api/v1/admin/products/{id}/archive` sent with a stale `If-Match:
  * "999999"`, so a well-formed, accepted body answers 412

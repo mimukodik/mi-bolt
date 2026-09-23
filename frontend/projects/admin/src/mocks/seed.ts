@@ -1,4 +1,4 @@
-import catalogSource from '../../../../docs/api/fixtures/catalog-source.json';
+import catalogSource from '../../../../../data/catalog/catalog.json';
 
 import type { AdminProduct } from '../app/api/generated/models/admin-product';
 import type { AdminProductColor } from '../app/api/generated/models/admin-product-color';
@@ -34,7 +34,7 @@ export interface SeedCatalog {
 }
 
 function fail(what: string): never {
-  throw new Error(`catalog-source.json: ${what}`);
+  throw new Error(`data/catalog/catalog.json: ${what}`);
 }
 
 function rec(value: unknown, what: string): Record<string, unknown> {
@@ -118,7 +118,7 @@ function specGroup(value: unknown): AdminSpecGroup {
   };
 }
 
-/** The admin view of `catalog-source.json`: ids 1..N, the last two archived, every image registered. */
+/** The admin view of `data/catalog/catalog.json`: ids 1..N, the last two archived, every image registered. */
 export function seedCatalog(source: unknown = catalogSource): SeedCatalog {
   const products = list(rec(source, 'root'), 'products');
   const images = new Map<string, MockImage>();

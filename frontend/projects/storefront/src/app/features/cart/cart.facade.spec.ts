@@ -18,7 +18,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { HttpResponse, http } from 'msw';
 
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
@@ -29,7 +29,7 @@ import { CART_TTL_MS } from '../../../mocks/cart/cart-store';
 import '../../../mocks/cart/cart.handlers';
 import { loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 import { isCatalogFixtureShape } from '../../../mocks/catalog/catalog.handlers';
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import {
   createDeterministicIds,
   createFixedClock,

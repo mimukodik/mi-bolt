@@ -8,7 +8,7 @@
  * 49, ids 1-4 the only featured products, ids 47/48 archived, product 5
  * `honor-600-lite` with colours `fekete`/`zold` and first variant id
  * `honor-600-lite--fekete--128`) are literals read from
- * `docs/api/fixtures/catalog-source.json` through `seed.ts`, never
+ * `data/catalog/catalog.json` through `seed.ts`, never
  * computed with the handler code under test.
  */
 import { describe, expect, it } from 'vitest';

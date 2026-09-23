@@ -19,7 +19,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import catalogSource from '../../../../docs/api/fixtures/catalog-source.json';
+import catalogSource from '../../../../../data/catalog/catalog.json';
 import { isRecord } from '../app/core/is-record';
 import {
   ARCHIVED_SEED_COUNT,
@@ -158,7 +158,7 @@ describe('seed image content types', () => {
   it('rejects an unsupported image extension', () => {
     const source = buildSourceWithImageFile('sample-photo.gif');
     expect(() => seedCatalog(source)).toThrow(
-      'catalog-source.json: image type of sample-photo.gif',
+      'data/catalog/catalog.json: image type of sample-photo.gif',
     );
   });
 });
@@ -178,7 +178,7 @@ describe('SEED_ADMIN', () => {
 
 describe('seedCatalog guards', () => {
   it('throws when the root is not an object', () => {
-    expect(() => seedCatalog(null)).toThrow('catalog-source.json: root is not an object');
+    expect(() => seedCatalog(null)).toThrow('data/catalog/catalog.json: root is not an object');
   });
 
   it('throws when a product carries an unsupported storageGb', () => {
@@ -201,6 +201,6 @@ describe('seedCatalog guards', () => {
     const badVariant = { ...firstVariant, storageGb: 64 };
     const badProduct = { ...firstSource, variants: [badVariant] };
     const badSource = { products: [badProduct] };
-    expect(() => seedCatalog(badSource)).toThrow('catalog-source.json: storageGb 64');
+    expect(() => seedCatalog(badSource)).toThrow('data/catalog/catalog.json: storageGb 64');
   });
 });

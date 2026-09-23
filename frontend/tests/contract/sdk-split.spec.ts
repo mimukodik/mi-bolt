@@ -24,9 +24,9 @@ import '@angular/compiler';
 import { describe, it, expect } from 'vitest';
 import yaml from 'js-yaml';
 
-import { isRecord } from '../../src/mocks/is-record';
+import { isRecord } from '../../projects/storefront/src/mocks/is-record';
 import { ADMIN_TAGS, HTTP_METHOD_KEYS, isAdminTag } from './admin-tags';
-import * as shopOperations from '../../src/app/api/generated/functions';
+import * as shopOperations from '../../projects/storefront/src/app/api/generated/functions';
 import * as adminOperations from '../../projects/admin/src/app/api/generated/functions';
 
 interface SpecOperation {
@@ -39,7 +39,7 @@ interface SpecOperation {
 const REPO_ROOT = resolve(__dirname, '../..');
 const SHOP_CONFIG_PATH = resolve(REPO_ROOT, 'ng-openapi-gen.json');
 const ADMIN_CONFIG_PATH = resolve(REPO_ROOT, 'ng-openapi-gen.admin.json');
-const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
+const SPEC_PATH = resolve(REPO_ROOT, '../contracts/commerce/openapi.yaml');
 
 function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];

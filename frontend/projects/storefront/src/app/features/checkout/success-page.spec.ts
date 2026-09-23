@@ -27,7 +27,7 @@ import '@angular/compiler';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpResponse, http, type DefaultBodyType } from 'msw';
 import { BehaviorSubject, type Observable } from 'rxjs';
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
@@ -46,7 +46,7 @@ import {
   DEFAULT_SCENARIO,
 } from '../../../mocks/scenarios';
 import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 
 import '../../../mocks/cart/cart.handlers';

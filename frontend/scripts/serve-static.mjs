@@ -2,10 +2,10 @@
 // scripts/serve-static.mjs — T28 deployable CSR demo static server.
 //
 // A minimal HTTPS-or-localhost static host for the production build
-// under `dist/mi-bolt/browser/`. The server:
+// under `dist/storefront/browser/`. The server:
 //
 //   * binds 127.0.0.1 only (no 0.0.0.0) so it never leaks to the LAN;
-//   * serves the `dist/mi-bolt/browser/` directory;
+//   * serves the `dist/storefront/browser/` directory;
 //   * applies SPA fallback — any GET request that does NOT start
 //     with `/api/` and that does not resolve to an existing file
 //     returns `index.html` so deep links survive a hard reload;
@@ -63,7 +63,7 @@ import { parseProxyTimeout } from './proxy-timeout.mjs';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const STATIC_DIR = resolve(
   repoRoot,
-  process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser',
+  process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/storefront/browser',
 );
 const API_PROXY = process.env['MI_BOLT_API_PROXY'] ?? null;
 /** Milliseconds the proxy waits for the backend before answering 502. */

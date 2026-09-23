@@ -13,7 +13,7 @@
 
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import catalogFixture from '../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../../docs/api/fixtures/catalog.json';
 import {
   buildCatalogHandlers,
   catalogStore,
@@ -33,7 +33,7 @@ import {
   type Clock,
   type Ids,
 } from '../scenarios';
-import { server, useMswServer } from '../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../tests/msw-server';
 
 useMswServer();
 

@@ -2,7 +2,7 @@
  * MIM-212 — checkout store on the 2.0.0 contract.
  *
  * The checkout draft shares the cart's session version counter
- * (`docs/api/openapi.yaml:16-19`); a `version` of its own would split
+ * (`contracts/commerce/openapi.yaml:16-19`); a `version` of its own would split
  * the ETag across two resources. The store holds no counter and no TTL:
  * it reads the cart through the injected `CartStore` and bumps the
  * shared version through `CartStore.touch`. A `read` method assembles

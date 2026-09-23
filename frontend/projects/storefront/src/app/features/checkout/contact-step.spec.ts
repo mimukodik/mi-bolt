@@ -252,7 +252,7 @@ describe('FIX-63-AC07 ContactStep renders from its two inputs with no injected s
 
   it("declares exactly the contract's two inputs and one output", () => {
     const source = readFileSync(
-      join(process.cwd(), 'src/app/features/checkout/contact-step.ts'),
+      join(process.cwd(), 'projects/storefront/src/app/features/checkout/contact-step.ts'),
       'utf8',
     );
     expect(source).toMatch(/contactFields\s*=\s*input\.required<FieldTree<Contact>>\(\)/);

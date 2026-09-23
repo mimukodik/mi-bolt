@@ -30,7 +30,7 @@ import { http, HttpResponse, passthrough, type HttpHandler } from 'msw';
 import { setupWorker } from 'msw/browser';
 
 import { environment } from '../environments/environment';
-import catalogFixture from '../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
 import { Repository } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
