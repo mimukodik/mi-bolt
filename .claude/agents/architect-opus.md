@@ -18,8 +18,8 @@ Work in this order:
 
 1. Read the code that actually exists before proposing anything. Cite absolute
    paths.
-2. State the constraints, including the workspace rules in `CLAUDE.md` and
-   `AGENTS.md` that apply.
+2. State the constraints, including the workspace rules in `CLAUDE.md` that
+   apply.
 3. Give at least two candidate approaches with their tradeoffs, then recommend
    one and say why the others lose.
 4. Break the recommendation into ordered steps, each with its own verification

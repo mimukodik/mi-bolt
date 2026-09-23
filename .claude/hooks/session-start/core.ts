@@ -33,7 +33,7 @@ ${lines}`;
 /** Builds the shared memory section pointing at the `claude:memory` CLI. */
 function buildMemorySection(memoryIndexContent: string): string {
   return `[muhely shared memory]
-Read one topic with \`pnpm claude:memory read <topic>\`, search with \`pnpm claude:memory search "<query>"\`. Do not open these files directly.
+Read one topic with \`mise run claude:memory read <topic>\`, search with \`mise run claude:memory search "<query>"\`. Do not open these files directly.
 ${memoryIndexContent}`;
 }
 

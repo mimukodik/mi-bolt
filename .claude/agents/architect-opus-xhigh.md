@@ -22,15 +22,15 @@ many subsystems or a whole migration, when the plan will have enough steps that
 no single reading of the code covers them, or when `architect-opus` already
 designed this and its plan did not hold. A hard decision inside one subsystem
 is `architect-opus` work however hard it is. Which of those brought you here is
-in the task; `packages/shared/.agents/skills/model-routing/SKILL.md` owns that
+in the task; `.claude/skills/model-routing/SKILL.md` owns that
 decision.
 
 Work in this order:
 
 1. Read the code that actually exists before proposing anything. Cite absolute
    paths.
-2. State the constraints, including the workspace rules in `CLAUDE.md` and
-   `AGENTS.md` that apply.
+2. State the constraints, including the workspace rules in `CLAUDE.md` that
+   apply.
 3. Give at least two candidate approaches with their tradeoffs, then recommend
    one and say why the others lose.
 4. Break the recommendation into ordered steps, each with its own verification

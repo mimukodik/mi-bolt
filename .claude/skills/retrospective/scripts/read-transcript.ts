@@ -6,10 +6,8 @@
  * `.claude/hooks/` are run.
  *
  * Nothing but wiring lives here; the report itself is built in
- * transcript-report.ts, which the shared suite covers. This file is listed in
- * COVERAGE_GATE_EXCLUDED_PATHS for the same reason
- * scripts/coverage-changed-lines.ts is: a unit test cannot enter it without
- * running the whole command. It is verified by being executed.
+ * transcript-report.ts. A unit test cannot enter this file without running
+ * the whole command, so it is verified by being executed.
  */
 import { readFileSync } from "node:fs";
 

@@ -59,8 +59,8 @@ agents hold a grant at all.
   run for the same answer. Whether a finished run may be picked up again is a
   separate question, answered in *Size the task before you route it*.
 - Everything this skill routes is work the orchestrator delegates rather than
-  does itself. `.claude/CLAUDE.md` ("How I work") owns that rule and its one
-  exception, so read it there rather than from a copy here.
+  does itself. `.claude/CLAUDE.md` ("How I work") owns that rule and its
+  exceptions, so read it there rather than from a copy here.
 - Every spawn carries an explicit `model`. Never rely on inheritance: the
   session model is a property of the session, not a routing decision, so a spawn
   that inherits it gets whatever the orchestrator happens to be running rather
@@ -316,7 +316,7 @@ missed something.
 | Adversarial verification, code review | opus | high | `reviewer-opus` | `reviewer-opus-xhigh` when the review surface is large or long-running, when a first pass left the question open, and, through step 3's one exception, for a security-relevant diff whatever its size. |
 | Binary rubric grading, listing, counting, extraction | haiku | none | `scout-haiku` | `researcher-sonnet` as soon as an item needs a judgment call. |
 | Docs and summaries from given material | sonnet | high | `researcher-sonnet` | `reviewer-opus` when the material contradicts itself and has to be reconciled. |
-| Writing or editing an instruction file (`SKILL.md`, a rule file, `CLAUDE.md`, `AGENTS.md`, an agent definition), or drafting a shared-memory entry for `pnpm claude:memory write` to apply | opus | high | `instructions-opus` | Never down to `coder-sonnet`, however precise the spec; when the wording itself is contested, `reviewer-opus` reviews it instead of a second authoring pass. The end-of-work read-back that `.claude/rules/session-lifecycle.md` requires is a fresh `instructions-opus` on a task of its own, not that second pass. |
+| Writing or editing an instruction file (`SKILL.md`, a rule file, `CLAUDE.md`, `AGENTS.md`, an agent definition), or drafting a shared-memory entry for `mise run claude:memory write` to apply | opus | high | `instructions-opus` | Never down to `coder-sonnet`, however precise the spec; when the wording itself is contested, `reviewer-opus` reviews it instead of a second authoring pass. The end-of-work read-back that `.claude/rules/session-lifecycle.md` requires is a fresh `instructions-opus` on a task of its own, not that second pass. |
 | Real-browser task execution or spec verification with screenshots | sonnet | high | `real-browser-sonnet` | `debugger-opus` when the run exposes a bug with an unknown cause; the browser report is its input. |
 
 Each row's effort is the effort pinned in that agent's definition. There is no
@@ -538,7 +538,8 @@ The commit does not move: one unit is still one commit carrying both agents'
 files, and a commit boundary is not an agent boundary. One session gave a single
 agent a transport unit's implementation and both its suites because the unit was
 one commit, and the user stopped it: „tul nagy feladatot adtal egy agentnek,
-testeket kulon agentnek kellett volna irnia".
+testeket kulon agentnek kellett volna irnia" ("you gave one agent too large a
+task, the tests should have been written by a separate agent").
 
 Split along a boundary that can be verified on its own, not along whatever is
 convenient to describe. Two agents whose results cannot be checked separately
@@ -592,25 +593,13 @@ Every prompt to a routed agent states, in this order:
    spawn and of what. On every other agent the line is wasted, because it cannot
    spawn whatever a prompt tells it.
 6. For a split unit, which half this spawn is. The implementation half is told
-   it does not write the tests: the changed-line coverage rule in
+   it does not write the tests: the coverage rule in
    `.claude/rules/code-standards.md` is loaded into that agent and binds the
    commit rather than its own run, so without this line it reads that rule as an
    instruction to write the tests *Size the task before you route it* gave to
    the other spawn. The test half is told the implementation is finished and is
    not its to change, so a failing assertion comes back as a finding instead of
    being edited away in the code the test was written to check.
-7. That it does not run an `@agent-native/*` update and, if it concludes one is
-   needed, says so and stops. `AGENTS.md` owns the rule and names the commands,
-   and the root `CLAUDE.md` symlinks to it, so every agent spawned from
-   `.claude/agents/` has already loaded it and this line is a deliberate second
-   copy of a rule that `.claude/rules/session-lifecycle.md` ("Agent definitions
-   and subagent prompts") would otherwise keep out of the prompt. The issue
-   owner asked for the copy in those words, „mindig ird bele a promptba",
-   because an upgrade rewrites dependencies and scaffolded skills across the
-   whole workspace before anyone can review it; the shared-memory topic
-   `agent-native-fork-updates` records the decision. Removing the line as a
-   redundant restatement would be reversing that decision rather than tidying
-   one.
 8. For a spawn that runs while a sibling agent is writing into the same working
    tree, which files are this agent's, item 3's list written out file by file
    rather than as an area, and that this agent fixes only a red typecheck, test,

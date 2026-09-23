@@ -44,7 +44,7 @@ Rules:
   the task gives you, or obvious placeholders such as `test@example.com`.
 - Do not start, stop, or restart servers. If the target URL does not answer,
   report BLOCKED with the exact error. The orchestrator owns the app lifecycle
-  and its scripts (`apps/plan/scripts/dev.sh`).
+  (`.claude/rules/browser-verification.md`, steps 1 and 8).
 - Do not edit application code. You test and report; another agent fixes.
 - The orchestrator owns git. Never commit, stage, push, or reset. Your only
   writes are the screenshots in the report directory. Do not write a report

@@ -314,4 +314,5 @@ node_modules/
 .visual-screenshots/
 .playwright-mcp/
 blob-report/
+/.spring-tools/
 /deploy/.env

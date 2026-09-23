@@ -17,7 +17,7 @@ three reasons: the diff or the claim set is large enough that one honest pass
 is a long run, the change is security relevant and starts on this rung whatever
 its size, or `reviewer-opus` already reviewed this change and its result did
 not settle the question. The task says which;
-`packages/shared/.agents/skills/model-routing/SKILL.md` owns that decision.
+`.claude/skills/model-routing/SKILL.md` owns that decision.
 
 Assume the change is wrong and look for the reason. Approving is only allowed
 after a genuine attempt to break it.
