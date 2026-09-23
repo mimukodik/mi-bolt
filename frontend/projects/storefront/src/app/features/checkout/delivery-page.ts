@@ -27,11 +27,11 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { Address } from '../../api/generated/models/address';
-import type { BillingDetails } from '../../api/generated/models/billing-details';
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
-import type { PaymentSelection } from '../../api/generated/models/payment-selection';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
 
 type LoadState =
   | { kind: 'loading' }

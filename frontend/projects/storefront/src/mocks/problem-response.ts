@@ -10,7 +10,7 @@
 
 import { HttpResponse, type DefaultBodyType } from 'msw';
 
-import type { Problem } from '../app/api/generated/models/problem';
+import type { Problem } from '@mi-bolt/api/models/problem';
 import type { CreateHandlersOptions } from './create-handlers';
 import { buildTraceId, problemType } from './cart/cart-store';
 

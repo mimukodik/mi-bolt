@@ -15,7 +15,7 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
-      "@mi-bolt/api/*": ["./projects/storefront/src/app/api/generated/*"],
+      "@mi-bolt/api/*": ["./projects/shop-api/src/generated/*"],
       "@mi-bolt/core-api/*": ["./projects/core-api/src/*"],
       "@mi-bolt/mocks/*": ["./projects/storefront/src/mocks/*"]
     }
@@ -57,6 +57,9 @@
     },
     {
       "path": "./projects/core-api/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/shop-api/tsconfig.lib.json"
     }
   ]
 }

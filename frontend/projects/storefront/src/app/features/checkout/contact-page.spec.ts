@@ -24,7 +24,7 @@ import {
   type ContactSaveResult,
 } from './contact-step';
 
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
 
 const ZERO = { amount: 0, currency: 'HUF' } as const;
 

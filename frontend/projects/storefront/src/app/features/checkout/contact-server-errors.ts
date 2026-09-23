@@ -15,8 +15,8 @@
  * field whose value no longer matches the saved one.
  */
 
-import type { Contact } from '../../api/generated/models/contact';
-import type { FieldError as WireFieldError } from '../../api/generated/models/field-error';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { FieldError as WireFieldError } from '@mi-bolt/api/models/field-error';
 
 import type { FieldError } from '../../shared/ui/form-field-message/form-field-message';
 import { pointerToFieldKey, type ContactFieldKey } from './contact.schema';

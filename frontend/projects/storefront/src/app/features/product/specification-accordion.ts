@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 
-import type { SpecGroup } from '../../api/generated/models/spec-group';
+import type { SpecGroup } from '@mi-bolt/api/models/spec-group';
 
 /**
  * Specification boxes on the device page: every group is an always-open

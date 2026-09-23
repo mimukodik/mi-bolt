@@ -41,7 +41,7 @@ import { join as pathJoin, resolve as pathResolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { server, useMswServer } from '../../../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import { type CreateHandlersOptions, createHandlers } from '../../../mocks/create-handlers';
 import '../../../mocks/cart/cart.handlers';
@@ -64,8 +64,8 @@ import { CartFacade } from './cart.facade';
 import { CartLine } from './cart-line';
 import { CartPage } from './cart-page';
 import { OrderSummary } from './order-summary';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { CartNotice } from '../../api/generated/models/cart-notice';
+import type { CartItem } from '@mi-bolt/api/models/cart-item';
+import type { CartNotice } from '@mi-bolt/api/models/cart-notice';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker

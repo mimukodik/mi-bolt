@@ -23,13 +23,13 @@ import { ReviewStep, type CheckoutViewState } from './review-step';
 import type { PriceChange } from './checkout.facade';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
-import type { Cart } from '../../api/generated/models/cart';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
-import type { PaymentIntent } from '../../api/generated/models/payment-intent';
-import type { PaymentIntentStatus } from '../../api/generated/models/payment-intent-status';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { CartItem } from '@mi-bolt/api/models/cart-item';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
+import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
+import type { PaymentIntentStatus } from '@mi-bolt/api/models/payment-intent-status';
 
 // The terms tick is kept in sessionStorage (checkout-keys.ts), so a case
 // that ticks it must not leak the tick into the next case.

@@ -122,7 +122,7 @@ export default defineConfig({
             entry.url.includes('/main') || entry.url.includes('/chunk-'),
           sourceFilter: (sourcePath: string) =>
             sourcePath.includes('projects/storefront/src/') &&
-            !sourcePath.includes('projects/storefront/src/app/api/generated/'),
+            !sourcePath.includes('projects/shop-api/src/generated/'),
           reports: ['v8', 'console-summary', 'lcovonly', 'json-summary'],
           onEnd: (coverageResults: CoverageResults | undefined) => {
             if (process.env['E2E_COVERAGE_GATE'] !== '1') return;

@@ -30,14 +30,11 @@ import { TestBed } from '@angular/core/testing';
 import { http, HttpResponse } from 'msw';
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 
-import { Api } from '../../../app/api/generated/api';
-import {
-  ApiConfiguration,
-  provideApiConfiguration,
-} from '../../../app/api/generated/api-configuration';
-import type { Image } from '../../../app/api/generated/models/image';
-import type { Product } from '../../../app/api/generated/models/product';
-import type { Variant } from '../../../app/api/generated/models/variant';
+import { Api } from '@mi-bolt/api/api';
+import { ApiConfiguration, provideApiConfiguration } from '@mi-bolt/api/api-configuration';
+import type { Image } from '@mi-bolt/api/models/image';
+import type { Product } from '@mi-bolt/api/models/product';
+import type { Variant } from '@mi-bolt/api/models/variant';
 
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { ProductFacade } from '../../../app/features/product/product.facade';

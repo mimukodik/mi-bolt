@@ -41,7 +41,7 @@ export default defineConfig([
       'out-tsc/**',
       // Generated OpenAPI client; carries its own `/* eslint-disable */`
       // and is never hand-edited (MIM-209 step 3).
-      'projects/storefront/src/app/api/generated/**',
+      'projects/shop-api/src/generated/**',
       // The admin application's own generated OpenAPI client, same rules.
       'projects/admin/src/app/api/generated/**',
       'vitest.config.*',
@@ -348,7 +348,7 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@mi-bolt/api/*', '@mi-bolt/mocks/*', '**/src/app/api/generated/**'],
+              group: ['@mi-bolt/api/*', '@mi-bolt/mocks/*', '**/shop-api/**'],
               message:
                 'The shop SDK and mocks are not for the admin: use projects/admin/src/app/api/generated.',
             },

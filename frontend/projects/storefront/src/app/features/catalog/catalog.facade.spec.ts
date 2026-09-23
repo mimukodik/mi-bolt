@@ -22,8 +22,8 @@ import { provideZonelessChangeDetection, Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { Api } from '../../../app/api/generated/api';
-import { listProducts } from '../../../app/api/generated/fn/catalog/list-products';
+import { Api } from '@mi-bolt/api/api';
+import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
 import { CatalogFacade } from '../../../app/features/catalog/catalog.facade';
 import {
   mergeFacetsIntoUniverse,
@@ -43,10 +43,10 @@ import {
   type CatalogQuery,
   type Sort,
 } from '../../../app/features/catalog/catalog-query';
-import type { CatalogItem } from '../../../app/api/generated/models/catalog-item';
-import type { Facets } from '../../../app/api/generated/models/facets';
-import type { ColorFacetValue } from '../../../app/api/generated/models/color-facet-value';
-import type { ProductPage } from '../../../app/api/generated/models/product-page';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { Facets } from '@mi-bolt/api/models/facets';
+import type { ColorFacetValue } from '@mi-bolt/api/models/color-facet-value';
+import type { ProductPage } from '@mi-bolt/api/models/product-page';
 
 beforeAll(async () => {
   await TestBed.compileComponents();

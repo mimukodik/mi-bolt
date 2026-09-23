@@ -1,5 +1,5 @@
-import type { Product } from '../../api/generated/models/product';
-import type { Variant } from '../../api/generated/models/variant';
+import type { Product } from '@mi-bolt/api/models/product';
+import type { Variant } from '@mi-bolt/api/models/variant';
 
 /**
  * The demo device the product page specs serve from their own MSW

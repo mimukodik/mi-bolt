@@ -32,9 +32,9 @@ import { Component, computed, input } from '@angular/core';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
-import type { Address } from '../../api/generated/models/address';
-import type { OrderLine } from '../../api/generated/models/order-line';
-import type { OrderReceipt } from '../../api/generated/models/order-receipt';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { OrderLine } from '@mi-bolt/api/models/order-line';
+import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 
 const PAYMENT_LABELS: Readonly<Record<OrderReceipt['paymentMethod'], string>> = {
   card: 'Bankkártya (szimulált)',

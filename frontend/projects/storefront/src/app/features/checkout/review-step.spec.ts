@@ -19,17 +19,17 @@ import { ReviewStep, type CheckoutViewState } from './review-step';
 import { TermsDialog } from './terms-dialog';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
-import type { Address } from '../../api/generated/models/address';
-import type { BillingDetails } from '../../api/generated/models/billing-details';
-import type { Cart } from '../../api/generated/models/cart';
-import type { CartItem } from '../../api/generated/models/cart-item';
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
-import type { Contact } from '../../api/generated/models/contact';
-import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
-import type { PaymentSelection } from '../../api/generated/models/payment-selection';
-import type { PaymentIntent } from '../../api/generated/models/payment-intent';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { CartItem } from '@mi-bolt/api/models/cart-item';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
+import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
 
 import type { PriceChange } from './checkout.facade';
 

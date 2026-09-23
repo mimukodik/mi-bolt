@@ -22,7 +22,7 @@
 
 import { signal, type Signal, type WritableSignal } from '@angular/core';
 
-import type { Cart } from '../../api/generated/models/cart';
+import type { Cart } from '@mi-bolt/api/models/cart';
 
 /**
  * A single request waiting in the queue. `retry` is true when the

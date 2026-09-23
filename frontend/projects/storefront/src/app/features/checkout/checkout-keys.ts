@@ -20,7 +20,7 @@
 import { freshIdempotencyKey } from '../../shared/utils/idempotency-key';
 import { isRecord } from '../../shared/utils/is-record';
 
-import type { Cart } from '../../api/generated/models/cart';
+import type { Cart } from '@mi-bolt/api/models/cart';
 
 const INTENT_KEY_STORAGE = 'mi-bolt.checkout.intent-key';
 const ORDER_KEY_STORAGE = 'mi-bolt.checkout.order-key';

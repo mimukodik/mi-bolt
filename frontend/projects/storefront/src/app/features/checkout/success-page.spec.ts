@@ -35,7 +35,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
@@ -54,13 +54,13 @@ import '../../../mocks/checkout/checkout.handlers';
 import '../../../mocks/payment/payment.handlers';
 import '../../../mocks/orders/order.handlers';
 
-import type { Address } from '../../../app/api/generated/models/address';
-import type { BillingDetails } from '../../../app/api/generated/models/billing-details';
-import type { Contact } from '../../../app/api/generated/models/contact';
-import type { DeliverySelection } from '../../../app/api/generated/models/delivery-selection';
-import type { PaymentSelection } from '../../../app/api/generated/models/payment-selection';
-import type { OrderReceipt } from '../../../app/api/generated/models/order-receipt';
-import type { HomeDeliverySelection } from '../../../app/api/generated/models/home-delivery-selection';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
+import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
+import type { HomeDeliverySelection } from '@mi-bolt/api/models/home-delivery-selection';
 
 import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { CheckoutFacade } from '../../../app/features/checkout/checkout.facade';

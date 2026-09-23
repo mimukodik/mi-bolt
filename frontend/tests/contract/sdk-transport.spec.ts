@@ -30,14 +30,14 @@ import { server, useMswServer } from '../msw-server';
 
 import { withoutAdminOperations } from './admin-tags';
 
-import { Api } from '../../projects/storefront/src/app/api/generated/api';
-import type { Cart } from '../../projects/storefront/src/app/api/generated/models/cart';
-import type { Product } from '../../projects/storefront/src/app/api/generated/models/product';
+import { Api } from '../../projects/shop-api/src/generated/api';
+import type { Cart } from '../../projects/shop-api/src/generated/models/cart';
+import type { Product } from '../../projects/shop-api/src/generated/models/product';
 import {
   ApiConfiguration as ApiConfig,
   provideApiConfiguration as provideApiConfig,
-} from '../../projects/storefront/src/app/api/generated/api-configuration';
-import * as operations from '../../projects/storefront/src/app/api/generated/functions';
+} from '../../projects/shop-api/src/generated/api-configuration';
+import * as operations from '../../projects/shop-api/src/generated/functions';
 import {
   demoSessionInterceptor,
   withIfMatch,

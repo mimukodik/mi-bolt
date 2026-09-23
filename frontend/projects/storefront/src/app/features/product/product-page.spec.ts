@@ -11,9 +11,9 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { server, useMswServer } from '../../../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import type { Cart } from '../../api/generated/models/cart';
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
 import type { UiProblem } from '../../shared/types/ui-problem';

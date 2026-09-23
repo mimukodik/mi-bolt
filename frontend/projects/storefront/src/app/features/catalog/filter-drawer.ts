@@ -14,9 +14,9 @@ import {
 
 import type { CatalogQuery } from './catalog-query';
 import { ALLOWED_STORAGE_GB, isStorageBucket } from './catalog-query';
-import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
-import type { FacetValue } from '../../api/generated/models/facet-value';
-import type { Facets } from '../../api/generated/models/facets';
+import type { ColorFacetValue } from '@mi-bolt/api/models/color-facet-value';
+import type { FacetValue } from '@mi-bolt/api/models/facet-value';
+import type { Facets } from '@mi-bolt/api/models/facets';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { Button } from '../../shared/ui/button/button';

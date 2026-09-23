@@ -90,13 +90,13 @@ import {
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { Address } from '../../api/generated/models/address';
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { DeliveryOption } from '../../api/generated/models/delivery-option';
-import type { DeliveryOptionId } from '../../api/generated/models/delivery-option-id';
-import type { DeliverySelection } from '../../api/generated/models/delivery-selection';
-import type { PaymentMethodId } from '../../api/generated/models/payment-method-id';
-import type { UnavailableReason } from '../../api/generated/models/unavailable-reason';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { DeliveryOption } from '@mi-bolt/api/models/delivery-option';
+import type { DeliveryOptionId } from '@mi-bolt/api/models/delivery-option-id';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { PaymentMethodId } from '@mi-bolt/api/models/payment-method-id';
+import type { UnavailableReason } from '@mi-bolt/api/models/unavailable-reason';
 
 export interface DeliverySelectionChange {
   readonly delivery: DeliverySelection;

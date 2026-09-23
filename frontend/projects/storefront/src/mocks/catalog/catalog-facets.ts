@@ -11,13 +11,7 @@
  * backend).
  */
 
-import type {
-  ColorFacetValue,
-  Facets,
-  FacetValue,
-  Money,
-  PriceRange,
-} from '../../app/api/generated/models';
+import type { ColorFacetValue, Facets, FacetValue, Money, PriceRange } from '@mi-bolt/api/models';
 import { ALLOWED_STORAGES, type CatalogEntry } from './catalog-store';
 import type { CatalogFilter } from './catalog-filter';
 import {

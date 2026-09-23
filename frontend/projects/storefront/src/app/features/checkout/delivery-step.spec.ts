@@ -27,9 +27,9 @@ import { DeliveryStep } from './delivery-step';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { DeliveryOption } from '../../api/generated/models/delivery-option';
-import type { PaymentMethodOption } from '../../api/generated/models/payment-method-option';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { DeliveryOption } from '@mi-bolt/api/models/delivery-option';
+import type { PaymentMethodOption } from '@mi-bolt/api/models/payment-method-option';
 
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;

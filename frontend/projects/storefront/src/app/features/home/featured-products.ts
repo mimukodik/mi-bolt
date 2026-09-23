@@ -1,7 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
 import { ProductCard } from '../catalog/product-card';
 import { Button } from '../../shared/ui/button/button';
 

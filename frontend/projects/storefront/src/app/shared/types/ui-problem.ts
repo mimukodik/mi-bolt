@@ -1,4 +1,4 @@
-import type { FieldError } from '../../api/generated/models/field-error';
+import type { FieldError } from '@mi-bolt/api/models/field-error';
 
 /**
  * `UiProblem` as `docs/spec/components.md:7` defines it: the shape a
