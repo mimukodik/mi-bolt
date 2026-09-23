@@ -91,6 +91,24 @@ describe('POST /admin/auth/login', () => {
     expect(body['code']).toBe('CSRF_TOKEN_INVALID');
   });
 
+  it('rejects a missing password with 400 INVALID_REQUEST', async () => {
+    const db = createDb();
+    server?.use(...authHandlers(db));
+    issueXsrfCookie(db);
+    const token = db.xsrfToken ?? '';
+
+    const res = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'X-XSRF-TOKEN': token },
+      body: JSON.stringify({ username: 'admin' }),
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body['code']).toBe('INVALID_REQUEST');
+    expect(body['detail']).toBe('Missing required member');
+    expect(body['fieldErrors']).toEqual([{ path: '/password', code: 'REQUIRED' }]);
+  });
+
   it('rejects a wrong password with 401 UNAUTHENTICATED / Wrong username or password', async () => {
     const db = createDb();
     server?.use(...authHandlers(db));
@@ -184,6 +202,25 @@ describe('PUT /admin/auth/password', () => {
       }),
     });
     expect(res.status).toBe(401);
+  });
+
+  it('rejects a missing newPassword with 400 INVALID_REQUEST', async () => {
+    const db = createDb();
+    server?.use(...authHandlers(db));
+    db.sessionAdminId = SEED_ADMIN.id;
+    issueXsrfCookie(db);
+    const token = db.xsrfToken ?? '';
+
+    const res = await fetch(PASSWORD_URL, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', 'X-XSRF-TOKEN': token },
+      body: JSON.stringify({ currentPassword: SEED_ADMIN_PASSWORD }),
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body['code']).toBe('INVALID_REQUEST');
+    expect(body['detail']).toBe('Missing required member');
+    expect(body['fieldErrors']).toEqual([{ path: '/newPassword', code: 'REQUIRED' }]);
   });
 
   it('rejects a new password shorter than 15 characters with 422 SIZE', async () => {

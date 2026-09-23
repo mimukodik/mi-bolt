@@ -46,13 +46,20 @@ export function authHandlers(db: MockDb): HttpHandler[] {
         isRecord(body) && typeof body['username'] === 'string' ? body['username'] : undefined;
       const password =
         isRecord(body) && typeof body['password'] === 'string' ? body['password'] : undefined;
-      const admin =
-        username === undefined || password === undefined
-          ? undefined
-          : [...db.admins.values()].find(
-              (candidate) =>
-                candidate.user.username === username && candidate.password === password,
-            );
+      if (username === undefined || password === undefined) {
+        const fieldErrors = [
+          ...(username === undefined ? [{ path: '/username', code: 'REQUIRED' }] : []),
+          ...(password === undefined ? [{ path: '/password', code: 'REQUIRED' }] : []),
+        ];
+        return problem(400, 'INVALID_REQUEST', 'Invalid request', {
+          detail: 'Missing required member',
+          fieldErrors,
+        });
+      }
+
+      const admin = [...db.admins.values()].find(
+        (candidate) => candidate.user.username === username && candidate.password === password,
+      );
       if (admin === undefined) {
         return problem(401, 'UNAUTHENTICATED', 'Authentication required', {
           detail: 'Wrong username or password',
@@ -85,9 +92,21 @@ export function authHandlers(db: MockDb): HttpHandler[] {
       const currentPassword =
         isRecord(body) && typeof body['currentPassword'] === 'string'
           ? body['currentPassword']
-          : '';
+          : undefined;
       const newPassword =
-        isRecord(body) && typeof body['newPassword'] === 'string' ? body['newPassword'] : '';
+        isRecord(body) && typeof body['newPassword'] === 'string' ? body['newPassword'] : undefined;
+      if (currentPassword === undefined || newPassword === undefined) {
+        const fieldErrors = [
+          ...(currentPassword === undefined
+            ? [{ path: '/currentPassword', code: 'REQUIRED' }]
+            : []),
+          ...(newPassword === undefined ? [{ path: '/newPassword', code: 'REQUIRED' }] : []),
+        ];
+        return problem(400, 'INVALID_REQUEST', 'Invalid request', {
+          detail: 'Missing required member',
+          fieldErrors,
+        });
+      }
 
       if (newPassword.length < 15 || newPassword.length > 64) {
         return problem(422, 'VALIDATION_FAILED', 'Section rejected', {
