@@ -1,0 +1,51 @@
+<adm-section-card title="Kiemelések" [errorCount]="errorCount()" [number]="2">
+  <button
+    #addButton="matButton"
+    admSectionActions
+    matButton
+    type="button"
+    [disabled]="field()().value().length >= max"
+    (click)="add()"
+  >
+    <mat-icon>add</mat-icon>
+    Kiemelés
+  </button>
+  <div cdkDropList class="flex flex-col gap-2" (cdkDropListDropped)="drop($event)">
+    @for (highlight of field(); track highlight; let index = $index, first = $first, last = $last) {
+      <div cdkDrag class="flex items-start gap-2">
+        <button aria-label="Áthelyezés húzással" cdkDragHandle matIconButton type="button">
+          <mat-icon>drag_indicator</mat-icon>
+        </button>
+        <mat-form-field class="min-w-0 flex-1" subscriptSizing="dynamic">
+          <mat-label>Kiemelés {{ index + 1 }}</mat-label>
+          <input matInput [formField]="highlight.text" />
+          <mat-hint align="end">{{ highlight.text().value().length }} / {{ maxLength }}</mat-hint>
+          <mat-error>{{ highlight.text().errors()[0]?.message }}</mat-error>
+        </mat-form-field>
+        <button
+          matIconButton
+          type="button"
+          [attr.aria-label]="`Kiemelés ${index + 1}: műveletek`"
+          [matMenuTriggerFor]="rowMenu"
+        >
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #rowMenu="matMenu">
+          <button mat-menu-item type="button" [disabled]="first" (click)="move(index, -1)">
+            <mat-icon>arrow_upward</mat-icon>
+            <span>Feljebb</span>
+          </button>
+          <button mat-menu-item type="button" [disabled]="last" (click)="move(index, 1)">
+            <mat-icon>arrow_downward</mat-icon>
+            <span>Lejjebb</span>
+          </button>
+          <button mat-menu-item type="button" (click)="remove(index, addButton)">
+            <mat-icon>delete</mat-icon>
+            <span>Törlés</span>
+          </button>
+        </mat-menu>
+      </div>
+    }
+  </div>
+  <p class="adm-array-error" role="alert">{{ arrayError() }}</p>
+</adm-section-card>
