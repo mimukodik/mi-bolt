@@ -130,8 +130,10 @@ export class CatalogPage {
    *  under explicit refresh warning"). */
   readonly hasPrevious = computed<boolean>(() => this.facade.vm().status === 'refreshing');
 
-  /** True while any catalogue request is in flight, the first load and
-   *  every refresh: the filter counts show a skeleton then (MIM-228). */
+  /** True while any catalogue request is in flight (loading or refreshing).
+   *  The brand and colour lists show skeleton rows before the first
+   *  response; on every refresh the existing counts show a shimmer
+   *  (MIM-228). */
   readonly facetsBusy = computed<boolean>(() => {
     const status = this.facade.vm().status;
     return status === 'loading' || status === 'refreshing';
