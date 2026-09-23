@@ -15,6 +15,9 @@ import { issueXsrfCookie } from './guards';
 import { SEED_ADMIN } from './seed';
 import { usersHandlers } from './users.handlers';
 
+/** The random `traceId` of every Problem body, typed `unknown` so an object literal may carry it. */
+const ANY_TRACE_ID: unknown = expect.any(String);
+
 useMswServer();
 
 const USERS_URL = new URL('/api/v1/admin/users', document.baseURI).href;
@@ -109,10 +112,14 @@ describe('GET /admin/users', () => {
     const res = await fetch(`${USERS_URL}?page=1`);
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
       params: { parameter: 'page' },
     });
   });
@@ -143,6 +150,32 @@ describe('POST /admin/users', () => {
       body: JSON.stringify({ username: 'new-admin' }),
     });
     expect(res.status).toBe(401);
+  });
+
+  // Fails if the unknown-query-key check on create is removed.
+  it('rejects an unknown query key with 400', async () => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+
+    const res = await fetch(`${USERS_URL}?x=1`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'X-XSRF-TOKEN': token },
+      body: JSON.stringify({ username: 'new-admin' }),
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
+      params: { parameter: 'x' },
+    });
   });
 
   it('rejects a missing username with 400 INVALID_REQUEST', async () => {
@@ -215,9 +248,13 @@ describe('POST /admin/users', () => {
     });
     expect(res.status).toBe(422);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
       status: 422,
       code: 'VALIDATION_FAILED',
+      detail: 'One or more supplied fields are not acceptable',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [
         { path: '/username', code: 'PATTERN', params: {} },
         { path: '/username', code: 'SIZE', params: {} },
@@ -308,6 +345,31 @@ describe('DELETE /admin/users/:adminId', () => {
     expect(res.status).toBe(401);
   });
 
+  // Fails if the unknown-query-key check on delete is removed or moved after the id conversion.
+  it('rejects an unknown query key with 400 before reading the id', async () => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+
+    const res = await fetch(`${userUrl('not-a-uuid')}?x=1`, {
+      method: 'DELETE',
+      headers: { 'X-XSRF-TOKEN': token },
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
+      params: { parameter: 'x' },
+    });
+  });
+
   // Fails if the UUID-shape check on the path id is removed or its wrongType wording drifts.
   it('rejects an id that is not a UUID with 400', async () => {
     const db = createDb();
@@ -321,10 +383,14 @@ describe('DELETE /admin/users/:adminId', () => {
     });
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Query or path parameter has the wrong type',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
       params: { parameter: 'adminId', reason: 'type UUID' },
     });
   });
@@ -377,22 +443,21 @@ describe('DELETE /admin/users/:adminId', () => {
     expect(body['params']).toEqual({ adminId: unknownId });
   });
 
-  // Fails if the params.adminId the 404 carries stops being the normalised form of the requested id.
-  it('rejects the table-cased unknown id with 404, the normalised id in params', async () => {
+  // Fails if normalizeAdminId (users.handlers.ts:56-63) stops zero-padding or lower-casing each group, or if the 404 stops carrying the normalised id.
+  it('rejects a short-group upper-case unknown id with 404, the normalised id in params', async () => {
     const db = createDb();
     signIn(db);
     const token = primeToken(db);
     server?.use(...usersHandlers(db));
-    const unknownId = '00000000-0000-4000-8000-00000000abcd';
 
-    const res = await fetch(userUrl(unknownId), {
+    const res = await fetch(userUrl('ABCDEF01-2-3-4-5'), {
       method: 'DELETE',
       headers: { 'X-XSRF-TOKEN': token },
     });
     expect(res.status).toBe(404);
     const body = await jsonRecord(res);
     expect(body['code']).toBe('NOT_FOUND');
-    expect(body['params']).toEqual({ adminId: unknownId });
+    expect(body['params']).toEqual({ adminId: 'abcdef01-0002-0003-0004-000000000005' });
   });
 
   it('deletes a non-self admin: 204, and it is removed', async () => {

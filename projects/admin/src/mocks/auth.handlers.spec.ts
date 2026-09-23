@@ -16,6 +16,9 @@ import { createDb } from './db';
 import { issueXsrfCookie } from './guards';
 import { SEED_ADMIN, SEED_ADMIN_PASSWORD } from './seed';
 
+/** The random `traceId` of every Problem body, typed `unknown` so an object literal may carry it. */
+const ANY_TRACE_ID: unknown = expect.any(String);
+
 useMswServer();
 
 const SESSION_URL = new URL('/api/v1/admin/auth/session', document.baseURI).href;
@@ -93,10 +96,14 @@ describe('GET /admin/auth/session', () => {
     const res = await fetch(`${SESSION_URL}?x=1`);
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
       params: { parameter: 'x' },
     });
     expect(xsrfCookie()).toBe(db.xsrfToken);
@@ -189,11 +196,13 @@ describe('POST /admin/auth/login', () => {
     const res = await login('a'.repeat(85), 'x', token);
     expect(res.status).toBe(422);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
       status: 422,
       code: 'VALIDATION_FAILED',
-      title: 'Section rejected',
       detail: 'One or more supplied fields are not acceptable',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [{ path: '/username', code: 'SIZE', params: {} }],
     });
   });
@@ -208,9 +217,13 @@ describe('POST /admin/auth/login', () => {
     const res = await login('', '', token);
     expect(res.status).toBe(422);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
       status: 422,
       code: 'VALIDATION_FAILED',
+      detail: 'One or more supplied fields are not acceptable',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [
         { path: '/username', code: 'SIZE', params: {} },
         { path: '/password', code: 'SIZE', params: {} },
@@ -227,10 +240,13 @@ describe('POST /admin/auth/login', () => {
     const res = await loginRaw(db, '{}');
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Missing required member',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [
         { path: '/username', code: 'REQUIRED', params: {} },
         { path: '/password', code: 'REQUIRED', params: {} },
@@ -247,10 +263,13 @@ describe('POST /admin/auth/login', () => {
     const res = await loginRaw(db, JSON.stringify({ username: null, password: 'a' }));
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Missing required member',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [{ path: '/username', code: 'REQUIRED', params: {} }],
     });
   });
@@ -277,10 +296,13 @@ describe('POST /admin/auth/login', () => {
     const res = await loginRaw(db, JSON.stringify({ username: ['a'], password: 'x' }));
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Malformed request body',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [],
     });
   });
@@ -327,10 +349,14 @@ describe('POST /admin/auth/login', () => {
     });
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
       params: { parameter: 'next' },
     });
   });
@@ -350,6 +376,46 @@ describe('POST /admin/auth/logout', () => {
 
     const session = await fetch(SESSION_URL);
     expect(session.status).toBe(401);
+  });
+
+  // Fails if the CSRF check on logout is removed.
+  it('rejects with 403 when no XSRF header is sent', async () => {
+    const db = createDb();
+    server?.use(...authHandlers(db));
+    db.sessionAdminId = SEED_ADMIN.id;
+
+    const res = await fetch(LOGOUT_URL, { method: 'POST' });
+    expect(res.status).toBe(403);
+    const body = await jsonRecord(res);
+    expect(body['code']).toBe('CSRF_TOKEN_INVALID');
+    expect(db.sessionAdminId).toBe(SEED_ADMIN.id);
+  });
+
+  // Fails if the unknown-query-key check on logout is removed.
+  it('rejects an unknown query key with 400 and keeps the session', async () => {
+    const db = createDb();
+    server?.use(...authHandlers(db));
+    db.sessionAdminId = SEED_ADMIN.id;
+    issueXsrfCookie(db);
+    const token = db.xsrfToken ?? '';
+
+    const res = await fetch(`${LOGOUT_URL}?x=1`, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token },
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
+      params: { parameter: 'x' },
+    });
+    expect(db.sessionAdminId).toBe(SEED_ADMIN.id);
   });
 });
 
@@ -387,6 +453,36 @@ describe('PUT /admin/auth/password', () => {
     expect(res.status).toBe(401);
   });
 
+  // Fails if the unknown-query-key check on the password change is removed.
+  it('rejects an unknown query key with 400', async () => {
+    const db = createDb();
+    server?.use(...authHandlers(db));
+    db.sessionAdminId = SEED_ADMIN.id;
+    issueXsrfCookie(db);
+    const token = db.xsrfToken ?? '';
+
+    const res = await fetch(`${PASSWORD_URL}?x=1`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', 'X-XSRF-TOKEN': token },
+      body: JSON.stringify({
+        currentPassword: SEED_ADMIN_PASSWORD,
+        newPassword: 'a-brand-new-password-1',
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Unknown query parameter',
+      traceId: ANY_TRACE_ID,
+      fieldErrors: [],
+      params: { parameter: 'x' },
+    });
+  });
+
   it('rejects a missing newPassword with 400 INVALID_REQUEST', async () => {
     const db = createDb();
     server?.use(...authHandlers(db));
@@ -421,10 +517,13 @@ describe('PUT /admin/auth/password', () => {
     });
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Malformed request body',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [],
     });
   });
@@ -482,9 +581,13 @@ describe('PUT /admin/auth/password', () => {
     });
     expect(res.status).toBe(422);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
       status: 422,
       code: 'VALIDATION_FAILED',
+      detail: 'One or more supplied fields are not acceptable',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [{ path: '/currentPassword', code: 'SIZE', params: {} }],
     });
   });
@@ -504,9 +607,13 @@ describe('PUT /admin/auth/password', () => {
     });
     expect(res.status).toBe(422);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
       status: 422,
       code: 'VALIDATION_FAILED',
+      detail: 'One or more supplied fields are not acceptable',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [
         { path: '/currentPassword', code: 'SIZE', params: {} },
         { path: '/newPassword', code: 'SIZE', params: {} },
@@ -529,10 +636,13 @@ describe('PUT /admin/auth/password', () => {
     });
     expect(res.status).toBe(400);
     const body = await jsonRecord(res);
-    expect(body).toMatchObject({
+    expect(body).toEqual({
+      type: 'urn:mi-bolt:problem:invalid-request',
+      title: 'Invalid request',
       status: 400,
       code: 'INVALID_REQUEST',
       detail: 'Missing required member',
+      traceId: ANY_TRACE_ID,
       fieldErrors: [
         { path: '/currentPassword', code: 'REQUIRED', params: {} },
         { path: '/newPassword', code: 'SIZE', params: {} },
@@ -563,29 +673,6 @@ describe('PUT /admin/auth/password', () => {
     expect(body['fieldErrors']).toEqual([
       { path: '/currentPassword', code: 'WRONG_PASSWORD', params: {} },
     ]);
-  });
-
-  // Fails if WRONG_PASSWORD stops running only after every bean-validation error has cleared.
-  it('rejects a wrong current password with 422 WRONG_PASSWORD (the table case)', async () => {
-    const db = createDb();
-    server?.use(...authHandlers(db));
-    db.sessionAdminId = SEED_ADMIN.id;
-    issueXsrfCookie(db);
-    const token = db.xsrfToken ?? '';
-
-    const res = await fetch(PASSWORD_URL, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json', 'X-XSRF-TOKEN': token },
-      body: JSON.stringify({ currentPassword: 'wrong', newPassword: 'a-valid-15-char-pw' }),
-    });
-    expect(res.status).toBe(422);
-    const body = await jsonRecord(res);
-    expect(body).toMatchObject({
-      status: 422,
-      code: 'VALIDATION_FAILED',
-      detail: 'The current password is wrong',
-      fieldErrors: [{ path: '/currentPassword', code: 'WRONG_PASSWORD', params: {} }],
-    });
   });
 
   it('rejects a new password over 72 UTF-8 bytes with 422 PASSWORD_TOO_LONG', async () => {
