@@ -103,13 +103,9 @@ export class ProductListPage {
   /** Szűrők törlése: focus moves to the page title first, because the clear removes the button that holds it. */
   protected clearFilters(title: HTMLElement): void {
     title.focus();
-    this.store.setQuery({
-      q: DEFAULT_PRODUCT_LIST_QUERY.q,
-      brands: DEFAULT_PRODUCT_LIST_QUERY.brands,
-      status: DEFAULT_PRODUCT_LIST_QUERY.status,
-      featured: DEFAULT_PRODUCT_LIST_QUERY.featured,
-      outOfStock: DEFAULT_PRODUCT_LIST_QUERY.outOfStock,
-    });
+    // Every filter goes back to the default; the sort the user chose is kept.
+    const { sort, direction } = this.store.query();
+    this.store.setQuery({ ...DEFAULT_PRODUCT_LIST_QUERY, sort, direction });
   }
 
   /** Újra: focus moves to the page title first, because the reload removes the button that holds it. */
