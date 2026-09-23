@@ -224,4 +224,25 @@ describe('unauthorizedInterceptor', () => {
       throw new Error('expected a UrlTree');
     }
   });
+
+  it('case 13: a 401 on POST logout is skip-marked too — resolves, current() null, no navigation', async () => {
+    const db = createDb();
+    server?.use(...authHandlers(db));
+    server?.use(
+      http.post('*/api/v1/admin/auth/logout', () => HttpResponse.json({}, { status: 401 })),
+    );
+
+    const session = TestBed.inject(AdminSession);
+    await session.login({ username: SEED_ADMIN.username, password: SEED_ADMIN_PASSWORD });
+    expect(session.current()).toEqual(SEED_ADMIN);
+
+    const router = TestBed.inject(Router);
+    Object.defineProperty(router, 'url', { value: '/adminok', configurable: true });
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    await session.logout();
+
+    expect(session.current()).toBe(null);
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
 });

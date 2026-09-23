@@ -62,10 +62,15 @@ export class AdminSession {
     return user;
   }
 
-  /** 204 or 401 both mean signed out; any other error leaves `current` unchanged. */
+  /**
+   * 204 or 401 both mean signed out; any other error leaves `current`
+   * unchanged. Skip-marked like the priming GET and the login POST: the
+   * caller owns the navigation after a logout, so the interceptor must
+   * not also navigate with `vissza`.
+   */
   async logout(): Promise<void> {
     try {
-      await firstValueFrom(this.api.invoke(logoutAdmin));
+      await firstValueFrom(this.api.invoke(logoutAdmin, undefined, skipUnauthorizedRedirect()));
       this.currentSignal.set(null);
     } catch (err) {
       if (err instanceof HttpErrorResponse && err.status === 401) {
