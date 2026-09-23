@@ -7,23 +7,20 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 To start a local development server, run:
 
 ```bash
-ng serve
+mise run storefront   # the storefront alone on the MSW mock; mise run frontend starts all three apps
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
 ## Local backend
 
-`npm start` always runs on the in-page mock (MSW); the real Spring backend is a separate configuration. In four terminals, the first two from the repository root and the last two from `frontend/`:
+`mise run frontend` and `mise run storefront` always run on the in-page mock (MSW); the real Spring backend is a separate configuration. From the repository root, one command starts the database container, the backend natively and the three apps against it; Ctrl+C stops the backend and the apps:
 
 ```bash
-deploy/compose.sh up -d --wait postgres                 # PostgreSQL 16 in Docker on port 55433
-backend/gradlew -p backend :services:commerce:bootRun   # the backend, port 8080
-npm run start:payment     # the demo payment app on its own origin, http://localhost:4210/demo-fizetes/
-npm run start:local-backend
+mise run dev   # PostgreSQL on 55433, the backend on 8080, storefront 4200, payment 4210 (/demo-fizetes/), admin 4220
 ```
 
-`start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080`. The backend hands the shop an absolute `redirectUrl` on `http://localhost:4210` (MIM-251: the payment gateway is a separate origin, as a real one is), so the browser leaves the shop for the payment dev server, whose `proxy.payment.conf.json` forwards its `/api` calls to the same backend; `returnUrl` brings it back to `http://localhost:4200/penztar`. With `npm start` (MSW) both apps stay on 4200: the mock's URLs are relative and `proxy.conf.json` reaches the payment app through `/demo-fizetes`. Stop the database with `deploy/compose.sh stop postgres`.
+`start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080`. The backend hands the shop an absolute `redirectUrl` on `http://localhost:4210` (MIM-251: the payment gateway is a separate origin, as a real one is), so the browser leaves the shop for the payment dev server, whose `proxy.payment.conf.json` forwards its `/api` calls to the same backend; `returnUrl` brings it back to `http://localhost:4200/penztar`. With `npm start` (MSW) both apps stay on 4200: the mock's URLs are relative and `proxy.conf.json` reaches the payment app through `/demo-fizetes`. Stop the database with `mise run stop`.
 
 The built apps run on the real backend with two static hosts: `npx ng build --configuration local-backend`, `npm run build:payment`, then `MI_BOLT_API_PROXY=http://localhost:8080 PORT=4200 node scripts/serve-static.mjs` for the shop and `MI_BOLT_PAYMENT_ONLY=1 MI_BOLT_PAYMENT_STATIC_DIR=dist/demo-payment/browser MI_BOLT_API_PROXY=http://localhost:8080 PORT=4210 node scripts/serve-static.mjs` for the payment app.
 
@@ -61,7 +58,7 @@ ng test
 
 ## Continuous integration
 
-`.github/workflows/pr-check.yml` runs lint and format, unit tests with coverage (summary in the job summary, report as the `coverage-unit` artifact), the production build and the API client drift check in parallel on every pull request and push to `main`, on Blacksmith runners. The `e2e` job is a six-cell matrix, one job per browser (Chromium, Firefox, WebKit) and viewport (Full HD, mobile), each running its `integration-*` Playwright project in parallel; the Chromium cells collect V8 coverage and fail below the `angular.json` thresholds through the `onEnd` hook in `playwright.config.ts`; `e2e-report` merges the six blob reports into one HTML report. Both jobs are skipped until the first end-to-end spec lands.
+`.github/workflows/frontend.yml`, called by `.github/workflows/ci.yml` when a pull request or a push to `main` changes a frontend input path (`.github/components.yml`), runs lint and format, unit tests with coverage (summary in the job summary, report as the `coverage-unit` artifact), the production build and the API client drift check in parallel, on Blacksmith runners. The `e2e` job is a six-cell matrix, one job per browser (Chromium, Firefox, WebKit) and viewport (Full HD, mobile), each running its `integration-*` Playwright project in parallel; the Chromium cells collect V8 coverage and fail below the `angular.json` thresholds through the `onEnd` hook in `playwright.config.ts`; `e2e-report` merges the six blob reports into one HTML report. Both jobs are skipped until the first end-to-end spec lands.
 
 ## Additional Resources
 

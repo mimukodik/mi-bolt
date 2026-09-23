@@ -7,7 +7,7 @@
  * dist, and nothing in CI inspected the built output before this script
  * existed. It guards all three: `check:admin-dist`, `check:storefront-dist`
  * and `check:payment-dist`, each run by the `build` job of
- * `.github/workflows/pr-check.yml` after the build that produces its dist.
+ * `.github/workflows/frontend.yml` after the build that produces its dist.
  * The file-name check catches a copied `mockServiceWorker.js` even where
  * its content never spells out the needle.
  *
