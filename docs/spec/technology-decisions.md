@@ -10,6 +10,8 @@ Recommended 3D choice, only after approval: **one locally hosted, licensed GLB d
 
 The license/availability of a suitable model is a real dependency. No model asset was supplied, procured or granted permission by this plan. That is why O01 is conditional, not a hidden promise that any real phone can be shown in 3D for free. The rest of the webshop does not depend on this decision.
 
+**O01 rejected on 2026-09-23 (Linear MIM-372).** The product owner decided not to build the 3D view because licensed device models are too expensive for this demo (in their words, in English: "no, this is too expensive"). The research behind the decision: the yettel.hu rotator is the hosted Binkies3D "Engage 3D" player, whose models reach the page only as `blob:` URLs and may not be extracted (Binkies Terms of Service, section 3.C); the yettel.hu legal notice (section 3) forbids copying or adapting site content without written permission; a Binkies subscription is negotiated with sales, with no public price and no trial; a royalty-free per-device model costs money (a Galaxy A55 model is listed at USD 99 on CGTrader), and free CC-BY models exist only for some devices. The recommendation above is kept as the recorded choice if the decision is ever revisited; nothing in the codebase depends on it.
+
 ## Evidence quality
 
 The uploaded reports mix observed script/tag names with hypotheses about frameworks, bundle contents, A/B testing, versions and server behavior. They were reviewed, but the original live websites were not re-instrumented here. Custom element prefixes do not by themselves establish Stencil/Lit. A .swiper CSS class does not prove a current Swiper version. A listed pixel is not a payment gateway. Copied commercial prices/stock/product labels are not approved fixtures. The table keeps those distinctions explicit.
@@ -29,6 +31,8 @@ Sources: S16,U03.
 Evidence: Official local glTF/GLB web component and loading patterns.
 
 **Decision: Optional O01, one licensed local device.** User-activated lazy load, locally hosted model/poster/decoders, static gallery fallback; no AR or telemetry. Viewer does not supply legal rights to product models.
+
+**Superseded on 2026-09-23:** O01 was rejected as too expensive (Linear MIM-372); see Recommendation.
 
 Sources: S17,S18.
 
