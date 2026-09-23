@@ -9,12 +9,18 @@
  * copy. The type is read from the bytes' magic numbers, never from the
  * declared part type. `GET` is public and serves either the stored bytes
  * or, for a seed image (`bytes === null`), the fixture file under
- * `public/media/`.
+ * `public/media/`. Both endpoints reject the first undeclared query key
+ * before anything else they check; the upload also rejects the first text
+ * form part as an undeclared parameter, checked in the backend's order:
+ * CSRF, session, malformed multipart, an oversized part, the first unknown
+ * parameter (query keys before text parts), the `upload-error` scenario,
+ * then a missing `file` part.
  */
 import { HttpResponse, bypass, http, type HttpHandler } from 'msw';
 
 import type { Problem } from '../app/api/generated/models/problem';
 import type { UploadedImage } from '../app/api/generated/models/uploaded-image';
+import { unknownQueryParameter } from './backend-answers';
 import type { MockDb } from './db';
 import { csrfRejection, sessionRejection } from './guards';
 import { problem } from './problem';
@@ -31,12 +37,6 @@ const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 const JPEG_SIGNATURE = [0xff, 0xd8, 0xff] as const;
 const RIFF_SIGNATURE = [0x52, 0x49, 0x46, 0x46] as const;
 const WEBP_SIGNATURE = [0x57, 0x45, 0x42, 0x50] as const;
-
-const EXTENSION_BY_CONTENT_TYPE: Record<UploadedImage['contentType'], string> = {
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/jpeg': 'jpg',
-};
 
 async function readImageSize(
   blob: Blob,
@@ -110,12 +110,6 @@ async function handleUpload(
   const session = sessionRejection(db);
   if (session !== undefined) return session;
 
-  if (db.scenario === 'upload-error') {
-    return problem(503, 'SERVICE_UNAVAILABLE', 'Service unavailable', {
-      detail: 'The service is temporarily unavailable',
-    });
-  }
-
   let form: FormData;
   try {
     form = await request.formData();
@@ -125,18 +119,32 @@ async function handleUpload(
     });
   }
 
+  for (const value of form.values()) {
+    if (value instanceof Blob && value.size > MAX_UPLOAD_BYTES) {
+      return problem(413, 'PAYLOAD_TOO_LARGE', 'Upload too large', {
+        detail: 'The upload exceeds the size limit',
+        params: { maxBytes: MAX_UPLOAD_BYTES },
+      });
+    }
+  }
+
+  const queryKey = new URL(request.url).searchParams.keys().next().value;
+  if (queryKey !== undefined) return unknownQueryParameter(queryKey);
+  for (const [name, value] of form.entries()) {
+    if (typeof value === 'string') return unknownQueryParameter(name);
+  }
+
+  if (db.scenario === 'upload-error') {
+    return problem(503, 'SERVICE_UNAVAILABLE', 'Service unavailable', {
+      detail: 'The service is temporarily unavailable',
+    });
+  }
+
   const file = form.get('file');
   if (!(file instanceof Blob)) {
     return problem(400, 'INVALID_REQUEST', 'Invalid request', {
       detail: 'Missing required request part',
       params: { part: 'file' },
-    });
-  }
-
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return problem(413, 'PAYLOAD_TOO_LARGE', 'Upload too large', {
-      detail: 'The upload exceeds the size limit',
-      params: { maxBytes: MAX_UPLOAD_BYTES },
     });
   }
 
@@ -162,7 +170,7 @@ async function handleUpload(
     return fieldRejected('IMAGE_UNREADABLE');
   }
 
-  db.images.set(id, { bytes, contentType, width: size.width, height: size.height });
+  db.images.set(id, { bytes, seedFile: null, contentType, width: size.width, height: size.height });
 
   return HttpResponse.json(
     buildUploadedImage(id, contentType, size.width, size.height, bytes.length),
@@ -170,7 +178,15 @@ async function handleUpload(
   );
 }
 
-async function handleGet(db: MockDb, imageId: string, fetchSeed: SeedFetcher): Promise<Response> {
+async function handleGet(
+  db: MockDb,
+  request: Request,
+  imageId: string,
+  fetchSeed: SeedFetcher,
+): Promise<Response> {
+  const queryKey = new URL(request.url).searchParams.keys().next().value;
+  if (queryKey !== undefined) return unknownQueryParameter(queryKey);
+
   const entry = db.images.get(imageId);
   if (entry === undefined) {
     return problem(404, 'NOT_FOUND', 'Resource not found', {
@@ -189,8 +205,7 @@ async function handleGet(db: MockDb, imageId: string, fetchSeed: SeedFetcher): P
     });
   }
 
-  const extension = EXTENSION_BY_CONTENT_TYPE[entry.contentType];
-  return await fetchSeed(new URL(`media/${imageId}.${extension}`, document.baseURI));
+  return await fetchSeed(new URL(`media/${entry.seedFile}`, document.baseURI));
 }
 
 export function mediaHandlers(
@@ -200,9 +215,9 @@ export function mediaHandlers(
 ): HttpHandler[] {
   return [
     http.post('*/api/v1/admin/media', ({ request }) => handleUpload(db, request, readSize)),
-    http.get('*/api/v1/media/:imageId', ({ params }) => {
+    http.get('*/api/v1/media/:imageId', ({ request, params }) => {
       const imageId = String(params['imageId']);
-      return handleGet(db, imageId, fetchSeed);
+      return handleGet(db, request, imageId, fetchSeed);
     }),
   ];
 }

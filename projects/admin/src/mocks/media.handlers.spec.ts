@@ -146,6 +146,36 @@ function uploadWithoutFileBody(): Uint8Array<ArrayBuffer> {
   return multipartBody([{ name: 'other', bytes: 'not a file' }]);
 }
 
+function uploadImagePartOnlyBody(): Uint8Array<ArrayBuffer> {
+  return multipartBody([
+    { name: 'image', filename: 'photo.png', type: 'image/png', bytes: PNG_FIXTURE_BYTES },
+  ]);
+}
+
+function uploadWithTextFilePartBody(): Uint8Array<ArrayBuffer> {
+  return multipartBody([{ name: 'file', bytes: 'not a file' }]);
+}
+
+/** The exact `Problem` body `problem()` (media.handlers.ts) builds, for `toEqual` assertions. */
+function expectedProblem(
+  status: number,
+  code: string,
+  title: string,
+  detail: string,
+  params?: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    type: `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`,
+    title,
+    status,
+    code,
+    detail,
+    traceId: expect.any(String),
+    fieldErrors: [],
+    ...(params === undefined ? {} : { params }),
+  };
+}
+
 function setUpMediaHandlers(
   db: ReturnType<typeof createDb>,
   readSize: ImageSizeReader = readSizeStub(),
@@ -185,6 +215,7 @@ describe('POST /admin/media', () => {
     const db = createDb();
     db.images.set(PNG_FIXTURE_ID, {
       bytes: PNG_FIXTURE_BYTES,
+      seedFile: null,
       contentType: 'image/png',
       width: 300,
       height: 600,
@@ -307,7 +338,48 @@ describe('POST /admin/media', () => {
     expect(body).toMatchObject({ code: 'PAYLOAD_TOO_LARGE', params: { maxBytes: 1048576 } });
   });
 
+  // Fails if the size-loop in handleUpload (media.handlers.ts) runs after the query-key check.
+  it('413s an oversized part before an unknown query key', async () => {
+    const db = createDb();
+    const token = setUpMediaHandlers(db);
+    const bytes = new Uint8Array(1048577);
+    bytes.set(PNG_SIGNATURE, 0);
+
+    const response = await fetch(`${UPLOAD_URL}?x=1`, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token, 'Content-Type': MULTIPART_CONTENT_TYPE },
+      body: uploadFileBody(bytes),
+    });
+
+    expect(response.status).toBe(413);
+    const body: unknown = await response.json();
+    expect(body).toMatchObject({ code: 'PAYLOAD_TOO_LARGE', params: { maxBytes: 1048576 } });
+  });
+
+  // Fails if handleUpload's `form.get('file')` check (media.handlers.ts) stops answering
+  // "Missing required request part" for a request with no `file` part.
   it('400s a request with no file part', async () => {
+    const db = createDb();
+    const token = setUpMediaHandlers(db);
+
+    const response = await fetch(UPLOAD_URL, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token, 'Content-Type': MULTIPART_CONTENT_TYPE },
+      body: uploadImagePartOnlyBody(),
+    });
+
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Missing required request part', {
+        part: 'file',
+      }),
+    );
+  });
+
+  // Fails if the `for (const [name, value] of form.entries())` loop in handleUpload
+  // (media.handlers.ts) stops answering an unknown parameter for a text part.
+  it('400s a text part as an unknown parameter', async () => {
     const db = createDb();
     const token = setUpMediaHandlers(db);
 
@@ -319,10 +391,114 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(400);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({
-      detail: 'Missing required request part',
-      params: { part: 'file' },
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Unknown query parameter', {
+        parameter: 'other',
+      }),
+    );
+  });
+
+  // Fails if the text-part loop in handleUpload (media.handlers.ts) skips a part named
+  // `file` that carries no filename (a string value, not a Blob).
+  it('400s a text part named file as an unknown parameter', async () => {
+    const db = createDb();
+    const token = setUpMediaHandlers(db);
+
+    const response = await fetch(UPLOAD_URL, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token, 'Content-Type': MULTIPART_CONTENT_TYPE },
+      body: uploadWithTextFilePartBody(),
     });
+
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Unknown query parameter', {
+        parameter: 'file',
+      }),
+    );
+  });
+
+  // Fails if handleUpload's query-key check (media.handlers.ts) runs after the text-part loop.
+  it('400s an unknown query key before the text parts', async () => {
+    const db = createDb();
+    const token = setUpMediaHandlers(db);
+
+    const response = await fetch(`${UPLOAD_URL}?x=1`, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token, 'Content-Type': MULTIPART_CONTENT_TYPE },
+      body: uploadWithoutFileBody(),
+    });
+
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Unknown query parameter', {
+        parameter: 'x',
+      }),
+    );
+  });
+
+  // Fails if handleUpload's query-key check (media.handlers.ts) is skipped for an otherwise
+  // valid upload, or if the upload is stored before that check runs.
+  it('400s an unknown query key on a valid upload', async () => {
+    const db = createDb();
+    const token = setUpMediaHandlers(db);
+
+    const response = await fetch(`${UPLOAD_URL}?x=1`, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token, 'Content-Type': MULTIPART_CONTENT_TYPE },
+      body: uploadFileBody(PNG_FIXTURE_BYTES),
+    });
+
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Unknown query parameter', {
+        parameter: 'x',
+      }),
+    );
+    expect(db.images.has(PNG_FIXTURE_ID)).toBe(false);
+  });
+
+  // Fails if the try/catch around `request.formData()` in handleUpload (media.handlers.ts)
+  // stops catching a body that is not valid multipart.
+  it('400s a malformed multipart body', async () => {
+    const db = createDb();
+    const token = setUpMediaHandlers(db);
+
+    const response = await fetch(UPLOAD_URL, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token, 'Content-Type': MULTIPART_CONTENT_TYPE },
+      body: 'not multipart',
+    });
+
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Malformed multipart request'),
+    );
+  });
+
+  // Fails if the query-key check in handleUpload (media.handlers.ts) runs after the
+  // `db.scenario === 'upload-error'` check.
+  it('400s an unknown query key before the upload-error scenario', async () => {
+    const db = createDb('upload-error');
+    const token = setUpMediaHandlers(db);
+
+    const response = await fetch(`${UPLOAD_URL}?x=1`, {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': token, 'Content-Type': MULTIPART_CONTENT_TYPE },
+      body: uploadFileBody(PNG_FIXTURE_BYTES),
+    });
+
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Unknown query parameter', {
+        parameter: 'x',
+      }),
+    );
   });
 
   it('403s without the XSRF header', async () => {
@@ -379,6 +555,7 @@ describe('GET /media/:imageId', () => {
     const db = createDb();
     db.images.set(PNG_FIXTURE_ID, {
       bytes: PNG_FIXTURE_BYTES,
+      seedFile: null,
       contentType: 'image/png',
       width: 300,
       height: 600,
@@ -404,6 +581,22 @@ describe('GET /media/:imageId', () => {
     expect(body).toMatchObject({ params: { imageId: 'abc' } });
   });
 
+  // Fails if handleGet's query-key check (media.handlers.ts) runs after the `db.images.get` lookup.
+  it('400s an unknown query key before the id lookup', async () => {
+    const db = createDb();
+    setUpMediaHandlers(db);
+
+    const response = await fetch(`${mediaUrl('abc')}?x=1&y=2`);
+
+    expect(response.status).toBe(400);
+    const body: unknown = await response.json();
+    expect(body).toEqual(
+      expectedProblem(400, 'INVALID_REQUEST', 'Invalid request', 'Unknown query parameter', {
+        parameter: 'x',
+      }),
+    );
+  });
+
   it('serves a seed id through the seed fetcher', async () => {
     const db = createDb();
     const stub = fetchSeedStub();
@@ -418,5 +611,28 @@ describe('GET /media/:imageId', () => {
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
     expect(stub.urls).toHaveLength(1);
     expect(stub.urls[0]?.href.endsWith(`/media/${seedImageId}.png`)).toBe(true);
+  });
+
+  // Fails if handleGet (media.handlers.ts) serves a seed from `imageId` plus a fixed
+  // extension instead of from the entry's own `seedFile`.
+  it('serves a .jpeg seed from its own file name', async () => {
+    const db = createDb();
+    const stub = fetchSeedStub();
+    db.images.set('jpeg-seed', {
+      bytes: null,
+      seedFile: 'jpeg-seed.jpeg',
+      contentType: 'image/jpeg',
+      width: 1,
+      height: 1,
+    });
+    db.sessionAdminId = SEED_ADMIN.id;
+    issueXsrfCookie(db);
+    server?.use(...mediaHandlers(db, readSizeStub(), stub.fetchSeed));
+
+    const response = await fetch(mediaUrl('jpeg-seed'));
+
+    expect(response.status).toBe(200);
+    expect(stub.urls).toHaveLength(1);
+    expect(stub.urls[0]?.href.endsWith('/media/jpeg-seed.jpeg')).toBe(true);
   });
 });
