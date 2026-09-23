@@ -5,7 +5,8 @@
 // and an array `fieldErrors`; `isProblem` is the type guard, `problemOf`
 // extracts the Problem body from an `HttpErrorResponse`, `fieldErrorsOf`
 // returns the `fieldErrors` pointer list (or `[]` when the body is not
-// a Problem).
+// a Problem). A Problem sent as text (a responseType 'text' operation)
+// is parsed first.
 
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -20,10 +21,25 @@ export function isProblem(value: unknown): value is Problem {
   return true;
 }
 
+/**
+ * The Problem body of an `HttpErrorResponse`, or `null`. An operation
+ * generated with `responseType: 'text'` (its success is a body-less 204)
+ * leaves the error body as the raw JSON text, so a string body is parsed
+ * before it is narrowed.
+ */
 export function problemOf(error: unknown): Problem | null {
   if (!(error instanceof HttpErrorResponse)) return null;
-  if (!isProblem(error.error)) return null;
-  return error.error;
+  const body: unknown = typeof error.error === 'string' ? parseJson(error.error) : error.error;
+  return isProblem(body) ? body : null;
+}
+
+function parseJson(text: string): unknown {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 export function fieldErrorsOf(error: unknown): readonly FieldError[] {

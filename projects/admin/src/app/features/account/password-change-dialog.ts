@@ -28,35 +28,6 @@ interface PasswordChangeModel {
 }
 
 /**
- * `changeAdminPassword` (api/generated/fn/admin-auth/change-admin-password.ts)
- * requests `responseType: 'text'`, because its only success shape is 204 with
- * no body; Angular's `HttpXhrBackend` only JSON-parses a response when
- * `responseType === 'json'` (`node_modules/@angular/common/fesm2022/_module-chunk.mjs`,
- * the `onLoad` handler), so on a 422 (or any other) error `err.error` is left
- * as the raw response text rather than a parsed `Problem`, and
- * `fieldErrorsOf` — which expects an already-parsed body — reads it as
- * empty. Reparsing here, only when the body is still a string, is what
- * makes `fieldErrorsOf` see the same `Problem` a JSON-responseType
- * endpoint would have handed it.
- */
-function parsedProblemResponse(err: HttpErrorResponse): HttpErrorResponse {
-  if (typeof err.error !== 'string') {
-    return err;
-  }
-  try {
-    const parsed: unknown = JSON.parse(err.error);
-    return new HttpErrorResponse({
-      error: parsed,
-      headers: err.headers,
-      status: err.status,
-      url: err.url ?? undefined,
-    });
-  } catch {
-    return err;
-  }
-}
-
-/**
  * The "Jelszó módosítása" dialog opened from the account menu (MIM-339).
  * Closes with `true` on a successful save, `false` on a 401 (the
  * unauthorized interceptor is already navigating away), `undefined`
@@ -143,7 +114,7 @@ export class PasswordChangeDialog {
       return undefined;
     } catch (err) {
       if (err instanceof HttpErrorResponse) {
-        const fieldErrors = fieldErrorsOf(parsedProblemResponse(err));
+        const fieldErrors = fieldErrorsOf(err);
         if (err.status === 422 && fieldErrors.length > 0) {
           return toServerErrors(this.form, fieldErrors);
         }
