@@ -19,7 +19,7 @@ import '@angular/compiler';
  *              Removing the last item produces the empty screen.
  *   T18-AC04 - Continue button is disabled for empty/invalid/pending
  *              cart and navigates to /penztar/adatok only after
- *              authoritative revalidation (`facade.ensureCart`).
+ *              the cart is read again from the server (`facade.refetch`).
  *   T18-AC05 - 89 990 x 2 = 179 980 HUF subtotal; with home
  *              delivery (1 990 HUF) total = 181 970 HUF. No monthly
  *              fee or hidden add-on copy.
@@ -35,7 +35,7 @@ import {
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { http, HttpResponse } from 'msw';
+import { type DefaultBodyType, http, HttpResponse } from 'msw';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -934,7 +934,7 @@ describe('S2-C clear: "Kosár ürítése" empties the cart through DELETE /cart/
 // T18-AC04: Continue is disabled when cart cannot be advanced, navigates to /penztar/adatok
 // ---------------------------------------------------------------------------
 describe('T18-AC04 Continue gating and authoritative revalidation', () => {
-  it('exposes a continue button disabled when the cart is empty, pending, or in error', async () => {
+  it('exposes a continue button disabled while the cart is empty and active once it has a line', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
 
@@ -969,21 +969,253 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     expect(continueBtn.classList.contains('is-primary')).toBe(false);
   });
 
-  it('navigates only after facade.ensureCart() resolves successfully', async () => {
+  it('reads the cart from the server again, then navigates', async () => {
     const cartFacade = TestBed.inject(CartFacade);
     await cartFacade.ensureCart();
     await cartFacade.addItem(VARIANT_MOTO_256, 2);
 
     const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const refetch = vi.spyOn(cartFacade, 'refetch');
 
+    await fixture.componentInstance.onContinue();
+    await fixture.whenStable();
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(router.url).toBe('/penztar/adatok');
+  });
+
+  it('stays on the cart and says so when the server cart differs from the one on screen', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    const onScreen = cartFacade.cart();
+    if (onScreen === null) throw new Error('Expected a cart');
+    const changed = {
+      ...onScreen,
+      version: onScreen.version + 1,
+      items: onScreen.items.map((item) => ({ ...item, quantity: item.quantity + 1 })),
+    };
+    server.use(http.get('*/api/v1/cart', () => HttpResponse.json(changed)));
+
+    const router = TestBed.inject(Router);
     const fixture = TestBed.createComponent(CartPage);
     await fixture.whenStable();
     fixture.detectChanges();
 
-    fixture.componentInstance.onContinue();
+    await fixture.componentInstance.onContinue();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toBe('/');
+    expect(cartFacade.cart()?.items[0]?.quantity).toBe(3);
+    const root = getRootElement(fixture);
+    expect(
+      queryElement(root, '[data-testid="status-message"]')
+        ?.querySelector('p.message')
+        ?.textContent.trim(),
+    ).toBe('A kosár időközben megváltozott; nézd át, mielőtt továbblépsz.');
+  });
+
+  it('stays on the cart when the server read fails', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    server.use(
+      http.get('*/api/v1/cart', () =>
+        serverError('A kosár nem érhető el.', 'spec-trace-500-continue-read'),
+      ),
+    );
+
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onContinue();
     await fixture.whenStable();
 
-    expect(router.url).toBe('/penztar/adatok');
+    expect(router.url).toBe('/');
+    expect(cartFacade.error()?.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(fixture.componentInstance.continuing()).toBe(false);
+  });
+
+  it('stays on the cart when the server attaches notices', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    const onScreen = cartFacade.cart();
+    if (onScreen === null) throw new Error('Expected a cart');
+    const withNotice = {
+      ...onScreen,
+      notices: [{ code: 'PRICE_CHANGED' as const, variantId: VARIANT_MOTO_256, params: {} }],
+    };
+    server.use(http.get('*/api/v1/cart', () => HttpResponse.json(withNotice)));
+
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    await fixture.componentInstance.onContinue();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toBe('/');
+    const root = getRootElement(fixture);
+    expect(root.querySelectorAll('[data-testid="cart-notice"]').length).toBe(1);
+  });
+
+  it('does not navigate once the page is gone', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    const onScreen = cartFacade.cart();
+    if (onScreen === null) throw new Error('Expected a cart');
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get('*/api/v1/cart', async () => {
+        await held;
+        return HttpResponse.json(onScreen);
+      }),
+    );
+
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate');
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const continued = fixture.componentInstance.onContinue();
+    fixture.destroy();
+    release();
+    await continued;
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // A failed remove or clear leaves the cart unchanged, so the shopper
+  // can still go on to checkout (owner: "Igen, aktív marad").
+  function serverError(detail: string, traceId: string): HttpResponse<DefaultBodyType> {
+    return HttpResponse.json(
+      {
+        type: 'about:blank',
+        title: 'Szerverhiba',
+        status: 500,
+        code: 'INTERNAL_SERVER_ERROR',
+        detail,
+        traceId,
+        fieldErrors: [],
+      },
+      { status: 500, headers: { 'content-type': 'application/problem+json' } },
+    );
+  }
+
+  it('keeps "Tovább az adatokhoz" active after a failed remove', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    server.use(
+      http.delete('*/api/v1/cart/items/:variantId', () =>
+        serverError('A termék eltávolítása nem sikerült.', 'spec-trace-500-continue-remove'),
+      ),
+    );
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="cart-line-remove"]').click();
+    await settleMutation(fixture);
+
+    expect(cartFacade.error()?.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(queryElement(root, '[data-testid="cart-line"]')).not.toBeNull();
+    expect(fixture.componentInstance.canContinue()).toBe(true);
+    expect(getButtonElement(root, '[data-testid="cart-continue"] button').disabled).toBe(false);
+  });
+
+  it('keeps "Tovább az adatokhoz" active after a failed clear', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    server.use(
+      http.delete('*/api/v1/cart/items', () =>
+        serverError('A kosár ürítése nem sikerült.', 'spec-trace-500-continue-clear'),
+      ),
+    );
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="cart-clear"] button').click();
+    await settleMutation(fixture);
+
+    expect(cartFacade.error()?.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(queryElement(root, '[data-testid="cart-line"]')).not.toBeNull();
+    expect(fixture.componentInstance.canContinue()).toBe(true);
+    expect(getButtonElement(root, '[data-testid="cart-continue"] button').disabled).toBe(false);
+  });
+
+  it('a conflict whose background read failed does not let the shopper leave on a stale cart', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    const onScreen = cartFacade.cart();
+    if (onScreen === null) throw new Error('Expected a cart');
+    const serverCart = {
+      ...onScreen,
+      version: onScreen.version + 1,
+      items: onScreen.items.map((item) => ({ ...item, quantity: item.quantity + 1 })),
+    };
+    let reads = 0;
+    server.use(
+      http.delete('*/api/v1/cart/items/:variantId', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:cart-version-conflict',
+            title: 'Ütközés',
+            status: 412,
+            code: 'CART_VERSION_CONFLICT',
+            detail: 'A kosár időközben megváltozott.',
+            traceId: 'spec-trace-412-continue',
+            fieldErrors: [],
+            params: { expected: 2, received: 1 },
+          },
+          { status: 412, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+      http.get('*/api/v1/cart', () => {
+        reads += 1;
+        return reads === 1
+          ? serverError('A kosár nem érhető el.', 'spec-trace-500-resync')
+          : HttpResponse.json(serverCart);
+      }),
+    );
+
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="cart-line-remove"]').click();
+    await settleMutation(fixture);
+
+    expect(cartFacade.conflict()).toBeNull();
+    expect(cartFacade.error()?.code).toBe('INTERNAL_SERVER_ERROR');
+    expect(fixture.componentInstance.canContinue()).toBe(true);
+
+    await fixture.componentInstance.onContinue();
+    await fixture.whenStable();
+
+    expect(reads).toBe(2);
+    expect(router.url).toBe('/');
+    expect(cartFacade.cart()?.version).toBe(serverCart.version);
   });
 });
 
@@ -1235,6 +1467,9 @@ describe('MIM-216: every dismissible status message closes and returns focus', (
     const banner = queryElement(root, '[data-testid="status-message"]');
     expect(banner).not.toBeNull();
     expect(banner?.querySelector('button')).toBeNull();
+    expect(banner?.querySelector('p.message')?.textContent.trim()).toBe(
+      'A kosár módosítása nem sikerült; a kosár változatlan.',
+    );
   });
 
   it('dismissing the transient status banner moves focus to the page h1', async () => {
