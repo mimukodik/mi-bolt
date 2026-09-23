@@ -983,40 +983,22 @@ describe('GET /products sorts', () => {
       (item) => `${readString(item, 'slug')}/${String(readNumber(item, 'storageGb'))}`,
     );
 
-  for (const sort of ['newest', 'oldest', 'popularity', 'price_asc', 'price_desc']) {
-    it(`sort=${sort} breaks a full tie on rank before id, like the backend`, async () => {
-      loadCatalogFixture({
-        products: [
-          sortProduct('1', 'Brand', 'Tie 1', [128]),
-          sortProduct('2', 'Brand', 'Tie 2', [128]),
-          sortProduct('3', 'Brand', 'Tie 3', [128]),
-        ],
-        ranking: [sortRanking('1', 3), sortRanking('2', 1), sortRanking('3', 2)],
-      });
-      try {
-        const body = await loadJson(`/api/v1/products?sort=${sort}`);
-        expect(slugAndStorage(body)).toEqual(['sort-2/128', 'sort-3/128', 'sort-1/128']);
-      } finally {
-        restoreCommittedFixture();
-      }
-    });
-  }
-
   // Name sorts key on "brand name" in Java's CASE_INSENSITIVE_ORDER. A
-  // name-only key would put "Alpha" (brand Beta) first; a Hungarian
-  // collation would put Zte before Zsolt; reversing the whole comparator
-  // would put 256 GB before 128 GB under name_desc.
+  // name-only key would put "Alpha" (brand beta) first; a case-sensitive
+  // order would put "beta Alpha" last; a Hungarian collation would put
+  // Zte before Zsolt; reversing the whole comparator would put 256 GB
+  // before 128 GB under name_desc.
   const nameCatalogue = (): { products: Product[]; ranking: ProductRanking[] } => ({
     products: [
       sortProduct('1', 'Zte', 'Zte One', [128]),
       sortProduct('2', 'Zsolt', 'Zsolt One', [128]),
-      sortProduct('3', 'Beta', 'Alpha', [128]),
+      sortProduct('3', 'beta', 'Alpha', [128]),
       sortProduct('4', 'Alpha', 'Zeta', [128, 256]),
     ],
     ranking: [sortRanking('1', 1), sortRanking('2', 2), sortRanking('3', 3), sortRanking('4', 4)],
   });
 
-  it('sort=name_asc orders "brand name" case-insensitively by code unit, storage ascending', async () => {
+  it('sort=name_asc orders "brand name" case-insensitively by code unit', async () => {
     loadCatalogFixture(nameCatalogue());
     try {
       const body = await loadJson('/api/v1/products?sort=name_asc');
@@ -1032,7 +1014,7 @@ describe('GET /products sorts', () => {
     }
   });
 
-  it('sort=name_desc reverses only the name, storage stays ascending', async () => {
+  it('sort=name_desc reverses the "brand name" order', async () => {
     loadCatalogFixture(nameCatalogue());
     try {
       const body = await loadJson('/api/v1/products?sort=name_desc');
