@@ -5,7 +5,7 @@ import { APP_BASE_HREF } from '@angular/common';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { MatGridTile } from '@angular/material/grid-list';
+import { MatGridList, MatGridTile } from '@angular/material/grid-list';
 import { of } from 'rxjs';
 
 import { OverviewComponent } from './overview.component';
@@ -30,6 +30,22 @@ function tilesOf(fixture: ComponentFixture<OverviewComponent>): MatGridTile[] {
   return result;
 }
 
+function gridOf(fixture: ComponentFixture<OverviewComponent>): MatGridList {
+  const instance: unknown = fixture.debugElement.query(By.directive(MatGridList)).componentInstance;
+  if (!(instance instanceof MatGridList)) {
+    throw new Error('Expected a mat-grid-list');
+  }
+  return instance;
+}
+
+function hostOf(fixture: ComponentFixture<OverviewComponent>): HTMLElement {
+  const element: unknown = fixture.nativeElement;
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Expected the host element');
+  }
+  return element;
+}
+
 describe('OverviewComponent', () => {
   describe('desktop layout (handset = false)', () => {
     let fixture: ComponentFixture<OverviewComponent>;
@@ -45,7 +61,7 @@ describe('OverviewComponent', () => {
         ],
       });
       fixture = TestBed.createComponent(OverviewComponent);
-      native = fixture.nativeElement as HTMLElement;
+      native = hostOf(fixture);
       fixture.detectChanges();
     });
 
@@ -90,10 +106,15 @@ describe('OverviewComponent', () => {
       expect(icon?.textContent.trim()).not.toBe('more_vert');
       expect(native.querySelector('.more-button')).toBeNull();
     });
+
+    it('lays the cards out in two columns', () => {
+      // Fails if overview.component.html stops binding cols to 2 off a handset.
+      expect(gridOf(fixture).cols).toBe(2);
+    });
   });
 
   describe('handset layout (handset = true)', () => {
-    it('renders every card with span 1×1', () => {
+    it('stacks every card in one column with span 1×1', () => {
       TestBed.configureTestingModule({
         imports: [OverviewComponent],
         providers: [
@@ -113,6 +134,8 @@ describe('OverviewComponent', () => {
         { colspan: 1, rowspan: 1 },
         { colspan: 1, rowspan: 1 },
       ]);
+      // Fails if overview.component.html keeps two columns on a handset (mockup M1a).
+      expect(gridOf(fixture).cols).toBe(1);
     });
   });
 });

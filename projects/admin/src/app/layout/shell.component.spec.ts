@@ -8,19 +8,12 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import type { Observable } from 'rxjs';
 import type { BreakpointState } from '@angular/cdk/layout';
 import { of } from 'rxjs';
+import { MatSidenav } from '@angular/material/sidenav';
 
 import { ShellComponent } from './shell.component';
 
 @Component({ selector: 'adm-stub', template: '' })
 class StubComponent {}
-
-interface SidenavShape {
-  opened: boolean;
-  mode: 'over' | 'side' | 'push';
-  open: () => Promise<void> | void;
-  close: () => Promise<void> | void;
-  toggle: () => Promise<void> | void;
-}
 
 function breakpointStub(matches: boolean): Partial<BreakpointObserver> {
   return {
@@ -28,16 +21,20 @@ function breakpointStub(matches: boolean): Partial<BreakpointObserver> {
   };
 }
 
-function findSidenav(fixture: ComponentFixture<ShellComponent>): unknown {
-  const debugEl: unknown = fixture.debugElement.query(By.css('mat-sidenav'));
-  const wrapped = debugEl as { componentInstance: unknown } | null;
-  const componentInstance: unknown = wrapped?.componentInstance;
-  return componentInstance;
+function sidenavOf(fixture: ComponentFixture<ShellComponent>): MatSidenav {
+  const instance: unknown = fixture.debugElement.query(By.directive(MatSidenav)).componentInstance;
+  if (!(instance instanceof MatSidenav)) {
+    throw new Error('Expected a mat-sidenav in the shell');
+  }
+  return instance;
 }
 
-function sidenavOf(fixture: ComponentFixture<ShellComponent>): SidenavShape {
-  const result: unknown = findSidenav(fixture);
-  return result as SidenavShape;
+function hostOf(fixture: ComponentFixture<ShellComponent>): HTMLElement {
+  const element: unknown = fixture.nativeElement;
+  if (!(element instanceof HTMLElement)) {
+    throw new Error('Expected the host element');
+  }
+  return element;
 }
 
 describe('ShellComponent', () => {
@@ -55,7 +52,7 @@ describe('ShellComponent', () => {
         ],
       });
       fixture = TestBed.createComponent(ShellComponent);
-      native = fixture.nativeElement as HTMLElement;
+      native = hostOf(fixture);
       fixture.detectChanges();
     });
 
@@ -93,7 +90,7 @@ describe('ShellComponent', () => {
       });
       fixture = TestBed.createComponent(ShellComponent);
       fixture.detectChanges();
-      const sidenav: SidenavShape = sidenavOf(fixture);
+      const sidenav = sidenavOf(fixture);
       expect(sidenav.opened).toBe(true);
       expect(sidenav.mode).toBe('side');
     });
@@ -109,7 +106,7 @@ describe('ShellComponent', () => {
       });
       fixture = TestBed.createComponent(ShellComponent);
       fixture.detectChanges();
-      const sidenav: SidenavShape = sidenavOf(fixture);
+      const sidenav = sidenavOf(fixture);
       expect(sidenav.mode).toBe('over');
       // Force the sidenav open so we can prove the navigation handler closes it.
       await sidenav.open();
