@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import catalogSource from '../../../../docs/api/fixtures/catalog-source.json';
+import catalogSource from '../../../../../data/catalog/catalog.json';
 import { createDb } from './db';
 import { SEED_ADMIN } from './seed';
 

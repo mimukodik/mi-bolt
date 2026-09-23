@@ -80,3 +80,7 @@ generator serves the users API's new admins.
   the `docker logs … | grep 'initial admin'` line.
 - Deleting every admin is impossible through the API (`LAST_ADMIN`), so
   the bootstrap runs again only on an emptied table.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.

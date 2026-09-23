@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Generator for docs/api/fixtures/catalog.json.
 //
-// Reads docs/api/fixtures/catalog-source.json (the backend's
-// data/catalog/catalog.json, in source order with the 48 products,
-// 92 variants and 83 colours the catalogue ships with) and emits a
+// Reads data/catalog/catalog.json (the backend's single copy, in
+// source order with the 48 products, 92 variants and 83 colours the
+// catalogue ships with) and emits a
 // fixture shaped exactly like the OpenAPI 2.0.0 contract: the
 // `Product` per product and a parallel `ranking[]` array holding the
 // fields the handlers need but `Product` does not carry
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 
-const SOURCE_PATH = join(ROOT, 'docs/api/fixtures/catalog-source.json');
+const SOURCE_PATH = join(ROOT, '../data/catalog/catalog.json');
 const OUTPUT_PATH = join(ROOT, 'docs/api/fixtures/catalog.json');
 
 /** Per-line maximum the cart honours; matches the backend constant. */

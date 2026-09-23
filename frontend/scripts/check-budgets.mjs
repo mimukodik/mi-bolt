@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // scripts/check-budgets.mjs — T28 resource-budget gate.
 //
-// Reads the production bundle under `dist/mi-bolt/browser/`,
+// Reads the production bundle under `dist/storefront/browser/`,
 // measures the gzipped size of every JavaScript and CSS asset, and
 // asserts the four T28-AC04 design budgets:
 //
@@ -56,7 +56,7 @@ function parseArguments(argv) {
 const arguments_ = parseArguments(argv);
 const STATIC_DIR = resolve(
   repoRoot,
-  arguments_.staticDir ?? process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/mi-bolt/browser',
+  arguments_.staticDir ?? process.env['MI_BOLT_E2E_STATIC_DIR'] ?? 'dist/storefront/browser',
 );
 
 const BUDGETS = Object.freeze({
@@ -68,7 +68,7 @@ const BUDGETS = Object.freeze({
 if (!existsSync(STATIC_DIR)) {
   process.stderr.write(
     `check-budgets: static directory not found: ${STATIC_DIR}\n` +
-      `check-budgets: build with 'npx ng build mi-bolt --configuration=production' first.\n`,
+      `check-budgets: build with 'npx ng build storefront --configuration=production' first.\n`,
   );
   process.exit(1);
 }

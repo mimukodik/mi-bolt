@@ -40,9 +40,9 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import { type CreateHandlersOptions, createHandlers } from '../../../mocks/create-handlers';
 import '../../../mocks/cart/cart.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
@@ -258,7 +258,10 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
   const cached = fileCache.get(filename);
   if (cached !== undefined) return cached;
 
-  const foundPath = await findInWorkspace(filename, pathResolve(process.cwd(), 'src'));
+  const foundPath = await findInWorkspace(
+    filename,
+    pathResolve(process.cwd(), 'projects/storefront/src'),
+  );
   if (foundPath === null) return '';
   const content = await readFile(foundPath, 'utf-8');
   fileCache.set(filename, content);

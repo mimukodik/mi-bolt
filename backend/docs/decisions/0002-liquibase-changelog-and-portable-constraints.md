@@ -83,3 +83,7 @@ unique index over `(cart_id, variant_id)` for T5) will get their own
   Liquibase interaction and the `ddl-auto=validate` interaction.
 - https://docs.liquibase.com/start/tutorials/yaml-changelog.html — YAML
   changelog reference.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.

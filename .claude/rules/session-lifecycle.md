@@ -7,25 +7,37 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
 
 ## Tools and startup
 
-- **npm, one package, no monorepo.** `package-lock.json` is the lockfile; there
-  is no `pnpm`, no `mise`, no `apps/`, no `packages/` and no workspace filter.
-  Every command is run from the repository root. The scripts that exist are
-  what `package.json` defines — today `ng`, `start`, `start:payment`,
-  `build`, `build:payment`, `build:check`, `watch`, `test`, `lint`, `format`,
-  `format:check`, `api:generate`, `api:drift`, `api:sync`, `fixtures:catalog`
-  and `fixtures:catalog:check` — and a command
-  not in that list does not exist here however familiar it looks. Read the
-  list rather than recalling it; several rules in this directory once named
-  scripts that had never been defined, and an agent handed one of those fails
-  on the user's machine rather than on mine.
-- **The dev server is the orchestrator's, and there is no database.** `npm
-  start` runs `ng serve`; the backend is MSW, served in-process, so nothing
-  needs bringing up beside it. A spawned agent neither starts nor stops that
-  server: `.claude/rules/parallel-spawns.md` makes the port a shared resource,
-  and `.claude/rules/browser-verification.md` puts starting and stopping with
-  the orchestrator. An agent that needs a built artifact served uses
-  `scripts/serve-static.mjs` on a port of its own, names the port in its
-  report, and stops it when it is done.
+- **mise at the root, npm in `frontend/` and `tools/`, Gradle in `backend/`.**
+  Every command is run from the repository root. The root commands are the
+  tasks the root `mise.toml` defines, run as `mise run <task>` and listed by
+  `mise tasks`; each of `frontend/`, `backend/` and `tools/` has its own
+  `setup`, `lint`, `test` and `build` behind them. The Angular workspace is
+  `frontend/`, with `frontend/package-lock.json` as its lockfile, and one of
+  its scripts runs as `npm --prefix frontend run <script>`; the backend is the
+  Gradle build under `backend/`, and one of its tasks runs as
+  `backend/gradlew -p backend :services:commerce:<task>`. The one exception to
+  the root is a package binary run with `npx` against the Angular workspace,
+  such as `npx eslint` or `npx prettier`: `node_modules` exists only in
+  `frontend/`, and `npx` looks for the local binary from the directory it runs
+  in, so it runs from `frontend/`. There is no `pnpm`.
+  A command that is neither a `mise` task, nor a script in
+  `frontend/package.json`, nor a Gradle task does not exist here however
+  familiar it looks. Read the list rather than recalling it; several rules in
+  this directory once named scripts that had never been defined, and an agent
+  handed one of those fails on the user's machine rather than on mine.
+- **The dev servers and the database are the orchestrator's.**
+  `mise run storefront`, `mise run admin` and `mise run payment` serve one app
+  each with `ng serve`, and `mise run frontend` serves all three; the
+  storefront and the admin run on MSW in the browser, so nothing needs
+  bringing up beside them. `mise run db` starts PostgreSQL alone;
+  `mise run backend`, `mise run backend:docker`, `mise run dev`,
+  `mise run dev:docker` and `mise run stack` start the backend with it; and
+  `mise run stop` stops them. A spawned agent neither starts nor stops any of
+  these: `.claude/rules/parallel-spawns.md` makes the port a shared resource, and
+  `.claude/rules/browser-verification.md` puts starting and stopping with the
+  orchestrator. An agent that needs a built artifact served uses
+  `frontend/scripts/serve-static.mjs` on a port of its own, names the port in
+  its report, and stops it when it is done.
 - **A skill whose frontmatter carries `disable-model-invocation` can only be
   started by the user typing it.** A `Skill` tool call to one fails, so check
   the frontmatter before calling a skill not called before. When one is needed,
@@ -241,15 +253,13 @@ The `/retrospective` skill runs three ways:
 
 The Stop hook does not nudge retrospectives; it only enforces the Todo list.
 The skill runs as a forked background agent, proposes a new skill, a skill
-change, or a CLAUDE.md/AGENTS.md change only when warranted, and always writes
+change, or a CLAUDE.md change only when warranted, and always writes
 a file under `.claude/retrospectives/`, even with no proposal, because that
 file is what tells the SessionStart hook the session is covered up to the
 point it was written. Applying a proposal requires AskUserQuestion approval
 first; an approved new or modified skill must be written and tested with the
-`skill-creator` skill (plugin). Skills live under `.agents/skills/<name>/SKILL.md`.
-`.claude/skills/` holds a second, independent copy of the same tree — two real
-directories, not a symlink pair — so an edit applied to one reaches half its
-readers; `.claude/rules/code-standards.md` owns that check.
+`skill-creator` skill (plugin). Skills live under
+`.claude/skills/<name>/SKILL.md`.
 
 Every proposal's outcome goes back into the retrospective file, and writing it
 is the orchestrator's rather than the skill's: the skill runs as a fork that
@@ -277,9 +287,9 @@ section says how.
 
 `.claude/settings.json` wires them: SessionStart injects the shared memory
 index and a pending retrospectives scan, and no longer restates rules; Stop
-runs the Todo guard only. Source is in `.claude/hooks/`. There is no script in
-`package.json` that tests or typechecks it, and `npm run test` does not reach
-it — `angular.json` scopes the unit runner to `src/`. A change there is
+runs the Todo guard only. Source is in `.claude/hooks/`, a package of its own
+that the frontend's unit runner does not reach: `mise run claude:hooks:test`
+and `mise run claude:hooks:typecheck` are its gates. A change there is also
 verified by running the hook itself and reading its output, and the commit body
 records that command.
 
@@ -388,7 +398,7 @@ What the Hooks section says about a hook holds for the definitions in
 
 - More than one Claude session can work in this workspace at once. Shared
   surfaces are `.claude/settings.json`, `.claude/hooks/`, `.claude/rules/`,
-  `.claude/CLAUDE.md`, `.claude/agents/`, and both skill trees.
+  `.claude/CLAUDE.md`, `.claude/agents/`, and `.claude/skills/`.
 - **I never message another session on my own judgment.** Changing a shared
   surface is not a reason to send anything. A SendMessage to a peer session
   goes out only when the user asks for it, and then it states what changed,

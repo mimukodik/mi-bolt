@@ -195,3 +195,8 @@ tests that today assert on the `String` form of the discriminator getter:
 - https://docs.spring.io/spring-boot/reference/features/json.html — the
   Spring Boot 4 reference for the Jackson 3 module, confirming the package
   name and the absence of a Jackson 2 dependency.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- `api/openapi.yaml` is now `contracts/commerce/openapi.yaml` at the git root; the build reads it as `../../../contracts/commerce/openapi.yaml` from `backend/services/commerce/`.
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.

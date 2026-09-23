@@ -31,8 +31,8 @@ test("message includes the memory section when content is given", () => {
   const message = buildSessionStartMessage("remembered fact", [], undefined);
   assert.match(message, /\[muhely shared memory\]/);
   assert.match(message, /remembered fact/);
-  assert.match(message, /pnpm claude:memory read <topic>/);
-  assert.match(message, /pnpm claude:memory search "<query>"/);
+  assert.match(message, /mise run claude:memory read <topic>/);
+  assert.match(message, /mise run claude:memory search "<query>"/);
   assert.match(message, /Do not open these files directly\./);
 });
 

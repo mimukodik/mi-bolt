@@ -30,13 +30,13 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 /** The `src/` tree, derived from the runner's working directory. */
-const SRC_ROOT = resolve(process.cwd(), 'src');
+const SRC_ROOT = resolve(process.cwd(), 'projects/storefront/src');
 
 /** The repository root, which is where `angular.json` lives. */
-const REPO_ROOT = resolve(SRC_ROOT, '..');
+const REPO_ROOT = process.cwd();
 
 /** The module every source file imports, and the one `fileReplacements` swaps. */
-const DEFAULT_ENVIRONMENT_MODULE = 'src/environments/environment.ts';
+const DEFAULT_ENVIRONMENT_MODULE = 'projects/storefront/src/environments/environment.ts';
 
 /** `src/main.ts` without its extension — the shape `importsEntryPoint` compares against. */
 const ENTRY_POINT = join(SRC_ROOT, 'main');
@@ -135,13 +135,96 @@ function isFileReplacement(value: unknown): value is FileReplacement {
   );
 }
 
+/** One entry of a build target's `assets` array, in its object form. */
+interface AssetPattern {
+  readonly glob: string;
+  readonly input: string;
+  readonly ignore?: readonly string[];
+}
+
+function isAssetPattern(value: unknown): value is AssetPattern {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (typeof value['glob'] !== 'string' || typeof value['input'] !== 'string') {
+    return false;
+  }
+  const ignore: unknown = value['ignore'];
+  if (ignore === undefined) {
+    return true;
+  }
+  return Array.isArray(ignore) && ignore.every((entry: unknown) => typeof entry === 'string');
+}
+
+/** Walks `angular.json` from the workspace root down the given key path. */
+function readAngularJson(keys: readonly string[]): unknown {
+  const parsed: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'angular.json'), 'utf8'));
+  let node: unknown = parsed;
+  for (const key of keys) {
+    node = isRecord(node) ? node[key] : undefined;
+  }
+  return node;
+}
+
+/** Reads an array node out of `angular.json` as `unknown` entries, or `[]` when it is absent. */
+function readJsonArray(keys: readonly string[]): unknown[] {
+  const node = readAngularJson(keys);
+  if (!Array.isArray(node)) {
+    return [];
+  }
+  const entries: unknown[] = [];
+  for (const entry of node) {
+    entries.push(entry);
+  }
+  return entries;
+}
+
+/** Reads an array node out of `angular.json`, keeping the entries `guard` accepts. */
+function readEntries<T>(keys: readonly string[], guard: (value: unknown) => value is T): T[] {
+  return readJsonArray(keys).filter(guard);
+}
+
+/** Reads the `fileReplacements` one project's `build` configuration declares. */
+function readProjectReplacements(project: string, configuration: string): FileReplacement[] {
+  return readEntries(
+    [
+      'projects',
+      project,
+      'architect',
+      'build',
+      'configurations',
+      configuration,
+      'fileReplacements',
+    ],
+    isFileReplacement,
+  );
+}
+
+/**
+ * Reads the `assets` a project's `build` target declares, or those of one
+ * of its configurations: a configuration's own array replaces the target's
+ * rather than extending it, so the two are read separately here.
+ */
+function readBuildAssets(project: string, configuration?: string): AssetPattern[] {
+  const keys = ['projects', project, 'architect', 'build'];
+  if (configuration === undefined) {
+    // The target's own array lives under `options`; a named
+    // configuration's sits directly under the configuration.
+    keys.push('options');
+  } else {
+    keys.push('configurations', configuration);
+  }
+  keys.push('assets');
+  return readEntries(keys, isAssetPattern);
+}
+
 /** Reads `fileReplacements` for one build configuration out of `angular.json`. */
 function readFileReplacements(configuration: string): FileReplacement[] {
   const parsed: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'angular.json'), 'utf8'));
   let node: unknown = parsed;
   for (const key of [
     'projects',
-    'mi-bolt',
+    'storefront',
     'architect',
     'build',
     'configurations',
@@ -159,7 +242,7 @@ function readServeConfiguration(configuration: string): Record<string, unknown> 
   let node: unknown = parsed;
   for (const key of [
     'projects',
-    'mi-bolt',
+    'storefront',
     'architect',
     'serve',
     'configurations',
@@ -213,7 +296,9 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
   it('reads the replacement list out of angular.json', () => {
     // The fallback in `environmentModuleFor` hides a parse failure, so
     // a configuration that has always declared one is read first.
-    expect(environmentModuleFor('development')).toBe('src/environments/environment.development.ts');
+    expect(environmentModuleFor('development')).toBe(
+      'projects/storefront/src/environments/environment.development.ts',
+    );
     expect(existsSync(join(REPO_ROOT, environmentModuleFor('development')))).toBe(true);
   });
 
@@ -237,17 +322,58 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     expect(dev.demo).toBe(true);
   });
 
+  it('MIM-414: the production build swaps the worker module and drops the worker asset', () => {
+    // The production dist is made MSW-free in two places: the module the
+    // application reaches (`fileReplacements`) and the static asset the
+    // browser registers (`assets.ignore`). `npm run check:storefront-dist`
+    // proves the built artefact once it exists; these assertions hold the
+    // configuration that artefact is built from, in `npm run test`.
+    for (const project of ['storefront', 'demo-payment']) {
+      const replacement = readProjectReplacements(project, 'production').find(
+        (entry) => entry.replace === 'projects/storefront/src/mocks/browser.ts',
+      );
+      expect(replacement?.with).toBe('projects/storefront/src/mocks/browser.production.ts');
+    }
+    expect(existsSync(join(REPO_ROOT, 'projects/storefront/src/mocks/browser.production.ts'))).toBe(
+      true,
+    );
+
+    const shopPublic = readBuildAssets('storefront').filter(
+      (pattern) => pattern.input === 'projects/storefront/public',
+    );
+    expect(shopPublic.length).toBeGreaterThan(0);
+    expect(
+      shopPublic.every((pattern) => (pattern.ignore ?? []).includes('mockServiceWorker.js')),
+    ).toBe(true);
+
+    // The dev server, the e2e build and `npm run start:payment` all serve the
+    // worker, so neither development configuration may inherit that exclusion.
+    const shopDevKeepsWorker = readBuildAssets('storefront', 'development').some(
+      (pattern) => pattern.glob === '**/*' && (pattern.ignore ?? []).length === 0,
+    );
+    expect(shopDevKeepsWorker).toBe(true);
+
+    const paymentWorkerAssets = readBuildAssets('demo-payment').filter((pattern) =>
+      pattern.glob.includes('mockServiceWorker'),
+    );
+    expect(paymentWorkerAssets).toEqual([]);
+    const paymentDevKeepsWorker = readBuildAssets('demo-payment', 'development').some((pattern) =>
+      pattern.glob.includes('mockServiceWorker'),
+    );
+    expect(paymentDevKeepsWorker).toBe(true);
+  });
+
   it('the local-backend configuration compiles a mock-free development build (MIM-214)', () => {
     // The frontend on the real local backend: no optimisation, no mock
     // worker; `npm start` stays on the mock (the owner's rule, 2026-09-22).
     const module = environmentModuleFor('local-backend');
-    expect(module).toBe('src/environments/environment.local-backend.ts');
+    expect(module).toBe('projects/storefront/src/environments/environment.local-backend.ts');
     expect(existsSync(join(REPO_ROOT, module))).toBe(true);
     const flags = parseEnvironmentFlags(readFileSync(join(REPO_ROOT, module), 'utf8'));
     expect(flags.production).toBe(false);
     expect(flags.demo).toBe(false);
     const serve = readServeConfiguration('local-backend');
-    expect(serve?.['buildTarget']).toBe('mi-bolt:build:local-backend');
+    expect(serve?.['buildTarget']).toBe('storefront:build:local-backend');
     expect(serve?.['proxyConfig']).toBe('proxy.local-backend.conf.json');
     expect(existsSync(join(REPO_ROOT, 'proxy.local-backend.conf.json'))).toBe(true);
   });

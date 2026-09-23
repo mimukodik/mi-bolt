@@ -36,7 +36,7 @@ Registered in `.claude/settings.json`.
   below states when an existing marker file still leaves a session eligible.
   It also exports `SKIPPED_MARKER_SUFFIX` (`.skipped.md`), the suffix it
   matches decline markers by, and that export is for a reader outside this
-  package: `scripts/agent-memory/store/retrospective.ts` spells the same
+  package: `tools/agent-memory/store/retrospective.ts` spells the same
   suffix a second time, and a test there imports this constant to assert the
   two still agree. `.claude/retrospectives/README.md` says why there are two
   copies and which test fails when they diverge.
@@ -183,9 +183,12 @@ not considered a bug to fix.
 From the workspace root:
 
 ```
-pnpm claude:hooks:test
-pnpm claude:hooks:typecheck
+mise run claude:hooks:test
+mise run claude:hooks:typecheck
 ```
+
+Each runs the matching script of this package's own `package.json`, against the
+TypeScript and Node types `npm ci --prefix .claude/hooks` installs.
 
 ## Manual testing
 

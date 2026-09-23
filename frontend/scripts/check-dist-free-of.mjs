@@ -3,8 +3,11 @@
  * Walks a built dist directory and fails if any `.js` file contains one of
  * the given needles in its content, or has one of them in its file name.
  * MIM-332 (unit F5) adds this gate for the admin production build: the
- * owner does not want any mock (MSW) code in the admin production dist,
- * and nothing in CI inspected the built output before this script existed.
+ * owner does not want any mock (MSW) code in an application's production
+ * dist, and nothing in CI inspected the built output before this script
+ * existed. It guards all three: `check:admin-dist`, `check:storefront-dist`
+ * and `check:payment-dist`, each run by the `build` job of
+ * `.github/workflows/pr-check.yml` after the build that produces its dist.
  * The file-name check catches a copied `mockServiceWorker.js` even where
  * its content never spells out the needle.
  *

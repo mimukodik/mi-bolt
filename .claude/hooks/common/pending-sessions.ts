@@ -36,10 +36,10 @@ const TRANSCRIPT_EXTENSION = ".jsonl";
  * Suffix marking a retrospective marker file as a declined-offer record.
  *
  * Exported because the same suffix is spelled a second time in
- * `scripts/agent-memory/store/retrospective.ts`, where it decides that a
+ * `tools/agent-memory/store/retrospective.ts`, where it decides that a
  * decline marker is not searchable session evidence. The two tools compile
  * and run separately and cannot share the constant itself (that direction of
- * import fails `pnpm claude:hooks:typecheck`), so the memory tool's suite
+ * import fails `mise run claude:hooks:typecheck`), so the memory tool's suite
  * imports this one and asserts the two still agree: rename it here and that
  * test fails naming both files, rather than the two silently diverging.
  */

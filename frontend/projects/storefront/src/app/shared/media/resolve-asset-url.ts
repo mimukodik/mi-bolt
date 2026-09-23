@@ -1,7 +1,7 @@
 /**
  * Resolve a contract image URL.
  *
- * `docs/api/openapi.yaml:1126` fixes what arrives here: `Image.src` is a
+ * `contracts/commerce/openapi.yaml:1126` fixes what arrives here: `Image.src` is a
  * ready-to-use URL the client puts into the markup unchanged and never
  * prefixes or rewrites, and the server decides its shape — a
  * root-relative path resolved under the deployment base, or an

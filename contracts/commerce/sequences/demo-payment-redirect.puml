@@ -1,0 +1,23 @@
+@startuml demo-payment-redirect
+title Demo payment redirect and return (kommunikacio.md 8.3)
+actor Shopper
+participant "Storefront\n/" as SF
+participant "Demo payment\n/demo-fizetes/" as PAY
+participant "Commerce API\n/api/v1" as API
+
+SF -> API : POST /payment-intents (If-Match, Idempotency-Key)
+API --> SF : 201 PaymentIntent (requires_action, redirectUrl, returnUrl)
+SF -> PAY : full page load of redirectUrl, the storefront SPA is discarded
+PAY -> API : GET /payment-intents/{paymentIntentId}
+API --> PAY : 200 PaymentIntent (amount)
+Shopper -> PAY : choose succeeded, declined or pending
+PAY -> API : POST /payment-intents/{paymentIntentId}/outcome (PaymentOutcomeRequest)
+alt the intent still requires action
+  API --> PAY : 200 PaymentIntent (the chosen status)
+else the intent is already terminal
+  API --> PAY : 409 Problem PAYMENT_ALREADY_RESOLVED
+end
+PAY -> SF : full page load of returnUrl, the storefront starts from zero
+SF -> API : GET /payment-intents/{paymentIntentId}
+API --> SF : 200 PaymentIntent (status)
+@enduml

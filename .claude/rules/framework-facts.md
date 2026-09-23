@@ -33,7 +33,8 @@ The instruments, in order:
   (`"content projection ng-content"`), not a sentence: a natural-language
   query returns `{"results":[]}` where the keyword form returns the page.
   Every agent definition under `.claude/agents/` carries this tool except
-  `real-browser-sonnet` and `scout-haiku`, so an agent that writes or reviews
+  `real-browser-sonnet`, `scout-haiku` and the three `playwright-test-*`
+  definitions, so an agent that writes or reviews
   code here has it; grep the definitions rather than trusting this sentence
   once they change.
 - **`mcp__angular-cli__get_best_practices`**, for the version-specific coding
@@ -56,9 +57,10 @@ prompts") covers the same failure for claims about this branch's history.
 ## Measuring this repository is a different thing, and is unchanged
 
 Everything the gates and the shell already do stays required: running
-`npm run test`, `npm run lint` and `npm run build` and reading the exit
-codes; grepping the tree; reading `angular.json`,
-`package.json` and `eslint.config.mjs`; `git log -S` to find when a line
+`npm --prefix frontend run test`, `npm --prefix frontend run lint` and
+`npm --prefix frontend run build` and reading the exit codes; grepping the
+tree; reading `frontend/angular.json`, `frontend/package.json` and
+`frontend/eslint.config.mjs`; `git log -S` to find when a line
 arrived. Reading the installed source under `node_modules/` to settle what a
 version actually ships is also measurement, not a probe.
 

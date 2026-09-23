@@ -1,5 +1,5 @@
 // tests/contract/schema.spec.ts — contract-level assertions over
-// docs/api/openapi.yaml (the OpenAPI 2.0.0 wire contract) and the
+// contracts/commerce/openapi.yaml (the OpenAPI 2.0.0 wire contract) and the
 // generated catalogue fixture under docs/api/fixtures/catalog.json.
 //
 // Vitest suite that dereferences the spec with
@@ -22,9 +22,9 @@ import addFormats from 'ajv-formats';
 
 import { withoutAdminOperations } from './admin-tags';
 
-const SPEC_PATH = resolve(__dirname, '../../docs/api/openapi.yaml');
+const SPEC_PATH = resolve(__dirname, '../../../contracts/commerce/openapi.yaml');
 const CATALOG_PATH = resolve(__dirname, '../../docs/api/fixtures/catalog.json');
-const CATALOG_SOURCE_PATH = resolve(__dirname, '../../docs/api/fixtures/catalog-source.json');
+const CATALOG_SOURCE_PATH = resolve(__dirname, '../../../data/catalog/catalog.json');
 
 interface CatalogVariant {
   id?: string;
@@ -173,8 +173,8 @@ describe('T03-AC01 operationIds', () => {
   });
 
   it('every media-type example on responses and requestBodies validates against its own schema', () => {
-    // docs/api/openapi.yaml declares `examples:` blocks at the media
-    // type level on seven operations (`grep -n 'examples:' docs/api/openapi.yaml` →
+    // contracts/commerce/openapi.yaml declares `examples:` blocks at the media
+    // type level on seven operations (`grep -n 'examples:' contracts/commerce/openapi.yaml` →
     // 337, 558, 621, 654, 739, 808, 851; the eighth hit at line 247 is
     // a header-schema array, not a media-type named map and so is not
     // walked here). Walk every operation response and requestBody on
@@ -290,7 +290,7 @@ describe('T03-AC02 Money invariant', () => {
 describe('T03-AC02 status codes & repeated query arrays', () => {
   it('every operation response is one of the documented status codes', () => {
     // Measured from the spec:
-    //   grep -oE "^\s+'[0-9]{3}':" docs/api/openapi.yaml | sort -u
+    //   grep -oE "^\s+'[0-9]{3}':" contracts/commerce/openapi.yaml | sort -u
     // → 200, 201, 400, 404, 409, 410, 412, 422, 503.
     const known = new Set(['200', '201', '400', '404', '409', '410', '412', '422', '503']);
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
@@ -342,7 +342,7 @@ describe('T03-AC02 status codes & repeated query arrays', () => {
 
 describe('T03-AC04 schema constraints', () => {
   it('Variant.maxQuantity is integer 0..10', () => {
-    // docs/api/openapi.yaml:1207-1210
+    // contracts/commerce/openapi.yaml:1207-1210
     const variant = dereferenced.components.schemas.Variant as {
       properties: { maxQuantity: { type: string; minimum: number; maximum: number } };
     };
@@ -352,7 +352,7 @@ describe('T03-AC04 schema constraints', () => {
   });
 
   it('CatalogItem.maxQuantity is integer 0..10', () => {
-    // docs/api/openapi.yaml:1309-1312 (CatalogItem is allOf [ProductBase, ...]).
+    // contracts/commerce/openapi.yaml:1309-1312 (CatalogItem is allOf [ProductBase, ...]).
     const catalogItem = dereferenced.components.schemas.CatalogItem as {
       allOf: {
         properties?: { maxQuantity?: { type: string; minimum: number; maximum: number } };
@@ -366,7 +366,7 @@ describe('T03-AC04 schema constraints', () => {
   });
 
   it('CartItem.quantity is integer 1..10', () => {
-    // docs/api/openapi.yaml:1583-1586
+    // contracts/commerce/openapi.yaml:1583-1586
     const cartItem = dereferenced.components.schemas.CartItem as {
       properties: { quantity: { type: string; minimum: number; maximum: number } };
     };
@@ -377,7 +377,7 @@ describe('T03-AC04 schema constraints', () => {
 
   it('Product.highlights is 1..6 entries on ProductBase, and Product dereferences to it', () => {
     // The `highlights` array lives on ProductBase
-    // (docs/api/openapi.yaml:1267-1272: minItems 1, maxItems 6).
+    // (contracts/commerce/openapi.yaml:1267-1272: minItems 1, maxItems 6).
     // Product is allOf [ProductBase, ...] and dereferences the base.
     const productBase = dereferenced.components.schemas.ProductBase as {
       properties: { highlights: { type: string; minItems: number; maxItems: number } };
@@ -403,7 +403,7 @@ describe('T03-AC04 schema constraints', () => {
 
 describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
   it('cart-version-monotonic: every mutating cart operation requires If-Match', () => {
-    // Measured: `grep -n "parameters/IfMatch" -B25 docs/api/openapi.yaml |
+    // Measured: `grep -n "parameters/IfMatch" -B25 contracts/commerce/openapi.yaml |
     //  grep operationId` returns the exact set below
     // (addCartItem, clearCart, setCartItemQuantity, removeCartItem,
     // updateCheckout, createPaymentIntent, createOrder).
@@ -442,8 +442,8 @@ describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
 
   it('expiresAt fields are date-time on Cart and PaymentIntent', () => {
     // The `Quote` schema is retired in 2.0.0; the date-time invariant
-    // survives on Cart.expiresAt (docs/api/openapi.yaml:1635-1637) and
-    // PaymentIntent.expiresAt (docs/api/openapi.yaml:1956-1958).
+    // survives on Cart.expiresAt (contracts/commerce/openapi.yaml:1635-1637) and
+    // PaymentIntent.expiresAt (contracts/commerce/openapi.yaml:1956-1958).
     const cart = dereferenced.components.schemas.Cart as {
       properties: { expiresAt: { type: string; format: string } };
     };
@@ -458,7 +458,7 @@ describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
   });
 
   it('idempotency-key-required-on-mutations: createPaymentIntent and createOrder list Idempotency-Key', () => {
-    // Measured: `grep -n "parameters/IdempotencyKey" docs/api/openapi.yaml`
+    // Measured: `grep -n "parameters/IdempotencyKey" contracts/commerce/openapi.yaml`
     // → references at lines 599 (createPaymentIntent) and 780
     // (createOrder). Those are the only two operations that require
     // Idempotency-Key in 2.0.0; the previous "every POST/PUT/PATCH/DELETE"
@@ -495,7 +495,7 @@ describe('T03-AC04 business invariants (not enforced by JSON Schema)', () => {
 });
 
 describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
-  it('catalog.json contains one product per entry of catalog-source.json', () => {
+  it('catalog.json contains one product per entry of data/catalog/catalog.json', () => {
     expect(catalog.products).toHaveLength(expectedProductCount);
   });
 
@@ -515,7 +515,7 @@ describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
   });
 
   it('at least one out-of-stock combination exists', () => {
-    // docs/api/openapi.yaml:1096-1101: Availability enum = in_stock,
+    // contracts/commerce/openapi.yaml:1096-1101: Availability enum = in_stock,
     // out_of_stock. The fixture marks 5 variants as out_of_stock
     // (measured: count of availability === 'out_of_stock').
     const oos = catalog.products
@@ -555,7 +555,7 @@ describe('T03-AC03 fixture shape (docs/api/fixtures/catalog.json)', () => {
   });
 
   it('every fixture product validates against the OpenAPI Product schema', () => {
-    // Product carries `unevaluatedProperties: false` (docs/api/openapi.yaml:1322).
+    // Product carries `unevaluatedProperties: false` (contracts/commerce/openapi.yaml:1322).
     // The contract suite compiles against Ajv 2020 (draft 2020-12) so that
     // keyword actually fires; default-export Ajv (draft-07) silently ignores
     // it under `strict: false` and would let unknown fields pass.

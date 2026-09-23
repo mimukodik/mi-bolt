@@ -1,0 +1,71 @@
+# The one Compose file of the monorepo: the local stack (mise run db, backend:docker,
+# stack) and the build definition of the two images. Run it through deploy/compose.sh.
+# The project name is the database's former project, so an existing mi-bolt-postgres
+# container is adopted and the mi-bolt-postgres-data volume keeps its data. A second
+# stack beside it sets COMPOSE_PROJECT_NAME, MIBOLT_POSTGRES_VOLUME and the three ports.
+name: mi-bolt-local
+
+services:
+  postgres:
+    image: postgres:16.15-alpine3.24@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-mi_bolt}"
+      POSTGRES_USER: "${POSTGRES_USER:-mi_bolt}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?copy deploy/.env.example to deploy/.env}"
+    command: ["postgres", "-c", "max_connections=250"]
+    ports:
+      - "${MIBOLT_POSTGRES_PORT:-55433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mi_bolt} -d ${POSTGRES_DB:-mi_bolt}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  commerce:
+    image: mi-bolt-commerce
+    build:
+      context: ../backend
+      dockerfile: services/commerce/Dockerfile
+      additional_contexts:
+        contracts: ../contracts
+        catalog: ../data/catalog
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MIBOLT_DB_URL: "jdbc:postgresql://postgres:5432/${POSTGRES_DB:-mi_bolt}"
+      MIBOLT_DB_USER: "${POSTGRES_USER:-mi_bolt}"
+      MIBOLT_DB_PASSWORD: "${POSTGRES_PASSWORD:?copy deploy/.env.example to deploy/.env}"
+      MIBOLT_PAYMENT_REDIRECT_URL_PREFIX: "${MIBOLT_PAYMENT_ORIGIN:-http://localhost:4210}/demo-fizetes/"
+      MIBOLT_PAYMENT_RETURN_URL_PREFIX: "${MIBOLT_SHOP_ORIGIN:-http://localhost:4200}/penztar?paymentIntentId="
+      MIBOLT_ADMIN_INITIAL_PASSWORD: "${MIBOLT_ADMIN_INITIAL_PASSWORD:-}"
+    ports:
+      - "${MIBOLT_BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/api/v1/actuator/health/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  web:
+    image: mi-bolt-web
+    build:
+      context: ../frontend
+    restart: unless-stopped
+    depends_on:
+      commerce:
+        condition: service_healthy
+    environment:
+      BACKEND_ORIGIN: "http://commerce:8080"
+    ports:
+      - "${MIBOLT_WEB_PORT:-4200}:8080"
+
+volumes:
+  postgres-data:
+    name: "${MIBOLT_POSTGRES_VOLUME:-mi-bolt-postgres-data}"

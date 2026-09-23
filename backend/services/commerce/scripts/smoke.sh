@@ -102,7 +102,7 @@ else
 	X=$(xsrf)
 	req 200 "GET /admin/products" "$BASE/admin/products"
 	req 200 "GET /admin/users" "$BASE/admin/users"
-	IMG=$(ls data/catalog/images/*.png | head -1)
+	IMG=$(ls ../../../data/catalog/images/*.png | head -1)
 	req 200 "POST /admin/media (a stored catalogue image)" -X POST -H "X-XSRF-TOKEN: $X" \
 		-F "file=@$IMG;type=image/png" "$BASE/admin/media"
 	head -c 1048577 /dev/zero > "$B.big"

@@ -33,7 +33,7 @@ Never read the whole transcript into context at once. The file can be large.
 Run the skill's own reader instead, from the repository root:
 
 ```bash
-node packages/shared/..agents/skills/retrospective/scripts/read-transcript.ts \
+node .claude/skills/retrospective/scripts/read-transcript.ts \
   <transcript.jsonl>
 ```
 
@@ -83,7 +83,7 @@ Look for:
   `kötelező mindig commitolni` is a standing rule, so a working tree full of
   the session's own output is a finding, not background noise. Report it in
   the summary even when it produces no proposal.
-- Run `mise exec -- pnpm claude:memory status`. When it reports a review is
+- Run `mise run claude:memory status`. When it reports a review is
   due, say so in the Session summary with the reason the command gave, and
   tell the user that `/memory-review` is theirs to run: the skill is
   user-invoked only, so this retrospective never starts one itself. This is a
@@ -118,14 +118,15 @@ proposal" and stop.
 
 Routing:
 
-- A stable fact or convention -> a new rule in `.claude/CLAUDE.md` (keep it
-  under 200 lines) or in the matching `.claude/rules/*.md` file.
+- A stable fact or convention -> a new rule in `.claude/CLAUDE.md` or in the
+  matching `.claude/rules/*.md` file. Both load at launch into every session,
+  so length there is paid for by every session the rule never applies to:
+  propose the shortest wording that still says what to do and why.
 - A multi-step procedure -> a new or updated skill under
-  `packages/shared/.agents/skills/`.
+  `.claude/skills/`.
 - A durable learning that is neither a rule nor a procedure, a decision with
   the reason behind it or a trap that already cost time -> an entry in
   `.claude/shared-memory/`: one topic file plus its line in the index.
-- Behavior specific to one app -> `apps/<app>/AGENTS.md`.
 
 ## Output
 
@@ -156,7 +157,7 @@ conditions. The file must start with the heading
 
   A `memory` proposal gives the topic name, the one-line summary that goes in
   the index, and the body of the topic file. Applying it is
-  `pnpm claude:memory write <topic> --summary "<one line>" --content "<body>"`,
+  `mise run claude:memory write <topic> --summary "<one line>" --content "<body>"`,
   run by the caller only after the user approved that proposal with
   AskUserQuestion, never by this skill.
 
@@ -207,12 +208,33 @@ and Not proposed content one level under it, as `###` headings, so earlier
 runs stay readable in the same file and every section stays attached to the
 run that produced it.
 
-Return to the caller a short plain-text summary: the number of proposals, the
-file path if one was written, and one line per proposal. That summary plus the
-`NEXT:` line below it is the whole of the final message, and it replaces
-whatever final-report shape the agent named in `agent:` above carries: the file
-this run wrote already holds the findings, and the caller acts on the `NEXT:`
-line. End the response with the literal line:
+Return to the caller a short plain-text report in three sections, headed
+`## Summary`, `## What was verified` and `## Uncertain`, in that order and
+ending with the literal `NEXT:` line below. This fork runs as
+`instructions-opus` and so carries that definition's own report shape as well;
+these headings are the ones to write, being the same three sections named for
+the work this run does.
+
+Under `## Summary`: the number of proposals, the absolute file path if one was
+written, and one line per proposal. Beyond those lines it points at the file
+rather than repeating the proposal bodies.
+
+Under `## What was verified`: what this run ran and what came back, namely the
+transcript reader, any subagent transcripts you sampled,
+`git status --porcelain` and `git log --oneline -3`,
+`mise run claude:memory status`, the
+`grep -rn "approved, not applied" .claude/retrospectives` scan, and the rule
+files you read a finding against. Those are the whole of this run's evidence,
+and the caller has no other way to tell a proposal drawn from the transcript
+from one drawn from memory of the session.
+
+Under `## Uncertain`: what this run could not settle, such as a transcript
+passage that stayed ambiguous, a rule you could not check against the file
+that owns it, a proposal whose routing you were unsure of. The file records
+proposals rather than uncertainties, so the caller hears these here or not at
+all. A run with nothing uncertain says so in a line rather than dropping the
+section, for the reason `.claude/agents/CLAUDE.md` ("Report shape") gives.
+End the response with the literal line:
 
 ```
 NEXT: ask the user with AskUserQuestion which of this run's proposals to apply, and what to do with each Still waiting item carried over from an earlier run; apply only approved ones. For new-skill and update-skill proposals invoke the skill-creator skill (plugin) to write, refine, eval, and place the skill using workspace conventions. Then record this run's proposals in this file's Outcomes section, and close a carried-over item by editing its line in the earlier run's own file. .claude/rules/session-lifecycle.md says when those writes happen and how both sets go to the user.

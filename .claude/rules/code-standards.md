@@ -6,12 +6,12 @@ path-scoped rules trigger only on a read.
 
 - Well-documented codebase, not over-explained.
 - A `CLAUDE.md` belongs at the top of an area, not in every subdirectory
-  under it. `scripts/CLAUDE.md` and `.claude/hooks/CLAUDE.md` each document
-  their own tool's layer split and modules; those tools' `cli/`, `io/`,
-  `analysis/`, `store/` and `search/` directories get no file of their own, so
-  there is one place to read and one place to keep current. The file that
-  exists is kept maintained. `.claude/rules/` has none because every `.md`
-  there is loaded as a rule; it is documented in `.claude/CLAUDE.md` instead.
+  under it. `.claude/hooks/CLAUDE.md` documents that package's modules, and
+  its `common/`, `session-start/` and `stop-guard/` directories get no file of
+  their own, so there is one place to read and one place to keep current.
+  The file that exists is kept maintained. `.claude/rules/` has none because
+  every `.md` there is loaded as a rule; it is documented in
+  `.claude/CLAUDE.md` instead.
 - Modern TypeScript: proper use of functional and OOP programming; generic
   interfaces are mandatory.
 - Strict generics. `as` is forbidden; use `satisfies`. `any` is forbidden; use
@@ -35,12 +35,16 @@ path-scoped rules trigger only on a read.
 - Every user-visible change is tested in a real browser with the
   chrome-devtools subagent, per `.claude/rules/browser-verification.md`.
   Typecheck and unit tests alone are never enough.
-- **Coverage is an aggregate floor here, not a per-line gate.** `angular.json`'s
-  `coverageThresholds` measures the whole of `src/**` rather than each file:
-  80% statements, lines and functions, 75% branches, which `npm run test`
+- **Coverage is an aggregate floor here, not a per-line gate.**
+  `frontend/angular.json`'s `coverageThresholds` measures the whole of
+  `frontend/projects/storefront/src/**` rather than each file: 80% statements,
+  lines and functions, 75% branches, which `npm --prefix frontend run test`
   enforces and which passes today with three to five points of headroom. The
   numbers sit just under the real figures deliberately, so the gate blocks
-  nothing being written now and fails the moment coverage decays.
+  nothing being written now and fails the moment coverage decays. The
+  backend's floor is the JaCoCo line-coverage verification its `build` task
+  runs, a bundle ratio and a per-class ratio with the generated code
+  excluded; `backend/services/commerce/build.gradle` owns those numbers.
 
   This replaces a 100% changed-line requirement, and the user set the budget:
   "haladnunk kene es ez demo mvp app ami sosem lesz eles" ("we need to make
@@ -50,10 +54,6 @@ path-scoped rules trigger only on a read.
   is a budget, not a mood") is why that caps verification rather than being
   weighed against tidiness, and it is written down here so the next reader can
   see it was applied rather than forgotten.
-
-  The old rule was also unenforceable here: it named a
-  `coverage:changed-lines` script that `package.json` does not define. A gate
-  nobody could run was not holding the line it appeared to hold.
 
   Two things survive the relaxation, because they are what actually caught
   defects here rather than what the percentage claimed to:
@@ -85,13 +85,17 @@ path-scoped rules trigger only on a read.
   pull request, or take `git merge-base origin/main HEAD` where the work came
   straight off `main`.
 - **A subagent's green report is not a run.** Before every commit the
-  orchestrator itself runs `npm run test`, `npx eslint <the changed files>`,
-  `npx prettier --check <the changed files>` and `npm run build`, and reads the
-  exit codes. One agent reported a typecheck green while it was exiting 1 with
-  two TS2322 errors in a spec file that same agent had just written; the next
-  agent called those errors pre-existing after checking only that its own files
-  were not the cause. Both reports were sincere, both were wrong, and the error
-  reached the orchestrator twice.
+  orchestrator itself runs `npm --prefix frontend run test` and
+  `npm --prefix frontend run build`, and, from `frontend/`,
+  `npx eslint <the changed files>` and `npx prettier --check <the changed
+  files>`, and reads the exit codes; for a change under `backend/` the gate is
+  `backend/gradlew -p backend :services:commerce:build`, which runs the unit
+  and integration tests, PMD and the coverage verification. One agent reported
+  a typecheck green while it was exiting 1 with two TS2322 errors in a spec
+  file that same agent had just written; the next agent called those errors
+  pre-existing after checking only that its own files were not the cause.
+  Both reports were sincere, both were wrong, and the error reached the
+  orchestrator twice.
 - Layers a unit test cannot reach are excluded in the coverage configuration,
   never by ignore comments scattered through the source: shell scripts, docker
   compose files, docs, generated files, and the spec files themselves. The
@@ -103,22 +107,17 @@ path-scoped rules trigger only on a read.
   hyphens (`add-to-cart`, `filter-panel`); symbols and test ids mix camelCase
   and PascalCase (`addToCartSelection`, `AddToCart`, `filter-min-price`). Run
   every spelling before concluding a name has zero hits: `grep -rn "AddToCart"`
-  and `grep -rn "add-to-cart"` return different files in `src/app/features/product/`.
-- **A "these two trees are the same file" claim is checked, not assumed.**
-  `.claude/skills/` and `.agents/skills/` are two independent directories here,
-  not a symlink pair: `ls -lai` on the same file under each prints different
-  inodes. An edit to one does not reach the other, so a correction has to be
-  applied twice or the change reaches half its readers. `ls -ld` and `ls -lai`
-  settle it in one command.
+  and `grep -rn "add-to-cart"` return different files in
+  `frontend/projects/storefront/src/app/features/product/`.
 - **A cut feature leaves nothing behind, and the mock data is not a reason to
   keep any of it.** When the user cuts a component, a route, a filter or a
   feature, it goes out of every layer in the same change: the type union, the
-  template, the SCSS, the handler, the fixture, and its tests.
-  No compatibility shim, no "the old payload still parses so nothing breaks",
-  no code parked against a future rebuild. What `src/mocks/` already serves is
-  not a reason to keep one either: a fixture in a shape the code no longer
-  knows is not a case to design for, and a handler that tolerates it is work
-  spent on a hypothetical. It goes out with the rest.
+  template, the SCSS, the handler, the fixture, and its tests. No compatibility
+  shim, no "the old payload still parses so nothing breaks", no code parked
+  against a future rebuild. What `frontend/projects/storefront/src/mocks/`
+  already serves is not a reason to keep one either: a fixture in a shape the
+  code no longer knows is not a case to design for, and a handler that tolerates
+  it is work spent on a hypothetical. It goes out with the rest.
 
   This binds the code the current change makes dead; pre-existing dead code
   that nothing here touches stays where it is, per `.claude/CLAUDE.md`
@@ -134,14 +133,16 @@ path-scoped rules trigger only on a read.
 
 
 - **Only the `playwright-test-*` agents write end-to-end tests.** Every
-  `*.spec.ts` under `e2e/` is written by `playwright-test-generator` or
-  repaired by `playwright-test-healer`, from a plan `playwright-test-planner`
-  saved under `specs/`. No other agent, no `coder-agent.sh` runner and not the
-  orchestrator creates or edits one: a spec written by anything else was never
-  executed against a real page while it was being written, and that execution
-  is the whole of what those three agents add. Everything else under `e2e/`,
-  `playwright.config.ts`, `e2e/fixtures/**` and `e2e/seed.spec.ts`, which is
-  the conventions file rather than a test, is ordinary repository code under
-  the ordinary rules. A production change an end-to-end test turns out to need
-  goes to the unit that owns it, never into the spec. The `playwright-tests`
-  skill owns the two flows and how the agents are watched.
+  `*.spec.ts` under `frontend/e2e/` is written by `playwright-test-generator`
+  or repaired by `playwright-test-healer`, from a plan
+  `playwright-test-planner` saved under `frontend/specs/`. No other agent, no
+  `coder-agent.sh` runner and not the orchestrator creates or edits one: a
+  spec written by anything else was never executed against a real page while
+  it was being written, and that execution is the whole of what those three
+  agents add. Everything else under
+  `frontend/e2e/`, `frontend/playwright.config.ts`, `frontend/e2e/fixtures/**`
+  and `frontend/e2e/seed.spec.ts`, which is the conventions file rather than a
+  test, is ordinary repository code under the ordinary rules. A production
+  change an end-to-end test turns out to need goes to the unit that owns it,
+  never into the spec. The `playwright-tests` skill owns the two flows and how
+  the agents are watched.

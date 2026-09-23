@@ -14,7 +14,7 @@ import '@angular/compiler';
 // @vitest-environment jsdom
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
@@ -32,7 +32,7 @@ import {
   createFixedClock,
   DEFAULT_SCENARIO,
 } from '../../../mocks/scenarios';
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 
 import '../../../mocks/cart/cart.handlers';

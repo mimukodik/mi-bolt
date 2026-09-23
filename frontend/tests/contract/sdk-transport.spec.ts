@@ -1,6 +1,6 @@
 // tests/contract/sdk-transport.spec.ts — T04-AC04 SDK transport contract.
 //
-// Every operation declared in docs/api/openapi.yaml must reach MSW through the
+// Every operation declared in contracts/commerce/openapi.yaml must reach MSW through the
 // generated SDK, which itself uses Angular's real HttpClient. The test asserts
 // (1) the 17 operations are present and each one round-trips with the
 // documented URL, method, body and headers; (2) repeated brand[] and
@@ -30,18 +30,18 @@ import { server, useMswServer } from '../msw-server';
 
 import { withoutAdminOperations } from './admin-tags';
 
-import { Api } from '../../src/app/api/generated/api';
-import type { Cart } from '../../src/app/api/generated/models/cart';
-import type { Product } from '../../src/app/api/generated/models/product';
+import { Api } from '../../projects/storefront/src/app/api/generated/api';
+import type { Cart } from '../../projects/storefront/src/app/api/generated/models/cart';
+import type { Product } from '../../projects/storefront/src/app/api/generated/models/product';
 import {
   ApiConfiguration as ApiConfig,
   provideApiConfiguration as provideApiConfig,
-} from '../../src/app/api/generated/api-configuration';
-import * as operations from '../../src/app/api/generated/functions';
+} from '../../projects/storefront/src/app/api/generated/api-configuration';
+import * as operations from '../../projects/storefront/src/app/api/generated/functions';
 import {
   demoSessionInterceptor,
   withIfMatch,
-} from '../../src/app/core/api/demo-session.interceptor';
+} from '../../projects/storefront/src/app/core/api/demo-session.interceptor';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker
@@ -49,7 +49,7 @@ import {
 useMswServer();
 
 const REPO_ROOT = resolve(__dirname, '../..');
-const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
+const SPEC_PATH = resolve(REPO_ROOT, '../contracts/commerce/openapi.yaml');
 const BASE_URL = 'http://localhost/api/v1';
 const BASE_URL_PATH = '/api/v1';
 
@@ -113,7 +113,7 @@ function capture(request: Request, bodyText: string): void {
  * response resolves so a failing test sees the exact request the SDK
  * produced. The handlers under `src/mocks/**` require a session-scoped
  * `X-Demo-Session` header that the 2.0.0 contract does not declare (the
- * contract's session is the `mibolt_session` cookie — `docs/api/openapi.yaml`
+ * contract's session is the `mibolt_session` cookie — `contracts/commerce/openapi.yaml`
  * line 936-939). The contract suite must assert the wire contract, so this
  * file ships its own minimal handlers instead of the real slice handlers:
  * the wire shape is the contract, the per-tab session state is an
@@ -359,13 +359,13 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
     const { api } = makeSdk();
     expect(TestBed.inject(ApiConfig).rootUrl).toBe(BASE_URL);
 
-    // catalog (public; no If-Match) — docs/api/openapi.yaml:54-244
+    // catalog (public; no If-Match) — contracts/commerce/openapi.yaml:54-244
     await callOperation(api, 'listProducts');
     await callOperation(api, 'getProduct', { slug: 'demo-one-5g' });
     await callOperation(api, 'listRelatedProducts', { slug: 'demo-one-5g' });
     await callOperation(api, 'getMedia$Jpeg', { imageId: 'i1' });
 
-    // cart (session-scoped; If-Match on mutations) — docs/api/openapi.yaml:266-465
+    // cart (session-scoped; If-Match on mutations) — contracts/commerce/openapi.yaml:266-465
     await callOperation(api, 'getCart');
     await callOperation(
       api,
@@ -387,7 +387,7 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
       withIfMatch('4'),
     );
 
-    // checkout (session-scoped; If-Match on update) — docs/api/openapi.yaml:467-573
+    // checkout (session-scoped; If-Match on update) — contracts/commerce/openapi.yaml:467-573
     await callOperation(api, 'getCheckoutOptions');
     await callOperation(api, 'getCheckout');
     await callOperation(
@@ -398,7 +398,7 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
     );
 
     // payment (If-Match + Idempotency-Key on create; body on resolve)
-    // docs/api/openapi.yaml:575-750
+    // contracts/commerce/openapi.yaml:575-750
     await callOperation(
       api,
       'createPaymentIntent',
@@ -411,7 +411,7 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
       body: { outcome: 'succeeded' },
     });
 
-    // orders (If-Match + Idempotency-Key on create) — docs/api/openapi.yaml:752-933
+    // orders (If-Match + Idempotency-Key on create) — contracts/commerce/openapi.yaml:752-933
     await callOperation(
       api,
       'createOrder',
@@ -500,9 +500,9 @@ describe('T04-AC04 repeated query-array parameters round-trip', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. If-Match is attached by withIfMatch (docs/api/openapi.yaml:993-1001)
+// 3. If-Match is attached by withIfMatch (contracts/commerce/openapi.yaml:993-1001)
 //    and Idempotency-Key by the createOrder caller
-//    (docs/api/openapi.yaml:1002-1008, generated SDK fn/orders/create-order.ts:25)
+//    (contracts/commerce/openapi.yaml:1002-1008, generated SDK fn/orders/create-order.ts:25)
 // ---------------------------------------------------------------------------
 
 describe('T04-AC05 If-Match is attached by withIfMatch', () => {

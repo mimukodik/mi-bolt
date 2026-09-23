@@ -37,7 +37,7 @@
  *
  * `ensureSession()` is safe before the contact step exists: `GET
  * /checkout` answers 200 with an empty, incomplete draft on a session
- * that has never been written (`docs/api/openapi.yaml:491-513`), so a
+ * that has never been written (`contracts/commerce/openapi.yaml:491-513`), so a
  * first visit hydrates to a session with no sections and the contact
  * step matches on the cart alone. A failed read leaves `session()`
  * null, which the step logic treats as a missing section.

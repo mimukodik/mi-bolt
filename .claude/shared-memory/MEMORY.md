@@ -6,8 +6,8 @@ that already cost time. Rules do not belong here, they live in
 `.claude/CLAUDE.md` and `.claude/rules/`.
 
 An entry is added only after the retrospective skill proposes it and the user
-approves it. Read one topic with `pnpm claude:memory read <topic>`, search with
-`pnpm claude:memory search "<query>"`; search also covers the session reports
+approves it. Read one topic with `mise run claude:memory read <topic>`, search with
+`mise run claude:memory search "<query>"`; search also covers the session reports
 under `.claude/retrospectives/`, and "Shared memory" in `.claude/CLAUDE.md`
 says what a hit there is worth.
 

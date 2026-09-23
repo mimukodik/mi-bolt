@@ -85,43 +85,6 @@ fills an empty database on the first boot exactly as `bootRun` does.
 `MIBOLT_DB_URL`, `MIBOLT_DB_USER` and `MIBOLT_DB_PASSWORD` in the shell
 override the compose defaults.
 
-### The whole stack in one command
-
-`scripts/demo-stack.sh` brings up the local PostgreSQL database, builds
-and starts the backend, then clones, builds and serves the shop and the
-payment app from [`mimukodik/mi-bolt`](https://github.com/mimukodik/mi-bolt)
-`main` into a temp directory. One command from a clean machine to a
-running shop, payment app and API.
-
-```bash
-./scripts/demo-stack.sh start     # database + backend + shop + payment app
-./scripts/demo-stack.sh stop      # stop them in reverse order
-./scripts/demo-stack.sh status    # up/down for each
-```
-
-When `start` finishes, it prints:
-
-| URL                                     | What                                          |
-| --------------------------------------- | --------------------------------------------- |
-| `http://localhost:4200/`                | Shop (proxies `/api/*` to backend)            |
-| `http://localhost:4210/demo-fizetes/`   | Payment app (its own origin)                  |
-| `http://localhost:8080/api/v1`          | Backend API                                   |
-
-`stop` shuts down the payment app, shop, backend processes started by
-`start` and the database container; the database volume and the frontend
-clone stay on disk. Use `./scripts/local-database-docker.sh reset --yes`
-to wipe the database. Environment overrides:
-
-| Variable                  | Default                                       |
-| ------------------------- | --------------------------------------------- |
-| `MIBOLT_FRONTEND_REPO`    | `https://github.com/mimukodik/mi-bolt.git`    |
-| `MIBOLT_FRONTEND_REF`     | `main`                                        |
-| `MIBOLT_FRONTEND_DIR`     | (unset; a fresh `mktemp` directory is used)   |
-| `MIBOLT_BACKEND_PORT`     | `8080`                                        |
-| `MIBOLT_FRONTEND_PORT`    | `4200`                                        |
-| `MIBOLT_PAYMENT_PORT`     | `4210`                                        |
-| `MIBOLT_SKIP_BUILD`       | `0` (set to `1` to reuse an existing bootJar) |
-
 ### Deploy
 
 How the image is built, published and run on a server, with the

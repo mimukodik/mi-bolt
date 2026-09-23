@@ -7,25 +7,30 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "mi-bolt": {
+    "storefront": {
       "projectType": "application",
       "schematics": {},
-      "root": "",
-      "sourceRoot": "src",
+      "root": "projects/storefront",
+      "sourceRoot": "projects/storefront/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "browser": "src/main.ts",
-            "tsConfig": "tsconfig.app.json",
+            "browser": "projects/storefront/src/main.ts",
+            "tsConfig": "projects/storefront/tsconfig.app.json",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "projects/storefront/public",
+                "ignore": ["mockServiceWorker.js"]
               }
             ],
-            "styles": ["src/styles/tokens.css", "src/styles/primitives.css", "src/styles.css"]
+            "styles": [
+              "projects/storefront/src/styles/tokens.css",
+              "projects/storefront/src/styles/primitives.css",
+              "projects/storefront/src/styles.css"
+            ]
           },
           "configurations": {
             "production": {
@@ -41,7 +46,13 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "projects/storefront/src/mocks/browser.ts",
+                  "with": "projects/storefront/src/mocks/browser.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
@@ -49,8 +60,14 @@
               "sourceMap": true,
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.development.ts"
+                  "replace": "projects/storefront/src/environments/environment.ts",
+                  "with": "projects/storefront/src/environments/environment.development.ts"
+                }
+              ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "projects/storefront/public"
                 }
               ]
             },
@@ -60,8 +77,8 @@
               "sourceMap": true,
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.local-backend.ts"
+                  "replace": "projects/storefront/src/environments/environment.ts",
+                  "with": "projects/storefront/src/environments/environment.local-backend.ts"
                 }
               ]
             }
@@ -73,13 +90,13 @@
           "options": { "proxyConfig": "proxy.conf.json", "hmr": false },
           "configurations": {
             "production": {
-              "buildTarget": "mi-bolt:build:production"
+              "buildTarget": "storefront:build:production"
             },
             "development": {
-              "buildTarget": "mi-bolt:build:development"
+              "buildTarget": "storefront:build:development"
             },
             "local-backend": {
-              "buildTarget": "mi-bolt:build:local-backend",
+              "buildTarget": "storefront:build:local-backend",
               "proxyConfig": "proxy.local-backend.conf.json"
             }
           },
@@ -88,15 +105,15 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "runnerConfig": "vitest.config.ts",
+            "runnerConfig": "projects/storefront/vitest.config.ts",
             "setupFiles": ["tests/setup-msw.ts"],
             "coverage": true,
-            "coverageInclude": ["src/**/*.ts"],
+            "coverageInclude": ["projects/storefront/src/**/*.ts"],
             "coverageExclude": [
               "**/*.spec.ts",
               "**/*.test.ts",
               "**/*.d.ts",
-              "src/app/api/generated/**",
+              "projects/storefront/src/app/api/generated/**",
               "tests/**"
             ],
             "coverageThresholds": {
@@ -114,8 +131,8 @@
           "options": {
             "eslintConfig": "eslint.config.mjs",
             "lintFilePatterns": [
-              "src/**/*.ts",
-              "src/**/*.html",
+              "projects/storefront/src/**/*.ts",
+              "projects/storefront/src/**/*.html",
               "tests/**/*.ts",
               "e2e/**/*.ts",
               "playwright.config.ts"
@@ -139,12 +156,7 @@
             "tsConfig": "projects/demo-payment/tsconfig.app.json",
             "baseHref": "/demo-fizetes/",
             "outputPath": { "base": "dist/demo-payment" },
-            "assets": [
-              {
-                "glob": "mockServiceWorker.js",
-                "input": "public"
-              }
-            ],
+            "assets": [],
             "styles": ["projects/demo-payment/src/styles.css"]
           },
           "configurations": {
@@ -153,7 +165,13 @@
                 { "type": "initial", "maximumWarning": "500kB", "maximumError": "1MB" },
                 { "type": "anyComponentStyle", "maximumWarning": "4kB", "maximumError": "8kB" }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "projects/storefront/src/mocks/browser.ts",
+                  "with": "projects/storefront/src/mocks/browser.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
@@ -161,8 +179,14 @@
               "sourceMap": true,
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.development.ts"
+                  "replace": "projects/storefront/src/environments/environment.ts",
+                  "with": "projects/storefront/src/environments/environment.development.ts"
+                }
+              ],
+              "assets": [
+                {
+                  "glob": "mockServiceWorker.js",
+                  "input": "projects/storefront/public"
                 }
               ]
             }
@@ -280,11 +304,11 @@
                 },
                 {
                   "glob": "mockServiceWorker.js",
-                  "input": "public"
+                  "input": "projects/storefront/public"
                 },
                 {
                   "glob": "media/**",
-                  "input": "public"
+                  "input": "projects/storefront/public"
                 }
               ]
             },

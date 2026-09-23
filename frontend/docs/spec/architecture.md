@@ -70,7 +70,7 @@ Read requests use switchMap to cancel obsolete HTTP and prevent late results. Ca
 
 ```text
 # docs/design/yettel.md is the design reference; no duplicate design-skill folder in docs
-docs/api/openapi.yaml                single wire contract
+../contracts/commerce/openapi.yaml   single wire contract (git root)
 docs/api/fixtures/                   deterministic synthetic data
 src/main.ts                     bootstrap entry, fatal fallback
 src/core/bootstrap-demo.ts      await mock hydrate/start, then Angular
@@ -111,7 +111,7 @@ X-Demo-Session is an opaque namespace, NOT security. Distinct browser contexts h
 
 ## 9. Cart, checkout summary, payment, order invariants
 
-All prices originate from fixture catalogue values, not incoming requests. Money.amount is **whole HUF**, not ISO minor units. Avoid decimal multiplication. Item quantity 1..5 and <= available stock; reject rather than clamp. Same variant merges into one cart line. A successful cart mutation or checkout update increments the one shared session version once (`docs/api/openapi.yaml:16-19`). The checkout summary is recomputed on every read, so no total is cached between steps. UI serializes checkout writes.
+All prices originate from fixture catalogue values, not incoming requests. Money.amount is **whole HUF**, not ISO minor units. Avoid decimal multiplication. Item quantity 1..5 and <= available stock; reject rather than clamp. Same variant merges into one cart line. A successful cart mutation or checkout update increments the one shared session version once (`contracts/commerce/openapi.yaml:16-19`). The checkout summary is recomputed on every read, so no total is cached between steps. UI serializes checkout writes.
 
 For mutations use `If-Match: "<cart.version>"` and `Idempotency-Key`. Idempotency lookup happens before comparing current cart status/version: a replay after success must not become a conflict. Scope key to session+method+path and canonical request fingerprint, including semantically relevant version precondition. A retry sends the identical body/precondition. Reusing a key with a different payload returns 409. Store terminal success or domain-conflict outcome for replay; transport errors before execution have no commit; failed schema validation mutates nothing. An order whose card payment intent amount differs from the current summary total is refused with 409 PRICE_CHANGED (`params.intentAmount`, `params.total`) and mutates nothing; the shopper confirms the new total before submitting again.
 
@@ -155,4 +155,4 @@ Budget targets (project decisions, not current measurements): initial JS 300 KiB
 
 The plan supplies original fictional front/back artwork in `docs/design/assets/products`, with `docs/design/asset-manifest.json` provenance. Copy the WebP files to `public/assets/products/` in T10. These files do not claim real-device fidelity or contain functional UI text. All fixture media references resolve to an included image; matching casing color and view are explicit.
 
-ProductImage uses `resolveAssetUrl(path: string, documentBaseUri: string): string` from `src/app/shared/media/resolve-asset-url.ts`. It accepts the two shapes the API contract allows for `Image.src` (`docs/api/openapi.yaml`, `Image`): a root-relative path such as `/api/v1/media/<id>` or `/assets/products/<file>`, stripped of its leading slash and resolved under `document.baseURI` with any result outside the same-origin base rejected, and an absolute `http(s)` URL (a content delivery network) passed through unchanged. A `..` or `.` segment, encoded traversal, a protocol-relative `//host`, a relative path and every other scheme (`javascript:`, `data:`, `ftp:`) are rejected. Test the `/` deployment, an absolute URL and malformed paths. Every `<img src>` the application renders goes through this function.
+ProductImage uses `resolveAssetUrl(path: string, documentBaseUri: string): string` from `src/app/shared/media/resolve-asset-url.ts`. It accepts the two shapes the API contract allows for `Image.src` (`contracts/commerce/openapi.yaml`, `Image`): a root-relative path such as `/api/v1/media/<id>` or `/assets/products/<file>`, stripped of its leading slash and resolved under `document.baseURI` with any result outside the same-origin base rejected, and an absolute `http(s)` URL (a content delivery network) passed through unchanged. A `..` or `.` segment, encoded traversal, a protocol-relative `//host`, a relative path and every other scheme (`javascript:`, `data:`, `ftp:`) are rejected. Test the `/` deployment, an absolute URL and malformed paths. Every `<img src>` the application renders goes through this function.

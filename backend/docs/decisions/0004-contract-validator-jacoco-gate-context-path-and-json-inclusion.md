@@ -147,3 +147,10 @@ on every class, with the same exclusions (generated `api/**`, the application
 class). A new class can no longer land half-tested while the bundle stays
 green. The earlier manual "every changed line covered" rule is retired: this
 is a demo MVP and the per-line hunt cost more than it caught.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- `api/openapi.yaml` is now `contracts/commerce/openapi.yaml` at the git root; the build reads it as `../../../contracts/commerce/openapi.yaml` from `backend/services/commerce/`.
+- The contract validator now reads `Path.of("../../../contracts/commerce/openapi.yaml")` (`ContractValidation.java`).
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.
+- `docs/01-kommunikacio.md` (`docs/01`) is now `contracts/commerce/kommunikacio.md`.

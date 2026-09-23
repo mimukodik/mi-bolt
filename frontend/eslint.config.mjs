@@ -41,7 +41,7 @@ export default defineConfig([
       'out-tsc/**',
       // Generated OpenAPI client; carries its own `/* eslint-disable */`
       // and is never hand-edited (MIM-209 step 3).
-      'src/app/api/generated/**',
+      'projects/storefront/src/app/api/generated/**',
       // The admin application's own generated OpenAPI client, same rules.
       'projects/admin/src/app/api/generated/**',
       'vitest.config.*',
@@ -60,7 +60,7 @@ export default defineConfig([
     ],
   },
   {
-    files: ['src/**/*.ts', 'projects/**/*.ts'],
+    files: ['projects/**/*.ts'],
     extends: [
       eslint.configs.recommended,
       tseslint.configs.strictTypeChecked,
@@ -121,7 +121,7 @@ export default defineConfig([
       // empty class by design; the decorator is the exemption (MIM-220).
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
       // Type-aware rules ported from example-eslint.config.mjs. These
-      // live only in this src/**/*.ts block (which has `projectService`)
+      // live only in this projects/storefront/src/**/*.ts block (which has `projectService`)
       // and are deliberately NOT added to the tests/**/*.ts block below:
       // that tree is not included by any tsconfig (tsconfig.app.json /
       // tsconfig.spec.json both include only `src/`), so type-aware
@@ -161,7 +161,7 @@ export default defineConfig([
     // to this app's two TypeScript trees (there are no .tsx/.js/.jsx
     // source files here). The Nx-only `@nx/enforce-module-boundaries` rule
     // from that block is dropped entirely: this is not an Nx workspace.
-    files: ['src/**/*.ts', 'projects/**/*.ts', 'tests/**/*.ts'],
+    files: ['projects/**/*.ts', 'tests/**/*.ts'],
     rules: {
       '@typescript-eslint/consistent-type-imports': [
         'error',
@@ -296,7 +296,7 @@ export default defineConfig([
   },
   {
     // Playwright end-to-end tests: Node code driving a browser, not part of
-    // the Angular program, so not in the src/** or tests/** blocks.
+    // the Angular program, so not in the projects/storefront/src/** or tests/** blocks.
     files: ['e2e/**/*.ts', 'playwright.config.ts'],
     ignores: ['e2e/seed.spec.ts'],
     extends: [eslint.configs.recommended, tseslint.configs.recommended],
@@ -374,10 +374,10 @@ export default defineConfig([
   },
   {
     // Test policy: a focused, skipped, placeholder or expected-to-fail
-    // unit test lets a failing requirement pass silently. The src/**
+    // unit test lets a failing requirement pass silently. The projects/storefront/src/**
     // block switches no-restricted-syntax off; this block sets it again
     // for the spec files only.
-    files: ['src/**/*.spec.ts', 'projects/**/*.spec.ts', 'tests/**/*.ts'],
+    files: ['projects/**/*.spec.ts', 'tests/**/*.ts'],
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -417,7 +417,7 @@ export default defineConfig([
     // A coverage-ignore pragma removes lines from the coverage denominator
     // without a test; the deleted scripts/check-test-policy.mjs rejected
     // them, and production files are where they would count.
-    files: ['src/**/*.ts', 'projects/**/*.ts', 'tests/**/*.ts', 'e2e/**/*.ts'],
+    files: ['projects/**/*.ts', 'tests/**/*.ts', 'e2e/**/*.ts'],
     rules: {
       'no-warning-comments': [
         'error',
@@ -426,13 +426,13 @@ export default defineConfig([
     },
   },
   {
-    // Scoped to src/**/*.html (not the source repo's unscoped `**/*.html`):
+    // Scoped to projects/storefront/src/**/*.html (not the source repo's unscoped `**/*.html`):
     // this app's docs/ tree carries several MB of static yettel.hu
     // reference captures and a docs/index.html, none of them Angular
     // templates, and a repo-wide glob sent the Angular template parser
     // into a multi-minute stall on docs/index.html (654 KB) during the
     // MIM-209 inventory run.
-    files: ['src/**/*.html', 'projects/**/*.html'],
+    files: ['projects/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {
       // Disallow the legacy `*ngIf` / `*ngFor` / `*ngSwitch` structural

@@ -25,7 +25,7 @@
 import '@angular/compiler';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { HttpResponse, http } from 'msw';
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
@@ -50,7 +50,7 @@ import {
   DEFAULT_SCENARIO,
 } from '../../../mocks/scenarios';
 
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import type { Address } from '../../../app/api/generated/models/address';
 import type { BillingDetails } from '../../../app/api/generated/models/billing-details';
 

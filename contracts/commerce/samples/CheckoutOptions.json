@@ -1,0 +1,39 @@
+{
+  "deliveryOptions": [
+    {
+      "id": "home_delivery",
+      "label": "Házhozszállítás",
+      "description": "Kiszállítás a megadott címre",
+      "fee": {
+        "amount": 1990,
+        "currency": "HUF"
+      },
+      "requiresAddress": true,
+      "estimatedDays": 2,
+      "available": true
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": "card",
+      "label": "Bankkártya",
+      "description": "Online bankkártyás fizetés",
+      "fee": {
+        "amount": 0,
+        "currency": "HUF"
+      },
+      "available": true
+    },
+    {
+      "id": "cash_on_delivery",
+      "label": "Utánvét",
+      "description": "Fizetés a futárnak",
+      "fee": {
+        "amount": 990,
+        "currency": "HUF"
+      },
+      "available": true
+    }
+  ],
+  "termsVersion": "2026-09-01"
+}

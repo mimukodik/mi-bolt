@@ -24,7 +24,7 @@ import '@angular/compiler';
 // @vitest-environment jsdom
 import { HttpResponse, http } from 'msw';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
@@ -42,7 +42,7 @@ import {
   DEFAULT_SCENARIO,
 } from '../../../mocks/scenarios';
 import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 
 import '../../../mocks/cart/cart.handlers';

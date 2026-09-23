@@ -44,8 +44,8 @@ index that grows past it needs trimming, not more entries appended.
 ## The Reviewed preamble line
 
 `MEMORY.md` carries a `Reviewed: YYYY-MM-DD (N entries)` line directly under
-its heading once a review has run, written by `pnpm claude:memory reviewed`
-and read by `pnpm claude:memory status`. No line means no review has ever
+its heading once a review has run, written by `mise run claude:memory reviewed`
+and read by `mise run claude:memory status`. No line means no review has ever
 run. `status` uses it to decide whether a review is due, checked in order:
 the index at 80 percent of either cap, 10 or more entries added since the
 last review, never reviewed with 5 or more entries, or 90 days elapsed since
@@ -54,18 +54,18 @@ the last review; the first of these that fires is the one reported.
 ## Reading and writing
 
 This directory only defines the data; the CLI that operates on it lives in
-`scripts/agent-memory/`. Use it rather than opening these files by hand, so a
+`tools/agent-memory/`. Use it rather than opening these files by hand, so a
 session pulls in one topic instead of the whole directory:
 
-- `pnpm claude:memory list`
-- `pnpm claude:memory search "<query>"`
-- `pnpm claude:memory read <topic>`
-- `pnpm claude:memory write <topic> --summary "<one line>" --content "<body>"`
-- `pnpm claude:memory remove <topic>`
-- `pnpm claude:memory status`
-- `pnpm claude:memory reviewed`
+- `mise run claude:memory list`
+- `mise run claude:memory search "<query>"`
+- `mise run claude:memory read <topic>`
+- `mise run claude:memory write <topic> --summary "<one line>" --content "<body>"`
+- `mise run claude:memory remove <topic>`
+- `mise run claude:memory status`
+- `mise run claude:memory reviewed`
 
-`pnpm claude:memory --help` documents every flag with its default, the
+`mise run claude:memory -- --help` documents every flag with its default, the
 topic-name and summary limits, and the exit codes.
 
 An entry is added only after the retrospective skill proposes it and the user

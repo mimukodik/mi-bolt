@@ -188,7 +188,7 @@ describe('ProductImage primitive', () => {
   });
 
   // MIM-210: `Image.src` is a ready-to-use URL the server decides
-  // (`docs/api/openapi.yaml:1126`); the catalogue serves it as
+  // (`contracts/commerce/openapi.yaml:1126`); the catalogue serves it as
   // `/api/v1/media/<imageId>`. Rejecting that shape rendered the
   // monogram fallback on the gallery, the cart line and the card.
   it('renders the photo for a contract /api/v1/media/<imageId> src (MIM-210)', () => {

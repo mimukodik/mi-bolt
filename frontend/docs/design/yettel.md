@@ -28,7 +28,7 @@ redistribution. Screenshots of the captured pages at Full HD (1920x1080) and
 mobile (390x844) are under `docs/design/yettel/screenshots/` (home, list,
 list-filters, device and cart at both sizes, device-gallery at Full HD only);
 the comparison against the Angular build sits in the browser pass in
-`.claude/rules/frontend-browser.md`.
+`.claude/rules/browser-verification.md`.
 
 ## 2. Colour tokens
 
@@ -632,10 +632,9 @@ items within `.specification__boxes`.
 ## 6. List page feature inventory
 
 What the captured yettel list page (`docs/design/yettel/pages/list-mobiltelefon.html`)
-offers, against what the MiBolt backend serves per the backend contract
-`api/openapi.yaml` in `mimukodik/mi-bolt-backend`, version 2.0.0 (the copy
-under this repository's `docs/api/openapi.yaml` is the superseded 1.0.0
-contract until `npm run api:sync` refreshes it in the data-layer slice that follows S0). `GET /api/v1/products`
+offers, against what the MiBolt backend serves per the contract
+`contracts/commerce/openapi.yaml` at the git root (version 2.0.0 when this
+inventory was written). `GET /api/v1/products`
 takes `q`, `brand` (repeatable), `storageGb` (repeatable), `color`
 (repeatable colour code), `minPrice`, `maxPrice`, `inStock`, `is5g`,
 `featured`, `sort` (`ProductSort`: `recommended` (default), `newest`,

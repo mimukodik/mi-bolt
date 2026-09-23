@@ -15,7 +15,7 @@
  * MIM-212 adds two store methods — `touch` and `resetForOrder` — for
  * the checkout store. Both reuse the existing reconcile and version
  * machinery so the cart and the checkout draft always read and bump
- * the same counter (`docs/api/openapi.yaml:16-19`). The Problem body
+ * the same counter (`contracts/commerce/openapi.yaml:16-19`). The Problem body
  * moves to the generated `Problem` type, and the Problem `type` URI
  * follows the contract's own examples via `problemType`.
  */
@@ -80,7 +80,7 @@ export function buildTraceId(_options: CreateHandlersOptions): string {
 
 /**
  * The Problem `type` URI the contract's own examples give for a code
- * (`docs/api/openapi.yaml:1060`, and the kebab-case rule for the
+ * (`contracts/commerce/openapi.yaml:1060`, and the kebab-case rule for the
  * others). `CART_VERSION_CONFLICT` is the one exception the contract
  * fixes by example; every other code follows the cart's own
  * derivation.

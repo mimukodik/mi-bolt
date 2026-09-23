@@ -122,7 +122,7 @@ test("session-start includes the shared memory section when the index has conten
     assert.equal(result.status, 0);
     assert.match(result.stdout, /\[muhely shared memory\]/);
     assert.match(result.stdout, /a remembered fact/);
-    assert.match(result.stdout, /pnpm claude:memory read <topic>/);
+    assert.match(result.stdout, /mise run claude:memory read <topic>/);
   });
 });
 
@@ -144,7 +144,7 @@ test("shared memory index is capped at 25600 bytes when it fits within 200 lines
     const result = runSessionStart({});
     assert.equal(result.status, 0);
     const prefix =
-      '[muhely shared memory]\nRead one topic with `pnpm claude:memory read <topic>`, search with `pnpm claude:memory search "<query>"`. Do not open these files directly.\n';
+      '[muhely shared memory]\nRead one topic with `mise run claude:memory read <topic>`, search with `mise run claude:memory search "<query>"`. Do not open these files directly.\n';
     assert.ok(result.stdout.startsWith(prefix));
     const capped = result.stdout.slice(prefix.length, -1);
     assert.equal(Buffer.byteLength(capped, "utf8"), 25_600);
@@ -158,7 +158,7 @@ test("shared memory index cap never splits a UTF-8 character even when the byte 
     const result = runSessionStart({});
     assert.equal(result.status, 0);
     const prefix =
-      '[muhely shared memory]\nRead one topic with `pnpm claude:memory read <topic>`, search with `pnpm claude:memory search "<query>"`. Do not open these files directly.\n';
+      '[muhely shared memory]\nRead one topic with `mise run claude:memory read <topic>`, search with `mise run claude:memory search "<query>"`. Do not open these files directly.\n';
     assert.ok(result.stdout.startsWith(prefix));
     const capped = result.stdout.slice(prefix.length, -1);
     assert.ok(!capped.includes("�"));

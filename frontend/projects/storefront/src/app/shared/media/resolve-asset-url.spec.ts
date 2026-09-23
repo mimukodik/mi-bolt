@@ -18,7 +18,7 @@ describe('resolveAssetUrl', () => {
       'https://example.test/mi-bolt/assets/placeholder.svg',
     ],
     // MIM-210: the catalogue serves `Image.src` as `/api/v1/media/<imageId>`
-    // (`docs/api/openapi.yaml:1126`). Rejecting that shape rendered the
+    // (`contracts/commerce/openapi.yaml:1126`). Rejecting that shape rendered the
     // monogram fallback on the gallery, the cart line and the card.
     [
       '/api/v1/media/849997cd0d4d4ff9a1f0e4e1a1c4d9b1b7ab8d0ad2e0c3b7e0b8d4b5b8c5e7a1',

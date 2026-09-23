@@ -5,9 +5,11 @@
  * The development configuration replaces it via the fileReplacements
  * in angular.json. The production build has
  * `production: true, demo: false`, so the MSW bootstrap
- * short-circuits and the mock worker.js is the only MSW asset
- * that ships in the bundle — and only as a static asset that is
- * never registered as an active service worker.
+ * short-circuits, and the production dist carries no MSW at all: the
+ * production configuration's `fileReplacements` swap
+ * `src/mocks/browser.ts` for `browser.production.ts`, and the base
+ * `assets` pattern ignores `mockServiceWorker.js`
+ * (`npm run check:storefront-dist`).
  *
  * `environment.production` is the single source of truth: do not
  * branch on `environment.demo` for production decisions.

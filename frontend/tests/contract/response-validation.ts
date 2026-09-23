@@ -2,7 +2,7 @@
  * T26 — OpenAPI-backed schema validators used by the contract
  * parity suite (`tests/contract/operation-matrix.spec.ts`).
  *
- * The wire contract is `docs/api/openapi.yaml`; the SDK is generated
+ * The wire contract is `contracts/commerce/openapi.yaml`; the SDK is generated
  * from it; the MSW handlers register their slices through the T05
  * dispatcher. T26 makes drift between the three obvious at build
  * time by:
@@ -30,7 +30,7 @@ import addFormats from 'ajv-formats';
 import { withoutAdminOperations } from './admin-tags';
 
 export const REPO_ROOT = resolve(__dirname, '../..');
-export const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
+export const SPEC_PATH = resolve(REPO_ROOT, '../contracts/commerce/openapi.yaml');
 
 export const REQUIRED_OPERATION_COUNT = 17;
 

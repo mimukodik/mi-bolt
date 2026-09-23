@@ -17,7 +17,7 @@ const smoke = process.env['E2E_TARGET'] === 'local-backend';
 const port = Number(process.env['E2E_PORT'] ?? (smoke ? 4410 : 4400));
 const serveConfiguration = smoke ? 'local-backend' : 'development';
 const baseURL = `http://localhost:${port}`;
-const ngServeCommand = `npx ng serve --configuration ${serveConfiguration} --port ${port}`;
+const ngServeCommand = `npx ng serve storefront --configuration ${serveConfiguration} --port ${port}`;
 // In CI, Playwright runs against the built app served by scripts/serve-static.mjs (user, 2026-09-22).
 // The smoke config keeps `ng serve` in CI because its /api proxy lives in the dev server.
 // env: { [key: string]: string; }  (playwright/types/test.d.ts:10993)
@@ -33,7 +33,7 @@ const webServer =
         command: 'node scripts/serve-static.mjs',
         env: {
           PORT: String(port),
-          MI_BOLT_E2E_STATIC_DIR: 'dist/mi-bolt/browser',
+          MI_BOLT_E2E_STATIC_DIR: 'dist/storefront/browser',
         },
         url: baseURL,
         reuseExistingServer: false,
@@ -44,12 +44,12 @@ const webServer =
 // never drift (owner, 2026-09-22: the threshold lives in configuration, not in a script).
 const angularJson = JSON.parse(readFileSync(join(configDir, 'angular.json'), 'utf8')) as {
   projects: {
-    'mi-bolt': {
+    storefront: {
       architect: { test: { options: { coverageThresholds: Record<string, number | boolean> } } };
     };
   };
 };
-const unitThresholds = angularJson.projects['mi-bolt'].architect.test.options.coverageThresholds;
+const unitThresholds = angularJson.projects['storefront'].architect.test.options.coverageThresholds;
 const thresholds: Record<'statements' | 'branches' | 'functions' | 'lines', number> = (
   ['statements', 'branches', 'functions', 'lines'] as const
 ).reduce(
@@ -121,7 +121,8 @@ export default defineConfig({
           entryFilter: (entry: V8CoverageEntry) =>
             entry.url.includes('/main') || entry.url.includes('/chunk-'),
           sourceFilter: (sourcePath: string) =>
-            sourcePath.includes('src/') && !sourcePath.includes('src/app/api/generated/'),
+            sourcePath.includes('projects/storefront/src/') &&
+            !sourcePath.includes('projects/storefront/src/app/api/generated/'),
           reports: ['v8', 'console-summary', 'lcovonly', 'json-summary'],
           onEnd: (coverageResults: CoverageResults | undefined) => {
             if (process.env['E2E_COVERAGE_GATE'] !== '1') return;

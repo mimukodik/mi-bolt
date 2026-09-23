@@ -86,7 +86,11 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
   const filename = url.startsWith('./') ? url.slice(2) : url;
   const cached = fileCache.get(filename);
   if (cached !== undefined) return cached;
-  const fullPath = pathResolve(process.cwd(), 'src/app/features/product', filename);
+  const fullPath = pathResolve(
+    process.cwd(),
+    'projects/storefront/src/app/features/product',
+    filename,
+  );
   const content = await readFile(fullPath, 'utf-8');
   fileCache.set(filename, content);
   return content;
@@ -295,8 +299,14 @@ describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
 
 describe('FIX-16/FIX-50 ProductPage add-to-cart integration (source-text regression guard)', () => {
   it('ProductPage template contains app-add-to-cart, onAddRequested calls cartFacade.addItem, and the removed added output is not bound', async () => {
-    const htmlPath = pathResolve(process.cwd(), 'src/app/features/product/product-page.html');
-    const tsPath = pathResolve(process.cwd(), 'src/app/features/product/product-page.ts');
+    const htmlPath = pathResolve(
+      process.cwd(),
+      'projects/storefront/src/app/features/product/product-page.html',
+    );
+    const tsPath = pathResolve(
+      process.cwd(),
+      'projects/storefront/src/app/features/product/product-page.ts',
+    );
     const html = await readFile(htmlPath, 'utf-8');
     const ts = await readFile(tsPath, 'utf-8');
 

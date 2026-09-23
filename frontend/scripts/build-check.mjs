@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Wrap `ng build --configuration production` and fail the run when any
+// Wrap `ng build storefront --configuration production` and fail the run when any
 // output line looks like a warning. `ng build` itself has no fail-on-warning
 // flag, so we run the build, echo its stdio line by line, classify each
 // line, and decide the exit code at the end.
 //
 // Usage:
-//   node scripts/build-check.mjs          # run ng build, stream + classify
+//   node scripts/build-check.mjs          # run ng build storefront, stream + classify
 //   node scripts/build-check.mjs --input <file>   # classify lines from a file
 //   node scripts/build-check.mjs --help
 //
@@ -20,12 +20,12 @@ import { createReadStream } from 'node:fs';
 
 const USAGE = `Usage: node scripts/build-check.mjs [--input <file>] [--help]
 
-Runs \`npx ng build --configuration production\` and fails (exit 1) if any
+Runs \`npx ng build storefront --configuration production\` and fails (exit 1) if any
 emitted line looks like a warning. Use --input to classify lines from a log
 file instead of running the build (handy for fixtures and CI smoke tests).`;
 
 const BUILD_COMMAND = 'npx';
-const BUILD_ARGS = ['ng', 'build', '--configuration', 'production'];
+const BUILD_ARGS = ['ng', 'build', 'storefront', '--configuration', 'production'];
 
 // Strip ANSI colour/escape sequences so word boundaries in the patterns work
 // even when "WARNING" or an NG code is wrapped in SGR codes by the builder.

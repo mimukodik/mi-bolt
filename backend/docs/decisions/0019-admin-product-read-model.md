@@ -26,3 +26,7 @@ than the query plans a paged SQL filter over seven sort keys would need; a
 database-side filter and page is the upgrade path if the catalogue grows.
 The query parameters bind through the generated interface's defaults, so
 the service never sees a null status, sort, direction, page or page size.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- `data/catalog/` is the git root's `data/catalog/`, the one copy of the catalogue: the backend image carries it and the frontend fixture is generated from it.

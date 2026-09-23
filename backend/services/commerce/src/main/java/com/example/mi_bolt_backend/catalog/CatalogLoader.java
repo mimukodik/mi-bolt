@@ -50,7 +50,7 @@ public class CatalogLoader implements ApplicationRunner {
 			CatalogValidator validator,
 			JsonMapper objectMapper,
 			PlatformTransactionManager transactionManager,
-			@Value("${mibolt.catalog.path:data/catalog}") String catalogPath) {
+			@Value("${mibolt.catalog.path:../../../data/catalog}") String catalogPath) {
 		this(productRepository, catalogImageRepository, validator, objectMapper, transactionManager,
 				Path.of(catalogPath));
 	}
