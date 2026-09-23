@@ -56,6 +56,9 @@ import { SEED_ADMIN } from '../../../../mocks/seed';
 import { ProductListStore } from './product-list.store';
 import { ProductListDataSource } from './product-list.data-source';
 
+// A trace id is random per response; the matcher is typed unknown so the lint rule accepts it.
+const ANY_TRACE_ID: unknown = expect.any(String);
+
 useMswServer();
 
 /** Read the issued XSRF token out of the document cookie so we can
@@ -309,7 +312,7 @@ describe('ProductListStore', () => {
         status: 503,
         code: 'SERVICE_UNAVAILABLE',
         detail: 'The service is temporarily unavailable',
-        traceId: expect.any(String),
+        traceId: ANY_TRACE_ID,
         fieldErrors: [],
       },
     });
