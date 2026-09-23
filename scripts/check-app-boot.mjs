@@ -18,7 +18,7 @@
  * ranges the workspace reserves for runners and browser verification; both
  * the `demo-payment` and `admin` runs use it, sequentially, never at once.
  *
- * Usage: node scripts/check-payment-boot.mjs [--project <name>] [--base-path <path>]
+ * Usage: node scripts/check-app-boot.mjs [--project <name>] [--base-path <path>]
  *   --project    ng serve project name (default: demo-payment)
  *   --base-path  the app's served base path (default: /demo-fizetes)
  *
@@ -198,7 +198,7 @@ async function main() {
     try {
       writeSync(
         process.stderr.fd,
-        `check-payment-boot: total budget of ${TOTAL_BUDGET_MS / 1000} seconds reached, exiting\n`,
+        `check-app-boot: total budget of ${TOTAL_BUDGET_MS / 1000} seconds reached, exiting\n`,
       );
     } catch {
       // stderr closed; nothing to report.
@@ -222,12 +222,12 @@ async function main() {
     await assertOk(WORKER_URL, { requireContentType: 'javascript' });
     process.stdout.write(`checking ${SERVE_URL}\n`);
     await assertOk(SERVE_URL);
-    process.stdout.write('check-payment-boot: OK\n');
+    process.stdout.write('check-app-boot: OK\n');
   } catch (error) {
     if (error instanceof GateFailure) {
       process.stderr.write(`${error.message}\n`);
     } else {
-      process.stderr.write(`check-payment-boot: ${error.stack ?? error}\n`);
+      process.stderr.write(`check-app-boot: ${error.stack ?? error}\n`);
     }
     process.exitCode = 1;
   } finally {

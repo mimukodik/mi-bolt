@@ -16,8 +16,9 @@ registerLocaleData(localeHu, 'hu-HU');
  * Starts the in-page mock worker before bootstrap, in a non-production demo
  * build only. `isDevMode()` is not usable here: the `local-backend`
  * configuration is a dev build too, and it must not start the worker. The
- * dynamic `import()` keeps `setupWorker` and the MSW module graph out of
- * the production bundle (checked by the admin's `check:admin-boot` gate).
+ * dynamic `import()` keeps `setupWorker` out of the initial bundle: the
+ * production build still emits the worker as a lazy chunk, which this guard
+ * never fetches.
  */
 async function bootstrap(): Promise<void> {
   if (!environment.production && environment.demo) {
@@ -29,4 +30,8 @@ async function bootstrap(): Promise<void> {
 
 bootstrap().catch((err: unknown) => {
   console.error(err);
+  const message = document.createElement('p');
+  message.setAttribute('role', 'alert');
+  message.textContent = 'Az admin nem tudott elindulni. A részletek a böngésző konzoljában vannak.';
+  document.body.replaceChildren(message);
 });
