@@ -57,10 +57,6 @@ function describeCartError(facade: CartFacade): string {
   if (facade.cartExpired()) {
     return 'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.';
   }
-  const error = facade.error();
-  if (error !== null) {
-    return error.detail;
-  }
   return 'A kosár betöltése sikertelen.';
 }
 
@@ -176,7 +172,6 @@ export class CartPage {
       }
       return 'loading';
     }
-    if (this.facade.error() !== null) return 'error';
     if (cart.items.length === 0) return 'empty';
     return 'ready';
   });
@@ -223,9 +218,16 @@ export class CartPage {
     severity: StatusSeverity;
     dismissible: boolean;
   } | null>(() => {
-    const error = this.facade.error();
-    if (error !== null) {
-      return { text: error.detail, severity: 'error', dismissible: false };
+    // The ErrorState already carries the load-failure and
+    // expiry copy when state is 'error'; the banner's
+    // mutation-specific text would contradict it.
+    if (this.state() === 'error') return null;
+    if (this.facade.error() !== null) {
+      return {
+        text: 'A kosár módosítása nem sikerült; a kosár változatlan.',
+        severity: 'error',
+        dismissible: false,
+      };
     }
     if (this.facade.conflict() !== null) {
       return {
@@ -251,6 +253,9 @@ export class CartPage {
   );
 
   constructor() {
+    // A refused add on another page leaves its failure on the shared
+    // facade; this visit starts without it (owner, 2026-09-23).
+    this.facade.dismissError();
     // Ensure a cart exists as soon as the user lands. ensureCart()
     // is idempotent and does nothing when a snapshot is already
     // loaded, so calling it on every mount is safe.
