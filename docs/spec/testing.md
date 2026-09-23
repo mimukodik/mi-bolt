@@ -54,7 +54,7 @@ The end-to-end suite was reinstated on 2026-09-22. `playwright.config.ts` define
 
 `docs/tasks/test-scenarios.json` contains127 specified scenario rows;124 baseline and3 optional3D. Rows include exact actions, expected assertions, scenario names, groups and owning tasks. Many rows are parameterized (all sort modes, input boundaries, viewport matrix), so127 is an inventory count, not final test-run count or source coverage claim.
 
-A ScenarioDescriptor contains scenarioId, fixedNow, seed, handler overrides/failure schedule and optional non-PII initial snapshot. Allowed fault types:503 once, network error before commit, delayed old read, version conflict, out-of-stock at add/order, price changed, stale/expired quote, declined/pending payment, response lost after commit, invalid storage and unavailable worker/asset.
+A ScenarioDescriptor contains scenarioId, fixedNow, seed, handler overrides/failure schedule and optional non-PII initial snapshot. Allowed fault types:503 once, network error before commit, delayed old read, version conflict, out-of-stock at add/order, price changed, declined/pending payment, response lost after commit, invalid storage and unavailable worker/asset.
 
 Hold response ordering explicitly for race tests. Avoid arbitrary sleep. Use condition assertions, controllable deferred responses and mock clocks. Mock stock/date/IDs are reproducible. Polling tests advance clock, not real waiting. Local images are deterministic; reduced motion and fonts are stable for snapshots.
 

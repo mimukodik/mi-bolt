@@ -68,7 +68,7 @@ Status: specified, not implemented or executed in this planning package. Each gr
 |E063|idempotency|checkout-ready|Double-click final confirmation|Exactly one order request in flight and one receipt.|
 |E064|idempotency|order-timeout-after-commit|Commit silently then Retry same request|Same DEMO number, same total, stock decremented once.|
 |E065|idempotency|order-timeout-after-commit|Reload before receipt then recover|Replay/lookup receipt without contact persistence or second order.|
-|E066|checkout|checkout-ready|Go review→contact→delivery|Entered values survive SPA navigation; changing draft invalidates quote.|
+|E066|checkout|checkout-ready|Go review→contact→delivery|Entered values survive SPA navigation; the review summary is recomputed from the changed draft.|
 |E067|checkout|cart-seeded|Directly open review URL|Redirect to earliest incomplete step, not broken summary.|
 |E068|checkout|draft-503-once|Save contact then Retry|Typed values retained; no advance on failure.|
 |E069|checkout|order-existing|Start new shopping after completed receipt|New cart/order intent; completed cart cannot be reused.|
@@ -79,22 +79,22 @@ Status: specified, not implemented or executed in this planning package. Each gr
 |E074|contact|default|Submit empty fields|Required messages and focus order; no draft API request.|
 |E075|contact|default|Use too-short/too-long name,invalid email,wrong phone|Each relevant boundary has distinct assertion; no request until valid.|
 |E076|contact|contact-422-once|Submit schema-valid contact rejected by mock rule|Map /email field error; retain all values; successful correction works.|
-|E077|delivery|checkout-contact|Choose home with valid HU address|Shipping1990; complete address saved.|
-|E078|delivery|checkout-contact|Choose virtual pickup|Shipping0, address omitted, no real location claim.|
+|E077|delivery|checkout-contact|Choose home with valid HU address|Shipping 1490 Ft below a 30000 Ft subtotal, 0 from it; complete address saved.|
+|E078|delivery|checkout-contact|Choose pickup point|Shipping 990 Ft below a 30000 Ft subtotal, 0 from it; address omitted, no real location claim.|
 |E079|delivery|checkout-contact|Submit invalid postcode/city/line1|Accessible field errors; no invalid draft saved.|
 |E080|delivery|options-503-once|Fail choices load then Retry|No fabricated choice or zero shipping; retry recovers.|
-|E081|delivery|checkout-ready|Change home to pickup and return review|Fresh quote total differs by1990; old payment invalidated.|
-|E082|quote|checkout-ready|Create quote for One x1 home delivery|339990 +1990 =341980 HUF; qty2=681970 HUF.|
-|E083|quote|quote-expired|Advance mock clock to expiry then submit|QUOTE_EXPIRED, explicit refresh/review required.|
-|E084|quote|price-changed|Change fixture price before quote/order|409 PRICE_CHANGED with new cart version; user explicitly re-reviews.|
-|E085|quote|stock-lost-before-order|Confirm after stock changes|No order committed; return to cart correction without wiping contact.|
-|E086|quote|quote-stale-cart|Change cart after quote|Old quote cannot authorize order; new total required.|
+|E081|delivery|checkout-ready|Change home to pickup and return review|Recomputed total differs by the fee difference (500 Ft below a 30000 Ft subtotal, none from it); a card payment intent for the old total is refused with 409 PRICE_CHANGED.|
+|E082|review|checkout-ready|Open review for one phone with home delivery and card|Summary = subtotal + shipping fee + payment fee, recomputed on every read; a phone above 30000 Ft gets 0 shipping and 0 card fee, so total = subtotal.|
+|E083|review|—|Retired: the 2.0.0 contract has no quote, no expiry and no QUOTE_EXPIRED; the summary is recomputed on every read.|—|
+|E084|review|price-changed|Change fixture price before order|409 PRICE_CHANGED with new cart version; user explicitly re-reviews.|
+|E085|order|stock-lost-before-order|Confirm after stock changes|No order committed; return to cart correction without wiping contact.|
+|E086|review|cart-changed|Change the cart after opening review, then confirm|412 CART_VERSION_CONFLICT, no order; the conflict banner offers Újrapróbálom.|
 |E087|review|checkout-ready|Open review|Correct product variant, contact, method, shipping, subtotal and total.|
-|E088|review|checkout-ready|Try final action without one/both checks|Submission disabled/explained; no API order request.|
+|E088|review|checkout-ready|Try final action without the terms tick|The button stays active; the click marks the terms, moves focus to them and sends no order request.|
 |E089|review|checkout-ready|Open terms with keyboard and close|Accessible modal; explicitly demo terms, no real subscription.|
-|E090|review|checkout-ready|Use contact and delivery edit links|Correct earlier step, retained fields, invalidated previous quote.|
-|E091|payment|checkout-ready|Choose demo_cod and confirm|No payment-intent call; order successfully simulated.|
-|E092|payment|payment-success|Choose demo_card and confirm|Succeeded matching intent then one order; no card fields or real network.|
+|E090|review|checkout-ready|Use contact and delivery edit links|Correct earlier step, retained fields; the review summary is recomputed on return.|
+|E091|payment|checkout-ready|Choose Utánvét (cash_on_delivery) and confirm|No payment-intent call; order successfully simulated.|
+|E092|payment|payment-success|Choose Bankkártya (card) and confirm|Succeeded matching intent then one order; no card fields or real network.|
 |E093|payment|payment-declined|Confirm then retry new intent|Remain on review; fields/cart retained; new key for new payment attempt.|
 |E094|payment|payment-pending-resolves|Poll deterministic pending intent|At most ten GET polls; stop on success and create one order.|
 |E095|payment|payment-pending-timeout|Keep pending for ten polls|Stop and explain unknown outcome, no false receipt or automatic new payment.|
