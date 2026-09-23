@@ -182,7 +182,7 @@ describe('SpecGroupsSection', () => {
     addGroupButton.click();
     await fixture.whenStable();
 
-    expect(panelTitles()).toEqual(['Kijelző', 'Rendszer', 'Új csoport']);
+    expect(panelTitles()).toEqual(['Kijelző', 'Rendszer', 'Új csoport 3']);
     expect(panels()[2].classList.contains('mat-expanded')).toBe(true);
     expect(host.model().specGroups[2].rows.length).toBe(1);
   });
@@ -198,6 +198,16 @@ describe('SpecGroupsSection', () => {
     expect(rowMenuAriaLabels).toEqual([
       'Csoport 1, sor 1: műveletek',
       'Csoport 2, sor 1: műveletek',
+    ]);
+
+    // Fails if the two groups' add-row buttons share a name, which would
+    // leave a screen reader unable to tell them apart.
+    const addRowButtonAriaLabels = Array.from(
+      element().querySelectorAll<HTMLButtonElement>('button[aria-label$=": sor hozzáadása"]'),
+    ).map((btn) => btn.getAttribute('aria-label'));
+    expect(addRowButtonAriaLabels).toEqual([
+      'Csoport 1: sor hozzáadása',
+      'Csoport 2: sor hozzáadása',
     ]);
 
     const groupMenuButton = element().querySelector<HTMLButtonElement>(
@@ -266,10 +276,10 @@ describe('SpecGroupsSection', () => {
 
     expect(host.model().specGroups[0].rows.map((row) => row.label)).toEqual(['Típus']);
 
-    const addRowButton = Array.from(panels()[0].querySelectorAll<HTMLButtonElement>('button')).find(
-      (btn) => btn.textContent.trim().endsWith('Sor'),
+    const addRowButton = panels()[0].querySelector<HTMLButtonElement>(
+      'button[aria-label="Csoport 1: sor hozzáadása"]',
     );
-    if (addRowButton === undefined) throw new Error('Expected the Sor button');
+    if (addRowButton === null) throw new Error('Expected the Sor button');
     // Removing the row's menu trigger has to leave focus in the section
     // rather than dropping it to <body> (WCAG 2.4.3).
     expect(document.activeElement).toBe(addRowButton);

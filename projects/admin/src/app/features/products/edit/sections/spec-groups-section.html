@@ -21,7 +21,9 @@
         (opened)="markOpen(group)"
       >
         <mat-expansion-panel-header>
-          <mat-panel-title>{{ group.title().value() || 'Új csoport' }}</mat-panel-title>
+          <mat-panel-title>{{
+            group.title().value() || `Új csoport ${groupIndex + 1}`
+          }}</mat-panel-title>
           <mat-panel-description>{{ describe(group) }}</mat-panel-description>
         </mat-expansion-panel-header>
         <div class="flex items-start gap-2">
@@ -124,7 +126,13 @@
           </div>
         }
         <p class="adm-array-error" role="alert">{{ rowsError(group) }}</p>
-        <button #addRowButton="matButton" matButton type="button" (click)="addRow(group)">
+        <button
+          #addRowButton="matButton"
+          matButton
+          type="button"
+          [attr.aria-label]="`Csoport ${groupIndex + 1}: sor hozzáadása`"
+          (click)="addRow(group)"
+        >
           <mat-icon>add</mat-icon>
           Sor
         </button>
