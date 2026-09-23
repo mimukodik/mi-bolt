@@ -88,7 +88,7 @@
         "backend/docs/06-uzembe-helyezes.md",
         "contracts"
       ],
-      "pattern": "docs/api/openapi\\.yaml|api-sync|api:sync|catalog-source\\.json|pr-check\\.yml|local-database-docker|demo-stack\\.sh|docker-compose\\.(local-database\\.)?yml|pnpm claude:memory|\\.\\./mi-bolt-backend|mi-bolt-backend/|00-attekintes|01-kommunikacio|03-frontend\\.md|05-backend-generator|HANDOVER\\.md|traceability\\.md|docs/tasks|npm run backend:|dist/mi-bolt/|AGENTS\\.md|\\.codex/|\\.gemini/|(^|[^/])\\.agents/",
+      "pattern": "docs/api/openapi\\.yaml|api-sync|api:sync|catalog-source\\.json|(^|[^A-Za-z0-9-])pr-check\\.yml|local-database-docker|demo-stack\\.sh|docker-compose\\.(local-database\\.)?yml|pnpm claude:memory|\\.\\./mi-bolt-backend|mi-bolt-backend/|00-attekintes|01-kommunikacio|03-frontend\\.md|05-backend-generator|HANDOVER\\.md|traceability\\.md|docs/tasks|npm run backend:|dist/mi-bolt|AGENTS\\.md|\\.codex/|\\.gemini/|(^|[^/])\\.agents/",
       "allow": [
         "frontend/docs/README.md",
         "frontend/docs/design/yettel.md",
@@ -99,7 +99,7 @@
   "adr": [
     {
       "paths": ["backend/docs/decisions"],
-      "pattern": "docs/api/openapi\\.yaml|api-sync|api:sync|catalog-source\\.json|pr-check\\.yml|local-database-docker|demo-stack\\.sh|docker-compose\\.(local-database\\.)?yml|pnpm claude:memory|\\.\\./mi-bolt-backend|mi-bolt-backend/|00-attekintes|01-kommunikacio|03-frontend\\.md|05-backend-generator|HANDOVER\\.md|traceability\\.md|docs/tasks|npm run backend:|dist/mi-bolt/|AGENTS\\.md|\\.codex/|\\.gemini/|(^|[^/])\\.agents/",
+      "pattern": "docs/api/openapi\\.yaml|api-sync|api:sync|catalog-source\\.json|(^|[^A-Za-z0-9-])pr-check\\.yml|local-database-docker|demo-stack\\.sh|docker-compose\\.(local-database\\.)?yml|pnpm claude:memory|\\.\\./mi-bolt-backend|mi-bolt-backend/|00-attekintes|01-kommunikacio|03-frontend\\.md|05-backend-generator|HANDOVER\\.md|traceability\\.md|docs/tasks|npm run backend:|dist/mi-bolt|AGENTS\\.md|\\.codex/|\\.gemini/|(^|[^/])\\.agents/",
       "allow": [
         "backend/docs/decisions/0004-contract-validator-jacoco-gate-context-path-and-json-inclusion.md",
         "backend/docs/decisions/0007-catalogue-schema-loader-and-media-storage.md",
@@ -112,7 +112,7 @@
   "claude": [
     {
       "paths": [".claude", "CLAUDE.md", ".mcp.json"],
-      "pattern": "docs/api/openapi\\.yaml|api-sync|api:sync|catalog-source\\.json|pr-check\\.yml|local-database-docker|demo-stack\\.sh|docker-compose\\.(local-database\\.)?yml|pnpm claude:memory|\\.\\./mi-bolt-backend|mi-bolt-backend/|00-attekintes|01-kommunikacio|03-frontend\\.md|05-backend-generator|HANDOVER\\.md|traceability\\.md|docs/tasks|npm run backend:|dist/mi-bolt/|AGENTS\\.md|\\.codex/|\\.gemini/|(^|[^/])\\.agents/",
+      "pattern": "docs/api/openapi\\.yaml|api-sync|api:sync|catalog-source\\.json|(^|[^A-Za-z0-9-])pr-check\\.yml|local-database-docker|demo-stack\\.sh|docker-compose\\.(local-database\\.)?yml|pnpm claude:memory|\\.\\./mi-bolt-backend|mi-bolt-backend/|00-attekintes|01-kommunikacio|03-frontend\\.md|05-backend-generator|HANDOVER\\.md|traceability\\.md|docs/tasks|npm run backend:|dist/mi-bolt|AGENTS\\.md|\\.codex/|\\.gemini/|(^|[^/])\\.agents/",
       "allow": [
         ".claude/agents/instructions-opus.md",
         ".claude/skills/angular-developer/references/mcp.md",
