@@ -1,0 +1,18 @@
+# Component -> the input paths whose change runs that component's CI branch
+# (spec 5.5). Read by the `changes` job of ci.yml (dorny/paths-filter).
+frontend:
+  - 'frontend/**'
+  - 'contracts/**'
+  - 'data/catalog/**'
+  - 'mise.toml'
+  - '.github/**'
+  - 'tools/ci/**'
+backend:
+  - 'backend/**'
+  - 'contracts/**'
+  - 'data/catalog/**'
+  - 'mise.toml'
+  - '.github/**'
+  - 'tools/ci/**'
+contracts:
+  - 'contracts/**'
