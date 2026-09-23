@@ -23,6 +23,10 @@ import {
   firstQueryKey,
   hasOnlyMembers,
   isTextual,
+  javaIsBlank,
+  javaStrip,
+  javaTrim,
+  javaTrimAllWhitespace,
   malformedBody,
   notAcceptable,
   readJsonObject,
@@ -124,15 +128,16 @@ function isValidCalendarDate(value: string): boolean {
   return day >= 1 && day <= daysInMonth(year, month);
 }
 
-/** A `LocalDate` member: `YYYY-MM-DD` and a real calendar date; `""` is no value. */
+/** A `LocalDate` member: `YYYY-MM-DD` and a real calendar date after Java's `String.trim()`; blank is no value. */
 function readDate(value: unknown): Read<string> {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== 'string') return MALFORMED;
-  if (value === '') return undefined;
-  return isValidCalendarDate(value) ? value : MALFORMED;
+  const trimmed = javaTrim(value);
+  if (trimmed === '') return undefined;
+  return isValidCalendarDate(trimmed) ? trimmed : MALFORMED;
 }
 
-/** An `Integer` member: a JSON number truncated toward zero, or a digit-only string. */
+/** An `Integer` member: a JSON number truncated toward zero, or a digit-only string after Java's `String.trim()` (Jackson's `StdDeserializer`). */
 function readInteger(value: unknown): Read<number> {
   if (value === undefined || value === null) return undefined;
   if (typeof value === 'number') {
@@ -140,7 +145,7 @@ function readInteger(value: unknown): Read<number> {
     return truncated < INT32_MIN || truncated > INT32_MAX ? MALFORMED : truncated;
   }
   if (typeof value === 'string') {
-    const trimmed = value.trim();
+    const trimmed = javaTrim(value);
     if (trimmed === '') return undefined;
     if (!INTEGER_STRING_PATTERN.test(trimmed)) return MALFORMED;
     const parsed = Number(trimmed);
@@ -149,14 +154,15 @@ function readInteger(value: unknown): Read<number> {
   return MALFORMED;
 }
 
-/** A `Boolean` member: `true`/`false`, the same as text, or 0/non-zero for an integer number. */
+/** A `Boolean` member: `true`/`false` in lower, capitalised or upper case after Java's `String.trim()`, or 0/non-zero for an integer number (Jackson's `StdDeserializer`). */
 function readBoolean(value: unknown): Read<boolean> {
   if (value === undefined || value === null) return undefined;
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value === '' ? undefined : MALFORMED;
+    const trimmed = javaTrim(value);
+    if (trimmed === 'true' || trimmed === 'True' || trimmed === 'TRUE') return true;
+    if (trimmed === 'false' || trimmed === 'False' || trimmed === 'FALSE') return false;
+    return trimmed === '' ? undefined : MALFORMED;
   }
   if (typeof value === 'number') return Number.isInteger(value) ? value !== 0 : MALFORMED;
   return MALFORMED;
@@ -497,33 +503,6 @@ function beanValidationErrors(input: ReadInput): FieldError[] {
 
 // --- The validator (`AdminProductValidator`, same order; the brief's §5) -------------------
 
-/**
- * "Blank" is every character Java whitespace: `Character.isWhitespace`, which
- * excludes the non-breaking spaces U+00A0, U+2007 and U+202F. `\u001C`-`\u001F`
- * (the FILE/GROUP/RECORD/UNIT SEPARATOR control characters) are part of that
- * set on purpose, not an accidental control character.
- */
-const BLANK_PATTERN =
-  // eslint-disable-next-line no-control-regex -- \u001C-\u001F are Java whitespace, matched on purpose
-  /^[\t\n\v\f\r\u001C-\u001F\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]*$/;
-
-function isBlank(value: string): boolean {
-  return BLANK_PATTERN.test(value);
-}
-
-/**
- * Java's `String.strip()`: removes leading and trailing `Character.isWhitespace`
- * characters, the same set as `BLANK_PATTERN`, so a no-break space survives as
- * it does on the backend.
- */
-const EDGE_WHITESPACE_PATTERN =
-  // eslint-disable-next-line no-control-regex -- \u001C-\u001F are Java whitespace, matched on purpose
-  /^[\t\n\v\f\r\u001C-\u001F\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]+|[\t\n\v\f\r\u001C-\u001F\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]+$/g;
-
-function strip(value: string): string {
-  return value.replace(EDGE_WHITESPACE_PATTERN, '');
-}
-
 /** A value the invariant "the validator runs only after bean validation passed" guarantees present. */
 function requireDefined<T>(value: T | undefined): T {
   if (value === undefined) {
@@ -536,8 +515,8 @@ function validatorErrors(input: ReadInput): FieldError[] {
   const errors: FieldError[] = [];
   const brand = requireDefined(input.brand);
   const name = requireDefined(input.name);
-  if (isBlank(brand)) errors.push(fieldError('/brand', 'NOTBLANK'));
-  if (isBlank(name)) errors.push(fieldError('/name', 'NOTBLANK'));
+  if (javaIsBlank(brand)) errors.push(fieldError('/brand', 'NOTBLANK'));
+  if (javaIsBlank(name)) errors.push(fieldError('/name', 'NOTBLANK'));
 
   requireDefined(input.highlights).forEach((item, index) => {
     const path = `/highlights/${String(index)}`;
@@ -545,7 +524,7 @@ function validatorErrors(input: ReadInput): FieldError[] {
       errors.push(fieldError(path, 'REQUIRED'));
       return;
     }
-    if (isBlank(item)) errors.push(fieldError(path, 'NOTBLANK'));
+    if (javaIsBlank(item)) errors.push(fieldError(path, 'NOTBLANK'));
   });
 
   const colors = requireDefined(input.colors);
@@ -559,8 +538,9 @@ function validatorErrors(input: ReadInput): FieldError[] {
     const code = requireDefined(color.code);
     if (seenColorCodes.has(code)) errors.push(fieldError(`${base}/code`, 'DUPLICATE_COLOR_CODE'));
     seenColorCodes.add(code);
-    if (isBlank(requireDefined(color.name))) errors.push(fieldError(`${base}/name`, 'NOTBLANK'));
-    if (isBlank(requireDefined(color.alt))) errors.push(fieldError(`${base}/alt`, 'NOTBLANK'));
+    if (javaIsBlank(requireDefined(color.name)))
+      errors.push(fieldError(`${base}/name`, 'NOTBLANK'));
+    if (javaIsBlank(requireDefined(color.alt))) errors.push(fieldError(`${base}/alt`, 'NOTBLANK'));
   });
 
   const knownColorCodes = new Set(
@@ -599,16 +579,17 @@ function validatorErrors(input: ReadInput): FieldError[] {
       errors.push(fieldError(base, 'REQUIRED'));
       return;
     }
-    if (isBlank(requireDefined(group.title))) errors.push(fieldError(`${base}/title`, 'NOTBLANK'));
+    if (javaIsBlank(requireDefined(group.title)))
+      errors.push(fieldError(`${base}/title`, 'NOTBLANK'));
     requireDefined(group.rows).forEach((row, rowIndex) => {
       const rowBase = `${base}/rows/${String(rowIndex)}`;
       if (row === undefined) {
         errors.push(fieldError(rowBase, 'REQUIRED'));
         return;
       }
-      if (isBlank(requireDefined(row.label)))
+      if (javaIsBlank(requireDefined(row.label)))
         errors.push(fieldError(`${rowBase}/label`, 'NOTBLANK'));
-      if (isBlank(requireDefined(row.value)))
+      if (javaIsBlank(requireDefined(row.value)))
         errors.push(fieldError(`${rowBase}/value`, 'NOTBLANK'));
     });
   });
@@ -684,14 +665,15 @@ const LONG_MIN = -9223372036854775808n;
 const LONG_MAX = 9223372036854775807n;
 
 /**
- * Spring's `Long` path conversion: whitespace stripped, then either a signed
+ * Spring's `Long` path conversion: every Java whitespace character removed
+ * (Spring's `StringUtils.trimAllWhitespace`), then either a signed
  * decimal, or `0x`/`0X`/`#` hex digits with an optional leading `-` only —
  * `NumberUtils.parseNumber`'s `isHexNumber` strips just a leading minus
  * before the hex prefix, so `+0x1` is not a Long and falls through to
  * `wrongType`, while `-0x1` converts to -1.
  */
 function parseProductId(raw: string): number | undefined {
-  const cleaned = raw.replace(/\s+/g, '');
+  const cleaned = javaTrimAllWhitespace(raw);
   const decimal = DECIMAL_ID_PATTERN.exec(cleaned);
   if (decimal !== null) {
     const magnitude = BigInt(decimal[2]);
@@ -806,12 +788,12 @@ function buildColor(input: AdminProductColorInput, db: MockDb): AdminProductColo
   if (image === undefined) throw new Error(`unknown image ${input.imageId}`);
   return {
     code: input.code,
-    name: strip(input.name),
+    name: javaStrip(input.name),
     swatchHex: input.swatchHex,
     image: {
       id: input.imageId,
       src: `/api/v1/media/${input.imageId}`,
-      alt: strip(input.alt),
+      alt: javaStrip(input.alt),
       width: image.width,
       height: image.height,
     },
@@ -840,9 +822,9 @@ function buildProduct(input: AdminProductInput, db: MockDb, meta: ProductMeta): 
   return {
     id: meta.id,
     slug: input.slug,
-    brand: strip(input.brand),
-    name: strip(input.name),
-    description: strip(input.description),
+    brand: javaStrip(input.brand),
+    name: javaStrip(input.name),
+    description: javaStrip(input.description),
     is5g: input.is5g,
     releasedAt: input.releasedAt,
     rank: input.rank,
@@ -852,12 +834,12 @@ function buildProduct(input: AdminProductInput, db: MockDb, meta: ProductMeta): 
     version: meta.version,
     ...(meta.archivedAt === undefined ? {} : { archivedAt: meta.archivedAt }),
     updatedAt: new Date().toISOString(),
-    highlights: input.highlights.map(strip),
+    highlights: input.highlights.map(javaStrip),
     colors: input.colors.map((color) => buildColor(color, db)),
     variants: input.variants.map((variant) => buildVariant(variant, input.slug)),
     specGroups: input.specGroups.map((group) => ({
-      title: strip(group.title),
-      rows: group.rows.map((row) => ({ label: strip(row.label), value: strip(row.value) })),
+      title: javaStrip(group.title),
+      rows: group.rows.map((row) => ({ label: javaStrip(row.label), value: javaStrip(row.value) })),
     })),
   };
 }
