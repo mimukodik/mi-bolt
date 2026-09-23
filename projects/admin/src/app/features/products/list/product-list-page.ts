@@ -89,9 +89,10 @@ export class ProductListPage {
     );
   });
 
+  /** `aria-rowcount`: the header row plus every product, or -1 while the total is unknown (ARIA's value for an unknown count). */
   protected readonly rowCount = computed(() => {
     const total = this.store.total();
-    return total === null ? null : total + 1;
+    return total === null ? -1 : total + 1;
   });
 
   protected onSortChange(sort: Sort): void {

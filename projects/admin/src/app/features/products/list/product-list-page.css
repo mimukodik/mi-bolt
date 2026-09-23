@@ -27,3 +27,8 @@ cdk-virtual-scroll-viewport {
 .adm-count {
   color: var(--mat-sys-on-surface-variant);
 }
+/* The empty and error states' buttons sit in the table's flex column; they keep their own width. */
+.adm-state-action {
+  align-self: flex-start;
+  margin-inline-start: 0.25rem;
+}

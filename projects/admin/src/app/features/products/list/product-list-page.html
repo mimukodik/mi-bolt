@@ -52,14 +52,16 @@
     @if (store.status() === 'empty') {
       @if (filtered()) {
         <p class="m-0 p-4">Nincs a szűrésnek megfelelő termék.</p>
-        <button matButton type="button" (click)="clearFilters()">Szűrők törlése</button>
+        <button class="adm-state-action" matButton type="button" (click)="clearFilters()">
+          Szűrők törlése
+        </button>
       } @else {
         <p class="m-0 p-4">Még nincs aktív termék.</p>
       }
     }
     @if (store.status() === 'error') {
       <p class="m-0 p-4" role="alert">A termékek betöltése nem sikerült.</p>
-      <button matButton type="button" (click)="store.retry()">Újra</button>
+      <button class="adm-state-action" matButton type="button" (click)="store.retry()">Újra</button>
     }
     <cdk-virtual-scroll-viewport
       class="min-h-0 flex-1"

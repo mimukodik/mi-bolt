@@ -351,6 +351,7 @@ describe('ProductListPage', () => {
       (button) => button.textContent.trim() === 'Szűrők törlése',
     );
     if (clearButton === undefined) throw new Error('Szűrők törlése button missing');
+    expect(getComputedStyle(clearButton).alignSelf).toBe('flex-start');
 
     const navigated = nextNavigationEnd(router);
     clearButton.click();
@@ -376,11 +377,13 @@ describe('ProductListPage', () => {
 
     const alert = root.querySelector('[role="alert"]');
     expect(alert?.textContent.trim()).toBe('A termékek betöltése nem sikerült.');
+    expect(root.querySelector('[role="table"]')?.getAttribute('aria-rowcount')).toBe('-1');
 
     const retryButton = Array.from(root.querySelectorAll('button')).find(
       (button) => button.textContent.trim() === 'Újra',
     );
     if (retryButton === undefined) throw new Error('Újra button missing');
+    expect(getComputedStyle(retryButton).alignSelf).toBe('flex-start');
     retryButton.click();
     await harness.fixture.whenStable();
     harness.detectChanges();
