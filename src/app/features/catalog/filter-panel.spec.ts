@@ -575,3 +575,91 @@ describe('MIM-228: a selected facet row with a zero count stays clickable', () =
     expect(queryButton(root, '[data-testid="filter-color-white"]').disabled).toBe(true);
   });
 });
+
+describe('FilterPanel — the price error is tied to the invalid price field', () => {
+  it('an untouched price range links no field and marks none invalid', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+
+    expect(min.getAttribute('aria-describedby')).toBeNull();
+    expect(min.getAttribute('aria-invalid')).toBeNull();
+    expect(max.getAttribute('aria-describedby')).toBeNull();
+    expect(max.getAttribute('aria-invalid')).toBeNull();
+    expect(root.querySelector('[data-testid="filter-price-error"]')).toBeNull();
+  });
+
+  it('a negative min links the min field to the message and marks it invalid', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+
+    fireInput(min, '-5');
+    fixture.detectChanges();
+
+    expect(min.getAttribute('aria-describedby')).toBe('filter-price-message');
+    expect(min.getAttribute('aria-invalid')).toBe('true');
+    expect(max.getAttribute('aria-describedby')).toBeNull();
+    expect(max.getAttribute('aria-invalid')).toBeNull();
+    const message = queryElement(root, '#filter-price-message');
+    expect(message.hidden).toBe(false);
+    expect(message.textContent.trim()).toBe('A minimum ár nem lehet negatív.');
+  });
+
+  it('a negative max links the max field to the message and marks it invalid', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+
+    fireInput(max, '-5');
+    fixture.detectChanges();
+
+    expect(max.getAttribute('aria-describedby')).toBe('filter-price-message');
+    expect(max.getAttribute('aria-invalid')).toBe('true');
+    expect(min.getAttribute('aria-describedby')).toBeNull();
+    expect(min.getAttribute('aria-invalid')).toBeNull();
+    const message = queryElement(root, '#filter-price-message');
+    expect(message.hidden).toBe(false);
+    expect(message.textContent.trim()).toBe('A maximum ár nem lehet negatív.');
+  });
+
+  it('an inverted range links the min field, not the max field', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+    const max = queryInput(root, '[data-testid="filter-max-price"]');
+
+    fireInput(max, '1000');
+    fixture.detectChanges();
+    fireInput(min, '2000');
+    fixture.detectChanges();
+
+    expect(min.getAttribute('aria-describedby')).toBe('filter-price-message');
+    expect(min.getAttribute('aria-invalid')).toBe('true');
+    expect(max.getAttribute('aria-describedby')).toBeNull();
+    expect(max.getAttribute('aria-invalid')).toBeNull();
+    expect(queryElement(root, '#filter-price-message').textContent.trim()).toBe(
+      'A minimum nem lehet nagyobb a maximum árnál.',
+    );
+  });
+
+  it('fixing the error removes the link and the invalid mark', () => {
+    const { fixture } = setup();
+    const root = getRootElement(fixture);
+    const min = queryInput(root, '[data-testid="filter-min-price"]');
+
+    fireInput(min, '-5');
+    fixture.detectChanges();
+    expect(min.getAttribute('aria-invalid')).toBe('true');
+
+    fireInput(min, '500');
+    fixture.detectChanges();
+
+    expect(min.getAttribute('aria-describedby')).toBeNull();
+    expect(min.getAttribute('aria-invalid')).toBeNull();
+    expect(root.querySelector('[data-testid="filter-price-error"]')).toBeNull();
+  });
+});

@@ -237,16 +237,34 @@ export class FilterPanel {
     return false;
   });
 
-  /** Hungarian reason describing the price range problem, or null. */
-  readonly priceError = computed<string | null>(() => {
+  /** Single source of truth for the price validation: the message that
+   *  renders under the fieldset, and which input the error belongs to
+   *  (used by `aria-invalid`/`aria-describedby`). Two computeds reading
+   *  one validation keeps the two outputs from drifting apart when the
+   *  rules change. */
+  private readonly priceValidation = computed<{
+    readonly field: 'min' | 'max' | null;
+    readonly message: string | null;
+  }>(() => {
     const min = this.parsePrice(this.minDraft());
     const max = this.parsePrice(this.maxDraft());
-    if (min !== null && min < 0) return 'A minimum ár nem lehet negatív.';
-    if (max !== null && max < 0) return 'A maximum ár nem lehet negatív.';
-    if (min !== null && max !== null && min > max)
-      return 'A minimum nem lehet nagyobb a maximum árnál.';
-    return null;
+    if (min !== null && min < 0) {
+      return { field: 'min', message: 'A minimum ár nem lehet negatív.' };
+    }
+    if (max !== null && max < 0) {
+      return { field: 'max', message: 'A maximum ár nem lehet negatív.' };
+    }
+    if (min !== null && max !== null && min > max) {
+      return { field: 'min', message: 'A minimum nem lehet nagyobb a maximum árnál.' };
+    }
+    return { field: null, message: null };
   });
+
+  /** Hungarian reason describing the price range problem, or null. */
+  readonly priceError = computed<string | null>(() => this.priceValidation().message);
+
+  /** Which price input the current error belongs to, in page order. */
+  readonly priceInvalidField = computed<'min' | 'max' | null>(() => this.priceValidation().field);
 
   // ---------------------------------------------------------------------------
   // Event handlers
