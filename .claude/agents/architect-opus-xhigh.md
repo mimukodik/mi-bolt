@@ -22,7 +22,7 @@ many subsystems or a whole migration, when the plan will have enough steps that
 no single reading of the code covers them, or when `architect-opus` already
 designed this and its plan did not hold. A hard decision inside one subsystem
 is `architect-opus` work however hard it is. Which of those brought you here is
-in the task; `packages/shared/.agents/skills/model-routing/SKILL.md` owns that
+in the task; `.claude/skills/model-routing/SKILL.md` owns that
 decision.
 
 Work in this order:

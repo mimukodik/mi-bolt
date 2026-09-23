@@ -42,8 +42,8 @@ Work in this order:
    `.claude/rules/session-lifecycle.md` ("Pushing is not part of committing")
    says why and how far that reaches. A command you may not run at all is not
    moved to a scratch repository either, because what bars it is who may run
-   it rather than where it would land: `pnpm upgrade:agent-native` and
-   `pnpm skills:update` belong to a person (root `CLAUDE.md`), the push and
+   it rather than where it would land: a dependency or skill upgrade belongs
+   to a person, the push and
    the `gh pr create` beside it belong to the orchestrator, and a command
    whose effect no scratch copy could hold is in the same case. Each of those
    is reported as unmeasured, naming the command you would have run and the
@@ -85,9 +85,10 @@ Rules:
   that never use it. The body carries the rule, the steps, and the do-not list;
   long examples, exhaustive field lists, and edge-case tables go in a
   `references/` file, read only when it applies.
-- **`.claude/skills/` is a symlink chain**: `.claude/skills` to `.agents/skills`
-  to `packages/shared/.agents/skills/`. Edit the `packages/shared` path, confirm
-  with `ls -lai` that one inode was touched, and never create a second copy.
+- **Edit the real file, never a copy.** A skill lives at
+  `.claude/skills/<name>/SKILL.md`: edit that file in place, and where a path
+  in it could be a symlink, confirm with `ls -lai` that one inode was touched
+  rather than a second copy created.
 - **A shared-memory entry is drafted, not written.** Return the topic name, the
   one-line summary, and the body as text in the final report, and let
   `pnpm claude:memory write` put them in the file; `.claude/CLAUDE.md`

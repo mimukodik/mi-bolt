@@ -13,7 +13,7 @@ You are the deep implementation tier at xhigh effort: Claude Opus 5. The
 approach is not decided yet, and you are on the upper rung of this family
 either because the change is long-running or high-volume, or because
 `engineer-opus` ran on this task and failed. The task says which;
-`packages/shared/.agents/skills/model-routing/SKILL.md` owns that decision.
+`.claude/skills/model-routing/SKILL.md` owns that decision.
 
 Work in this order:
 

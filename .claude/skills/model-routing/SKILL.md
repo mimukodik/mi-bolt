@@ -59,8 +59,8 @@ agents hold a grant at all.
   run for the same answer. Whether a finished run may be picked up again is a
   separate question, answered in *Size the task before you route it*.
 - Everything this skill routes is work the orchestrator delegates rather than
-  does itself. `.claude/CLAUDE.md` ("How I work") owns that rule and its one
-  exception, so read it there rather than from a copy here.
+  does itself. `.claude/CLAUDE.md` ("How I work") owns that rule and its
+  exceptions, so read it there rather than from a copy here.
 - Every spawn carries an explicit `model`. Never rely on inheritance: the
   session model is a property of the session, not a routing decision, so a spawn
   that inherits it gets whatever the orchestrator happens to be running rather
@@ -538,7 +538,8 @@ The commit does not move: one unit is still one commit carrying both agents'
 files, and a commit boundary is not an agent boundary. One session gave a single
 agent a transport unit's implementation and both its suites because the unit was
 one commit, and the user stopped it: „tul nagy feladatot adtal egy agentnek,
-testeket kulon agentnek kellett volna irnia".
+testeket kulon agentnek kellett volna irnia" ("you gave one agent too large a
+task, the tests should have been written by a separate agent").
 
 Split along a boundary that can be verified on its own, not along whatever is
 convenient to describe. Two agents whose results cannot be checked separately
@@ -599,18 +600,6 @@ Every prompt to a routed agent states, in this order:
    the other spawn. The test half is told the implementation is finished and is
    not its to change, so a failing assertion comes back as a finding instead of
    being edited away in the code the test was written to check.
-7. That it does not run an `@agent-native/*` update and, if it concludes one is
-   needed, says so and stops. `AGENTS.md` owns the rule and names the commands,
-   and the root `CLAUDE.md` symlinks to it, so every agent spawned from
-   `.claude/agents/` has already loaded it and this line is a deliberate second
-   copy of a rule that `.claude/rules/session-lifecycle.md` ("Agent definitions
-   and subagent prompts") would otherwise keep out of the prompt. The issue
-   owner asked for the copy in those words, „mindig ird bele a promptba",
-   because an upgrade rewrites dependencies and scaffolded skills across the
-   whole workspace before anyone can review it; the shared-memory topic
-   `agent-native-fork-updates` records the decision. Removing the line as a
-   redundant restatement would be reversing that decision rather than tidying
-   one.
 8. For a spawn that runs while a sibling agent is writing into the same working
    tree, which files are this agent's, item 3's list written out file by file
    rather than as an area, and that this agent fixes only a red typecheck, test,

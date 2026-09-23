@@ -40,7 +40,10 @@ path-scoped rules trigger only on a read.
   80% statements, lines and functions, 75% branches, which `npm run test`
   enforces and which passes today with three to five points of headroom. The
   numbers sit just under the real figures deliberately, so the gate blocks
-  nothing being written now and fails the moment coverage decays.
+  nothing being written now and fails the moment coverage decays. The
+  backend's floor is the JaCoCo line-coverage verification its `build` task
+  runs, a bundle ratio and a per-class ratio with the generated code
+  excluded; `backend/services/commerce/build.gradle` owns those numbers.
 
   This replaces a 100% changed-line requirement, and the user set the budget:
   "haladnunk kene es ez demo mvp app ami sosem lesz eles" ("we need to make
@@ -87,7 +90,9 @@ path-scoped rules trigger only on a read.
 - **A subagent's green report is not a run.** Before every commit the
   orchestrator itself runs `npm run test`, `npx eslint <the changed files>`,
   `npx prettier --check <the changed files>` and `npm run build`, and reads the
-  exit codes. One agent reported a typecheck green while it was exiting 1 with
+  exit codes; for a change under `backend/` the gate is
+  `backend/gradlew -p backend :services:commerce:build`, which runs the unit
+  and integration tests, PMD and the coverage verification. One agent reported a typecheck green while it was exiting 1 with
   two TS2322 errors in a spec file that same agent had just written; the next
   agent called those errors pre-existing after checking only that its own files
   were not the cause. Both reports were sincere, both were wrong, and the error

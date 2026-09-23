@@ -167,8 +167,8 @@ rules that already govern a command. `ai_tutor` and
 adding either is the user's call rather than a definition's.
 
 A grant does nothing unless the session connects the server.
-`.claude/settings.json` lists `chrome-devtools` and `angular-cli` in
-`enabledMcpjsonServers`, so that enablement is tracked and travels with a
+`.claude/settings.json` lists `chrome-devtools`, `angular-cli`,
+`linear-server` and `spring-tools` in `enabledMcpjsonServers`, so that enablement is tracked and travels with a
 clone. Where a grant here looks dead, check that the server is still named in
 that tracked file rather than only in an untracked
 `.claude/settings.local.json`, which enables it on one machine and nowhere
@@ -224,3 +224,53 @@ exception, and it needs that name-keying: there the file is the deliverable, and
 the `retrospective` skill has `instructions-opus` write `<YYYY-MM-DD>-<id8>.md`
 itself, a name the filter passes. Screenshots and other binary evidence written
 by MCP tools are not affected.
+
+## Report shape
+
+**Every definition here names the report its agent returns, and every one of
+them answers the same three sections, whatever else its template adds.**
+What was done: what the agent changed, found or decided, with absolute paths.
+What was verified: each claim with the command, path or URL that settles it.
+What is uncertain: what the agent could not settle, and any decision that is
+the user's to make.
+
+**"What was verified" is the section that does the work.** A claim with no
+command, path or URL behind it is what this shape exists to make visible, and
+it is visible only because a heading promised one. Only the agent's final
+message crosses back: "intermediate tool calls and results stay inside the
+subagent; only its final message returns to the parent"
+(https://code.claude.com/docs/en/agent-sdk/subagents, read 2026-09-18), so a
+measurement left out of the report is one the orchestrator can reach again only
+by spawning the work a second time.
+
+**"What is uncertain" is not a politeness, and an empty one is a claim.** An
+agent with nothing uncertain says so under the heading rather than dropping the
+heading, because an absent section reads exactly like a section nobody thought
+about, and the orchestrator cannot tell which of the two it was handed.
+
+**A tier may require more; no tier may require less.** `real-browser-sonnet` is
+the superset rather than the exception: its template opens with a header
+carrying the verdict and the viewport read-backs, and adds sections for console
+errors, failed network requests, scripts run and what went uncovered, because
+that evidence has no textual substitute. It answers all three regardless, under
+`## What was verified`, under `## Uncertain`, and with the done half spread
+across `## Summary`, `## Steps` and `## Findings`. A floor is not a length:
+each section is answered as briefly as its answer allows, since a report that
+hands back everything the agent read re-floods the context the spawn existed to
+protect, and what the parent is owed is "a concise summary, not every file the
+subagent read" (same page).
+
+**This section states the requirement once and no definition restates it.** A
+definition names the three sections and gives the tier's own line under
+each, in whatever form its template uses, and carries none of the rest:
+not that they are mandatory, not what each is for, not the paragraph
+above about an empty section. Thirteen copies of a
+requirement are thirteen things that drift apart, which is the reason "The copy
+is what drifts, not the original" in `.claude/rules/session-lifecycle.md`
+gives. Nothing enforces the shape either. The harness imposes no shape on a
+subagent's final message, the `AgentDefinition` field table carrying `tools`,
+`model`, `effort` and `skills` and nothing for an output format or schema (same
+page), and the parent "may summarize it in its own response" whatever arrives.
+So the reader who checks these sections is the orchestrator. Whether naming
+them also makes a report survive that summary intact is unmeasured; what it
+buys is that a missing one shows at a glance.

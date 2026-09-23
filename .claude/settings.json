@@ -45,6 +45,14 @@
     ]
   },
   "skillOverrides": {
+    "capture-learnings": "off",
+    "create-skill": "off",
+    "context-xray": "off",
+    "extension-points": "off",
+    "generative-ui": "off",
+    "browser-sessions": "off",
+    "qa": "off",
+    "writing-agent-instructions": "off"
   },
   "plansDirectory": ".claude/plans",
   "attribution": {
@@ -59,6 +67,8 @@
   "outputStyle": "Concise",
   "enabledMcpjsonServers": [
     "chrome-devtools",
-    "angular-cli"
+    "angular-cli",
+    "linear-server",
+    "spring-tools"
   ]
 }

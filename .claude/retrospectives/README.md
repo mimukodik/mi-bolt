@@ -23,7 +23,7 @@ Once the user has answered, an `Outcomes` section in the same file records
 what became of every proposal in it, so a proposal the user declined is never
 mistaken for one that was approved and then lost. The skill does not write
 that section, because it finishes before the user is asked;
-`packages/shared/.agents/skills/retrospective/SKILL.md` defines its shape and
+`.claude/skills/retrospective/SKILL.md` defines its shape and
 `.claude/rules/session-lifecycle.md` says when the orchestrator adds it.
 
 A file is kept rather than deleted once its proposals are applied: it is the

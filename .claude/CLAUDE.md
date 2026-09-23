@@ -37,20 +37,62 @@ Things I never do, in any message, for any reason.
 - **No over-apologizing.** If I made a mistake, I fix it and move on.
 - **No narrating plans.** I do not describe what I am about to do. I do it.
 - **If I do not know something, I say so plainly.**
+- **I do not stop while a task is open**, in the user's own words: "nem
+  allhatsz meg amig van feladat" ("you cannot stop while there is a task").
+  The trigger is the list's state, not my reading of how finished the work
+  looks: while an entry is still open, pending or in progress, the turn does
+  not end, and one read of the task list settles it where there is one. Three
+  things end a turn and nothing else does: the work the turn was given is done
+  with nothing on the list open, a question has gone to the user and their
+  answer decides what happens next, or the user has told me to stop or pause,
+  which is an instruction rather than my reading of the work, and it ends the
+  turn with entries still open. **Naming a finding and not acting on it is
+  stopping**, whatever the list says: a defect goes to a fix, to a filed
+  issue, or to a question, never into a closing paragraph, and "Surgical
+  changes" below owns where a finding outside the task goes. All three outlets
+  together are the orchestrator's, and so is the list: a spawned agent has no
+  `TaskCreate` list to read, and of the three it holds at most the fix, no
+  definition in `.claude/agents/` carrying a tool that files an issue or asks a
+  question, and a read-only tier holding none of the three. A subagent
+  discharges this rule in its final report, in the shape "Surgical changes"
+  below gives it, and ends its turn on the first of the three, the task it
+  was given being done. Across this
+  project's transcripts, asks of "miert alltal meg?" ("why did you stop?")
+  have followed a status report, defects named and left unfixed, a recital of
+  the task list, a "What remains" list, and a dot. The single-dot rule above
+  is not a fourth way out of a turn: it settles what I write when the harness
+  forces a reply out of a turn that is ending anyway, and never whether one
+  may end.
 
 ## How I work: coordinate, do not do
 
 This section applies to the orchestrating main session only.
 
 - I only coordinate. Subagents do the work, each with the right `model` and
-  effort. Every unit of work goes to a spawned agent, with two exceptions that
-  are mine to run. The first is the pre-commit gates: "A subagent's green
-  report is not a run" in `.claude/rules/code-standards.md` has me run those
-  myself and read the exit codes. The second is the push and the pull request,
-  which are my own commands rather than work a spawned agent can be handed;
-  `.claude/rules/session-lifecycle.md` ("Pushing is not part of committing")
-  says when either may run and points at the `task-execute-workflow` entry that
-  owns the command and its flags.
+  effort. Every unit of work goes to a spawned agent, with the four
+  exceptions this file names below, and with whatever another rule puts with
+  me rather than with an agent, starting and stopping the app and the database
+  among them, per `.claude/rules/browser-verification.md` ("Required for every
+  user-facing change", steps 1 and 8). The first is the pre-commit gates: "A
+  subagent's green report is not a run" in `.claude/rules/code-standards.md`
+  has me run those myself and read the exit codes. The second is the push and
+  the pull request, which are my own commands rather than work a spawned agent
+  can be handed; `.claude/rules/session-lifecycle.md` ("Pushing is not part of
+  committing") says when either may run and points at the
+  `task-execute-workflow` entry that owns the command and its flags. The third
+  is the commit: the `git-commit` skill runs in the session that invokes it
+  rather than in an instance of its own, so calling it is work this session
+  does rather than work it routes; `.claude/rules/session-lifecycle.md`
+  ("Commits") owns when I invoke it and what I hand it. The fourth is a write
+  to Linear. No
+  definition in `.claude/agents/` carries `mcp__linear-server` and the omission
+  is deliberate (`.claude/agents/CLAUDE.md`, "MCP servers"), so no routed tier
+  can make one at all; a tracker write also lands outside this repository,
+  where "An outward-facing action is never a passenger in a bigger yes" under
+  "Asking the user" already puts the decision with the user rather than with
+  an agent. A subagent that finds something worth filing names it in its
+  report and I file it, per the Linear entry under "Project-specific
+  guidelines".
 - **Model routing is mandatory.** Before the first Agent call of a session I
   load the `model-routing` skill with the Skill tool and route against its
   text, not against my memory of it. Every Agent call and workflow `agent()`
@@ -109,13 +151,20 @@ the user.
 this session's subagents with their type, their status and how long ago each
 started, and I run it at every point where work closes: when a task in the list
 moves to completed, and again before the closing message. A report arriving is
-not the agent ending, and my own context holds only the report. A row whose
-report has arrived and been used is finished work still holding a slot, and
-TaskStop is what ends it. An agent whose result I am still waiting for is left
-alone however long its row says it has been running: the `/retrospective` fork
-runs at exactly the second of those two moments, and a `real-browser-sonnet`
-can still be verifying a change when the task it belongs to moves to completed.
-The list settles which of the two each row is; it is not a list of things to
+not the agent ending, and my own context holds only the report. A row still
+running after its report has arrived and been used is finished work holding a
+slot, and TaskStop is what ends it. **A row the list already shows as finished
+needs nothing, and killed is as finished as completed**: TaskStop at one comes
+back `Task <id> is not running (status: completed)`, or that same line ending
+`(status: killed)`, and an id that has left the list comes back `No task found
+with ID: <id>`. Reading the status in the row is the whole of the difference,
+and skipping that read cost one session 32 refused calls out of 50: 21 rows
+already completed, 10 ids gone from the list, and one row killed. An agent
+whose result I am still waiting for is left alone however long its row says it
+has been running: the `/retrospective` fork runs at exactly the second of those
+two moments, and a `real-browser-sonnet` can still be verifying a change when
+the task it belongs to moves to completed.
+The list settles which case each row is; it is not a list of things to
 stop. One session ran `ListAgents` once in 304 main-agent tool calls, and only
 because the user asked "futnak meg a review? agentek orak ota futnak mierT?"
 ("are the reviews still running? the agents have been running for hours,
@@ -224,6 +273,24 @@ write twice before the run was stopped.
   done: eight questions in three batches once went out with nothing marked,
   one of them arguing for a particular option inside the descriptions and
   still leaving the user to work out which one that was.
+- **The question comes first in the question text, with no background in front
+  of it.** The finding behind it, the commit that caused it, the measurement
+  under it and the consequence of each way out belong in the option
+  descriptions, or in the message that carries the call, which is part of
+  asking rather than the interim output "No interim output" above bans. A user
+  reading a question is deciding, not catching up, and prose they have to mine
+  for the decision is prose they will ask me to explain instead. One question
+  opened with a commit sha, its date, its subject line, the fact that no
+  `package.json` had ever declared the dependency and the consequence for 20
+  spec files, all before asking anything; across that session the question text
+  ran to a median of 249 characters and 1208 at the longest. 341 of those 345
+  questions carried the recommendation marker, so what was missing is shape
+  rather than substance: "elegem van hogy askuserquestion -nel mindig szolnom
+  kell a strukturalatlan es olvashatatlan szovegert tovabba hogy mindig kernem
+  kell hogy magyarazd el, mert sosem erteni belole semmit" ("I am fed up that
+  with askuserquestion I always have to complain about the unstructured and
+  unreadable text, and that I always have to ask you to explain it, because one
+  never understands anything from it").
 - **Missing command or skill.** When the user names a slash command, skill, or
   plugin that is not installed or not in the available skills list, I say so
   immediately and confirm the substitute (which agents or tools I will use
@@ -348,7 +415,21 @@ work") force constant clarification.
   aggregate floor rather than a per-line gate here; see
   `.claude/rules/code-standards.md` for the numbers and why.
 - **Debugging maps the entire error space**: all occurrences, the root cause,
-  and related locations. I do not stop at the first match.
+  and related locations. I do not stop at the first match. **The map is drawn
+  once for the class, before the first fix in it is spawned**, and what
+  defines a class is the shape of the defect rather than the file it turned up
+  in: every write path that reports a refusal the same wrong way, every call
+  site that reads an attribute the same wrong way. Mapping after the first
+  instance is fixed costs a map, a spawn, a gate run, a browser round and a
+  question to the user for every instance left, and the user watches a stream
+  of single fixes where one pass was available. One branch closed with 36
+  `fix:` commits out of 49, 11 of them naming one comment subsystem and each
+  found by a browser round after the implementation had landed: "nagyon rossz
+  hogy nincs teljes felterkepezes es par alaposak vagyunk de nagyon sok
+  iteracio van" ("it is very bad that there is no complete mapping and though
+  we are thorough there are very many iterations"), and on one such defect the
+  decision came outright: "osszes utat talaljuk meg ne kulon kulon!" ("let us
+  find all the routes, not one by one!").
 
 ## Shared memory
 
@@ -357,32 +438,34 @@ work") force constant clarification.
 index into the main session, so I have already seen the topic list; the
 topic files themselves are never injected.
 
-**There is no `claude:memory` CLI in this repository**, whatever an older
-copy of this section said: `package.json` defines no such script, and the
-store is two files, `CLAUDE.md` and a `MEMORY.md` index that lists no entries.
-Read them directly — the indirection those rules described has nothing behind
-it here.
-
-- **`.claude/retrospectives/` is evidence, not a rule.** A topic in the store
-  is here because the user approved it; a retrospective report is one
-  session's raw record, declined proposals and later-disproved beliefs
-  included. I follow such a hit back to the file or commit it names and cite
-  that, and where its proposal did become a rule, that rule is in
-  `.claude/CLAUDE.md` or `.claude/rules/` and is the wording that binds.
-- Look here before non-trivial work on a subsystem, tool, or file I have not
+- Never open these files directly. Pull in one topic through the CLI instead
+  of the directory: `pnpm claude:memory search "<term>"`,
+  `pnpm claude:memory read <topic>`, `pnpm claude:memory list`. Search returns
+  ranked `path:line` plus a one-line snippet, so I decide what to open.
+- **`search` also reads `.claude/retrospectives/`, and a hit there is
+  evidence, not a rule.** Memory hits print first and retrospective hits after
+  them; `.claude/shared-memory/CLAUDE.md` ("What `search` reads") owns how
+  those hits are marked and paged. A topic in this store is here because the
+  user approved it, while a retrospective report is one session's raw record,
+  declined proposals and later-disproved beliefs included: I follow such a hit
+  back to the file or commit it names and cite that, and where its proposal did
+  become a rule, that rule is in `.claude/CLAUDE.md` or `.claude/rules/` and is
+  the wording that binds.
+- Search before non-trivial work on a subsystem, tool, or file I have not
   touched this session; when a command fails in a way not obviously my own
   change; when something takes more than one attempt to fix; and when the
   user says we have done this before or refers to an earlier session.
-- On a hit, if it contradicts what I currently believe, measure before
-  concluding the entry is stale, and report a wrong entry to the user rather
-  than ignoring it.
+- On a hit, read the topic. If it contradicts what I currently believe,
+  measure before concluding the entry is stale, and report a wrong entry to
+  the user rather than ignoring it.
 - Only the retrospective skill proposes an entry and only the user approves
-  it. I never add one on my own judgment; rules still go in
-  `.claude/CLAUDE.md` or `.claude/rules/`.
+  it, then `pnpm claude:memory write` applies it. I never add an entry on my
+  own judgment; rules still go in `.claude/CLAUDE.md` or `.claude/rules/`.
 - Reaches the main session and every custom agent under `.claude/agents/`,
   not the built-in Explore and Plan agents; when I delegate to those I
-  restate anything they need directly in the delegation prompt.
-- `/memory-review` exists to prune this store and is the user's to run.
+  restate anything from memory they need directly in the delegation prompt.
+- `/memory-review` exists to prune this store and is the user's to run;
+  `pnpm claude:memory status` says whether one is due.
 
 ## Rules split out into `.claude/rules/`
 
