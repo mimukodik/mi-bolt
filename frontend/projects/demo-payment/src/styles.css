@@ -10,8 +10,11 @@
  * brand: the 8-point spacing rhythm, the two dominant radii, the 44px
  * control height on a 48px touch floor, and the type steps the page needs.
  * The palette and the typeface are deliberately NOT the shop's; that is
- * this application's own choice. The contract forbids only a real payment
- * provider's name or identity on this screen
+ * this application's own choice, apart from the error red and the demo
+ * banner's warning pair, which are the shop's
+ * (`frontend/docs/design/yettel.md` §2, §9). On identity the contract asks
+ * only that this page be clearly marked as a demo, under a generic name,
+ * and never carry a real payment provider's name or identity
  * (`contracts/commerce/kommunikacio.md` §8.3).
  */
 
