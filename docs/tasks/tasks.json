@@ -413,7 +413,7 @@
       },
       {
         "id": "T07-AC02",
-        "text": "Only successful atomic cart mutations increment version once. A quote/payment is invalidated on mutation; totals are whole HUF from catalogue prices."
+        "text": "Only successful atomic cart mutations increment version once, and the checkout session shares that version, so a request carrying an older version is refused with 412 CART_VERSION_CONFLICT; totals are whole HUF from catalogue prices."
       },
       {
         "id": "T07-AC03",
@@ -447,7 +447,7 @@
   },
   {
     "id": "T08",
-    "title": "Checkout draft, szállítás és árajánlat mock",
+    "title": "Checkout draft, delivery and summary mock",
     "dependsOn": [
       "T07"
     ],
@@ -455,10 +455,10 @@
     "files": [
       "src/mocks/checkout/checkout.handlers.ts",
       "src/mocks/checkout/validate-checkout.ts",
-      "src/mocks/checkout/quote-domain.ts",
+      "src/mocks/checkout/checkout-store.ts",
       "tests/checkout-mock.spec.ts"
     ],
-    "interface": "getCheckoutSession/updateCheckout/getCheckoutOptions/createCheckoutQuote; Quote TTL = 5 minutes.",
+    "interface": "getCheckout/updateCheckout/getCheckoutOptions; the server recomputes the checkout summary on every read, with no quote step.",
     "deliverable": "Server-like validation, shipping and final totals.",
     "acceptanceCriteria": [
       {
@@ -467,15 +467,15 @@
       },
       {
         "id": "T08-AC02",
-        "text": "Home delivery requires valid HU address; virtual pickup forbids an address. Shipping = 1990 HUF or 0 HUF from options, never a client-supplied price."
+        "text": "Home delivery requires valid HU address; virtual pickup forbids an address. Shipping comes from the options, never a client-supplied price: 1490 HUF home delivery, 990 HUF pickup point, 0 HUF for either from a 30000 HUF subtotal."
       },
       {
         "id": "T08-AC03",
-        "text": "Quote requires nonempty cart, complete contact/delivery/payment and current stock; total = subtotal + shipping."
+        "text": "An order requires a nonempty cart, complete contact/delivery/payment, accepted terms and current stock; total = subtotal + shipping fee + payment fee, recomputed on every read."
       },
       {
         "id": "T08-AC04",
-        "text": "Quote expires after exactly 5 mock-clock minutes; stale cart version or draft updates invalidate it."
+        "text": "There is no quote and no expiry: a changed draft or cart changes the next summary read, and a request carrying a stale session version is refused with 412 CART_VERSION_CONFLICT."
       },
       {
         "id": "T08-AC05",
@@ -492,7 +492,7 @@
     ],
     "testGroups": [
       "checkout",
-      "quote"
+      "review"
     ],
     "status": "planned",
     "optional": false,
@@ -517,11 +517,11 @@
     "acceptanceCriteria": [
       {
         "id": "T09-AC01",
-        "text": "Only demo_card and demo_cod exist. No bank-card fields or third-party payment requests are accepted."
+        "text": "Only card and cash_on_delivery exist; cash on delivery costs 490 HUF and is not offered above a 300000 HUF subtotal. No bank-card fields or third-party payment requests are accepted."
       },
       {
         "id": "T09-AC02",
-        "text": "Card succeeds/declines/remains pending via deterministic scenarios; a succeeded intent must match cart, quote, amount and session. COD forbids a paymentIntentId."
+        "text": "Card succeeds/declines/remains pending via deterministic scenarios; a succeeded intent must match cart, amount and session, and an intent whose amount differs from the current total is refused with 409 PRICE_CHANGED (params.intentAmount, params.total). COD forbids a paymentIntentId."
       },
       {
         "id": "T09-AC03",
@@ -1035,7 +1035,7 @@
       },
       {
         "id": "T18-AC05",
-        "text": "Display 339990 × 2 = 679980 HUF; with home delivery total = 681970 HUF. Use no monthly fee or hidden add-on."
+        "text": "Display 339990 × 2 = 679980 HUF; home delivery is free from a 30000 HUF subtotal, so the total with home delivery stays 679980 HUF. Use no monthly fee or hidden add-on."
       }
     ],
     "commonAcceptanceCriteria": [
@@ -1086,7 +1086,7 @@
       },
       {
         "id": "T19-AC04",
-        "text": "Each page can advance only after its own inputs validate and draft save succeeds. Editing earlier data invalidates quote/intent."
+        "text": "Each page can advance only after its own inputs validate and draft save succeeds. Editing earlier data changes the recomputed summary, and a payment intent for the old total is refused with 409 PRICE_CHANGED."
       },
       {
         "id": "T19-AC05",
@@ -1177,7 +1177,7 @@
       "src/app/features/checkout/address-form.ts",
       "src/app/features/checkout/payment-method-selector.ts"
     ],
-    "interface": "DeliveryStep emits DeliverySelection + demo_card|demo_cod; consumes CheckoutOptions.",
+    "interface": "DeliveryStep emits DeliverySelection + card|cash_on_delivery; consumes CheckoutOptions.",
     "deliverable": "Two delivery choices and two explicitly simulated payment choices.",
     "acceptanceCriteria": [
       {
@@ -1190,11 +1190,11 @@
       },
       {
         "id": "T21-AC03",
-        "text": "Shipping fee visibly follows selected option: 1990 vs 0 HUF. No tariff, installments, insurance, actual card field or provider redirect."
+        "text": "Shipping fee visibly follows selected option: 1490 HUF home delivery, 990 HUF pickup point, 0 HUF from a 30000 HUF subtotal. No tariff, installments, insurance, actual card field or provider redirect."
       },
       {
         "id": "T21-AC04",
-        "text": "Changing any option invalidates previous quote/intent and requires fresh review; selection is not indicated by color alone."
+        "text": "Changing any option changes the recomputed summary and a payment intent for the old total is refused; selection is not indicated by color alone."
       },
       {
         "id": "T21-AC05",
@@ -1228,15 +1228,15 @@
     "area": "UI",
     "files": [
       "src/app/features/checkout/review-step.ts",
-      "src/app/features/checkout/quote-state.ts",
+      "src/app/features/checkout/review-page.ts",
       "src/app/features/checkout/terms-dialog.ts"
     ],
-    "interface": "ReviewStep consumes Quote + contact/delivery views; emits submitRequested after valid explicit consents.",
+    "interface": "ReviewStep consumes the server-computed CheckoutSummary + contact/delivery views; emits submitRequested once the terms are accepted.",
     "deliverable": "Complete review including fresh totals and editable previous sections.",
     "acceptanceCriteria": [
       {
         "id": "T22-AC01",
-        "text": "Enter review by creating fresh quote. Show items, one-time subtotal, shipping, total and method; back/edit links preserve fields."
+        "text": "Enter review with the server's summary, recomputed on every read. Show items, one-time subtotal, shipping, total and method; back/edit links preserve fields."
       },
       {
         "id": "T22-AC02",
@@ -1244,15 +1244,15 @@
       },
       {
         "id": "T22-AC03",
-        "text": "PRICE_CHANGED, QUOTE_EXPIRED and OUT_OF_STOCK have distinct messages and correction paths; old amount cannot be submitted."
+        "text": "PRICE_CHANGED, CART_VERSION_CONFLICT and OUT_OF_STOCK have distinct messages and correction paths; old amount cannot be submitted."
       },
       {
         "id": "T22-AC04",
-        "text": "Primary CTA is Demórendelés véglegesítése; disabled while quote/consent/state incomplete, accompanied by an explanation."
+        "text": "Primary CTA is Demórendelés véglegesítése; it stays active, a click with the terms unticked marks them, moves focus to them and sends no order request, and it is disabled only while the order is in flight."
       },
       {
         "id": "T22-AC05",
-        "text": "Render loading, ready, quote-expired, price-change and field-error states without erasing the order summary."
+        "text": "Render loading, ready, conflict, stock-error, price-change and field-error states without erasing the order summary."
       }
     ],
     "commonAcceptanceCriteria": [
@@ -1265,7 +1265,6 @@
     ],
     "testGroups": [
       "review",
-      "quote",
       "design"
     ],
     "status": "planned",
@@ -1285,7 +1284,7 @@
       "src/app/features/checkout/order-submission.ts",
       "src/app/features/checkout/payment-progress.ts"
     ],
-    "interface": "submitOrder(): starts payment only for demo_card, then createOrder; retryUnknownOutcome() reuses persisted safe order key and body references.",
+    "interface": "submitOrder(): starts payment only for card, then createOrder; retryUnknownOutcome() reuses persisted safe order key and body references.",
     "deliverable": "User-driven submission with no duplicate orders.",
     "acceptanceCriteria": [
       {
@@ -1467,7 +1466,7 @@
       },
       {
         "id": "T26-AC03",
-        "text": "Include missing required header, wrong type, quantity overflow, stock conflict, stale version/quote, reused key and conditional-address/payment violations."
+        "text": "Include missing required header, wrong type, quantity overflow, stock conflict, stale version, reused key and conditional-address/payment violations."
       },
       {
         "id": "T26-AC04",
