@@ -1440,21 +1440,39 @@ describe('owner 2026-09-22: a refused add names the per-product limit', () => {
 
 describe('an add that settles after another variant was picked shows no message', () => {
   // Holds `POST /cart/items` until the case calls `release()`, so the
-  // shopper can switch colour while the add is in flight.
+  // shopper can switch colour while the add is in flight. `release()`
+  // is safe to call before the handler has been driven: the response
+  // is stashed and the next request resolves with it immediately,
+  // so a slow first request cannot hang the test.
   function holdAdd(respond: () => Response): { release: () => void } {
-    const held = { release: (): void => undefined };
+    let capture: ((response: Response) => void) | null = null;
+    let pending: Response | null = null;
     server.use(
       http.post(
         `${BASE_URL}/cart/items`,
         () =>
           new Promise<Response>((resolve) => {
-            held.release = (): void => {
-              resolve(respond());
-            };
+            if (pending !== null) {
+              const response = pending;
+              pending = null;
+              resolve(response);
+              return;
+            }
+            capture = resolve;
           }),
       ),
     );
-    return held;
+    return {
+      release: (): void => {
+        const response = respond();
+        if (capture !== null) {
+          capture(response);
+          capture = null;
+          return;
+        }
+        pending = response;
+      },
+    };
   }
 
   function cartWithGraphite256(): Cart {
@@ -1533,7 +1551,7 @@ describe('an add that settles after another variant was picked shows no message'
         { status: 409 },
       ),
     );
-    const { root, fixture, host, tick } = await createHarness();
+    const { root, fixture, host, cartFacade, tick } = await createHarness();
 
     queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button').click();
     await tick();
@@ -1543,6 +1561,10 @@ describe('an add that settles after another variant was picked shows no message'
     await tick();
     fixture.detectChanges();
 
+    // The dispatch must have failed for this case to exercise the
+    // refusal drop; without this assertion a future regression that
+    // quietly returns 200 would still pass.
+    expect(cartFacade.error()?.code).toBe('QUANTITY_LIMIT');
     expect(host.page()?.addError()).toBeNull();
     expect(
       queryElement(root, '.cta-desktop').querySelector('[data-testid="status-message"]'),

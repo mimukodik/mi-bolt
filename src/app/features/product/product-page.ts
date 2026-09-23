@@ -342,9 +342,11 @@ export class ProductPage {
       await this.cartFacade.ensureCart();
       await this.cartFacade.addItem(intent.variantId, intent.quantity);
       // The shopper picked another colour or storage while this add was
-      // in flight. Its outcome belongs to the old selection, so the page
-      // shows neither message under the new one; the cart itself has
-      // taken the add.
+      // in flight. Its outcome — success or failure — belongs to the
+      // old selection, so the page shows neither message under the new
+      // one. The `addError` linkedSignal would already have cleared a
+      // refusal on the variant change; the early-return keeps a stale
+      // success message from following the shopper to the new variant.
       if (this.selectedVariant()?.id !== intent.variantId) return;
       // The queue's dispatch resolves the failure signals for THIS
       // intent synchronously before `addItem()`'s own promise
