@@ -292,12 +292,26 @@ describe('T20-AC02 accessible label/autocomplete/error wiring', () => {
       'contact-fullname-message',
     );
 
+    // The IDREF resolves before the first submit; the message is hidden and empty (R20).
+    const pristine = root.querySelector<HTMLElement>('#contact-fullname-message');
+    expect(pristine?.hidden).toBe(true);
+    expect(pristine?.textContent.trim()).toBe('');
+
     await fixture.componentInstance.onSubmit();
     fixture.detectChanges();
 
-    expect(root.querySelector('#contact-fullname-message')).not.toBeNull();
-    expect(root.querySelector('#contact-email-message')).not.toBeNull();
-    expect(root.querySelector('#contact-phone-message')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-fullname-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-fullname-message')?.textContent.trim()).toBe(
+      'A teljes név kötelező.',
+    );
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe(
+      'Az e-mail cím kötelező.',
+    );
+    expect(root.querySelector<HTMLElement>('#contact-phone-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-phone-message')?.textContent.trim()).toBe(
+      'A telefonszám kötelező.',
+    );
   });
 
   it('invalid submission focuses the summary first then jumps to the first invalid field', async () => {

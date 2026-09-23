@@ -520,6 +520,12 @@ describe('DS-18 an empty billing name reports the required message once the fiel
     const fixture = createFixture();
     const root = getRootElement(fixture);
     const input = getInputElement(root, '[data-testid="billing-name-input"]');
+
+    const pristineMessage = getElement(root, '#billing-name-message');
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+    expect(pristineMessage.hidden).toBe(true);
+    expect(pristineMessage.textContent.trim()).toBe('');
+
     input.dispatchEvent(new Event('blur', { bubbles: true }));
     fixture.detectChanges();
 
@@ -528,6 +534,7 @@ describe('DS-18 an empty billing name reports the required message once the fiel
     const field = getElement(root, '[data-testid="billing-name-field"]');
     const messageEl = field.querySelector('[data-testid="form-field-message"]');
     expect(messageEl?.textContent.trim()).toBe('A számlázási név megadása kötelező.');
+    expect(pristineMessage.hidden).toBe(false);
   });
 });
 
@@ -633,8 +640,10 @@ describe('DS-20 the confirm control stays enabled and a click on an incomplete s
     const invalid = addressForm.querySelectorAll('[aria-invalid="true"]');
     expect(invalid.length).toBe(3);
     expect(document.activeElement).toBe(invalid[0]);
-    expect(root.querySelector('#delivery-option-message')).toBeNull();
-    expect(root.querySelector('#payment-method-message')).toBeNull();
+    expect(root.querySelector<HTMLElement>('#delivery-option-message')?.hidden).toBe(true);
+    expect(root.querySelector('#delivery-option-message')?.textContent.trim()).toBe('');
+    expect(root.querySelector<HTMLElement>('#payment-method-message')?.hidden).toBe(true);
+    expect(root.querySelector('#payment-method-message')?.textContent.trim()).toBe('');
   });
 
   it('once everything is filled the same click emits continueRequested once', () => {

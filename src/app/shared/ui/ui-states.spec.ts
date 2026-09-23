@@ -328,7 +328,11 @@ describe('MiBolt primitives: Required State Contract', () => {
       TestBed.configureTestingModule({ imports: [FormHost] });
       const f = TestBed.createComponent(FormHost);
       f.detectChanges();
-      expect(getNativeElement(f).querySelector('[data-testid="form-field-message"]')).toBeNull();
+      const pristine = getNativeElement(f).querySelector<HTMLElement>(
+        '[data-testid="form-field-message"]',
+      );
+      expect(pristine?.hidden).toBe(true);
+      expect(pristine?.textContent.trim()).toBe('');
 
       f.componentInstance.errors.set([{ code: 'required', message: 'Kötelező', pointer: '/a' }]);
       f.componentInstance.touched.set(true);
@@ -336,7 +340,8 @@ describe('MiBolt primitives: Required State Contract', () => {
       const msg = getNativeElement(f).querySelector<HTMLElement>(
         '[data-testid="form-field-message"]',
       );
-      expect(msg).not.toBeNull();
+      expect(msg?.hidden).toBe(false);
+      expect(msg?.textContent.trim()).toBe('Kötelező');
       expect(msg?.getAttribute('data-pointer')).toBe('/a');
     });
   });
