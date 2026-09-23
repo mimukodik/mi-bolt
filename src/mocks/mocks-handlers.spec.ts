@@ -45,9 +45,7 @@ import catalogFixture from '../../docs/api/fixtures/catalog.json';
 
 // Stand-in literals typed directly against `VariantLookup`'s own
 // shape — the generated SDK types — and shared by every `describe`
-// block that needs a successful lookup hit. `DEMO_PRODUCT` lives in
-// the repository's mock-local shape (it omits `slug`/`releasedAt`
-// the SDK requires), so wrapping it in a cast hides a real gap.
+// block that needs a successful lookup hit.
 const LOOKUP_PRODUCT: VariantLookup['product'] = {
   id: 'p-01',
   slug: 'demo-one-5g',

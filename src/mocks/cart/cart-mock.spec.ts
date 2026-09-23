@@ -67,10 +67,6 @@ beforeEach(() => {
     scenario: DEFAULT_SCENARIO,
     apiRoot: '/api/v1',
   };
-  // Seed the catalogue-derived repository product so the checkout,
-  // payment and order mocks keep reading the same product fixture
-  // they always have, even though the cart store does not consult
-  // it.
   server.use(...createHandlers(options));
 });
 
