@@ -1,0 +1,53 @@
+@let isHandset = this.isHandset();
+
+<mat-sidenav-container class="sidenav-container h-dvh">
+  <mat-sidenav
+    #drawer
+    class="sidenav"
+    fixedInViewport
+    [attr.role]="isHandset ? 'dialog' : 'navigation'"
+    [mode]="isHandset ? 'over' : 'side'"
+    [opened]="isHandset === false"
+  >
+    <mat-toolbar>Menü</mat-toolbar>
+    <mat-nav-list>
+      <a
+        #rlaAttekintes="routerLinkActive"
+        mat-list-item
+        routerLink="/attekintes"
+        routerLinkActive
+        [activated]="rlaAttekintes.isActive"
+        >Áttekintés</a
+      >
+      <a
+        #rlaTermekek="routerLinkActive"
+        mat-list-item
+        routerLink="/termekek"
+        routerLinkActive
+        [activated]="rlaTermekek.isActive"
+        >Termékek</a
+      >
+      <a
+        #rlaAdminok="routerLinkActive"
+        mat-list-item
+        routerLink="/adminok"
+        routerLinkActive
+        [activated]="rlaAdminok.isActive"
+        >Adminok</a
+      >
+    </mat-nav-list>
+  </mat-sidenav>
+  <mat-sidenav-content class="flex flex-col h-full">
+    <mat-toolbar color="primary">
+      @if (isHandset) {
+        <button aria-label="Menü megnyitása" matIconButton type="button" (click)="drawer.toggle()">
+          <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
+        </button>
+      }
+      <span>MiBolt Admin</span>
+    </mat-toolbar>
+    <main class="flex-1 min-h-0 overflow-auto scroll-pt-16">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
