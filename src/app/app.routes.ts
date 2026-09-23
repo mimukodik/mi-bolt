@@ -1,4 +1,5 @@
-import type { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, type Routes } from '@angular/router';
 
 import { MarketingLayout } from './layouts/marketing-layout';
 import { ShopLayout } from './layouts/shop-layout';
@@ -79,7 +80,14 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: '/penztar/kosar',
+        // A string redirect keeps only the query parameters written into
+        // it, so a function carries the shopper's own query string and
+        // fragment across (for example `?mi-scenario=…`).
+        redirectTo: ({ queryParams, fragment }) =>
+          inject(Router).createUrlTree(['/penztar/kosar'], {
+            queryParams,
+            fragment: fragment ?? undefined,
+          }),
       },
     ],
   },
