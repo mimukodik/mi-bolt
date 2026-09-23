@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Print a GitHub-flavored markdown coverage summary from an istanbul/nyc
 // json-summary file. Reads the `total` object only; the column order and
-// the `### Unit coverage` heading are what the PR check workflow appends
+// the `### Unit coverage` heading are what .github/workflows/frontend.yml appends
 // to `$GITHUB_STEP_SUMMARY`.
 import { existsSync, readFileSync } from 'node:fs';
 

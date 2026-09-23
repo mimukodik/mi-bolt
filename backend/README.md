@@ -1,25 +1,27 @@
 # MiBolt Backend
 
 Spring Boot 4.1.1 / Java 21 / Gradle 9.7.1 backend for the MiBolt demo
-webshop. Contract-first: `api/openapi.yaml` is the single source of truth,
-the generated interfaces land under `build/generated/openapi/`, and every
-implementation lives in `src/main/java/com/example/mi_bolt_backend/`.
+webshop. Contract-first: `contracts/commerce/openapi.yaml` is the single
+source of truth, the generated interfaces land under
+`services/commerce/build/generated/openapi/`, and every implementation
+lives in `services/commerce/src/main/java/com/example/mi_bolt_backend/`.
 The API answers at `http://localhost:8080/api/v1`.
+
+Every command below runs from the repository root.
 
 ## Quick start
 
 ```bash
-./scripts/local-database-docker.sh start   # PostgreSQL 16 in Docker, port 55433
-./gradlew bootRun                          # Liquibase, then the catalogue loader
+mise run backend                           # PostgreSQL 16 in its container (port 55433), then bootRun
 curl http://localhost:8080/api/v1/products
 ```
 
-The first boot on an empty database imports `data/catalog` (48 products,
-85 images); see "Catalogue".
+The first boot on an empty database imports the repository's
+`data/catalog` (48 products, 85 images); see "Catalogue".
 
 ## Requirements
 
-- JDK 21 (`brew install openjdk@21`)
+- mise, which installs the pinned JDK 21 from the root `mise.toml`
 - Gradle wrapper (no system Gradle needed)
 - Docker, for the local database and for "Run in Docker"
 - For the tests: nothing else. H2 in PostgreSQL mode is on the test
@@ -27,22 +29,20 @@ The first boot on an empty database imports `data/catalog` (48 products,
 
 ## Database
 
-`scripts/local-database-docker.sh` owns the local PostgreSQL container
-(`mi-bolt-postgres`, compose project `mi-bolt-local`, network
-`mi-bolt-local`, host port 55433). Use the script, never `docker` or `psql`
-directly (docs/04-adatbazis.md).
+The local PostgreSQL is the `postgres` service of `deploy/compose.yaml`
+(compose project `mi-bolt-local`, volume `mi-bolt-postgres-data`, host
+port 55433). Use the mise tasks and `deploy/compose.sh`, never `docker` or
+`psql` directly (docs/04-adatbazis.md).
 
-| Command                                         | What it does                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------ |
-| `./scripts/local-database-docker.sh start`      | Start the container and wait until it is ready (default)     |
-| `./scripts/local-database-docker.sh stop`       | Stop it                                                      |
-| `./scripts/local-database-docker.sh status`     | Container state, port mapping, volume                        |
-| `./scripts/local-database-docker.sh reset --yes`| Destroy the data volume and start an empty database          |
-| `./scripts/local-database-docker.sh logs -f`    | Follow the container log                                     |
-| `./scripts/local-database-docker.sh --help`     | Every command                                                |
+| Command                          | What it does                                                   |
+| -------------------------------- | -------------------------------------------------------------- |
+| `mise run db`                    | Start PostgreSQL alone and wait until it is healthy            |
+| `mise run stop`                  | Stop every container of the stack; the volume keeps its data   |
+| `deploy/compose.sh ps`           | Container state and port mapping                               |
+| `deploy/compose.sh logs -f postgres` | Follow the database log                                    |
 
 The application reads its connection from three environment variables,
-with defaults that match the script:
+with defaults that match `deploy/.env.example`:
 
 | Variable             | Default                                        |
 | -------------------- | ---------------------------------------------- |
@@ -51,7 +51,7 @@ with defaults that match the script:
 | `MIBOLT_DB_PASSWORD` | `mi_bolt_local`                                |
 
 The schema is Liquibase: one change set per logical change under
-`src/main/resources/db/changelog/changes/`, appended to
+`services/commerce/src/main/resources/db/changelog/changes/`, appended to
 `db.changelog-master.yaml`. Hibernate runs with `ddl-auto=validate`, so an
 entity that disagrees with the change sets stops the boot. H2 and PostgreSQL
 share the portable types; the one place they differed (`clob` vs `@Lob`)
@@ -62,26 +62,24 @@ is recorded in docs/decisions/0012 and changeset 0006.
 ### Locally
 
 ```bash
-./scripts/local-database-docker.sh start
-./gradlew bootRun
+mise run backend               # the database, then Gradle bootRun on 8080
+mise run dev                   # the same, plus the three frontend apps against it
 ```
 
 ### In Docker
 
-The multi-stage `Dockerfile` builds the jar with the Gradle wrapper and
-runs the Spring Boot layers on a JRE image; `docker-compose.yml` starts
-only the backend. The database stays the container the script above
-manages: the compose file joins its `mi-bolt-local` network and reaches it
-as `mi-bolt-postgres:5432`, so start the database first.
+`services/commerce/Dockerfile` builds the jar with the Gradle wrapper and
+runs the Spring Boot layers on a JRE image. It is the `commerce` service of
+`deploy/compose.yaml`, beside the database in the same Compose project.
 
 ```bash
-./scripts/local-database-docker.sh start   # once; creates the network too
-docker compose up --build                  # or: docker-compose up --build
-docker compose down                        # stop and remove the backend container
+mise run backend:docker        # the database and the mi-bolt-commerce container
+mise run stack                 # the whole system in containers, the web image included
+mise run stop                  # stop every container; the database volume keeps its data
 ```
 
-`data/catalog` is mounted read-only into the container, so the loader
-fills an empty database on the first boot exactly as `bootRun` does.
+The image carries the repository's `data/catalog`, so the loader fills an
+empty database on the first boot exactly as `bootRun` does.
 `MIBOLT_DB_URL`, `MIBOLT_DB_USER` and `MIBOLT_DB_PASSWORD` in the shell
 override the compose defaults.
 
@@ -100,32 +98,36 @@ persists the rows inside one transaction, so a failure rolls back the
 whole batch. Images are stored in the database and served by
 `GET /media/{imageId}`.
 
-| Property              | Default        | Purpose                                      |
-| --------------------- | -------------- | -------------------------------------------- |
-| `mibolt.catalog.path` | `data/catalog` | Directory holding `catalog.json` + `images/` |
+| Property              | Default                 | Purpose                                                              |
+| --------------------- | ----------------------- | -------------------------------------------------------------------- |
+| `mibolt.catalog.path` | `../../../data/catalog` | Directory holding `catalog.json` + `images/`: the repository's `data/catalog`, relative to `services/commerce/` |
 
-The tests use `src/test/resources/catalog` instead. On success the loader
-logs `catalogue loaded: N products, M variants, K images, F featured`; on
-a populated table it logs `catalogue present, N products, loader skipped`.
+The tests use `services/commerce/src/test/resources/catalog` instead. On
+success the loader logs `catalogue loaded: N products, M variants, K images,
+F featured`; on a populated table it logs `catalogue present, N products,
+loader skipped`.
 
-To reload after a content change, reset the database, then boot again:
+To reload after a content change, empty the database, then boot again.
+`deploy/compose.sh down -v` deletes the `mi-bolt-postgres-data` volume and
+with it every local row:
 
 ```bash
-./scripts/local-database-docker.sh reset --yes
-./gradlew bootRun              # or: docker compose up --build
+deploy/compose.sh down -v
+mise run backend               # or: mise run backend:docker
 ```
 
 `data/catalog` itself is produced by the import script in
-`scripts/catalog-import` (docs/decisions/0005).
+`tools/catalog-import` (docs/decisions/0005).
 
 ## Tests and quality gates
 
 ```bash
-./gradlew test                 # 217 unit tests
-./gradlew integrationTest      # 176 integration tests, shared Spring context
-./gradlew pmdMain pmdTest      # PMD
-./gradlew build                # everything above plus the coverage gates
-bash scripts/smoke.sh          # end-to-end pass against a running backend (BASE=http://…/api/v1)
+backend/gradlew -p backend :services:commerce:test             # 217 unit tests
+backend/gradlew -p backend :services:commerce:integrationTest  # 176 integration tests, shared Spring context
+backend/gradlew -p backend :services:commerce:pmdMain :services:commerce:pmdTest   # PMD
+backend/gradlew -p backend :services:commerce:build            # everything above plus the coverage gates
+bash backend/services/commerce/scripts/smoke.sh                # end-to-end pass against a running backend (BASE=http://…/api/v1)
+mise run verify                                                # every workspace's lint, test and build, and the contract checks
 ```
 
 - **Test database:** H2 in PostgreSQL mode with the same Liquibase changelog
@@ -142,17 +144,21 @@ bash scripts/smoke.sh          # end-to-end pass against a running backend (BASE
   never inline a fully qualified name) and four extra rules
   (`SystemPrintln`, `AvoidReassigningParameters`,
   `AvoidUncheckedExceptionsInSignatures`, `AvoidThrowingRawExceptionTypes`);
-  see docs/decisions/0009. Reports land under `build/reports/pmd/`.
-- **CI:** `.github/workflows/pr-check.yml` runs unit tests, integration
-  tests and PMD in parallel on every pull request and push to `main`; then,
-  side by side, the coverage gate and build, which needs the two test jobs
-  (docs/decisions/0006), and a PostgreSQL boot and smoke job, which needs
-  all three and starts the jar on an empty `postgres:16` service container
-  and runs `scripts/smoke.sh` (docs/decisions/0013).
+  see docs/decisions/0009. Reports land under
+  `services/commerce/build/reports/pmd/`.
+- **CI:** `.github/workflows/backend.yml`, called by `.github/workflows/ci.yml`
+  when a pull request or a push to `main` changes a backend input path
+  (`.github/components.yml`), runs unit tests, integration tests and PMD in
+  parallel; then, side by side, the coverage gate and build, which needs the
+  two test jobs (docs/decisions/0006), and a PostgreSQL boot and smoke job,
+  which needs all three and starts the jar on an empty `postgres:16`
+  service container and runs `services/commerce/scripts/smoke.sh`
+  (docs/decisions/0013).
 
 ## API
 
-Every endpoint is under `/api/v1` and described in `api/openapi.yaml`.
+Every endpoint is under `/api/v1` and described in
+`contracts/commerce/openapi.yaml`.
 
 | Area            | Endpoints                                                                                                                   | Decision |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -163,29 +169,29 @@ Every endpoint is under `/api/v1` and described in `api/openapi.yaml`.
 
 The session is a cookie (`mibolt_session`) issued by the first `GET /cart`.
 Fees, thresholds and lifetimes are configuration under `mibolt.*` in
-`src/main/resources/application.properties`.
+`services/commerce/src/main/resources/application.properties`.
 
 ## Project layout
 
-| Path                                   | Content                                                     |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `api/openapi.yaml`                     | The contract                                                |
-| `src/main/java/...`                    | Implementation, one package per area                        |
-| `src/main/resources/db/changelog/`     | Liquibase change sets                                       |
-| `src/test/java/...`                    | Unit and integration tests (`@IntegrationTest` shared context) |
-| `data/catalog/`                        | Fixture catalogue and images loaded on an empty database    |
-| `docs/`                                | Specification (`00`–`05`) and `docs/decisions/` records      |
-| `scripts/local-database-docker.sh`     | Local database manager                                      |
-| `scripts/catalog-import/`              | TypeScript importer that produces `data/catalog`            |
-| `Dockerfile`, `docker-compose.yml`     | Backend image and compose service                           |
-| `docker-compose.local-database.yml`    | The database container the script manages                  |
-| `.github/workflows/pr-check.yml`       | CI                                                          |
+Paths are relative to `backend/` unless they start at the repository root.
+
+| Path                                           | Content                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------- |
+| `contracts/commerce/openapi.yaml` (root)       | The contract                                                |
+| `services/commerce/src/main/java/...`          | Implementation, one package per area                        |
+| `services/commerce/src/main/resources/db/changelog/` | Liquibase change sets                                 |
+| `services/commerce/src/test/java/...`          | Unit and integration tests (`@IntegrationTest` shared context) |
+| `data/catalog/` (root)                         | Fixture catalogue and images loaded on an empty database    |
+| `docs/`                                        | Backend rules (`02`, `04`, `06`) and `docs/decisions/` records |
+| `tools/catalog-import/` (root)                 | TypeScript importer that produces `data/catalog`            |
+| `services/commerce/Dockerfile`                 | Backend image                                               |
+| `deploy/compose.yaml` (root)                   | The database, backend and web containers                    |
+| `.github/workflows/backend.yml` (root)         | Backend CI, called by `ci.yml`                              |
 
 ## Documentation
 
-- `docs/00-attekintes.md` overview, `docs/01-kommunikacio.md` API
-  conventions and errors, `docs/02-backend.md` backend rules,
-  `docs/04-adatbazis.md` database rules, `docs/06-uzembe-helyezes.md`
-  deployment.
-- `docs/decisions/` holds one record per decision, 0001–0012, referenced
+- `contracts/commerce/kommunikacio.md` (root) API conventions and errors,
+  `docs/02-backend.md` backend rules, `docs/04-adatbazis.md` database
+  rules, `docs/06-uzembe-helyezes.md` deployment.
+- `docs/decisions/` holds one record per decision, 0001–0021, referenced
   from the tables above.
