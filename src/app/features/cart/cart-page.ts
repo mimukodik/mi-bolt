@@ -218,6 +218,12 @@ export class CartPage {
     severity: StatusSeverity;
     dismissible: boolean;
   } | null>(() => {
+    // The ErrorState already carries the load-failure and
+    // expiry copy when state is 'error'; the banner's
+    // mutation-specific text would contradict it (and is
+    // literally wrong — no mutation was attempted when the
+    // cart never loaded).
+    if (this.state() === 'error') return null;
     if (this.facade.error() !== null) {
       return {
         text: 'A kosár módosítása nem sikerült; a kosár változatlan.',
