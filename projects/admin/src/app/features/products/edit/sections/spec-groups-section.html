@@ -70,13 +70,15 @@
           track row;
           let rowIndex = $index, firstRow = $first, lastRow = $last
         ) {
-          <div class="flex flex-wrap items-start gap-2">
-            <mat-form-field class="min-w-40 flex-1" subscriptSizing="dynamic">
+          <div
+            class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
+          >
+            <mat-form-field subscriptSizing="dynamic">
               <mat-label>Megnevezés</mat-label>
               <input matInput [formField]="row.label" />
               <mat-error>{{ row.label().errors()[0]?.message }}</mat-error>
             </mat-form-field>
-            <mat-form-field class="min-w-60 flex-[2]" subscriptSizing="dynamic">
+            <mat-form-field class="col-span-2 sm:col-span-1" subscriptSizing="dynamic">
               <mat-label>Érték</mat-label>
               <textarea
                 cdkAutosizeMaxRows="6"
@@ -88,6 +90,7 @@
               <mat-error>{{ row.value().errors()[0]?.message }}</mat-error>
             </mat-form-field>
             <button
+              class="col-start-2 row-start-1 sm:col-start-3"
               matIconButton
               type="button"
               [attr.aria-label]="`Csoport ${groupIndex + 1}, sor ${rowIndex + 1}: műveletek`"
