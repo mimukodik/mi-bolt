@@ -15,7 +15,7 @@ import type { Variant } from '../../api/generated/models/variant';
  * in `variants()` are rendered `disabled` and expose the Hungarian
  * reason via `aria-describedby` so the user knows why the option is
  * not available. The component resolves the exact color+storage
- * combination itself (`docs/spec/components.md:439`) and emits the
+ * combination itself (`docs/spec/components.md:424`) and emits the
  * resolved variant id; it never chooses a substitute.
  *
  * The component is purely presentational — it does not own the

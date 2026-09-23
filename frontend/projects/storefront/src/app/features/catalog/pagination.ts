@@ -2,7 +2,7 @@ import type { ElementRef } from '@angular/core';
 import { Component, computed, input, output, viewChildren } from '@angular/core';
 
 /**
- * `Pagination` — `docs/spec/components.md:386`.
+ * `Pagination` — `docs/spec/components.md:371`.
  *
  * Previous/next plus numbered page navigation with `aria-current`,
  * replacing the plain "x / y" text the pre-`FIX-60` markup showed.

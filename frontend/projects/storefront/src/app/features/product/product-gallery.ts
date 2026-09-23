@@ -10,7 +10,7 @@ import type { Image } from '../../api/generated/models/image';
  *
  * Owns no image list of its own: it renders whichever `images()` the
  * parent supplies and follows `selectedImageId()`, resolving the
- * active image by id (`docs/spec/components.md:420`) rather than by
+ * active image by id (`docs/spec/components.md:405`) rather than by
  * position, so a variant switch that swaps the image list never shows
  * the wrong photo at a stale index. The gallery deliberately does NOT
  * auto-advance: there is no autoplay timer, no time-based rotation, no
@@ -130,7 +130,7 @@ export class ProductGallery {
     this.zoomRequested.emit(image.id);
   }
 
-  /** Closing the zoom is internal: `components.md:426` lists
+  /** Closing the zoom is internal: `components.md:411` lists
    *  `zoom-open` as a state of this component and gives it no close
    *  output, so `AccessibleDialog`'s `(closed)` wires to this
    *  method directly rather than to a parent-owned signal. */

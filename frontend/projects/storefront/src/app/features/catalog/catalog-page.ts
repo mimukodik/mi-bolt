@@ -92,7 +92,7 @@ export class CatalogPage {
    *  back so the drawer can restore focus to it on close (WCAG SC 2.4.3).
    *  The button itself now lives in `CatalogToolbar`'s template, which
    *  exposes it through `filterTriggerEl()` rather than through the
-   *  declared input/output surface `components.md:371` names. */
+   *  declared input/output surface `components.md:356` names. */
   private readonly toolbar = viewChild(CatalogToolbar);
   protected readonly filterTrigger = computed<HTMLElement | null>(
     () => this.toolbar()?.filterTriggerEl() ?? null,

@@ -12,8 +12,8 @@ import type { Money } from '../../shared/ui/price-block/price-block';
 
 /**
  * FIX-50 item 5 — `MobileBuyRail` extracted to
- * `docs/spec/components.md:476-488` (with the `error` input decision
- * D11 adds at `:480`). Shares the page's single pending/error state
+ * `docs/spec/components.md:461-473` (with the `error` input decision
+ * D11 adds at `:465`). Shares the page's single pending/error state
  * rather than owning one of its own
  * (`docs/spec/architecture.md:57`).
  */

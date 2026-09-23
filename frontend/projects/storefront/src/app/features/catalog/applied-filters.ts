@@ -14,7 +14,7 @@ function chipTestId(name: FilterIdentity['name']): string {
 }
 
 /**
- * `AppliedFilters` — `docs/spec/components.md:356`.
+ * `AppliedFilters` — `docs/spec/components.md:341`.
  *
  * Named removable chips plus clear-all, rendered from the chip array
  * the page passes in. The chips come pre-built (with the page's

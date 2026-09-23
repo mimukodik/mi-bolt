@@ -40,7 +40,7 @@ export class HomePage {
   /**
    * Hero heading text, relocated character-for-character from
    * `hero.html`'s H1 so `Hero` can declare `title`/`subtitle` as the
-   * signal inputs `docs/spec/components.md:255` requires (FIX-64).
+   * signal inputs `docs/spec/components.md:240` requires (FIX-64).
    * `title` is the plain first line; `subtitle` is the accent-styled
    * second line.
    */

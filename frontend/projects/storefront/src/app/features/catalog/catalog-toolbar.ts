@@ -5,7 +5,7 @@ import { isSort, SORT_MODES, type Sort } from './catalog-query';
 import type { AsyncStatus } from '../../shared/types/async-status';
 
 /**
- * `CatalogToolbar` — `docs/spec/components.md:371`.
+ * `CatalogToolbar` — `docs/spec/components.md:356`.
  *
  * Live result count, sort and page-size controls, and the mobile filter
  * trigger with its selected-count cue. Extracted out of `CatalogPage`
@@ -60,7 +60,7 @@ export class CatalogToolbar {
   /** The filter-trigger button, exposed so `CatalogPage` can pass it as
    *  `FilterDrawer.restoreEl` — WCAG focus restoration back onto the
    *  control that opened the drawer. Not part of the declared
-   *  input/output surface `components.md:371` names; a plain public
+   *  input/output surface `components.md:356` names; a plain public
    *  property a parent can read is not one of those two things. */
   private readonly filterTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('filterTrigger');
   readonly filterTriggerEl = computed<HTMLButtonElement | null>(
@@ -71,7 +71,7 @@ export class CatalogToolbar {
    *  to it when a sibling control removes itself from the DOM. Same
    *  non-input/output shape as `filterTriggerEl` above: a public
    *  property a parent reads is neither an input nor an output, so
-   *  `components.md:371`'s declared surface is unchanged. */
+   *  `components.md:356`'s declared surface is unchanged. */
   private readonly resultCountRef = viewChild<ElementRef<HTMLElement>>('resultCount');
   readonly resultCountEl = computed<HTMLElement | null>(
     () => this.resultCountRef()?.nativeElement ?? null,
@@ -83,7 +83,7 @@ export class CatalogToolbar {
    *  must say what it discloses and whether it is open). A plain
    *  writable signal, not a declared input, for the same reason
    *  `filterTriggerEl()` above is a plain public property: it is
-   *  neither an input nor an output, so `components.md:371`'s declared
+   *  neither an input nor an output, so `components.md:356`'s declared
    *  surface and FIX-60-AC02's one-addition limit (`appliedCount`) are
    *  both unaffected. */
   readonly drawerExpanded = signal(false);

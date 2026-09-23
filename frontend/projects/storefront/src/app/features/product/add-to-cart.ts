@@ -1,11 +1,11 @@
 /**
  * T18 — add-to-cart surface (S3 → S4.1).
  *
- * Presentation-only per `docs/spec/components.md:446-458`
+ * Presentation-only per `docs/spec/components.md:431-443`
  * (`AddToCartControl`): a single primary CTA that emits one intent
  * and owns no cart persistence of its own. `variant`, `pending` and
  * `error` all come from the parent — `ProductPage`, which
- * `components.md:409` names as the container that owns `CartFacade`
+ * `components.md:394` names as the container that owns `CartFacade`
  * injection (FIX-50 item 2b). The control adds one piece: there is no
  * quantity to read or display.
  *

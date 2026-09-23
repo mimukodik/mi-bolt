@@ -2,7 +2,7 @@
  * FIX-63 — `ContactPage` container: owns the Signal Forms model, the
  * `CONTACT_DRAFT_SAVER` save call and the post-save navigation that
  * `ContactStep.onSubmit()` used to do itself before this task moved
- * that responsibility up here (`components.md:551-557`).
+ * that responsibility up here (`components.md:536-542`).
  *
  * `ContactStep` itself is covered by `contact-step.spec.ts` in
  * isolation; this file covers only what the container adds: the save

@@ -881,7 +881,7 @@ describe('FIX-16/FIX-50 desktop CTA disabled state, against the real ProductPage
   // FIX-16's own Status line recorded this as open: the original
   // AC09b case rendered a hand-copied markup replica rather than
   // ProductPage. The FIX-50 reshape drops AddToCart's `enabled`
-  // input (components.md:450 declares none), so the page now
+  // input (components.md:435 declares none), so the page now
   // withholds the variant instead; this closes both at once.
   it('with an unresolvable ?variant=, .cta-desktop renders app-add-to-cart whose own button is disabled', async () => {
     const { fixture, root, tick } = await createHarness();

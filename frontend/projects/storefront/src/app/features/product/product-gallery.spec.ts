@@ -12,7 +12,7 @@ import type { Image } from '../../api/generated/models/image';
 /**
  * T16 / FIX-50 - Product gallery component (T16-AC02 / T16-AC05).
  *
- * Reshaped to `docs/spec/components.md:420-428`: the component
+ * Reshaped to `docs/spec/components.md:405-413`: the component
  * resolves its active image by id (`selectedImageId`) rather than by
  * position, so a variant switch that swaps the image list never shows
  * the wrong photo at a stale index.
