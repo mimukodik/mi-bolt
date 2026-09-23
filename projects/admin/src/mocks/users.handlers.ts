@@ -1,7 +1,16 @@
 import { HttpResponse, http, type HttpHandler } from 'msw';
 
-import { isRecord } from '../app/core/is-record';
 import type { AdminUserCreated } from '../app/api/generated/models/admin-user-created';
+import {
+  asText,
+  bodyViolations,
+  fieldError,
+  isTextual,
+  malformedBody,
+  readJsonObject,
+  unknownQueryParameter,
+  wrongType,
+} from './backend-answers';
 import type { MockDb } from './db';
 import { csrfRejection, sessionRejection } from './guards';
 import { problem } from './problem';
@@ -29,12 +38,38 @@ function generatePassword(): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/** The first query key in query-string order, or `undefined` when there is none. */
+function firstQueryKey(request: Request): string | undefined {
+  const url = new URL(request.url);
+  return [...url.searchParams.keys()][0];
+}
+
+const ADMIN_ID_PATTERN =
+  /^[0-9a-fA-F]{1,8}-[0-9a-fA-F]{1,4}-[0-9a-fA-F]{1,4}-[0-9a-fA-F]{1,4}-[0-9a-fA-F]{1,12}$/;
+const ADMIN_ID_GROUP_WIDTHS = [8, 4, 4, 4, 12];
+
+/**
+ * The path id the way Spring's `UUID.fromString` reads and re-prints it
+ * (trimmed, each group zero-padded to 8-4-4-4-12 and lower-cased), or
+ * `undefined` when it does not match a UUID's shape.
+ */
+function normalizeAdminId(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (trimmed.length > 36 || !ADMIN_ID_PATTERN.test(trimmed)) return undefined;
+  const groups = trimmed.split('-');
+  return groups
+    .map((group, index) => group.toLowerCase().padStart(ADMIN_ID_GROUP_WIDTHS[index] ?? 0, '0'))
+    .join('-');
+}
+
 /** The three `AdminUsers` operations: list, create, delete. */
 export function usersHandlers(db: MockDb): HttpHandler[] {
   return [
-    http.get('*/api/v1/admin/users', () => {
+    http.get('*/api/v1/admin/users', ({ request }) => {
       const rejection = sessionRejection(db);
       if (rejection !== undefined) return rejection;
+      const key = firstQueryKey(request);
+      if (key !== undefined) return unknownQueryParameter(key);
 
       const users = [...db.admins.values()]
         .map((admin) => admin.user)
@@ -50,29 +85,24 @@ export function usersHandlers(db: MockDb): HttpHandler[] {
       if (csrf !== undefined) return csrf;
       const rejection = sessionRejection(db);
       if (rejection !== undefined) return rejection;
+      const key = firstQueryKey(request);
+      if (key !== undefined) return unknownQueryParameter(key);
 
-      const body = await request.json();
-      const username =
-        isRecord(body) && typeof body['username'] === 'string' ? body['username'] : undefined;
-      if (username === undefined) {
-        return problem(400, 'INVALID_REQUEST', 'Invalid request', {
-          detail: 'Missing required member',
-          fieldErrors: [{ path: '/username', code: 'REQUIRED' }],
-        });
+      const body = await readJsonObject(request, ['username']);
+      if (body === undefined) return malformedBody();
+      if (!isTextual(body['username'])) return malformedBody();
+
+      const usernameText = asText(body['username']);
+      if (usernameText === undefined) {
+        return bodyViolations([fieldError('/username', 'REQUIRED')]);
       }
-      if (username.length > 80) {
-        return problem(422, 'VALIDATION_FAILED', 'Section rejected', {
-          detail: 'One or more supplied fields are not acceptable',
-          fieldErrors: [{ path: '/username', code: 'SIZE' }],
-        });
-      }
-      if (!matchesUsernamePattern(username)) {
-        return problem(422, 'VALIDATION_FAILED', 'Section rejected', {
-          detail: 'One or more supplied fields are not acceptable',
-          fieldErrors: [{ path: '/username', code: 'PATTERN' }],
-        });
-      }
-      const taken = [...db.admins.values()].some((admin) => admin.user.username === username);
+      const errors = [
+        ...(matchesUsernamePattern(usernameText) ? [] : [fieldError('/username', 'PATTERN')]),
+        ...(usernameText.length > 80 ? [fieldError('/username', 'SIZE')] : []),
+      ];
+      if (errors.length > 0) return bodyViolations(errors);
+
+      const taken = [...db.admins.values()].some((admin) => admin.user.username === usernameText);
       if (taken) {
         return problem(409, 'USERNAME_TAKEN', 'Username already taken');
       }
@@ -80,7 +110,7 @@ export function usersHandlers(db: MockDb): HttpHandler[] {
       const id = crypto.randomUUID();
       const createdAt = new Date().toISOString();
       const generatedPassword = generatePassword();
-      const user = { id, username, createdAt };
+      const user = { id, username: usernameText, createdAt };
       db.admins.set(id, { user, password: generatedPassword });
       const created: AdminUserCreated = { user, generatedPassword };
       return HttpResponse.json(created, { status: 201 });
@@ -91,8 +121,13 @@ export function usersHandlers(db: MockDb): HttpHandler[] {
       if (csrf !== undefined) return csrf;
       const rejection = sessionRejection(db);
       if (rejection !== undefined) return rejection;
+      const key = firstQueryKey(request);
+      if (key !== undefined) return unknownQueryParameter(key);
 
-      const adminId = String(params['adminId']);
+      const rawAdminId = String(params['adminId']);
+      const adminId = normalizeAdminId(rawAdminId);
+      if (adminId === undefined) return wrongType('adminId', 'UUID');
+
       if (adminId === db.sessionAdminId) {
         return problem(409, 'ADMIN_SELF_DELETE', 'The signed-in admin cannot be deleted');
       }

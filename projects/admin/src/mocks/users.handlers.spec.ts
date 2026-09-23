@@ -99,6 +99,23 @@ describe('GET /admin/users', () => {
       .map((u) => u['username']);
     expect(names).toEqual(['amy', 'bob']);
   });
+
+  // Fails if the unknown-query-key check on this operation is removed or moved before the session check.
+  it('rejects an unknown query key with 400', async () => {
+    const db = createDb();
+    signIn(db);
+    server?.use(...usersHandlers(db));
+
+    const res = await fetch(`${USERS_URL}?page=1`);
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body).toMatchObject({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Unknown query parameter',
+      params: { parameter: 'page' },
+    });
+  });
 });
 
 describe('POST /admin/users', () => {
@@ -143,7 +160,7 @@ describe('POST /admin/users', () => {
     const body = await jsonRecord(res);
     expect(body['code']).toBe('INVALID_REQUEST');
     expect(body['detail']).toBe('Missing required member');
-    expect(body['fieldErrors']).toEqual([{ path: '/username', code: 'REQUIRED' }]);
+    expect(body['fieldErrors']).toEqual([{ path: '/username', code: 'REQUIRED', params: {} }]);
   });
 
   it('rejects a username over 80 characters with 422 SIZE', async () => {
@@ -162,7 +179,7 @@ describe('POST /admin/users', () => {
     expect(body['code']).toBe('VALIDATION_FAILED');
     expect(body['title']).toBe('Section rejected');
     expect(body['detail']).toBe('One or more supplied fields are not acceptable');
-    expect(body['fieldErrors']).toEqual([{ path: '/username', code: 'SIZE' }]);
+    expect(body['fieldErrors']).toEqual([{ path: '/username', code: 'SIZE', params: {} }]);
   });
 
   it('rejects a username that fails the pattern with 422 PATTERN', async () => {
@@ -181,7 +198,49 @@ describe('POST /admin/users', () => {
     expect(body['code']).toBe('VALIDATION_FAILED');
     expect(body['title']).toBe('Section rejected');
     expect(body['detail']).toBe('One or more supplied fields are not acceptable');
-    expect(body['fieldErrors']).toEqual([{ path: '/username', code: 'PATTERN' }]);
+    expect(body['fieldErrors']).toEqual([{ path: '/username', code: 'PATTERN', params: {} }]);
+  });
+
+  // Fails if the PATTERN and SIZE violations stop being reported together, PATTERN first.
+  it('rejects a username that fails both the pattern and the size, PATTERN first', async () => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+
+    const res = await fetch(USERS_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'X-XSRF-TOKEN': token },
+      body: JSON.stringify({ username: 'A'.repeat(90) }),
+    });
+    expect(res.status).toBe(422);
+    const body = await jsonRecord(res);
+    expect(body).toMatchObject({
+      status: 422,
+      code: 'VALIDATION_FAILED',
+      fieldErrors: [
+        { path: '/username', code: 'PATTERN', params: {} },
+        { path: '/username', code: 'SIZE', params: {} },
+      ],
+    });
+  });
+
+  // Fails if a member the schema does not declare stops making the whole body malformed.
+  it('rejects a body with an undeclared member as malformed', async () => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+
+    const res = await fetch(USERS_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'X-XSRF-TOKEN': token },
+      body: JSON.stringify({ username: 'bea', role: 'x' }),
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body['code']).toBe('INVALID_REQUEST');
+    expect(body['detail']).toBe('Malformed request body');
   });
 
   it('rejects an existing username with 409 USERNAME_TAKEN', async () => {
@@ -249,6 +308,27 @@ describe('DELETE /admin/users/:adminId', () => {
     expect(res.status).toBe(401);
   });
 
+  // Fails if the UUID-shape check on the path id is removed or its wrongType wording drifts.
+  it('rejects an id that is not a UUID with 400', async () => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+
+    const res = await fetch(userUrl('not-a-uuid'), {
+      method: 'DELETE',
+      headers: { 'X-XSRF-TOKEN': token },
+    });
+    expect(res.status).toBe(400);
+    const body = await jsonRecord(res);
+    expect(body).toMatchObject({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'adminId', reason: 'type UUID' },
+    });
+  });
+
   it('rejects deleting the signed-in admin with 409 ADMIN_SELF_DELETE', async () => {
     const db = createDb();
     signIn(db);
@@ -264,37 +344,73 @@ describe('DELETE /admin/users/:adminId', () => {
     expect(body['code']).toBe('ADMIN_SELF_DELETE');
   });
 
-  it('rejects an unknown id with 404 NOT_FOUND', async () => {
+  // Fails if the id is no longer normalised before the self check, so an upper-cased id slips past it.
+  it('rejects deleting the signed-in admin by an upper-cased id, normalised first', async () => {
     const db = createDb();
     signIn(db);
     const token = primeToken(db);
     server?.use(...usersHandlers(db));
 
-    const res = await fetch(userUrl('does-not-exist'), {
+    const res = await fetch(userUrl(SEED_ADMIN.id.toUpperCase()), {
+      method: 'DELETE',
+      headers: { 'X-XSRF-TOKEN': token },
+    });
+    expect(res.status).toBe(409);
+    const body = await jsonRecord(res);
+    expect(body['code']).toBe('ADMIN_SELF_DELETE');
+  });
+
+  it('rejects an unknown id with 404 NOT_FOUND', async () => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+    const unknownId = '00000000-0000-4000-8000-000000000000';
+
+    const res = await fetch(userUrl(unknownId), {
       method: 'DELETE',
       headers: { 'X-XSRF-TOKEN': token },
     });
     expect(res.status).toBe(404);
     const body = await jsonRecord(res);
     expect(body['code']).toBe('NOT_FOUND');
-    expect(body['params']).toEqual({ adminId: 'does-not-exist' });
+    expect(body['params']).toEqual({ adminId: unknownId });
+  });
+
+  // Fails if the params.adminId the 404 carries stops being the normalised form of the requested id.
+  it('rejects the table-cased unknown id with 404, the normalised id in params', async () => {
+    const db = createDb();
+    signIn(db);
+    const token = primeToken(db);
+    server?.use(...usersHandlers(db));
+    const unknownId = '00000000-0000-4000-8000-00000000abcd';
+
+    const res = await fetch(userUrl(unknownId), {
+      method: 'DELETE',
+      headers: { 'X-XSRF-TOKEN': token },
+    });
+    expect(res.status).toBe(404);
+    const body = await jsonRecord(res);
+    expect(body['code']).toBe('NOT_FOUND');
+    expect(body['params']).toEqual({ adminId: unknownId });
   });
 
   it('deletes a non-self admin: 204, and it is removed', async () => {
     const db = createDb();
     signIn(db);
-    db.admins.set('second-id', {
-      user: { id: 'second-id', username: 'second', createdAt: '2026-09-20T00:00:00Z' },
+    const secondId = 'a0000000-0000-4000-8000-000000000002';
+    db.admins.set(secondId, {
+      user: { id: secondId, username: 'second', createdAt: '2026-09-20T00:00:00Z' },
       password: 'irrelevant-secret-000',
     });
     const token = primeToken(db);
     server?.use(...usersHandlers(db));
 
-    const res = await fetch(userUrl('second-id'), {
+    const res = await fetch(userUrl(secondId), {
       method: 'DELETE',
       headers: { 'X-XSRF-TOKEN': token },
     });
     expect(res.status).toBe(204);
-    expect(db.admins.has('second-id')).toBe(false);
+    expect(db.admins.has(secondId)).toBe(false);
   });
 });
