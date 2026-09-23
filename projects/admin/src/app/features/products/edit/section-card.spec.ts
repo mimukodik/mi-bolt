@@ -62,7 +62,12 @@ describe('SectionCard', () => {
     host.errorCount.set(2);
     await fixture.whenStable();
 
-    expect(element().querySelector('.adm-section-errors')?.textContent.trim()).toBe('2 hiba');
+    const badge: unknown = element().querySelector('.adm-section-errors');
+    if (!(badge instanceof HTMLElement)) {
+      throw new Error('Expected the error badge element');
+    }
+    expect(badge.textContent.trim()).toBe('2 hiba');
+    expect(badge.getAttribute('role')).toBeNull();
   });
 
   it('renders no number element when number is null', async () => {
