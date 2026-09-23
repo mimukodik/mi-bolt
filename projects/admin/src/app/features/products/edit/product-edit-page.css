@@ -1,0 +1,57 @@
+:host {
+  display: block;
+}
+
+/* Sticks at the top of the shell's scrolling main, whose scroll-padding-top (4 rem) matches its height. */
+.adm-edit-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  height: 4rem;
+  padding: 0 1rem;
+  background: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+/* One line at every width: a long name is cut with an ellipsis instead of wrapping. */
+.adm-edit-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--mat-sys-title-large);
+}
+
+/* Narrow screens keep the header to one line: the status chip gives way to the buttons. */
+@media (max-width: 599.98px) {
+  .adm-edit-status {
+    display: none;
+  }
+}
+
+.adm-edit-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 20rem;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+}
+
+.adm-edit-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.adm-edit-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

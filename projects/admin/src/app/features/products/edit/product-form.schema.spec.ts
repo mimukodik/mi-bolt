@@ -104,6 +104,29 @@ describe('productFormSchema: slug', () => {
         .map((error) => error.message),
     ).toEqual([MESSAGES.slugPattern]);
   });
+
+  it('locks the slug only when slugLocked is true', () => {
+    const unset = TestBed.runInInjectionContext(() =>
+      form(signal(emptyProductForm()), productFormSchema({ featuredOthers: signal(0) })),
+    );
+    expect(unset.slug().readonly()).toBe(false);
+
+    const unlocked = TestBed.runInInjectionContext(() =>
+      form(
+        signal(emptyProductForm()),
+        productFormSchema({ featuredOthers: signal(0), slugLocked: signal(false) }),
+      ),
+    );
+    expect(unlocked.slug().readonly()).toBe(false);
+
+    const locked = TestBed.runInInjectionContext(() =>
+      form(
+        signal(emptyProductForm()),
+        productFormSchema({ featuredOthers: signal(0), slugLocked: signal(true) }),
+      ),
+    );
+    expect(locked.slug().readonly()).toBe(true);
+  });
 });
 
 describe('productFormSchema: brand', () => {
