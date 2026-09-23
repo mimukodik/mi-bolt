@@ -54,11 +54,15 @@ describe('FormFieldMessage primitive', () => {
     expect(msg?.id).toBe('email-message');
   });
 
-  it('hides error text while the field is untouched and the form un-submitted', () => {
+  it('keeps the message hidden, empty and untagged while the field is untouched and the form un-submitted', () => {
     const { fixture } = setup();
-    expect(
-      getNativeElement(fixture).querySelector('[data-testid="form-field-message"]'),
-    ).toBeNull();
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="form-field-message"]',
+    );
+    expect(msg?.id).toBe('email-message');
+    expect(msg?.hidden).toBe(true);
+    expect(msg?.textContent.trim()).toBe('');
+    expect(msg?.hasAttribute('data-pointer')).toBe(false);
   });
 
   it('shows the error when the field is touched', () => {
@@ -68,6 +72,7 @@ describe('FormFieldMessage primitive', () => {
     const msg = getNativeElement(fixture).querySelector<HTMLElement>(
       '[data-testid="form-field-message"]',
     );
+    expect(msg?.hidden).toBe(false);
     expect(msg?.textContent).toContain('Az e-mail cím megadása kötelező.');
     expect(msg?.classList.contains('is-error')).toBe(true);
   });
@@ -76,9 +81,11 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.submitted.set(true);
     fixture.detectChanges();
-    expect(
-      getNativeElement(fixture).querySelector('[data-testid="form-field-message"]'),
-    ).not.toBeNull();
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="form-field-message"]',
+    );
+    expect(msg?.hidden).toBe(false);
+    expect(msg?.textContent.trim()).toBe('Az e-mail cím megadása kötelező.');
   });
 
   it('tags server errors with the originating JSON pointer', () => {
@@ -103,6 +110,7 @@ describe('FormFieldMessage primitive', () => {
     if (msg === null) {
       throw new Error('Expected form-field-message');
     }
+    expect(msg.hidden).toBe(false);
     expect(msg.textContent.trim()).toBe('Formátum: nev@példa.hu');
     expect(msg.classList.contains('is-help')).toBe(true);
     expect(msg.classList.contains('is-error')).toBe(false);
@@ -112,8 +120,10 @@ describe('FormFieldMessage primitive', () => {
     const { fixture, host } = setup();
     host.errors.set([]);
     fixture.detectChanges();
-    expect(
-      getNativeElement(fixture).querySelector('[data-testid="form-field-message"]'),
-    ).toBeNull();
+    const msg = getNativeElement(fixture).querySelector<HTMLElement>(
+      '[data-testid="form-field-message"]',
+    );
+    expect(msg?.hidden).toBe(true);
+    expect(msg?.textContent.trim()).toBe('');
   });
 });

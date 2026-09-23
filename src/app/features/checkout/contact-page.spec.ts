@@ -234,9 +234,10 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     expect(fixture.componentInstance.serverErrors()).not.toBeNull();
 
     const root = getRootElement(fixture);
-    const message = root.querySelector<HTMLElement>('#contact-email-message');
-    expect(message).not.toBeNull();
-    expect(message?.textContent).toContain('Adj meg egy érvényes e-mail címet.');
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe(
+      'Adj meg egy érvényes e-mail címet.',
+    );
     expect(root.querySelector('[data-testid="contact-save-error"]')).toBeNull();
   });
 
@@ -336,14 +337,18 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    expect(root.querySelector('#contact-email-message')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe(
+      'Adj meg egy érvényes e-mail címet.',
+    );
 
     // Editing the field whose value no longer matches the saved one
     // drops that field's server error.
     fixture.componentInstance.contactFields.email().value.set('masik@example.test');
     fixture.detectChanges();
 
-    expect(root.querySelector('#contact-email-message')).toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(true);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe('');
   });
 
   it('a 422 with errors on multiple fields marks them all (MIM-212)', async () => {
@@ -386,8 +391,14 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
 
     const root = getRootElement(fixture);
-    expect(root.querySelector('#contact-email-message')).not.toBeNull();
-    expect(root.querySelector('#contact-phone-message')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe(
+      'Adj meg egy érvényes e-mail címet.',
+    );
+    expect(root.querySelector<HTMLElement>('#contact-phone-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-phone-message')?.textContent.trim()).toBe(
+      'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+    );
   });
 
   it('editing one of multiple server-errored fields drops only that one (MIM-212)', async () => {
@@ -424,14 +435,24 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    expect(root.querySelector('#contact-email-message')).not.toBeNull();
-    expect(root.querySelector('#contact-phone-message')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe(
+      'Adj meg egy érvényes e-mail címet.',
+    );
+    expect(root.querySelector<HTMLElement>('#contact-phone-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-phone-message')?.textContent.trim()).toBe(
+      'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+    );
 
     fixture.componentInstance.contactFields.email().value.set('masik@example.test');
     fixture.detectChanges();
 
-    expect(root.querySelector('#contact-email-message')).toBeNull();
-    expect(root.querySelector('#contact-phone-message')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(true);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe('');
+    expect(root.querySelector<HTMLElement>('#contact-phone-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-phone-message')?.textContent.trim()).toBe(
+      'Adj meg érvényes magyar (+36) telefonszámot 8-9 jeggyel.',
+    );
   });
 
   it('editing fullName clears its server error (MIM-212)', async () => {
@@ -460,12 +481,16 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     fixture.detectChanges();
 
     const root = getRootElement(fixture);
-    expect(root.querySelector('#contact-fullname-message')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-fullname-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-fullname-message')?.textContent.trim()).toBe(
+      'Add meg a teljes neved (2–100 karakter).',
+    );
 
     fixture.componentInstance.contactFields.fullName().value.set('Másik Név');
     fixture.detectChanges();
 
-    expect(root.querySelector('#contact-fullname-message')).toBeNull();
+    expect(root.querySelector<HTMLElement>('#contact-fullname-message')?.hidden).toBe(true);
+    expect(root.querySelector('#contact-fullname-message')?.textContent.trim()).toBe('');
   });
 
   it('a seeded form with its fields cleared is blocked by client validation and never saved (MIM-212)', async () => {

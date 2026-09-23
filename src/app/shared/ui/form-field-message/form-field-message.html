@@ -1,12 +1,11 @@
-@if (showMessage()) {
-  <p
-    class="root mt-1"
-    data-testid="form-field-message"
-    [attr.data-pointer]="dataPointer()"
-    [class.is-error]="severity() === 'error'"
-    [class.is-help]="severity() === 'help'"
-    [id]="describedById()"
-  >
-    {{ visibleText() }}
-  </p>
-}
+<p
+  class="root mt-1"
+  data-testid="form-field-message"
+  [attr.data-pointer]="showMessage() ? dataPointer() : null"
+  [class.is-error]="severity() === 'error'"
+  [class.is-help]="severity() === 'help'"
+  [hidden]="!showMessage()"
+  [id]="describedById()"
+>
+  {{ showMessage() ? visibleText() : '' }}
+</p>

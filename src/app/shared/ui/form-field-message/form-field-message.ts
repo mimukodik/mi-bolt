@@ -26,6 +26,10 @@ export interface FieldError {
  * originating JSON pointer so the orchestrator can match the error back
  * to its parent payload.
  *
+ * The paragraph is always rendered, hidden and empty while no message
+ * shows, so an `aria-describedby` pointing at `describedById` always
+ * resolves and a pristine field's description reads nothing.
+ *
  * Required states:
  * - pristine      — no visible message.
  * - valid         — no visible message.
