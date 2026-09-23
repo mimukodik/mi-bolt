@@ -1,7 +1,7 @@
 @startuml admin-product-edit
 title Admin product edit, then seen on the storefront
 actor Admin
-participant "Admin\n/admin/" as ADM
+participant "Admin UI\n/admin/" as ADM
 participant "Commerce API\n/api/v1" as API
 participant "Storefront\n/" as SF
 actor Shopper

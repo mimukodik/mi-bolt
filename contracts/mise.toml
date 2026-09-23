@@ -1,5 +1,7 @@
 # Contract checks: the OpenAPI lint, the samples against their schemas, and the
-# PlantUML syntax of the sequence diagrams. The root task contracts:check calls check.
+# PlantUML syntax of the sequence diagrams. Run from the repository root with
+# 'mise -C contracts run check' (the CI workflow .github/workflows/contracts.yml
+# calls it).
 [tools]
 uv = "0.12.17"
 vacuum = "0.30.6"
