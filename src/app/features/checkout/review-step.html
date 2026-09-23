@@ -467,7 +467,13 @@
       </div>
 
       @if (ctaExplanation(); as explanation) {
-        <p class="cta-explanation" data-testid="review-cta-explanation" role="note">
+        <p
+          #ctaExplanation
+          class="cta-explanation"
+          data-testid="review-cta-explanation"
+          role="note"
+          tabindex="-1"
+        >
           {{ explanation }}
         </p>
       }

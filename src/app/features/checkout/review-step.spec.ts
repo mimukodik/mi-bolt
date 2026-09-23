@@ -591,6 +591,40 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(getCheckbox(getRoot(second), 'review-consent-terms-input').checked).toBe(false);
   });
 
+  it('RS-19d a changed cart clears the tick: a new ReviewStep on other lines starts unticked (owner 2026-09-23)', () => {
+    const first = createFixture();
+    checkTermsConsent(first);
+    first.destroy();
+    TestBed.resetTestingModule();
+
+    const second = createFixture({
+      cart: { ...CART, items: [{ ...CART_ITEM, quantity: 2 }], totalQuantity: 2 },
+    });
+    expect(getCheckbox(getRoot(second), 'review-consent-terms-input').checked).toBe(false);
+    expect(second.componentInstance.acceptedTerms()).toBe(false);
+  });
+
+  it('RS-19e the tick clears on the open page when the cart lines change (owner 2026-09-23)', () => {
+    const fixture = createFixture();
+    checkTermsConsent(fixture);
+    fixture.componentRef.setInput('cart', {
+      ...CART,
+      items: [{ ...CART_ITEM, quantity: 2 }],
+      totalQuantity: 2,
+    });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.acceptedTerms()).toBe(false);
+    expect(getCheckbox(getRoot(fixture), 'review-consent-terms-input').checked).toBe(false);
+  });
+
+  it('RS-19f a new cart version with the same lines keeps the tick', () => {
+    const fixture = createFixture();
+    checkTermsConsent(fixture);
+    fixture.componentRef.setInput('cart', { ...CART, version: 2 });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.acceptedTerms()).toBe(true);
+  });
+
   it('RS-20 blurring the unchecked checkbox moves it to the touched-invalid state and shows the message', () => {
     const fixture = createFixture();
     const root = getRoot(fixture);
@@ -696,6 +730,17 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(withIntentRoot.querySelectorAll('[data-testid="review-cta-explanation"]').length).toBe(
       0,
     );
+  });
+
+  it('RS-24b a blocked click with the terms ticked moves focus to the explanation', async () => {
+    const fixture = createFixture({ draft: CARD_DRAFT_COMPLETE, paymentIntent: null });
+    checkTermsConsent(fixture);
+    const root = getRoot(fixture);
+    getButton(root, 'review-submit').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+    expect(document.activeElement).toBe(getByTestId(root, 'review-cta-explanation'));
   });
 
   it('RS-25 an unconfirmed price change keeps the CTA from submitting ahead of every other reason', () => {
