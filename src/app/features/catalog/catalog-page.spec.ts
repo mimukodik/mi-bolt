@@ -109,8 +109,7 @@ function queryImage(parent: Element, selector: string): HTMLImageElement {
 
 // ---------------------------------------------------------------------------
 // MSW handler: minimal stub of GET /products so the SDK round-trip
-// resolves without spinning up the entire catalog mock. The shape
-// mirrors `docs/api/fixtures/products.json`.
+// resolves without spinning up the entire catalog mock.
 // ---------------------------------------------------------------------------
 
 function makeImage(id: string, src: string, alt: string): Variant['images'][number] {

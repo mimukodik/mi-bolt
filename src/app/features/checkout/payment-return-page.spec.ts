@@ -33,7 +33,6 @@ import { provideApiConfiguration } from '../../../app/api/generated/api-configur
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
-import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
 import { IdempotencyStore } from '../../../mocks/idempotency';
 import { Repository } from '../../../mocks/repository';
 import {
@@ -109,7 +108,6 @@ beforeEach((): void => {
   const clock = createFixedClock('2026-09-20T10:00:00.000Z');
   const ids = createDeterministicIds(1);
   const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
   const options = {
     repository,
     clock,

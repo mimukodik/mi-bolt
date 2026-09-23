@@ -43,8 +43,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
-import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
 import { type CreateHandlersOptions, createHandlers } from '../../../mocks/create-handlers';
+import '../../../mocks/cart/cart.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 import { Repository } from '../../../mocks/repository';
 import {
@@ -269,7 +269,6 @@ function makeEnv(): CreateHandlersOptions {
   const clock = createFixedClock('2026-09-20T10:00:00.000Z');
   const ids = createDeterministicIds(1);
   const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-  repository.loadProducts([DEMO_PRODUCT]);
   return { repository, clock, ids, scenario: DEFAULT_SCENARIO, apiRoot: '/api/v1' };
 }
 

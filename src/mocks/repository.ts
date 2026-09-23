@@ -1,16 +1,15 @@
 /**
  * T05 — in-memory mock repository.
  *
- * The repository is the single source of truth for the demo
- * catalogue, carts, checkout drafts, payment intents, idempotency
- * keys and committed order receipts. Each scenario owns its own
- * Repository instance (created via `new Repository(scenario, ids)`)
- * so two scenario instances cannot leak state into each other.
- *
- * T06 expanded the Product shape to the full variant matrix so
- * filter/sort/facet predicates can operate on every fixture field.
- * T07–T09 extend the surface with cart/checkout/payment/order
- * mutation methods.
+ * Holds one scenario's demo carts, committed order receipts and
+ * idempotency keys, plus the mock-local wire types those records
+ * use and the `Product` shape (with `Variant`, `SpecGroup` and
+ * `SpecRow`) that types `DEMO_PRODUCT` in `cart/cart.handlers.ts`.
+ * Each scenario owns its own Repository instance (created via
+ * `new Repository(scenario, ids, clock)`) so two scenario instances
+ * cannot leak state into each other. The product catalogue is not
+ * here: the handlers read it from `catalogStore`
+ * (`catalog/catalog.handlers.ts`).
  */
 
 /** Money in whole HUF, no minor units. */
@@ -123,9 +122,6 @@ import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 const CART_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export class Repository {
-  private readonly products = new Map<string, Product>();
-  private readonly productsBySlug = new Map<string, Product>();
-  private readonly variantsById = new Map<string, { product: Product; variant: Variant }>();
   private readonly carts = new Map<string, Cart>();
   private readonly cartsBySession = new Map<string, string>();
   private readonly orders = new Map<string, OrderReceipt>();
@@ -144,39 +140,6 @@ export class Repository {
   /** Read-only access to the scenario descriptor. */
   getScenario(): ScenarioDescriptor {
     return this.scenario;
-  }
-
-  /**
-   * Replaces the catalog contents with the supplied fixtures. Called
-   * by the catalog handlers (T06) so two scenario instances cannot
-   * share product state. The repository itself stays scenario-owned.
-   */
-  loadProducts(fixtures: readonly Product[]): void {
-    this.products.clear();
-    this.productsBySlug.clear();
-    this.variantsById.clear();
-    for (const product of fixtures) {
-      this.products.set(product.id, product);
-      this.productsBySlug.set(product.slug, product);
-      for (const variant of product.variants) {
-        this.variantsById.set(variant.id, { product, variant });
-      }
-    }
-  }
-
-  /** Lists every product currently in the catalog. */
-  listProducts(): readonly Product[] {
-    return Array.from(this.products.values());
-  }
-
-  /** Looks up a product by id. */
-  getProductById(id: string): Product | undefined {
-    return this.products.get(id);
-  }
-
-  /** Looks up a product by slug. */
-  getProductBySlug(slug: string): Product | undefined {
-    return this.productsBySlug.get(slug);
   }
 
   /** Creates an empty cart for the given demo session and returns it. */
@@ -243,11 +206,6 @@ export class Repository {
       throw new Error(`[mi-bolt] repository: unknown cart id ${cart.id}`);
     }
     this.carts.set(cart.id, cart);
-  }
-
-  /** Looks up a variant by id across every loaded product. */
-  getVariant(variantId: string): { product: Product; variant: Variant } | undefined {
-    return this.variantsById.get(variantId);
   }
 
   /** Lists every cart owned by the scenario. Tests use it for isolation checks. */
