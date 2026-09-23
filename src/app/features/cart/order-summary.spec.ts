@@ -94,6 +94,27 @@ describe('OrderSummary', () => {
     expect(paymentFeeRoot?.getAttribute('data-size')).toBe('md');
   });
 
+  it('titles the inverse card "Összesen", like yettel.hu (owner 2026-09-23)', () => {
+    const { fixture, host } = setup();
+    host.inverse.set(true);
+    fixture.detectChanges();
+    const root = getNativeElement(fixture);
+    const title = root.querySelector<HTMLElement>('h2.title');
+    expect(title).not.toBeNull();
+    expect(title?.textContent.trim()).toBe('Összesen');
+    expect(root.querySelector('[data-testid="order-summary"]')?.getAttribute('aria-label')).toBe(
+      'Rendelés összesítése',
+    );
+  });
+
+  it('keeps "Rendelés összesítése" as the title of the default card', () => {
+    const { fixture } = setup();
+    const root = getNativeElement(fixture);
+    const title = root.querySelector<HTMLElement>('h2.title');
+    expect(title).not.toBeNull();
+    expect(title?.textContent.trim()).toBe('Rendelés összesítése');
+  });
+
   it('projects consumer content inside the card after the footnote (MIM-211)', () => {
     const { fixture, host } = setup();
     host.footnote.set('Bruttó árak.');

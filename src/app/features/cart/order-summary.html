@@ -4,7 +4,7 @@
   data-testid="order-summary"
   [attr.data-inverse]="inverse() ? '' : null"
 >
-  <h2 class="title m-0 font-bold">Rendelés összesítése</h2>
+  <h2 class="title m-0 font-bold">{{ inverse() ? 'Összesen' : 'Rendelés összesítése' }}</h2>
 
   <div class="rows flex flex-col gap-3">
     <div class="row row--subtotal" data-testid="order-summary-subtotal">
