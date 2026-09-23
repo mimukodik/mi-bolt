@@ -105,8 +105,8 @@ function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): Colo
       if (!samples.has(option.colorCode)) samples.set(option.colorCode, option);
     }
   }
-  // Walk products by recommended order (preserved by `applyFilters`),
-  // then colorOrder within the product.
+  // Walk products by the filter's sort order, then colorOrder within
+  // each product.
   const firstEntryBySlug = new Map<string, CatalogEntry>();
   for (const entry of matched) {
     if (!firstEntryBySlug.has(entry.product.slug)) {

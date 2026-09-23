@@ -85,6 +85,8 @@ const DEFAULT_STORAGE_FACET = [
   { value: '256', label: '256 GB', count: 27 },
   { value: '512', label: '512 GB', count: 17 },
 ];
+// Disjunctive colour count: an entry counts for a colour when it has a
+// variant of that colour passing every other filter (owner 2026-09-22).
 const DEFAULT_FIRST_COLOR = { value: 'zold', label: 'Zöld', swatchHex: '#7C9F63', count: 3 };
 const DEFAULT_IS5G = 54;
 const DEFAULT_INSTOCK = 55;
