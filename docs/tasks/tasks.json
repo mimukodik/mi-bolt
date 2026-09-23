@@ -1506,7 +1506,6 @@
     "files": [
       "tests/",
       "docs/mi-bolt/spec/coverage-policy.json",
-      "scripts/check-traceability.mjs",
       "scripts/check-test-policy.mjs"
     ],
     "interface": "Outputs independent unit reports, scenario coverage report, file manifest and requirement traceability.",
