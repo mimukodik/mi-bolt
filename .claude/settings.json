@@ -68,6 +68,7 @@
   "enabledMcpjsonServers": [
     "chrome-devtools",
     "angular-cli",
+    "playwright-test",
     "linear-server",
     "spring-tools"
   ]

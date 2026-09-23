@@ -121,9 +121,11 @@ behind that form. Subagents inherit the MCP tools of the main conversation, so
 string entry there references an already-configured server and shares the
 parent's connection.
 
-`.mcp.json` configures `chrome-devtools` and `angular-cli`, and those two are
-the only servers any definition here grants; every other server a session
-connects goes to no definition here.
+`.mcp.json` configures `angular-cli`, `chrome-devtools`, `playwright-test`
+and `spring-tools`. The first three are the only servers any definition here
+grants, `playwright-test` to the three `playwright-test-*` definitions alone;
+`spring-tools` and every other server a session connects go to no definition
+here.
 
 `chrome-devtools` goes to `real-browser-sonnet` alone, whole-server, and that
 agent must never use the `claude-in-chrome` or `computer-use` servers.
@@ -168,7 +170,8 @@ adding either is the user's call rather than a definition's.
 
 A grant does nothing unless the session connects the server.
 `.claude/settings.json` lists `chrome-devtools`, `angular-cli`,
-`linear-server` and `spring-tools` in `enabledMcpjsonServers`, so that enablement is tracked and travels with a
+`playwright-test`, `linear-server` and `spring-tools` in
+`enabledMcpjsonServers`, so that enablement is tracked and travels with a
 clone. Where a grant here looks dead, check that the server is still named in
 that tracked file rather than only in an untracked
 `.claude/settings.local.json`, which enables it on one machine and nowhere
