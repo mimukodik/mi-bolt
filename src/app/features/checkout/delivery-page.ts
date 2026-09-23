@@ -8,7 +8,7 @@
  * save is rendered here rather than in `DeliveryStep`, because the contract's
  * `saveState` is a plain `AsyncStatus` with no room for a message.
  */
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import {
@@ -47,6 +47,7 @@ type LoadState =
 export class DeliveryPage {
   private readonly checkoutFacade = inject(CheckoutFacade);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** The Signal Forms field tree the delivery step binds to. The facade
    *  no longer owns a form (MIM-212 S3-C1); this container builds it
@@ -169,6 +170,9 @@ export class DeliveryPage {
         return;
       }
 
+      // The three sections are saved; a shopper who left the step while
+      // they were in flight is not pulled back into the wizard.
+      if (this.destroyRef.destroyed) return;
       await this.router.navigate(['/penztar/ellenorzes']);
     } finally {
       if (this.saveFailure() === null) {

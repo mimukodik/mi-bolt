@@ -519,6 +519,38 @@ describe('DP-07..DP-09 gated section saves', () => {
     expect(navigate).toHaveBeenCalledWith(['/penztar/ellenorzes']);
   });
 
+  it('DP-15 a save sequence that lands after the page is gone does not navigate', async () => {
+    const fixture = await createReadySettled();
+    const facade = TestBed.inject(CheckoutFacade);
+    const fullSession = buildFullSession();
+    let releaseDelivery!: (value: CheckoutResult<CheckoutSession>) => void;
+    const updateDelivery = vi.spyOn(facade, 'updateDelivery').mockImplementation(
+      () =>
+        new Promise<CheckoutResult<CheckoutSession>>((r) => {
+          releaseDelivery = r;
+        }),
+    );
+    const updatePayment = vi
+      .spyOn(facade, 'updatePayment')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    const updateBilling = vi
+      .spyOn(facade, 'updateBilling')
+      .mockResolvedValue({ ok: true, value: fullSession });
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fillCompleteHomeDelivery(fixture);
+    const action = fixture.componentInstance.onContinueRequested();
+    fixture.destroy();
+    releaseDelivery({ ok: true, value: fullSession });
+    await action;
+
+    expect(updateDelivery).toHaveBeenCalledTimes(1);
+    expect(updatePayment).toHaveBeenCalledTimes(1);
+    expect(updateBilling).toHaveBeenCalledTimes(1);
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
   it('DP-08 a pickup selection sends no address key', async () => {
     const fixture = await createReadySettled();
     const facade = TestBed.inject(CheckoutFacade);

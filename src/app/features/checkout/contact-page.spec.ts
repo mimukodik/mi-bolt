@@ -17,7 +17,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CheckoutFacade } from './checkout.facade';
 import { ContactPage } from './contact-page';
-import { CONTACT_DRAFT_SAVER, ContactStep, type ContactDraftSaver } from './contact-step';
+import {
+  CONTACT_DRAFT_SAVER,
+  ContactStep,
+  type ContactDraftSaver,
+  type ContactSaveResult,
+} from './contact-step';
 
 import type { CheckoutSession } from '../../api/generated/models/checkout-session';
 
@@ -491,6 +496,59 @@ describe('ContactPage owns the save call and post-save navigation', () => {
 
     expect(root.querySelector<HTMLElement>('#contact-fullname-message')?.hidden).toBe(true);
     expect(root.querySelector('#contact-fullname-message')?.textContent.trim()).toBe('');
+  });
+
+  it('a save that lands after the page is gone does not navigate', async () => {
+    let release!: (value: ContactSaveResult) => void;
+    const saver: ContactDraftSaver = () =>
+      new Promise((r) => {
+        release = r;
+      });
+    const fixture = createContactPage(saver);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+
+    fillModel(fixture);
+    const action = fixture.componentInstance.onContinue();
+    fixture.destroy();
+    release({ ok: true });
+    await action;
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('a 422 that lands after the page is gone neither focuses nor reports an error', async () => {
+    let release!: (value: ContactSaveResult) => void;
+    const saver: ContactDraftSaver = () =>
+      new Promise((r) => {
+        release = r;
+      });
+    const fixture = createContactPage(saver);
+    const step = getContactStep(fixture);
+    const focusSummarySpy = vi.spyOn(step, 'focusSummary');
+    const focusFirstInvalidFieldSpy = vi.spyOn(step, 'focusFirstInvalidField');
+
+    fillModel(fixture);
+    const action = fixture.componentInstance.onContinue();
+    fixture.destroy();
+    release({
+      ok: false,
+      message: 'x',
+      fieldErrors: {
+        email: [
+          {
+            code: 'EMAIL_FORMAT',
+            message: 'Adj meg egy érvényes e-mail címet.',
+            pointer: '/email',
+          },
+        ],
+      },
+    });
+    await action;
+
+    expect(focusSummarySpy).not.toHaveBeenCalled();
+    expect(focusFirstInvalidFieldSpy).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.saveState()).not.toBe('error');
   });
 
   it('a seeded form with its fields cleared is blocked by client validation and never saved (MIM-212)', async () => {

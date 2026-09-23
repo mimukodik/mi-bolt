@@ -596,6 +596,117 @@ describe('ReviewPage maps submit outcomes', () => {
     writableOf<unknown>(checkout, 'sessionWritable').set(null);
     expect(page.viewState()).toBe('loading');
   });
+
+  it('RP-24 a committed outcome that lands after the page is gone still navigates to the receipt', async () => {
+    const h = harness();
+
+    let releaseOutcome!: (value: SubmitOutcome) => void;
+    const submission = TestBed.inject(OrderSubmission);
+    vi.spyOn(submission, 'submitOrder').mockImplementation(
+      () =>
+        new Promise<SubmitOutcome>((r) => {
+          releaseOutcome = r;
+        }),
+    );
+
+    await h.fixture.whenStable();
+    const page = h.fixture.componentInstance;
+
+    const submitCall = page.onSubmitRequested();
+    h.fixture.destroy();
+    releaseOutcome({ kind: 'committed', orderId: 'ord-1', orderNumber: 'DEMO-000001' });
+    await submitCall;
+
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/siker', 'ord-1']);
+  });
+
+  it('RP-25 a payment-required outcome that lands after the page is gone does not leave the SPA', async () => {
+    const h = harness();
+
+    let releaseOutcome!: (value: SubmitOutcome) => void;
+    const submission = TestBed.inject(OrderSubmission);
+    vi.spyOn(submission, 'submitOrder').mockImplementation(
+      () =>
+        new Promise<SubmitOutcome>((r) => {
+          releaseOutcome = r;
+        }),
+    );
+
+    await h.fixture.whenStable();
+    const page = h.fixture.componentInstance;
+
+    const submitCall = page.onSubmitRequested();
+    h.fixture.destroy();
+    releaseOutcome({
+      kind: 'payment-required',
+      intentId: 'pi-1',
+      redirectUrl: '/demo-fizetes/pi-1',
+    });
+    await submitCall;
+
+    expect(h.assignSpy).not.toHaveBeenCalled();
+  });
+
+  it('RP-26 an incomplete outcome that lands after the page is gone does not navigate', async () => {
+    const h = harness();
+
+    let releaseOutcome!: (value: SubmitOutcome) => void;
+    const submission = TestBed.inject(OrderSubmission);
+    vi.spyOn(submission, 'submitOrder').mockImplementation(
+      () =>
+        new Promise<SubmitOutcome>((r) => {
+          releaseOutcome = r;
+        }),
+    );
+
+    await h.fixture.whenStable();
+    const page = h.fixture.componentInstance;
+
+    const submitCall = page.onSubmitRequested();
+    h.fixture.destroy();
+    releaseOutcome({
+      kind: 'incomplete',
+      route: '/penztar/szallitas?navigationReason=incomplete',
+    });
+    await submitCall;
+
+    expect(h.navigateByUrlSpy).not.toHaveBeenCalled();
+  });
+
+  it('RP-27 a payment intent created after the page is gone does not leave the SPA', async () => {
+    const h = harness();
+    const checkout = TestBed.inject(CheckoutFacade);
+
+    let releaseIntent!: (value: { ok: true; value: PaymentIntent }) => void;
+    vi.spyOn(checkout, 'createPaymentIntent').mockImplementation(
+      () =>
+        new Promise((r) => {
+          releaseIntent = r;
+        }),
+    );
+
+    await h.fixture.whenStable();
+    const page = h.fixture.componentInstance;
+
+    const action = page.onNewPayment();
+    h.fixture.destroy();
+    releaseIntent({
+      ok: true,
+      value: {
+        id: 'pi-new',
+        status: 'requires_action',
+        amount: { amount: 89990, currency: 'HUF' },
+        createdAt: '2026-09-20T10:00:00.000Z',
+        expiresAt: '2026-09-20T10:15:00.000Z',
+        redirectUrl: '/demo-fizetes/pi-new',
+        returnUrl: '/penztar/ellenorzes',
+      },
+    });
+    await action;
+
+    expect(h.assignSpy).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -687,6 +687,81 @@ describe('SuccessStep', () => {
     expect(navOrder).toBeLessThan(startOrder);
   });
 
+  it('SP-22 the new-shopping action does not navigate once the page is gone, and still clears the receipt', async () => {
+    await seedCompleteCashDraft();
+    await placeCodOrder();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const cart = TestBed.inject(CartFacade);
+    const router = TestBed.inject(Router);
+
+    const orderId = checkout.order()?.id;
+    if (orderId === undefined) throw new Error('expected an order on the facade');
+
+    const fixture = await mountSuccessPage(orderId);
+
+    let releaseEnsureCart!: () => void;
+    const ensureCartSpy = vi.spyOn(cart, 'ensureCart').mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          releaseEnsureCart = r;
+        }),
+    );
+    const startSpy = vi.spyOn(checkout, 'startNewPurchase').mockImplementation(() => undefined);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const actionButton = queryHTMLElement(document, '[data-testid="success-new-shopping"] button');
+    if (!(actionButton instanceof HTMLButtonElement)) {
+      throw new Error('expected the new-shopping action to be an HTMLButtonElement');
+    }
+    actionButton.click();
+    fixture.destroy();
+    releaseEnsureCart();
+    await vi.waitFor(() => {
+      expect(ensureCartSpy).toHaveBeenCalledTimes(1);
+      expect(startSpy).toHaveBeenCalledTimes(1);
+    });
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('SP-23 a failed new-shopping action does not send a page that is gone to the cart', async () => {
+    await seedCompleteCashDraft();
+    await placeCodOrder();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const cart = TestBed.inject(CartFacade);
+    const router = TestBed.inject(Router);
+
+    const orderId = checkout.order()?.id;
+    if (orderId === undefined) throw new Error('expected an order on the facade');
+
+    const fixture = await mountSuccessPage(orderId);
+
+    let releaseEnsureCart!: (reason: unknown) => void;
+    const ensureCartSpy = vi.spyOn(cart, 'ensureCart').mockImplementation(
+      () =>
+        new Promise<void>((_, reject) => {
+          releaseEnsureCart = reject;
+        }),
+    );
+    const startSpy = vi.spyOn(checkout, 'startNewPurchase').mockImplementation(() => undefined);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const actionButton = queryHTMLElement(document, '[data-testid="success-new-shopping"] button');
+    if (!(actionButton instanceof HTMLButtonElement)) {
+      throw new Error('expected the new-shopping action to be an HTMLButtonElement');
+    }
+    actionButton.click();
+    fixture.destroy();
+    releaseEnsureCart(new Error('down'));
+    await vi.waitFor(() => {
+      expect(fixture.componentInstance.startingNewCart()).toBe(false);
+    });
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(ensureCartSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('SP-21 the success mark is yettel check-circle: 32px, two filled paths, no stroke', async () => {
     await seedCompleteCashDraft();
     const placed = await placeCodOrder();
