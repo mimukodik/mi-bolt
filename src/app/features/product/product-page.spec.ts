@@ -1437,3 +1437,116 @@ describe('owner 2026-09-22: a refused add names the per-product limit', () => {
     expect(queryElement(root, '.cta-desktop').textContent).not.toContain('legfeljebb');
   });
 });
+
+describe('an add that settles after another variant was picked shows no message', () => {
+  // Holds `POST /cart/items` until the case calls `release()`, so the
+  // shopper can switch colour while the add is in flight.
+  function holdAdd(respond: () => Response): { release: () => void } {
+    const held = { release: (): void => undefined };
+    server.use(
+      http.post(
+        `${BASE_URL}/cart/items`,
+        () =>
+          new Promise<Response>((resolve) => {
+            held.release = (): void => {
+              resolve(respond());
+            };
+          }),
+      ),
+    );
+    return held;
+  }
+
+  function cartWithGraphite256(): Cart {
+    return {
+      id: 'cart-test-page-1',
+      version: 2,
+      items: [
+        {
+          variantId: 'demo-one-5g-graphite-256',
+          variantSlug: 'demo-one-5g-graphite-256-variant',
+          productId: 'demo-one-5g',
+          productName: 'Demo One 5G',
+          productSlug: 'demo-one-5g',
+          colorName: 'Grafit',
+          storageGb: 256,
+          quantity: 1,
+          unitPrice: { amount: 339_990, currency: 'HUF' },
+          lineTotal: { amount: 339_990, currency: 'HUF' },
+          maxQuantity: 5,
+          availability: 'in_stock',
+          image: {
+            id: 'demo-one-5g-graphite-256-front',
+            src: '/assets/products/graphite-front.webp',
+            alt: 'Demo One 5G',
+            width: 800,
+            height: 800,
+          },
+        },
+      ],
+      lineCount: 1,
+      totalQuantity: 1,
+      subtotal: { amount: 339_990, currency: 'HUF' },
+      expiresAt: '2026-12-31T23:59:59.000Z',
+      notices: [],
+    };
+  }
+
+  it('drops the success message of the previous variant', async () => {
+    const held = holdAdd(() =>
+      HttpResponse.json(cartWithGraphite256(), { status: 200, headers: { ETag: '"2"' } }),
+    );
+    const { root, fixture, host, cartFacade, tick } = await createHarness();
+
+    queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button').click();
+    await tick();
+    queryButton(root, '[data-testid="variant-color-silver"]').click();
+    await tick();
+    held.release();
+    await tick();
+    fixture.detectChanges();
+
+    expect(host.page()?.addSuccessMessage()).toBeNull();
+    expect(
+      queryElement(root, '.cta-desktop').querySelector('[data-testid="status-message"]'),
+    ).toBeNull();
+    expect(host.page()?.addPending()).toBe(false);
+    // The cart itself took the add; only the page's message is dropped.
+    expect(cartFacade.cart()?.items.map((item) => item.variantId)).toEqual([
+      'demo-one-5g-graphite-256',
+    ]);
+  });
+
+  it('drops the refusal of the previous variant', async () => {
+    const held = holdAdd(() =>
+      HttpResponse.json(
+        {
+          type: 'urn:mi-bolt:problem:quantity-limit',
+          title: 'Conflict',
+          status: 409,
+          code: 'QUANTITY_LIMIT',
+          detail: 'Merged quantity would exceed the line maximum',
+          traceId: 't',
+          fieldErrors: [],
+          params: { max: 3, requested: 4 },
+        },
+        { status: 409 },
+      ),
+    );
+    const { root, fixture, host, tick } = await createHarness();
+
+    queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button').click();
+    await tick();
+    queryButton(root, '[data-testid="variant-color-silver"]').click();
+    await tick();
+    held.release();
+    await tick();
+    fixture.detectChanges();
+
+    expect(host.page()?.addError()).toBeNull();
+    expect(
+      queryElement(root, '.cta-desktop').querySelector('[data-testid="status-message"]'),
+    ).toBeNull();
+    expect(host.page()?.addPending()).toBe(false);
+  });
+});

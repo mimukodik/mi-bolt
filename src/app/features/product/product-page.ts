@@ -341,6 +341,11 @@ export class ProductPage {
     try {
       await this.cartFacade.ensureCart();
       await this.cartFacade.addItem(intent.variantId, intent.quantity);
+      // The shopper picked another colour or storage while this add was
+      // in flight. Its outcome belongs to the old selection, so the page
+      // shows neither message under the new one; the cart itself has
+      // taken the add.
+      if (this.selectedVariant()?.id !== intent.variantId) return;
       // The queue's dispatch resolves the failure signals for THIS
       // intent synchronously before `addItem()`'s own promise
       // settles, so reading them here reflects this call's own
