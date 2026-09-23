@@ -30,6 +30,7 @@ import type { Money } from '../app/api/generated/models/money';
 import type { Problem } from '../app/api/generated/models/problem';
 import type { SortDirection } from '../app/api/generated/models/sort-direction';
 import {
+  javaTrim,
   notAcceptable,
   serviceUnavailable,
   unknownQueryParameter,
@@ -174,13 +175,13 @@ function convertQ(searchParams: URLSearchParams): string | undefined {
   return values.length === 0 ? undefined : values.join(',');
 }
 
-/** None → `[]`; one value → split on `,`; two or more → as given, no splitting. Never fails. */
+/** None → `[]`; one value → split on `,`, each element trimmed like Java's `String.trim()` (Spring's `StringToCollectionConverter`); two or more → as given. Never fails. */
 function convertBrand(searchParams: URLSearchParams): readonly string[] {
   const values = searchParams.getAll('brand');
   if (values.length === 0) return [];
   if (values.length === 1) {
     const [only] = values;
-    return only === '' ? [] : only.split(',');
+    return only === '' ? [] : only.split(',').map(javaTrim);
   }
   return values;
 }

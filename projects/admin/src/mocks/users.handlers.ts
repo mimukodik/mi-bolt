@@ -7,6 +7,7 @@ import {
   fieldError,
   firstQueryKey,
   isTextual,
+  javaTrim,
   malformedBody,
   readJsonObject,
   unknownQueryParameter,
@@ -42,15 +43,6 @@ function generatePassword(): string {
 const ADMIN_ID_GROUP_WIDTHS = [8, 4, 4, 4, 12] as const;
 const ADMIN_ID_GROUP_PATTERN = /^\+?([0-9a-fA-F]+)$/;
 const LONG_MAX = 0x7fffffffffffffffn;
-
-/** Java's `String.trim()`: strips leading and trailing characters whose code is at most `0x20`. */
-function javaTrim(value: string): string {
-  let start = 0;
-  let end = value.length;
-  while (start < end && value.charCodeAt(start) <= 0x20) start += 1;
-  while (end > start && value.charCodeAt(end - 1) <= 0x20) end -= 1;
-  return value.slice(start, end);
-}
 
 /**
  * One `-`-separated group the way `Long.parseLong(group, 16)` reads it: an

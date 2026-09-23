@@ -152,7 +152,13 @@ describe('productsReadHandlers list — auth and validation', () => {
     server?.use(...adminHandlers(createDb()));
     const { status, body } = await getJson(LIST_URL);
     expect(status).toBe(401);
-    expect(body).toMatchObject({ status: 401, code: 'UNAUTHENTICATED' });
+    expect(asProblem(body)).toEqual({
+      status: 401,
+      code: 'UNAUTHENTICATED',
+      title: 'Authentication required',
+      detail: 'Authentication required',
+      params: undefined,
+    });
   });
 
   // Fails if firstUnknownQueryParam ever lets an undeclared key through phase 1,
@@ -755,9 +761,11 @@ describe('productsReadHandlers detail', () => {
     signedIn();
     const { status, body } = await getJson(detailUrl(99999));
     expect(status).toBe(404);
-    expect(body).toMatchObject({
+    expect(asProblem(body)).toEqual({
       status: 404,
       code: 'NOT_FOUND',
+      title: 'Resource not found',
+      detail: 'Product not found',
       params: { productId: 99999 },
     });
   });
