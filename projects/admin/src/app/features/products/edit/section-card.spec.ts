@@ -33,12 +33,15 @@ describe('SectionCard', () => {
     await fixture.whenStable();
   });
 
-  function element(): HTMLElement {
-    const raw: unknown = fixture.nativeElement;
+  function asHtmlElement(raw: unknown, message: string): HTMLElement {
     if (!(raw instanceof HTMLElement)) {
-      throw new Error('Expected the host element');
+      throw new Error(message);
     }
     return raw;
+  }
+
+  function element(): HTMLElement {
+    return asHtmlElement(fixture.nativeElement, 'Expected the host element');
   }
 
   function titleText(): string | undefined {
@@ -62,10 +65,10 @@ describe('SectionCard', () => {
     host.errorCount.set(2);
     await fixture.whenStable();
 
-    const badge: unknown = element().querySelector('.adm-section-errors');
-    if (!(badge instanceof HTMLElement)) {
-      throw new Error('Expected the error badge element');
-    }
+    const badge = asHtmlElement(
+      element().querySelector('.adm-section-errors'),
+      'Expected the error badge element',
+    );
     expect(badge.textContent.trim()).toBe('2 hiba');
     expect(badge.getAttribute('role')).toBeNull();
   });
