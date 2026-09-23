@@ -264,9 +264,22 @@ function qPosition(entry: CatalogEntry, q: string): number {
   return entry.searchKey.indexOf(q);
 }
 
-/** Case-insensitive "brand name" comparison key for name sorts. */
+/** "brand name", the backend's name-sort key (CatalogService.java
+ *  NAME_ASC / NAME_DESC). */
 function nameKey(entry: CatalogEntry): string {
   return entry.nameKey;
+}
+
+/** Java's `String.CASE_INSENSITIVE_ORDER`, the backend's order for brand
+ *  and product names: the code-unit order of the lowercased strings, not
+ *  a locale collation (a Hungarian collation sorts "Zte" before "Zsolt";
+ *  the backend does not). */
+export function compareCaseInsensitive(a: string, b: string): number {
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  if (x < y) return -1;
+  if (x > y) return 1;
+  return 0;
 }
 
 /**
@@ -337,7 +350,7 @@ export function applyFilters(
   return out;
 }
 
-/** Numeric id used as the final tie-break on non-name sorts. */
+/** Numeric product id, the second key of the recommended order. */
 function entryId(entry: CatalogEntry): number {
   const n = Number(entry.product.id);
   return Number.isFinite(n) ? n : 0;
@@ -350,6 +363,15 @@ export function sortEntries(
   q: string | undefined,
 ): CatalogEntry[] {
   const copy = entries.slice();
+  // CatalogService.java RECOMMENDED_ENTRY_ORDER: rank, then product id,
+  // then storage. Every sort except the name sorts ends in it, like the
+  // backend.
+  const recommendedOrder = (a: CatalogEntry, b: CatalogEntry): number => {
+    if (a.ranking.rank !== b.ranking.rank) return a.ranking.rank - b.ranking.rank;
+    const idCmp = entryId(a) - entryId(b);
+    if (idCmp !== 0) return idCmp;
+    return a.storageGb - b.storageGb;
+  };
   const recommendedCmp = (a: CatalogEntry, b: CatalogEntry): number => {
     if (q !== undefined && q.trim().length > 0) {
       const qn = q.trim().toLowerCase().normalize('NFC');
@@ -357,15 +379,7 @@ export function sortEntries(
       const pb = qPosition(b, qn);
       if (pa !== pb) return pa - pb;
     }
-    if (a.ranking.rank !== b.ranking.rank) return a.ranking.rank - b.ranking.rank;
-    const idCmp = entryId(a) - entryId(b);
-    if (idCmp !== 0) return idCmp;
-    return a.storageGb - b.storageGb;
-  };
-  const numericTieBreak = (a: CatalogEntry, b: CatalogEntry): number => {
-    const idCmp = entryId(a) - entryId(b);
-    if (idCmp !== 0) return idCmp;
-    return a.storageGb - b.storageGb;
+    return recommendedOrder(a, b);
   };
 
   switch (mode) {
@@ -376,47 +390,47 @@ export function sortEntries(
       copy.sort((a, b) => {
         const cmp = b.releasedAt.localeCompare(a.releasedAt);
         if (cmp !== 0) return cmp;
-        return numericTieBreak(a, b);
+        return recommendedOrder(a, b);
       });
       break;
     case 'oldest':
       copy.sort((a, b) => {
         const cmp = a.releasedAt.localeCompare(b.releasedAt);
         if (cmp !== 0) return cmp;
-        return numericTieBreak(a, b);
+        return recommendedOrder(a, b);
       });
       break;
     case 'popularity':
       copy.sort((a, b) => {
         const cmp = b.ranking.popularityScore - a.ranking.popularityScore;
         if (cmp !== 0) return cmp;
-        return numericTieBreak(a, b);
+        return recommendedOrder(a, b);
       });
       break;
     case 'price_asc':
       copy.sort((a, b) => {
         const cmp = a.variant.price.amount - b.variant.price.amount;
         if (cmp !== 0) return cmp;
-        return numericTieBreak(a, b);
+        return recommendedOrder(a, b);
       });
       break;
     case 'price_desc':
       copy.sort((a, b) => {
         const cmp = b.variant.price.amount - a.variant.price.amount;
         if (cmp !== 0) return cmp;
-        return numericTieBreak(a, b);
+        return recommendedOrder(a, b);
       });
       break;
     case 'name_asc':
       copy.sort((a, b) => {
-        const cmp = nameKey(a).localeCompare(nameKey(b), 'hu');
+        const cmp = compareCaseInsensitive(nameKey(a), nameKey(b));
         if (cmp !== 0) return cmp;
         return a.storageGb - b.storageGb;
       });
       break;
     case 'name_desc':
       copy.sort((a, b) => {
-        const cmp = nameKey(b).localeCompare(nameKey(a), 'hu');
+        const cmp = compareCaseInsensitive(nameKey(b), nameKey(a));
         if (cmp !== 0) return cmp;
         return a.storageGb - b.storageGb;
       });

@@ -922,6 +922,130 @@ describe('GET /products sorts', () => {
       expect(items.slice(0, 2).map((i) => readString(i, 'slug'))).toEqual(expected);
     });
   }
+
+  // A synthetic catalogue: every product shares releasedAt, popularity
+  // and price, so the non-name sorts tie everywhere and fall through to
+  // the backend's RECOMMENDED_ENTRY_ORDER (CatalogService.java): rank,
+  // then product id, then storage. Ranks run against ids on purpose.
+  const sortVariant = (id: string, storageGb: 128 | 256): Product['variants'][number] => ({
+    id: `${id}--szin--${String(storageGb)}`,
+    slug: `szin-${String(storageGb)}gb`,
+    colorCode: 'szin',
+    colorName: 'Szín',
+    swatchHex: '#000000',
+    storageGb,
+    price: { amount: 100_000, currency: 'HUF' },
+    availability: 'in_stock',
+    maxQuantity: 5,
+    images: [
+      {
+        id: `${id}--szin--${String(storageGb)}-front`,
+        src: '/api/v1/media/img',
+        alt: id,
+        width: 100,
+        height: 100,
+      },
+    ],
+  });
+  const sortProduct = (
+    id: string,
+    brand: string,
+    name: string,
+    storages: readonly (128 | 256)[],
+  ): Product => ({
+    id,
+    slug: `sort-${id}`,
+    brand,
+    name,
+    highlights: [],
+    is5g: false,
+    releasedAt: '2026-01-01',
+    description: 'd',
+    variants: storages.map((storageGb) => sortVariant(`sort-${id}`, storageGb)),
+    specGroups: [],
+  });
+  const sortRanking = (id: string, rank: number): ProductRanking => ({
+    slug: `sort-${id}`,
+    rank,
+    popularityScore: 50,
+    featured: false,
+    colorOrder: ['szin'],
+  });
+  const restoreCommittedFixture = (): void => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[sort tests] committed fixture failed shape check');
+    }
+    loadCatalogFixture(catalogFixture);
+  };
+  const slugAndStorage = (body: Record<string, unknown>): string[] =>
+    readItems(body).map(
+      (item) => `${readString(item, 'slug')}/${String(readNumber(item, 'storageGb'))}`,
+    );
+
+  for (const sort of ['newest', 'oldest', 'popularity', 'price_asc', 'price_desc']) {
+    it(`sort=${sort} breaks a full tie on rank before id, like the backend`, async () => {
+      loadCatalogFixture({
+        products: [
+          sortProduct('1', 'Brand', 'Tie 1', [128]),
+          sortProduct('2', 'Brand', 'Tie 2', [128]),
+          sortProduct('3', 'Brand', 'Tie 3', [128]),
+        ],
+        ranking: [sortRanking('1', 3), sortRanking('2', 1), sortRanking('3', 2)],
+      });
+      try {
+        const body = await loadJson(`/api/v1/products?sort=${sort}`);
+        expect(slugAndStorage(body)).toEqual(['sort-2/128', 'sort-3/128', 'sort-1/128']);
+      } finally {
+        restoreCommittedFixture();
+      }
+    });
+  }
+
+  // Name sorts key on "brand name" in Java's CASE_INSENSITIVE_ORDER. A
+  // name-only key would put "Alpha" (brand Beta) first; a Hungarian
+  // collation would put Zte before Zsolt; reversing the whole comparator
+  // would put 256 GB before 128 GB under name_desc.
+  const nameCatalogue = (): { products: Product[]; ranking: ProductRanking[] } => ({
+    products: [
+      sortProduct('1', 'Zte', 'Zte One', [128]),
+      sortProduct('2', 'Zsolt', 'Zsolt One', [128]),
+      sortProduct('3', 'Beta', 'Alpha', [128]),
+      sortProduct('4', 'Alpha', 'Zeta', [128, 256]),
+    ],
+    ranking: [sortRanking('1', 1), sortRanking('2', 2), sortRanking('3', 3), sortRanking('4', 4)],
+  });
+
+  it('sort=name_asc orders "brand name" case-insensitively by code unit, storage ascending', async () => {
+    loadCatalogFixture(nameCatalogue());
+    try {
+      const body = await loadJson('/api/v1/products?sort=name_asc');
+      expect(slugAndStorage(body)).toEqual([
+        'sort-4/128',
+        'sort-4/256',
+        'sort-3/128',
+        'sort-2/128',
+        'sort-1/128',
+      ]);
+    } finally {
+      restoreCommittedFixture();
+    }
+  });
+
+  it('sort=name_desc reverses only the name, storage stays ascending', async () => {
+    loadCatalogFixture(nameCatalogue());
+    try {
+      const body = await loadJson('/api/v1/products?sort=name_desc');
+      expect(slugAndStorage(body)).toEqual([
+        'sort-1/128',
+        'sort-2/128',
+        'sort-3/128',
+        'sort-4/128',
+        'sort-4/256',
+      ]);
+    } finally {
+      restoreCommittedFixture();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
