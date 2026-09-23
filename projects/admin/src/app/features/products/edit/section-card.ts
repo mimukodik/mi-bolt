@@ -18,7 +18,7 @@ import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/m
           }
           <span>{{ title() }}</span>
           @if (errorCount() > 0) {
-            <span class="adm-section-errors">{{ errorCount() }} hiba</span>
+            <span class="adm-section-errors" role="status">{{ errorCount() }} hiba</span>
           }
         </mat-card-title>
         <div class="adm-section-actions"><ng-content select="[admSectionActions]" /></div>
