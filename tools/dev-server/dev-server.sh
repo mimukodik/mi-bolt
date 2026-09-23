@@ -30,6 +30,24 @@ log_file() {
   echo "$STATE_DIR/$1.log"
 }
 
+start_time() {
+  ps -o lstart= -p "$1" 2>/dev/null
+}
+
+# Prints the pid when the pid file still names the process this script
+# started: same pid and same start time. A reused or dead pid fails.
+owned_pid() {
+  local line pid recorded current
+  line="$(head -n 1 "$1" 2>/dev/null)"
+  pid="${line%% *}"
+  recorded="${line#* }"
+  is_port_number "$pid" || return 1
+  [ "$recorded" != "$line" ] || return 1
+  current="$(start_time "$pid")"
+  [ -n "$current" ] && [ "$current" = "$recorded" ] || return 1
+  echo "$pid"
+}
+
 stop_process_group() {
   local pid="$1"
   local port="$2"
@@ -76,8 +94,7 @@ cmd_start() {
 
   if [ -f "$pf" ]; then
     local existing_pid
-    existing_pid="$(cat "$pf")"
-    if kill -0 "$existing_pid" 2>/dev/null; then
+    if existing_pid="$(owned_pid "$pf")"; then
       echo "port $port is already managed by this script (pid $existing_pid)" >&2
       exit 3
     fi
@@ -93,7 +110,7 @@ cmd_start() {
   "$@" </dev/null >"$lf" 2>&1 &
   local pid=$!
 
-  echo "$pid" > "$pf"
+  printf '%s %s\n' "$pid" "$(start_time "$pid")" > "$pf"
 
   local elapsed=0
   while :; do
@@ -131,7 +148,15 @@ cmd_stop() {
   fi
 
   local pid
-  pid="$(cat "$pf")"
+  if ! pid="$(owned_pid "$pf")"; then
+    rm -f "$pf"
+    if port_probe "$port"; then
+      echo "port $port is in use by a process this script did not start (stale pid file removed); nothing was killed" >&2
+      exit 7
+    fi
+    echo "stopped $port"
+    exit 0
+  fi
 
   stop_process_group "$pid" "$port"
 
@@ -155,8 +180,7 @@ cmd_status() {
 
   if [ -f "$pf" ]; then
     local pid
-    pid="$(cat "$pf")"
-    if kill -0 "$pid" 2>/dev/null; then
+    if pid="$(owned_pid "$pf")"; then
       echo "running $port pid $pid"
       exit 0
     fi

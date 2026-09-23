@@ -201,4 +201,29 @@ describe("dev-server.sh", () => {
     },
     30000,
   );
+
+  it(
+    "stop never signals a pid it cannot prove it started",
+    async () => {
+      const port = await freePort();
+      const child = spawn(serverCommand(port)[0], serverCommand(port).slice(1), {
+        detached: true,
+        stdio: "ignore",
+      });
+      try {
+        expect(await waitUntil(() => answers(port), 10000)).toBe(true);
+
+        writeFileSync(join(stateDir, port + ".pid"), child.pid + "\n");
+
+        const result = script(["stop", String(port)]);
+        expect(result.status).toBe(7);
+        expect(result.stderr).toContain("did not start");
+        expect(await answers(port)).toBe(true);
+        expect(existsSync(join(stateDir, port + ".pid"))).toBe(false);
+      } finally {
+        child.kill();
+      }
+    },
+    30000,
+  );
 });
