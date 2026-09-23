@@ -57,6 +57,8 @@ services:
     image: mi-bolt-web
     build:
       context: ../frontend
+      additional_contexts:
+        catalog: ../data/catalog
     restart: unless-stopped
     depends_on:
       commerce:
