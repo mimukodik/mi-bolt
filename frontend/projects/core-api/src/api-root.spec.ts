@@ -30,19 +30,19 @@ describe('resolveApiRoot', () => {
   });
 
   it('derives the root from a base-href subpath', () => {
-    const root = resolveApiRoot({ baseURI: 'http://localhost:4200/admin/' } as Document);
+    const root = resolveApiRoot({ baseURI: 'http://localhost:4200/admin/' });
 
     expect(root).toBe('http://localhost:4200/api/v1');
   });
 
   it('drops the path and keeps the origin', () => {
-    const root = resolveApiRoot({ baseURI: 'https://shop.example/x/y' } as Document);
+    const root = resolveApiRoot({ baseURI: 'https://shop.example/x/y' });
 
     expect(root).toBe('https://shop.example/api/v1');
   });
 
   it('reports an unparseable baseURI and keeps the cause', () => {
-    const error = captureError(() => resolveApiRoot({ baseURI: 'not a url' } as Document));
+    const error = captureError(() => resolveApiRoot({ baseURI: 'not a url' }));
 
     expect(error.message).toContain('cannot parse document.baseURI "not a url"');
     expect(error.cause).toBeDefined();
