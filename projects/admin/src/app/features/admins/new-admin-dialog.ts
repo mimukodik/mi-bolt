@@ -102,9 +102,14 @@ export class NewAdminDialog {
     void this.attempt.run(this.form, () => this.submit());
   }
 
+  /** Whether the dialog has not already started closing. */
+  private get isOpen(): boolean {
+    return this.dialogRef.getState() === MatDialogState.OPEN;
+  }
+
   /** Mégse: closes with no result, unless a close is already under way. */
   protected cancel(): void {
-    if (this.dialogRef.getState() === MatDialogState.OPEN) {
+    if (this.isOpen) {
       this.dialogRef.close();
     }
   }
@@ -139,7 +144,7 @@ export class NewAdminDialog {
     } finally {
       // A close already started keeps Escape and the backdrop blocked: a second
       // close would replace the result on its way out.
-      if (this.dialogRef.getState() === MatDialogState.OPEN) {
+      if (this.isOpen) {
         this.dialogRef.disableClose = false;
       }
     }
