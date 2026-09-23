@@ -3,9 +3,7 @@
  *
  * Holds one scenario's demo carts, committed order receipts and
  * idempotency keys, plus the mock-local wire types those records
- * use and the `Product` shape (with `Variant`, `SpecGroup` and
- * `SpecRow`) that types `DEMO_PRODUCT` in `cart/cart.handlers.ts`.
- * Each scenario owns its own Repository instance (created via
+ * use. Each scenario owns its own Repository instance (created via
  * `new Repository(scenario, ids, clock)`) so two scenario instances
  * cannot leak state into each other. The product catalogue is not
  * here: the handlers read it from `catalogStore`
@@ -29,47 +27,6 @@ export interface Image {
 
 /** Stock state of a single variant. */
 export type Availability = 'in_stock' | 'out_of_stock';
-
-/** One SKU of a product (color × storage). */
-export interface Variant {
-  id: string;
-  colorCode: string;
-  colorName: string;
-  swatchHex: string;
-  storageGb: 128 | 256 | 512;
-  price: Money;
-  availability: Availability;
-  maxQuantity: number;
-  images: readonly Image[];
-}
-
-/** One spec row in a spec group. */
-export interface SpecRow {
-  label: string;
-  value: string;
-}
-
-/** One spec group shown on the product page. */
-export interface SpecGroup {
-  id: string;
-  title: string;
-  rows: readonly SpecRow[];
-}
-
-/** Full catalogue product — matches the OpenAPI `Product` schema. */
-export interface Product {
-  id: string;
-  slug: string;
-  brand: string;
-  name: string;
-  highlights: readonly string[];
-  defaultVariant: Variant;
-  is5g: boolean;
-  isDemo: true;
-  description: string;
-  variants: readonly Variant[];
-  specGroups: readonly SpecGroup[];
-}
 
 /** Full Cart shape — T07 owns version, totals, expiry. */
 export interface Cart {
