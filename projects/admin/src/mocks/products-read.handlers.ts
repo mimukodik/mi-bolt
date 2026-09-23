@@ -16,8 +16,7 @@
  * by code-unit order. The `list-error` and `empty-catalog` scenarios
  * follow the contract.
  */
-import { HttpResponse, http } from 'msw';
-import type { HttpHandler } from 'msw';
+import { HttpResponse, http, type HttpHandler } from 'msw';
 
 import type { AdminProduct } from '../app/api/generated/models/admin-product';
 import type { AdminProductListItem } from '../app/api/generated/models/admin-product-list-item';
@@ -79,12 +78,34 @@ function readInt(searchParams: URLSearchParams, name: string): number | undefine
   return Number.isInteger(parsed) ? parsed : NaN;
 }
 
-function readBool(searchParams: URLSearchParams, name: string): boolean | undefined {
+const KNOWN_QUERY_PARAMS = new Set([
+  'status',
+  'sort',
+  'direction',
+  'page',
+  'pageSize',
+  'q',
+  'brand',
+  'featured',
+  'outOfStock',
+]);
+
+function unknownQueryParam(name: string): HttpResponse<Problem> {
+  return problem(400, 'INVALID_REQUEST', 'Invalid request', {
+    detail: `Unknown query parameter "${name}"`,
+    params: { parameter: name },
+  });
+}
+
+function parseBoolQueryParam(
+  searchParams: URLSearchParams,
+  name: string,
+): { value: boolean | undefined } | { rejection: HttpResponse<Problem> } {
   const value = searchParams.get(name);
-  if (value === null) return undefined;
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return undefined;
+  if (value === null) return { value: undefined };
+  if (value === 'true') return { value: true };
+  if (value === 'false') return { value: false };
+  return { rejection: invalidParameter(name) };
 }
 
 interface ListQuery {
@@ -103,6 +124,10 @@ function parseListQuery(
   request: Request,
 ): { query: ListQuery } | { rejection: HttpResponse<Problem> } {
   const searchParams = new URL(request.url).searchParams;
+
+  for (const key of searchParams.keys()) {
+    if (!KNOWN_QUERY_PARAMS.has(key)) return { rejection: unknownQueryParam(key) };
+  }
 
   const statusRaw = searchParams.get('status') ?? DEFAULT_STATUS;
   if (!isStatusFilter(statusRaw)) return { rejection: invalidParameter('status') };
@@ -131,8 +156,10 @@ function parseListQuery(
   const q = searchParams.get('q') ?? undefined;
   if (q !== undefined && q.length > 100) return { rejection: invalidParameter('q') };
 
-  const featured = readBool(searchParams, 'featured');
-  const outOfStock = readBool(searchParams, 'outOfStock');
+  const featured = parseBoolQueryParam(searchParams, 'featured');
+  if ('rejection' in featured) return featured;
+  const outOfStock = parseBoolQueryParam(searchParams, 'outOfStock');
+  if ('rejection' in outOfStock) return outOfStock;
 
   return {
     query: {
@@ -142,9 +169,9 @@ function parseListQuery(
       page,
       pageSize,
       q,
-      brands: searchParams.getAll('brand'),
-      featured,
-      outOfStock,
+      brands: searchParams.getAll('brand').filter((brand) => brand.length > 0),
+      featured: featured.value,
+      outOfStock: outOfStock.value,
     },
   };
 }
@@ -303,15 +330,6 @@ function distinctBrands(db: MockDb): string[] {
   });
 }
 
-function parseDetailProductId(
-  request: Request,
-): { productId: number } | { rejection: HttpResponse<Problem> } {
-  const segments = new URL(request.url).pathname.split('/');
-  const last = segments[segments.length - 1] ?? '';
-  if (!/^[1-9][0-9]*$/.test(last)) return { rejection: invalidParameter('productId') };
-  return { productId: Number(last) };
-}
-
 export function productsReadHandlers(db: MockDb): HttpHandler[] {
   return [
     http.get(PRODUCTS_PATH, ({ request }) => {
@@ -326,16 +344,19 @@ export function productsReadHandlers(db: MockDb): HttpHandler[] {
       const body = pageFor(filtered, parsed.query.page, parsed.query.pageSize);
       return HttpResponse.json(body);
     }),
-    http.get(PRODUCT_DETAIL_PATH, ({ request }) => {
+    http.get(PRODUCT_DETAIL_PATH, ({ params }) => {
       const session = sessionRejection(db);
       if (session !== undefined) return session;
-      const parsed = parseDetailProductId(request);
-      if ('rejection' in parsed) return parsed.rejection;
-      const product = db.products.get(parsed.productId);
+      const raw = params['productId'];
+      if (typeof raw !== 'string' || !/^[1-9][0-9]*$/.test(raw)) {
+        return invalidParameter('productId');
+      }
+      const productId = Number(raw);
+      const product = db.products.get(productId);
       if (product === undefined) {
         return problem(404, 'NOT_FOUND', 'Resource not found', {
           detail: 'Product not found',
-          params: { productId: parsed.productId },
+          params: { productId },
         });
       }
       return HttpResponse.json(product, {

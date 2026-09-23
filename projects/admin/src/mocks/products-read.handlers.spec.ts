@@ -150,6 +150,47 @@ describe('productsReadHandlers list — auth and validation', () => {
       params: { parameter: 'sort' },
     });
   });
+
+  it('returns 400 for an unknown query parameter and names it', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?colour=red`);
+    expect(status).toBe(400);
+    expect(body).toMatchObject({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      detail: 'Unknown query parameter "colour"',
+      params: { parameter: 'colour' },
+    });
+  });
+
+  it('returns 400 when featured is not a boolean', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?featured=maybe`);
+    expect(status).toBe(400);
+    expect(body).toMatchObject({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      params: { parameter: 'featured' },
+    });
+  });
+
+  it('returns 400 when outOfStock is not a boolean', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?outOfStock=0`);
+    expect(status).toBe(400);
+    expect(body).toMatchObject({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      params: { parameter: 'outOfStock' },
+    });
+  });
+
+  it('ignores empty brand values and filters only the named ones', async () => {
+    signedIn();
+    const { body } = await getJson(`${LIST_URL}?brand=&brand=Apple&pageSize=100`);
+    const page = asListPage(body);
+    expect(new Set(page.items.map((item) => item.brand))).toEqual(new Set(['Apple']));
+  });
 });
 
 describe('productsReadHandlers list — default behaviour', () => {
