@@ -180,4 +180,10 @@ export class OverviewComponent {
       target.set(FAILED);
     }
   }
+
+  /** Újra: focus moves to the card's title first, because the reload removes the button that holds it. */
+  protected retry(key: CardKey, title: HTMLElement): void {
+    title.focus();
+    void this.load(key);
+  }
 }

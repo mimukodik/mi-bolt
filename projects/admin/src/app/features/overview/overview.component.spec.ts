@@ -181,11 +181,18 @@ describe('OverviewComponent', () => {
       if (!(retryButton instanceof HTMLButtonElement)) {
         throw new Error('Expected the Újra button');
       }
+      const adminsTitle = cards[3]?.querySelector('mat-card-title');
+      if (!(adminsTitle instanceof HTMLElement)) {
+        throw new Error('Expected the Adminok card title');
+      }
       expect(retryButton.textContent.trim()).toBe('Újra');
       expect(retryButton.getAttribute('aria-label')).toBe('Újra: Adminok');
       retryButton.click();
+      expect(document.activeElement).toBe(adminsTitle);
       await fresh.whenStable();
       fresh.detectChanges();
+      expect(document.activeElement).toBe(adminsTitle);
+      expect(adminsTitle.getAttribute('tabindex')).toBe('-1');
       expect(textsOf(freshNative, '.adm-count')).toEqual(['46', '2', '1']);
       expect(freshNative.querySelector('[role="alert"]')).toBeNull();
     });

@@ -5,7 +5,7 @@
       <mat-grid-tile [colspan]="card.cols" [rowspan]="card.rows">
         <mat-card class="dashboard-card">
           <mat-card-header>
-            <mat-card-title>
+            <mat-card-title #cardTitle tabindex="-1">
               {{ card.title }}
               @if (card.key === 'featured') {
                 <span> {{ featuredTotal() }}</span>
@@ -23,7 +23,7 @@
                   matButton
                   type="button"
                   [attr.aria-label]="`Újra: ${card.title}`"
-                  (click)="load(card.key)"
+                  (click)="retry(card.key, cardTitle)"
                 >
                   Újra
                 </button>
@@ -49,7 +49,7 @@
                   matButton
                   type="button"
                   [attr.aria-label]="`Újra: ${card.title}`"
-                  (click)="load(card.key)"
+                  (click)="retry(card.key, cardTitle)"
                 >
                   Újra
                 </button>
