@@ -381,8 +381,16 @@ describe('screens.md:51: the drawer opens with focus on its heading (owner 2026-
   it('closing and reopening the drawer puts the focus back on the heading', async () => {
     const { fixture, host } = setup();
     await fixture.whenStable();
+    // Pin the first-open focus, so the rest of the case starts from the
+    // heading rather than from <body>.
+    const initial = document.activeElement;
+    expect(initial?.tagName).toBe('H2');
+    expect(initial?.textContent.trim()).toBe('Szűrők');
+
     // Move the focus off the heading, so the reopen has to put it back.
-    queryInput('[data-testid="drawer-min-price"]').focus();
+    const minPrice = queryInput('[data-testid="drawer-min-price"]');
+    minPrice.focus();
+    expect(document.activeElement).toBe(minPrice);
 
     host.opened.set(false);
     fixture.detectChanges();
