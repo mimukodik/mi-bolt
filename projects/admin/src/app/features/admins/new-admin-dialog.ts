@@ -6,9 +6,9 @@ import type { TreeValidationResult } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import {
   MatDialogActions,
-  MatDialogClose,
   MatDialogContent,
   MatDialogRef,
+  MatDialogState,
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { MatError, MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
@@ -53,7 +53,6 @@ function isValidUsername(value: string): boolean {
     FormField,
     MatButton,
     MatDialogActions,
-    MatDialogClose,
     MatDialogContent,
     MatDialogTitle,
     MatError,
@@ -103,6 +102,13 @@ export class NewAdminDialog {
     void this.attempt.run(this.form, () => this.submit());
   }
 
+  /** Mégse: closes with no result, unless a close is already under way. */
+  protected cancel(): void {
+    if (this.dialogRef.getState() === MatDialogState.OPEN) {
+      this.dialogRef.close();
+    }
+  }
+
   private async submit(): Promise<TreeValidationResult> {
     const { username } = this.model();
     this.dialogRef.disableClose = true;
@@ -131,7 +137,11 @@ export class NewAdminDialog {
       this.failure.set('Az admin létrehozása nem sikerült. Próbáld újra.');
       return undefined;
     } finally {
-      this.dialogRef.disableClose = false;
+      // A close already started keeps Escape and the backdrop blocked: a second
+      // close would replace the result on its way out.
+      if (this.dialogRef.getState() === MatDialogState.OPEN) {
+        this.dialogRef.disableClose = false;
+      }
     }
   }
 }

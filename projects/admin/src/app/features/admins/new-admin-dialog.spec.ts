@@ -353,6 +353,8 @@ describe('NewAdminDialog', () => {
     submitButton().click();
     await arrived;
     TestBed.tick();
+    const ref = TestBed.inject(MatDialog).openDialogs.at(0);
+    if (ref === undefined) throw new Error('expected the open dialog');
 
     expect(megseButton().disabled).toBe(true);
 
@@ -382,6 +384,8 @@ describe('NewAdminDialog', () => {
     if (created === undefined) throw new Error('expected the dialog to close with a value');
     expect(created.user.username).toBe('kovacs.anna');
     expect(db.admins.get(created.user.id)?.password).toBe(created.generatedPassword);
+    // The close already started, so Escape and the backdrop stay blocked.
+    expect(ref.disableClose).toBe(true);
   });
 
   it('case 13: the username field sizes its subscript to the message, so a two-line error is not clipped', async () => {
@@ -395,5 +399,31 @@ describe('NewAdminDialog', () => {
     await fixture.whenStable();
 
     expect(overlay().querySelector('.mat-mdc-form-field-subscript-dynamic-size')).not.toBeNull();
+  });
+
+  it('case 14: once the dialog is closing with a result, Mégse cannot replace it', async () => {
+    // Fails if Mégse closes the dialog again while it is already closing with a
+    // result, which would replace the created admin with undefined.
+    const db = createDb();
+    signIn(db);
+    server?.use(...usersHandlers(db));
+
+    const closed = openDialog();
+    await fixture.whenStable();
+    const ref = TestBed.inject(MatDialog).openDialogs.at(0);
+    if (ref === undefined) throw new Error('expected the open dialog');
+    const megse = megseButton();
+    const result: AdminUserCreated = {
+      generatedPassword: 'Jelszo-Teszt-123',
+      user: {
+        id: '3f6c9a2e-7b1d-4c58-9e0a-5d2b8f4a6c18',
+        username: 'kovacs.anna',
+        createdAt: '2026-09-23T10:00:00.000Z',
+      },
+    };
+
+    ref.close(result);
+    megse.click(); // synchronous: the dialog is closing, so Mégse must leave the result alone
+    expect(await closed).toBe(result);
   });
 });

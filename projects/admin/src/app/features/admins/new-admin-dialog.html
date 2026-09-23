@@ -11,7 +11,7 @@
     <p class="adm-dialog-error" role="alert">{{ failure() ?? '' }}</p>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
-    <button matButton type="button" [disabled]="form().submitting()" [mat-dialog-close]="undefined">
+    <button matButton type="button" [disabled]="form().submitting()" (click)="cancel()">
       Mégse
     </button>
     <button matButton="filled" type="submit" [disabled]="attempt.disabled(form)">Létrehozás</button>
