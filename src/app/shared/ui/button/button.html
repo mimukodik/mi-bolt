@@ -1,14 +1,15 @@
 <button
   class="root inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-3 text-base leading-6 whitespace-nowrap select-none"
   [attr.aria-busy]="loading() ? 'true' : null"
-  [attr.aria-disabled]="disabled() ? 'true' : null"
+  [attr.aria-disabled]="disabled() || loading() ? 'true' : null"
+  [class.is-disabled]="disabled() || loading()"
   [class.is-navy]="variant() === 'navy'"
   [class.is-primary]="variant() === 'primary'"
   [class.is-primary-on-dark]="variant() === 'primaryOnDark'"
   [class.is-secondary]="variant() === 'secondary'"
   [class.is-secondary-on-dark]="variant() === 'secondaryOnDark'"
   [class.w-full]="block()"
-  [disabled]="disabled() || loading()"
+  [disabled]="disabled()"
   [type]="type()"
   (click)="onClick($event)"
 >

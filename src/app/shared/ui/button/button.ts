@@ -17,9 +17,12 @@ import { Component, input, output } from '@angular/core';
  *
  * State contracts (where applicable):
  * - default, hover, focus-visible, active, disabled, loading.
- * - The native `aria-busy` and the visual loading state share one source of truth:
- *   setting `loading` to true swaps the label to the loading label and disables
- *   interaction without changing the button's outer width.
+ * - `loading` swaps the label to the loading label and makes the button inert
+ *   (`aria-busy`, `aria-disabled`, the disabled look, the click dropped by
+ *   `onClick`) without changing its outer width. It never sets native
+ *   `disabled`: a focused button that becomes disabled hands the focus to
+ *   `<body>`, and the shopper who pressed it would lose their place. Only the
+ *   `disabled` input sets native `disabled`.
  *
  * Selection is not conveyed by color alone: the focus ring, the disabled state
  * and the loading label are all textual/structural, not chromatic.

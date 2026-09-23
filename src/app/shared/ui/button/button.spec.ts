@@ -169,6 +169,8 @@ describe('Button primitive', () => {
     fixture.detectChanges();
     const btn = root.querySelector<HTMLButtonElement>('button');
     expect(btn?.disabled).toBe(true);
+    expect(btn?.getAttribute('aria-disabled')).toBe('true');
+    expect(btn?.classList.contains('is-disabled')).toBe(true);
     btn?.click();
     expect(host.clickCount()).toBe(0);
   });
@@ -180,10 +182,21 @@ describe('Button primitive', () => {
     fixture.detectChanges();
     const btn = root.querySelector<HTMLButtonElement>('button');
     expect(btn?.getAttribute('aria-busy')).toBe('true');
-    expect(btn?.disabled).toBe(true);
+    // Loading never sets native `disabled`: a focused button that
+    // becomes disabled loses its focus to <body>.
+    expect(btn?.disabled).toBe(false);
+    expect(btn?.getAttribute('aria-disabled')).toBe('true');
+    expect(btn?.classList.contains('is-disabled')).toBe(true);
     expect(btn?.textContent).toContain('Hozzáadás…');
     btn?.click();
     expect(host.clickCount()).toBe(0);
+  });
+
+  it('is neither aria-disabled nor styled disabled when idle', () => {
+    const { root } = setup();
+    const btn = root.querySelector<HTMLButtonElement>('button');
+    expect(btn?.hasAttribute('aria-disabled')).toBe(false);
+    expect(btn?.classList.contains('is-disabled')).toBe(false);
   });
 
   it('uses a button (not an a-tag) for actions', () => {
@@ -250,7 +263,7 @@ describe('Button primitive', () => {
     expect(primary).toContain('border:0');
     expect(primary).toContain('font-family:var(--font-family-bold)');
     // hover: #c5ff64.
-    expect(declarations(css, '.root:hover:not(:disabled)')).toContain(
+    expect(declarations(css, '.root:hover:not(.is-disabled)')).toContain(
       'background:var(--color-accent-hover)',
     );
     // the two outlined variants take the hairline out of the padding, so
@@ -269,7 +282,7 @@ describe('Button primitive', () => {
     expect(onDark).toContain('color:var(--color-accent)');
     expect(onDark).toContain('background:transparent');
     expect(onDark).toContain('border-color:var(--color-accent)');
-    expect(declarations(css, '.root.is-secondary-on-dark:hover:not(:disabled)')).toContain(
+    expect(declarations(css, '.root.is-secondary-on-dark:hover:not(.is-disabled)')).toContain(
       'background:var(--color-accent)',
     );
     expect(declarations(css, '.root.is-secondary-on-dark:focus-visible')).toContain(
@@ -284,11 +297,11 @@ describe('Button primitive', () => {
     const navy = declarations(css, '.root.is-navy');
     expect(navy).toContain('color:var(--color-text-inverse)');
     expect(navy).toContain('background:var(--color-primary)');
-    expect(declarations(css, '.root.is-navy:hover:not(:disabled)')).toContain(
+    expect(declarations(css, '.root.is-navy:hover:not(.is-disabled)')).toContain(
       'background:var(--color-primary-hover)',
     );
     // disabled: #80919f on #e5e9ec.
-    const disabled = declarations(css, '.root:disabled');
+    const disabled = declarations(css, '.root.is-disabled');
     expect(disabled).toContain('color:var(--color-disabled-text)');
     expect(disabled).toContain('background:var(--color-disabled-bg)');
     // the retired orange palette is gone from this primitive.

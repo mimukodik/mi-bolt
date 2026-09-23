@@ -77,7 +77,7 @@ describe('ErrorState primitive', () => {
     expect(host.retryCount()).toBe(1);
   });
 
-  it('swaps to the pending label and disables the button while retrying', () => {
+  it('swaps to the pending label and makes the button inert while retrying', () => {
     const { fixture, host } = setup();
     host.pending.set(true);
     fixture.detectChanges();
@@ -85,7 +85,8 @@ describe('ErrorState primitive', () => {
     if (btn === null) {
       throw new Error('Expected button');
     }
-    expect(btn.disabled).toBe(true);
+    expect(btn.disabled).toBe(false);
+    expect(btn.getAttribute('aria-disabled')).toBe('true');
     expect(btn.getAttribute('aria-busy')).toBe('true');
     expect(btn.textContent).toContain('Újrapróbálom…');
   });

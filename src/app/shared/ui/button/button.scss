@@ -47,24 +47,24 @@
   background: var(--color-primary);
 }
 
-.root:hover:not(:disabled) {
+.root:hover:not(.is-disabled) {
   background: var(--color-accent-hover);
 }
 
-.root.is-secondary:hover:not(:disabled) {
+.root.is-secondary:hover:not(.is-disabled) {
   background: var(--color-surface-sky);
 }
 
-.root.is-secondary-on-dark:hover:not(:disabled) {
+.root.is-secondary-on-dark:hover:not(.is-disabled) {
   color: var(--color-primary);
   background: var(--color-accent);
 }
 
-.root.is-navy:hover:not(:disabled) {
+.root.is-navy:hover:not(.is-disabled) {
   background: var(--color-primary-hover);
 }
 
-.root:active:not(:disabled) {
+.root:active:not(.is-disabled) {
   transform: translateY(1px);
 }
 
@@ -82,7 +82,11 @@
   outline-color: var(--color-text-inverse);
 }
 
-.root:disabled {
+/* Disabled and loading share this look. Loading keeps the native button
+   enabled, so a focused button keeps its focus (a focused control that
+   becomes disabled hands the focus to <body>); `aria-disabled` and the
+   click guard in button.ts make it inert. */
+.root.is-disabled {
   color: var(--color-disabled-text);
   background: var(--color-disabled-bg);
   border-color: var(--color-disabled-bg);

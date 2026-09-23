@@ -225,7 +225,7 @@ describe('MiBolt primitives: Required State Contract', () => {
       expect(css).toContain(':hover');
       expect(css).toContain(':focus-visible');
       expect(css).toContain(':active');
-      expect(css).toContain(':disabled');
+      expect(css).toContain('.is-disabled');
     });
   });
 
@@ -293,7 +293,8 @@ describe('MiBolt primitives: Required State Contract', () => {
       if (btn === null) {
         throw new Error('Expected button');
       }
-      expect(btn.disabled).toBe(true);
+      expect(btn.disabled).toBe(false);
+      expect(btn.getAttribute('aria-disabled')).toBe('true');
       expect(btn.getAttribute('aria-busy')).toBe('true');
     });
   });
