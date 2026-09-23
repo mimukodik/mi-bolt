@@ -1,3 +1,13 @@
+/** The same lines as on screen: every variant, quantity and unit price, in any order. */
+function sameLines(onScreen: Cart, fresh: Cart): boolean {
+  if (onScreen.items.length !== fresh.items.length) return false;
+  return onScreen.items.every((line) => {
+    const match = fresh.items.find((item) => item.variantId === line.variantId);
+    if (match === undefined) return false;
+    return match.quantity === line.quantity && match.unitPrice.amount === line.unitPrice.amount;
+  });
+}
+
 /**
  * T18 — cart screen (S4.1).
  *
@@ -341,32 +351,42 @@ export class CartPage {
   }
 
   /**
-   * Continue handler. The flow is:
-   *   1. set `continuing` so the button enters loading state;
-   *   2. call `facade.ensureCart()` — the authoritative
-   *      revalidation (AC04). If a 412 conflict / 410 expiry / any
-   *      other Problem on the error signal happened in the
-   *      background, the facade's signals flip and the user stays
-   *      on the page;
-   *   3. only navigate when the local cart is still present and
-   *      non-empty.
+   * "Tovább az adatokhoz". The cart is read from the server again before
+   * the shopper leaves (T18-AC04, owner: "Igen, lekéri újra"): a failed
+   * change leaves this button active, so the snapshot on screen may be
+   * behind the server (a conflict whose background read failed, another
+   * tab). The shopper stays when the read fails, when the cart comes back
+   * empty or with notices, and, with a message, when a line differs from
+   * the one on screen. Nothing navigates once the page is gone.
    */
-  onContinue(): void {
+  async onContinue(): Promise<void> {
     if (!this.canContinue()) return;
+    const onScreen = this.cart();
     this.continuing.set(true);
-    void this.facade
-      .ensureCart()
-      .then(() => {
-        const cart = this.cart() ?? this.facade.cart();
-        if (cart === null || cart.items.length === 0) {
-          this.continuing.set(false);
-          return;
-        }
-        return this.router.navigate(['/penztar/adatok']);
-      })
-      .finally(() => {
-        this.continuing.set(false);
-      });
+    try {
+      await this.facade.refetch();
+      if (this.destroyRef.destroyed) return;
+      const fresh = this.facade.cart();
+      if (
+        fresh === null ||
+        this.facade.error() !== null ||
+        this.facade.conflict() !== null ||
+        this.facade.cartExpired()
+      ) {
+        return;
+      }
+      if (fresh.items.length === 0 || fresh.notices.length > 0) return;
+      if (onScreen === null || !sameLines(onScreen, fresh)) {
+        this.transientStatus.set({
+          text: 'A kosár időközben megváltozott; nézd át, mielőtt továbblépsz.',
+          severity: 'info',
+        });
+        return;
+      }
+      await this.router.navigate(['/penztar/adatok']);
+    } finally {
+      this.continuing.set(false);
+    }
   }
 
   dismissStatusMessage(): void {
