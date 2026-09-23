@@ -174,13 +174,19 @@ function convertQ(searchParams: URLSearchParams): string | undefined {
   return values.length === 0 ? undefined : values.join(',');
 }
 
-/** None → `[]`; one value → split on `,`; two or more → as given, no splitting. Never fails. */
+/** Java's `String.trim()`: removes every character up to U+0020 at both ends, nothing else. */
+function javaTrim(value: string): string {
+  // eslint-disable-next-line no-control-regex -- U+0000-U+001F are what Java's trim() removes
+  return value.replace(/^[\u0000-\u0020]+|[\u0000-\u0020]+$/g, '');
+}
+
+/** None → `[]`; one value → split on `,`, each element trimmed like Java's `String.trim()` (Spring's `StringToCollectionConverter`); two or more → as given. Never fails. */
 function convertBrand(searchParams: URLSearchParams): readonly string[] {
   const values = searchParams.getAll('brand');
   if (values.length === 0) return [];
   if (values.length === 1) {
     const [only] = values;
-    return only === '' ? [] : only.split(',');
+    return only === '' ? [] : only.split(',').map(javaTrim);
   }
   return values;
 }
