@@ -169,7 +169,7 @@ pair, in exactly that shape:
 
 Give it a docstring in the file's own voice saying what it is for and why it
 is a plain public property rather than an output: the same reason
-`filterTriggerEl`'s docstring gives, which is that `components.md:371`'s
+`filterTriggerEl`'s docstring gives, which is that `components.md:356`'s
 declared input/output surface is unchanged by a public property a parent reads.
 **Write that reasoning in your own words from that docstring; do not copy it
 verbatim and do not restate the `appliedCount` paragraph.**

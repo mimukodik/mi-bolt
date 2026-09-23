@@ -7,7 +7,7 @@ import { ErrorState } from '../error-state/error-state';
 import { LoadingState } from '../loading-state/loading-state';
 
 /**
- * `AsyncContent` — `docs/spec/components.md:191`.
+ * `AsyncContent` — `docs/spec/components.md:176`.
  *
  * Composes the loading/empty/error primitives around whatever content
  * the caller projects, so a list page never repeats the same five-way
@@ -20,7 +20,7 @@ import { LoadingState } from '../loading-state/loading-state';
  * `hasPrevious` at the call site: `refreshing` becomes
  * `status: 'loading', hasPrevious: true`. `hasPrevious` is what tells
  * `loading` apart from a refresh — "previous usable data can remain
- * under explicit refresh warning" (`components.md:191`'s Functions
+ * under explicit refresh warning" (`components.md:184`'s Functions
  * line) — by keeping the caller's projected content on screen instead
  * of swapping it for a skeleton.
  *
@@ -32,7 +32,7 @@ import { LoadingState } from '../loading-state/loading-state';
  * declares only `retryRequested`, and an empty-action output would be a
  * change to the specification that decision **D1** forbids this task
  * from making. Projection lets the caller keep ownership of its own
- * action (e.g. "Szűrők törlése", `components.md:362`'s `AppliedFilters`
+ * action (e.g. "Szűrők törlése", `components.md:347`'s `AppliedFilters`
  * `cleared` output) without `AsyncContent` needing to know what it is.
  */
 @Component({

@@ -1,7 +1,7 @@
 /**
  * T20 — contact step UI (S4.2).
  *
- * FIX-63 gave `ContactStep` the signature `docs/spec/components.md:551-557`
+ * FIX-63 gave `ContactStep` the signature `docs/spec/components.md:536-542`
  * declares: `contactFields`/`saveState` inputs, `continueRequested` output.
  * The component is purely presentational: it renders the three labelled
  * inputs against the `contactFields` Signal Forms field tree the owning
@@ -171,7 +171,7 @@ export class ContactStep {
   /** `true` after the user has tried to submit at least once. */
   readonly submitted = signal<boolean>(false);
 
-  /** `saveState:AsyncStatus` carries no payload (`components.md:551-557`),
+  /** `saveState:AsyncStatus` carries no payload (`components.md:536-542`),
    *  so this message is a fixed, generic sentence rather than the wire's
    *  own detail — the container renders the actual save call, and this
    *  component only reports the outcome R15 allows it to show. */

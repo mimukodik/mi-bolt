@@ -19,7 +19,7 @@
  *   2. Standalone rendering: render the Hero and HowDemoWorks
  *      components directly. `Hero` declares `title`/`subtitle`
  *      (required) as signal inputs
- *      (`docs/spec/components.md:255`, FIX-64); every direct
+ *      (`docs/spec/components.md:240`, FIX-64); every direct
  *      `TestBed.createComponent(Hero)` site below binds `title` and
  *      `subtitle` with `componentRef.setInput` before `detectChanges`.
  *   3. Orchestration via StubApi: instantiate HomePage's facade

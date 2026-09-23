@@ -1,7 +1,7 @@
 /**
  * T20 — contact step UI (S4.2), rewritten for FIX-63.
  *
- * FIX-63 gave `ContactStep` the fixed signature `components.md:551-557`
+ * FIX-63 gave `ContactStep` the fixed signature `components.md:536-542`
  * declares: `contactFields:FieldTree<Contact>`/`saveState:AsyncStatus`
  * inputs, `continueRequested:void` output. The component injects no
  * `CONTACT_DRAFT_SAVER` and no `Router` — `contact-page.ts` owns the

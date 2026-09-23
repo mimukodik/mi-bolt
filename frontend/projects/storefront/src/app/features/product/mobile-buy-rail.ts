@@ -17,7 +17,7 @@ import type { UiProblem } from '../../shared/types/ui-problem';
 
 /**
  * T16 — narrow-viewport-only sticky purchase rail
- * (`docs/spec/components.md:476-488`).
+ * (`docs/spec/components.md:461-473`).
  *
  * Extracted from the inline markup `product-page.html` used to carry:
  * a plain button with no `[loading]` binding and no error surface of
@@ -25,7 +25,7 @@ import type { UiProblem } from '../../shared/types/ui-problem';
  * state (`pending`, `error`) rather than owning one
  * (`docs/spec/architecture.md:57` — "do not maintain two
  * independently writable totals"); the page is the one place that
- * calls `CartFacade` (`components.md:409`).
+ * calls `CartFacade` (`components.md:394`).
  *
  * Required states: default, loading (`pending`), disabled
  * (`!available`), error, and focus (native button semantics).

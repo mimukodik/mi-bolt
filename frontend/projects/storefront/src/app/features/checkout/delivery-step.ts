@@ -1,7 +1,7 @@
 /**
  * T21 — DeliveryStep (S4.3), ported to the 2.0.0 contract (MIM-212, S3-C4).
  *
- * FIX-56: brought back to the signature `docs/spec/components.md:566-576`
+ * FIX-56: brought back to the signature `docs/spec/components.md:551-561`
  * declares. The component is purely presentational: it renders the
  * delivery options, the payment method and the billing block the
  * `options` and `fields` inputs carry, reads and writes the address /
@@ -346,7 +346,7 @@ export class DeliveryStep {
     return option?.label ?? 'Nincs kiválasztva';
   });
 
-  /** `saveState:AsyncStatus` carries no payload (`components.md:570-572`), so
+  /** `saveState:AsyncStatus` carries no payload (`components.md:555-557`), so
    *  this message is a fixed, generic sentence rather than the wire's own
    *  `detail` — the container renders the backend-detail-carrying failure
    *  banner alongside this component, per R15 and FIX-56 item 4. */

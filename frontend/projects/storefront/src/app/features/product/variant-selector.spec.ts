@@ -11,11 +11,11 @@ import type { Variant } from '../../api/generated/models/variant';
 
 /**
  * FIX-50 item 4 — `VariantSelector` reshaped to
- * `docs/spec/components.md:435-443`: takes the variant list directly,
+ * `docs/spec/components.md:420-428`: takes the variant list directly,
  * resolves the exact (color, storage) pair itself, and emits the
  * resolved variant id rather than two axis events. Deliberately
  * missing the silver/512 combination so a genuinely unavailable pair
- * can be exercised (`components.md:439` — "never choose a
+ * can be exercised (`components.md:424` — "never choose a
  * substitute").
  */
 const variants: readonly Variant[] = [
@@ -116,7 +116,7 @@ async function createHarness(): Promise<{
   return { fixture, host, root: getRootElement(fixture) };
 }
 
-describe('VariantSelector (FIX-50 reshape to components.md:435-443)', () => {
+describe('VariantSelector (FIX-50 reshape to components.md:420-428)', () => {
   it('with a colour+storage pair that has a variant, clicking the colour emits that variant id', async () => {
     const { host, root, fixture } = await createHarness();
 

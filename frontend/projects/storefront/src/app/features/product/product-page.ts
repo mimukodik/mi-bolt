@@ -200,7 +200,7 @@ export class ProductPage {
   readonly addToCartEnabled = computed(() => this.vm().addToCart.enabled);
   readonly addToCartReason = computed<string | null>(() => this.vm().addToCart.reason);
 
-  /** `AddToCartControl`'s contract (components.md:450) has no
+  /** `AddToCartControl`'s contract (components.md:435) has no
    *  `enabled` input of its own — the only way it can be disabled is
    *  `variant === null`. The page therefore withholds the variant
    *  whenever `addToCart.enabled` is false (invalid deep-link query
@@ -212,7 +212,7 @@ export class ProductPage {
 
   /** In-flight state of the page's single cart mutation. Both the
    *  desktop control and the mobile rail read it; neither owns one of
-   *  its own (docs/spec/architecture.md:57, components.md:409). */
+   *  its own (docs/spec/architecture.md:57, components.md:394). */
   readonly addPending = signal<boolean>(false);
 
   /** Last cart-mutation failure, or null. Same single owner. It resets
@@ -226,7 +226,7 @@ export class ProductPage {
 
   /** Confirmation text after a successful add. `AddToCartControl`
    *  declares no input for its own `success` state
-   *  (components.md:450-452), so the page signals it directly. */
+   *  (components.md:435-437), so the page signals it directly. */
   readonly addSuccessMessage = signal<string | null>(null);
 
   /** View handle on the desktop `AddToCart` control. Used to return
@@ -329,7 +329,7 @@ export class ProductPage {
 
   /** Performs the one cart mutation this page owns. Called by the
    *  desktop control's `(addRequested)` and by the mobile rail's
-   *  `(addRequested)` (docs/spec/architecture.md:57, components.md:409:
+   *  `(addRequested)` (docs/spec/architecture.md:57, components.md:394:
    *  "CartFacade injection only at container/add orchestrator"). */
   async onAddRequested(intent: { variantId: string; quantity: number }): Promise<void> {
     if (this.addPending()) return;
@@ -378,7 +378,7 @@ export class ProductPage {
     }
   }
 
-  /** The mobile rail emits `void` per components.md:478, so the page
+  /** The mobile rail emits `void` per components.md:467, so the page
    *  supplies the intent from its own view model. */
   onRailAddRequested(): void {
     const v = this.vm();

@@ -1,9 +1,9 @@
 /**
  * T18 / FIX-50 — add-to-cart surface (S3 → S4.1), reshaped to
- * `docs/spec/components.md:446-458` (`AddToCartControl`): presentation
+ * `docs/spec/components.md:431-443` (`AddToCartControl`): presentation
  * only, one primary CTA, one `addRequested` intent, no own cart
  * persistence. `ProductPage` is the container that owns `CartFacade`
- * (components.md:409) — see `product-page.spec.ts` for the
+ * (components.md:394) — see `product-page.spec.ts` for the
  * integration coverage of the actual mutation.
  */
 
@@ -167,7 +167,7 @@ async function createHarness(): Promise<{
   return { fixture, host, root: getRootElement(fixture) };
 }
 
-describe('AddToCart (FIX-50 reshape to components.md:446-458)', () => {
+describe('AddToCart (FIX-50 reshape to components.md:431-443)', () => {
   it('FIX-50-AC01: renders and constructs with no CartFacade provider at all', async () => {
     const { root } = await createHarness();
     expect(root.querySelector('[data-testid="add-to-cart"]')).not.toBeNull();
