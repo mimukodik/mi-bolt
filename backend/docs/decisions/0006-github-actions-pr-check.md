@@ -244,3 +244,4 @@ on `main` and the PR runs that restore from it — is still to be measured.
 - Its jobs run on Blacksmith runners (`blacksmith-2vcpu-ubuntu-2404`) instead of the pinned `ubuntu-24.04` above, and run their steps in `backend/` (the smoke job in `backend/services/commerce/`).
 - It has five jobs: `Unit tests`, `Integration tests`, `Lint (PMD)` (decision 0009), `Coverage gate and build`, and `PostgreSQL boot and smoke` (decision 0013).
 - The monorepo's Node jobs run in `.github/workflows/frontend.yml`; `backend.yml` still has none. The import script is at `tools/catalog-import/` (decision 0005) and is still never run in CI.
+- The root `package.json`/pnpm setup for the coding agents' tooling is gone: that tooling is `tools/package.json` (`tools/agent-memory.ts`) and `.claude/hooks/package.json`, both npm, and `backend.yml` runs neither.

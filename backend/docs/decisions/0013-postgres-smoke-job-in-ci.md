@@ -47,3 +47,4 @@ let it through.
 
 - The `postgres-smoke` job (`PostgreSQL boot and smoke`) is in `.github/workflows/backend.yml` (decision 0006's note), not in `.github/workflows/pr-check.yml`; it still waits on the unit tests, the integration tests and PMD (`needs: [unit-tests, integration-tests, lint]`).
 - `scripts/smoke.sh` is `backend/services/commerce/scripts/smoke.sh`; the job runs it as `bash scripts/smoke.sh` from `backend/services/commerce/`.
+- The `docs/02` citations above refer to the same file under `backend/docs/`.
