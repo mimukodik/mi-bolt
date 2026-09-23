@@ -31,6 +31,7 @@ import type { Problem } from '../app/api/generated/models/problem';
 import type { SortDirection } from '../app/api/generated/models/sort-direction';
 import {
   javaTrim,
+  javaTrimAllWhitespace,
   notAcceptable,
   serviceUnavailable,
   unknownQueryParameter,
@@ -128,20 +129,20 @@ function convertEnum<T extends string>(
   return mapped === undefined ? { ok: false } : { ok: true, value: mapped };
 }
 
-/** `true`/`on`/`yes`/`1` and their false counterparts, trimmed and lower-cased; absent/`''` is "no filter". */
+/** `true`/`on`/`yes`/`1` and their false counterparts, trimmed like Java's String.trim() and lower-cased; absent/`''` is "no filter". */
 function convertBoolean(raw: string | null): ConversionResult<boolean | undefined> {
   if (raw === null) return { ok: true, value: undefined };
-  const normalised = raw.trim().toLowerCase();
+  const normalised = javaTrim(raw).toLowerCase();
   if (normalised === '') return { ok: true, value: undefined };
   if (['true', 'on', 'yes', '1'].includes(normalised)) return { ok: true, value: true };
   if (['false', 'off', 'no', '0'].includes(normalised)) return { ok: true, value: false };
   return { ok: false };
 }
 
-/** Whitespace stripped, then decimal (optional `+`/`-`) or `0x`/`#` hex (optional `-` only), bounded to a 32-bit signed integer; absent/`''` is `fallback`. */
+/** Java whitespace removed (StringUtils.trimAllWhitespace), then decimal (optional `+`/`-`) or `0x`/`#` hex (optional `-` only), bounded to a 32-bit signed integer; absent/`''` is `fallback`. */
 function convertInteger(raw: string | null, fallback: number): ConversionResult<number> {
   if (raw === null || raw === '') return { ok: true, value: fallback };
-  const stripped = raw.replace(/\s+/g, '');
+  const stripped = javaTrimAllWhitespace(raw);
   if (DECIMAL_INTEGER.test(stripped)) {
     const value = Number(stripped);
     return isInt32(value) ? { ok: true, value } : { ok: false };
@@ -158,9 +159,9 @@ function isInt32(value: number): boolean {
   return Number.isInteger(value) && value >= INT32_MIN && value <= INT32_MAX;
 }
 
-/** Whitespace stripped, then decimal (optional `+`/`-`) or `0x`/`#` hex (optional `-` only), as a `bigint` with no range bound applied yet. */
+/** Java whitespace removed (StringUtils.trimAllWhitespace), then decimal (optional `+`/`-`) or `0x`/`#` hex (optional `-` only), as a `bigint` with no range bound applied yet. */
 function convertLong(raw: string): ConversionResult<bigint> {
-  const stripped = raw.replace(/\s+/g, '');
+  const stripped = javaTrimAllWhitespace(raw);
   if (DECIMAL_INTEGER.test(stripped)) return { ok: true, value: BigInt(stripped) };
   const hexMatch = HEX_INTEGER.exec(stripped);
   if (hexMatch === null) return { ok: false };
@@ -261,7 +262,7 @@ function parseProductId(raw: string): { rejection: HttpResponse<Problem> } | { p
 }
 
 function normalise(value: string): string {
-  return value.trim().normalize('NFC').toLowerCase();
+  return value.normalize('NFC').toLowerCase();
 }
 
 function totalStock(variants: readonly AdminProductVariant[]): number {
@@ -289,7 +290,7 @@ function matchesStatus(product: AdminProduct, status: AdminProductStatusFilter):
 
 function matchesQuery(product: AdminProduct, q: string | undefined): boolean {
   if (q === undefined) return true;
-  const trimmed = q.trim();
+  const trimmed = javaTrim(q);
   if (trimmed.length === 0) return true;
   const needle = normalise(trimmed);
   const haystack = normalise(`${product.brand} ${product.name} ${product.slug}`);

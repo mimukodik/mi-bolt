@@ -42,6 +42,23 @@ export function javaTrim(value: string): string {
   return value.slice(start, end);
 }
 
+/** Java's `Character.isWhitespace` for one code point. */
+function isJavaWhitespace(code: number): boolean {
+  if ((code >= 0x09 && code <= 0x0d) || (code >= 0x1c && code <= 0x20)) return true;
+  if (code === 0x1680 || code === 0x2028 || code === 0x2029 || code === 0x205f || code === 0x3000)
+    return true;
+  return (code >= 0x2000 && code <= 0x2006) || (code >= 0x2008 && code <= 0x200a);
+}
+
+/** Spring's `StringUtils.trimAllWhitespace`, which `NumberUtils.parseNumber` applies: every `Character.isWhitespace` character removed, wherever it stands. */
+export function javaTrimAllWhitespace(value: string): string {
+  let kept = '';
+  for (const character of value) {
+    if (!isJavaWhitespace(character.codePointAt(0) ?? 0)) kept += character;
+  }
+  return kept;
+}
+
 /** The first query key in query-string order, or `undefined` when there is none. */
 export function firstQueryKey(request: Request): string | undefined {
   return [...new URL(request.url).searchParams.keys()][0];
