@@ -331,6 +331,26 @@ export default defineConfig([
   { files: ['e2e/fixtures/**/*.ts'], rules: { 'no-restricted-imports': 'off' } },
   { files: ['e2e/seed.spec.ts'], rules: {} },
   {
+    // The admin has its own SDK and mocks (MIM-331); the root tsconfig's shop
+    // aliases stay visible to it, so the linter keeps them out. The admin
+    // also takes no type assertion at all (`as const` stays allowed).
+    files: ['projects/admin/**/*.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@mi-bolt/api/*', '@mi-bolt/mocks/*', '**/src/app/api/generated/**'],
+              message: 'The shop SDK and mocks are not for the admin: use projects/admin/src/app/api/generated.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.spec.ts'],
     rules: {
       // Relaxed for the demo (MIM-209, docs/lint-relaxations.md).
