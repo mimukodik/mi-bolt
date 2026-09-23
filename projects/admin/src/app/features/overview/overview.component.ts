@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Breakpoints, BreakpointObserver } from '@angular/cdk/layout';
 import { MatGridListModule } from '@angular/material/grid-list';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
@@ -60,8 +59,7 @@ const HANDSET_CARDS: readonly OverviewCard[] = PRODUCT_FILTER_CARDS.map((c) => (
   selector: 'adm-overview',
   templateUrl: './overview.component.html',
   styleUrl: './overview.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatGridListModule, MatIconModule, MatButtonModule, MatCardModule, RouterLink],
+  imports: [MatGridListModule, MatButtonModule, MatCardModule, RouterLink],
 })
 export class OverviewComponent {
   private readonly breakpointObserver = inject(BreakpointObserver);
