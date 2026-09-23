@@ -353,12 +353,18 @@ describe('ProductListPage', () => {
     if (clearButton === undefined) throw new Error('Szűrők törlése button missing');
     expect(getComputedStyle(clearButton).alignSelf).toBe('flex-start');
 
+    const title = root.querySelector('h1');
+    if (!(title instanceof HTMLElement)) throw new Error('page title missing');
+
     const navigated = nextNavigationEnd(router);
     clearButton.click();
+    expect(document.activeElement).toBe(title);
     await navigated;
     await harness.fixture.whenStable();
     harness.detectChanges();
 
+    expect(document.activeElement).toBe(title);
+    expect(title.getAttribute('tabindex')).toBe('-1');
     expect(router.parseUrl(router.url).queryParams).toEqual({ sort: 'name' });
     expect(rowNames(rootOf(harness))[0]).toBe('Apple iPhone 16');
   });
@@ -384,10 +390,16 @@ describe('ProductListPage', () => {
     );
     if (retryButton === undefined) throw new Error('Újra button missing');
     expect(getComputedStyle(retryButton).alignSelf).toBe('flex-start');
+    const title = root.querySelector('h1');
+    if (!(title instanceof HTMLElement)) throw new Error('page title missing');
+
     retryButton.click();
+    expect(document.activeElement).toBe(title);
     await harness.fixture.whenStable();
     harness.detectChanges();
 
+    expect(document.activeElement).toBe(title);
+    expect(title.getAttribute('tabindex')).toBe('-1');
     expect(rootOf(harness).querySelector('[role="alert"]')).toBeNull();
     expect(rowNames(rootOf(harness))[0]).toBe('Motorola Edge 50 Fusion');
   });
