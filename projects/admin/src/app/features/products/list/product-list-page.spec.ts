@@ -135,10 +135,6 @@ describe('ProductListPage', () => {
     expect(root.querySelector('.adm-count')?.textContent.trim()).toBe('46 termék');
 
     const renderedRows = rows(root);
-    // Reported in the unit's report, never asserted (brief §Tests, case 7):
-    // jsdom's virtual-scroll viewport has no real layout, so its buffer-only
-    // render count is an environment artefact rather than a behaviour to pin.
-    console.log('jsdom_rendered_rows:', renderedRows.length);
 
     const names = rowNames(root);
     expect(names.slice(0, 3)).toEqual([
