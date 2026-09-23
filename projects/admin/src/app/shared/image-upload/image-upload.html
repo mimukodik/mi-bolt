@@ -1,0 +1,30 @@
+<input
+  #fileInput
+  accept="image/webp,image/jpeg,image/png"
+  class="adm-image-upload-file-input"
+  type="file"
+  (change)="onFileInputChange($event)"
+/>
+<div class="adm-image-upload-dropzone" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
+  @if (previewSrc(); as src) {
+    <img alt="" height="120" width="120" [src]="src" />
+  } @else {
+    <div class="adm-image-upload-preview">(nincs kép)</div>
+  }
+  @if (uploading()) {
+    <mat-progress-bar mode="determinate" [value]="percent()" />
+  }
+  <button
+    #chooseButton
+    matButton
+    type="button"
+    [attr.aria-describedby]="describedBy()"
+    [disabled]="disabled()"
+    (blur)="onBlur()"
+    (click)="openFilePicker()"
+  >
+    Kép választása
+  </button>
+  <span class="adm-image-upload-hint">vagy húzd ide</span>
+</div>
+<p role="alert">{{ error() }}</p>
