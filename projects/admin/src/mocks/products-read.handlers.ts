@@ -6,9 +6,11 @@
  * `GET /api/v1/admin/products/:productId` and
  * `GET /api/v1/admin/brands` the way the backend's query service
  * does (MIM-334 decisions 1-3, quoted from the brief so unit B9 and
- * this mock agree on every rule): a session guard first, then the
- * contract's 400 `INVALID_REQUEST` for every query or path parameter
- * outside its range, then filters, sort with the id as the tie-break,
+ * this mock agree on every rule): a session guard first, then an
+ * unknown query key, then the contract's 400 `INVALID_REQUEST` for a
+ * query or path value that does not convert or that breaks its
+ * constraint, worded exactly as `backend-answers.ts` words
+ * `ProblemAdvice`, then filters, sort with the id as the tie-break,
  * paging with `totalElements` and `totalPages`, and the list-item
  * projection; the detail call carries the `ETag` header whose value
  * is the product `version` quoted; the brands call returns the
@@ -27,6 +29,12 @@ import type { AdminProductVariant } from '../app/api/generated/models/admin-prod
 import type { Money } from '../app/api/generated/models/money';
 import type { Problem } from '../app/api/generated/models/problem';
 import type { SortDirection } from '../app/api/generated/models/sort-direction';
+import {
+  notAcceptable,
+  serviceUnavailable,
+  unknownQueryParameter,
+  wrongType,
+} from './backend-answers';
 import type { MockDb } from './db';
 import { sessionRejection } from './guards';
 import { problem } from './problem';
@@ -35,27 +43,18 @@ const PRODUCTS_PATH = '*/api/v1/admin/products';
 const PRODUCT_DETAIL_PATH = '*/api/v1/admin/products/:productId';
 const BRANDS_PATH = '*/api/v1/admin/brands';
 
-const STATUS_FILTER_VALUES: readonly string[] = ['active', 'archived', 'all'];
-const SORT_FIELD_VALUES: readonly string[] = [
-  'rank',
-  'name',
+const KNOWN_QUERY_PARAMS = new Set([
+  'q',
   'brand',
-  'releasedAt',
-  'minPrice',
-  'totalStock',
+  'status',
   'featured',
-];
-const SORT_DIRECTION_VALUES: readonly string[] = ['asc', 'desc'];
-
-function isStatusFilter(value: string): value is AdminProductStatusFilter {
-  return STATUS_FILTER_VALUES.includes(value);
-}
-function isSortField(value: string): value is AdminProductSortField {
-  return SORT_FIELD_VALUES.includes(value);
-}
-function isSortDirection(value: string): value is SortDirection {
-  return SORT_DIRECTION_VALUES.includes(value);
-}
+  'outOfStock',
+  'sort',
+  'direction',
+  'page',
+  'pageSize',
+]);
+const NO_QUERY_PARAMS: ReadonlySet<string> = new Set();
 
 const DEFAULT_STATUS: AdminProductStatusFilter = 'active';
 const DEFAULT_SORT: AdminProductSortField = 'rank';
@@ -64,48 +63,126 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 
-function invalidParameter(parameter: string): HttpResponse<Problem> {
-  return problem(400, 'INVALID_REQUEST', 'Invalid request', {
-    detail: 'Query or path parameter is not acceptable',
-    params: { parameter },
-  });
-}
-
-function readInt(searchParams: URLSearchParams, name: string): number | undefined {
-  const value = searchParams.get(name);
-  if (value === null) return undefined;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : NaN;
-}
-
-const KNOWN_QUERY_PARAMS = new Set([
-  'status',
-  'sort',
-  'direction',
-  'page',
-  'pageSize',
-  'q',
-  'brand',
-  'featured',
-  'outOfStock',
+const STATUS_VALUES: ReadonlyMap<string, AdminProductStatusFilter> = new Map([
+  ['active', 'active'],
+  ['ACTIVE', 'active'],
+  ['archived', 'archived'],
+  ['ARCHIVED', 'archived'],
+  ['all', 'all'],
+  ['ALL', 'all'],
 ]);
 
-function unknownQueryParam(name: string): HttpResponse<Problem> {
-  return problem(400, 'INVALID_REQUEST', 'Invalid request', {
-    detail: `Unknown query parameter "${name}"`,
-    params: { parameter: name },
-  });
+const SORT_VALUES: ReadonlyMap<string, AdminProductSortField> = new Map([
+  ['rank', 'rank'],
+  ['RANK', 'rank'],
+  ['name', 'name'],
+  ['NAME', 'name'],
+  ['brand', 'brand'],
+  ['BRAND', 'brand'],
+  ['releasedAt', 'releasedAt'],
+  ['RELEASED_AT', 'releasedAt'],
+  ['minPrice', 'minPrice'],
+  ['MIN_PRICE', 'minPrice'],
+  ['totalStock', 'totalStock'],
+  ['TOTAL_STOCK', 'totalStock'],
+  ['featured', 'featured'],
+  ['FEATURED', 'featured'],
+]);
+
+const DIRECTION_VALUES: ReadonlyMap<string, SortDirection> = new Map([
+  ['asc', 'asc'],
+  ['ASC', 'asc'],
+  ['desc', 'desc'],
+  ['DESC', 'desc'],
+]);
+
+const INT32_MIN = -2147483648;
+const INT32_MAX = 2147483647;
+const INT64_MIN = -9223372036854775808n;
+const INT64_MAX = 9223372036854775807n;
+const DECIMAL_INTEGER = /^[+-]?[0-9]+$/;
+const HEX_INTEGER = /^([+-]?)(?:0[xX]|#)([0-9a-fA-F]+)$/;
+
+type ConversionResult<T> = { readonly ok: true; readonly value: T } | { readonly ok: false };
+
+/** The first query key not in `known`, worded as the backend words an undeclared key. */
+function firstUnknownQueryParam(
+  searchParams: URLSearchParams,
+  known: ReadonlySet<string>,
+): HttpResponse<Problem> | undefined {
+  for (const key of searchParams.keys()) {
+    if (!known.has(key)) return unknownQueryParameter(key);
+  }
+  return undefined;
 }
 
-function parseBoolQueryParam(
-  searchParams: URLSearchParams,
-  name: string,
-): { value: boolean | undefined } | { rejection: HttpResponse<Problem> } {
-  const value = searchParams.get(name);
-  if (value === null) return { value: undefined };
-  if (value === 'true') return { value: true };
-  if (value === 'false') return { value: false };
-  return { rejection: invalidParameter(name) };
+/** A wire value or a constant-name alias, mapped to its wire value; absent/`''` is the default. */
+function convertEnum<T extends string>(
+  raw: string | null,
+  defaultValue: T,
+  values: ReadonlyMap<string, T>,
+): ConversionResult<T> {
+  if (raw === null || raw === '') return { ok: true, value: defaultValue };
+  const mapped = values.get(raw);
+  return mapped === undefined ? { ok: false } : { ok: true, value: mapped };
+}
+
+/** `true`/`on`/`yes`/`1` and their false counterparts, trimmed and lower-cased; absent/`''` is "no filter". */
+function convertBoolean(raw: string | null): ConversionResult<boolean | undefined> {
+  if (raw === null) return { ok: true, value: undefined };
+  const normalised = raw.trim().toLowerCase();
+  if (normalised === '') return { ok: true, value: undefined };
+  if (['true', 'on', 'yes', '1'].includes(normalised)) return { ok: true, value: true };
+  if (['false', 'off', 'no', '0'].includes(normalised)) return { ok: true, value: false };
+  return { ok: false };
+}
+
+/** Whitespace stripped, then decimal or `0x`/`#` hex, bounded to a 32-bit signed integer; absent/`''` is `fallback`. */
+function convertInteger(raw: string | null, fallback: number): ConversionResult<number> {
+  if (raw === null || raw === '') return { ok: true, value: fallback };
+  const stripped = raw.replace(/\s+/g, '');
+  if (DECIMAL_INTEGER.test(stripped)) {
+    const value = Number(stripped);
+    return isInt32(value) ? { ok: true, value } : { ok: false };
+  }
+  const hexMatch = HEX_INTEGER.exec(stripped);
+  if (hexMatch === null) return { ok: false };
+  const [, sign, digits] = hexMatch;
+  const magnitude = Number.parseInt(digits, 16);
+  const value = sign === '-' ? -magnitude : magnitude;
+  return isInt32(value) ? { ok: true, value } : { ok: false };
+}
+
+function isInt32(value: number): boolean {
+  return Number.isInteger(value) && value >= INT32_MIN && value <= INT32_MAX;
+}
+
+/** Whitespace stripped, then decimal or `0x`/`#` hex, as a `bigint` with no range bound applied yet. */
+function convertLong(raw: string): ConversionResult<bigint> {
+  const stripped = raw.replace(/\s+/g, '');
+  if (DECIMAL_INTEGER.test(stripped)) return { ok: true, value: BigInt(stripped) };
+  const hexMatch = HEX_INTEGER.exec(stripped);
+  if (hexMatch === null) return { ok: false };
+  const [, sign, digits] = hexMatch;
+  const magnitude = BigInt(`0x${digits}`);
+  return { ok: true, value: sign === '-' ? -magnitude : magnitude };
+}
+
+/** Absent → no filter; otherwise every `q` value joined with `,`. Never fails. */
+function convertQ(searchParams: URLSearchParams): string | undefined {
+  const values = searchParams.getAll('q');
+  return values.length === 0 ? undefined : values.join(',');
+}
+
+/** None → `[]`; one value → split on `,`; two or more → as given, no splitting. Never fails. */
+function convertBrand(searchParams: URLSearchParams): readonly string[] {
+  const values = searchParams.getAll('brand');
+  if (values.length === 0) return [];
+  if (values.length === 1) {
+    const [only] = values;
+    return only === '' ? [] : only.split(',');
+  }
+  return values;
 }
 
 interface ListQuery {
@@ -125,55 +202,61 @@ function parseListQuery(
 ): { query: ListQuery } | { rejection: HttpResponse<Problem> } {
   const searchParams = new URL(request.url).searchParams;
 
-  for (const key of searchParams.keys()) {
-    if (!KNOWN_QUERY_PARAMS.has(key)) return { rejection: unknownQueryParam(key) };
-  }
+  const unknown = firstUnknownQueryParam(searchParams, KNOWN_QUERY_PARAMS);
+  if (unknown !== undefined) return { rejection: unknown };
 
-  const statusRaw = searchParams.get('status') ?? DEFAULT_STATUS;
-  if (!isStatusFilter(statusRaw)) return { rejection: invalidParameter('status') };
+  const q = convertQ(searchParams);
+  const brands = convertBrand(searchParams);
 
-  const sortRaw = searchParams.get('sort') ?? DEFAULT_SORT;
-  if (!isSortField(sortRaw)) return { rejection: invalidParameter('sort') };
+  const status = convertEnum(searchParams.get('status'), DEFAULT_STATUS, STATUS_VALUES);
+  if (!status.ok) return { rejection: wrongType('status', 'AdminProductStatusFilter') };
 
-  const directionRaw = searchParams.get('direction') ?? DEFAULT_DIRECTION;
-  if (!isSortDirection(directionRaw)) return { rejection: invalidParameter('direction') };
+  const featured = convertBoolean(searchParams.get('featured'));
+  if (!featured.ok) return { rejection: wrongType('featured', 'Boolean') };
 
-  const pageRaw = readInt(searchParams, 'page');
-  if (pageRaw !== undefined && (Number.isNaN(pageRaw) || pageRaw < DEFAULT_PAGE)) {
-    return { rejection: invalidParameter('page') };
-  }
-  const page = pageRaw ?? DEFAULT_PAGE;
+  const outOfStock = convertBoolean(searchParams.get('outOfStock'));
+  if (!outOfStock.ok) return { rejection: wrongType('outOfStock', 'Boolean') };
 
-  const pageSizeRaw = readInt(searchParams, 'pageSize');
-  if (
-    pageSizeRaw !== undefined &&
-    (Number.isNaN(pageSizeRaw) || pageSizeRaw < 1 || pageSizeRaw > MAX_PAGE_SIZE)
-  ) {
-    return { rejection: invalidParameter('pageSize') };
-  }
-  const pageSize = pageSizeRaw ?? DEFAULT_PAGE_SIZE;
+  const sort = convertEnum(searchParams.get('sort'), DEFAULT_SORT, SORT_VALUES);
+  if (!sort.ok) return { rejection: wrongType('sort', 'AdminProductSortField') };
 
-  const q = searchParams.get('q') ?? undefined;
-  if (q !== undefined && q.length > 100) return { rejection: invalidParameter('q') };
+  const direction = convertEnum(searchParams.get('direction'), DEFAULT_DIRECTION, DIRECTION_VALUES);
+  if (!direction.ok) return { rejection: wrongType('direction', 'SortDirection') };
 
-  const featured = parseBoolQueryParam(searchParams, 'featured');
-  if ('rejection' in featured) return featured;
-  const outOfStock = parseBoolQueryParam(searchParams, 'outOfStock');
-  if ('rejection' in outOfStock) return outOfStock;
+  const page = convertInteger(searchParams.get('page'), DEFAULT_PAGE);
+  if (!page.ok) return { rejection: wrongType('page', 'Integer') };
+
+  const pageSize = convertInteger(searchParams.get('pageSize'), DEFAULT_PAGE_SIZE);
+  if (!pageSize.ok) return { rejection: wrongType('pageSize', 'Integer') };
+
+  if (q !== undefined && q.length > 100) return { rejection: notAcceptable('q', 'SIZE') };
+  if (page.value < DEFAULT_PAGE) return { rejection: notAcceptable('page', 'MIN') };
+  if (pageSize.value < 1) return { rejection: notAcceptable('pageSize', 'MIN') };
+  if (pageSize.value > MAX_PAGE_SIZE) return { rejection: notAcceptable('pageSize', 'MAX') };
 
   return {
     query: {
-      status: statusRaw,
-      sort: sortRaw,
-      direction: directionRaw,
-      page,
-      pageSize,
+      status: status.value,
+      sort: sort.value,
+      direction: direction.value,
+      page: page.value,
+      pageSize: pageSize.value,
       q,
-      brands: searchParams.getAll('brand').filter((brand) => brand.length > 0),
+      brands,
       featured: featured.value,
       outOfStock: outOfStock.value,
     },
   };
+}
+
+/** The path `productId`: a `Long`-shaped value, `MIN` 1, looked up as a `Number`. */
+function parseProductId(raw: string): { rejection: HttpResponse<Problem> } | { productId: number } {
+  const converted = convertLong(raw);
+  if (!converted.ok || converted.value < INT64_MIN || converted.value > INT64_MAX) {
+    return { rejection: wrongType('productId', 'Long') };
+  }
+  if (converted.value < 1n) return { rejection: notAcceptable('productId', 'MIN') };
+  return { productId: Number(converted.value) };
 }
 
 function normalise(value: string): string {
@@ -335,37 +418,42 @@ export function productsReadHandlers(db: MockDb): HttpHandler[] {
     http.get(PRODUCTS_PATH, ({ request }) => {
       const session = sessionRejection(db);
       if (session !== undefined) return session;
-      if (db.scenario === 'list-error') {
-        return problem(503, 'SERVICE_UNAVAILABLE', 'Service unavailable');
-      }
+      if (db.scenario === 'list-error') return serviceUnavailable();
       const parsed = parseListQuery(request);
       if ('rejection' in parsed) return parsed.rejection;
       const filtered = filterAndSort(db, parsed.query);
       const body = pageFor(filtered, parsed.query.page, parsed.query.pageSize);
       return HttpResponse.json(body);
     }),
-    http.get(PRODUCT_DETAIL_PATH, ({ params }) => {
+    http.get(PRODUCT_DETAIL_PATH, ({ request, params }) => {
       const session = sessionRejection(db);
       if (session !== undefined) return session;
+      const searchParams = new URL(request.url).searchParams;
+      const unknown = firstUnknownQueryParam(searchParams, NO_QUERY_PARAMS);
+      if (unknown !== undefined) return unknown;
       const raw = params['productId'];
-      if (typeof raw !== 'string' || !/^[1-9][0-9]*$/.test(raw)) {
-        return invalidParameter('productId');
-      }
-      const productId = Number(raw);
-      const product = db.products.get(productId);
+      const parsed =
+        typeof raw === 'string'
+          ? parseProductId(raw)
+          : { rejection: wrongType('productId', 'Long') };
+      if ('rejection' in parsed) return parsed.rejection;
+      const product = db.products.get(parsed.productId);
       if (product === undefined) {
         return problem(404, 'NOT_FOUND', 'Resource not found', {
           detail: 'Product not found',
-          params: { productId },
+          params: { productId: parsed.productId },
         });
       }
       return HttpResponse.json(product, {
         headers: { ETag: `"${String(product.version)}"` },
       });
     }),
-    http.get(BRANDS_PATH, () => {
+    http.get(BRANDS_PATH, ({ request }) => {
       const session = sessionRejection(db);
       if (session !== undefined) return session;
+      const searchParams = new URL(request.url).searchParams;
+      const unknown = firstUnknownQueryParam(searchParams, NO_QUERY_PARAMS);
+      if (unknown !== undefined) return unknown;
       return HttpResponse.json(distinctBrands(db));
     }),
   ];

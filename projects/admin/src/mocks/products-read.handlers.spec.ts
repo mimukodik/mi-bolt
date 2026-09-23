@@ -6,19 +6,25 @@
  * `GET /api/v1/admin/products/:productId` and
  * `GET /api/v1/admin/brands` exactly the way the backend's query
  * service does: every list call goes through `sessionRejection` (401
- * without an admin), then validates the query and path parameters
- * with the same 400 shape, then applies filters, the sort key with
- * the id as the tie-break, paging, and the list-item projection;
- * the detail call carries the `ETag` header whose value is the
- * product `version` quoted; the brands call returns the distinct
- * brand names, archived included, sorted case-insensitively. The
- * `list-error` and `empty-catalog` scenarios follow the contract.
+ * without an admin), then an unknown query key, then a query or path
+ * value that does not convert or that breaks its constraint, worded
+ * exactly as `backend-answers.ts` words `ProblemAdvice` (MIM-334, fix
+ * round F7-R2), then applies filters, the sort key with the id as the
+ * tie-break, paging, and the list-item projection; the detail call
+ * carries the `ETag` header whose value is the product `version`
+ * quoted; the brands call returns the distinct brand names, archived
+ * included, sorted case-insensitively. The `list-error` and
+ * `empty-catalog` scenarios follow the contract.
  *
  * Values are read from the seed and the fixture directly, never
  * computed with the code under test: the catalogue has 48 products,
  * 46 active and 2 archived (`xiaomi-17t`, `apple-iphone-15`); the
  * default sort is `rank` ascending so the first page is the first
- * three seeds in source order.
+ * three seeds in source order. Brand counts (active only, the default
+ * status filter): Apple 10, Samsung 12, Xiaomi 8, HONOR 8, Google
+ * Pixel 4, Motorola 1, Vivo 3. The brief's `brand=Apple,Nokia` case
+ * uses `HONOR,Vivo` instead: the seed has no `Nokia` brand, and HONOR
+ * (8) plus Vivo (3) is 11 active products with no archived member.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -121,6 +127,26 @@ function asStringArray(value: unknown): readonly string[] {
   return arrayOf(value).map(stringOf);
 }
 
+/** The five fields every `Problem` rejection is pinned on: status, code, title, detail, params. */
+interface ProblemShape {
+  readonly status: number;
+  readonly code: string;
+  readonly title: string;
+  readonly detail: string;
+  readonly params: unknown;
+}
+
+function asProblem(value: unknown): ProblemShape {
+  if (!isRecord(value)) throw new Error('expected a problem');
+  return {
+    status: numberOf(value['status']),
+    code: stringOf(value['code']),
+    title: stringOf(value['title']),
+    detail: stringOf(value['detail']),
+    params: value['params'],
+  };
+}
+
 describe('productsReadHandlers list — auth and validation', () => {
   it('returns 401 when no admin is signed in', async () => {
     server?.use(...adminHandlers(createDb()));
@@ -129,67 +155,334 @@ describe('productsReadHandlers list — auth and validation', () => {
     expect(body).toMatchObject({ status: 401, code: 'UNAUTHENTICATED' });
   });
 
-  it('returns 400 when pageSize > 100', async () => {
-    signedIn();
-    const { status, body } = await getJson(`${LIST_URL}?pageSize=101`);
-    expect(status).toBe(400);
-    expect(body).toMatchObject({
-      status: 400,
-      code: 'INVALID_REQUEST',
-      params: { parameter: 'pageSize' },
-    });
-  });
-
-  it('returns 400 when sort is outside the enum', async () => {
-    signedIn();
-    const { status, body } = await getJson(`${LIST_URL}?sort=bogus`);
-    expect(status).toBe(400);
-    expect(body).toMatchObject({
-      status: 400,
-      code: 'INVALID_REQUEST',
-      params: { parameter: 'sort' },
-    });
-  });
-
+  // Fails if firstUnknownQueryParam ever lets an undeclared key through phase 1,
+  // or if unknownQueryParameter's wording drifts from ProblemAdvice.
   it('returns 400 for an unknown query parameter and names it', async () => {
     signedIn();
     const { status, body } = await getJson(`${LIST_URL}?colour=red`);
     expect(status).toBe(400);
-    expect(body).toMatchObject({
+    expect(asProblem(body)).toEqual({
       status: 400,
       code: 'INVALID_REQUEST',
-      detail: 'Unknown query parameter "colour"',
+      title: 'Invalid request',
+      detail: 'Unknown query parameter',
       params: { parameter: 'colour' },
     });
   });
 
+  // Fails if phase 3's page MIN check ever runs before phase 1's unknown-key check.
+  it('rejects an unknown query parameter before checking page (phase 1 before phase 3)', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?colour=red&page=0`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Unknown query parameter',
+      params: { parameter: 'colour' },
+    });
+  });
+
+  // Fails if convertEnum accepts a status value not in STATUS_VALUES.
+  it('returns 400 when status is outside the enum', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?status=bogus`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'status', reason: 'type AdminProductStatusFilter' },
+    });
+  });
+
+  // Fails if STATUS_VALUES drops the ACTIVE constant-name alias.
+  it('accepts the ACTIVE constant name for status, same items as no query', async () => {
+    signedIn();
+    const noQuery = await getJson(LIST_URL);
+    const constantName = await getJson(`${LIST_URL}?status=ACTIVE`);
+    expect(constantName.status).toBe(200);
+    expect(constantName.body).toEqual(noQuery.body);
+  });
+
+  // Fails if convertEnum starts matching status case-insensitively instead of by exact key.
+  it('rejects a status value that only differs in case', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?status=Active`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'status', reason: 'type AdminProductStatusFilter' },
+    });
+  });
+
+  // Fails if convertEnum stops treating '' as the default rather than an unmapped value.
+  it('treats an empty status as the default, same items as no query', async () => {
+    signedIn();
+    const noQuery = await getJson(LIST_URL);
+    const emptyStatus = await getJson(`${LIST_URL}?status=`);
+    expect(emptyStatus.status).toBe(200);
+    expect(emptyStatus.body).toEqual(noQuery.body);
+  });
+
+  // Fails if SORT_VALUES or DIRECTION_VALUES drop a constant-name alias.
+  it('accepts the RELEASED_AT/DESC constant names, same order as the wire values', async () => {
+    signedIn();
+    const wireValues = await getJson(`${LIST_URL}?sort=releasedAt&direction=desc`);
+    const constantNames = await getJson(`${LIST_URL}?sort=RELEASED_AT&direction=DESC`);
+    expect(constantNames.status).toBe(200);
+    expect(constantNames.body).toEqual(wireValues.body);
+  });
+
+  // Fails if convertEnum accepts a sort value not in SORT_VALUES.
+  it('returns 400 when sort is outside the enum', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?sort=bogus`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'sort', reason: 'type AdminProductSortField' },
+    });
+  });
+
+  // Fails if convertEnum accepts a direction value not in DIRECTION_VALUES.
+  it('returns 400 when direction is outside the enum', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?direction=up`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'direction', reason: 'type SortDirection' },
+    });
+  });
+
+  // Fails if convertBoolean drops the 'yes' alias for true.
+  it('accepts featured=YES as true, only featured products', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?featured=YES`);
+    expect(status).toBe(200);
+    const page = asListPage(body);
+    expect(page.totalElements).toBe(4);
+    expect(page.items.every((item) => item.featured)).toBe(true);
+  });
+
+  // Fails if convertBoolean stops mapping '0' to false.
+  it('accepts featured=0 as false, only products that are not featured', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?featured=0&pageSize=100`);
+    expect(status).toBe(200);
+    const page = asListPage(body);
+    expect(page.totalElements).toBe(42);
+    expect(page.items.every((item) => !item.featured)).toBe(true);
+  });
+
+  // Fails if convertBoolean stops treating '' as "no filter".
+  it('treats an empty featured as no filter, same items as no query', async () => {
+    signedIn();
+    const noQuery = await getJson(LIST_URL);
+    const emptyFeatured = await getJson(`${LIST_URL}?featured=`);
+    expect(emptyFeatured.status).toBe(200);
+    expect(emptyFeatured.body).toEqual(noQuery.body);
+  });
+
+  // Fails if the 'featured' name or the Boolean reason drifts from wrongType's wording.
   it('returns 400 when featured is not a boolean', async () => {
     signedIn();
     const { status, body } = await getJson(`${LIST_URL}?featured=maybe`);
     expect(status).toBe(400);
-    expect(body).toMatchObject({
+    expect(asProblem(body)).toEqual({
       status: 400,
       code: 'INVALID_REQUEST',
-      params: { parameter: 'featured' },
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'featured', reason: 'type Boolean' },
     });
   });
 
-  it('returns 400 when outOfStock is not a boolean', async () => {
+  // Fails if convertBoolean stops mapping '0' to false for outOfStock (it used to be rejected outright).
+  it('accepts outOfStock=0 as false; every seed product has stock, so nothing is excluded', async () => {
     signedIn();
-    const { status, body } = await getJson(`${LIST_URL}?outOfStock=0`);
+    const noQuery = await getJson(LIST_URL);
+    const falseOutOfStock = await getJson(`${LIST_URL}?outOfStock=0`);
+    expect(falseOutOfStock.status).toBe(200);
+    expect(falseOutOfStock.body).toEqual(noQuery.body);
+  });
+
+  // Fails if convertBoolean stops trimming surrounding whitespace before matching 'on'.
+  it('accepts outOfStock=" on " (trimmed) as true, only zero-stock products', async () => {
+    const db = signedIn();
+    const product = db.products.get(1);
+    if (product === undefined) throw new Error('seed product 1 missing');
+    product.variants[0].stock = 0;
+
+    const { status, body } = await getJson(`${LIST_URL}?outOfStock=%20on%20`);
+    expect(status).toBe(200);
+    const page = asListPage(body);
+    expect(page.totalElements).toBe(1);
+    expect(page.items[0]?.slug).toBe('motorola-edge-50-fusion');
+  });
+
+  // Fails if convertInteger accepts a decimal-point shape like '1.5'.
+  it('returns 400 when page is not an integer', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=1.5`);
     expect(status).toBe(400);
-    expect(body).toMatchObject({
+    expect(asProblem(body)).toEqual({
       status: 400,
       code: 'INVALID_REQUEST',
-      params: { parameter: 'outOfStock' },
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'page', reason: 'type Integer' },
     });
   });
 
+  // Fails if isInt32 stops bounding a converted decimal to the 32-bit signed range.
+  it('returns 400 when page is outside the 32-bit signed range', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=99999999999`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'page', reason: 'type Integer' },
+    });
+  });
+
+  // Fails if convertInteger stops accepting the 0x hex shape.
+  it('accepts a 0x-prefixed hex page', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=0x2&pageSize=1`);
+    expect(status).toBe(200);
+    const page = asListPage(body);
+    expect(page.page).toBe(2);
+    expect(page.pageSize).toBe(1);
+  });
+
+  // Fails if phase 3's pageSize MAX check ever runs before phase 2's page conversion.
+  it('rejects an unconvertible page before checking pageSize (phase 2 before phase 3)', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=abc&pageSize=500`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'page', reason: 'type Integer' },
+    });
+  });
+
+  // Fails if the page MIN constraint or its reason drifts from notAcceptable's wording.
+  it('returns 400 when page is below 1', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=0`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter is not acceptable',
+      params: { parameter: 'page', reason: 'MIN' },
+    });
+  });
+
+  // Fails if the pageSize MAX constraint or its reason drifts from notAcceptable's wording.
+  it('returns 400 when pageSize is above 100', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?pageSize=101`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter is not acceptable',
+      params: { parameter: 'pageSize', reason: 'MAX' },
+    });
+  });
+
+  // Fails if phase 3 stops checking constraints in declaration order (page before pageSize).
+  it('reports page, not pageSize, when both violate a constraint (the lowest index wins)', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=0&pageSize=500`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter is not acceptable',
+      params: { parameter: 'page', reason: 'MIN' },
+    });
+  });
+
+  // Fails if the q SIZE constraint stops running before the page MIN constraint (q's declaration index is lower).
+  it('reports q, not page, when both violate a constraint', async () => {
+    signedIn();
+    const q = 'x'.repeat(101);
+    const { status, body } = await getJson(`${LIST_URL}?q=${q}&page=0`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter is not acceptable',
+      params: { parameter: 'q', reason: 'SIZE' },
+    });
+  });
+
+  // Fails if convertBrand stops treating an absent brand as no filter.
+  it('treats an empty brand as no filter, same items as no query', async () => {
+    signedIn();
+    const noQuery = await getJson(LIST_URL);
+    const emptyBrand = await getJson(`${LIST_URL}?brand=`);
+    expect(emptyBrand.status).toBe(200);
+    expect(emptyBrand.body).toEqual(noQuery.body);
+  });
+
+  // Fails if convertBrand stops splitting a single repeated value on ','.
+  it('splits a single brand=HONOR,Vivo value on the comma', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?brand=HONOR,Vivo`);
+    expect(status).toBe(200);
+    const page = asListPage(body);
+    expect(page.totalElements).toBe(11);
+    expect(new Set(page.items.map((item) => item.brand))).toEqual(new Set(['HONOR', 'Vivo']));
+  });
+
+  // Fails if convertBrand starts splitting two-or-more repeated values instead of taking them as given.
   it('ignores empty brand values and filters only the named ones', async () => {
     signedIn();
-    const { body } = await getJson(`${LIST_URL}?brand=&brand=Apple&pageSize=100`);
+    const { status, body } = await getJson(`${LIST_URL}?brand=&brand=Apple`);
+    expect(status).toBe(200);
     const page = asListPage(body);
+    expect(page.totalElements).toBe(10);
     expect(new Set(page.items.map((item) => item.brand))).toEqual(new Set(['Apple']));
+  });
+
+  // Fails if the 503 detail falls back to the title instead of serviceUnavailable's wording.
+  it('returns 503 SERVICE_UNAVAILABLE for list-error', async () => {
+    signedIn('list-error');
+    const { status, body } = await getJson(LIST_URL);
+    expect(status).toBe(503);
+    expect(asProblem(body)).toEqual({
+      status: 503,
+      code: 'SERVICE_UNAVAILABLE',
+      title: 'Service unavailable',
+      detail: 'The service is temporarily unavailable',
+      params: undefined,
+    });
   });
 });
 
@@ -409,13 +702,6 @@ describe('productsReadHandlers list — tie-break', () => {
 });
 
 describe('productsReadHandlers list — scenarios', () => {
-  it('returns 503 SERVICE_UNAVAILABLE for list-error', async () => {
-    signedIn('list-error');
-    const { status, body } = await getJson(LIST_URL);
-    expect(status).toBe(503);
-    expect(body).toMatchObject({ status: 503, code: 'SERVICE_UNAVAILABLE' });
-  });
-
   it('returns an empty page with zero totals for empty-catalog', async () => {
     signedIn('empty-catalog');
     const { status, body } = await getJson(LIST_URL);
@@ -452,14 +738,96 @@ describe('productsReadHandlers detail', () => {
     });
   });
 
+  // Fails if the 'productId' name or the Long reason drifts from wrongType's wording.
   it('returns 400 when productId is not an integer', async () => {
     signedIn();
     const { status, body } = await getJson(detailUrl(0).replace(/0$/, 'abc'));
     expect(status).toBe(400);
-    expect(body).toMatchObject({
+    expect(asProblem(body)).toEqual({
       status: 400,
       code: 'INVALID_REQUEST',
-      params: { parameter: 'productId' },
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'productId', reason: 'type Long' },
+    });
+  });
+
+  // Fails if the productId MIN constraint or its reason drifts from notAcceptable's wording.
+  it('returns 400 when productId is below 1', async () => {
+    signedIn();
+    const { status, body } = await getJson(detailUrl(0));
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter is not acceptable',
+      params: { parameter: 'productId', reason: 'MIN' },
+    });
+  });
+
+  // Fails if convertLong stops bounding a converted decimal to the 64-bit signed range.
+  it('returns 400 when productId is outside the 64-bit signed range', async () => {
+    signedIn();
+    const { status, body } = await getJson(detailUrl(0).replace(/0$/, '99999999999999999999'));
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'productId', reason: 'type Long' },
+    });
+  });
+
+  // Fails if convertLong stops accepting the 0x hex shape for productId.
+  it('accepts a 0x-prefixed hex productId', async () => {
+    signedIn();
+    const { status, body } = await getJson(detailUrl(0).replace(/0$/, '0x1'));
+    expect(status).toBe(200);
+    const product = asDetail(body);
+    expect(product.id).toBe(1);
+  });
+
+  // Fails if convertLong stops applying the '-' sign to a hex magnitude.
+  it('applies the sign to a negative hex productId, then rejects it as below MIN', async () => {
+    signedIn();
+    const { status, body } = await getJson(detailUrl(0).replace(/0$/, '-0x1'));
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter is not acceptable',
+      params: { parameter: 'productId', reason: 'MIN' },
+    });
+  });
+
+  // Fails if the detail handler stops checking for an unknown query key (getAdminProduct declares none).
+  it('returns 400 for an unknown query parameter on a valid productId', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${detailUrl(1)}?x=1`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Unknown query parameter',
+      params: { parameter: 'x' },
+    });
+  });
+
+  // Fails if the unknown-key check ever runs after the path conversion instead of before it.
+  it('rejects an unknown query parameter before an invalid productId', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${detailUrl(0).replace(/0$/, 'abc')}?x=1`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Unknown query parameter',
+      params: { parameter: 'x' },
     });
   });
 });
@@ -478,5 +846,19 @@ describe('productsReadHandlers brands', () => {
       'Vivo',
       'Xiaomi',
     ]);
+  });
+
+  // Fails if the brands handler stops checking for an unknown query key (listAdminBrands declares none).
+  it('returns 400 for an unknown query parameter', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${BRANDS_URL}?sort=name`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Unknown query parameter',
+      params: { parameter: 'sort' },
+    });
   });
 });
