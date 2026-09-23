@@ -194,3 +194,5 @@ content-addressed identifier, so a CDN can cache by the same id.
 
 - The `docs/0N` citations above refer to the same files under `backend/docs/`.
 - `data/catalog/` is the git root's `data/catalog/`, the one copy of the catalogue: the backend image carries it and the frontend fixture is generated from it.
+- `data/catalog/` is tracked in git now, so the "is not tracked" sentence under Consequences no longer holds.
+- `scripts/local-database-docker.sh reset` is now `deploy/compose.sh down -v`, which drops the PostgreSQL volume, catalogue and images together.

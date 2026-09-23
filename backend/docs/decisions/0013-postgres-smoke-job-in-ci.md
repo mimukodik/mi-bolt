@@ -42,3 +42,8 @@ let it through.
 ## Date and status
 
 2026-09-20 — Valid. User decision on MIM-205 after the T11 finding.
+
+## Note: CI after the monorepo move (MIM-411, MIM-415)
+
+- The `postgres-smoke` job (`PostgreSQL boot and smoke`) is in `.github/workflows/backend.yml` (decision 0006's note), not in `.github/workflows/pr-check.yml`; it still waits on the unit tests, the integration tests and PMD (`needs: [unit-tests, integration-tests, lint]`).
+- `scripts/smoke.sh` is `backend/services/commerce/scripts/smoke.sh`; the job runs it as `bash scripts/smoke.sh` from `backend/services/commerce/`.
