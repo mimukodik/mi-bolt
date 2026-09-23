@@ -234,9 +234,10 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     expect(fixture.componentInstance.serverErrors()).not.toBeNull();
 
     const root = getRootElement(fixture);
-    const message = root.querySelector<HTMLElement>('#contact-email-message');
-    expect(message).not.toBeNull();
-    expect(message?.textContent).toContain('Adj meg egy érvényes e-mail címet.');
+    expect(root.querySelector<HTMLElement>('#contact-email-message')?.hidden).toBe(false);
+    expect(root.querySelector('#contact-email-message')?.textContent.trim()).toBe(
+      'Adj meg egy érvényes e-mail címet.',
+    );
     expect(root.querySelector('[data-testid="contact-save-error"]')).toBeNull();
   });
 
