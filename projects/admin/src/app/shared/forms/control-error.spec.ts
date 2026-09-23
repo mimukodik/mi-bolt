@@ -68,7 +68,8 @@ describe('ControlError', () => {
   });
 
   it('empties the alert once the touched field becomes valid', async () => {
-    // Fails if control-error.ts drops the `invalid()` half of the predicate.
+    // Fails if control-error.ts keeps a message once the touched field has no error. The `invalid()`
+    // half of the predicate cannot be told apart from an empty `errors()` without an async validator.
     host.f.name().markAsTouched();
     await fixture.whenStable();
     expect(alert()?.textContent.trim()).toBe('Kötelező mező.');
