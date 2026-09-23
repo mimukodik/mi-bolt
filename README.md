@@ -1,6 +1,6 @@
 # MiBolt
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.8.
+The Angular workspace under `frontend/` was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.8. See [`docs/monorepo.md`](docs/monorepo.md) for how this repository is laid out.
 
 ## Development server
 
@@ -20,22 +20,22 @@ Once the server is running, open your browser and navigate to `http://localhost:
 mise run dev   # PostgreSQL on 55433, the backend on 8080, storefront 4200, payment 4210 (/demo-fizetes/), admin 4220
 ```
 
-`start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080`. The backend hands the shop an absolute `redirectUrl` on `http://localhost:4210` (MIM-251: the payment gateway is a separate origin, as a real one is), so the browser leaves the shop for the payment dev server, whose `proxy.payment.conf.json` forwards its `/api` calls to the same backend; `returnUrl` brings it back to `http://localhost:4200/penztar`. With `npm start` (MSW) both apps stay on 4200: the mock's URLs are relative and `proxy.conf.json` reaches the payment app through `/demo-fizetes`. Stop the database with `mise run stop`.
+`npm --prefix frontend run start:local-backend` serves the `local-backend` configuration: `environment.local-backend.ts` replaces `environment.ts` (`demo: false`, so the mock worker stays off) and `proxy.local-backend.conf.json` forwards `/api` to `http://localhost:8080`. The backend hands the shop an absolute `redirectUrl` on `http://localhost:4210` (MIM-251: the payment gateway is a separate origin, as a real one is), so the browser leaves the shop for the payment dev server, whose `proxy.payment.conf.json` forwards its `/api` calls to the same backend; `returnUrl` brings it back to `http://localhost:4200/penztar`. With `npm --prefix frontend run start` (MSW) both apps stay on 4200: the mock's URLs are relative and `proxy.conf.json` reaches the payment app through `/demo-fizetes`. Stop the database with `mise run stop`.
 
-The built apps run on the real backend with two static hosts: `npx ng build --configuration local-backend`, `npm run build:payment`, then `MI_BOLT_API_PROXY=http://localhost:8080 PORT=4200 node scripts/serve-static.mjs` for the shop and `MI_BOLT_PAYMENT_ONLY=1 MI_BOLT_PAYMENT_STATIC_DIR=dist/demo-payment/browser MI_BOLT_API_PROXY=http://localhost:8080 PORT=4210 node scripts/serve-static.mjs` for the payment app.
+The built apps run on the real backend with two static hosts: `npm --prefix frontend exec -- ng build storefront --configuration local-backend`, `npm --prefix frontend run build:payment`, then `MI_BOLT_API_PROXY=http://localhost:8080 PORT=4200 node frontend/scripts/serve-static.mjs` for the shop and `MI_BOLT_PAYMENT_ONLY=1 MI_BOLT_PAYMENT_STATIC_DIR=dist/demo-payment/browser MI_BOLT_API_PROXY=http://localhost:8080 PORT=4210 node frontend/scripts/serve-static.mjs` for the payment app.
 
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
 
 ```bash
-ng generate component component-name
+npm --prefix frontend exec -- ng generate component component-name
 ```
 
 For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
 
 ```bash
-ng generate --help
+npm --prefix frontend exec -- ng generate --help
 ```
 
 ## Building
@@ -43,17 +43,17 @@ ng generate --help
 To build the project run:
 
 ```bash
-ng build
+npm --prefix frontend run build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+This will compile the storefront and store the build artifacts in the `frontend/dist/storefront/` directory. By default, the production build optimizes your application for performance and speed.
 
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
 
 ```bash
-ng test
+npm --prefix frontend run test
 ```
 
 ## Continuous integration
