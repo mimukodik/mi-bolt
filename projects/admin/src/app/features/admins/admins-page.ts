@@ -87,9 +87,10 @@ export class AdminsPage {
   /**
    * Opens the confirmation dialog; on confirmation calls the store and
    * shows the snack-bar matching the `DeleteResult`. A click on a
-   * blocked button is filtered out by the early return.
+   * blocked button is filtered out by the early return. Public so a
+   * spec can await the whole flow the click started.
    */
-  protected async confirmDelete(admin: AdminUser): Promise<void> {
+  async confirmDelete(admin: AdminUser): Promise<void> {
     if (this.deleteBlock(admin) !== null) return;
 
     const confirmed = await firstValueFrom(

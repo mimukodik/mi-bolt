@@ -27,7 +27,8 @@ import { formatDate, registerLocaleData } from '@angular/common';
 import localeHu from '@angular/common/locales/hu';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { MockResult } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
 
@@ -149,6 +150,14 @@ function snackBarText(): string {
   return element.textContent.trim();
 }
 
+/** The promise a spied call returned; `confirmDelete` resolves once the dialog, the DELETE and the snack-bar are done. */
+function returnedPromise(result: MockResult<Promise<void>> | undefined): Promise<void> {
+  if (result?.type === 'return') {
+    return result.value;
+  }
+  throw new Error('confirmDelete did not return');
+}
+
 describe('AdminsPage', () => {
   beforeEach(() => {
     configureTestBed();
@@ -251,6 +260,41 @@ describe('AdminsPage', () => {
     expect(tooltipOf(button, fixture).message).toBe('Az utolsó admin nem törölhető.');
   });
 
+  // Fails if a blocked Törlés (the signed-in admin's row) stops being
+  // filtered by confirmDelete's early return: opens a dialog or sends a
+  // DELETE despite `disabledInteractive` leaving the native `disabled`
+  // attribute unset.
+  it('case 5b: clicking a blocked Törlés opens no dialog and sends no DELETE', async () => {
+    const db = signedInDb();
+    server?.use(...authHandlers(db), ...usersHandlers(db));
+    await signInAndRefresh(db);
+
+    const fixture = TestBed.createComponent(AdminsPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const host = hostOf(fixture);
+
+    let deleteCount = 0;
+    const deleteListener = ({ request }: { request: Request }): void => {
+      if (request.method === 'DELETE' && request.url.includes('/admin/users/')) deleteCount++;
+    };
+    server?.events.on('request:start', deleteListener);
+
+    try {
+      const selfRow = rowByUsername(host, SEED_ADMIN.username);
+      if (selfRow === undefined) throw new Error('self row missing');
+      const deleting = vi.spyOn(fixture.componentInstance, 'confirmDelete');
+      torlesButtonOf(selfRow).click();
+      await returnedPromise(deleting.mock.results[0]);
+      await fixture.whenStable();
+
+      expect(TestBed.inject(MatDialog).openDialogs.length).toBe(0);
+      expect(deleteCount).toBe(0);
+    } finally {
+      server?.events.removeListener('request:start', deleteListener);
+    }
+  });
+
   // Fails if the page stops opening the dialog with the exact text, or if
   // Mégse stops cancelling; fails if Törlés stops sending the DELETE, the
   // snack-bar text drifts, or the row stays put after the 204.
@@ -274,6 +318,7 @@ describe('AdminsPage', () => {
     try {
       const otherRow = rowByUsername(host, OTHER_ADMIN.username);
       if (otherRow === undefined) throw new Error('other row missing');
+      const deleting = vi.spyOn(fixture.componentInstance, 'confirmDelete');
       torlesButtonOf(otherRow).click();
       await fixture.whenStable();
 
@@ -287,22 +332,14 @@ describe('AdminsPage', () => {
       );
 
       dialogButtonByLabel('Mégse').click();
+      await returnedPromise(deleting.mock.results[0]);
       await fixture.whenStable();
       expect(deleteCount).toBe(0);
 
       torlesButtonOf(otherRow).click();
       await fixture.whenStable();
       dialogButtonByLabel('Törlés').click();
-      // The dialog close → firstValueFrom → DELETE → store update path
-      // runs several async steps beyond `whenStable`. Yield so the DELETE
-      // resolves and the page re-renders with the row removed before we
-      // assert. Manually `detectChanges()` after the yield because
-      // zoneless scheduling does not always flush a signal-driven render
-      // before `whenStable()` resolves.
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 50);
-      });
-      fixture.detectChanges();
+      await returnedPromise(deleting.mock.results[1]);
       await fixture.whenStable();
       fixture.detectChanges();
 
@@ -360,14 +397,12 @@ describe('AdminsPage', () => {
 
       const otherRow = rowByUsername(host, OTHER_ADMIN.username);
       if (otherRow === undefined) throw new Error('other row missing');
+      const deleting = vi.spyOn(fixture.componentInstance, 'confirmDelete');
       torlesButtonOf(otherRow).click();
       await fixture.whenStable();
       dialogButtonByLabel('Törlés').click();
       refreshCookie(db);
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 50);
-      });
-      fixture.detectChanges();
+      await returnedPromise(deleting.mock.results[0]);
       await fixture.whenStable();
       fixture.detectChanges();
 
@@ -406,22 +441,13 @@ describe('AdminsPage', () => {
 
     const fixture = TestBed.createComponent(AdminsPage);
     // Render before the first GET settles so the progress bar is in
-    // the DOM while the request is pending; release the pending promise
-    // afterwards to land on the 503 branch. `whenStable` would wait for
-    // the hanging handler, so a tiny yield + manual detectChanges
-    // drives the page through the two renders without blocking.
-    fixture.detectChanges();
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    // the DOM while the request is pending; whenStable would wait for
+    // the held handler, so it is used only after releaseFirst().
     fixture.detectChanges();
     const host = hostOf(fixture);
     expect(host.querySelector('mat-progress-bar')).not.toBeNull();
 
     (releaseFirst ?? (() => undefined))();
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 50);
-    });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -434,9 +460,6 @@ describe('AdminsPage', () => {
     );
     expect(retryButton).not.toBeUndefined();
     retryButton?.click();
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 50);
-    });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
