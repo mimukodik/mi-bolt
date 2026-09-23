@@ -255,7 +255,13 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "projects/admin/src/mocks/browser.ts",
+                  "with": "projects/admin/src/mocks/browser.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,

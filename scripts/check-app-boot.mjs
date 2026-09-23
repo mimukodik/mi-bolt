@@ -12,7 +12,7 @@
  * non-root base path.
  *
  * A unit test cannot catch either: jsdom has no Service Worker, the
- * production build skips MSW behind `isDevMode()`, and the failure lives
+ * production build skips MSW behind its environment guard, and the failure lives
  * in the dev server's asset and base-path handling — not in any code the
  * test suite imports. Port 4299 is this script's alone and is outside the
  * ranges the workspace reserves for runners and browser verification; both

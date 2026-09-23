@@ -16,9 +16,10 @@ registerLocaleData(localeHu, 'hu-HU');
  * Starts the in-page mock worker before bootstrap, in a non-production demo
  * build only. `isDevMode()` is not usable here: the `local-backend`
  * configuration is a dev build too, and it must not start the worker. The
- * dynamic `import()` keeps `setupWorker` out of the initial bundle: the
- * production build still emits the worker as a lazy chunk, which this guard
- * never fetches.
+ * dynamic `import()` keeps `setupWorker` out of the initial bundle, and the
+ * production configuration swaps `./mocks/browser` for `browser.production.ts`
+ * (angular.json `fileReplacements`), so no MSW code reaches the production
+ * dist (`npm run check:admin-dist`).
  */
 async function bootstrap(): Promise<void> {
   if (!environment.production && environment.demo) {
