@@ -72,8 +72,7 @@ export const worker: ReturnType<typeof setupWorker> | undefined = isBrowserProce
 
 /**
  * The `production` scenario is the only one that runs with an empty
- * catalog: every demo / happy-path / out-of-stock /
- * payment-declined variant expects the fixture to be present so the
+ * catalog: every other scenario expects the fixture to be present so the
  * page renders the catalogue rather than an empty state.
  */
 const PRODUCTION_SCENARIO_NAME = 'production';
