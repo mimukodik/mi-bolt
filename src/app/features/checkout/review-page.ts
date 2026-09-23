@@ -145,7 +145,9 @@ export class ReviewPage {
     void this.router.navigate([route]);
   }
 
-  /** The eight `SubmitOutcome` kinds, each to its recovery. */
+  /** The eight `SubmitOutcome` kinds, each to its recovery. A shopper who
+   *  left the page while the submit was in flight is sent nowhere, except
+   *  to the receipt of an order that was placed. */
   async onSubmitRequested(): Promise<void> {
     this.submitFailure.set(null);
     this.submitting.set(true);
@@ -153,6 +155,10 @@ export class ReviewPage {
       const outcome = await this.orderSubmission.submitOrder();
       switch (outcome.kind) {
         case 'committed':
+          // Even when the shopper has left this page: only the receipt page
+          // empties the ordered cart (success-step.ts, `resetOrderedCart`),
+          // so without it a placed order would stay out of sight and its
+          // cart could be checked out again.
           await this.router.navigate(['/penztar/siker', outcome.orderId]);
           return;
         case 'payment-required':
@@ -163,6 +169,7 @@ export class ReviewPage {
           // "Fizetés indítása" control is the way forward, so this
           // arm only records that the submit did not land.
           if (outcome.redirectUrl !== null) {
+            if (this.destroyRef.destroyed) return;
             this.locationAssign(outcome.redirectUrl);
             return;
           }
@@ -172,6 +179,7 @@ export class ReviewPage {
           // The route carries `?navigationReason=incomplete`
           // (`order-submission.ts:93-98`), so it is a URL, not a
           // segment array.
+          if (this.destroyRef.destroyed) return;
           await this.router.navigateByUrl(outcome.route);
           return;
         case 'unknown':
@@ -243,12 +251,14 @@ export class ReviewPage {
    * would idempotently replay the intent that was just declined
    * instead of minting a new one. Design §5.3 requires the opposite:
    * "Újrapróbálom (new intent, new key)".
+   * A shopper who left the page meanwhile is not sent to the payment page.
    */
   private async startPayment(): Promise<void> {
     this.submitFailure.set(null);
     checkoutKeys.rotateIntentKey();
     const result = await this.checkoutFacade.createPaymentIntent();
     if (result.ok) {
+      if (this.destroyRef.destroyed) return;
       this.locationAssign(result.value.redirectUrl);
       return;
     }

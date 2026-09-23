@@ -6,7 +6,7 @@
  * were saved, so the step can drop a server error the moment the user
  * edits the field it referred to.
  */
-import { Component, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { buildContactForm, normalizeContact } from './contact.schema';
@@ -41,6 +41,7 @@ export class ContactPage {
   private readonly router = inject(Router);
   private readonly checkout = inject(CheckoutFacade);
   private readonly step = viewChild.required(ContactStep);
+  private readonly destroyRef = inject(DestroyRef);
 
   /**
    * The form starts from the contact section the checkout draft
@@ -71,6 +72,10 @@ export class ContactPage {
     try {
       const normalized = normalizeContact(this.modelWritable());
       const saveResult = await this.saver(normalized);
+      // The shopper left the step while the save was in flight: nothing
+      // here may focus a destroyed view (NG0911) or pull them back into
+      // the wizard. Whatever the save wrote to the draft stays.
+      if (this.destroyRef.destroyed) return;
       if (!saveResult.ok) {
         if (
           saveResult.fieldErrors !== undefined &&

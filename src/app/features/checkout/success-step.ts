@@ -37,7 +37,7 @@
  * never talks to the SDK directly.
  */
 
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -75,6 +75,7 @@ export class SuccessStep {
   private readonly cart = inject(CartFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Raw order id from the URL. Lazily resolved through `paramMap`. */
   private readonly orderIdFromRoute = toSignal(this.route.paramMap, {
@@ -242,13 +243,17 @@ export class SuccessStep {
     //   4. Clear the checkout session and the receipt through
     //      `startNewPurchase()` so the wizard guards do not bounce
     //      a later navigation back to this success URL.
+    //   5. Skip both navigations when the shopper has already left this
+    //      page; the reset in 4 still runs.
     void this.cart
       .ensureCart()
-      .then(() => this.router.navigate(['/telefonok']))
+      .then(() => (this.destroyRef.destroyed ? undefined : this.router.navigate(['/telefonok'])))
       .then(() => {
         this.checkout.startNewPurchase();
       })
-      .catch(() => this.router.navigate(['/penztar/kosar']))
+      .catch(() =>
+        this.destroyRef.destroyed ? undefined : this.router.navigate(['/penztar/kosar']),
+      )
       .finally(() => {
         this.startingNewCart.set(false);
       });
