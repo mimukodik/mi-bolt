@@ -310,6 +310,16 @@ export class CartFacade {
   }
 
   /**
+   * Drops the last generic mutation failure. A page that did not issue
+   * that mutation calls it on arrival, so a refused add on another page
+   * does not follow the shopper there (owner, 2026-09-23). The 412
+   * conflict and the 410 expiry describe the cart itself and stay.
+   */
+  dismissError(): void {
+    this.errorWritable.set(null);
+  }
+
+  /**
    * Adopt a version the server bumped through a non-cart mutation
    * (`PATCH /checkout`, the shared session counter, openapi.yaml:16-19).
    * The lines did not change, only the version, so nothing is refetched,
