@@ -16,6 +16,8 @@ import {
   firstQueryKey,
   hasOnlyMembers,
   isTextual,
+  javaIsBlank,
+  javaStrip,
   javaTrimAllWhitespace,
   malformedBody,
   notAcceptable,
@@ -211,5 +213,25 @@ describe('backend answers', () => {
       const c = String.fromCharCode(code);
       expect(javaTrimAllWhitespace(`1${c}2`)).toBe(`1${c}2`);
     }
+  });
+
+  // Fails if javaIsBlank treats a no-break space as blank or misses a Java whitespace character.
+  it('is blank for empty and Java whitespace, not for a no-break space', () => {
+    expect(javaIsBlank('')).toBe(true);
+    expect(javaIsBlank(' ')).toBe(true);
+    expect(javaIsBlank(String.fromCharCode(0x1c, 0x2028, 0x3000))).toBe(true);
+    expect(javaIsBlank(String.fromCharCode(0xa0))).toBe(false);
+    expect(javaIsBlank(String.fromCharCode(0x2007))).toBe(false);
+    expect(javaIsBlank(String.fromCharCode(0x202f))).toBe(false);
+    expect(javaIsBlank('a')).toBe(false);
+  });
+
+  // Fails if javaStrip removes a no-break space or leaves a Java whitespace character at an edge.
+  it('strips Java whitespace from both edges and keeps a no-break space', () => {
+    expect(javaStrip(`${String.fromCharCode(0x1c)} a b ${String.fromCharCode(0x3000)}`)).toBe(
+      'a b',
+    );
+    const noBreakEdges = `${String.fromCharCode(0xa0)}a${String.fromCharCode(0xa0)}`;
+    expect(javaStrip(noBreakEdges)).toBe(noBreakEdges);
   });
 });
