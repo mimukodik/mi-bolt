@@ -62,8 +62,13 @@
   color: var(--color-text-secondary);
 }
 
+/* A long e-mail, name or street wraps inside the card instead of
+   pushing past it: `anywhere` also lowers the cell's min-content
+   width, so the `1fr` track can shrink. */
 .row dd {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--type-body);
   color: var(--color-text-primary);
 }

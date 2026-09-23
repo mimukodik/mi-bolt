@@ -202,6 +202,14 @@
   font-size: var(--type-body);
 }
 
+/* A long name or street wraps inside the card instead of pushing
+   past it: `anywhere` also lowers the cell's min-content width, so
+   the flex item can shrink. */
+.meta__row dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .meta__row dt {
   color: var(--color-text-secondary);
   font-size: var(--type-helper);
