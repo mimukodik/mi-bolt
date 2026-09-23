@@ -266,6 +266,20 @@
                   "replace": "projects/admin/src/environments/environment.ts",
                   "with": "projects/admin/src/environments/environment.development.ts"
                 }
+              ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "projects/admin/public"
+                },
+                {
+                  "glob": "mockServiceWorker.js",
+                  "input": "public"
+                },
+                {
+                  "glob": "media/**",
+                  "input": "public"
+                }
               ]
             },
             "local-backend": {

@@ -109,6 +109,8 @@ jobs:
         timeout-minutes: 5
       - run: npm run check:payment-boot
         timeout-minutes: 6
+      - run: npm run check:admin-boot
+        timeout-minutes: 6
 
   api-drift:
     name: API client drift

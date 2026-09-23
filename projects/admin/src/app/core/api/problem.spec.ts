@@ -33,6 +33,18 @@ describe('isProblem', () => {
   it('returns false for an object missing the Problem shape', () => {
     expect(isProblem({ code: 'X' })).toBe(false);
   });
+
+  it('returns false when code is not a string', () => {
+    expect(isProblem({ code: 1, status: 422, fieldErrors: [] })).toBe(false);
+  });
+
+  it('returns false when status is not a number', () => {
+    expect(isProblem({ code: 'X', status: '422', fieldErrors: [] })).toBe(false);
+  });
+
+  it('returns false when fieldErrors is not an array', () => {
+    expect(isProblem({ code: 'X', status: 422, fieldErrors: 'not-an-array' })).toBe(false);
+  });
 });
 
 describe('problemOf', () => {
