@@ -1176,7 +1176,7 @@
     "title": "Back navigation retains draft",
     "scenario": "checkout-ready",
     "action": "Go review→contact→delivery",
-    "expected": "Entered values survive SPA navigation; changing draft invalidates quote.",
+    "expected": "Entered values survive SPA navigation; the review summary is recomputed from the changed draft.",
     "layers": [
       "unit"
     ],
@@ -1367,7 +1367,7 @@
     "title": "Home shipping",
     "scenario": "checkout-contact",
     "action": "Choose home with valid HU address",
-    "expected": "Shipping1990; complete address saved.",
+    "expected": "Shipping 1490 Ft below a 30000 Ft subtotal, 0 from it; complete address saved.",
     "layers": [
       "unit"
     ],
@@ -1383,8 +1383,8 @@
     "group": "delivery",
     "title": "Pickup without address",
     "scenario": "checkout-contact",
-    "action": "Choose virtual pickup",
-    "expected": "Shipping0, address omitted, no real location claim.",
+    "action": "Choose pickup point",
+    "expected": "Shipping 990 Ft below a 30000 Ft subtotal, 0 from it; address omitted, no real location claim.",
     "layers": [
       "unit"
     ],
@@ -1435,7 +1435,7 @@
     "title": "Changing delivery",
     "scenario": "checkout-ready",
     "action": "Change home to pickup and return review",
-    "expected": "Fresh quote total differs by1990; old payment invalidated.",
+    "expected": "Recomputed total differs by the fee difference (500 Ft below a 30000 Ft subtotal, none from it); a card payment intent for the old total is refused with 409 PRICE_CHANGED.",
     "layers": [
       "unit"
     ],
@@ -1448,11 +1448,11 @@
   },
   {
     "id": "E082",
-    "group": "quote",
-    "title": "Quote totals",
+    "group": "review",
+    "title": "Summary totals",
     "scenario": "checkout-ready",
-    "action": "Create quote for One x1 home delivery",
-    "expected": "339990 +1990 =341980 HUF; qty2=681970 HUF.",
+    "action": "Open review for one phone with home delivery and card",
+    "expected": "Summary = subtotal + shipping fee + payment fee, recomputed on every read; a phone above 30000 Ft gets 0 shipping and 0 card fee, so total = subtotal.",
     "layers": [
       "unit"
     ],
@@ -1466,16 +1466,16 @@
   },
   {
     "id": "E083",
-    "group": "quote",
-    "title": "Expired quote",
-    "scenario": "quote-expired",
-    "action": "Advance mock clock to expiry then submit",
-    "expected": "QUOTE_EXPIRED, explicit refresh/review required.",
+    "group": "review",
+    "title": "Retired: quote expiry",
+    "scenario": "—",
+    "action": "Retired: the 2.0.0 contract has no quote, no expiry and no QUOTE_EXPIRED; the summary is recomputed on every read.",
+    "expected": "—",
     "layers": [
       "unit"
     ],
     "optional": false,
-    "status": "specified-not-run",
+    "status": "retired",
     "tasks": [
       "T08",
       "T22",
@@ -1484,10 +1484,10 @@
   },
   {
     "id": "E084",
-    "group": "quote",
+    "group": "review",
     "title": "Price change",
     "scenario": "price-changed",
-    "action": "Change fixture price before quote/order",
+    "action": "Change fixture price before order",
     "expected": "409 PRICE_CHANGED with new cart version; user explicitly re-reviews.",
     "layers": [
       "unit"
@@ -1502,7 +1502,7 @@
   },
   {
     "id": "E085",
-    "group": "quote",
+    "group": "order",
     "title": "Stock loss at submit",
     "scenario": "stock-lost-before-order",
     "action": "Confirm after stock changes",
@@ -1520,11 +1520,11 @@
   },
   {
     "id": "E086",
-    "group": "quote",
+    "group": "review",
     "title": "Stale cart version",
-    "scenario": "quote-stale-cart",
-    "action": "Change cart after quote",
-    "expected": "Old quote cannot authorize order; new total required.",
+    "scenario": "cart-changed",
+    "action": "Change the cart after opening review, then confirm",
+    "expected": "412 CART_VERSION_CONFLICT, no order; the conflict banner offers Újrapróbálom.",
     "layers": [
       "unit"
     ],
@@ -1558,8 +1558,8 @@
     "group": "review",
     "title": "Unchecked consent",
     "scenario": "checkout-ready",
-    "action": "Try final action without one/both checks",
-    "expected": "Submission disabled/explained; no API order request.",
+    "action": "Try final action without the terms tick",
+    "expected": "The button stays active; the click marks the terms, moves focus to them and sends no order request.",
     "layers": [
       "unit"
     ],
@@ -1593,7 +1593,7 @@
     "title": "Edit links",
     "scenario": "checkout-ready",
     "action": "Use contact and delivery edit links",
-    "expected": "Correct earlier step, retained fields, invalidated previous quote.",
+    "expected": "Correct earlier step, retained fields; the review summary is recomputed on return.",
     "layers": [
       "unit"
     ],
@@ -1609,7 +1609,7 @@
     "group": "payment",
     "title": "COD simulated purchase",
     "scenario": "checkout-ready",
-    "action": "Choose demo_cod and confirm",
+    "action": "Choose Utánvét (cash_on_delivery) and confirm",
     "expected": "No payment-intent call; order successfully simulated.",
     "layers": [
       "unit"
@@ -1628,7 +1628,7 @@
     "group": "payment",
     "title": "Card simulation succeeds",
     "scenario": "payment-success",
-    "action": "Choose demo_card and confirm",
+    "action": "Choose Bankkártya (card) and confirm",
     "expected": "Succeeded matching intent then one order; no card fields or real network.",
     "layers": [
       "unit"

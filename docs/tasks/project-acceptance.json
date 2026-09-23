@@ -56,7 +56,7 @@
   },
   {
     "id": "AC12",
-    "text": "COD and mock-card success, decline, pending, timeout, server error, stale quote, stock/price change and unknown outcome have tested recovery paths.",
+    "text": "COD and mock-card success, decline, pending, timeout, server error, stock/price change (409 PRICE_CHANGED on order) and unknown outcome have tested recovery paths.",
     "status": "required-not-yet-executed"
   },
   {
