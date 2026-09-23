@@ -288,7 +288,9 @@ describe('owner 2026-09-22: Szűrők alkalmazása is always active', () => {
     expect(applyButton().disabled).toBe(false);
     expect(min.getAttribute('aria-invalid')).toBe('true');
     expect(min.getAttribute('aria-describedby')).toBe('drawer-price-message');
-    expect(queryInput('[data-testid="drawer-max-price"]').getAttribute('aria-invalid')).toBeNull();
+    const max = queryInput('[data-testid="drawer-max-price"]');
+    expect(max.getAttribute('aria-invalid')).toBeNull();
+    expect(max.getAttribute('aria-describedby')).toBeNull();
 
     applyButton().click();
     fixture.detectChanges();
@@ -309,6 +311,10 @@ describe('owner 2026-09-22: Szűrők alkalmazása is always active', () => {
 
     const max = queryInput('[data-testid="drawer-max-price"]');
     expect(max.getAttribute('aria-invalid')).toBe('true');
+    expect(max.getAttribute('aria-describedby')).toBe('drawer-price-message');
+    const min = queryInput('[data-testid="drawer-min-price"]');
+    expect(min.getAttribute('aria-invalid')).toBeNull();
+    expect(min.getAttribute('aria-describedby')).toBeNull();
     expect(document.activeElement).toBe(max);
   });
 
@@ -329,6 +335,36 @@ describe('owner 2026-09-22: Szűrők alkalmazása is always active', () => {
     expect(host.emitted.length).toBe(1);
     expect(host.emitted[0]?.minPrice).toBe(1000);
   });
+
+  it('submitting the form (Enter) with a valid draft applies once', () => {
+    const { fixture, host } = setup();
+    typePrice('drawer-min-price', '1000');
+    fixture.detectChanges();
+
+    const submit = new Event('submit', { bubbles: true, cancelable: true });
+    queryElement('[data-testid="filter-drawer"]').dispatchEvent(submit);
+    fixture.detectChanges();
+
+    expect(submit.defaultPrevented).toBe(true);
+    expect(host.emitted.length).toBe(1);
+    expect(host.emitted[0]?.minPrice).toBe(1000);
+  });
+
+  it('submitting the form (Enter) with min above max applies nothing and focuses the min price', async () => {
+    const { fixture, host } = setup();
+    typePrice('drawer-min-price', '5000');
+    typePrice('drawer-max-price', '1000');
+    fixture.detectChanges();
+
+    const submit = new Event('submit', { bubbles: true, cancelable: true });
+    queryElement('[data-testid="filter-drawer"]').dispatchEvent(submit);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(submit.defaultPrevented).toBe(true);
+    expect(host.emitted.length).toBe(0);
+    expect(document.activeElement).toBe(queryInput('[data-testid="drawer-min-price"]'));
+  });
 });
 
 describe('screens.md:51: the drawer opens with focus on its heading (owner 2026-09-23)', () => {
@@ -337,6 +373,25 @@ describe('screens.md:51: the drawer opens with focus on its heading (owner 2026-
     // CDK schedules the focus through `afterNextRender` after the
     // dialog mounts, so the change-detection pass alone is not enough.
     await fixture.whenStable();
+    const active = document.activeElement;
+    expect(active?.tagName).toBe('H2');
+    expect(active?.textContent.trim()).toBe('Szűrők');
+  });
+
+  it('closing and reopening the drawer puts the focus back on the heading', async () => {
+    const { fixture, host } = setup();
+    await fixture.whenStable();
+    // Move the focus off the heading, so the reopen has to put it back.
+    queryInput('[data-testid="drawer-min-price"]').focus();
+
+    host.opened.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    host.opened.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
     const active = document.activeElement;
     expect(active?.tagName).toBe('H2');
     expect(active?.textContent.trim()).toBe('Szűrők');
