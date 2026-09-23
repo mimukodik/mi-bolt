@@ -189,3 +189,8 @@ content-addressed identifier, so a CDN can cache by the same id.
   JSON inclusion.
 - Spring Framework 6.1 Reference, `TransactionTemplate`.
 - Liquibase 5.0.3 documentation, `type` field behaviour.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.
+- `data/catalog/` is the git root's `data/catalog/`, the one copy of the catalogue: the backend image carries it and the frontend fixture is generated from it.

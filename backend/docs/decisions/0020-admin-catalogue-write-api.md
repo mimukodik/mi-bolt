@@ -58,3 +58,7 @@ session and CSRF checks (ADR 0015).
 - A 412 raised at the flush, after a concurrent write, carries only
   `params.received`: the winning version is not known inside the failed
   transaction.
+
+## Note: paths after the monorepo move (MIM-411)
+
+- The `docs/0N` citations above refer to the same files under `backend/docs/`.
