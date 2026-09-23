@@ -98,6 +98,7 @@ describe('seedCatalog', () => {
         expect(image).toBeDefined();
         if (image === undefined) continue;
         expect(image.bytes).toBeNull();
+        expect(image.seedFile).toBe(`${color.image.id}.png`);
         expect(color.image.src).toBe(`/api/v1/media/${color.image.id}`);
       }
     }

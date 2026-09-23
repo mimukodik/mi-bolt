@@ -18,13 +18,15 @@ export const SEED_ADMIN: AdminUser = {
 export const SEED_ADMIN_PASSWORD = 'mibolt-admin-demo';
 export const ARCHIVED_SEED_COUNT = 2;
 
-/** A stored image: uploaded bytes, or `null` for a seed file served from `public/media`. */
-export interface MockImage {
-  readonly bytes: Uint8Array | null;
+/** An uploaded image carries its bytes; a seed image carries the file name it is served from under `public/media/`. */
+export type MockImage = {
   readonly contentType: UploadedImage['contentType'];
   readonly width: number;
   readonly height: number;
-}
+} & (
+  | { readonly bytes: Uint8Array; readonly seedFile: null }
+  | { readonly bytes: null; readonly seedFile: string }
+);
 
 export interface SeedCatalog {
   readonly products: readonly AdminProduct[];
@@ -84,7 +86,7 @@ function color(value: unknown, images: Map<string, MockImage>): AdminProductColo
   const id = imageId(file);
   const width = num(image, 'width');
   const height = num(image, 'height');
-  images.set(id, { bytes: null, contentType: contentTypeOf(file), width, height });
+  images.set(id, { bytes: null, seedFile: file, contentType: contentTypeOf(file), width, height });
   return {
     code: text(source, 'code'),
     name: text(source, 'name'),
