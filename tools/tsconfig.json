@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["agent-memory.ts", "agent-memory/**/*.ts"]
+  "include": ["agent-memory.ts", "agent-memory/**/*.ts", "dev-server/**/*.ts"]
 }
