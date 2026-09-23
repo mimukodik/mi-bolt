@@ -3,6 +3,7 @@
   accept="image/webp,image/jpeg,image/png"
   class="adm-image-upload-file-input"
   type="file"
+  [disabled]="disabled()"
   (change)="onFileInputChange($event)"
 />
 <div class="adm-image-upload-dropzone" (dragover)="onDragOver($event)" (drop)="onDrop($event)">

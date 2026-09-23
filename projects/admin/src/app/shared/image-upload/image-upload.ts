@@ -100,7 +100,6 @@ export class ImageUpload implements FormValueControl<Image | null> {
 
   readonly value = model<Image | null>(null);
   readonly disabled = input<boolean>(false);
-  readonly touched = input<boolean>(false);
   readonly touch = output();
 
   /** Bound to the button's `[attr.aria-describedby]`; F23 passes `adm-control-error`'s id. */
@@ -147,16 +146,13 @@ export class ImageUpload implements FormValueControl<Image | null> {
   }
 
   protected onDragOver(event: DragEvent): void {
-    if (this.disabled()) {
-      return;
-    }
+    // Always suppresses the browser's own drop behaviour (which otherwise
+    // navigates the tab to the dropped file) — the `disabled` gate lives in
+    // `handleFile`, the single place every entry point routes through.
     event.preventDefault();
   }
 
   protected onDrop(event: DragEvent): void {
-    if (this.disabled()) {
-      return;
-    }
     event.preventDefault();
     const file = event.dataTransfer?.files[0] ?? null;
     if (file !== null) {
@@ -169,6 +165,9 @@ export class ImageUpload implements FormValueControl<Image | null> {
   }
 
   private handleFile(file: File): void {
+    if (this.disabled()) {
+      return;
+    }
     this.touch.emit();
     this.error.set(null);
 
