@@ -6,12 +6,6 @@
   background: inherit;
 }
 
-.mat-toolbar.mat-primary {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
 /*
  * Material's unlayered `.mat-drawer-content { display: block }` beats Tailwind's
  * layered `flex` utility, so the column is set here, where it wins; `main` then

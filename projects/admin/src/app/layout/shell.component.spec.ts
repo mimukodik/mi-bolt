@@ -7,6 +7,7 @@ import { MOCK_PLATFORM_LOCATION_CONFIG } from '@angular/common/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { ScrollDispatcher } from '@angular/cdk/scrolling';
 import type { Observable } from 'rxjs';
 import type { BreakpointState } from '@angular/cdk/layout';
 import { HttpResponse, http } from 'msw';
@@ -164,6 +165,15 @@ describe('ShellComponent', () => {
       }
       expect(getComputedStyle(content).display).toBe('flex');
       expect(getComputedStyle(content).flexDirection).toBe('column');
+    });
+
+    it('registers main as a CDK scroll container, so overlays follow its scrolling', () => {
+      const main = native.querySelector('main');
+      if (!(main instanceof HTMLElement)) throw new Error('expected main');
+      const registered = Array.from(TestBed.inject(ScrollDispatcher).scrollContainers.keys()).map(
+        (scrollable) => scrollable.getElementRef().nativeElement,
+      );
+      expect(registered).toContain(main);
     });
   });
 
