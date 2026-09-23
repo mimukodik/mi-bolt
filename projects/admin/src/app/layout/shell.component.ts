@@ -15,7 +15,7 @@ import { filter, map } from 'rxjs/operators';
 
 import { AdminSession } from '../core/auth/admin-session';
 import { LOGIN_PATH } from '../core/auth/login-path';
-import { PasswordChangeDialog } from '../features/account/password-change-dialog';
+import type { PasswordChangeDialog } from '../features/account/password-change-dialog';
 
 /**
  * Top-level admin shell: side navigation on desktop, drawer on handset.
@@ -70,8 +70,11 @@ export class ShellComponent {
       });
   }
 
-  openPasswordChange(): void {
-    const ref = this.dialog.open<PasswordChangeDialog, unknown, boolean>(PasswordChangeDialog, {
+  /** Loads the dialog on first use, so its form packages stay out of the initial bundle. */
+  async openPasswordChange(): Promise<void> {
+    const { PasswordChangeDialog: dialogComponent } =
+      await import('../features/account/password-change-dialog');
+    const ref = this.dialog.open<PasswordChangeDialog, unknown, boolean>(dialogComponent, {
       width: '28rem',
       autoFocus: 'first-tabbable',
     });

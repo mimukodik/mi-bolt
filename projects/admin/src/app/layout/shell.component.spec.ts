@@ -12,14 +12,15 @@ import type { BreakpointState } from '@angular/cdk/layout';
 import { HttpResponse, http } from 'msw';
 import { of } from 'rxjs';
 import { MatSidenav } from '@angular/material/sidenav';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { MockResult } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
 
 import { provideApiConfiguration } from '../api/generated/api-configuration';
 import { authHandlers } from '../../mocks/auth.handlers';
 import { createDb } from '../../mocks/db';
-import { SEED_ADMIN } from '../../mocks/seed';
+import { SEED_ADMIN, SEED_ADMIN_PASSWORD } from '../../mocks/seed';
 import { server, useMswServer } from '../../testing/msw-server';
 import { AdminSession } from '../core/auth/admin-session';
 import { unauthorizedInterceptor } from '../core/auth/unauthorized.interceptor';
@@ -97,6 +98,14 @@ function menuItemLabels(): string[] {
 function snackBarText(): string {
   const found = document.querySelector('.mat-mdc-snack-bar-label');
   return found === null ? '' : found.textContent.trim();
+}
+
+/** Narrows a spy's recorded result so the caller can await the promise `openPasswordChange` returned. */
+function returnedPromise(result: MockResult<Promise<void>>): Promise<void> {
+  if (result.type === 'return') {
+    return result.value;
+  }
+  throw new Error('openPasswordChange did not return');
 }
 
 describe('ShellComponent', () => {
@@ -290,8 +299,13 @@ describe('ShellComponent', () => {
 
       accountTrigger(native)?.click();
       await fixture.whenStable();
+      const opening = vi.spyOn(fixture.componentInstance, 'openPasswordChange');
       const items = Array.from(overlay().querySelectorAll<HTMLElement>('.mat-mdc-menu-item'));
       items[menuItemLabels().indexOf('Jelszó módosítása')].click();
+      await fixture.whenStable();
+
+      expect(opening).toHaveBeenCalledTimes(1);
+      await returnedPromise(opening.mock.results[0]);
       await fixture.whenStable();
 
       expect(overlay().querySelector('h2[mat-dialog-title]')?.textContent).toBe(
@@ -299,7 +313,7 @@ describe('ShellComponent', () => {
       );
 
       const inputs = Array.from(overlay().querySelectorAll<HTMLInputElement>('input'));
-      inputs[0].value = 'mibolt-admin-demo';
+      inputs[0].value = SEED_ADMIN_PASSWORD;
       inputs[0].dispatchEvent(new Event('input'));
       inputs[1].value = 'a-brand-new-password';
       inputs[1].dispatchEvent(new Event('input'));
