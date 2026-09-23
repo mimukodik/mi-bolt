@@ -473,6 +473,30 @@ describe('productsWriteHandlers', () => {
 
       expect(response.status).toBe(200);
     });
+
+    // Fails if replaceHandler stops calling csrfRejection first.
+    it('rejects without the XSRF header (403)', async () => {
+      const db = setup();
+      const input = inputOf(requireProduct(db, 5));
+
+      const response = await put(productUrl(5), db, input, {
+        'If-Match': '"0"',
+        [XSRF_HEADER]: undefined,
+      });
+
+      await expectProblem(response, 403, 'CSRF_TOKEN_INVALID');
+    });
+
+    // Fails if replaceHandler stops calling sessionRejection.
+    it('rejects with no session (401)', async () => {
+      const db = setup();
+      db.sessionAdminId = null;
+      const input = inputOf(requireProduct(db, 5));
+
+      const response = await put(productUrl(5), db, input, { 'If-Match': '"0"' });
+
+      await expectProblem(response, 401, 'UNAUTHENTICATED');
+    });
   });
 
   describe('archive', () => {
@@ -524,6 +548,28 @@ describe('productsWriteHandlers', () => {
 
       await expectProblem(response, 404, 'NOT_FOUND');
     });
+
+    // Fails if archiveHandler stops calling csrfRejection first.
+    it('rejects without the XSRF header (403)', async () => {
+      const db = setup();
+
+      const response = await action(archiveUrl(5), db, {
+        'If-Match': '"0"',
+        [XSRF_HEADER]: undefined,
+      });
+
+      await expectProblem(response, 403, 'CSRF_TOKEN_INVALID');
+    });
+
+    // Fails if archiveHandler stops calling sessionRejection.
+    it('rejects with no session (401)', async () => {
+      const db = setup();
+      db.sessionAdminId = null;
+
+      const response = await action(archiveUrl(5), db, { 'If-Match': '"0"' });
+
+      await expectProblem(response, 401, 'UNAUTHENTICATED');
+    });
   });
 
   describe('restore', () => {
@@ -557,6 +603,62 @@ describe('productsWriteHandlers', () => {
       const response = await action(restoreUrl(47), db, { 'If-Match': '"0"' });
 
       await expectProblem(response, 409, 'FEATURED_LIMIT');
+    });
+
+    // Fails if restoreHandler stops answering 428 when If-Match is absent.
+    it('rejects without If-Match (428)', async () => {
+      const db = setup();
+
+      const response = await action(restoreUrl(47), db);
+
+      await expectProblem(response, 428, 'PRECONDITION_REQUIRED');
+    });
+
+    // Fails if restoreHandler stops comparing If-Match with the stored version.
+    it('rejects a stale If-Match (412, expected 0 received 7)', async () => {
+      const db = setup();
+
+      const response = await action(restoreUrl(47), db, { 'If-Match': '"7"' });
+
+      const body = await expectProblem(response, 412, 'PRODUCT_VERSION_CONFLICT');
+      const params = body['params'];
+      expectRecord(params);
+      expect(readNumber(params, 'expected')).toBe(0);
+      expect(readNumber(params, 'received')).toBe(7);
+    });
+
+    // Fails if restoreHandler stops answering 404 for an id the catalogue does not hold.
+    it('rejects an unknown product id (404, params.productId 999)', async () => {
+      const db = setup();
+
+      const response = await action(restoreUrl(999), db, { 'If-Match': '"0"' });
+
+      const body = await expectProblem(response, 404, 'NOT_FOUND');
+      const params = body['params'];
+      expectRecord(params);
+      expect(readNumber(params, 'productId')).toBe(999);
+    });
+
+    // Fails if restoreHandler stops calling csrfRejection first.
+    it('rejects without the XSRF header (403)', async () => {
+      const db = setup();
+
+      const response = await action(restoreUrl(47), db, {
+        'If-Match': '"0"',
+        [XSRF_HEADER]: undefined,
+      });
+
+      await expectProblem(response, 403, 'CSRF_TOKEN_INVALID');
+    });
+
+    // Fails if restoreHandler stops calling sessionRejection.
+    it('rejects with no session (401)', async () => {
+      const db = setup();
+      db.sessionAdminId = null;
+
+      const response = await action(restoreUrl(47), db, { 'If-Match': '"0"' });
+
+      await expectProblem(response, 401, 'UNAUTHENTICATED');
     });
   });
 });

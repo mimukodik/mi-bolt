@@ -746,6 +746,25 @@ describe('products-write validation', () => {
         { path: '/variants/1/slug', code: 'DUPLICATE_VARIANT_SLUG', params: {} },
       ]);
     });
+
+    // Fails if replaceHandler stops running validatorErrors once the version check has passed.
+    it('replace with an all-whitespace brand gets NOTBLANK', async () => {
+      const db = setup();
+      const response = await putJson(
+        productUrl(5),
+        db,
+        withChanges(baseBody(), ['slug', 'honor-600-lite'], ['brand', '   ']),
+        { 'If-Match': '"0"' },
+      );
+      const body = await expectProblem(
+        response,
+        422,
+        'VALIDATION_FAILED',
+        'Section rejected',
+        'One or more supplied fields are not acceptable',
+      );
+      expect(fieldErrorsOf(body)).toEqual([{ path: '/brand', code: 'NOTBLANK', params: {} }]);
+    });
   });
 
   describe('query parameters', () => {
@@ -769,6 +788,38 @@ describe('products-write validation', () => {
     it('restore with an unknown query key answers 400 with that key', async () => {
       const db = setup();
       const response = await action(`${restoreUrl(1)}?force=1`, db, { 'If-Match': '"0"' });
+      const body = await expectProblem(
+        response,
+        400,
+        'INVALID_REQUEST',
+        'Invalid request',
+        'Unknown query parameter',
+      );
+      const params = body['params'];
+      expectRecord(params);
+      expect(readString(params, 'parameter')).toBe('force');
+    });
+
+    // Fails if firstQueryKey stops being checked on replace.
+    it('replace with an unknown query key answers 400 with that key', async () => {
+      const db = setup();
+      const response = await putJson(`${productUrl(5)}?x=1`, db, baseBody(), { 'If-Match': '"0"' });
+      const body = await expectProblem(
+        response,
+        400,
+        'INVALID_REQUEST',
+        'Invalid request',
+        'Unknown query parameter',
+      );
+      const params = body['params'];
+      expectRecord(params);
+      expect(readString(params, 'parameter')).toBe('x');
+    });
+
+    // Fails if firstQueryKey stops being checked on archive.
+    it('archive with an unknown query key answers 400 with that key', async () => {
+      const db = setup();
+      const response = await action(`${archiveUrl(1)}?force=1`, db, { 'If-Match': '"0"' });
       const body = await expectProblem(
         response,
         400,
@@ -912,6 +963,40 @@ describe('products-write validation', () => {
       expectRecord(params);
       expect(readString(params, 'parameter')).toBe('ifMatch');
       expect(readString(params, 'reason')).toBe('PATTERN');
+    });
+
+    // Fails if archive stops checking the If-Match pattern once productId MIN has passed.
+    it('archive with a malformed If-Match answers not acceptable, ifMatch PATTERN', async () => {
+      const db = setup();
+      const response = await action(archiveUrl(1), db, { 'If-Match': 'abc' });
+      const body = await expectProblem(
+        response,
+        400,
+        'INVALID_REQUEST',
+        'Invalid request',
+        'Query or path parameter is not acceptable',
+      );
+      const params = body['params'];
+      expectRecord(params);
+      expect(readString(params, 'parameter')).toBe('ifMatch');
+      expect(readString(params, 'reason')).toBe('PATTERN');
+    });
+
+    // Fails if restore stops checking productId MIN.
+    it('restore with productId 0 answers not acceptable, productId MIN', async () => {
+      const db = setup();
+      const response = await action(restoreUrl(0), db, { 'If-Match': '"0"' });
+      const body = await expectProblem(
+        response,
+        400,
+        'INVALID_REQUEST',
+        'Invalid request',
+        'Query or path parameter is not acceptable',
+      );
+      const params = body['params'];
+      expectRecord(params);
+      expect(readString(params, 'parameter')).toBe('productId');
+      expect(readString(params, 'reason')).toBe('MIN');
     });
 
     // Fails if HEX_ID_PATTERN (products-write.handlers.ts ~650) stops rejecting a leading '+'
