@@ -222,3 +222,10 @@ changes stored URLs, not the contract (docs/02 §6.2).
 ## Date and status
 
 2026-09-19 — Active (MIM-205 T3).
+
+## Note: paths after the monorepo move (MIM-411)
+
+- The importer lives at the git root's `tools/catalog-import/`; every `scripts/catalog-import/` path above, the `.cache/` ones included, now starts there.
+- It is the `catalog-import` npm workspace of `tools/package.json`, locked by `tools/package-lock.json`, so the `pnpm --dir scripts/catalog-import …` commands above become `npm --prefix tools ci`, `npm --prefix tools exec -w catalog-import -- playwright install chromium` and `npm --prefix tools run import -w catalog-import`.
+- It writes the git root's `data/catalog/` (`tools/catalog-import/src/import.ts:41-42`), which is tracked now (decision 0007's note).
+- The `docs/02` citations above refer to the same file under `backend/docs/`.

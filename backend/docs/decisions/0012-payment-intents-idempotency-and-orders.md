@@ -178,3 +178,4 @@ on 2026-09-20.
 - The contract line numbers cited above are those of the file when this record was written; the move kept the file byte for byte.
 - The `docs/0N` citations above refer to the same files under `backend/docs/`.
 - `docs/01-kommunikacio.md` (`docs/01`) is now `contracts/commerce/kommunikacio.md`.
+- `scripts/demo-stack.sh` is gone: `deploy/compose.yaml:44-45` derives the two URL prefix variables (`MIBOLT_PAYMENT_REDIRECT_URL_PREFIX`, `MIBOLT_PAYMENT_RETURN_URL_PREFIX`) from `MIBOLT_PAYMENT_ORIGIN` and `MIBOLT_SHOP_ORIGIN`, which `mise run stack` points at the web container's origin.

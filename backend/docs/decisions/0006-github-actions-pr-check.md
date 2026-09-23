@@ -237,3 +237,11 @@ on `main` and the PR runs that restore from it — is still to be measured.
   `persist-credentials` default `true`.
 - https://github.com/actions/download-artifact/blob/v7/action.yml —
   `pattern`, `path` and `merge-multiple` inputs, verified for revision 2.
+
+## Note: CI after the monorepo move (MIM-411, MIM-415)
+
+- The workflow this record describes is `.github/workflows/backend.yml` in the monorepo. It is a reusable workflow (`on: workflow_call`): `.github/workflows/ci.yml` calls it on a pull request to `main` or a push to `main` when the change touches a backend input path listed in `.github/components.yml`.
+- Its jobs run on Blacksmith runners (`blacksmith-2vcpu-ubuntu-2404`) instead of the pinned `ubuntu-24.04` above, and run their steps in `backend/` (the smoke job in `backend/services/commerce/`).
+- It has five jobs: `Unit tests`, `Integration tests`, `Lint (PMD)` (decision 0009), `Coverage gate and build`, and `PostgreSQL boot and smoke` (decision 0013).
+- The monorepo's Node jobs run in `.github/workflows/frontend.yml`; `backend.yml` still has none. The import script is at `tools/catalog-import/` (decision 0005) and is still never run in CI.
+- The root `package.json`/pnpm setup for the coding agents' tooling is gone: that tooling is `tools/package.json` (`tools/agent-memory.ts`) and `.claude/hooks/package.json`, both npm, and `backend.yml` runs neither.

@@ -255,3 +255,8 @@ Sources:
   — the `ASTClassType` node and its `FullyQualified` boolean
   attribute, which is true for every qualified type reference
   regardless of whether a matching import exists.
+
+## Note: CI after the monorepo move (MIM-411, MIM-415)
+
+- The `Lint (PMD)` job is in `.github/workflows/backend.yml` (decision 0006's note). It runs `./gradlew pmdMain pmdTest` in `backend/` and, on failure, uploads `pmd-reports` from `backend/services/commerce/build/reports/pmd/`.
+- The `coverage-gate` job named above is `Coverage gate and build` there.
