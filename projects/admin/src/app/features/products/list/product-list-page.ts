@@ -83,7 +83,6 @@ export class ProductListPage {
     return (
       query.q !== DEFAULT_PRODUCT_LIST_QUERY.q ||
       query.brands.length !== DEFAULT_PRODUCT_LIST_QUERY.brands.length ||
-      query.brands.some((brand, index) => brand !== DEFAULT_PRODUCT_LIST_QUERY.brands[index]) ||
       query.status !== DEFAULT_PRODUCT_LIST_QUERY.status ||
       query.featured !== DEFAULT_PRODUCT_LIST_QUERY.featured ||
       query.outOfStock !== DEFAULT_PRODUCT_LIST_QUERY.outOfStock
