@@ -127,7 +127,6 @@ Routing:
 - A durable learning that is neither a rule nor a procedure, a decision with
   the reason behind it or a trap that already cost time -> an entry in
   `.claude/shared-memory/`: one topic file plus its line in the index.
-- Behavior specific to one app -> `apps/<app>/AGENTS.md`.
 
 ## Output
 

@@ -108,12 +108,6 @@ path-scoped rules trigger only on a read.
   every spelling before concluding a name has zero hits: `grep -rn "AddToCart"`
   and `grep -rn "add-to-cart"` return different files in
   `frontend/projects/storefront/src/app/features/product/`.
-- **A "these two trees are the same file" claim is checked, not assumed.**
-  `.claude/skills/` and `.agents/skills/` are two independent directories here,
-  not a symlink pair: `ls -lai` on the same file under each prints different
-  inodes. An edit to one does not reach the other, so a correction has to be
-  applied twice or the change reaches half its readers. `ls -ld` and `ls -lai`
-  settle it in one command.
 - **A cut feature leaves nothing behind, and the mock data is not a reason to
   keep any of it.** When the user cuts a component, a route, a filter or a
   feature, it goes out of every layer in the same change: the type union, the

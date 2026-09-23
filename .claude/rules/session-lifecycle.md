@@ -248,15 +248,13 @@ The `/retrospective` skill runs three ways:
 
 The Stop hook does not nudge retrospectives; it only enforces the Todo list.
 The skill runs as a forked background agent, proposes a new skill, a skill
-change, or a CLAUDE.md/AGENTS.md change only when warranted, and always writes
+change, or a CLAUDE.md change only when warranted, and always writes
 a file under `.claude/retrospectives/`, even with no proposal, because that
 file is what tells the SessionStart hook the session is covered up to the
 point it was written. Applying a proposal requires AskUserQuestion approval
 first; an approved new or modified skill must be written and tested with the
-`skill-creator` skill (plugin). Skills live under `.agents/skills/<name>/SKILL.md`.
-`.claude/skills/` holds a second, independent copy of the same tree — two real
-directories, not a symlink pair — so an edit applied to one reaches half its
-readers; `.claude/rules/code-standards.md` owns that check.
+`skill-creator` skill (plugin). Skills live under
+`.claude/skills/<name>/SKILL.md`.
 
 Every proposal's outcome goes back into the retrospective file, and writing it
 is the orchestrator's rather than the skill's: the skill runs as a fork that
@@ -395,7 +393,7 @@ What the Hooks section says about a hook holds for the definitions in
 
 - More than one Claude session can work in this workspace at once. Shared
   surfaces are `.claude/settings.json`, `.claude/hooks/`, `.claude/rules/`,
-  `.claude/CLAUDE.md`, `.claude/agents/`, and both skill trees.
+  `.claude/CLAUDE.md`, `.claude/agents/`, and `.claude/skills/`.
 - **I never message another session on my own judgment.** Changing a shared
   surface is not a reason to send anything. A SendMessage to a peer session
   goes out only when the user asks for it, and then it states what changed,

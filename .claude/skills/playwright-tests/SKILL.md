@@ -56,8 +56,8 @@ a `coder-agent.sh` runner and every other agent keep out of those files.
   browsers. The CI matrix in `.github/workflows/pr-check.yml` installs each
   matrix entry's browser per-job.
 - The backend of `e2e/integration/**` is MSW inside the page. There is no server
-  to seed: `projects/storefront/src/mocks/repository.ts` is page-side memory
-  (AGENTS.md). `e2e/smoke/**` waits on the `local-backend` configuration.
+  to seed: `projects/storefront/src/mocks/repository.ts` is page-side memory.
+  `e2e/smoke/**` waits on the `local-backend` configuration.
 
 ## 3. Flow A: writing tests
 
