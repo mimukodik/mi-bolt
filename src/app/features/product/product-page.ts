@@ -341,6 +341,13 @@ export class ProductPage {
     try {
       await this.cartFacade.ensureCart();
       await this.cartFacade.addItem(intent.variantId, intent.quantity);
+      // The shopper picked another colour or storage while this add was
+      // in flight. Its outcome — success or failure — belongs to the
+      // old selection, so the early-return skips both the refusal and
+      // the confirmation below. The `addError` linkedSignal cannot do
+      // this: it clears only a refusal already on screen when the
+      // variant changed, not one this add would write afterwards.
+      if (this.selectedVariant()?.id !== intent.variantId) return;
       // The queue's dispatch resolves the failure signals for THIS
       // intent synchronously before `addItem()`'s own promise
       // settles, so reading them here reflects this call's own
