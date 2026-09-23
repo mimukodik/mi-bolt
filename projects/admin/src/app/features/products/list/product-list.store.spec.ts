@@ -55,6 +55,7 @@ import { SEED_ADMIN } from '../../../../mocks/seed';
 
 import { ProductListStore } from './product-list.store';
 import { ProductListDataSource } from './product-list.data-source';
+import { DEFAULT_PRODUCT_LIST_QUERY } from './product-list.query';
 
 // A trace id is random per response; the matcher is typed unknown so the lint rule accepts it.
 const ANY_TRACE_ID: unknown = expect.any(String);
@@ -175,9 +176,25 @@ describe('ProductListStore', () => {
     expect(store.query().brands).toEqual(['Apple', 'Samsung']);
   });
 
+  it('setQuery back to the defaults removes those keys from the URL and query()', async () => {
+    const { store } = await setup();
+    const router = TestBed.inject(Router);
+
+    const filtered = nextNavigationEnd(router);
+    store.setQuery({ status: 'archived', brands: ['Apple'], featured: true });
+    await filtered;
+    expect(router.url).toBe('/termekek?brand=Apple&status=archived&featured=true');
+
+    const reset = nextNavigationEnd(router);
+    store.setQuery({ status: 'active', brands: [], featured: false });
+    await reset;
+    expect(router.url).toBe('/termekek');
+    expect(store.query()).toEqual(DEFAULT_PRODUCT_LIST_QUERY);
+  });
+
   it('a query change replaces the data source; a late response of the old query never reaches the new one', async () => {
     const { store } = await setup();
-    let releaseOldPage!: (value: AdminProductPage) => void;
+    let releaseOldPage: (value: AdminProductPage) => void = () => undefined;
     const oldPageGate = new Promise<AdminProductPage>((resolve) => {
       releaseOldPage = resolve;
     });

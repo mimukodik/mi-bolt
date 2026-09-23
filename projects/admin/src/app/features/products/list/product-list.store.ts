@@ -140,7 +140,6 @@ export class ProductListStore {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: serializeProductListQuery(next),
-      queryParamsHandling: 'merge',
     });
   }
 
