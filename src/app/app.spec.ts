@@ -141,9 +141,7 @@ describe('T01-AC04: HttpClient runs on FetchBackend', () => {
     // backend, with no `withFetch()` call needed.
     const http = providerManifest.httpClient;
     const list = Array.isArray(http) ? http : hasInternalProviders(http) ? http.ɵproviders : [];
-    const hasFetchBackend = list.some(
-      (entry) => hasProvToken(entry, 'FetchBackend') || hasProvToken(entry, 'HttpHandler'),
-    );
+    const hasFetchBackend = list.some((entry) => hasProvToken(entry, 'FetchBackend'));
     expect(hasFetchBackend).toBe(true);
   });
 });
