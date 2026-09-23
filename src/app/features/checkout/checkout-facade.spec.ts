@@ -36,7 +36,6 @@ import { provideApiConfiguration } from '../../../app/api/generated/api-configur
 import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
-import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
 import { isRecord } from '../../../mocks/is-record';
@@ -191,7 +190,6 @@ beforeEach(() => {
     scenario: DEFAULT_SCENARIO,
     apiRoot: '/api/v1',
   };
-  options.repository.loadProducts([DEMO_PRODUCT]);
   server.use(...createHandlers(options));
   server.events.on('request:start', ({ request }) => {
     if (capturedDemoSession === null) {

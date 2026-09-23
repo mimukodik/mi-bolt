@@ -26,7 +26,7 @@ import type { Cart } from '../../../app/api/generated/models/cart';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { CART_TTL_MS } from '../../../mocks/cart/cart-store';
-import { DEMO_PRODUCT } from '../../../mocks/cart/cart.handlers';
+import '../../../mocks/cart/cart.handlers';
 import { loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
 import { isCatalogFixtureShape } from '../../../mocks/catalog/catalog.handlers';
 import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
@@ -130,7 +130,6 @@ beforeEach(() => {
     scenario: DEFAULT_SCENARIO,
     apiRoot: '/api/v1',
   };
-  options.repository.loadProducts([DEMO_PRODUCT]);
   server.use(...createHandlers(options));
 
   const handler = ({ request }: { request: Request }): void => {

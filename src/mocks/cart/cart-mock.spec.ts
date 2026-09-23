@@ -18,7 +18,7 @@ import {
 } from '../../mocks/catalog/catalog.handlers';
 import { type VariantLookup } from '../../mocks/catalog/catalog-store';
 import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/cart-store';
-import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
+import '../../mocks/cart/cart.handlers';
 import { Repository } from '../../mocks/repository';
 import {
   BUILT_IN_SCENARIOS,
@@ -71,7 +71,6 @@ beforeEach(() => {
   // payment and order mocks keep reading the same product fixture
   // they always have, even though the cart store does not consult
   // it.
-  options.repository.loadProducts([DEMO_PRODUCT]);
   server.use(...createHandlers(options));
 });
 
@@ -581,7 +580,6 @@ describe('cart-mutation-fails scenario', () => {
     const scenario = BUILT_IN_SCENARIOS['cart-mutation-fails'];
     if (scenario === undefined) throw new Error('cart-mutation-fails is not registered');
     options = { ...options, repository: new Repository(scenario, ids, clock), scenario };
-    options.repository.loadProducts([DEMO_PRODUCT]);
     server.use(...createHandlers(options));
   });
 

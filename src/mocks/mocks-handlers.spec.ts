@@ -33,7 +33,7 @@ import { CartStore, type VariantLookupFn } from './cart/cart-store';
 import { CheckoutStore } from './checkout/checkout-store';
 import { OrderStore } from './orders/order-store';
 import { IdempotencyStore } from './idempotency';
-import { DEMO_PRODUCT, cartStore } from './cart/cart.handlers';
+import { cartStore } from './cart/cart.handlers';
 import { checkoutStore, orderStore } from './checkout/checkout.handlers';
 import './payment/payment.handlers';
 import './orders/order.handlers';
@@ -872,7 +872,6 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
     const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
 
     // Built directly through createCart/updateCart rather than
     // loadPersistedCart: loadPersistedCart was retired with the v2
@@ -888,7 +887,6 @@ describe('ensureCart does not resurrect an expired restored cart', () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');
     const ids = createDeterministicIds(1);
     const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-    repository.loadProducts([DEMO_PRODUCT]);
 
     const created = repository.createCart('sess-ordered');
     repository.updateCart({ ...created, status: 'ordered' });
@@ -1170,7 +1168,6 @@ describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
       scenario: DEFAULT_SCENARIO,
       apiRoot: '/api/v1',
     };
-    options.repository.loadProducts([DEMO_PRODUCT]);
   });
 
   function session1Headers(): Record<string, string> {

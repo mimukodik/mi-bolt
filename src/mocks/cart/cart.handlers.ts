@@ -17,10 +17,6 @@
  * registry so they appear in `createStrictHandlers(...)` for tests
  * and in `createHandlers(...)` for the browser/node workers.
  *
- * `VARIANTS` / `DEMO_PRODUCT` / `ensureFixture(repository)` are kept
- * because the checkout, payment and order mocks and their specs
- * still read the seeded `Repository` product. S3 migrates those.
- *
  * `options.persist` fires after every successful mutation so the browser
  * worker can write the sessionStorage snapshot, and `options.snapshot`
  * seeds the store at construction (MIM-212, S3-P0).
@@ -34,7 +30,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { isRecord } from '../is-record';
-import type { Product, Repository } from '../repository';
+import type { Product } from '../repository';
 
 import { buildTraceId, CartStore, problemType } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
@@ -145,10 +141,8 @@ const VARIANTS: Product['variants'] = [
 ];
 
 /**
- * Demo device fixture. Mirrors the openapi.yaml Product example so
- * cart unit tests can rely on the four variant ids (`graphite-256`,
- * `graphite-512`, `silver-256`, `silver-512`). T06 will replace this
- * load with the full 16-product catalog.
+ * Demo device fixture in the mock-local `Product` shape. The product
+ * page specs render it as plain data; no handler serves it.
  */
 export const DEMO_PRODUCT: Product = {
   id: 'p-01',
@@ -181,17 +175,6 @@ export const DEMO_PRODUCT: Product = {
   variants: VARIANTS,
   defaultVariant: VARIANTS[0],
 };
-
-/**
- * Loads the demo fixture into a repository unless another slice has
- * already populated the catalogue. Tests rely on the fixture being
- * present; T06 will overwrite with the full catalog.
- */
-function ensureFixture(repository: Repository): void {
-  if (repository.listProducts().length === 0) {
-    repository.loadProducts([DEMO_PRODUCT]);
-  }
-}
 
 /**
  * Resolve the loaded catalogue store; throw when no fixture was
@@ -278,9 +261,6 @@ function readVariantId(
 export const cartHandlersEntry: BusinessHandlerEntry = (
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] => {
-  const { repository } = options;
-  ensureFixture(repository);
-
   const store = new CartStore(options, (id) => requireCatalog().getVariant(id));
   cartStore.current = store;
 

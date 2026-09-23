@@ -22,7 +22,6 @@ import {
   isCatalogFixtureShape,
   loadCatalogFixture,
 } from '../../mocks/catalog/catalog.handlers';
-import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/cart-store';
 import { CheckoutStore, TERMS_VERSION } from '../../mocks/checkout/checkout-store';
 import { IDEMPOTENCY_WINDOW_MS } from '../../mocks/idempotency';
@@ -103,7 +102,6 @@ beforeEach(() => {
     scenario: DEFAULT_SCENARIO,
     apiRoot: '/api/v1',
   };
-  options.repository.loadProducts([DEMO_PRODUCT]);
   server.use(...createHandlers(options));
 });
 

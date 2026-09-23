@@ -30,14 +30,9 @@ import { http, HttpResponse, passthrough, type HttpHandler } from 'msw';
 import { setupWorker } from 'msw/browser';
 
 import { environment } from '../environments/environment';
-// Static import keeps the JSON in the bundle. The browser worker
-// seeds the in-memory repository from this fixture on construction
-// so the catalog endpoint returns the demo data instead of an empty
-// items array.
-import productsFixture from '../../docs/api/fixtures/products.json';
 import catalogFixture from '../../docs/api/fixtures/catalog.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
-import { Repository, type Product } from './repository';
+import { Repository } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
@@ -71,22 +66,6 @@ export const worker: ReturnType<typeof setupWorker> | undefined = isBrowserProce
   : undefined;
 
 /**
- * The `production` scenario is the only one that runs with an empty
- * catalog: every demo / happy-path / out-of-stock /
- * payment-declined variant expects the fixture to be present so the
- * page renders the catalogue rather than an empty state.
- */
-const PRODUCTION_SCENARIO_NAME = 'production';
-
-function loadCatalogProducts(repository: Repository, scenarioName: string): void {
-  if (scenarioName === PRODUCTION_SCENARIO_NAME) {
-    repository.loadProducts([]);
-    return;
-  }
-  repository.loadProducts(productsFixture as readonly Product[]);
-}
-
-/**
  * Build the handler factory options the browser worker uses. T05
  * owns only the dispatcher shell; T06–T09 will add their own slices
  * by calling `registerBusinessHandlers(...)` from their files.
@@ -96,7 +75,6 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
   const repository = new Repository(scenario, ids, clock);
-  loadCatalogProducts(repository, scenario.name);
   if (isCatalogFixtureShape(catalogFixture)) {
     loadCatalogFixture(catalogFixture);
   }
