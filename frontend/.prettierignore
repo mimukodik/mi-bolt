@@ -19,3 +19,16 @@ docs/
 .agents/
 .codex/
 .gemini/
+
+# Build and test output. These rules live in the repository root .gitignore,
+# which Prettier does not read from here: it only follows a .gitignore in the
+# same directory it is run from, and this directory (frontend/) has none of
+# its own. node_modules/ needs no entry; Prettier ignores it by default.
+dist/
+coverage/
+.angular/
+playwright-report/
+test-results/
+.visual-screenshots/
+.playwright-mcp/
+blob-report/
