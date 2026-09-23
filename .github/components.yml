@@ -16,4 +16,3 @@ backend:
   - 'tools/ci/**'
 contracts:
   - 'contracts/**'
-  - '.github/**'
