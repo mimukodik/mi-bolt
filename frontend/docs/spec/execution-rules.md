@@ -1,6 +1,6 @@
 # MiBolt MVP — execution contract
 
-These files under docs/ are a planning handoff inside the application repository. They are NOT a completed Angular app. The repository root AGENTS.md is created or carefully merged in T00; this document does not overwrite existing project instructions.
+These files under docs/ are a planning handoff inside the application repository. They are NOT a completed Angular app. The project instructions are the repository root `CLAUDE.md` and `.claude/`; this document does not overwrite them.
 
 ## Design authority
 
