@@ -194,7 +194,7 @@ jobs:
         run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Build (development configuration, mock worker on)
         timeout-minutes: 5
-        run: npx ng build --configuration development
+        run: npx ng build storefront --configuration development
       - name: Playwright ${{ matrix.project }}
         timeout-minutes: 12
         run: npx playwright test ${{ matrix.seed }} --project=${{ matrix.project }}

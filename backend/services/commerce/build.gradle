@@ -224,6 +224,18 @@ pmd {
 	ignoreFailures = false
 }
 
+// PMD reports an unloadable ruleset and then analyses nothing with a green
+// result, so a wrong ruleSetFiles path would switch the lint gate off.
+tasks.withType(Pmd).configureEach { pmdTask ->
+	pmdTask.doFirst {
+		pmdTask.ruleSetFiles.each { ruleSet ->
+			if (!ruleSet.exists()) {
+				throw new GradleException("PMD ruleset not found: ${ruleSet}")
+			}
+		}
+	}
+}
+
 // Only the generated OpenAPI sources (build/generated/openapi, package …api) are
 // skipped, and only on pmdMain: the hand-written tests under the same package
 // name in src/test stay inside the gate.
