@@ -82,6 +82,12 @@ export const BUILT_IN_SCENARIOS: Readonly<Record<ScenarioName, ScenarioDescripto
       clockOffsetMs: 0,
       isolated: true,
     }),
+    'cart-mutation-fails': Object.freeze({
+      name: 'cart-mutation-fails',
+      seed: 404,
+      clockOffsetMs: 0,
+      isolated: true,
+    }),
   });
 
 /**
