@@ -220,9 +220,7 @@ export class CartPage {
   } | null>(() => {
     // The ErrorState already carries the load-failure and
     // expiry copy when state is 'error'; the banner's
-    // mutation-specific text would contradict it (and is
-    // literally wrong — no mutation was attempted when the
-    // cart never loaded).
+    // mutation-specific text would contradict it.
     if (this.state() === 'error') return null;
     if (this.facade.error() !== null) {
       return {

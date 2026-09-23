@@ -565,6 +565,7 @@ describe('T18-AC03 line state and the empty screen on last-line removal', () => 
     expect(queryElement(root, 'app-error-state')).toBeNull();
     expect(queryElement(root, '[data-testid="cart-line"]')).not.toBeNull();
     expect(root.textContent).not.toContain('Merged quantity');
+    expect(root.textContent).not.toContain('A kosár módosítása nem sikerült');
   });
 
   it('a failed remove keeps the cart on screen and says so in Hungarian (owner 2026-09-23)', async () => {
@@ -599,6 +600,40 @@ describe('T18-AC03 line state and the empty screen on last-line removal', () => 
     expect(queryElement(root, '[data-testid="cart-line"]')).not.toBeNull();
     expect(root.textContent).toContain('A kosár módosítása nem sikerült; a kosár változatlan.');
     expect(root.textContent).not.toContain('Line not in cart');
+  });
+
+  it('a failed clear keeps the cart on screen and says so in Hungarian (owner 2026-09-23)', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 2);
+    server.use(
+      http.delete('*/api/v1/cart/items', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:not-found',
+            title: 'Not found',
+            status: 404,
+            code: 'NOT_FOUND',
+            detail: 'Cart not found',
+            traceId: 'spec-trace-404-clear',
+            fieldErrors: [],
+          },
+          { status: 404, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="cart-clear"] button').click();
+    await settleMutation(fixture);
+
+    expect(queryElement(root, 'app-error-state')).toBeNull();
+    expect(queryElement(root, '[data-testid="cart-line"]')).not.toBeNull();
+    expect(root.textContent).toContain('A kosár módosítása nem sikerült; a kosár változatlan.');
+    expect(root.textContent).not.toContain('Cart not found');
   });
 });
 
