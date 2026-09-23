@@ -8,7 +8,7 @@ import { deleteAdminUser } from '../../api/generated/fn/admin-users/delete-admin
 import { listAdminUsers } from '../../api/generated/fn/admin-users/list-admin-users';
 import type { AdminUser } from '../../api/generated/models/admin-user';
 import type { Problem } from '../../api/generated/models/problem';
-import { isProblem } from '../../core/api/problem';
+import { problemOf } from '../../core/api/problem';
 
 /**
  * The five outcomes `delete()` reports to the page. A 204 removes the
@@ -68,11 +68,7 @@ export class AdminsStore {
       // HttpClient rejects with HttpErrorResponse; anything else falls
       // through to `failed` with no Problem body.
       if (!(err instanceof HttpErrorResponse)) return { kind: 'failed', problem: null };
-      // The generated DELETE uses `responseType: 'text'`, so the body
-      // reaches `HttpErrorResponse.error` as a JSON string; parse it
-      // back into the Problem shape so the `kind` mapping can read the
-      // code.
-      const problem: Problem | null = parseProblem(err);
+      const problem: Problem | null = problemOf(err);
       if (err.status === 404) return { kind: 'gone' };
       if (err.status === 409) {
         if (problem?.code === 'ADMIN_SELF_DELETE') return { kind: 'self' };
@@ -81,22 +77,4 @@ export class AdminsStore {
       return { kind: 'failed', problem };
     }
   }
-}
-
-/**
- * Reads the `Problem` body out of an `HttpErrorResponse`. The DELETE
- * operation uses `responseType: 'text'`, so `err.error` is a JSON
- * string here; parse it back, then narrow with `isProblem` the same
- * way `problemOf` does for the JSON responses.
- */
-function parseProblem(error: HttpErrorResponse): Problem | null {
-  const body: unknown = error.error;
-  if (typeof body !== 'string') return isProblem(body) ? body : null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(body);
-  } catch {
-    return null;
-  }
-  return isProblem(parsed) ? parsed : null;
 }
