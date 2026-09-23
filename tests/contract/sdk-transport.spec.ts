@@ -28,6 +28,8 @@ import { firstValueFrom } from 'rxjs';
 import { http, HttpResponse } from 'msw';
 import { server, useMswServer } from '../msw-server';
 
+import { withoutAdminOperations } from './admin-tags';
+
 import { Api } from '../../src/app/api/generated/api';
 import type { Cart } from '../../src/app/api/generated/models/cart';
 import type { Product } from '../../src/app/api/generated/models/product';
@@ -309,7 +311,8 @@ beforeAll(async () => {
     teardown: { destroyAfterEach: true },
   });
   const raw = await readFile(SPEC_PATH, 'utf8');
-  spec = yaml.load(raw) as OpenApiSpec;
+  // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
+  spec = withoutAdminOperations(yaml.load(raw) as OpenApiSpec);
   opRows = collectOperations(spec);
   seenOperationIds = new Set<string>();
 });

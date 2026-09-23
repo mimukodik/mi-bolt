@@ -27,6 +27,8 @@ import $RefParser from '@apidevtools/json-schema-ref-parser';
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
+import { withoutAdminOperations } from './admin-tags';
+
 export const REPO_ROOT = resolve(__dirname, '../..');
 export const SPEC_PATH = resolve(REPO_ROOT, 'docs/api/openapi.yaml');
 
@@ -121,8 +123,12 @@ export async function loadOpenApiSpec(): Promise<{
   dereferenced: OpenApiSpec;
 }> {
   const rawYaml = await readFile(SPEC_PATH, 'utf8');
-  const raw = yaml.load(rawYaml) as OpenApiSpec;
-  const dereferenced = (await $RefParser.dereference(SPEC_PATH)) as OpenApiSpec;
+  // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
+  const raw = withoutAdminOperations(yaml.load(rawYaml) as OpenApiSpec);
+  // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
+  const dereferenced = withoutAdminOperations(
+    (await $RefParser.dereference(SPEC_PATH)) as OpenApiSpec,
+  );
   rawSpecCache = raw;
   derefSpecCache = dereferenced;
   ajvCache = buildAjv();
