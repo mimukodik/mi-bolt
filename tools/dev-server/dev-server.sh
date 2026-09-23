@@ -31,7 +31,7 @@ log_file() {
 }
 
 start_time() {
-  ps -o lstart= -p "$1" 2>/dev/null
+  LC_ALL=C ps -o lstart= -p "$1" 2>/dev/null
 }
 
 # Prints the pid when the pid file still names the process this script

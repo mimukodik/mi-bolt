@@ -226,4 +226,23 @@ describe("dev-server.sh", () => {
     },
     30000,
   );
+
+  it(
+    "stop works when the locale differs from start's",
+    async () => {
+      const port = await freePort();
+
+      const started = script(["start", String(port), "--", ...serverCommand(port)], {
+        LC_ALL: "hu_HU.UTF-8",
+        LANG: "hu_HU.UTF-8",
+      });
+      expect(started.status).toBe(0);
+
+      const stopped = script(["stop", String(port)], { LC_ALL: "C", LANG: "C" });
+      expect(stopped.status).toBe(0);
+      expect(stopped.stdout).toContain("stopped " + port);
+      expect(await answers(port)).toBe(false);
+    },
+    30000,
+  );
 });
