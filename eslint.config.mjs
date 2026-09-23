@@ -147,10 +147,8 @@ export default defineConfig([
     // the non-type-aware presets rather than the type-aware `extends` above —
     // without a matching block at all, ESLint reports "File ignored because no
     // matching configuration was supplied" for every file in this tree and the
-    // widening buys nothing. FIX-46 (blocked, pending FIX-39) would add a
-    // second, later block matching this same tree plus `src/**/*.spec.ts`
-    // that carries the `no-restricted-syntax` test-policy rule; no such block
-    // exists in this file today, so MIM-209 keeps none and adds none.
+    // widening buys nothing. The test-policy block further down covers this
+    // tree as well.
     files: ['tests/**/*.ts'],
     extends: [eslint.configs.recommended, tseslint.configs.recommended],
   },
@@ -333,6 +331,25 @@ export default defineConfig([
     rules: {
       // Relaxed for the demo (MIM-209, docs/lint-relaxations.md).
       'max-lines-per-function': 'off',
+    },
+  },
+  {
+    // Test policy: a focused, skipped, placeholder or expected-to-fail
+    // unit test lets a failing requirement pass the suite silently.
+    // `no-restricted-properties` rather than `no-restricted-syntax`,
+    // which the src/** block switches off.
+    files: ['src/**/*.spec.ts', 'projects/**/*.spec.ts', 'tests/**/*.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        ...['describe', 'suite', 'it', 'test'].flatMap((object) =>
+          ['only', 'skip', 'todo', 'fails', 'skipIf', 'runIf'].map((property) => ({
+            object,
+            property,
+            message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+          })),
+        ),
+      ],
     },
   },
   {
