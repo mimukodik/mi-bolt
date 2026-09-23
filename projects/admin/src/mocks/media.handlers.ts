@@ -20,7 +20,7 @@ import { HttpResponse, bypass, http, type HttpHandler } from 'msw';
 
 import type { Problem } from '../app/api/generated/models/problem';
 import type { UploadedImage } from '../app/api/generated/models/uploaded-image';
-import { fieldError, unknownQueryParameter } from './backend-answers';
+import { fieldError, firstQueryKey, unknownQueryParameter } from './backend-answers';
 import type { MockDb } from './db';
 import { csrfRejection, sessionRejection } from './guards';
 import { problem } from './problem';
@@ -128,7 +128,7 @@ async function handleUpload(
     }
   }
 
-  const queryKey = new URL(request.url).searchParams.keys().next().value;
+  const queryKey = firstQueryKey(request);
   if (queryKey !== undefined) return unknownQueryParameter(queryKey);
   for (const [name, value] of form.entries()) {
     if (typeof value === 'string') return unknownQueryParameter(name);
@@ -184,7 +184,7 @@ async function handleGet(
   imageId: string,
   fetchSeed: SeedFetcher,
 ): Promise<Response> {
-  const queryKey = new URL(request.url).searchParams.keys().next().value;
+  const queryKey = firstQueryKey(request);
   if (queryKey !== undefined) return unknownQueryParameter(queryKey);
 
   const entry = db.images.get(imageId);

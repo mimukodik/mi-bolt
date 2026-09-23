@@ -6,6 +6,7 @@ import {
   asText,
   bodyViolations,
   fieldError,
+  firstQueryKey,
   isTextual,
   malformedBody,
   readJsonObject,
@@ -28,12 +29,6 @@ async function withCookie(response: HttpResponse<Problem>, cookie: string): Prom
   headers.set('Set-Cookie', cookie);
   if (!isRecord(body)) return new Response(null, { status: response.status, headers });
   return HttpResponse.json(body, { status: response.status, headers });
-}
-
-/** The first query key in query-string order, or `undefined` when there is none. */
-function firstQueryKey(request: Request): string | undefined {
-  const url = new URL(request.url);
-  return [...url.searchParams.keys()][0];
 }
 
 /** The four `AdminAuth` operations: session read, login, logout, password change. */
