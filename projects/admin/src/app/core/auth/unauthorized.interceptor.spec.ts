@@ -2,8 +2,8 @@
  * Spec for `unauthorizedInterceptor` (MIM-337): a 401 from a plain
  * request clears the session and returns to the login page carrying
  * `vissza`, unless the admin is already there; a 401 from a
- * `skipUnauthorizedRedirect()`-marked request (the session priming GET
- * and the login POST, both `AdminSession`'s own) does neither; every
+ * `skipUnauthorizedRedirect()`-marked request (the session priming GET,
+ * the login POST and the logout POST, all `AdminSession`'s own) does neither; every
  * other status passes through untouched and the error is always
  * rethrown. Driven through MSW's `authHandlers` for the real auth flow,
  * plus one-off handlers for the statuses the mock does not itself answer
