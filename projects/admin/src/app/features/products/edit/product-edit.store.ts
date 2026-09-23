@@ -17,7 +17,8 @@
 //
 // `save` throws when called before `load` because there is no etag to send
 // in `If-Match`; the page guards against it, and the throw is a programmer
-// error rather than a runtime state.
+// error rather than a runtime state. A response that arrives after a newer
+// `load()` has started leaves the store showing the newer product.
 
 import { Injectable, inject, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
@@ -48,6 +49,9 @@ export type SaveResult =
 export class ProductEditStore {
   readonly #api = inject(AdminApi);
 
+  /** Bumped by every `load()`; a `load` or `save` whose response resolves after a newer `load` started stops touching the signals below. */
+  #generation = 0;
+
   readonly #product = signal<AdminProduct | null>(null);
   readonly #etag = signal<string | null>(null);
   readonly #loadStatus = signal<'idle' | 'loading' | 'ready' | 'not-found' | 'error'>('idle');
@@ -63,15 +67,18 @@ export class ProductEditStore {
 
   /** Fetch one product together with its `ETag`. Never rejects. */
   async load(productId: number): Promise<void> {
+    const generation = ++this.#generation;
     this.#loadStatus.set('loading');
     try {
       const response = await firstValueFrom(
         this.#api.invoke$Response(getAdminProduct, { productId }),
       );
+      if (generation !== this.#generation) return;
       this.#product.set(response.body);
       this.#etag.set(response.headers.get('ETag'));
       this.#loadStatus.set('ready');
     } catch (error: unknown) {
+      if (generation !== this.#generation) return;
       if (error instanceof HttpErrorResponse && error.status === 404) {
         this.#product.set(null);
         this.#etag.set(null);
@@ -84,17 +91,20 @@ export class ProductEditStore {
 
   /** Create a product. Validation errors become `'invalid'`; anything else is `'failed'`. */
   async create(input: AdminProductInput): Promise<SaveResult> {
+    const generation = this.#generation;
     try {
       const response = await firstValueFrom(
         this.#api.invoke$Response(createAdminProduct, { body: input }),
       );
-      this.#product.set(response.body);
-      this.#etag.set(response.headers.get('ETag'));
+      if (generation === this.#generation) {
+        this.#product.set(response.body);
+        this.#etag.set(response.headers.get('ETag'));
+      }
       return { kind: 'saved', product: response.body };
     } catch (error: unknown) {
       if (error instanceof HttpErrorResponse && (error.status === 400 || error.status === 422)) {
         const problem = problemOf(error);
-        if (problem !== null) {
+        if (problem !== null && problem.fieldErrors.length > 0) {
           return { kind: 'invalid', fieldErrors: problem.fieldErrors };
         }
       }
@@ -109,6 +119,7 @@ export class ProductEditStore {
     if (product === null || etag === null) {
       throw new Error('save before load');
     }
+    const generation = this.#generation;
     try {
       const response = await firstValueFrom(
         this.#api.invoke$Response(
@@ -117,8 +128,10 @@ export class ProductEditStore {
           withIfMatch(etag),
         ),
       );
-      this.#product.set(response.body);
-      this.#etag.set(response.headers.get('ETag'));
+      if (generation === this.#generation) {
+        this.#product.set(response.body);
+        this.#etag.set(response.headers.get('ETag'));
+      }
       return { kind: 'saved', product: response.body };
     } catch (error: unknown) {
       if (error instanceof HttpErrorResponse) {
@@ -127,7 +140,7 @@ export class ProductEditStore {
         }
         if (error.status === 400 || error.status === 422) {
           const problem = problemOf(error);
-          if (problem !== null) {
+          if (problem !== null && problem.fieldErrors.length > 0) {
             return { kind: 'invalid', fieldErrors: problem.fieldErrors };
           }
         }

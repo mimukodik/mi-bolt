@@ -26,10 +26,12 @@ import { http, HttpResponse } from 'msw';
 import type { FieldError } from '../../../api/generated/models/field-error';
 import type { AdminProduct } from '../../../api/generated/models/admin-product';
 import type { AdminProductInput } from '../../../api/generated/models/admin-product-input';
+import type { Problem } from '../../../api/generated/models/problem';
 import { provideApiConfiguration } from '../../../api/generated/api-configuration';
 import { ifMatchInterceptor } from '../../../core/api/if-match.interceptor';
 
 import { server, useMswServer } from '../../../../testing/msw-server';
+import { malformedBody, serviceUnavailable } from '../../../../mocks/backend-answers';
 import { createDb } from '../../../../mocks/db';
 import type { MockDb } from '../../../../mocks/db';
 import { SEED_ADMIN } from '../../../../mocks/seed';
@@ -307,5 +309,199 @@ describe('ProductEditStore', () => {
 
     await s.loadBrands();
     expect(s.brands()).toEqual([]);
+  });
+
+  it('create answered with a one-off 422 Problem with no field errors → failed, not invalid', async () => {
+    const db = signedIn();
+    const seeded = db.products.get(1);
+    if (seeded === undefined) throw new Error('seed missing product 1');
+    const input = inputOf(seeded);
+
+    const emptyFieldErrorsProblem: Problem = {
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
+      status: 422,
+      code: 'VALIDATION_FAILED',
+      detail: 'One or more supplied fields are not acceptable',
+      traceId: 'test-trace-422-empty-create',
+      fieldErrors: [],
+    };
+    server?.use(
+      http.post(
+        '/api/v1/admin/products',
+        () => HttpResponse.json(emptyFieldErrorsProblem, { status: 422 }),
+        { once: true },
+      ),
+    );
+
+    const s = store();
+    const result = await s.create(input);
+
+    expect(result).toEqual({ kind: 'failed', problem: emptyFieldErrorsProblem });
+  });
+
+  it('create answered with a one-off 400 from malformedBody() → failed', async () => {
+    const db = signedIn();
+    const seeded = db.products.get(1);
+    if (seeded === undefined) throw new Error('seed missing product 1');
+    const input = inputOf(seeded);
+
+    server?.use(http.post('/api/v1/admin/products', () => malformedBody(), { once: true }));
+
+    const s = store();
+    const result = await s.create(input);
+
+    expect(result.kind).toBe('failed');
+  });
+
+  it('save (after load(1)) answered with a one-off 422 Problem with no field errors → failed, product and etag unchanged', async () => {
+    const db = signedIn();
+    const seeded = db.products.get(1);
+    if (seeded === undefined) throw new Error('seed missing product 1');
+
+    const s = store();
+    await s.load(1);
+    const productBefore = s.product();
+    const etagBefore = s.etag();
+    if (productBefore === null) throw new Error('expected product');
+    const input = inputOf(productBefore);
+
+    const emptyFieldErrorsProblem: Problem = {
+      type: 'urn:mi-bolt:problem:validation-failed',
+      title: 'Section rejected',
+      status: 422,
+      code: 'VALIDATION_FAILED',
+      detail: 'One or more supplied fields are not acceptable',
+      traceId: 'test-trace-422-empty-save',
+      fieldErrors: [],
+    };
+    server?.use(
+      http.put(
+        '/api/v1/admin/products/:productId',
+        () => HttpResponse.json(emptyFieldErrorsProblem, { status: 422 }),
+        { once: true },
+      ),
+    );
+
+    const result = await s.save(input);
+
+    expect(result.kind).toBe('failed');
+    expect(s.product()).toEqual(productBefore);
+    expect(s.etag()).toBe(etagBefore);
+  });
+
+  it('load(1) held; load(2) completes first; releasing load(1) does not overwrite product 2', async () => {
+    const db = signedIn();
+    const product2 = db.products.get(2);
+    if (product2 === undefined) throw new Error('seed missing product 2');
+
+    let releaseLoad1: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseLoad1 = resolve;
+    });
+    // Wraps the real handler: awaits the gate, then falls through by
+    // returning `undefined`, the same pattern the If-Match test above uses
+    // (server.use handlers run before the ones registered in signedIn(),
+    // and returning undefined lets the request continue to those).
+    server?.use(
+      http.get(
+        '/api/v1/admin/products/1',
+        async () => {
+          await gate;
+          return undefined;
+        },
+        { once: true },
+      ),
+    );
+
+    const s = store();
+    const load1 = s.load(1);
+    await s.load(2);
+
+    expect(s.product()?.id).toBe(2);
+    expect(s.loadStatus()).toBe('ready');
+
+    releaseLoad1();
+    await load1;
+
+    expect(s.product()?.id).toBe(2);
+    expect(s.etag()).toBe(`"${String(product2.version)}"`);
+    expect(s.loadStatus()).toBe('ready');
+  });
+
+  it('load(1), save held, load(2) completes; releasing the save resolves saved for product 1 without touching the store', async () => {
+    const db = signedIn();
+    const product1 = db.products.get(1);
+    const product2 = db.products.get(2);
+    if (product1 === undefined || product2 === undefined) {
+      throw new Error('seed missing product 1 or 2');
+    }
+
+    let releaseSave: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    server?.use(
+      http.put(
+        '/api/v1/admin/products/:productId',
+        async () => {
+          await gate;
+          return undefined;
+        },
+        { once: true },
+      ),
+    );
+
+    const s = store();
+    await s.load(1);
+    const input = inputOf(product1);
+    const savePromise = s.save(input);
+
+    await s.load(2);
+    expect(s.product()?.id).toBe(2);
+
+    releaseSave();
+    const result = await savePromise;
+
+    expect(isSaved(result)).toBe(true);
+    if (!isSaved(result)) throw new Error('expected saved');
+    expect(result.product.id).toBe(product1.id);
+
+    expect(s.product()?.id).toBe(2);
+    expect(s.etag()).toBe(`"${String(product2.version)}"`);
+  });
+
+  it('load(1) held and answered 503 after load(2) completed → loadStatus stays ready, product stays 2', async () => {
+    const db = signedIn();
+    const product2 = db.products.get(2);
+    if (product2 === undefined) throw new Error('seed missing product 2');
+
+    let releaseLoad1: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseLoad1 = resolve;
+    });
+    server?.use(
+      http.get(
+        '/api/v1/admin/products/1',
+        async () => {
+          await gate;
+          return serviceUnavailable();
+        },
+        { once: true },
+      ),
+    );
+
+    const s = store();
+    const load1 = s.load(1);
+    await s.load(2);
+
+    expect(s.loadStatus()).toBe('ready');
+    expect(s.product()?.id).toBe(2);
+
+    releaseLoad1();
+    await load1;
+
+    expect(s.loadStatus()).toBe('ready');
+    expect(s.product()?.id).toBe(2);
   });
 });
