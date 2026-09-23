@@ -23,6 +23,47 @@ const __dirname = path.dirname(__filename);
 const CROSS_APP_IMPORT_MESSAGE =
   'One app never imports another: move the shared code into a library under projects/ and import it through its alias.';
 
+// no-restricted-imports does not visit a dynamic import(), so this selector
+// bans it with the same app-segment match (\x2F is '/', which an esquery
+// regex cannot hold).
+const CROSS_APP_DYNAMIC_IMPORT = {
+  selector: 'ImportExpression[source.value=/(^|\\x2F)(storefront|admin|demo-payment)\\x2F/]',
+  message: CROSS_APP_IMPORT_MESSAGE,
+};
+
+// The unit-test policy selectors, shared by every spec block below.
+const TEST_POLICY_SYNTAX = [
+  {
+    // On the property name, whatever the object: catches chains
+    // (test.concurrent.only), aliases (t.only) and a runtime
+    // ctx.skip().
+    selector: 'MemberExpression[property.name=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+    message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+  },
+  {
+    // A string key, whatever the object: it['only'],
+    // describe.concurrent['skip'].
+    selector:
+      'MemberExpression[computed=true][property.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+    message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+  },
+  {
+    // Any other computed key on the test API itself: it[`skip`],
+    // test[key]. A computed key on an alias or a chain (t[key]) is
+    // out of reach of a syntax rule.
+    selector:
+      "MemberExpression[computed=true][property.type!='Literal'][object.name=/^(describe|suite|it|test|bench)$/]",
+    message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+  },
+  {
+    // Destructuring: const { only } = it, const { 'only': x } = it,
+    // and a test context taken apart as ({ skip }) => skip().
+    selector:
+      'ObjectPattern > Property[key.name=/^(only|skip|todo|fails|skipIf|runIf)$/], ObjectPattern > Property[key.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
+    message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
+  },
+];
+
 export default defineConfig([
   // Shared baseline ported from example-eslint.config.mjs (MIM-209): every
   // rule the source repo sets, at the same severity, minus the Nx-only
@@ -385,6 +426,16 @@ export default defineConfig([
     },
   },
   {
+    // Dynamic imports between apps, for app source (spec files: see below).
+    files: [
+      'projects/storefront/**/*.ts',
+      'projects/admin/**/*.ts',
+      'projects/demo-payment/**/*.ts',
+    ],
+    ignores: ['**/*.spec.ts'],
+    rules: { 'no-restricted-syntax': ['error', CROSS_APP_DYNAMIC_IMPORT] },
+  },
+  {
     // The admin tag helper and the SDK-split spec (MIM-331) take no type
     // assertion either; the older contract suites are not covered yet.
     files: ['tests/contract/admin-tags.ts', 'tests/contract/sdk-split.spec.ts'],
@@ -406,39 +457,18 @@ export default defineConfig([
     // for the spec files only.
     files: ['projects/**/*.spec.ts', 'tests/**/*.ts'],
     rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          // On the property name, whatever the object: catches chains
-          // (test.concurrent.only), aliases (t.only) and a runtime
-          // ctx.skip().
-          selector: 'MemberExpression[property.name=/^(only|skip|todo|fails|skipIf|runIf)$/]',
-          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
-        },
-        {
-          // A string key, whatever the object: it['only'],
-          // describe.concurrent['skip'].
-          selector:
-            'MemberExpression[computed=true][property.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
-          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
-        },
-        {
-          // Any other computed key on the test API itself: it[`skip`],
-          // test[key]. A computed key on an alias or a chain (t[key]) is
-          // out of reach of a syntax rule.
-          selector:
-            "MemberExpression[computed=true][property.type!='Literal'][object.name=/^(describe|suite|it|test|bench)$/]",
-          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
-        },
-        {
-          // Destructuring: const { only } = it, const { 'only': x } = it,
-          // and a test context taken apart as ({ skip }) => skip().
-          selector:
-            'ObjectPattern > Property[key.name=/^(only|skip|todo|fails|skipIf|runIf)$/], ObjectPattern > Property[key.value=/^(only|skip|todo|fails|skipIf|runIf)$/]',
-          message: 'A focused, skipped or placeholder test lets a failing requirement pass.',
-        },
-      ],
+      'no-restricted-syntax': ['error', ...TEST_POLICY_SYNTAX],
     },
+  },
+  {
+    // The block above replaces no-restricted-syntax for spec files, so the
+    // app spec files take the test policy and the dynamic-import ban together.
+    files: [
+      'projects/storefront/**/*.spec.ts',
+      'projects/admin/**/*.spec.ts',
+      'projects/demo-payment/**/*.spec.ts',
+    ],
+    rules: { 'no-restricted-syntax': ['error', ...TEST_POLICY_SYNTAX, CROSS_APP_DYNAMIC_IMPORT] },
   },
   {
     // A coverage-ignore pragma removes lines from the coverage denominator
