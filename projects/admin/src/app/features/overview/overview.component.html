@@ -1,0 +1,25 @@
+<div class="grid-container">
+  <h1 class="adm-h1">Áttekintés</h1>
+  <mat-grid-list rowHeight="350px" [cols]="isHandset() ? 1 : 2">
+    @for (card of cards(); track card.title) {
+      <mat-grid-tile [colspan]="card.cols" [rowspan]="card.rows">
+        <mat-card class="dashboard-card">
+          <mat-card-header>
+            <mat-card-title>
+              {{ card.title }}
+              @if (card.subtitle) {
+                <span> {{ card.subtitle }}</span>
+              }
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="dashboard-card-content">
+            <p class="adm-count">–</p>
+          </mat-card-content>
+          <mat-card-actions>
+            <a matButton [queryParams]="card.queryParams" [routerLink]="card.link">Megnyitás</a>
+          </mat-card-actions>
+        </mat-card>
+      </mat-grid-tile>
+    }
+  </mat-grid-list>
+</div>
