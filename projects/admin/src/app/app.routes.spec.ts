@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
-import type { Routes } from '@angular/router';
+import type { LoadChildren, Route, Routes } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { ShellComponent } from './layout/shell.component';
@@ -54,11 +54,11 @@ function shellInner(harness: RouterTestingHarness): HTMLElement | null {
   return null;
 }
 
-function loadChildrenOf(route: { loadChildren?: unknown }): () => Promise<Routes> {
-  if (typeof route.loadChildren !== 'function') {
+function loadChildrenOf(route: Route): LoadChildren {
+  if (route.loadChildren === undefined) {
     throw new Error('loadChildren missing on route');
   }
-  return route.loadChildren as () => Promise<Routes>;
+  return route.loadChildren;
 }
 
 function findChild(path: string): NonNullable<(typeof routes)[1]['children']>[number] {

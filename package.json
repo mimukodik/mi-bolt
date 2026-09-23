@@ -26,8 +26,8 @@
     "lint": "ng lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "api:generate": "ng-openapi-gen --config ng-openapi-gen.json",
-    "api:drift": "npm run api:generate && git diff --exit-code -- src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- src/app/api/generated)\"",
+    "api:generate": "ng-openapi-gen --config ng-openapi-gen.json && ng-openapi-gen --config ng-openapi-gen.admin.json",
+    "api:drift": "npm run api:generate && git diff --exit-code -- src/app/api/generated projects/admin/src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- src/app/api/generated projects/admin/src/app/api/generated)\"",
     "api:sync": "node scripts/api-sync.mjs",
     "fixtures:catalog": "node scripts/build-catalog-fixture.mjs",
     "fixtures:catalog:check": "node scripts/build-catalog-fixture.mjs --check"

@@ -20,6 +20,8 @@ import $RefParser from '@apidevtools/json-schema-ref-parser';
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
+import { withoutAdminOperations } from './admin-tags';
+
 const SPEC_PATH = resolve(__dirname, '../../docs/api/openapi.yaml');
 const CATALOG_PATH = resolve(__dirname, '../../docs/api/fixtures/catalog.json');
 const CATALOG_SOURCE_PATH = resolve(__dirname, '../../docs/api/fixtures/catalog-source.json');
@@ -115,8 +117,11 @@ beforeAll(async () => {
     readFile(CATALOG_PATH, 'utf8'),
     readFile(CATALOG_SOURCE_PATH, 'utf8'),
   ]);
-  spec = yaml.load(specRaw) as OpenApiSpec;
-  dereferenced = (await $RefParser.dereference(SPEC_PATH)) as DereferencedSpec;
+  // Shop suite: admin-tagged operations are the admin SDK's (tests/contract/admin-tags.ts).
+  spec = withoutAdminOperations(yaml.load(specRaw) as OpenApiSpec);
+  dereferenced = withoutAdminOperations(
+    (await $RefParser.dereference(SPEC_PATH)) as DereferencedSpec,
+  );
   catalog = JSON.parse(catalogRaw) as CatalogFixture;
   expectedProductCount = (JSON.parse(catalogSourceRaw) as SourceFixture).products.length;
   ajv = new Ajv2020({ allErrors: true, strict: false });
