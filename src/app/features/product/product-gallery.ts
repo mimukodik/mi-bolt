@@ -1,5 +1,4 @@
-import type { ElementRef } from '@angular/core';
-import { Component, computed, effect, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { ProductImage } from '../../shared/ui/product-image/product-image';
@@ -41,9 +40,6 @@ import type { Image } from '../../api/generated/models/image';
 @Component({
   selector: 'app-product-gallery',
   imports: [AccessibleDialog, ProductImage],
-  host: {
-    '(document:keydown)': 'onDocumentKeydown($event)',
-  },
   templateUrl: './product-gallery.html',
   styleUrl: './product-gallery.scss',
 })
@@ -54,8 +50,6 @@ export class ProductGallery {
 
   readonly imageSelected = output<string>();
   readonly zoomRequested = output<string>();
-
-  private readonly frame = viewChild<ElementRef<HTMLElement>>('gallery-main');
 
   readonly zoomOpen = signal(false);
   private readonly imageFailed = signal(false);
@@ -170,18 +164,6 @@ export class ProductGallery {
       event.preventDefault();
       if (this.hasSeveral()) this.imageSelected.emit(list[list.length - 1].id);
     }
-  }
-
-  /**
-   * Listen for keyboard input on the document so that arrow keys work
-   * when the gallery surface itself is focused.
-   */
-  onDocumentKeydown(event: KeyboardEvent): void {
-    const frame = this.frame()?.nativeElement;
-    if (frame === undefined) return;
-    const target = event.target instanceof Node ? event.target : null;
-    if (target === null || !frame.contains(target)) return;
-    this.onKeydown(event);
   }
 
   onImageFailed(): void {
