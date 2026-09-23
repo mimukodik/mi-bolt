@@ -145,20 +145,32 @@ describe('AdminsStore', () => {
     expect(store.admins().map((admin) => admin.id)).toContain(SEED_ADMIN.id);
   });
 
-  // Fails if 409 `LAST_ADMIN` does not map to `{ kind: 'last' }`. The arrangement
-  // drops the seeded admin from `db.admins` while `db.sessionAdminId` still
-  // points at it, so the mock's last-admin branch fires for the remaining row.
-  //
-  // Blocked: the mock's `sessionAdmin` (mocks/guards.ts:23-28) clears
-  // `db.sessionAdminId` the first time the admin is not in `db.admins`,
-  // so a subsequent DELETE answers 401 `UNAUTHENTICATED` instead of
-  // 409 `LAST_ADMIN`. The brief says to report this rather than change
-  // the mock; the assertion below documents the unfulfilled contract.
-  it('case 2c: BLOCKED — mock clears sessionAdminId, so LAST_ADMIN cannot be reached', async () => {
+  // Fails if 409 `LAST_ADMIN` does not map to `{ kind: 'last' }`. The mock's
+  // `sessionAdmin` helper clears `db.sessionAdminId` once the signed-in admin
+  // is missing from `db.admins`, so going through `usersHandlers` answers
+  // 401 `UNAUTHENTICATED` instead of 409 `LAST_ADMIN`. The one-off DELETE
+  // here bypasses the session check (case 7 does the same) and returns
+  // 409 directly.
+  it('case 2c: delete() of the only remaining admin returns last', async () => {
     const db = signedInDb();
-    db.admins.delete(SEED_ADMIN.id);
     primeXsrf(db);
-    server?.use(...usersHandlers(db));
+    db.admins.delete(SEED_ADMIN.id);
+    server?.use(
+      http.delete('*/api/v1/admin/users/:adminId', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:last-admin',
+            title: 'Last admin',
+            status: 409,
+            code: 'LAST_ADMIN',
+            detail: 'The last admin cannot be deleted',
+            traceId: 'fixed-trace',
+            fieldErrors: [],
+          },
+          { status: 409 },
+        ),
+      ),
+    );
 
     const store = TestBed.inject(AdminsStore);
     const other = {

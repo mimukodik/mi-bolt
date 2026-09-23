@@ -155,9 +155,9 @@ describe('AdminsPage', () => {
   });
 
   afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
     TestBed.resetTestingModule();
     document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
-    TestBed.inject(MatDialog).closeAll();
   });
 
   // Fails if the table drops a username or its Létrehozva cell, if the date
@@ -266,47 +266,52 @@ describe('AdminsPage', () => {
     const host = hostOf(fixture);
 
     let deleteCount = 0;
-    server?.events.on('request:start', ({ request }) => {
+    const deleteListener = ({ request }: { request: Request }): void => {
       if (request.method === 'DELETE' && request.url.includes('/admin/users/')) deleteCount++;
-    });
+    };
+    server?.events.on('request:start', deleteListener);
 
-    const otherRow = rowByUsername(host, OTHER_ADMIN.username);
-    if (otherRow === undefined) throw new Error('other row missing');
-    torlesButtonOf(otherRow).click();
-    await fixture.whenStable();
+    try {
+      const otherRow = rowByUsername(host, OTHER_ADMIN.username);
+      if (otherRow === undefined) throw new Error('other row missing');
+      torlesButtonOf(otherRow).click();
+      await fixture.whenStable();
 
-    const title = document.querySelector('.cdk-overlay-container h2');
-    if (title === null) throw new Error('dialog title missing');
-    const message = document.querySelector('.cdk-overlay-container mat-dialog-content p');
-    if (message === null) throw new Error('dialog message missing');
-    expect(title.textContent.trim()).toBe('Admin törlése');
-    expect(message.textContent.trim()).toBe(
-      `Biztosan törlöd: ${OTHER_ADMIN.username}? A fiók azonnal megszűnik.`,
-    );
+      const title = document.querySelector('.cdk-overlay-container h2');
+      if (title === null) throw new Error('dialog title missing');
+      const message = document.querySelector('.cdk-overlay-container mat-dialog-content p');
+      if (message === null) throw new Error('dialog message missing');
+      expect(title.textContent.trim()).toBe('Admin törlése');
+      expect(message.textContent.trim()).toBe(
+        `Biztosan törlöd: ${OTHER_ADMIN.username}? A fiók azonnal megszűnik.`,
+      );
 
-    dialogButtonByLabel('Mégse').click();
-    await fixture.whenStable();
-    expect(deleteCount).toBe(0);
+      dialogButtonByLabel('Mégse').click();
+      await fixture.whenStable();
+      expect(deleteCount).toBe(0);
 
-    torlesButtonOf(otherRow).click();
-    await fixture.whenStable();
-    dialogButtonByLabel('Törlés').click();
-    // The dialog close → firstValueFrom → DELETE → store update path
-    // runs several async steps beyond `whenStable`. Yield so the DELETE
-    // resolves and the page re-renders with the row removed before we
-    // assert. Manually `detectChanges()` after the yield because
-    // zoneless scheduling does not always flush a signal-driven render
-    // before `whenStable()` resolves.
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 50);
-    });
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+      torlesButtonOf(otherRow).click();
+      await fixture.whenStable();
+      dialogButtonByLabel('Törlés').click();
+      // The dialog close → firstValueFrom → DELETE → store update path
+      // runs several async steps beyond `whenStable`. Yield so the DELETE
+      // resolves and the page re-renders with the row removed before we
+      // assert. Manually `detectChanges()` after the yield because
+      // zoneless scheduling does not always flush a signal-driven render
+      // before `whenStable()` resolves.
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 50);
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
-    expect(deleteCount).toBe(1);
-    expect(rowByUsername(host, OTHER_ADMIN.username)).toBeUndefined();
-    expect(snackBarText()).toContain(`Admin törölve: ${OTHER_ADMIN.username}`);
+      expect(deleteCount).toBe(1);
+      expect(rowByUsername(host, OTHER_ADMIN.username)).toBeUndefined();
+      expect(snackBarText()).toContain(`Admin törölve: ${OTHER_ADMIN.username}`);
+    } finally {
+      server?.events.removeListener('request:start', deleteListener);
+    }
   });
 
   // Fails if the snack-bar text for `LAST_ADMIN` drifts, or if the page
@@ -340,31 +345,37 @@ describe('AdminsPage', () => {
       ...usersHandlers(db),
     );
     let getCount = 0;
-    server?.events.on('request:start', ({ request }) => {
+    const getListener = ({ request }: { request: Request }): void => {
       if (request.method === 'GET' && request.url.includes('/admin/users')) getCount++;
-    });
-    await signInAndRefresh(db);
+    };
+    server?.events.on('request:start', getListener);
 
-    const fixture = TestBed.createComponent(AdminsPage);
-    fixture.detectChanges();
-    await fixture.whenStable();
-    const host = hostOf(fixture);
+    try {
+      await signInAndRefresh(db);
 
-    const otherRow = rowByUsername(host, OTHER_ADMIN.username);
-    if (otherRow === undefined) throw new Error('other row missing');
-    torlesButtonOf(otherRow).click();
-    await fixture.whenStable();
-    dialogButtonByLabel('Törlés').click();
-    refreshCookie(db);
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 50);
-    });
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+      const fixture = TestBed.createComponent(AdminsPage);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const host = hostOf(fixture);
 
-    expect(snackBarText()).toBe('Az utolsó admin nem törölhető.');
-    expect(getCount).toBeGreaterThanOrEqual(2);
+      const otherRow = rowByUsername(host, OTHER_ADMIN.username);
+      if (otherRow === undefined) throw new Error('other row missing');
+      torlesButtonOf(otherRow).click();
+      await fixture.whenStable();
+      dialogButtonByLabel('Törlés').click();
+      refreshCookie(db);
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 50);
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(snackBarText()).toBe('Az utolsó admin nem törölhető.');
+      expect(getCount).toBeGreaterThanOrEqual(2);
+    } finally {
+      server?.events.removeListener('request:start', getListener);
+    }
   });
 
   // Fails if the loading bar is missing while the first GET is pending,

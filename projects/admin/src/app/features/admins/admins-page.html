@@ -12,7 +12,7 @@
     </div>
   } @else {
     <div class="overflow-x-auto">
-      <table data-testid="admins-table" mat-table [dataSource]="store.admins()">
+      <table mat-table [dataSource]="store.admins()">
         <ng-container matColumnDef="username">
           <th *matHeaderCellDef mat-header-cell>Felhasználónév</th>
           <td *matCellDef="let admin" mat-cell>

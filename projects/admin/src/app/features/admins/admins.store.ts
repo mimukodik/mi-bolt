@@ -65,12 +65,14 @@ export class AdminsStore {
       this.adminsSignal.update((current) => current.filter((entry) => entry.id !== admin.id));
       return { kind: 'deleted' };
     } catch (err) {
+      // HttpClient rejects with HttpErrorResponse; anything else falls
+      // through to `failed` with no Problem body.
       if (!(err instanceof HttpErrorResponse)) return { kind: 'failed', problem: null };
       // The generated DELETE uses `responseType: 'text'`, so the body
       // reaches `HttpErrorResponse.error` as a JSON string; parse it
       // back into the Problem shape so the `kind` mapping can read the
       // code.
-      const problem: Problem | null = readProblem(err);
+      const problem: Problem | null = parseProblem(err);
       if (err.status === 404) return { kind: 'gone' };
       if (err.status === 409) {
         if (problem?.code === 'ADMIN_SELF_DELETE') return { kind: 'self' };
@@ -84,22 +86,17 @@ export class AdminsStore {
 /**
  * Reads the `Problem` body out of an `HttpErrorResponse`. The DELETE
  * operation uses `responseType: 'text'`, so `err.error` is a JSON
- * string here; the shape matches `Problem` and is parsed through the
- * same `isProblem` guard the SDK's other responses already pass.
+ * string here; parse it back, then narrow with `isProblem` the same
+ * way `problemOf` does for the JSON responses.
  */
-function readProblem(error: HttpErrorResponse): Problem | null {
+function parseProblem(error: HttpErrorResponse): Problem | null {
   const body: unknown = error.error;
-  if (typeof body === 'string') {
-    try {
-      return readProblemFromString(body);
-    } catch {
-      return null;
-    }
+  if (typeof body !== 'string') return isProblem(body) ? body : null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return null;
   }
-  return isProblem(body) ? body : null;
-}
-
-function readProblemFromString(body: string): Problem | null {
-  const parsed: unknown = JSON.parse(body);
   return isProblem(parsed) ? parsed : null;
 }
