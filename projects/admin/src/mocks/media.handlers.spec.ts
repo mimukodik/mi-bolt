@@ -352,6 +352,7 @@ describe('POST /admin/media', () => {
     expect(response.status).toBe(401);
   });
 
+  // Fails if the 503 detail differs from the backend's ProblemAdvice wording.
   it('503s in the upload-error scenario', async () => {
     const db = createDb('upload-error');
     const token = setUpMediaHandlers(db);
@@ -364,7 +365,12 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(503);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
+    expect(body).toMatchObject({
+      status: 503,
+      code: 'SERVICE_UNAVAILABLE',
+      title: 'Service unavailable',
+      detail: 'The service is temporarily unavailable',
+    });
   });
 });
 

@@ -111,7 +111,9 @@ async function handleUpload(
   if (session !== undefined) return session;
 
   if (db.scenario === 'upload-error') {
-    return problem(503, 'SERVICE_UNAVAILABLE', 'Service unavailable');
+    return problem(503, 'SERVICE_UNAVAILABLE', 'Service unavailable', {
+      detail: 'The service is temporarily unavailable',
+    });
   }
 
   let form: FormData;
