@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, Injector, afterNextRender, computed, inject, input } from '@angular/core';
 import { CdkDrag, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import type { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { MatButtonModule } from '@angular/material/button';
@@ -46,6 +46,8 @@ export class HighlightsSection {
   readonly field = input.required<FieldTree<HighlightModel[]>>();
   readonly attempted = input.required<boolean>();
 
+  private readonly injector = inject(Injector);
+
   protected readonly max = 6;
   protected readonly maxLength = 280;
 
@@ -66,19 +68,21 @@ export class HighlightsSection {
   }
 
   /**
-   * Removes one highlight; focus moves to the add button, because the removed
-   * row held the menu that focus would return to. Deferred to a microtask:
-   * the click that fires this handler is still bubbling up to `mat-menu`'s
-   * own panel, whose `(click)="closed.emit('click')"` synchronously restores
-   * focus to the (about to be removed) row's menu trigger after this handler
-   * returns, so a same-tick `addButton.focus()` would be immediately
-   * overridden by that restore.
+   * Removes one highlight; focus moves to the add button after the next
+   * render, because `mat-menu` restores focus to the removed row's own
+   * trigger during the same click (its panel's
+   * `(click)="closed.emit('click')"` still fires after this handler returns),
+   * and only once change detection has removed that trigger from the DOM can
+   * this call win without being immediately overridden.
    */
   protected remove(index: number, addButton: MatButton): void {
     this.field()().value.update((items) => items.filter((_, i) => i !== index));
-    queueMicrotask(() => {
-      addButton.focus();
-    });
+    afterNextRender(
+      () => {
+        addButton.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   protected move(index: number, delta: -1 | 1): void {
