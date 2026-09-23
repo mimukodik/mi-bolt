@@ -20,7 +20,8 @@ import {
   isCatalogFixtureShape,
   loadCatalogFixture,
 } from './catalog.handlers';
-import type { CatalogFixture, ProductRanking } from './catalog-store';
+import { sortEntries } from './catalog-filter';
+import type { CatalogEntry, CatalogFixture, ProductRanking } from './catalog-store';
 import type { Product } from '../../app/api/generated/models/product';
 import type { CreateHandlersOptions } from '../create-handlers';
 import { Repository } from '../repository';
@@ -1045,6 +1046,73 @@ describe('GET /products sorts', () => {
     } finally {
       restoreCommittedFixture();
     }
+  });
+
+  // `sortEntries` on the store's entries reversed. The store builds its
+  // entries in rank, id, storage order already, and a stable sort keeps
+  // that order on a tie, so only a reversed input shows that each
+  // tie-break line does its own work.
+  describe('sortEntries on an input the store did not pre-sort', () => {
+    const reversedEntries = (): CatalogEntry[] => {
+      const store = catalogStore.current;
+      if (store === null) throw new Error('[sort tests] no catalogue loaded');
+      return [...store.listEntries()].reverse();
+    };
+    const keys = (entries: readonly CatalogEntry[]): string[] =>
+      entries.map((entry) => `${entry.product.slug}/${String(entry.storageGb)}`);
+
+    for (const sort of ['newest', 'oldest', 'popularity', 'price_asc', 'price_desc'] as const) {
+      it(`sort=${sort} ties fall through to rank, id and storage`, () => {
+        loadCatalogFixture({
+          products: [
+            sortProduct('1', 'Brand', 'Tie 1', [128, 256]),
+            sortProduct('2', 'Brand', 'Tie 2', [128]),
+            sortProduct('3', 'Brand', 'Tie 3', [128]),
+          ],
+          ranking: [sortRanking('1', 3), sortRanking('2', 1), sortRanking('3', 2)],
+        });
+        try {
+          expect(keys(sortEntries(reversedEntries(), sort, undefined))).toEqual([
+            'sort-2/128',
+            'sort-3/128',
+            'sort-1/128',
+            'sort-1/256',
+          ]);
+        } finally {
+          restoreCommittedFixture();
+        }
+      });
+    }
+
+    it('sort=name_asc ties on the name fall through to storage ascending', () => {
+      loadCatalogFixture(nameCatalogue());
+      try {
+        expect(keys(sortEntries(reversedEntries(), 'name_asc', undefined))).toEqual([
+          'sort-4/128',
+          'sort-4/256',
+          'sort-3/128',
+          'sort-2/128',
+          'sort-1/128',
+        ]);
+      } finally {
+        restoreCommittedFixture();
+      }
+    });
+
+    it('sort=name_desc ties on the name fall through to storage ascending', () => {
+      loadCatalogFixture(nameCatalogue());
+      try {
+        expect(keys(sortEntries(reversedEntries(), 'name_desc', undefined))).toEqual([
+          'sort-1/128',
+          'sort-2/128',
+          'sort-3/128',
+          'sort-4/128',
+          'sort-4/256',
+        ]);
+      } finally {
+        restoreCommittedFixture();
+      }
+    });
   });
 });
 
