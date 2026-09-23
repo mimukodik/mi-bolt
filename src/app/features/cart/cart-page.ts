@@ -380,7 +380,7 @@ export class CartPage {
     afterNextRender(
       () => {
         const lines = this.lines();
-        if (lines.length === 0) {
+        if (lines.length === 0 || index < 0) {
           this.pageTitle()?.nativeElement.focus();
           return;
         }
