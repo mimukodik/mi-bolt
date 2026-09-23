@@ -112,11 +112,45 @@ describe('ProductListDataSource — live MSW', () => {
     const first = await firstEmission(stream);
     expect(ds.total()).toBe(46);
     expect(first).toHaveLength(46);
-    for (let i = 0; i < 46; i += 1) {
-      expect(first[i]).toBeDefined();
-    }
+    expect(first.filter((row) => row === undefined)).toEqual([]);
     expect(ds.status()).toBe('ready');
     expect(ds.loadedCount()).toBe(46);
+
+    ds.disconnect();
+  });
+
+  it('page 1 with status all yields total 48 (every seeded product)', async () => {
+    const loader = (page: number): Observable<AdminProductPage> =>
+      new Observable<AdminProductPage>((subscriber) => {
+        const url = new URL('/api/v1/admin/products', document.baseURI);
+        url.searchParams.set('status', 'all');
+        url.searchParams.set('sort', 'rank');
+        url.searchParams.set('direction', 'asc');
+        url.searchParams.set('page', String(page));
+        url.searchParams.set('pageSize', '50');
+        fetch(url.href, { credentials: 'include' })
+          .then((r) => r.json())
+          .then((value: AdminProductPage) => value)
+          .then(
+            (value) => {
+              subscriber.next(value);
+              subscriber.complete();
+            },
+            (err: unknown) => {
+              subscriber.error(err);
+            },
+          );
+      });
+
+    const ds = new ProductListDataSource(loader);
+    const stream = ds.connect(new FakeCollectionViewer());
+
+    const first = await firstEmission(stream);
+    expect(ds.total()).toBe(48);
+    expect(first).toHaveLength(48);
+    expect(first.filter((row) => row === undefined)).toEqual([]);
+    expect(ds.status()).toBe('ready');
+    expect(ds.loadedCount()).toBe(48);
 
     ds.disconnect();
   });
@@ -137,12 +171,22 @@ describe('ProductListDataSource — fake loader', () => {
     expect(loader).toHaveBeenCalledTimes(1);
     expect(loader).toHaveBeenCalledWith(1);
     expect(ds.total()).toBe(46);
-    expect(first).toHaveLength(46);
-    for (let i = 0; i < 46; i += 1) {
-      expect(first[i]).toBeDefined();
-    }
+    expect(first).toEqual(items);
     expect(ds.status()).toBe('ready');
     expect(ds.loadedCount()).toBe(46);
+
+    ds.disconnect();
+  });
+
+  it('totalElements 0 → status empty, total 0, emits []', async () => {
+    const loader = vi.fn((): Observable<AdminProductPage> => of(pageOf(0, 1, [])));
+
+    const ds = new ProductListDataSource(loader);
+    const first = await firstEmission(ds.connect(new FakeCollectionViewer()));
+    expect(first).toEqual([]);
+    expect(ds.status()).toBe('empty');
+    expect(ds.total()).toBe(0);
+    expect(ds.loadedCount()).toBe(0);
 
     ds.disconnect();
   });

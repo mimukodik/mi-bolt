@@ -1,10 +1,29 @@
 /**
- * MIM-350, unit F15 — `ProductListStore` spec.
+ * MIM-350, unit F15 — store for the Termékek list.
  *
- * Exercises the store against the live MSW handlers (the same ones
- * the edit page uses), with a router harness so `ActivatedRoute` has
- * a real `queryParamMap` to read. The XSRF/session guard setup
- * follows `products-write.handlers.spec.ts`.
+ * The URL query string is the single source of truth for the page
+ * (`docs/spec/architecture.md:67`): `ProductListStore` reads it
+ * through `parseProductListQuery` and writes it back through
+ * `serializeProductListQuery`. The page calls `setQuery({ ... })`
+ * to change a filter, the router navigates, the signal picks the
+ * new value up, and a fresh `ProductListDataSource` is built for the
+ * new query. The old data source stays around only long enough to
+ * finish any page it had in flight; its emissions go into its own
+ * cache, never the new one's.
+ *
+ * The brief calls out the property: a late response of an old query
+ * must never reach the new data source. The store realises that by
+ * caching data sources by the serialised params, so a different
+ * query always gets a different instance. `replaceItem` updates only
+ * the cache of the *current* data source; an archive or a restore
+ * therefore never bleeds across a query change.
+ *
+ * `archive` and `restore` are the two wire actions. Each one posts
+ * the current row's `version` quoted as the `If-Match` header
+ * (`withIfMatch`), waits for the row's new version, applies the
+ * result through `replaceItem`, and resolves to a small tagged
+ * union so the page can branch on the outcome without inspecting
+ * HTTP status codes itself.
  */
 import { TestBed } from '@angular/core/testing';
 import {
@@ -13,10 +32,10 @@ import {
   withXhr,
   type HttpInterceptorFn,
 } from '@angular/common/http';
-import { Router, RouterOutlet, provideRouter } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet, provideRouter } from '@angular/router';
 import { Component, inject } from '@angular/core';
 import type { CollectionViewer, ListRange } from '@angular/cdk/collections';
-import { Subject } from 'rxjs';
+import { filter, firstValueFrom, Subject } from 'rxjs';
 import { http, HttpResponse as MswHttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -31,6 +50,7 @@ import { createDb } from '../../../../mocks/db';
 import type { MockDb } from '../../../../mocks/db';
 import { productsReadHandlers } from '../../../../mocks/products-read.handlers';
 import { productsWriteHandlers } from '../../../../mocks/products-write.handlers';
+import { serviceUnavailable } from '../../../../mocks/backend-answers';
 import { SEED_ADMIN } from '../../../../mocks/seed';
 
 import { ProductListStore } from './product-list.store';
@@ -113,16 +133,6 @@ async function setup(scenario: 'default' | 'save-conflict' = 'default'): Promise
   };
 }
 
-/** Drain microtasks so MSW's synchronous handlers deliver their
- *  responses to subscribers and Angular finishes a router navigation. */
-async function settle(n = 5): Promise<void> {
-  for (let i = 0; i < n; i += 1) {
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
-    });
-  }
-}
-
 /** Stub `CollectionViewer` the data source can attach to. The data
  *  source reads `viewChange` once at `connect()` time and otherwise
  *  ignores the viewer, so the stub only needs that property. */
@@ -130,6 +140,19 @@ function noopViewer(): CollectionViewer {
   return {
     viewChange: new Subject<ListRange>(),
   };
+}
+
+/** Wait for the next `NavigationEnd` emitted by `router.events`. The
+ *  store's `setQuery(...)` triggers a `router.navigate(...)`, and the
+ *  router emits `NavigationEnd` exactly once on a successful run;
+ *  resolving on that event is the supported wait for the navigation
+ *  the test caused, without sleeping for an arbitrary amount of time.
+ *  See angular.dev/api/router/NavigationEnd — "An event triggered
+ *  when a navigation ends successfully." */
+function nextNavigationEnd(router: Router): Promise<NavigationEnd> {
+  return firstValueFrom(
+    router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)),
+  );
 }
 
 describe('ProductListStore', () => {
@@ -140,14 +163,12 @@ describe('ProductListStore', () => {
   it('setQuery({ brands }) navigates to a sorted brand query and updates query()', async () => {
     const { store } = await setup();
 
-    store.setQuery({ brands: ['Samsung', 'Apple'] });
-    await settle();
-
     const router = TestBed.inject(Router);
-    expect(router.url).toContain('brand=Apple');
-    expect(router.url).toContain('brand=Samsung');
-    expect(router.url.indexOf('brand=Apple')).toBeLessThan(router.url.indexOf('brand=Samsung'));
+    const navigated = nextNavigationEnd(router);
+    store.setQuery({ brands: ['Samsung', 'Apple'] });
+    await navigated;
 
+    expect(router.url).toBe('/termekek?brand=Apple&brand=Samsung');
     expect(store.query().brands).toEqual(['Apple', 'Samsung']);
   });
 
@@ -210,18 +231,18 @@ describe('ProductListStore', () => {
     const oldDs = store.dataSource();
     expect(oldDs).toBeInstanceOf(ProductListDataSource);
     expect(oldDs.total()).toBeNull();
-    oldDs.connect(noopViewer());
+    const oldRows$ = oldDs.connect(noopViewer());
 
+    const router = TestBed.inject(Router);
+    const navigated = nextNavigationEnd(router);
     store.setQuery({ brands: ['Apple'] });
-    await settle();
+    await navigated;
 
     const newDs = store.dataSource();
     expect(newDs).not.toBe(oldDs);
-    newDs.connect(noopViewer());
+    const newRows$ = newDs.connect(noopViewer());
+    await firstValueFrom(newRows$);
 
-    for (let i = 0; i < 50 && newDs.total() === null; i += 1) {
-      await settle(1);
-    }
     expect(newDs.total()).toBe(10);
     expect(oldDs.total()).toBeNull();
 
@@ -249,19 +270,56 @@ describe('ProductListStore', () => {
       totalElements: 46,
       totalPages: 1,
     });
-    await settle();
+    await firstValueFrom(oldRows$.pipe(filter((rows) => rows.length > 0)));
 
     expect(newDs.total()).toBe(10);
     expect(oldDs.total()).toBe(46);
   });
 
+  it('retry() builds a new data source for the same query', async () => {
+    const { store } = await setup();
+    const before = store.dataSource();
+    const query = store.query();
+    store.retry();
+    expect(store.dataSource()).not.toBe(before);
+    expect(store.dataSource()).toBeInstanceOf(ProductListDataSource);
+    expect(store.query()).toEqual(query);
+  });
+
+  it('archive answered 503 returns { kind: "failed" } with the problem', async () => {
+    const { store } = await setup();
+    const ds = store.dataSource();
+    const stream$ = ds.connect(noopViewer());
+    const first = await firstValueFrom(stream$);
+    const row = first[0];
+    if (row === undefined) throw new Error('row 1 missing');
+
+    const mswServer = server;
+    if (mswServer === undefined) throw new Error('MSW server not initialised');
+    mswServer.use(
+      http.post('*/api/v1/admin/products/:productId/archive', () => serviceUnavailable()),
+    );
+
+    const result = await store.archive(row);
+    expect(result).toEqual({
+      kind: 'failed',
+      problem: {
+        type: 'urn:mi-bolt:problem:service-unavailable',
+        title: 'Service unavailable',
+        status: 503,
+        code: 'SERVICE_UNAVAILABLE',
+        detail: 'The service is temporarily unavailable',
+        traceId: expect.any(String),
+        fieldErrors: [],
+      },
+    });
+  });
+
   it('archive sends If-Match with the row version and updates the row in place', async () => {
     const { db, store } = await setup();
     const ds = store.dataSource();
-    ds.connect(noopViewer());
-    for (let i = 0; i < 50 && ds.total() === null; i += 1) {
-      await settle(1);
-    }
+    const stream$ = ds.connect(noopViewer());
+    await firstValueFrom(stream$);
     expect(ds.total()).toBe(46);
 
     let sentIfMatch: string | null = null;
