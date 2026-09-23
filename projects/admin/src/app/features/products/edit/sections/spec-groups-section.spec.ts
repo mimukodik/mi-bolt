@@ -157,6 +157,41 @@ describe('SpecGroupsSection', () => {
     expect(textareaByLabel('Érték', panel).map((el) => el.value)).toEqual(['6,1 hüvelyk', 'OLED']);
   });
 
+  it('lays a row out as a grid: menu beside Megnevezés, Érték below it on a phone', async () => {
+    // Fails if the row goes back to a flex row whose wrap depends on a
+    // utility on the Material host.
+    const header = element().querySelector<HTMLElement>('mat-expansion-panel-header');
+    if (header === null) throw new Error('Expected a panel header');
+    header.click();
+    await fixture.whenStable();
+
+    const panel = panels()[0];
+    const megnevezesField = inputByLabel('Megnevezés', panel)[0].closest('mat-form-field');
+    if (megnevezesField === null) throw new Error('Expected the Megnevezés field');
+    const row = megnevezesField.parentElement;
+    if (row === null) throw new Error('Expected the row container');
+
+    expect(row.classList.contains('grid')).toBe(true);
+    expect(row.classList.contains('grid-cols-[minmax(0,1fr)_auto]')).toBe(true);
+    expect(row.classList.contains('sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]')).toBe(true);
+
+    const ertekField = textareaByLabel('Érték', panel)[0].closest('mat-form-field');
+    if (ertekField === null) throw new Error('Expected the Érték field');
+    expect(ertekField.classList.contains('col-span-2')).toBe(true);
+    expect(ertekField.classList.contains('sm:col-span-1')).toBe(true);
+
+    const rowMenuButton = row.querySelector<HTMLButtonElement>(
+      'button[aria-label$=", sor 1: műveletek"]',
+    );
+    if (rowMenuButton === null) throw new Error('Expected the row menu button');
+    expect(rowMenuButton.classList.contains('col-start-2')).toBe(true);
+    expect(rowMenuButton.classList.contains('row-start-1')).toBe(true);
+    expect(rowMenuButton.classList.contains('sm:col-start-3')).toBe(true);
+
+    expect(megnevezesField.classList.contains('min-w-40')).toBe(false);
+    expect(megnevezesField.classList.contains('flex-1')).toBe(false);
+  });
+
   it('typing into the first row value updates the model', async () => {
     // Fails if [formField] stops wiring the row's value control to the model.
     const header = element().querySelector<HTMLElement>('mat-expansion-panel-header');
