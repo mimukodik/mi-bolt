@@ -43,6 +43,8 @@ function isValidUsername(value: string): boolean {
  * The "Új admin" dialog opened from the Adminok page (MIM-345, F14).
  * Closes with the `AdminUserCreated` body on a successful 201, with
  * nothing on cancel.
+ * While the request is in flight neither Escape, the backdrop nor Mégse
+ * closes it, so a created admin's password is never lost.
  */
 @Component({
   selector: 'adm-new-admin-dialog',
@@ -103,6 +105,7 @@ export class NewAdminDialog {
 
   private async submit(): Promise<TreeValidationResult> {
     const { username } = this.model();
+    this.dialogRef.disableClose = true;
     try {
       const created = await firstValueFrom(
         this.api.invoke(createAdminUser, { body: { username } }),
@@ -127,6 +130,8 @@ export class NewAdminDialog {
       }
       this.failure.set('Az admin létrehozása nem sikerült. Próbáld újra.');
       return undefined;
+    } finally {
+      this.dialogRef.disableClose = false;
     }
   }
 }

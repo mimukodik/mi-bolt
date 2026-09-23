@@ -83,6 +83,14 @@ function submitButton(): HTMLButtonElement {
   return found;
 }
 
+function megseButton(): HTMLButtonElement {
+  const found = Array.from(overlay().querySelectorAll<HTMLButtonElement>('button')).find(
+    (button) => button.textContent.trim() === 'Mégse',
+  );
+  if (found === undefined) throw new Error('expected the Mégse button');
+  return found;
+}
+
 function fill(input: HTMLInputElement, value: string): void {
   input.value = value;
   input.dispatchEvent(new Event('input'));
@@ -309,5 +317,83 @@ describe('NewAdminDialog', () => {
 
     TestBed.inject(MatDialog).closeAll();
     await expect(closed).resolves.toBeUndefined();
+  });
+
+  it('case 12: while the POST is in flight Escape, the backdrop and Mégse cannot close the dialog; it then closes with the created admin', async () => {
+    // Fails if `disableClose` stops blocking Escape, the backdrop or Mégse
+    // while the request is in flight, or if the dialog does not close with
+    // the created admin once the request resolves.
+    const db = createDb();
+    signIn(db);
+    let markArrived: (() => void) | undefined;
+    const arrived = new Promise<void>((resolve) => {
+      markArrived = resolve;
+    });
+    let release: (() => void) | undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server?.use(
+      http.post(
+        '*/api/v1/admin/users',
+        async () => {
+          (markArrived ?? ((): void => undefined))();
+          await released;
+          return undefined; // falls through to the users handler below, which creates the admin
+        },
+        { once: true },
+      ),
+      ...usersHandlers(db),
+    );
+
+    const closed = openDialog();
+    await fixture.whenStable();
+
+    fill(usernameInput(), 'kovacs.anna');
+    submitButton().click();
+    await arrived;
+    TestBed.tick();
+
+    expect(megseButton().disabled).toBe(true);
+
+    const pane = document.querySelector('.cdk-overlay-pane');
+    if (!(pane instanceof HTMLElement)) throw new Error('expected the dialog overlay pane');
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    // jsdom's KeyboardEvent carries no keyCode, and the CDK's dialog reads
+    // `event.keyCode === ESCAPE` (see `generated-password-dialog.spec.ts`).
+    Object.defineProperty(escape, 'keyCode', { get: () => 27 });
+    pane.dispatchEvent(escape);
+    TestBed.tick();
+    expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1);
+
+    const backdrop = document.querySelector('.cdk-overlay-backdrop');
+    if (!(backdrop instanceof HTMLElement)) throw new Error('expected the overlay backdrop');
+    backdrop.click();
+    TestBed.tick();
+    expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1);
+
+    megseButton().click();
+    TestBed.tick();
+    expect(TestBed.inject(MatDialog).openDialogs.length).toBe(1);
+
+    (release ?? ((): void => undefined))();
+    await fixture.whenStable();
+    const created = await closed;
+    if (created === undefined) throw new Error('expected the dialog to close with a value');
+    expect(created.user.username).toBe('kovacs.anna');
+    expect(db.admins.get(created.user.id)?.password).toBe(created.generatedPassword);
+  });
+
+  it('case 13: the username field sizes its subscript to the message, so a two-line error is not clipped', async () => {
+    // Fails if `subscriptSizing="dynamic"` is dropped from the username
+    // form field, clipping a two-line error message behind a scrollbar.
+    const db = createDb();
+    signIn(db);
+    server?.use(...usersHandlers(db));
+
+    void openDialog();
+    await fixture.whenStable();
+
+    expect(overlay().querySelector('.mat-mdc-form-field-subscript-dynamic-size')).not.toBeNull();
   });
 });

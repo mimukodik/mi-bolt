@@ -1,7 +1,7 @@
 <h2 mat-dialog-title>Új admin</h2>
 <form novalidate (submit)="onSubmit($event)">
   <mat-dialog-content>
-    <mat-form-field class="w-full">
+    <mat-form-field class="w-full" subscriptSizing="dynamic">
       <mat-label>Felhasználónév</mat-label>
       <input autocomplete="off" matInput [formField]="form.username" />
       <mat-hint>A jelszót a rendszer generálja.</mat-hint>
@@ -11,7 +11,9 @@
     <p class="adm-dialog-error" role="alert">{{ failure() ?? '' }}</p>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
-    <button matButton type="button" [mat-dialog-close]="undefined">Mégse</button>
+    <button matButton type="button" [disabled]="form().submitting()" [mat-dialog-close]="undefined">
+      Mégse
+    </button>
     <button matButton="filled" type="submit" [disabled]="attempt.disabled(form)">Létrehozás</button>
   </mat-dialog-actions>
 </form>
