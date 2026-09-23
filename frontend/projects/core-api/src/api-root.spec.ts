@@ -48,6 +48,13 @@ describe('resolveApiRoot', () => {
     expect(error.cause).toBeInstanceOf(TypeError);
   });
 
+  it('refuses a baseURI with an opaque origin', () => {
+    expect(() => resolveApiRoot({ baseURI: 'about:blank' })).toThrow(/has an opaque origin/);
+    expect(() => resolveApiRoot({ baseURI: 'file:///tmp/app/index.html' })).toThrow(
+      /has an opaque origin/,
+    );
+  });
+
   it('falls back to the live document when no argument is passed', () => {
     vi.stubGlobal('document', { baseURI: 'https://live.example/app/' });
 

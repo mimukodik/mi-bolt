@@ -30,5 +30,10 @@ export function resolveApiRoot(documentLike?: Pick<Document, 'baseURI'>): string
       { cause: err },
     );
   }
+  if (origin === 'null') {
+    throw new Error(
+      `[mi-bolt] resolveApiRoot(): document.baseURI "${baseUri}" has an opaque origin; SDK cannot derive a same-origin root.`,
+    );
+  }
   return `${origin}${API_PATH}`;
 }
