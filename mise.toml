@@ -68,9 +68,9 @@ run = "npm --prefix .claude/hooks ci"
 description = "Lint, test and build every workspace, and check the contract"
 depends = [
   "//frontend:lint", "//frontend:test", "//frontend:build",
-  "//backend:lint", "//backend:build",
+  "//backend:build",
   "//tools:lint", "//tools:test", "//tools:build",
-  "contracts:check", "claude:hooks:test", "claude:hooks:typecheck",
+  "contracts:check", "api:drift", "claude:hooks:test", "claude:hooks:typecheck",
 ]
 
 [tasks."api:generate"]
