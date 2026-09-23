@@ -156,6 +156,15 @@ describe('ShellComponent', () => {
       const text = brandBar.textContent;
       expect(text).toContain('MiBolt Admin');
     });
+
+    it('lays the content area out as a column, so main can take the remaining height', () => {
+      const content = native.querySelector('mat-sidenav-content');
+      if (!(content instanceof HTMLElement)) {
+        throw new Error('expected mat-sidenav-content');
+      }
+      expect(getComputedStyle(content).display).toBe('flex');
+      expect(getComputedStyle(content).flexDirection).toBe('column');
+    });
   });
 
   describe('layout and drawer behaviour', () => {
