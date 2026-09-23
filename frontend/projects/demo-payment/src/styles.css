@@ -11,7 +11,7 @@
  * control height on a 48px touch floor, and the type steps the page needs.
  * The palette and the typeface are deliberately NOT the shop's: a payment
  * authorisation screen may carry neither the shop's identity nor a
- * provider's (`docs/01-kommunikacio.md:223-224`).
+ * provider's (`contracts/commerce/kommunikacio.md` §8.3).
  */
 
 :root {

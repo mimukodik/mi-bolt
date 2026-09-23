@@ -38,7 +38,7 @@ import com.example.mi_bolt_backend.catalog.CatalogValidator;
  *
  * <p>{@code REQUIRED} is not in the same status class as the codes above: the
  * contract treats a missing required member as 400 {@code INVALID_REQUEST}
- * (docs/01 §5.1), which is what the advice layer answers for Bean Validation's
+ * (contracts/commerce/kommunikacio.md §5.1), which is what the advice layer answers for Bean Validation's
  * own {@code @NotNull}, while a non-empty result of this validator is
  * otherwise 422 {@code VALIDATION_FAILED}. A caller answering the whole list
  * under one status has to split on {@code REQUIRED} to keep that separation,
