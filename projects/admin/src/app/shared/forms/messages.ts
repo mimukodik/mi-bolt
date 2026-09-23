@@ -4,6 +4,8 @@ export const MESSAGES = {
   notNegative: 'Nem lehet negatív.',
   imageRequired: 'Tölts fel képet.',
   maxLength: (max: number): string => `Legfeljebb ${String(max)} karakter.`,
+  minLength: (min: number): string => `Legalább ${String(min)} karakter.`,
+  passwordMismatch: 'A két jelszó nem egyezik.',
   slugPattern: 'Csak kisbetű, szám és kötőjel.',
   hexPattern: 'Formátum: #RRGGBB.',
   integer: 'Egész számot adj meg.',
