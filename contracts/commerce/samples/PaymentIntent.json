@@ -1,0 +1,12 @@
+{
+  "id": "demo-payment-intent-001",
+  "status": "requires_action",
+  "amount": {
+    "amount": 151980,
+    "currency": "HUF"
+  },
+  "redirectUrl": "/demo-fizetes/?intent=demo-payment-intent-001",
+  "returnUrl": "/checkout/return?intent=demo-payment-intent-001",
+  "createdAt": "2026-09-23T17:30:00Z",
+  "expiresAt": "2026-09-23T18:30:00Z"
+}

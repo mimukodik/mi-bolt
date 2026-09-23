@@ -1,0 +1,330 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0002-catalog
+      author: mi-bolt
+      comment: |
+        Catalogue schema (docs/02-backend.md §4.1, §5; docs/04 §4). All
+        product catalogue state lives in the database: products, colours,
+        variants, spec groups, highlights and content-addressed images.
+        Image bytes live alongside the rest so a reset drops them together
+        (docs/02 §6.2). `ddl-auto=validate` will refuse to start the app
+        on a stale schema.
+      changes:
+        - createTable:
+            tableName: product
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: slug
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: brand
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(2000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_5g
+                  type: boolean
+                  constraints:
+                    nullable: false
+              - column:
+                  name: released_at
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rank
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: popularity_score
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: featured
+                  type: boolean
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: product_highlight
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_product_highlight_product
+                    references: product(id)
+                    deleteCascade: true
+              - column:
+                  name: position
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: varchar(280)
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: catalog_image
+            columns:
+              - column:
+                  name: id
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: content_type
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: width
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: height
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: bytes
+                  type: bytea
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: product_color
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_product_color_product
+                    references: product(id)
+                    deleteCascade: true
+              - column:
+                  name: code
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: swatch_hex
+                  type: varchar(7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: alt
+                  type: varchar(280)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: image_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_product_color_image
+                    references: catalog_image(id)
+              - column:
+                  name: position
+                  type: integer
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: product_variant
+            columns:
+              - column:
+                  name: id
+                  type: varchar(80)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_product_variant_product
+                    references: product(id)
+                    deleteCascade: true
+              - column:
+                  name: slug
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: color_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_product_variant_color
+                    references: product_color(id)
+              - column:
+                  name: storage_gb
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: stock
+                  type: integer
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: spec_group
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_spec_group_product
+                    references: product(id)
+                    deleteCascade: true
+              - column:
+                  name: position
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: spec_row
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: spec_group_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_spec_row_group
+                    references: spec_group(id)
+                    deleteCascade: true
+              - column:
+                  name: position
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: row_value
+                  type: varchar(2000)
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: product_color
+            columnNames: product_id, code
+            constraintName: uq_product_color_product_code
+        - addUniqueConstraint:
+            tableName: product_variant
+            columnNames: product_id, slug
+            constraintName: uq_product_variant_product_slug
+        - createIndex:
+            tableName: product
+            indexName: ix_product_rank
+            columns:
+              - column:
+                  name: rank
+        - createIndex:
+            tableName: product_highlight
+            indexName: ix_product_highlight_product
+            columns:
+              - column:
+                  name: product_id
+        - createIndex:
+            tableName: product_color
+            indexName: ix_product_color_product
+            columns:
+              - column:
+                  name: product_id
+        - createIndex:
+            tableName: product_variant
+            indexName: ix_product_variant_product
+            columns:
+              - column:
+                  name: product_id
+        - createIndex:
+            tableName: product_variant
+            indexName: ix_product_variant_color
+            columns:
+              - column:
+                  name: color_id
+        - createIndex:
+            tableName: spec_group
+            indexName: ix_spec_group_product
+            columns:
+              - column:
+                  name: product_id
+        - createIndex:
+            tableName: spec_row
+            indexName: ix_spec_row_group
+            columns:
+              - column:
+                  name: spec_group_id

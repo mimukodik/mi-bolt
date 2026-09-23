@@ -1,0 +1,169 @@
+{
+  "generatedAt": "2026-09-19T18:00:00Z",
+  "source": "https://example.test/mi-bolt/fixture",
+  "products": [
+    {
+      "slug": "samsung-galaxy-s25",
+      "brand": "Samsung",
+      "name": "Galaxy S25",
+      "highlights": [
+        "6,2\" Dynamic AMOLED 2X",
+        "50 MP kamera",
+        "Snapdragon 8 Elite"
+      ],
+      "description": "A Samsung Galaxy S25 a csúcskategóriás Samsung telefonok legújabb tagja.",
+      "is5g": true,
+      "releasedAt": "2025-02-07",
+      "rank": 12,
+      "popularityScore": 87,
+      "featured": true,
+      "specGroups": [
+        {
+          "label": "Kijelző",
+          "rows": [
+            {"label": "Méret", "value": "6,2\""},
+            {"label": "Felbontás", "value": "2340×1080"}
+          ]
+        },
+        {
+          "label": "Akkumulátor",
+          "rows": [
+            {"label": "Kapacitás", "value": "4000 mAh"}
+          ]
+        }
+      ],
+      "colors": [
+        {
+          "code": "navy",
+          "name": "Sötétkék",
+          "swatchHex": "#1B2A49",
+          "image": {
+            "file": "0494688791f55f77852d95d4aff487aa89ffd0d6c300a64c56ed4ff08c3be5b8.png",
+            "alt": "Samsung Galaxy S25 sötétkék",
+            "width": 300,
+            "height": 600
+          }
+        },
+        {
+          "code": "silver",
+          "name": "Ezüst",
+          "swatchHex": "#C0C0C0",
+          "image": {
+            "file": "052fbcc4bbaa16e953edf6427e20fba34bb43601a5282b314177ee89d5b85062.png",
+            "alt": "Samsung Galaxy S25 ezüst",
+            "width": 300,
+            "height": 600
+          }
+        },
+        {
+          "code": "navy-alt",
+          "name": "Sötétkék (más nézet)",
+          "swatchHex": "#1B2A49",
+          "image": {
+            "file": "0494688791f55f77852d95d4aff487aa89ffd0d6c300a64c56ed4ff08c3be5b8.png",
+            "alt": "Samsung Galaxy S25 sötétkék alternatív",
+            "width": 300,
+            "height": 600
+          }
+        }
+      ],
+      "variants": [
+        {"id": "samsung-galaxy-s25--navy--128", "slug": "sotetkek-128gb", "colorCode": "navy", "storageGb": 128, "priceHuf": 299990, "stock": 7},
+        {"id": "samsung-galaxy-s25--navy--256", "slug": "sotetkek-256gb", "colorCode": "navy", "storageGb": 256, "priceHuf": 349990, "stock": 3},
+        {"id": "samsung-galaxy-s25--navy--512", "slug": "sotetkek-512gb", "colorCode": "navy", "storageGb": 512, "priceHuf": 399990, "stock": 5},
+        {"id": "samsung-galaxy-s25--silver--128", "slug": "ezust-128gb", "colorCode": "silver", "storageGb": 128, "priceHuf": 299990, "stock": 6},
+        {"id": "samsung-galaxy-s25--silver--256", "slug": "ezust-256gb", "colorCode": "silver", "storageGb": 256, "priceHuf": 349990, "stock": 4},
+        {"id": "samsung-galaxy-s25--silver--512", "slug": "ezust-512gb", "colorCode": "silver", "storageGb": 512, "priceHuf": 399990, "stock": 2},
+        {"id": "samsung-galaxy-s25--navy-alt--256", "slug": "sotetkek-alt-256gb", "colorCode": "navy-alt", "storageGb": 256, "priceHuf": 349990, "stock": 1}
+      ]
+    },
+    {
+      "slug": "apple-iphone-16",
+      "brand": "Apple",
+      "name": "iPhone 16",
+      "highlights": [
+        "6,1\" Super Retina XDR",
+        "A18 chip",
+        "48 MP Fusion kamera"
+      ],
+      "description": "Az Apple iPhone 16 a 2024-es iPhone generáció alapmodellje.",
+      "is5g": true,
+      "releasedAt": "2024-09-20",
+      "rank": 18,
+      "popularityScore": 92,
+      "featured": false,
+      "specGroups": [
+        {
+          "label": "Kijelző",
+          "rows": [
+            {"label": "Méret", "value": "6,1\""},
+            {"label": "Felbontás", "value": "2556×1179"}
+          ]
+        },
+        {
+          "label": "Processzor",
+          "rows": [
+            {"label": "Chip", "value": "Apple A18"}
+          ]
+        }
+      ],
+      "colors": [
+        {
+          "code": "midnight",
+          "name": "Éjfekete",
+          "swatchHex": "#14141E",
+          "image": {
+            "file": "071b4f5e6090cfe2a70515bdcf2b72ecc5f21ed6d39ad6dcb9b510e39e24a5a3.png",
+            "alt": "Apple iPhone 16 éjfekete",
+            "width": 300,
+            "height": 600
+          }
+        }
+      ],
+      "variants": [
+        {"id": "apple-iphone-16--midnight--128", "slug": "ejszaka-128gb", "colorCode": "midnight", "storageGb": 128, "priceHuf": 399990, "stock": 8},
+        {"id": "apple-iphone-16--midnight--256", "slug": "ejszaka-256gb", "colorCode": "midnight", "storageGb": 256, "priceHuf": 449990, "stock": 5}
+      ]
+    },
+    {
+      "slug": "nokia-105",
+      "brand": "Nokia",
+      "name": "105",
+      "highlights": [
+        "1,77\" kijelző",
+        "Akár 15 óra beszélgetés",
+        "FM rádió"
+      ],
+      "description": "A Nokia 105 egy belépő szintű, kész nélküli mobiltelefon.",
+      "is5g": false,
+      "releasedAt": "2023-04-01",
+      "rank": 95,
+      "popularityScore": 24,
+      "featured": false,
+      "specGroups": [
+        {
+          "label": "Akkumulátor",
+          "rows": [
+            {"label": "Kapacitás", "value": "800 mAh"}
+          ]
+        }
+      ],
+      "colors": [
+        {
+          "code": "black",
+          "name": "Fekete",
+          "swatchHex": "#000000",
+          "image": {
+            "file": "0b460ce112a3af66e939ef080de17c73b1e1b9e25dd91e63814ea3dda5f57e31.png",
+            "alt": "Nokia 105 fekete",
+            "width": 300,
+            "height": 600
+          }
+        }
+      ],
+      "variants": [
+        {"id": "nokia-105--black--128", "slug": "fekete-128gb", "colorCode": "black", "storageGb": 128, "priceHuf": 12990, "stock": 0}
+      ]
+    }
+  ]
+}

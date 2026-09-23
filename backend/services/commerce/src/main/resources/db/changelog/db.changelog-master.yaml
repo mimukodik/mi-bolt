@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/0001-shop-session.yaml
+  - include:
+      file: db/changelog/changes/0002-catalog.yaml
+  - include:
+      file: db/changelog/changes/0003-cart.yaml
+  - include:
+      file: db/changelog/changes/0004-checkout.yaml
+  - include:
+      file: db/changelog/changes/0005-orders.yaml
+  - include:
+      file: db/changelog/changes/0006-idempotency-response-body.yaml
+  - include:
+      file: db/changelog/changes/0007-admin-user.yaml
+  - include:
+      file: db/changelog/changes/0008-product-admin-columns.yaml
+  - include:
+      file: db/changelog/changes/0009-featured-limit-lock.yaml

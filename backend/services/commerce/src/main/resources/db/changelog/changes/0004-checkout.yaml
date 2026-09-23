@@ -1,0 +1,91 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0004-checkout
+      author: mi-bolt
+      comment: |
+        One checkout draft per cart (docs/02-backend.md §4.3 rules 23–27). The
+        draft lives and dies with its cart: cart_id is unique and cascades on
+        delete, so an expired cart takes its draft with it. Sections are
+        nullable column groups; a section is present when its key column
+        (contact_full_name, billing_name, delivery_option, payment_method) is
+        not null. The delivery address columns are filled only for
+        home_delivery (rule 27). Money is not stored here: the summary is
+        recomputed on every read (rule 28).
+      changes:
+        - createTable:
+            tableName: checkout_draft
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cart_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_checkout_draft_cart
+                    references: cart(id)
+                    deleteCascade: true
+              - column:
+                  name: contact_full_name
+                  type: varchar(100)
+              - column:
+                  name: contact_email
+                  type: varchar(254)
+              - column:
+                  name: contact_phone
+                  type: varchar(16)
+              - column:
+                  name: billing_name
+                  type: varchar(100)
+              - column:
+                  name: billing_country_code
+                  type: varchar(2)
+              - column:
+                  name: billing_postal_code
+                  type: varchar(4)
+              - column:
+                  name: billing_city
+                  type: varchar(80)
+              - column:
+                  name: billing_line1
+                  type: varchar(120)
+              - column:
+                  name: billing_line2
+                  type: varchar(120)
+              - column:
+                  name: delivery_option
+                  type: varchar(20)
+              - column:
+                  name: delivery_country_code
+                  type: varchar(2)
+              - column:
+                  name: delivery_postal_code
+                  type: varchar(4)
+              - column:
+                  name: delivery_city
+                  type: varchar(80)
+              - column:
+                  name: delivery_line1
+                  type: varchar(120)
+              - column:
+                  name: delivery_line2
+                  type: varchar(120)
+              - column:
+                  name: payment_method
+                  type: varchar(20)
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false

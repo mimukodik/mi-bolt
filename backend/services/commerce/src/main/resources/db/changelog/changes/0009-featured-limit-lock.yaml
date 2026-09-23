@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0009-featured-limit-lock
+      author: mi-bolt
+      comment: |
+        One-row lock for the admin featured limit (docs/decisions/0020). Every
+        admin write that can add a featured, active product locks this row
+        before it counts, so two such writes run one after the other even
+        when no featured product exists yet.
+      changes:
+        - createTable:
+            tableName: featured_limit_lock
+            columns:
+              - column:
+                  name: id
+                  type: integer
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+        - insert:
+            tableName: featured_limit_lock
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 1

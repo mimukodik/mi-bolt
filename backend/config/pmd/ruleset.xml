@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="mi-bolt"
+		xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+	<description>PMD quickstart for the MiBolt backend (decision 0009).</description>
+	<rule ref="rulesets/java/quickstart.xml">
+		<!-- Re-added below with a JUnit 5 pattern that also accepts the smoke
+		     marker form f6_name (SmokeF6Test.f6_imageServingWorks). -->
+		<exclude name="MethodNamingConventions"/>
+		<!-- The Spring Boot entry point (@SpringBootApplication, one static main)
+		     is a false positive: a final class with a private constructor breaks
+		     the first non-static @Bean method added to it, and PMD 7.24.0 has no
+		     annotation-ignore property on this rule (decision 0009). -->
+		<exclude name="UseUtilityClass"/>
+	</rule>
+	<rule ref="category/java/codestyle.xml/MethodNamingConventions">
+		<properties>
+			<property name="junit5TestPattern" value="[a-z][a-zA-Z0-9]*|f[0-9]+_[a-zA-Z0-9]*"/>
+		</properties>
+	</rule>
+	<!-- The project rule "imports, never inline fully qualified names"
+	     (decision 0009, amendment): every qualified type reference in code
+	     is a violation. Imports and the package declaration are not
+	     ClassType nodes, javadoc is a comment; both stay untouched. -->
+	<rule name="NoFullyQualifiedNames"
+			language="java"
+			message="Do not inline a fully qualified type name; add an import instead."
+			class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+		<priority>3</priority>
+		<properties>
+			<property name="xpath">
+				<value><![CDATA[
+//ClassType[@FullyQualified = true()]
+]]></value>
+			</property>
+		</properties>
+	</rule>
+	<rule ref="category/java/bestpractices.xml/SystemPrintln"/>
+	<rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
+	<rule ref="category/java/design.xml/AvoidUncheckedExceptionsInSignatures"/>
+	<rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes"/>
+</ruleset>

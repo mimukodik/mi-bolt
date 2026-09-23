@@ -1,0 +1,13 @@
+{
+	"private": true,
+	"scripts": {
+		"claude:hooks:test": "node --test '.claude/hooks/**/*.test.ts'",
+		"claude:hooks:typecheck": "tsc -p .claude/hooks/tsconfig.json",
+		"claude:memory": "tsx scripts/agent-memory.ts"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.2",
+		"tsx": "^4.23.13",
+		"typescript": "^7.0.2"
+	}
+}

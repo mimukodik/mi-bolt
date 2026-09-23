@@ -1,0 +1,9 @@
+**/build
+**/.gradle
+**/bin
+**/out
+.idea
+*.md
+services/commerce/Dockerfile
+services/commerce/Dockerfile.dockerignore
+services/commerce/scripts

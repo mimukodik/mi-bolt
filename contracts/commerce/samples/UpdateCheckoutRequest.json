@@ -1,0 +1,10 @@
+{
+  "contact": {
+    "fullName": "Példa Vásárló",
+    "email": "vasarlo@example.com",
+    "phone": "+36301234567"
+  },
+  "payment": {
+    "method": "card"
+  }
+}

@@ -1,0 +1,31 @@
+# Starts the backend only. The database is the container that
+# scripts/local-database-docker.sh manages (docker-compose.local-database.yml);
+# start it first, because this file joins its network instead of creating one.
+name: mi-bolt-backend
+
+services:
+
+  backend:
+    build: .
+    container_name: mi-bolt-backend
+    restart: unless-stopped
+
+    environment:
+      MIBOLT_DB_URL: "${MIBOLT_DB_URL:-jdbc:postgresql://mi-bolt-postgres:5432/mi_bolt}"
+      MIBOLT_DB_USER: "${MIBOLT_DB_USER:-mi_bolt}"
+      MIBOLT_DB_PASSWORD: "${MIBOLT_DB_PASSWORD:-mi_bolt_local}"
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      # Read once by CatalogLoader on an empty product table; never written.
+      - ./data/catalog:/app/data/catalog:ro
+
+    networks:
+      - mi-bolt
+
+networks:
+  mi-bolt:
+    name: mi-bolt-local
+    external: true

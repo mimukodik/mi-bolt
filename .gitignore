@@ -289,12 +289,7 @@ yarn-error.log
 *.sublime-workspace
 
 # Visual Studio Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/mcp.json
+.vscode/
 .history/*
 
 # Miscellaneous
@@ -320,3 +315,4 @@ node_modules/
 .playwright-mcp/
 blob-report/
 /.spring-tools/
+/deploy/.env

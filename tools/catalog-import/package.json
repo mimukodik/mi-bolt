@@ -1,0 +1,20 @@
+{
+  "name": "yettel-catalog-import",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Helper script that downloads the yettel.hu phone catalogue for the MiBolt demo.",
+  "type": "module",
+  "scripts": {
+    "import": "tsx src/import.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "playwright": "^1.49.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

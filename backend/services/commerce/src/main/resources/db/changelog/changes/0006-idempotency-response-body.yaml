@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0006-idempotency-response-body
+      author: mi-bolt
+      comment: |
+        idempotency_record.response_body was declared clob in 0005-orders,
+        which PostgreSQL creates as text while the entity's @Lob String
+        expects oid, so Hibernate's schema validation refused to start the
+        application on PostgreSQL (H2 creates a CLOB and matched). The stored
+        receipt JSON is a few KB, so the column becomes varchar(20000) on
+        every database and the entity maps it as a plain length-limited
+        string. NOT NULL is re-stated because modifyDataType does not
+        promise to keep it on every database.
+      changes:
+        - modifyDataType:
+            tableName: idempotency_record
+            columnName: response_body
+            newDataType: varchar(20000)
+        - addNotNullConstraint:
+            tableName: idempotency_record
+            columnName: response_body
+            columnDataType: varchar(20000)

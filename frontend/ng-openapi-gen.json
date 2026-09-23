@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/ng-openapi-gen/ng-openapi-gen-schema.json",
+  "input": "../contracts/commerce/openapi.yaml",
+  "output": "projects/storefront/src/app/api/generated",
+  "module": false,
+  "services": false,
+  "apiService": "Api",
+  "promises": false,
+  "enumStyle": "alias",
+  "enumArray": true,
+  "ignoreUnusedModels": true,
+  "excludeParameters": ["If-Match"],
+  "excludeTags": ["AdminAuth", "AdminUsers", "AdminProducts", "AdminMedia"]
+}

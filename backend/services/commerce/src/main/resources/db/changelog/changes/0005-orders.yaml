@@ -1,0 +1,346 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0005-orders
+      author: mi-bolt
+      comment: |
+        Payment intents, orders and idempotency records (docs/02-backend.md §4.4
+        rules 30–34, §4.5 rules 35–46). A payment intent is the handle the demo
+        payment app redirects to and the one the order is later linked back to;
+        the intent outlives its session only until it expires (rule 33), but the
+        order outlives its session (rule 40), so the FK from shop_order to
+        shop_session has no cascade. order_number is unique by construction
+        (rule 36); the idempotency scope is unique per session+method+path+key
+        (rule 42); stock is guarded at the database so a buggy UPDATE cannot
+        drive it negative (docs/04-adatbazis.md §4).
+      changes:
+        - createTable:
+            tableName: payment_intent
+            columns:
+              - column:
+                  name: id
+                  type: varchar(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: session_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_payment_intent_session
+                    references: shop_session(id)
+                    deleteCascade: true
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: redirect_url
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: return_url
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: payment_intent
+            indexName: ix_payment_intent_session
+            columns:
+              - column:
+                  name: session_id
+        - createTable:
+            tableName: shop_order
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: order_number
+                  type: varchar(11)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: session_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_shop_order_session
+                    references: shop_session(id)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payment_method
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payment_intent_id
+                  type: varchar(36)
+                  constraints:
+                    foreignKeyName: fk_shop_order_payment_intent
+                    references: payment_intent(id)
+              - column:
+                  name: subtotal_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: shipping_fee_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payment_fee_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: delivery_option
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: delivery_country_code
+                  type: varchar(2)
+              - column:
+                  name: delivery_postal_code
+                  type: varchar(4)
+              - column:
+                  name: delivery_city
+                  type: varchar(80)
+              - column:
+                  name: delivery_line1
+                  type: varchar(120)
+              - column:
+                  name: delivery_line2
+                  type: varchar(120)
+              - column:
+                  name: billing_name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: billing_country_code
+                  type: varchar(2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: billing_postal_code
+                  type: varchar(4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: billing_city
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: billing_line1
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: billing_line2
+                  type: varchar(120)
+              - column:
+                  name: contact_full_name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: contact_email
+                  type: varchar(254)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: contact_phone
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: terms_version
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notice
+                  type: varchar(300)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: shop_order
+            columnNames: order_number
+            constraintName: uq_shop_order_number
+        - createIndex:
+            tableName: shop_order
+            indexName: ix_shop_order_session
+            columns:
+              - column:
+                  name: session_id
+        - createTable:
+            tableName: order_line
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: order_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_order_line_order
+                    references: shop_order(id)
+                    deleteCascade: true
+              - column:
+                  name: position
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: variant_id
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: product_name
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: color_name
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: storage_gb
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unit_price_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: line_total_huf
+                  type: bigint
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: order_line
+            indexName: ix_order_line_order
+            columns:
+              - column:
+                  name: order_id
+        - createTable:
+            tableName: idempotency_record
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: session_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_idempotency_record_session
+                    references: shop_session(id)
+                    deleteCascade: true
+              - column:
+                  name: method
+                  type: varchar(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: path
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: idempotency_key
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: request_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: response_status
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: response_location
+                  type: varchar(300)
+              - column:
+                  name: response_body
+                  type: clob
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: idempotency_record
+            columnNames: session_id, method, path, idempotency_key
+            constraintName: uq_idempotency_record_scope
+        - sql:
+            comment: docs/04-adatbazis.md §4 — stock never goes below zero
+            sql: ALTER TABLE product_variant ADD CONSTRAINT ck_product_variant_stock CHECK (stock >= 0)
