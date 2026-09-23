@@ -516,6 +516,30 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     expect(active?.textContent.trim()).toBe('Menü');
   });
 
+  it('MobileDrawer puts the focus back on its heading "Menü" when it is closed and reopened', async () => {
+    const f = TestBed.createComponent(MobileDrawerHost);
+    f.detectChanges();
+    f.componentInstance.opened.set(true);
+    f.detectChanges();
+    await f.whenStable();
+    // Move the focus off the heading, so the reopen has to put it back.
+    const link = document.body.querySelector<HTMLAnchorElement>('[role="dialog"] a');
+    link?.focus();
+    expect(document.activeElement).toBe(link);
+
+    f.componentInstance.opened.set(false);
+    f.detectChanges();
+    await f.whenStable();
+
+    f.componentInstance.opened.set(true);
+    f.detectChanges();
+    await f.whenStable();
+
+    const active = document.activeElement;
+    expect(active?.tagName).toBe('H2');
+    expect(active?.textContent.trim()).toBe('Menü');
+  });
+
   it('MobileDrawer dialog is not a scaled desktop header', () => {
     const f = TestBed.createComponent(MobileDrawerHost);
     f.componentInstance.opened.set(true);
