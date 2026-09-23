@@ -20,7 +20,7 @@ import { HttpResponse, bypass, http, type HttpHandler } from 'msw';
 
 import type { Problem } from '../app/api/generated/models/problem';
 import type { UploadedImage } from '../app/api/generated/models/uploaded-image';
-import { unknownQueryParameter } from './backend-answers';
+import { fieldError, unknownQueryParameter } from './backend-answers';
 import type { MockDb } from './db';
 import { csrfRejection, sessionRejection } from './guards';
 import { problem } from './problem';
@@ -96,7 +96,7 @@ function buildUploadedImage(
 function fieldRejected(code: string): HttpResponse<Problem> {
   return problem(422, 'VALIDATION_FAILED', 'Section rejected', {
     detail: 'One or more supplied fields are not acceptable',
-    fieldErrors: [{ path: '/file', code }],
+    fieldErrors: [fieldError('/file', code)],
   });
 }
 

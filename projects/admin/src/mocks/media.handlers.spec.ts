@@ -286,8 +286,14 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(422);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({
-      fieldErrors: [{ path: '/file', code: 'UNSUPPORTED_IMAGE_TYPE' }],
+    expect(body).toEqual({
+      ...expectedProblem(
+        422,
+        'VALIDATION_FAILED',
+        'Section rejected',
+        'One or more supplied fields are not acceptable',
+      ),
+      fieldErrors: [{ path: '/file', code: 'UNSUPPORTED_IMAGE_TYPE', params: {} }],
     });
   });
 
@@ -303,7 +309,15 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(422);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ fieldErrors: [{ path: '/file', code: 'EMPTY_FILE' }] });
+    expect(body).toEqual({
+      ...expectedProblem(
+        422,
+        'VALIDATION_FAILED',
+        'Section rejected',
+        'One or more supplied fields are not acceptable',
+      ),
+      fieldErrors: [{ path: '/file', code: 'EMPTY_FILE', params: {} }],
+    });
   });
 
   it('422s an unreadable image as IMAGE_UNREADABLE', async () => {
@@ -318,7 +332,15 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(422);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ fieldErrors: [{ path: '/file', code: 'IMAGE_UNREADABLE' }] });
+    expect(body).toEqual({
+      ...expectedProblem(
+        422,
+        'VALIDATION_FAILED',
+        'Section rejected',
+        'One or more supplied fields are not acceptable',
+      ),
+      fieldErrors: [{ path: '/file', code: 'IMAGE_UNREADABLE', params: {} }],
+    });
   });
 
   it('413s an upload over the size limit', async () => {
@@ -335,7 +357,15 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(413);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ code: 'PAYLOAD_TOO_LARGE', params: { maxBytes: 1048576 } });
+    expect(body).toEqual(
+      expectedProblem(
+        413,
+        'PAYLOAD_TOO_LARGE',
+        'Upload too large',
+        'The upload exceeds the size limit',
+        { maxBytes: 1048576 },
+      ),
+    );
   });
 
   // Fails if the size-loop in handleUpload (media.handlers.ts) runs after the query-key check.
@@ -353,7 +383,15 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(413);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ code: 'PAYLOAD_TOO_LARGE', params: { maxBytes: 1048576 } });
+    expect(body).toEqual(
+      expectedProblem(
+        413,
+        'PAYLOAD_TOO_LARGE',
+        'Upload too large',
+        'The upload exceeds the size limit',
+        { maxBytes: 1048576 },
+      ),
+    );
   });
 
   // Fails if handleUpload's `form.get('file')` check (media.handlers.ts) stops answering
@@ -541,12 +579,14 @@ describe('POST /admin/media', () => {
 
     expect(response.status).toBe(503);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({
-      status: 503,
-      code: 'SERVICE_UNAVAILABLE',
-      title: 'Service unavailable',
-      detail: 'The service is temporarily unavailable',
-    });
+    expect(body).toEqual(
+      expectedProblem(
+        503,
+        'SERVICE_UNAVAILABLE',
+        'Service unavailable',
+        'The service is temporarily unavailable',
+      ),
+    );
   });
 });
 
@@ -578,7 +618,11 @@ describe('GET /media/:imageId', () => {
 
     expect(response.status).toBe(404);
     const body: unknown = await response.json();
-    expect(body).toMatchObject({ params: { imageId: 'abc' } });
+    expect(body).toEqual(
+      expectedProblem(404, 'NOT_FOUND', 'Resource not found', 'image not found: abc', {
+        imageId: 'abc',
+      }),
+    );
   });
 
   // Fails if handleGet's query-key check (media.handlers.ts) runs after the `db.images.get` lookup.
