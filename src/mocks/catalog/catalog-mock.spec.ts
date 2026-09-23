@@ -1045,20 +1045,21 @@ describe('GET /products sorts', () => {
 
     for (const sort of ['newest', 'oldest', 'popularity', 'price_asc', 'price_desc'] as const) {
       it(`sort=${sort} ties fall through to rank, id and storage`, () => {
+        // Products 1 and 3 share rank 2, so the id step decides between them.
         loadCatalogFixture({
           products: [
             sortProduct('1', 'Brand', 'Tie 1', [128, 256]),
             sortProduct('2', 'Brand', 'Tie 2', [128]),
             sortProduct('3', 'Brand', 'Tie 3', [128]),
           ],
-          ranking: [sortRanking('1', 3), sortRanking('2', 1), sortRanking('3', 2)],
+          ranking: [sortRanking('1', 2), sortRanking('2', 1), sortRanking('3', 2)],
         });
         try {
           expect(keys(sortEntries(reversedEntries(), sort, undefined))).toEqual([
             'sort-2/128',
-            'sort-3/128',
             'sort-1/128',
             'sort-1/256',
+            'sort-3/128',
           ]);
         } finally {
           restoreCommittedFixture();
