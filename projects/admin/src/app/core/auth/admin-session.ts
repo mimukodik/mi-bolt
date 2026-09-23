@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Service, inject, signal } from '@angular/core';
 import type { Signal, WritableSignal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -20,7 +20,7 @@ import { skipUnauthorizedRedirect } from './skip-unauthorized-redirect';
  * `refresh()` runs as the app initializer (MIM-337), so a route guard
  * evaluated after bootstrap never sees `undefined`.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class AdminSession {
   private readonly api = inject(AdminApi);
 
