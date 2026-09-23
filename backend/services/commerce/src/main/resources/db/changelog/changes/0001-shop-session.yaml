@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0001-shop-session
+      author: mi-bolt
+      comment: |
+        Anonymous session cookie (docs/01-kommunikacio.md §2). The cookie value is a
+        random 32-byte token; only its SHA-256 hex digest (token_hash) is stored.
+        state_version is the single shared counter the cart and the checkout draft
+        will increment on every successful mutation (docs/02-backend.md §5).
+      changes:
+        - createTable:
+            tableName: shop_session
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: token_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: state_version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_seen_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false

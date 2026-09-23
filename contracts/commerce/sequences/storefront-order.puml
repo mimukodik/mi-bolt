@@ -1,0 +1,31 @@
+@startuml storefront-order
+title Storefront order with card payment (kommunikacio.md 8.1 and 8.3)
+actor Shopper
+participant "Storefront\n/" as SF
+participant "Commerce API\n/api/v1" as API
+participant "Demo payment\n/demo-fizetes/" as PAY
+
+Shopper -> SF : browse the catalogue
+SF -> API : GET /products?…
+API --> SF : 200 ProductPage
+SF -> API : GET /products/{slug}
+API --> SF : 200 Product
+Shopper -> SF : add to cart
+SF -> API : POST /cart/items (If-Match)
+API --> SF : 200 Cart + ETag
+SF -> API : GET /checkout/options
+API --> SF : 200 CheckoutOptions
+Shopper -> SF : contact, billing, delivery, payment
+SF -> API : PATCH /checkout (If-Match)
+API --> SF : 200 CheckoutSession + ETag
+SF -> API : POST /payment-intents (If-Match, Idempotency-Key)
+API --> SF : 201 PaymentIntent (redirectUrl, returnUrl)
+SF -> PAY : full page load of redirectUrl
+note right of PAY : demo-payment-redirect.puml
+PAY -> SF : full page load of returnUrl
+SF -> API : GET /payment-intents/{paymentIntentId}
+API --> SF : 200 PaymentIntent (succeeded)
+SF -> API : POST /orders (If-Match, Idempotency-Key, paymentIntentId)
+API --> SF : 201 OrderReceipt
+SF --> Shopper : order confirmation
+@enduml

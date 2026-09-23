@@ -1,0 +1,19 @@
+# Contract checks: the OpenAPI lint, the samples against their schemas, and the
+# PlantUML syntax of the sequence diagrams. Run from the repository root with
+# 'mise -C contracts run check' (the CI workflow .github/workflows/contracts.yml
+# calls it).
+[tools]
+uv = "0.12.17"
+vacuum = "0.30.6"
+"pypi:check-jsonschema" = "0.38.2"
+"conda:plantuml" = "1.2026.8"
+
+[settings]
+pypi.uvx = true
+
+[tasks.check]
+run = [
+  "vacuum lint --no-update-check commerce/openapi.yaml",
+  "bash check-samples.sh",
+  "plantuml -checkonly commerce/sequences/*.puml",
+]

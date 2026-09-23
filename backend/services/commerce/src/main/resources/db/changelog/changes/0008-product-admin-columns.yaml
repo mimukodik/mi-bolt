@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0008-product-admin-columns
+      author: mi-bolt
+      comment: |
+        Admin catalogue maintenance (docs/decisions/0017, 0020). version is the
+        JPA @Version behind the admin ETag/If-Match; existing rows start at 0.
+        archived_at marks a soft-deleted product (NULL = active); the shop
+        reads only rows where it is NULL. updated_at is set by every admin
+        write, which is what makes a child-only edit bump the version.
+      changes:
+        - addColumn:
+            tableName: product
+            columns:
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: archived_at
+                  type: timestamp with time zone
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone

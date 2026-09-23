@@ -1,0 +1,87 @@
+{
+  "items": [
+    {
+      "id": "demo-product-001",
+      "slug": "demo-phone-128gb",
+      "brand": "Példa",
+      "name": "Példa Telefon 128 GB",
+      "highlights": [
+        "5G-képes",
+        "128 GB tárhely",
+        "Példa kamerarendszer"
+      ],
+      "is5g": true,
+      "releasedAt": "2026-01-15",
+      "storageGb": 128,
+      "variantId": "demo-variant-001",
+      "variantSlug": "demo-phone-128gb-black",
+      "price": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "availability": "in_stock",
+      "maxQuantity": 5,
+      "image": {
+        "id": "demo-image-001",
+        "src": "/api/v1/media/demo-image-001",
+        "alt": "Példa Telefon 128 GB",
+        "width": 800,
+        "height": 800
+      },
+      "colors": [
+        {
+          "colorCode": "black",
+          "colorName": "Fekete",
+          "swatchHex": "#000000",
+          "variantId": "demo-variant-001",
+          "variantSlug": "demo-phone-128gb-black",
+          "price": {
+            "amount": 149990,
+            "currency": "HUF"
+          },
+          "availability": "in_stock"
+        }
+      ]
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "pageSize": 24,
+  "totalPages": 1,
+  "facets": {
+    "brands": [
+      {
+        "value": "Példa",
+        "label": "Példa",
+        "count": 1
+      }
+    ],
+    "storageGb": [
+      {
+        "value": "128",
+        "label": "128 GB",
+        "count": 1
+      }
+    ],
+    "colors": [
+      {
+        "value": "black",
+        "label": "Fekete",
+        "count": 1,
+        "swatchHex": "#000000"
+      }
+    ],
+    "is5g": 1,
+    "inStock": 1,
+    "priceRange": {
+      "min": {
+        "amount": 149990,
+        "currency": "HUF"
+      },
+      "max": {
+        "amount": 149990,
+        "currency": "HUF"
+      }
+    }
+  }
+}
