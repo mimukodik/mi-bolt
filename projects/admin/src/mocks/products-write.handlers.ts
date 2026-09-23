@@ -103,6 +103,16 @@ function readString(value: unknown): Read<string> {
   return asText(value);
 }
 
+/** Gregorian leap years, proleptic, as `java.time.LocalDate` counts them. */
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) return isLeapYear(year) ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
 function isValidCalendarDate(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (match === null) return false;
@@ -110,8 +120,7 @@ function isValidCalendarDate(value: string): boolean {
   const month = Number(match[2]);
   const day = Number(match[3]);
   if (month < 1 || month > 12) return false;
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return day >= 1 && day <= daysInMonth;
+  return day >= 1 && day <= daysInMonth(year, month);
 }
 
 /** A `LocalDate` member: `YYYY-MM-DD` and a real calendar date; `""` is no value. */

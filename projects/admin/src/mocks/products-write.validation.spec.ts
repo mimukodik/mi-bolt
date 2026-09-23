@@ -431,6 +431,36 @@ describe('products-write validation', () => {
       );
     });
 
+    // Fails if isLeapYear stops treating year 0 as a leap year (java.time.LocalDate.parse
+    // accepts "0000-02-29"; Date.UTC would read year 0 as 1900, which is not a leap year).
+    it('0000-02-29 is a valid calendar date (201)', async () => {
+      const db = setup();
+      const response = await postJson(
+        productsUrl(),
+        db,
+        withChanges(baseBody(), ['releasedAt', '0000-02-29']),
+      );
+      expect(response.status).toBe(201);
+    });
+
+    // Fails if isLeapYear stops treating year 1900 as not a leap year (java.time.LocalDate.parse
+    // throws DateTimeParseException on "1900-02-29").
+    it('1900-02-29 is malformed (not a leap year)', async () => {
+      const db = setup();
+      const response = await postJson(
+        productsUrl(),
+        db,
+        withChanges(baseBody(), ['releasedAt', '1900-02-29']),
+      );
+      await expectProblem(
+        response,
+        400,
+        'INVALID_REQUEST',
+        'Invalid request',
+        'Malformed request body',
+      );
+    });
+
     // Fails if readStringList stops rejecting a non-array value for a List member.
     it('a scalar in place of a List member is malformed', async () => {
       const db = setup();
