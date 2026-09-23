@@ -88,6 +88,44 @@ const DEFAULT_STORAGE_FACET = [
 // Disjunctive colour count: an entry counts for a colour when it has a
 // variant of that colour passing every other filter (owner 2026-09-22).
 const DEFAULT_FIRST_COLOR = { value: 'zold', label: 'Zöld', swatchHex: '#7C9F63', count: 3 };
+
+// Every colour of the catalogue in recommended order (rank asc, id asc,
+// then each product's own colour order), like the backend's
+// `recommendedColorOrder`.
+const RECOMMENDED_COLOR_ORDER = [
+  'zold',
+  'fekete',
+  'burgundi',
+  'ezust',
+  'gleccserszin',
+  'grafit',
+  'feher',
+  'halvany-rozsaszin',
+  'kiraly-szurke',
+  'kiraly-tengereszkek',
+  'obszidian',
+  'kiraly-szenszurke',
+  'kekeslila',
+  'sotetkek',
+  'levendulakek',
+  'levendula',
+  'rozsaszin',
+  'kozmosznarancs',
+  'titan',
+  'melykek',
+  'asztrofekete',
+  'egkek',
+  'felhofeher',
+  'vilagos-arany',
+  'zsalyazold',
+  'gleccserkek',
+  'kodos-ezust',
+  'recezold',
+  'ultramarin',
+  'narancssarga',
+  'kek',
+  'arany',
+];
 const DEFAULT_IS5G = 54;
 const DEFAULT_INSTOCK = 55;
 const DEFAULT_PRICE_RANGE = { min: 69990, max: 1095990 };
@@ -502,8 +540,12 @@ describe('GET /products filters', () => {
     expectRecord(facets);
     expect(facets['brands']).toEqual([
       { value: 'apple', label: 'Apple', count: 4 },
+      { value: 'google pixel', label: 'Google Pixel', count: 0 },
       { value: 'honor', label: 'HONOR', count: 1 },
       { value: 'motorola', label: 'Motorola', count: 1 },
+      { value: 'samsung', label: 'Samsung', count: 0 },
+      { value: 'vivo', label: 'Vivo', count: 0 },
+      { value: 'xiaomi', label: 'Xiaomi', count: 0 },
     ]);
     expect(facets['storageGb']).toEqual([
       { value: '128', label: '128 GB', count: 1 },
@@ -766,12 +808,15 @@ describe('GET /products filters', () => {
   });
 
   it('brand, storage and colour counts are taken over every featured entry, then capped (backend capCount)', async () => {
-    // Six featured entries. 1-4: brand Alfa, colour piros, 128 GB, no 5G.
-    // 5: Alfa, kek, 256 GB, 5G. 6: Beta, kek, 256 GB, 5G. The page shows
+    // Six featured entries. 1-4: brand Zsolt, colour piros, 128 GB, no 5G.
+    // 5: Zsolt, kek, 256 GB, 5G. 6: Zte, kek, 256 GB, 5G. The page shows
     // entries 1-4 only, but the backend counts all six and caps each
-    // count at 4: Alfa 5 → 4, Beta 1; 128 GB 4, 256 GB 2; piros 4, kek 2;
-    // 5G 2. Counting on the 4 shown entries would drop Beta and kek and
-    // read 0 for 256 GB and 5G.
+    // count at 4: Zsolt 5 → 4, Zte 1; 128 GB 4, 256 GB 2; piros 4, kek 2;
+    // 5G 2. Counting on the 4 shown entries would drop Zte and kek and
+    // read 0 for 256 GB and 5G. No entry has 512 GB, so the storage
+    // facet has no 512 row (the backend's `presentStorage`), and the
+    // brands come in the backend's case-insensitive order, where Zsolt
+    // sorts before Zte (a Hungarian collation puts Zte first).
     const variantOf = (
       id: string,
       colorCode: string,
@@ -815,12 +860,12 @@ describe('GET /products filters', () => {
       specGroups: [],
     });
     const products: Product[] = [
-      product(1, 'Alfa', false, variantOf('feat-1', 'piros', 'Piros', 128)),
-      product(2, 'Alfa', false, variantOf('feat-2', 'piros', 'Piros', 128)),
-      product(3, 'Alfa', false, variantOf('feat-3', 'piros', 'Piros', 128)),
-      product(4, 'Alfa', false, variantOf('feat-4', 'piros', 'Piros', 128)),
-      product(5, 'Alfa', true, variantOf('feat-5', 'kek', 'Kék', 256)),
-      product(6, 'Beta', true, variantOf('feat-6', 'kek', 'Kék', 256)),
+      product(1, 'Zsolt', false, variantOf('feat-1', 'piros', 'Piros', 128)),
+      product(2, 'Zsolt', false, variantOf('feat-2', 'piros', 'Piros', 128)),
+      product(3, 'Zsolt', false, variantOf('feat-3', 'piros', 'Piros', 128)),
+      product(4, 'Zsolt', false, variantOf('feat-4', 'piros', 'Piros', 128)),
+      product(5, 'Zsolt', true, variantOf('feat-5', 'kek', 'Kék', 256)),
+      product(6, 'Zte', true, variantOf('feat-6', 'kek', 'Kék', 256)),
     ];
     const ranking: ProductRanking[] = products.map((p, i) => ({
       slug: p.slug,
@@ -836,13 +881,12 @@ describe('GET /products filters', () => {
       const facets = body['facets'];
       expectRecord(facets);
       expect(facets['brands']).toEqual([
-        { value: 'alfa', label: 'Alfa', count: 4 },
-        { value: 'beta', label: 'Beta', count: 1 },
+        { value: 'zsolt', label: 'Zsolt', count: 4 },
+        { value: 'zte', label: 'Zte', count: 1 },
       ]);
       expect(facets['storageGb']).toEqual([
         { value: '128', label: '128 GB', count: 4 },
         { value: '256', label: '256 GB', count: 2 },
-        { value: '512', label: '512 GB', count: 0 },
       ]);
       const colors = facets['colors'];
       expectArray(colors);
@@ -970,6 +1014,86 @@ describe('GET /products facets', () => {
     });
     expectRecord(fekete);
     expect(readNumber(fekete, 'count')).toBe(8);
+  });
+
+  it('lists every catalogue brand, zero counts included, like the backend computeFacets', async () => {
+    const body = await loadJson('/api/v1/products?is5g=false');
+    const facets = body['facets'];
+    expectRecord(facets);
+    expect(facets['brands']).toEqual([
+      { value: 'apple', label: 'Apple', count: 0 },
+      { value: 'google pixel', label: 'Google Pixel', count: 0 },
+      { value: 'honor', label: 'HONOR', count: 1 },
+      { value: 'motorola', label: 'Motorola', count: 0 },
+      { value: 'samsung', label: 'Samsung', count: 0 },
+      { value: 'vivo', label: 'Vivo', count: 0 },
+      { value: 'xiaomi', label: 'Xiaomi', count: 0 },
+    ]);
+  });
+
+  it('lists every catalogue colour in recommended order, zero counts included', async () => {
+    const body = await loadJson('/api/v1/products?storageGb=512');
+    const facets = body['facets'];
+    expectRecord(facets);
+    const colors = facets['colors'];
+    expectArray(colors);
+    const pairs = colors.map((c) => {
+      expectRecord(c);
+      return [readString(c, 'value'), readNumber(c, 'count')];
+    });
+    expect(pairs).toEqual([
+      ['zold', 0],
+      ['fekete', 11],
+      ['burgundi', 1],
+      ['ezust', 2],
+      ['gleccserszin', 1],
+      ['grafit', 3],
+      ['feher', 0],
+      ['halvany-rozsaszin', 0],
+      ['kiraly-szurke', 0],
+      ['kiraly-tengereszkek', 0],
+      ['obszidian', 0],
+      ['kiraly-szenszurke', 0],
+      ['kekeslila', 0],
+      ['sotetkek', 0],
+      ['levendulakek', 0],
+      ['levendula', 1],
+      ['rozsaszin', 1],
+      ['kozmosznarancs', 1],
+      ['titan', 0],
+      ['melykek', 1],
+      ['asztrofekete', 0],
+      ['egkek', 1],
+      ['felhofeher', 0],
+      ['vilagos-arany', 0],
+      ['zsalyazold', 0],
+      ['gleccserkek', 0],
+      ['kodos-ezust', 0],
+      ['recezold', 0],
+      ['ultramarin', 0],
+      ['narancssarga', 0],
+      ['kek', 2],
+      ['arany', 0],
+    ]);
+    expect(colors[1]).toEqual({
+      value: 'fekete',
+      label: 'Fekete',
+      swatchHex: '#434346',
+      count: 11,
+    });
+  });
+
+  it('keeps the recommended colour order under another sort', async () => {
+    const body = await loadJson('/api/v1/products?sort=price_asc');
+    const facets = body['facets'];
+    expectRecord(facets);
+    const colors = facets['colors'];
+    expectArray(colors);
+    const codes = colors.map((c) => {
+      expectRecord(c);
+      return readString(c, 'value');
+    });
+    expect(codes).toEqual(RECOMMENDED_COLOR_ORDER);
   });
 });
 

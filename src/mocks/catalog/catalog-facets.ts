@@ -13,7 +13,6 @@
 
 import type {
   ColorFacetValue,
-  ColorOption,
   Facets,
   FacetValue,
   Money,
@@ -38,35 +37,52 @@ function capCount(count: number, filter: Filter): number {
   return filter.featured === true ? Math.min(count, FEATURED_SIZE) : count;
 }
 
-/** Builds the `brands` facet. Removes the `brand` filter, counts every
- *  matching entry per brand and caps each count (`capCount`). The `value`
- *  is the lowercased brand key (the identifier the URL and the panel
- *  filter on); the `label` is the brand's display name as it appears
- *  on a product page, so the filter row reads "Apple (17)" and not
- *  "apple (17)" — the demo copy and the API contract both expect the
- *  display name. */
+/** Java's `String.CASE_INSENSITIVE_ORDER`, the backend's brand order:
+ *  the code-unit order of the lowercased names, not a locale collation
+ *  (a Hungarian collation sorts "Zte" before "Zsolt"; the backend does
+ *  not). */
+function compareCaseInsensitive(a: string, b: string): number {
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  if (x < y) return -1;
+  if (x > y) return 1;
+  return 0;
+}
+
+/** Builds the `brands` facet. Lists every brand of the whole catalogue,
+ *  zero counts included, in the backend's order (`compareCaseInsensitive`),
+ *  like CatalogService.java `computeFacets`. Removes the `brand` filter,
+ *  counts every matching entry per brand and caps each count
+ *  (`capCount`). The `value` is the lowercased brand key (the identifier
+ *  the URL and the panel filter on); the `label` is the brand's display
+ *  name as it appears on a product page, so the filter row reads
+ *  "Apple (17)" and not "apple (17)". */
 function buildBrandFacet(entries: readonly CatalogEntry[], filter: Filter): FacetValue[] {
   const noBrand: Filter = { ...filter, brands: [] };
   const matched = sortEntries(applyFilters(entries, noBrand), filter.sort, filter.q);
   const counts = new Map<string, number>();
-  const displayNames = new Map<string, string>();
   for (const entry of matched) {
     counts.set(entry.brandKey, (counts.get(entry.brandKey) ?? 0) + 1);
+  }
+  const displayNames = new Map<string, string>();
+  for (const entry of entries) {
     if (!displayNames.has(entry.brandKey)) {
       displayNames.set(entry.brandKey, entry.product.brand);
     }
   }
-  return [...counts.entries()]
-    .map(([value, count]) => ({
+  return [...displayNames.entries()]
+    .map(([value, label]) => ({
       value,
-      label: displayNames.get(value) ?? value,
-      count: capCount(count, filter),
+      label,
+      count: capCount(counts.get(value) ?? 0, filter),
     }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'hu'));
+    .sort((a, b) => compareCaseInsensitive(a.label, b.label));
 }
 
-/** Builds the `storageGb` facet. Counts every matching entry per size,
- *  in fixed order, and caps each count (`capCount`). */
+/** Builds the `storageGb` facet. Lists every size some catalogue entry
+ *  has (the backend's `presentStorage`), in fixed order, zero counts
+ *  included; counts every matching entry per size and caps each count
+ *  (`capCount`). */
 function buildStorageFacet(entries: readonly CatalogEntry[], filter: Filter): FacetValue[] {
   const noStorage: Filter = { ...filter, storageGb: [] };
   const matched = sortEntries(applyFilters(entries, noStorage), filter.sort, filter.q);
@@ -74,8 +90,10 @@ function buildStorageFacet(entries: readonly CatalogEntry[], filter: Filter): Fa
   for (const entry of matched) {
     counts.set(entry.storageGb, (counts.get(entry.storageGb) ?? 0) + 1);
   }
+  const present = new Set(entries.map((entry) => entry.storageGb));
   const out: FacetValue[] = [];
   for (const gb of ALLOWED_STORAGES) {
+    if (!present.has(gb)) continue;
     const value = String(gb);
     out.push({ value, label: `${value} GB`, count: capCount(counts.get(gb) ?? 0, filter) });
   }
@@ -83,44 +101,37 @@ function buildStorageFacet(entries: readonly CatalogEntry[], filter: Filter): Fa
 }
 
 /**
- * Builds the `colors` facet. Walks products in recommended order and
- * keeps the first colour per code (`colorOrder` in `ranking[]`
- * preserves the source `colors[]` order). The count mirrors the
- * backend's `matchesColorFacet`: an entry counts for a colour when it
- * has a variant of that colour at its storage passing every other
- * active filter, the colour selection removed. Every count is then
- * capped (`capCount`) so a value ranked below the featured size still
- * counts.
+ * Builds the `colors` facet. Lists every colour of the whole catalogue,
+ * zero counts included, in recommended order: `entries` come in
+ * recommended order (rank asc, id asc, storage asc) and `colorOrder`
+ * keeps each product's own colour order, like the backend's
+ * `recommendedColorOrder`. The name and swatch come from the first
+ * product that has the colour (`findAnyColorWithCode`). The count
+ * mirrors the backend's `matchesColorFacet`: an entry counts for a
+ * colour when it has a variant of that colour at its storage passing
+ * every other active filter, the colour selection removed. Every count
+ * is then capped (`capCount`) so a value ranked below the featured size
+ * still counts.
  */
 function buildColorFacet(entries: readonly CatalogEntry[], filter: Filter): ColorFacetValue[] {
   const noColor: Filter = { ...filter, colors: [] };
   const matched = sortEntries(applyFilters(entries, noColor), filter.sort, filter.q);
-  const samples = new Map<string, ColorOption>();
   const counts = new Map<string, number>();
   for (const entry of matched) {
     for (const option of entry.colors) {
       const variant = entry.product.variants.find((v) => v.id === option.variantId);
       if (variant === undefined || !variantMatches(variant, noColor)) continue;
       counts.set(option.colorCode, (counts.get(option.colorCode) ?? 0) + 1);
-      if (!samples.has(option.colorCode)) samples.set(option.colorCode, option);
-    }
-  }
-  // Walk products by the filter's sort order, then colorOrder within
-  // each product.
-  const firstEntryBySlug = new Map<string, CatalogEntry>();
-  for (const entry of matched) {
-    if (!firstEntryBySlug.has(entry.product.slug)) {
-      firstEntryBySlug.set(entry.product.slug, entry);
     }
   }
   const seenCodes = new Set<string>();
   const out: ColorFacetValue[] = [];
-  for (const first of firstEntryBySlug.values()) {
-    for (const code of first.ranking.colorOrder) {
+  for (const entry of entries) {
+    for (const code of entry.ranking.colorOrder) {
       if (seenCodes.has(code)) continue;
-      seenCodes.add(code);
-      const sample = samples.get(code);
+      const sample = entry.product.variants.find((v) => v.colorCode === code);
       if (sample === undefined) continue;
+      seenCodes.add(code);
       out.push({
         value: code,
         label: sample.colorName,
