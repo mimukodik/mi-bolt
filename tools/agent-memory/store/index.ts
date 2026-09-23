@@ -46,7 +46,7 @@ const ENTRY_LINE = /^- \[([a-z0-9][a-z0-9-]*)\]\(\1\.md\): (.+)$/;
 export const INDEX_HEADER = `# Shared memory index
 
 Durable learnings for this workspace, one line per topic. Written by
-\`pnpm claude:memory write\`, read on demand with \`pnpm claude:memory read\`.
+\`mise run claude:memory write\`, read on demand with \`mise run claude:memory read\`.
 
 <!-- entries below, one line each: - [<topic>](<topic>.md): summary -->
 `;

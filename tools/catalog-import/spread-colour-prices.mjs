@@ -9,7 +9,7 @@
 // representative of any real retail pricing.
 //
 // This file is NOT run by the importer (src/import.ts). Run it by hand
-// from the repository root with `node scripts/catalog-import/spread-colour-prices.mjs`
+// from the repository root with `node tools/catalog-import/spread-colour-prices.mjs`
 // after an import has refreshed data/catalog/catalog.json.
 
 import { readFileSync, renameSync, writeFileSync } from "node:fs";

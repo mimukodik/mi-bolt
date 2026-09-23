@@ -47,13 +47,6 @@ out/
 
 node_modules
 
-# yettel.hu catalogue import (MIM-205 T3)
-data/catalog/catalog.invalid.json
-data/catalog/catalog.partial.json
-scripts/catalog-import/node_modules/
-scripts/catalog-import/dist/
-scripts/catalog-import/.cache/
-
 # Hook state files are runtime artefacts that do not belong in version control.
 .claude/hooks/.state/
 

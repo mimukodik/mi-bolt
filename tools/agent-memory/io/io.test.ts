@@ -61,9 +61,11 @@ describe("topicPath", () => {
 
 describe("REPO_ROOT", () => {
   it("is the checkout this file lives in", () => {
-    expect(fs.existsSync(path.join(REPO_ROOT, "package.json"))).toBe(true);
     expect(
-      fs.existsSync(path.join(REPO_ROOT, "scripts", "agent-memory.ts")),
+      fs.existsSync(path.join(REPO_ROOT, "tools", "package.json")),
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(REPO_ROOT, "tools", "agent-memory.ts")),
     ).toBe(true);
   });
 });

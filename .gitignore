@@ -319,3 +319,9 @@ node_modules/
 .visual-screenshots/
 .playwright-mcp/
 blob-report/
+
+# tools/: the yettel.hu catalogue import
+/tools/catalog-import/dist/
+/tools/catalog-import/.cache/
+/data/catalog/catalog.invalid.json
+/data/catalog/catalog.partial.json
