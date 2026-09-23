@@ -21,6 +21,7 @@ import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/c
 import { DEMO_PRODUCT } from '../../mocks/cart/cart.handlers';
 import { Repository } from '../../mocks/repository';
 import {
+  BUILT_IN_SCENARIOS,
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
@@ -572,5 +573,59 @@ describe('session isolation', () => {
     const session1Body: unknown = await session1.json();
     expectRecord(session1Body);
     expect(readString(session1Body, 'id')).not.toBe(readString(body, 'id'));
+  });
+});
+
+describe('cart-mutation-fails scenario', () => {
+  beforeEach(() => {
+    const scenario = BUILT_IN_SCENARIOS['cart-mutation-fails'];
+    if (scenario === undefined) throw new Error('cart-mutation-fails is not registered');
+    options = { ...options, repository: new Repository(scenario, ids, clock), scenario };
+    options.repository.loadProducts([DEMO_PRODUCT]);
+    server.use(...createHandlers(options));
+  });
+
+  it('answers a line removal with 503 SERVICE_UNAVAILABLE and keeps the line', async () => {
+    const added = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    expect(added.status).toBe(200);
+    const res = await fetch(`http://localhost/api/v1/cart/items/${VARIANT_MOTO_256}`, {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+    });
+    expect(res.status).toBe(503);
+    expect(res.headers.get('content-type')).toBe('application/problem+json');
+    const problem: unknown = await res.json();
+    expectRecord(problem);
+    expect(problem['code']).toBe('SERVICE_UNAVAILABLE');
+    const cart = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const body: unknown = await cart.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(2);
+    expect(readNumber(body, 'lineCount')).toBe(1);
+  });
+
+  it('answers a cart clear with 503 SERVICE_UNAVAILABLE and keeps the lines', async () => {
+    await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: VARIANT_MOTO_256, quantity: 1 }),
+    });
+    const res = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'DELETE',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+    });
+    expect(res.status).toBe(503);
+    const problem: unknown = await res.json();
+    expectRecord(problem);
+    expect(problem['code']).toBe('SERVICE_UNAVAILABLE');
+    const cart = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    const body: unknown = await cart.json();
+    expectRecord(body);
+    expect(readNumber(body, 'version')).toBe(2);
+    expect(readNumber(body, 'lineCount')).toBe(1);
   });
 });

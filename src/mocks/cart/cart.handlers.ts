@@ -36,12 +36,33 @@ import {
 import { isRecord } from '../is-record';
 import type { Product, Repository } from '../repository';
 
-import { CartStore } from './cart-store';
+import { buildTraceId, CartStore, problemType } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
 import { invalidRequest, problemResponse } from '../problem-response';
 
 /** Cross-handler reference to the cart store; consumed by the checkout and order mocks. */
 export const cartStore: { current: CartStore | null } = { current: null };
+
+/** `?mi-scenario=cart-mutation-fails`: removing a line and clearing the
+ *  cart answer 503 and leave the cart as it was, so a browser pass can
+ *  drive the cart page's failed-mutation path. */
+export const CART_MUTATION_FAILS_SCENARIO = 'cart-mutation-fails';
+
+function simulatedMutationFailure(options: CreateHandlersOptions): HttpResponse<DefaultBodyType> {
+  return problemResponse({
+    ok: false,
+    problem: {
+      type: problemType('SERVICE_UNAVAILABLE'),
+      title: 'Service unavailable',
+      status: 503,
+      code: 'SERVICE_UNAVAILABLE',
+      detail: 'Simulated cart failure (cart-mutation-fails scenario)',
+      traceId: buildTraceId(options),
+      fieldErrors: [],
+      params: {},
+    },
+  });
+}
 
 const VARIANTS: Product['variants'] = [
   {
@@ -295,6 +316,8 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
     }
+    if (options.scenario.name === CART_MUTATION_FAILS_SCENARIO)
+      return simulatedMutationFailure(options);
     const ifMatch = request.headers.get('If-Match');
     const outcome = store.clear(sessionId, ifMatch);
     if (outcome.ok) options.persist?.(sessionId);
@@ -326,6 +349,8 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
       if (sessionId === null) {
         return invalidRequest(options, 'Missing X-Demo-Session header', {});
       }
+      if (options.scenario.name === CART_MUTATION_FAILS_SCENARIO)
+        return simulatedMutationFailure(options);
       const ifMatch = request.headers.get('If-Match');
       const variantId = String(params['variantId']);
       const outcome = store.remove(sessionId, ifMatch, variantId);
