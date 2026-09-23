@@ -268,13 +268,6 @@ export class CartPage {
       const next = this.facade.cart();
       this.cart.set(next);
     });
-
-    // Reset the transient status banner when the cart resolves to a
-    // new shape so a stale "X törölve" message does not survive a
-    // subsequent successful mutation.
-    effect(() => {
-      this.cart();
-    });
   }
 
   onRemoveRequested(variantId: string): void {
