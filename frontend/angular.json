@@ -22,7 +22,8 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "projects/storefront/public"
+                "input": "projects/storefront/public",
+                "ignore": ["mockServiceWorker.js"]
               }
             ],
             "styles": [
@@ -45,7 +46,13 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "projects/storefront/src/mocks/browser.ts",
+                  "with": "projects/storefront/src/mocks/browser.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
@@ -55,6 +62,12 @@
                 {
                   "replace": "projects/storefront/src/environments/environment.ts",
                   "with": "projects/storefront/src/environments/environment.development.ts"
+                }
+              ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "projects/storefront/public"
                 }
               ]
             },
@@ -143,12 +156,7 @@
             "tsConfig": "projects/demo-payment/tsconfig.app.json",
             "baseHref": "/demo-fizetes/",
             "outputPath": { "base": "dist/demo-payment" },
-            "assets": [
-              {
-                "glob": "mockServiceWorker.js",
-                "input": "projects/storefront/public"
-              }
-            ],
+            "assets": [],
             "styles": ["projects/demo-payment/src/styles.css"]
           },
           "configurations": {
@@ -157,7 +165,13 @@
                 { "type": "initial", "maximumWarning": "500kB", "maximumError": "1MB" },
                 { "type": "anyComponentStyle", "maximumWarning": "4kB", "maximumError": "8kB" }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "projects/storefront/src/mocks/browser.ts",
+                  "with": "projects/storefront/src/mocks/browser.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
@@ -167,6 +181,12 @@
                 {
                   "replace": "projects/storefront/src/environments/environment.ts",
                   "with": "projects/storefront/src/environments/environment.development.ts"
+                }
+              ],
+              "assets": [
+                {
+                  "glob": "mockServiceWorker.js",
+                  "input": "projects/storefront/public"
                 }
               ]
             }

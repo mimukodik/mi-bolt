@@ -17,6 +17,8 @@
     "check:payment-boot": "node scripts/check-app-boot.mjs",
     "check:admin-boot": "node scripts/check-app-boot.mjs --project admin --base-path /admin",
     "check:admin-dist": "node scripts/check-dist-free-of.mjs dist/admin/browser setupWorker mockServiceWorker",
+    "check:storefront-dist": "node scripts/check-dist-free-of.mjs dist/storefront/browser setupWorker mockServiceWorker",
+    "check:payment-dist": "node scripts/check-dist-free-of.mjs dist/demo-payment/browser setupWorker mockServiceWorker",
     "build:check": "node scripts/build-check.mjs",
     "watch": "ng build storefront --watch --configuration development",
     "test": "ng test",
