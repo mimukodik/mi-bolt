@@ -111,6 +111,57 @@ describe('seedCatalog', () => {
   });
 });
 
+describe('seed image content types', () => {
+  function buildSourceWithImageFile(file: string): unknown {
+    const sourceProducts = Array.isArray(catalogSource) ? catalogSource : catalogSource.products;
+    if (!Array.isArray(sourceProducts)) {
+      throw new Error('fixture: products is not an array');
+    }
+    const firstSource: unknown = sourceProducts[0];
+    if (!isRecord(firstSource)) {
+      throw new Error('fixture: first product is not an object');
+    }
+    const colors = firstSource['colors'];
+    if (!Array.isArray(colors) || colors.length === 0) {
+      throw new Error('fixture: colors is not an array');
+    }
+    const firstColor: unknown = colors[0];
+    if (!isRecord(firstColor)) {
+      throw new Error('fixture: first color is not an object');
+    }
+    const image = firstColor['image'];
+    if (!isRecord(image)) {
+      throw new Error('fixture: first color image is not an object');
+    }
+    const badImage = { ...image, file };
+    const badColor = { ...firstColor, image: badImage };
+    const badProduct = { ...firstSource, colors: [badColor] };
+    return { products: [badProduct] };
+  }
+
+  it('registers a .webp image as image/webp', () => {
+    const source = buildSourceWithImageFile('sample-photo.webp');
+    expect(seedCatalog(source).images.get('sample-photo')?.contentType).toBe('image/webp');
+  });
+
+  it('registers a .jpg image as image/jpeg', () => {
+    const source = buildSourceWithImageFile('sample-photo.jpg');
+    expect(seedCatalog(source).images.get('sample-photo')?.contentType).toBe('image/jpeg');
+  });
+
+  it('registers a .jpeg image as image/jpeg', () => {
+    const source = buildSourceWithImageFile('sample-photo.jpeg');
+    expect(seedCatalog(source).images.get('sample-photo')?.contentType).toBe('image/jpeg');
+  });
+
+  it('rejects an unsupported image extension', () => {
+    const source = buildSourceWithImageFile('sample-photo.gif');
+    expect(() => seedCatalog(source)).toThrow(
+      'catalog-source.json: image type of sample-photo.gif',
+    );
+  });
+});
+
 describe('SEED_ADMIN', () => {
   it('matches the v4 UUID pattern and is not the placeholder "1"', () => {
     expect(SEED_ADMIN.id).toMatch(UUID_V4);
