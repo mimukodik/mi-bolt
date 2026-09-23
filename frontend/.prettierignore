@@ -16,9 +16,6 @@ docs/
 
 # Agent configuration; reformatting these files is out of scope for this workspace's prettier pass, so they are excluded outright.
 .claude/
-.agents/
-.codex/
-.gemini/
 
 # Build and test output. These rules live in the repository root .gitignore,
 # which Prettier does not read from here: it only follows a .gitignore in the
