@@ -511,6 +511,19 @@ function isBlank(value: string): boolean {
   return BLANK_PATTERN.test(value);
 }
 
+/**
+ * Java's `String.strip()`: removes leading and trailing `Character.isWhitespace`
+ * characters, the same set as `BLANK_PATTERN`, so a no-break space survives as
+ * it does on the backend.
+ */
+const EDGE_WHITESPACE_PATTERN =
+  // eslint-disable-next-line no-control-regex -- \u001C-\u001F are Java whitespace, matched on purpose
+  /^[\t\n\v\f\r\u001C-\u001F\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]+|[\t\n\v\f\r\u001C-\u001F\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]+$/g;
+
+function strip(value: string): string {
+  return value.replace(EDGE_WHITESPACE_PATTERN, '');
+}
+
 /** A value the invariant "the validator runs only after bean validation passed" guarantees present. */
 function requireDefined<T>(value: T | undefined): T {
   if (value === undefined) {
@@ -793,12 +806,12 @@ function buildColor(input: AdminProductColorInput, db: MockDb): AdminProductColo
   if (image === undefined) throw new Error(`unknown image ${input.imageId}`);
   return {
     code: input.code,
-    name: input.name,
+    name: strip(input.name),
     swatchHex: input.swatchHex,
     image: {
       id: input.imageId,
       src: `/api/v1/media/${input.imageId}`,
-      alt: input.alt,
+      alt: strip(input.alt),
       width: image.width,
       height: image.height,
     },
@@ -827,9 +840,9 @@ function buildProduct(input: AdminProductInput, db: MockDb, meta: ProductMeta): 
   return {
     id: meta.id,
     slug: input.slug,
-    brand: input.brand,
-    name: input.name,
-    description: input.description,
+    brand: strip(input.brand),
+    name: strip(input.name),
+    description: strip(input.description),
     is5g: input.is5g,
     releasedAt: input.releasedAt,
     rank: input.rank,
@@ -839,10 +852,13 @@ function buildProduct(input: AdminProductInput, db: MockDb, meta: ProductMeta): 
     version: meta.version,
     ...(meta.archivedAt === undefined ? {} : { archivedAt: meta.archivedAt }),
     updatedAt: new Date().toISOString(),
-    highlights: input.highlights,
+    highlights: input.highlights.map(strip),
     colors: input.colors.map((color) => buildColor(color, db)),
     variants: input.variants.map((variant) => buildVariant(variant, input.slug)),
-    specGroups: input.specGroups,
+    specGroups: input.specGroups.map((group) => ({
+      title: strip(group.title),
+      rows: group.rows.map((row) => ({ label: strip(row.label), value: strip(row.value) })),
+    })),
   };
 }
 
