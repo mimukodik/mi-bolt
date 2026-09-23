@@ -16,7 +16,7 @@
     "module": "preserve",
     "paths": {
       "@mi-bolt/api/*": ["./projects/storefront/src/app/api/generated/*"],
-      "@mi-bolt/core-api/*": ["./projects/storefront/src/app/core/api/*"],
+      "@mi-bolt/core-api/*": ["./projects/core-api/src/*"],
       "@mi-bolt/mocks/*": ["./projects/storefront/src/mocks/*"]
     }
   },
@@ -51,6 +51,12 @@
     },
     {
       "path": "./projects/admin/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/core-api/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/core-api/tsconfig.spec.json"
     }
   ]
 }

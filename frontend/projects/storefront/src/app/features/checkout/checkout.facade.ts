@@ -39,7 +39,7 @@ import {
   getPaymentIntent,
   updateCheckout,
 } from '../../api/generated/functions';
-import { withIfMatch } from '../../core/api/demo-session.interceptor';
+import { withIfMatch } from '@mi-bolt/core-api/demo-session.interceptor';
 import { isRecord } from '../../shared/utils/is-record';
 
 import type { BillingDetails } from '../../api/generated/models/billing-details';

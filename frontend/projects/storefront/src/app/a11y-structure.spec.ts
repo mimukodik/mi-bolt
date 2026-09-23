@@ -27,7 +27,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { Api } from './api/generated/api';
 import { ApiConfiguration, provideApiConfiguration } from './api/generated/api-configuration';
-import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import type { CatalogItem } from './api/generated/models/catalog-item';
 import type { ProductPage as ProductPageDTO } from './api/generated/models/product-page';
 import type { Variant } from './api/generated/models/variant';

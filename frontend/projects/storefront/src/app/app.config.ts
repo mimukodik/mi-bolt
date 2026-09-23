@@ -5,8 +5,8 @@ import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from 
 
 import { routes } from './app.routes';
 import { provideApiConfiguration } from './api/generated/api-configuration';
-import { resolveApiRoot } from './core/api/api-root';
-import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
+import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
 /**
  * Local production / development build providers. Each binding is

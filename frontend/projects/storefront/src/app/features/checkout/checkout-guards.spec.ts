@@ -27,7 +27,7 @@ import type { GuardResult, PartialMatchRouteSnapshot } from '@angular/router';
 import { Router, UrlSegment, UrlTree, convertToParamMap, provideRouter } from '@angular/router';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { IdempotencyStore } from '../../../mocks/idempotency';

@@ -33,7 +33,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';

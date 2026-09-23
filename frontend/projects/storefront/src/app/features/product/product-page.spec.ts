@@ -14,7 +14,7 @@ import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { Cart } from '../../api/generated/models/cart';
 import type { CatalogItem } from '../../api/generated/models/catalog-item';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
 import type { UiProblem } from '../../shared/types/ui-problem';
 import { isProductNotFound, ProductFacade, type ProductVm } from './product.facade';

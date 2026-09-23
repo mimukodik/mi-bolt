@@ -25,7 +25,7 @@ import { provideZonelessChangeDetection, computed } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
 
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
 import { CheckoutFacade, type CheckoutError, type CheckoutResult } from './checkout.facade';
 import { DeliveryPage } from './delivery-page';

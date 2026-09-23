@@ -74,6 +74,7 @@
     "monocart-reporter": "2.13.1",
     "msw": "^2.15.0",
     "ng-openapi-gen": "^1.0.5",
+    "ng-packagr": "^22.1.0",
     "postcss": "^8.5.3",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.12",

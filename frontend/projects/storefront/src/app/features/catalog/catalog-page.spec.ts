@@ -35,7 +35,7 @@ import { BehaviorSubject } from 'rxjs';
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration, provideApiConfiguration } from '../../api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { CatalogFacade } from './catalog.facade';
 import { CatalogPage } from './catalog-page';
 import { AsyncContent } from '../../shared/ui/async-content/async-content';

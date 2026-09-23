@@ -39,7 +39,7 @@ import type { Image } from '../../../app/api/generated/models/image';
 import type { Product } from '../../../app/api/generated/models/product';
 import type { Variant } from '../../../app/api/generated/models/variant';
 
-import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { ProductFacade } from '../../../app/features/product/product.facade';
 import {
   computeAddToCartState,

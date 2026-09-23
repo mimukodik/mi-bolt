@@ -1,4 +1,4 @@
-// src/app/core/api/api-root.ts — T04-AC05
+// projects/core-api/src/api-root.ts — T04-AC05
 //
 // Derives the SDK's runtime root URL from `document.baseURI` so every generated
 // API call resolves against the same origin Angular itself was bootstrapped

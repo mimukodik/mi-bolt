@@ -400,6 +400,51 @@
           }
         }
       }
+    },
+    "core-api": {
+      "projectType": "library",
+      "root": "projects/core-api",
+      "sourceRoot": "projects/core-api/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/core-api/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/core-api/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/core-api/tsconfig.spec.json",
+            "runnerConfig": "projects/core-api/vitest.config.ts",
+            "coverage": true,
+            "coverageInclude": ["projects/core-api/src/**/*.ts"],
+            "coverageExclude": ["**/*.spec.ts", "**/*.d.ts", "projects/core-api/src/public-api.ts"],
+            "coverageThresholds": {
+              "perFile": false,
+              "statements": 80,
+              "branches": 75,
+              "functions": 80,
+              "lines": 80
+            },
+            "coverageReporters": ["json-summary", "json", "text"]
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": ["projects/core-api/**/*.ts"],
+            "eslintConfig": "eslint.config.mjs"
+          }
+        }
+      }
     }
   }
 }

@@ -21,7 +21,7 @@ import { HttpResponse, http } from 'msw';
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import type { Cart } from '../../../app/api/generated/models/cart';
 
 import { createHandlers } from '../../../mocks/create-handlers';

@@ -8,7 +8,7 @@
  * tabs. A storage-denied context (private browsing, Node unit runner)
  * degrades to page-local: the key is generated and used once, never
  * stored, which is the same fallback the demo session interceptor
- * applies (`core/api/demo-session.interceptor.ts:40-46`). The fourth is
+ * applies (`projects/core-api/src/demo-session.interceptor.ts:40-46`). The fourth is
  * the review step's demo-terms tick, kept so the cold return from the
  * payment page does not untick it (owner's decision, 2026-09-22).
  *

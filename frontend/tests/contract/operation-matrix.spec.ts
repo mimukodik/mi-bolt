@@ -67,7 +67,7 @@ import {
   type OpenApiSpec,
   type OperationDescriptor,
 } from './response-validation';
-import { demoSessionInterceptor } from '../../projects/storefront/src/app/core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '../../projects/core-api/src/demo-session.interceptor';
 import {
   isCatalogFixtureShape,
   loadCatalogFixture,

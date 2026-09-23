@@ -52,7 +52,7 @@ import {
   createFixedClock,
   DEFAULT_SCENARIO,
 } from '../../../mocks/scenarios';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { Button } from '../../shared/ui/button/button';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ErrorState } from '../../shared/ui/error-state/error-state';

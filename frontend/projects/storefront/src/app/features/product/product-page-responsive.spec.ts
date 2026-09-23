@@ -24,7 +24,7 @@ import { describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from './demo-product.fixture';
 

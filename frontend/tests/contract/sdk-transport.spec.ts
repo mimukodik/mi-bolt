@@ -41,7 +41,7 @@ import * as operations from '../../projects/storefront/src/app/api/generated/fun
 import {
   demoSessionInterceptor,
   withIfMatch,
-} from '../../projects/storefront/src/app/core/api/demo-session.interceptor';
+} from '../../projects/core-api/src/demo-session.interceptor';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker

@@ -33,7 +33,7 @@ import { firstValueFrom, type Observable } from 'rxjs';
 import { Api } from '../../api/generated/api';
 import { ApiConfiguration } from '../../api/generated/api-configuration';
 import { addCartItem, clearCart, getCart, removeCartItem } from '../../api/generated/functions';
-import { withIfMatch } from '../../core/api/demo-session.interceptor';
+import { withIfMatch } from '@mi-bolt/core-api/demo-session.interceptor';
 import type { Cart } from '../../api/generated/models/cart';
 import type { Money } from '../../api/generated/models/money';
 import { isRecord } from '../../shared/utils/is-record';

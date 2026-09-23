@@ -1,4 +1,4 @@
-// src/app/core/api/demo-session.interceptor.ts — T04-AC05
+// projects/core-api/src/demo-session.interceptor.ts — T04-AC05
 //
 // Adds the X-Demo-Session header to every outgoing HTTP request so MSW can
 // namespace state per browser tab. The id is stored in sessionStorage,
