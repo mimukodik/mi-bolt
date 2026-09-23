@@ -16,6 +16,7 @@
     "build:admin": "ng build admin",
     "check:payment-boot": "node scripts/check-app-boot.mjs",
     "check:admin-boot": "node scripts/check-app-boot.mjs --project admin --base-path /admin",
+    "check:admin-dist": "node scripts/check-dist-free-of.mjs dist/admin/browser setupWorker mockServiceWorker",
     "build:check": "node scripts/build-check.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
