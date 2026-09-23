@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
+import { MatIcon } from '@angular/material/icon';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import {
@@ -22,18 +23,23 @@ import { firstValueFrom } from 'rxjs';
 import { AdminSession } from '../../core/auth/admin-session';
 import { openConfirm } from '../../shared/confirm-dialog/confirm-dialog';
 import type { AdminUser } from '../../api/generated/models/admin-user';
+import type { AdminUserCreated } from '../../api/generated/models/admin-user-created';
 
 import { AdminsStore } from './admins.store';
+import { GeneratedPasswordDialog } from './generated-password-dialog';
+import type { GeneratedPasswordData } from './generated-password-dialog';
+import { NewAdminDialog } from './new-admin-dialog';
 
 const COLUMNS = ['username', 'createdAt', 'actions'] as const;
 
 /**
- * The Adminok page (MIM-344, F13): a Material table of the admins with
- * the signed-in row marked `(te)`, and a Törlés button per row that is
- * disabled with a tooltip for the self row and the last-admin row, asks
- * for confirmation, and reports each server answer in a snack-bar.
- * The "Új admin" button is the next unit's (F14); this header row has
- * only the title.
+ * The Adminok page (MIM-344, F13; MIM-345, F14): a Material table of the
+ * admins with the signed-in row marked `(te)`, and a Törlés button per
+ * row that is disabled with a tooltip for the self row and the
+ * last-admin row, asks for confirmation, and reports each server answer
+ * in a snack-bar. The "Új admin" button opens `NewAdminDialog`, then the
+ * `GeneratedPasswordDialog`; the page keeps no field or signal holding
+ * the generated password.
  */
 @Component({
   selector: 'adm-admins-page',
@@ -48,6 +54,7 @@ const COLUMNS = ['username', 'createdAt', 'actions'] as const;
     MatHeaderCellDef,
     MatHeaderRow,
     MatHeaderRowDef,
+    MatIcon,
     MatProgressBar,
     MatRow,
     MatRowDef,
@@ -125,5 +132,35 @@ export class AdminsPage {
     // After a self / last / gone answer the row is still there (or
     // wasn't ours to remove), so reload to pick up the server's view.
     void this.store.load();
+  }
+
+  /**
+   * Opens `NewAdminDialog`; on cancel (`created` is `undefined`) returns.
+   * On a 201, reloads the list and shows the generated password in a
+   * `disableClose` dialog that only Bezárás closes. Public so a spec can
+   * await the whole flow the click started.
+   */
+  async openNewAdmin(): Promise<void> {
+    const created = await firstValueFrom(
+      this.dialog
+        .open<NewAdminDialog, undefined, AdminUserCreated>(NewAdminDialog, {
+          width: '28rem',
+          autoFocus: 'first-tabbable',
+        })
+        .afterClosed(),
+    );
+    if (created === undefined) return;
+
+    void this.store.load();
+
+    await firstValueFrom(
+      this.dialog
+        .open<GeneratedPasswordDialog, GeneratedPasswordData>(GeneratedPasswordDialog, {
+          width: '32rem',
+          disableClose: true,
+          data: { username: created.user.username, password: created.generatedPassword },
+        })
+        .afterClosed(),
+    );
   }
 }

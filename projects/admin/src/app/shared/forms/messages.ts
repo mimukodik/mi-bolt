@@ -6,6 +6,9 @@ export const MESSAGES = {
   maxLength: (max: number): string => `Legfeljebb ${String(max)} karakter.`,
   minLength: (min: number): string => `Legalább ${String(min)} karakter.`,
   passwordMismatch: 'A két jelszó nem egyezik.',
+  usernamePattern:
+    'Csak kisbetű, szám, pont, aláhúzás és kötőjel; elválasztó nem állhat elöl, hátul vagy kettő egymás után.',
+  usernameTaken: 'Ez a felhasználónév már foglalt.',
   slugPattern: 'Csak kisbetű, szám és kötőjel.',
   hexPattern: 'Formátum: #RRGGBB.',
   integer: 'Egész számot adj meg.',
