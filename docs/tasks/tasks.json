@@ -1508,7 +1508,7 @@
       "docs/mi-bolt/spec/coverage-policy.json",
       "scripts/check-test-policy.mjs"
     ],
-    "interface": "Outputs independent unit reports, scenario coverage report, file manifest and requirement traceability.",
+    "interface": "Outputs independent unit reports, scenario coverage report and file manifest.",
     "deliverable": "100% as an enforced gate, never a presentation label.",
     "acceptanceCriteria": [
       {
