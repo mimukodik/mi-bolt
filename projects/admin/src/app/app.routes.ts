@@ -1,15 +1,19 @@
 import type { Routes } from '@angular/router';
 
+import { adminAuthGuard } from './core/auth/admin-auth.guard';
+import { guestOnlyGuard } from './core/auth/guest-only.guard';
 import { ShellComponent } from './layout/shell.component';
 
 export const routes: Routes = [
   {
     path: 'bejelentkezes',
+    canActivate: [guestOnlyGuard],
     loadChildren: () => import('./features/login/login.routes').then((m) => m.LOGIN_ROUTES),
   },
   {
     path: '',
     component: ShellComponent,
+    canActivate: [adminAuthGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'attekintes' },
       {

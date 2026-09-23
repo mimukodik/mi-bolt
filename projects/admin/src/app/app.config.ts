@@ -1,4 +1,9 @@
-import { LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  LOCALE_ID,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import type { ApplicationConfig } from '@angular/core';
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
@@ -8,6 +13,8 @@ import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
 import { provideApiConfiguration } from './api/generated/api-configuration';
 
 import { ifMatchInterceptor } from './core/api/if-match.interceptor';
+import { AdminSession } from './core/auth/admin-session';
+import { unauthorizedInterceptor } from './core/auth/unauthorized.interceptor';
 import { routes } from './app.routes';
 
 /**
@@ -21,14 +28,18 @@ import { routes } from './app.routes';
  * screen needs for `reportProgress` events; `LOCALE_ID` plus the locale
  * registration in `main.ts` gives every pipe Hungarian formatting;
  * `MAT_ICON_DEFAULT_OPTIONS` points `mat-icon` at the self-hosted
- * Material Symbols font loaded from npm.
+ * Material Symbols font loaded from npm. The app initializer reads the
+ * admin session and primes the `XSRF-TOKEN` cookie before the first
+ * route is activated, and `unauthorizedInterceptor` clears the session
+ * and returns to the login page on a 401 from any other call.
  */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
     provideApiConfiguration(resolveApiRoot()),
-    provideHttpClient(withXhr(), withInterceptors([ifMatchInterceptor])),
+    provideHttpClient(withXhr(), withInterceptors([ifMatchInterceptor, unauthorizedInterceptor])),
+    provideAppInitializer(() => inject(AdminSession).refresh()),
     { provide: LOCALE_ID, useValue: 'hu-HU' },
     {
       provide: MAT_ICON_DEFAULT_OPTIONS,
