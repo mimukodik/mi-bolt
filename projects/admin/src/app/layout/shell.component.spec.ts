@@ -12,6 +12,7 @@ import type { BreakpointState } from '@angular/cdk/layout';
 import { HttpResponse, http } from 'msw';
 import { of } from 'rxjs';
 import { MatSidenav } from '@angular/material/sidenav';
+import { MatDialog } from '@angular/material/dialog';
 import type { MockResult } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -326,6 +327,34 @@ describe('ShellComponent', () => {
       await fixture.whenStable();
 
       expect(snackBarText()).toBe('Jelszó módosítva.');
+    });
+
+    it('shows a snack-bar and opens no dialog when the password dialog cannot be opened', async () => {
+      const db = createDb();
+      server?.use(...authHandlers(db));
+      fixture = TestBed.createComponent(ShellComponent);
+      native = hostOf(fixture);
+      fixture.detectChanges();
+      await signIn(db);
+      await fixture.whenStable();
+
+      accountTrigger(native)?.click();
+      await fixture.whenStable();
+
+      vi.spyOn(TestBed.inject(MatDialog), 'open').mockImplementation(() => {
+        throw new Error('dialog chunk failed to load');
+      });
+      const opening = vi.spyOn(fixture.componentInstance, 'openPasswordChange');
+      const items = Array.from(overlay().querySelectorAll<HTMLElement>('.mat-mdc-menu-item'));
+      items[menuItemLabels().indexOf('Jelszó módosítása')].click();
+      await fixture.whenStable();
+
+      expect(opening).toHaveBeenCalledTimes(1);
+      await returnedPromise(opening.mock.results[0]);
+      await fixture.whenStable();
+
+      expect(snackBarText()).toBe('A jelszó módosítása most nem érhető el. Próbáld újra.');
+      expect(overlay().querySelector('h2[mat-dialog-title]')).toBeNull();
     });
 
     it('shows no account trigger when signed out', () => {
