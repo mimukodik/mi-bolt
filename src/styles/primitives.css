@@ -257,7 +257,7 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
     var(--color-surface-section) 100%
   );
   background-size: 200% 100%;
-  animation: load-shimmer 1.4s ease-in-out infinite;
+  animation: facet-skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
 .facet-skeleton-row {
@@ -287,4 +287,16 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
 .facet-skeleton-bar--count {
   width: 2.5rem;
   margin-left: auto;
+}
+
+/* Global on purpose: a component's @keyframes is scoped with its
+   selectors under emulated encapsulation, so this global skeleton
+   cannot borrow LoadingState's own keyframes by name. */
+@keyframes facet-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
