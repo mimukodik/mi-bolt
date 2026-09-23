@@ -934,7 +934,7 @@ describe('GET /products sorts', () => {
     colorName: 'Szín',
     swatchHex: '#000000',
     storageGb,
-    price: { amount: 100_000, currency: 'HUF' },
+    price: { amount: 100_000, currency: 'HUF' as const },
     availability: 'in_stock',
     maxQuantity: 5,
     images: [
