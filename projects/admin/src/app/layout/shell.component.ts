@@ -72,17 +72,23 @@ export class ShellComponent {
 
   /** Loads the dialog on first use, so its form packages stay out of the initial bundle. */
   async openPasswordChange(): Promise<void> {
-    const { PasswordChangeDialog: dialogComponent } =
-      await import('../features/account/password-change-dialog');
-    const ref = this.dialog.open<PasswordChangeDialog, unknown, boolean>(dialogComponent, {
-      width: '28rem',
-      autoFocus: 'first-tabbable',
-    });
-    ref.afterClosed().subscribe((changed) => {
-      if (changed === true) {
-        this.snackBar.open('Jelszó módosítva.', undefined, { duration: 4000 });
-      }
-    });
+    try {
+      const { PasswordChangeDialog: dialogComponent } =
+        await import('../features/account/password-change-dialog');
+      const ref = this.dialog.open<PasswordChangeDialog, unknown, boolean>(dialogComponent, {
+        width: '28rem',
+        autoFocus: 'first-tabbable',
+      });
+      ref.afterClosed().subscribe((changed) => {
+        if (changed === true) {
+          this.snackBar.open('Jelszó módosítva.', undefined, { duration: 4000 });
+        }
+      });
+    } catch {
+      this.snackBar.open('A jelszó módosítása most nem érhető el. Próbáld újra.', undefined, {
+        duration: 4000,
+      });
+    }
   }
 
   async logout(): Promise<void> {
