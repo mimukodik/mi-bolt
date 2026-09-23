@@ -181,10 +181,16 @@ export class ProductListStore {
   // ---------------------------------------------------------------------------
 
   private rowAction(item: AdminProductListItem, fn: RowActionFn): Promise<RowActionResult> {
-    const result = firstValueFrom(
+    const handle = (err: unknown): RowActionResult => {
+      const problem = problemOf(err);
+      if (problem?.code === 'PRODUCT_VERSION_CONFLICT') return { kind: 'conflict' };
+      if (problem?.code === 'FEATURED_LIMIT') return { kind: 'featured-limit' };
+      return { kind: 'failed', problem };
+    };
+    return firstValueFrom(
       this.api.invoke(fn, { productId: item.id }, withIfMatch(`"${String(item.version)}"`)),
-    ).then(
-      (body: AdminProduct): RowActionResult => {
+    )
+      .then((body: AdminProduct): RowActionResult => {
         const next: AdminProductListItem = {
           ...item,
           status: body.status,
@@ -192,14 +198,7 @@ export class ProductListStore {
         };
         this.dataSource().replaceItem(next);
         return { kind: 'done', item: next };
-      },
-      (err: unknown): RowActionResult => {
-        const problem = problemOf(err);
-        if (problem?.code === 'PRODUCT_VERSION_CONFLICT') return { kind: 'conflict' };
-        if (problem?.code === 'FEATURED_LIMIT') return { kind: 'featured-limit' };
-        return { kind: 'failed', problem };
-      },
-    );
-    return result;
+      })
+      .catch(handle);
   }
 }

@@ -32,7 +32,7 @@
  */
 import { DataSource, type CollectionViewer, type ListRange } from '@angular/cdk/collections';
 import { signal, type Signal } from '@angular/core';
-import { type Observable, ReplaySubject, Subject } from 'rxjs';
+import { type Observable, ReplaySubject, Subject, Subscription, takeUntil } from 'rxjs';
 
 import type { AdminProductListItem } from '../../../api/generated/models/admin-product-list-item';
 import type { AdminProductPage } from '../../../api/generated/models/admin-product-page';
@@ -79,13 +79,19 @@ export class ProductListDataSource extends DataSource<ProductListRow> {
   /** Pages requested (in flight or completed). Used to deduplicate
    *  range requests so the same page is never requested twice. */
   private readonly requested = new Set<number>();
+  /** Subscriptions started by `connect()` and dropped by `disconnect()`:
+   *  the `viewer.viewChange` subscriber plus every in-flight page
+   *  request. Keeping a single bag makes the cleanup deterministic. */
+  private readonly subscriptions = new Subscription();
   /** Output subject; `disconnect()` completes it so the view stops
    *  receiving updates. A `ReplaySubject(1)` caches the most recent
    *  emission so a late subscriber (a view mounted after page 1 had
    *  already landed, or a test that subscribes after `connect()` ran)
    *  still gets the current sparse array. */
   private readonly subject = new ReplaySubject<readonly ProductListRow[]>(1);
-  /** Gate `takeUntil` subscribes to; completed by `disconnect()`. */
+  /** Gate every per-page subscription through `takeUntil(this.cancelled)`;
+   *  completed by `disconnect()` so in-flight pages stop pushing into
+   *  the (then-completed) subject. */
   private readonly cancelled = new Subject<void>();
 
   readonly total: Signal<number | null> = this.totalSignal.asReadonly();
@@ -106,9 +112,11 @@ export class ProductListDataSource extends DataSource<ProductListRow> {
    * is dropped on `disconnect()`.
    */
   connect(viewer: CollectionViewer): Observable<readonly ProductListRow[]> {
-    viewer.viewChange.subscribe((range) => {
-      this.requestRange(range);
-    });
+    this.subscriptions.add(
+      viewer.viewChange.subscribe((range) => {
+        this.requestRange(range);
+      }),
+    );
     // Initial page-1 load — the contract pins totalElements on page 1.
     this.requestPage(1);
     // The ReplaySubject caches the most recent emission, so a
@@ -123,12 +131,10 @@ export class ProductListDataSource extends DataSource<ProductListRow> {
    * new instance without leaving a zombie.
    */
   disconnect(): void {
+    this.subscriptions.unsubscribe();
     this.cancelled.next();
     this.cancelled.complete();
     this.subject.complete();
-    // Re-initialise so a reconnected source on the same instance (the
-    // store never does, but the contract allows) starts clean.
-    this.requested.clear();
   }
 
   /**
@@ -153,11 +159,14 @@ export class ProductListDataSource extends DataSource<ProductListRow> {
   // ---------------------------------------------------------------------------
 
   /** Translate a `ListRange` into the pages it covers, dropping any
-   *  already requested and any past the last. */
+   *  already requested and any past the last. Negative starts clamp
+   *  to page 1 (the contract's `page` minimum), so a view that
+   *  overscrolls past the top does not request page 0. */
   private requestRange(range: ListRange): void {
     if (range.end <= range.start) return;
-    const startPage = Math.floor(range.start / PRODUCT_LIST_PAGE_SIZE) + 1;
-    const endPage = Math.floor((range.end - 1) / PRODUCT_LIST_PAGE_SIZE) + 1;
+    const safeStart = Math.max(0, range.start);
+    const startPage = Math.floor(safeStart / PRODUCT_LIST_PAGE_SIZE) + 1;
+    const endPage = Math.floor(Math.max(safeStart, range.end - 1) / PRODUCT_LIST_PAGE_SIZE) + 1;
     const total = this.totalSignal();
     const maxPage = total === null ? endPage : Math.ceil(total / PRODUCT_LIST_PAGE_SIZE);
     for (let page = startPage; page <= endPage && page <= maxPage; page += 1) {
@@ -169,23 +178,27 @@ export class ProductListDataSource extends DataSource<ProductListRow> {
    *  a previous attempt failed (the page is forgotten in
    *  `handlePageError` so a later range can retry it). Each
    *  subscription is independent — slow page 2 cannot cancel a later
-   *  page 3, the merge-map semantics the brief asks for. */ private requestPage(
-    page: number,
-  ): void {
+   *  page 3, the merge-map semantics the brief asks for. */
+  private requestPage(page: number): void {
+    if (page < 1) return;
     if (this.requested.has(page)) return;
     const total = this.totalSignal();
     if (total !== null && page > Math.ceil(total / PRODUCT_LIST_PAGE_SIZE)) {
       return;
     }
     this.requested.add(page);
-    this.loader(page).subscribe({
-      next: (resp) => {
-        this.handlePage(page, resp);
-      },
-      error: () => {
-        this.handlePageError(page);
-      },
-    });
+    this.subscriptions.add(
+      this.loader(page)
+        .pipe(takeUntil(this.cancelled))
+        .subscribe({
+          next: (resp) => {
+            this.handlePage(page, resp);
+          },
+          error: () => {
+            this.handlePageError(page);
+          },
+        }),
+    );
   }
 
   /** A page landed. Page 1 also drives the source status and the
@@ -206,13 +219,16 @@ export class ProductListDataSource extends DataSource<ProductListRow> {
 
     const items = this.itemsSignal().slice();
     const offset = (page - 1) * PRODUCT_LIST_PAGE_SIZE;
+    let newlyDefined = 0;
     for (let i = 0; i < resp.items.length; i += 1) {
-      items[offset + i] = resp.items[i];
+      const target = offset + i;
+      if (items[target] === undefined) newlyDefined += 1;
+      items[target] = resp.items[i];
     }
     this.itemsSignal.set(items);
-    this.loadedCountSignal.set(
-      items.reduce<number>((acc, row) => (row === undefined ? acc : acc + 1), 0),
-    );
+    if (newlyDefined > 0) {
+      this.loadedCountSignal.update((n) => n + newlyDefined);
+    }
     this.pageErrorSignal.set(false);
     this.subject.next(items);
   }
