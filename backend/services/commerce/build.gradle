@@ -35,7 +35,7 @@ dependencies {
 	testRuntimeOnly 'com.h2database:h2'
 }
 
-// Flattens the four single-value enum discriminator properties in api/openapi.yaml
+// Flattens the four single-value enum discriminator properties in contracts/commerce/openapi.yaml
 // (home_delivery, pickup_point, card, cash_on_delivery) to plain strings. The 7.25.0
 // Spring generator produces a String getter on the parent interface and an OptionIdEnum-
 // like getter on each subtype, and the two do not match; see
@@ -61,10 +61,11 @@ def discriminatorReplacements = [
 	 'to'   : "        paymentMethod:\n          type: string\n        termsVersion:\n"]
 ]
 
+def sourceSpec = file('../../../contracts/commerce/openapi.yaml')
+
 tasks.register('prepareOpenApiSpec') {
-	def sourceSpec = file('api/openapi.yaml')
 	def derivedSpec = layout.buildDirectory.file('openapi/openapi.yaml')
-	inputs.file(sourceSpec)
+	inputs.file(sourceSpec).withPathSensitivity(PathSensitivity.RELATIVE)
 	outputs.file(derivedSpec)
 	doLast {
 		def text = sourceSpec.getText('UTF-8')
@@ -137,12 +138,14 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('test') {
+	inputs.file(sourceSpec).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('contractSpec')
 	useJUnitPlatform {
 		excludeTags 'integration'
 	}
 }
 
 tasks.register('integrationTest', Test) {
+	inputs.file(sourceSpec).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName('contractSpec')
 	description = 'Runs the Spring context tests (JUnit tag "integration").'
 	group = 'verification'
 	testClassesDirs = sourceSets.test.output.classesDirs
@@ -216,7 +219,7 @@ tasks.named('check') {
 pmd {
 	toolVersion = '7.24.0'
 	ruleSets = []
-	ruleSetFiles = files('config/pmd/ruleset.xml')
+	ruleSetFiles = files('../../config/pmd/ruleset.xml')
 	consoleOutput = true
 	ignoreFailures = false
 }

@@ -1,1 +1,3 @@
 rootProject.name = 'mi-bolt-backend'
+
+include 'services:commerce'

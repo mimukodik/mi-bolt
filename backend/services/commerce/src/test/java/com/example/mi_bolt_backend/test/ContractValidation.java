@@ -16,13 +16,14 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Helper that hands MockMvc a validator built from the contract source
- * ({@code api/openapi.yaml}, the original — the same file the generator
- * derives its copy from).
+ * ({@code contracts/commerce/openapi.yaml}, the repository's contract — the
+ * original the generator derives its copy from).
  *
  * <p>The factory reads the contract via {@link Files#readString(Path)} from
- * the project working directory. Tests run from the repository root in both
- * Gradle and the IDE, so a single source serves both. There is no committed
- * copy under {@code src/test/resources}.
+ * the Gradle project directory {@code backend/services/commerce/}, three
+ * levels below the repository root. That is Gradle's default test working
+ * directory, and IntelliJ's for a Gradle module, so a single source serves
+ * both. There is no committed copy under {@code src/test/resources}.
  */
 public final class ContractValidation {
 
@@ -48,18 +49,19 @@ public final class ContractValidation {
 				.build()));
 	}
 
-	/** Loads the contract from the project root; fail-fast if it cannot be read. */
+	/** Loads {@code contracts/commerce/openapi.yaml} from the Gradle project directory
+	 * {@code backend/services/commerce/}; fail-fast if it cannot be read. */
 	public static OpenApiInteractionValidator validator() {
 		return validator(LevelResolver.defaultResolver());
 	}
 
 	private static OpenApiInteractionValidator validator(LevelResolver levels) {
 		try {
-			String spec = Files.readString(Path.of("api/openapi.yaml"), StandardCharsets.UTF_8);
+			String spec = Files.readString(Path.of("../../../contracts/commerce/openapi.yaml"), StandardCharsets.UTF_8);
 			return OpenApiInteractionValidator.createForInlineApiSpecification(spec).withLevelResolver(levels).build();
 		}
 		catch (IOException e) {
-			throw new IllegalStateException("Cannot read api/openapi.yaml from the project root", e);
+			throw new IllegalStateException("Cannot read contracts/commerce/openapi.yaml (../../../ from backend/services/commerce)", e);
 		}
 	}
 }
