@@ -85,6 +85,17 @@ describe('toFormModel / toProductInput round trip', () => {
   }
 });
 
+describe('toFormModel: a variant whose colorCode matches no colour', () => {
+  it('maps colorKey to null instead of throwing', () => {
+    const base = seedCatalog().products[0];
+    const product = { ...base, variants: [{ ...base.variants[0], colorCode: 'no-such-code' }] };
+
+    const model = toFormModel(product);
+
+    expect(model.variants[0].colorKey).toBeNull();
+  });
+});
+
 describe('toFormModel / toProductInput colour rename', () => {
   it('carries a renamed colour code onto its variants’ colorCode and slug', () => {
     const model = validModel();

@@ -614,6 +614,18 @@ describe('productFormSchema: variants', () => {
     ).toEqual([message]);
   });
 
+  it('leaves colorKey clean when it resolves but storageGb is not chosen yet', () => {
+    const model = validModel();
+    model.variants[0].storageGb = null;
+    const f = buildForm(model);
+    expect(
+      f.variants[0]
+        .colorKey()
+        .errors()
+        .map((error) => error.message),
+    ).toEqual([]);
+  });
+
   it('flags an empty storageGb as required', () => {
     const model = validModel();
     model.variants[0].storageGb = null;
