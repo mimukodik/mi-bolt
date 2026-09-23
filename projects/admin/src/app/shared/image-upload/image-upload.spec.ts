@@ -433,7 +433,7 @@ describe('ImageUpload', () => {
   });
 
   it('15. a bare cancelable dragover on the drop zone calls preventDefault exactly once', async () => {
-    // Fails if onDragOver stops calling `event.preventDefault()` (image-upload.ts:152).
+    // Fails if onDragOver stops calling `event.preventDefault()` (image-upload.ts:155).
     const fixture = await createFixture(ImageUploadTestHost);
     const event = new Event('dragover', { cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
@@ -446,8 +446,8 @@ describe('ImageUpload', () => {
 
   it('16. focus() moves activeElement to the choose button, whose click clicks the hidden input once', async () => {
     // Fails if focus() stops calling `this.chooseButton().nativeElement.focus(...)`
-    // (image-upload.ts:129), or if openFilePicker() stops calling
-    // `this.fileInput().nativeElement.click()` (image-upload.ts:133).
+    // (image-upload.ts:132), or if openFilePicker() stops calling
+    // `this.fileInput().nativeElement.click()` (image-upload.ts:136).
     const fixture = await createFixture(ImageUploadTestHost);
     const instance = imageUploadInstance(fixture);
 
@@ -463,7 +463,7 @@ describe('ImageUpload', () => {
 
   it("17. a control whose value already carries an alt keeps it after a new upload's done", async () => {
     // Fails if onUploadProgress stops reading `this.value()?.alt` before building
-    // the new Image (image-upload.ts:205).
+    // the new Image (image-upload.ts:208).
     const fixture = await createFixture(ImageUploadTestHost);
     fixture.componentInstance.model.update((current) => ({
       ...current,
