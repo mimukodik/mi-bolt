@@ -27,6 +27,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   Injector,
@@ -140,6 +141,8 @@ export class CartPage {
    *  line that takes a removed line's place. */
   private readonly lines = viewChildren(CartLine);
   private readonly injector = inject(Injector);
+
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Variant id of the line whose mutation is currently in flight, or null.
    *  Only that line is disabled while the facade dispatches. */
@@ -377,6 +380,10 @@ export class CartPage {
    * focus, and without this it would drop to `<body>`.
    */
   private restoreFocus(index: number): void {
+    // A removal or clear can settle after the shopper has left the page;
+    // registering a render hook on a destroyed view throws NG0911, and a
+    // destroyed page has nothing left to focus.
+    if (this.destroyRef.destroyed) return;
     afterNextRender(
       () => {
         const lines = this.lines();

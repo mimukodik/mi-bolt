@@ -38,7 +38,7 @@ import { provideRouter, Router } from '@angular/router';
 import { http, HttpResponse } from 'msw';
 import { readdir, readFile } from 'node:fs/promises';
 import { join as pathJoin, resolve as pathResolve } from 'node:path';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
@@ -1410,5 +1410,71 @@ describe('focus after a cart line is removed ("következő sorra/címre")', () =
 
     expect(queryElement(root, 'app-empty-state')).not.toBeNull();
     expect(document.activeElement).toBe(root.querySelector('h1'));
+  });
+
+  it('a removal that settles after the page is destroyed does not throw', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.spyOn(cartFacade, 'removeItem').mockReturnValue(held);
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown): void => {
+      rejections.push(reason);
+    };
+    process.on('unhandledRejection', onRejection);
+    try {
+      removeButtons(root)[0]?.click();
+      fixture.destroy();
+      release();
+      await held;
+      // Node reports an unhandled rejection once the microtask queue has
+      // drained; one macrotask hop lets it fire before the assertion.
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+      expect(rejections).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+  });
+
+  it('a clear that settles after the page is destroyed does not throw', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    await cartFacade.addItem(VARIANT_MOTO_256, 1);
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.spyOn(cartFacade, 'clear').mockReturnValue(held);
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown): void => {
+      rejections.push(reason);
+    };
+    process.on('unhandledRejection', onRejection);
+    try {
+      getButtonElement(root, '[data-testid="cart-clear"] button').click();
+      fixture.destroy();
+      release();
+      await held;
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+      expect(rejections).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
   });
 });
