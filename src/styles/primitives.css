@@ -289,9 +289,10 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
   margin-left: auto;
 }
 
-/* Global on purpose: a component's @keyframes is scoped with its
-   selectors under emulated encapsulation, so this global skeleton
-   cannot borrow LoadingState's own keyframes by name. */
+/* Global on purpose: under emulated encapsulation the Angular compiler
+   rewrites @keyframes names in a component's CSS with a hash suffix, so
+   a global stylesheet cannot reference a keyframe defined inside a
+   component by its original name. */
 @keyframes facet-skeleton-shimmer {
   from {
     background-position: 200% 0;
