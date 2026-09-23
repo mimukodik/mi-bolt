@@ -16,7 +16,7 @@ import { demoSessionInterceptor } from './core/api/demo-session.interceptor';
  * inserting a new `const _foo = provideX(...)` line.
  */
 const _provideZoneless: EnvironmentProviders = provideZonelessChangeDetection();
-const _provideHttpWithFetch = provideHttpClient(withInterceptors([demoSessionInterceptor]));
+const _provideHttp = provideHttpClient(withInterceptors([demoSessionInterceptor]));
 const _provideRouter = provideRouter(
   routes,
   withComponentInputBinding(),
@@ -36,7 +36,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     _provideZoneless,
-    _provideHttpWithFetch,
+    _provideHttp,
     _provideRouter,
     _provideApi,
   ],
@@ -51,7 +51,7 @@ export const appConfig: ApplicationConfig = {
  */
 export const providerManifest = {
   zonelessChangeDetection: _provideZoneless,
-  httpClientWithFetch: _provideHttpWithFetch,
+  httpClient: _provideHttp,
   router: _provideRouter,
   api: _provideApi,
 } as const;

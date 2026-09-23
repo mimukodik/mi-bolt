@@ -149,7 +149,7 @@ export class CartFacade {
     // primitives that ARE injectable: `HttpClient` and
     // `ApiConfiguration`. In a real browser the same `new Api(...)`
     // call sees the live `HttpClient` produced by
-    // `provideHttpClient(withFetch(), withInterceptors(...))`.
+    // `provideHttpClient(withInterceptors(...))`.
     this.api = new Api(inject(ApiConfiguration), inject(HttpClient));
     this.queue.setVersionProvider(() => this.cartWritable()?.version ?? null);
     this.destroyRef.onDestroy(() => {
