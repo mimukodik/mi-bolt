@@ -192,7 +192,7 @@ type TopLevelOutcome = 'conflict' | 'malformed' | 'required';
 
 interface TopLevelRow {
   readonly member: 'is5g' | 'rank' | 'releasedAt';
-  readonly sent: readonly string[];
+  readonly sent: readonly (string | number)[];
   readonly outcome: TopLevelOutcome;
 }
 
@@ -208,21 +208,25 @@ const topLevelRows: readonly TopLevelRow[] = [
     outcome: 'conflict',
   },
   { member: 'is5g', sent: ['tRue', `${NBSP}true`, `${NEL}true`], outcome: 'malformed' },
-  { member: 'is5g', sent: [' '], outcome: 'required' },
+  { member: 'is5g', sent: ['', ' '], outcome: 'required' },
   {
     member: 'rank',
-    sent: [' 1', '1 ', `${CTRL_1C}1`, '+1'],
+    sent: [' 1', '1 ', `${CTRL_1C}1`, '+1', 1.9],
     outcome: 'conflict',
   },
-  { member: 'rank', sent: [`${NBSP}1`, `${BOM}1`, '0x1', '1.0'], outcome: 'malformed' },
-  { member: 'rank', sent: [' '], outcome: 'required' },
+  {
+    member: 'rank',
+    sent: [`${NBSP}1`, `${BOM}1`, '0x1', '1.0', `${NEL} 1`],
+    outcome: 'malformed',
+  },
+  { member: 'rank', sent: ['', ' '], outcome: 'required' },
   {
     member: 'releasedAt',
     sent: [' 2024-01-15', '2024-01-15 ', `${CTRL_1C}2024-01-15`],
     outcome: 'conflict',
   },
   { member: 'releasedAt', sent: [`${NBSP}2024-01-15`], outcome: 'malformed' },
-  { member: 'releasedAt', sent: [' '], outcome: 'required' },
+  { member: 'releasedAt', sent: ['', ' '], outcome: 'required' },
 ];
 
 describe('products-write conversions: top-level members', () => {
@@ -256,7 +260,7 @@ interface VariantRow {
 const variantRows: readonly VariantRow[] = [
   { member: 'storageGb', sent: [' 128', `${CTRL_1C}128`], outcome: 'conflict' },
   { member: 'storageGb', sent: [`${NBSP}128`], outcome: 'malformed' },
-  { member: 'stock', sent: [`${CTRL_1C}1`], outcome: 'conflict' },
+  { member: 'stock', sent: [' 1', `${CTRL_1C}1`], outcome: 'conflict' },
   { member: 'stock', sent: [`${NBSP}1`], outcome: 'malformed' },
   { member: 'amount', sent: [' 1'], outcome: 'conflict' },
   { member: 'amount', sent: [`${NBSP}1`], outcome: 'malformed' },
@@ -304,7 +308,7 @@ interface PathIdRow {
 const pathIdRows: readonly PathIdRow[] = [
   {
     label: 'Java whitespace in the path id',
-    ids: ['5%1C', '%1C5', '5%09', '%205'],
+    ids: ['5%1C', '%1C5', '5%09', '%205', '5%20'],
     outcome: 'conflict',
   },
   {

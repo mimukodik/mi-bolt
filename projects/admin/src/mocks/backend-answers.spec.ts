@@ -234,4 +234,14 @@ describe('backend answers', () => {
     const noBreakEdges = `${String.fromCharCode(0xa0)}a${String.fromCharCode(0xa0)}`;
     expect(javaStrip(noBreakEdges)).toBe(noBreakEdges);
   });
+
+  // Pins code-point iteration: an astral character next to edge whitespace survives whole.
+  it('keeps a surrogate pair whole beside edge whitespace', () => {
+    const grin = String.fromCodePoint(0x1f600);
+    expect(javaStrip(` ${grin} `)).toBe(grin);
+    expect(javaStrip(`${String.fromCharCode(0x1c)}${grin}${String.fromCharCode(0x3000)}`)).toBe(
+      grin,
+    );
+    expect(javaIsBlank(` ${grin}`)).toBe(false);
+  });
 });
