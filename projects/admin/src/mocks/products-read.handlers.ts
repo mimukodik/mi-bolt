@@ -101,7 +101,7 @@ const INT32_MAX = 2147483647;
 const INT64_MIN = -9223372036854775808n;
 const INT64_MAX = 9223372036854775807n;
 const DECIMAL_INTEGER = /^[+-]?[0-9]+$/;
-const HEX_INTEGER = /^([+-]?)(?:0[xX]|#)([0-9a-fA-F]+)$/;
+const HEX_INTEGER = /^(-?)(?:0[xX]|#)([0-9a-fA-F]+)$/;
 
 type ConversionResult<T> = { readonly ok: true; readonly value: T } | { readonly ok: false };
 
@@ -137,7 +137,7 @@ function convertBoolean(raw: string | null): ConversionResult<boolean | undefine
   return { ok: false };
 }
 
-/** Whitespace stripped, then decimal or `0x`/`#` hex, bounded to a 32-bit signed integer; absent/`''` is `fallback`. */
+/** Whitespace stripped, then decimal (optional `+`/`-`) or `0x`/`#` hex (optional `-` only), bounded to a 32-bit signed integer; absent/`''` is `fallback`. */
 function convertInteger(raw: string | null, fallback: number): ConversionResult<number> {
   if (raw === null || raw === '') return { ok: true, value: fallback };
   const stripped = raw.replace(/\s+/g, '');
@@ -157,7 +157,7 @@ function isInt32(value: number): boolean {
   return Number.isInteger(value) && value >= INT32_MIN && value <= INT32_MAX;
 }
 
-/** Whitespace stripped, then decimal or `0x`/`#` hex, as a `bigint` with no range bound applied yet. */
+/** Whitespace stripped, then decimal (optional `+`/`-`) or `0x`/`#` hex (optional `-` only), as a `bigint` with no range bound applied yet. */
 function convertLong(raw: string): ConversionResult<bigint> {
   const stripped = raw.replace(/\s+/g, '');
   if (DECIMAL_INTEGER.test(stripped)) return { ok: true, value: BigInt(stripped) };

@@ -371,6 +371,30 @@ describe('productsReadHandlers list — auth and validation', () => {
     expect(page.pageSize).toBe(1);
   });
 
+  // Fails if HEX_INTEGER (line 104) still allows a leading '+' before a hex prefix: Spring's
+  // NumberUtils.isHexNumber strips only '-', so '+0x1' falls through to Integer.valueOf and errors.
+  it('rejects a +0x-prefixed page (the backend only strips a leading minus before hex)', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=%2B0x1`);
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'page', reason: 'type Integer' },
+    });
+  });
+
+  // Fails if DECIMAL_INTEGER stops accepting a leading '+' on a decimal page.
+  it('accepts a +-prefixed decimal page', async () => {
+    signedIn();
+    const { status, body } = await getJson(`${LIST_URL}?page=%2B1`);
+    expect(status).toBe(200);
+    const page = asListPage(body);
+    expect(page.page).toBe(1);
+  });
+
   // Fails if phase 3's pageSize MAX check ever runs before phase 2's page conversion.
   it('rejects an unconvertible page before checking pageSize (phase 2 before phase 3)', async () => {
     signedIn();
@@ -787,6 +811,21 @@ describe('productsReadHandlers detail', () => {
     expect(status).toBe(200);
     const product = asDetail(body);
     expect(product.id).toBe(1);
+  });
+
+  // Fails if HEX_INTEGER (line 104) still allows a leading '+' before a hex prefix: Spring's
+  // NumberUtils.isHexNumber strips only '-', so '+0x1' falls through to Long.valueOf and errors.
+  it('rejects a +0x-prefixed productId (the backend only strips a leading minus before hex)', async () => {
+    signedIn();
+    const { status, body } = await getJson(detailUrl(0).replace(/0$/, '+0x1'));
+    expect(status).toBe(400);
+    expect(asProblem(body)).toEqual({
+      status: 400,
+      code: 'INVALID_REQUEST',
+      title: 'Invalid request',
+      detail: 'Query or path parameter has the wrong type',
+      params: { parameter: 'productId', reason: 'type Long' },
+    });
   });
 
   // Fails if convertLong stops applying the '-' sign to a hex magnitude.
