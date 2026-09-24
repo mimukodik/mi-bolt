@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0011-order-payment-intent-unique
+      author: mi-bolt
+      comment: |
+        A succeeded card payment intent backs one order only (docs/02-backend.md
+        rule 38). OrderService refuses a reused intent with 422 PAYMENT_REQUIRED;
+        this unique constraint is the database backstop for two concurrent
+        requests that both passed that check. Cash-on-delivery orders carry a
+        NULL payment_intent_id, and NULLs never collide under a unique
+        constraint in PostgreSQL or H2.
+      changes:
+        - addUniqueConstraint:
+            tableName: shop_order
+            columnNames: payment_intent_id
+            constraintName: uq_shop_order_payment_intent
