@@ -43,8 +43,15 @@ SLOT_COUNT=20
 
 SLOTS_DIR="${MIBOLT_STACK_SLOTS_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/mi-bolt/worktree-stack-slots}"
 
+# Set by acquire_lock/release_lock below; read by the EXIT/INT/TERM traps
+# registered right after release_lock is defined.
+LOCK_DIR=""
+
+# Prints the whole leading comment block (from the line after the shebang up
+# to the first non-comment line), whatever its length, with the "# " prefix
+# stripped.
 usage() {
-  sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"
 }
 
 require_worktree() {
@@ -73,12 +80,29 @@ sanitize_branch() {
   printf '%s' "${s}"
 }
 
-project_name_for_branch() {
-  local branch="$1" sanitized project hash
+# sha1 hex digest of stdin. shasum ships on macOS; a minimal Linux image may
+# have only sha1sum (GNU coreutils) instead.
+sha1_hex() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 1 | awk '{print $1}'
+  elif command -v sha1sum >/dev/null 2>&1; then
+    sha1sum | awk '{print $1}'
+  else
+    echo "stack.sh: neither shasum nor sha1sum is on PATH" >&2
+    exit 1
+  fi
+}
+
+# The project name is decided once the slot is known, so two branches that
+# sanitize alike never collide: the slot number is part of the name. Keeps
+# the 63-character Compose project-name cap by cutting the combined
+# prefix+sanitized string and appending a hash of the raw branch name.
+project_name_for_slot() {
+  local branch="$1" slot="$2" sanitized project hash
   sanitized="$(sanitize_branch "${branch}")"
-  project="mi-bolt-wt-${sanitized}"
+  project="mi-bolt-wt${slot}-${sanitized}"
   if [ "${#project}" -gt 63 ]; then
-    hash="$(printf '%s' "${branch}" | shasum -a 1 | cut -c1-8)"
+    hash="$(printf '%s' "${branch}" | sha1_hex | cut -c1-8)"
     project="${project:0:54}-${hash}"
   fi
   printf '%s' "${project}"
@@ -91,15 +115,64 @@ guard_not_default_project() {
   fi
 }
 
-# Best-effort TCP probe of 127.0.0.1:<port>, bounded by `timeout` where
-# available. Returns 0 (success) when something accepts the connection.
+# Best-effort TCP probe of 127.0.0.1:<port>, bounded to about 1s either way.
+# Returns 0 (success) when something accepts the connection.
 port_in_use() {
   local port="$1"
   if command -v timeout >/dev/null 2>&1; then
     timeout 1 bash -c "exec 3<>'/dev/tcp/127.0.0.1/${port}'" 2>/dev/null
-  else
-    (exec 3<>"/dev/tcp/127.0.0.1/${port}") 2>/dev/null
+    return
   fi
+  # No `timeout` binary: bound the probe ourselves so a filtered port cannot
+  # hang this script, by backgrounding the connect attempt and killing it
+  # after about 1s (10 * 0.1s) if it has not returned by then.
+  ( exec 3<>"/dev/tcp/127.0.0.1/${port}" ) 2>/dev/null &
+  local pid=$! waited=0
+  while kill -0 "${pid}" 2>/dev/null; do
+    if [ "${waited}" -ge 10 ]; then
+      kill "${pid}" 2>/dev/null
+      wait "${pid}" 2>/dev/null
+      return 1
+    fi
+    sleep 0.1
+    waited=$((waited + 1))
+  done
+  wait "${pid}"
+}
+
+# Releases the per-worktree lock acquire_lock took, if any. Idempotent, and
+# armed as a trap right below so it fires on a normal exit, an error exit
+# under `set -e`, or an interrupt while the lock is held.
+release_lock() {
+  if [ -n "${LOCK_DIR}" ]; then
+    rmdir "${LOCK_DIR}" 2>/dev/null || true
+    LOCK_DIR=""
+  fi
+}
+trap release_lock EXIT
+trap 'release_lock; exit 130' INT
+trap 'release_lock; exit 143' TERM
+
+# Serializes ensure_state's check-claim-write sequence across two `stack.sh`
+# runs in the same worktree, so they cannot both miss find_existing_slot and
+# both claim a (different) slot, leaking one forever. The lock directory's
+# name starts with '.', so it is invisible to every `"${SLOTS_DIR}"/*/` glob
+# used to enumerate slots elsewhere in this script (bash's `*` does not match
+# dotfiles by default) and is never mistaken for a slot.
+acquire_lock() {
+  mkdir -p "${SLOTS_DIR}"
+  local hash lock_dir tries=50 _try
+  hash="$(printf '%s' "${REPO_ROOT}" | sha1_hex | cut -c1-12)"
+  lock_dir="${SLOTS_DIR}/.lock-${hash}"
+  for _try in $(seq 1 "${tries}"); do
+    if mkdir "${lock_dir}" 2>/dev/null; then
+      LOCK_DIR="${lock_dir}"
+      return 0
+    fi
+    sleep 0.1
+  done
+  echo "stack.sh: timed out waiting for the per-worktree lock ${lock_dir} (held by another stack.sh run in this worktree?)" >&2
+  exit 1
 }
 
 # Finds a slot this worktree already claimed (its owner file's worktree= line
@@ -112,7 +185,7 @@ find_existing_slot() {
   for dir in "${SLOTS_DIR}"/*/; do
     [ -d "${dir}" ] || continue
     [ -f "${dir}owner" ] || continue
-    owner_path="$(sed -n 's/^worktree=//p' "${dir}owner")"
+    owner_path="$(sed -n 's/^worktree=//p' "${dir}owner" 2>/dev/null)" || owner_path=""
     if [ "${owner_path}" = "${REPO_ROOT}" ]; then
       basename "${dir}"
       return 0
@@ -124,14 +197,15 @@ find_existing_slot() {
 # Claims the first free, actually-unused slot; prints its number on success.
 claim_slot() {
   mkdir -p "${SLOTS_DIR}"
-  local n dir web_port backend_port postgres_port
+  local n dir web_port backend_port postgres_port project
   for n in $(seq 1 "${SLOT_COUNT}"); do
     dir="${SLOTS_DIR}/${n}"
     if mkdir "${dir}" 2>/dev/null; then
+      project="$(project_name_for_slot "${BRANCH}" "${n}")"
       {
         echo "worktree=${REPO_ROOT}"
         echo "branch=${BRANCH}"
-        echo "project=${PROJECT_NAME}"
+        echo "project=${project}"
       } > "${dir}/owner"
       web_port=$((WEB_PORT_BASE + n))
       backend_port=$((BACKEND_PORT_BASE + n))
@@ -169,6 +243,16 @@ ensure_state() {
   if [ -f "${STATE_FILE}" ]; then
     return 0
   fi
+
+  acquire_lock
+
+  # Re-check under the lock: a concurrent `stack.sh` run in this worktree may
+  # have finished claiming while this one waited for the lock.
+  if [ -f "${STATE_FILE}" ]; then
+    release_lock
+    return 0
+  fi
+
   local slot
   slot="$(find_existing_slot)" || true
   if [ -n "${slot}" ]; then
@@ -177,10 +261,15 @@ ensure_state() {
     if ! slot="$(claim_slot)"; then
       echo "stack.sh: no free slot among ${SLOT_COUNT} in ${SLOTS_DIR}" >&2
       echo "stack.sh: see 'stack.sh slots' to list claims, 'stack.sh prune --yes' to free stale ones" >&2
+      release_lock
       exit 1
     fi
   fi
+
+  PROJECT_NAME="$(project_name_for_slot "${BRANCH}" "${slot}")"
+  guard_not_default_project "${PROJECT_NAME}"
   write_state "${slot}"
+  release_lock
 }
 
 load_state() {
@@ -246,16 +335,21 @@ cmd_status() {
 cmd_health() {
   load_state
   local cid
-  cid="$("${COMPOSE_SH}" ps -q postgres)"
+  if ! cid="$("${COMPOSE_SH}" ps -q postgres 2>/dev/null)"; then
+    cid=""
+  fi
   if [ -z "${cid}" ]; then
     echo "[ERROR] postgres service has no running container for project ${COMPOSE_PROJECT_NAME}" >&2
     exit 1
   fi
 
   local pg_user pg_db pg_password
-  pg_user="$(docker exec "${cid}" printenv POSTGRES_USER)"
-  pg_db="$(docker exec "${cid}" printenv POSTGRES_DB)"
-  pg_password="$(docker exec "${cid}" printenv POSTGRES_PASSWORD)"
+  if ! pg_user="$(docker exec "${cid}" printenv POSTGRES_USER 2>/dev/null)" \
+    || ! pg_db="$(docker exec "${cid}" printenv POSTGRES_DB 2>/dev/null)" \
+    || ! pg_password="$(docker exec "${cid}" printenv POSTGRES_PASSWORD 2>/dev/null)"; then
+    echo "[ERROR] could not read POSTGRES_* environment from container ${cid} (is it still running?)" >&2
+    exit 1
+  fi
 
   if docker exec "${cid}" pg_isready -U "${pg_user}" -d "${pg_db}" >/dev/null 2>&1; then
     echo "ok: pg_isready"
@@ -342,7 +436,7 @@ cmd_slots() {
     n="$(basename "${dir}")"
     echo "slot ${n}:"
     if [ -f "${dir}owner" ]; then
-      sed 's/^/  /' "${dir}owner"
+      sed 's/^/  /' "${dir}owner" 2>/dev/null || echo "  (owner file unreadable)"
     fi
   done
   if [ "${found}" = false ]; then
@@ -364,9 +458,9 @@ cmd_prune() {
     [ -d "${dir}" ] || continue
     n="$(basename "${dir}")"
     [ -f "${dir}owner" ] || continue
-    owner_path="$(sed -n 's/^worktree=//p' "${dir}owner")"
-    owner_branch="$(sed -n 's/^branch=//p' "${dir}owner")"
-    project="$(sed -n 's/^project=//p' "${dir}owner")"
+    owner_path="$(sed -n 's/^worktree=//p' "${dir}owner" 2>/dev/null)" || owner_path=""
+    owner_branch="$(sed -n 's/^branch=//p' "${dir}owner" 2>/dev/null)" || owner_branch=""
+    project="$(sed -n 's/^project=//p' "${dir}owner" 2>/dev/null)" || project=""
 
     if [ -d "${owner_path}" ]; then
       continue
@@ -378,9 +472,18 @@ cmd_prune() {
     fi
 
     if [ -z "${project}" ]; then
-      project="$(project_name_for_branch "${owner_branch}")"
+      if [ -z "${owner_branch}" ] || [ -z "$(sanitize_branch "${owner_branch}")" ]; then
+        echo "stack.sh: slot ${n} has no usable project or branch recorded in its owner file; skipping" >&2
+        continue
+      fi
+      project="$(project_name_for_slot "${owner_branch}" "${n}")"
     fi
-    guard_not_default_project "${project}"
+
+    if [ "${project}" = "mi-bolt-local" ]; then
+      echo "stack.sh: slot ${n}'s owner file names the mi-bolt-local project; skipping" >&2
+      continue
+    fi
+
     echo "stack.sh: pruning slot ${n}, project ${project}"
     if COMPOSE_PROJECT_NAME="${project}" MIBOLT_POSTGRES_VOLUME="${project}-pgdata" "${COMPOSE_SH}" down -v; then
       rm -rf "${dir}"
@@ -401,8 +504,6 @@ main() {
 
   require_worktree
   BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-  PROJECT_NAME="$(project_name_for_branch "${BRANCH}")"
-  guard_not_default_project "${PROJECT_NAME}"
 
   shift
   case "${cmd}" in
