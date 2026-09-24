@@ -243,8 +243,9 @@ bemutatón, és pont az nem látszik, amire a katalógus épült.
 A képeket **a backend tárolja és szolgálja ki**. Ez tudatosan ideiglenes: most a működő backend a
 cél, a tartalomszolgáltató hálózatra költözés egy későbbi refactor-kör.
 
-**A kiszolgáló művelet: `GET /media/{imageId}`.** Nyilvános, munkamenet nélkül elérhető — a kép
-semmilyen munkamenethez kötött adatot nem hordoz.
+**A kiszolgáló művelet: `GET /media/{imageId}`.** Munkamenet nélkül elérhető — a kép
+semmilyen munkamenethez kötött adatot nem hordoz —, de a demókapu sütije (`mibolt_demo_access`)
+kell hozzá, mint minden bolti híváshoz (ADR 0022).
 
 Elvárások a művelettől:
 
