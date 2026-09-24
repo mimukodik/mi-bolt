@@ -2,11 +2,11 @@
 
 The end-to-end suite was reinstated on 2026-09-22: Playwright under `e2e/`, written only by the `playwright-test-*` agents, its CI job skipped until the first spec lands. Section 3 describes it.
 
-These are acceptance requirements for the future application. This planning package does not contain a completed Angular app and therefore does not claim an Angular test suite, 100% application coverage, or successful SDK compilation. Historical package-generation logs are intentionally not distributed with these project docs; fresh application evidence must be produced during implementation under docs/mi-bolt/execution/.
+These are acceptance requirements for the future application. This planning package does not contain a completed Angular app and therefore does not claim an Angular test suite, 100% application coverage, or successful SDK compilation. Historical package-generation logs are intentionally not distributed with these project docs; fresh application evidence is produced during implementation and recorded with the work in Linear.
 
 ## 1. Exact meaning of the coverage thresholds
 
-Four independent unit metrics are measured on each project's aggregate: statements ≥ 80, branches ≥ 75, functions ≥ 80, lines ≥ 80 (`angular.json`, `coverageThresholds`, `perFile: false`). Passing100% of written tests is NOT100% source coverage, nor does source coverage prove correctness. The scenario/state/requirements matrix therefore adds independent behavioral assertions.
+Four independent unit metrics are measured on the aggregate of each project with a `test` target (the generated `shop-api` library has none): statements ≥ 80, branches ≥ 75, functions ≥ 80, lines ≥ 80 (`angular.json`, `coverageThresholds`, `perFile: false`). Passing100% of written tests is NOT100% source coverage, nor does source coverage prove correctness. The scenario/state/requirements matrix therefore adds independent behavioral assertions.
 
 The denominator is explicit and version-controlled in the `coverageInclude` and `coverageExclude` options of the `test` target in `angular.json`. Include **all first-party runtime TypeScript**, including app bootstrap, guards, interceptors, facades, presentational behavior, parsing/validation, shared helpers and MSW mock handler/domain/persistence code. An unimported or unvisited file remains in the denominator with zero execution. Dead or impossible code requires a design correction, not an ignore annotation. No broad `core/**`, `mocks/**` or `errors/**` exclusions are allowed.
 
@@ -37,7 +37,7 @@ Example planned angular.json test target:
   "options": {
     "coverage": true,
     "coverageInclude": ["projects/storefront/src/**/*.ts"],
-    "coverageExclude": ["**/*.spec.ts", "**/*.test.ts", "**/*.d.ts", "projects/storefront/src/app/api/generated/**", "tests/**"],
+    "coverageExclude": ["**/*.spec.ts", "**/*.test.ts", "**/*.d.ts", "tests/**"],
     "coverageThresholds": {"perFile":false,"statements":80,"branches":75,"functions":80,"lines":80},
     "coverageReporters": ["html","lcov","json","json-summary"]
   }
@@ -102,7 +102,7 @@ npm run format            prettier --write .
 npm run format:check      prettier --check .
 ```
 
-The frontend CI workflow (`.github/workflows/frontend.yml`, called by `.github/workflows/ci.yml`) runs these gates: `lint`, `unit-tests` with coverage, `build` and `api-drift`; its `e2e` and `e2e-report` jobs carry `if: false` until the first spec under `e2e/integration/` lands. Every command is also run directly by whoever does the work, and its exit code is recorded with that task's evidence under docs/mi-bolt/execution/. Two of the checks are configuration rather than commands of their own: bundle budgets are the Angular CLI's own `budgets` array in the `production` build configuration of angular.json, so `ng build` enforces them, and unit coverage thresholds are the `@angular/build:unit-test` builder's own `coverageThresholds`, so `ng test` enforces them. Browser tests use a local STATIC host, not a business backend. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.
+The frontend CI workflow (`.github/workflows/frontend.yml`, called by `.github/workflows/ci.yml`) runs these gates: `lint`, `unit-tests` with coverage, `build` and `api-drift`; its `e2e` and `e2e-report` jobs carry `if: false` until the first spec under `e2e/integration/` lands. Every command is also run directly by whoever does the work, and its exit code is recorded with that task's evidence in Linear. Two of the checks are configuration rather than commands of their own: bundle budgets are the Angular CLI's own `budgets` array in the `production` build configuration of angular.json, so `ng build` enforces them, and unit coverage thresholds are the `@angular/build:unit-test` builder's own `coverageThresholds`, so `ng test` enforces them. Browser tests use a local STATIC host, not a business backend. Unexpected console/schema/network errors fail immediately; scenario-expected failures are explicitly asserted.
 
 ## 8. Required evidence
 

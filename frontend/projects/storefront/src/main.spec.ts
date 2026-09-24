@@ -9,7 +9,7 @@
  * development `fileReplacements` make `environment.production` false
  * under `ng test`. `start()` therefore skips its production early
  * return and reaches `await import('./core/bootstrap-demo')`, which
- * statically imports `../mocks/browser`, whose module scope calls
+ * statically imports `projects/shop-mocks/src/browser`, whose module scope calls
  * `setupWorker()` from `msw/browser`. Outside a real browser that call
  * throws `Invariant Violation: [MSW] Failed to execute setupWorker in
  * a non-browser environment`, the `import()` sits outside `start()`'s
@@ -110,9 +110,8 @@ describe('T01: the unit suite does not boot the application', () => {
 
 /**
  * The two flags the MSW gates read. `src/main.ts:48` returns before
- * `startMocks()` when `production` is true, and both
- * `src/core/bootstrap-demo.ts` and `startMockWorker` in
- * `src/mocks/browser.ts` return early unless `demo` is true.
+ * `startMocks()` when `production` is true, and `src/core/bootstrap-demo.ts`
+ * returns early unless `demo` is true.
  */
 interface EnvironmentFlags {
   readonly production: boolean;
@@ -330,13 +329,11 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     // configuration that artefact is built from, in `npm run test`.
     for (const project of ['storefront', 'demo-payment']) {
       const replacement = readProjectReplacements(project, 'production').find(
-        (entry) => entry.replace === 'projects/storefront/src/mocks/browser.ts',
+        (entry) => entry.replace === 'projects/shop-mocks/src/browser.ts',
       );
-      expect(replacement?.with).toBe('projects/storefront/src/mocks/browser.production.ts');
+      expect(replacement?.with).toBe('projects/shop-mocks/src/browser.production.ts');
     }
-    expect(existsSync(join(REPO_ROOT, 'projects/storefront/src/mocks/browser.production.ts'))).toBe(
-      true,
-    );
+    expect(existsSync(join(REPO_ROOT, 'projects/shop-mocks/src/browser.production.ts'))).toBe(true);
 
     const shopPublic = readBuildAssets('storefront').filter(
       (pattern) => pattern.input === 'projects/storefront/public',

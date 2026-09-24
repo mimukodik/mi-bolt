@@ -36,23 +36,23 @@ import * as operations from '../../projects/shop-api/src/generated/functions';
 import {
   createHandlers,
   createStrictHandlers,
-} from '../../projects/storefront/src/mocks/create-handlers';
-import { Repository as Repo } from '../../projects/storefront/src/mocks/repository';
+} from '../../projects/shop-mocks/src/create-handlers';
+import { Repository as Repo } from '../../projects/shop-mocks/src/repository';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
   type ScenarioDescriptor,
-} from '../../projects/storefront/src/mocks/scenarios';
+} from '../../projects/shop-mocks/src/scenarios';
 // Side-effect imports — each slice module calls `registerBusinessHandlers`
 // on load. The order matters only for the shared stores inside the
 // payment / order slices; once both have registered, every entry in
 // the dispatcher registry is callable.
-import '../../projects/storefront/src/mocks/catalog/catalog.handlers';
-import '../../projects/storefront/src/mocks/cart/cart.handlers';
-import '../../projects/storefront/src/mocks/checkout/checkout.handlers';
-import '../../projects/storefront/src/mocks/payment/payment.handlers';
-import '../../projects/storefront/src/mocks/orders/order.handlers';
+import '../../projects/shop-mocks/src/catalog/catalog.handlers';
+import '../../projects/shop-mocks/src/cart/cart.handlers';
+import '../../projects/shop-mocks/src/checkout/checkout.handlers';
+import '../../projects/shop-mocks/src/payment/payment.handlers';
+import '../../projects/shop-mocks/src/orders/order.handlers';
 
 import {
   REQUIRED_OPERATION_COUNT,
@@ -71,7 +71,7 @@ import { demoSessionInterceptor } from '../../projects/core-api/src/demo-session
 import {
   isCatalogFixtureShape,
   loadCatalogFixture,
-} from '../../projects/storefront/src/mocks/catalog/catalog.handlers';
+} from '../../projects/shop-mocks/src/catalog/catalog.handlers';
 import catalogFixture from '../../docs/api/fixtures/catalog.json';
 
 const BASE_URL = 'http://localhost/api/v1';
@@ -293,7 +293,7 @@ describe('T26-AC03 business-error code coverage', () => {
     // contracts/commerce/openapi.yaml:993-1001 declares If-Match required on
     // every mutation; contracts/commerce/openapi.yaml:1050-1066 binds 412 to
     // CART_VERSION_CONFLICT. The cart handler
-    // (src/mocks/cart/cart.handlers.ts:277-291) checks the header
+    // (projects/shop-mocks/src/cart/cart.handlers.ts:277-291) checks the header
     // and returns 412 CART_VERSION_CONFLICT when it is missing.
     const sessionId = 'session-test-12345678';
     const res = await rawFetch(
@@ -310,7 +310,7 @@ describe('T26-AC03 business-error code coverage', () => {
   it('wrong type (quantity as string) returns 400 INVALID_REQUEST', async () => {
     // contracts/commerce/openapi.yaml:1015-1018 maps 400 BadRequest to code
     // INVALID_REQUEST. Cart handler
-    // (src/mocks/cart/cart.handlers.ts:205-227) emits 400 when
+    // (projects/shop-mocks/src/cart/cart.handlers.ts:205-227) emits 400 when
     // quantity is not an integer in 1..10.
     const sessionId = 'session-test-12345678';
     const res = await rawFetch(

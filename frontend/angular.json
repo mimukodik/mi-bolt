@@ -54,8 +54,8 @@
               },
               "fileReplacements": [
                 {
-                  "replace": "projects/storefront/src/mocks/browser.ts",
-                  "with": "projects/storefront/src/mocks/browser.production.ts"
+                  "replace": "projects/shop-mocks/src/browser.ts",
+                  "with": "projects/shop-mocks/src/browser.production.ts"
                 }
               ]
             },
@@ -172,8 +172,8 @@
               },
               "fileReplacements": [
                 {
-                  "replace": "projects/storefront/src/mocks/browser.ts",
-                  "with": "projects/storefront/src/mocks/browser.production.ts"
+                  "replace": "projects/shop-mocks/src/browser.ts",
+                  "with": "projects/shop-mocks/src/browser.production.ts"
                 }
               ]
             },
@@ -181,12 +181,6 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "fileReplacements": [
-                {
-                  "replace": "projects/storefront/src/environments/environment.ts",
-                  "with": "projects/storefront/src/environments/environment.development.ts"
-                }
-              ],
               "assets": [
                 {
                   "glob": "mockServiceWorker.js",
@@ -462,6 +456,41 @@
           "builder": "@angular-eslint/builder:lint",
           "options": {
             "lintFilePatterns": ["projects/shop-api/**/*.ts"],
+            "eslintConfig": "eslint.config.mjs"
+          }
+        }
+      }
+    },
+    "shop-mocks": {
+      "projectType": "library",
+      "root": "projects/shop-mocks",
+      "sourceRoot": "projects/shop-mocks/src",
+      "prefix": "lib",
+      "architect": {
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "storefront:build:development",
+            "tsConfig": "projects/shop-mocks/tsconfig.spec.json",
+            "runnerConfig": "projects/shop-mocks/vitest.config.ts",
+            "setupFiles": ["tests/setup-msw.ts"],
+            "coverage": true,
+            "coverageInclude": ["projects/shop-mocks/src/**/*.ts"],
+            "coverageExclude": ["**/*.spec.ts", "**/*.d.ts"],
+            "coverageThresholds": {
+              "perFile": false,
+              "statements": 80,
+              "branches": 75,
+              "functions": 80,
+              "lines": 80
+            },
+            "coverageReporters": ["json-summary", "json", "text"]
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": ["projects/shop-mocks/**/*.ts"],
             "eslintConfig": "eslint.config.mjs"
           }
         }

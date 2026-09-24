@@ -7,7 +7,7 @@
  * `production: true, demo: false`, so the MSW bootstrap
  * short-circuits, and the production dist carries no MSW at all: the
  * production configuration's `fileReplacements` swap
- * `src/mocks/browser.ts` for `browser.production.ts`, and the base
+ * `projects/shop-mocks/src/browser.ts` for `browser.production.ts`, and the base
  * `assets` pattern ignores `mockServiceWorker.js`
  * (`npm run check:storefront-dist`).
  *

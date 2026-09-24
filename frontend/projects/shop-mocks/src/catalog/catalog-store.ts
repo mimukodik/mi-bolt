@@ -2,7 +2,7 @@
  * MIM-210 — catalogue store for the 2.0.0 contract mock.
  *
  * The store is the single in-memory source of truth behind the
- * catalogue handlers (`src/mocks/catalog/catalog.handlers.ts`). It
+ * catalogue handlers (`projects/shop-mocks/src/catalog/catalog.handlers.ts`). It
  * keeps the contract shape (`Product`, `CatalogItem`, `Image`,
  * `StorageGb`) and the parallel ranking fields the handlers need but
  * `Product` does not carry, because `ProductBase` and `Product` are
@@ -10,7 +10,7 @@
  * popularityScore / featured / colorOrder at query time.
  *
  * The store is module-local; the handlers live on top of it and never
- * touch a Repository. `src/mocks/browser.ts` calls `load(...)` once
+ * touch a Repository. `projects/shop-mocks/src/browser.ts` calls `load(...)` once
  * with the generated fixture (`docs/api/fixtures/catalog.json`).
  */
 

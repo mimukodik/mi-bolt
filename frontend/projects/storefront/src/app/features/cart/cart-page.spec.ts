@@ -43,15 +43,15 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
-import { type CreateHandlersOptions, createHandlers } from '../../../mocks/create-handlers';
-import '../../../mocks/cart/cart.handlers';
-import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
-import { Repository } from '../../../mocks/repository';
+import { type CreateHandlersOptions, createHandlers } from '@mi-bolt/mocks/create-handlers';
+import '@mi-bolt/mocks/cart/cart.handlers';
+import { isCatalogFixtureShape, loadCatalogFixture } from '@mi-bolt/mocks/catalog/catalog.handlers';
+import { Repository } from '@mi-bolt/mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
-} from '../../../mocks/scenarios';
+} from '@mi-bolt/mocks/scenarios';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { Button } from '../../shared/ui/button/button';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -513,10 +513,10 @@ describe('T18-AC03 line state and the empty screen on last-line removal', () => 
         HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:service-unavailable',
-            title: 'Hiba',
+            title: 'Service unavailable',
             status: 503,
             code: 'SERVICE_UNAVAILABLE',
-            detail: 'A kosár szolgáltatás átmenetileg nem elérhető.',
+            detail: 'The cart service is temporarily unavailable.',
             traceId: 'spec-trace-503',
             fieldErrors: [],
           },
@@ -734,10 +734,10 @@ describe('FIX-21 only the mutating line is disabled', () => {
         HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:cart-version-conflict',
-            title: 'Ütközés',
+            title: 'Precondition failed',
             status: 412,
             code: 'CART_VERSION_CONFLICT',
-            detail: 'A kosár időközben megváltozott.',
+            detail: 'The cart changed since the version supplied in If-Match',
             traceId: 'spec-trace-412',
             fieldErrors: [],
             params: { expected: 2, received: 1 },
@@ -1028,7 +1028,7 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     await cartFacade.addItem(VARIANT_MOTO_256, 2);
     server.use(
       http.get('*/api/v1/cart', () =>
-        serverError('A kosár nem érhető el.', 'spec-trace-500-continue-read'),
+        serverError('The cart is unavailable.', 'spec-trace-500-continue-read'),
       ),
     );
 
@@ -1108,7 +1108,7 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     return HttpResponse.json(
       {
         type: 'about:blank',
-        title: 'Szerverhiba',
+        title: 'Internal server error',
         status: 500,
         code: 'INTERNAL_SERVER_ERROR',
         detail,
@@ -1125,7 +1125,7 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     await cartFacade.addItem(VARIANT_MOTO_256, 2);
     server.use(
       http.delete('*/api/v1/cart/items/:variantId', () =>
-        serverError('A termék eltávolítása nem sikerült.', 'spec-trace-500-continue-remove'),
+        serverError('Removing the item failed.', 'spec-trace-500-continue-remove'),
       ),
     );
 
@@ -1148,7 +1148,7 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
     await cartFacade.addItem(VARIANT_MOTO_256, 2);
     server.use(
       http.delete('*/api/v1/cart/items', () =>
-        serverError('A kosár ürítése nem sikerült.', 'spec-trace-500-continue-clear'),
+        serverError('Clearing the cart failed.', 'spec-trace-500-continue-clear'),
       ),
     );
 
@@ -1182,10 +1182,10 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
         HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:cart-version-conflict',
-            title: 'Ütközés',
+            title: 'Precondition failed',
             status: 412,
             code: 'CART_VERSION_CONFLICT',
-            detail: 'A kosár időközben megváltozott.',
+            detail: 'The cart changed since the version supplied in If-Match',
             traceId: 'spec-trace-412-continue',
             fieldErrors: [],
             params: { expected: 2, received: 1 },
@@ -1196,7 +1196,7 @@ describe('T18-AC04 Continue gating and authoritative revalidation', () => {
       http.get('*/api/v1/cart', () => {
         reads += 1;
         return reads === 1
-          ? serverError('A kosár nem érhető el.', 'spec-trace-500-resync')
+          ? serverError('The cart is unavailable.', 'spec-trace-500-resync')
           : HttpResponse.json(serverCart);
       }),
     );
@@ -1446,10 +1446,10 @@ describe('MIM-216: every dismissible status message closes and returns focus', (
         HttpResponse.json(
           {
             type: 'about:blank',
-            title: 'Szerverhiba',
+            title: 'Internal server error',
             status: 500,
             code: 'INTERNAL_SERVER_ERROR',
-            detail: 'A termék eltávolítása nem sikerült.',
+            detail: 'Removing the item failed.',
             traceId: 'spec-trace-500',
             fieldErrors: [],
           },

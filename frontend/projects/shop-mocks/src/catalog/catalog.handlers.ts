@@ -9,11 +9,13 @@
  *   - getMedia             → GET  /api/v1/media/{imageId}
  *
  * The handlers live on top of `catalogStore` (this file's module
- * local). The store is loaded by `src/mocks/browser.ts` from
+ * local). The store is loaded by `projects/shop-mocks/src/browser.ts` from
  * `docs/api/fixtures/catalog.json`; the spec loads its own copy.
  */
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
+
+import type { Problem } from '@mi-bolt/api/models/problem';
 
 import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
 import { isRecord as isPlainRecord } from '../is-record';
@@ -37,7 +39,7 @@ import {
 } from './catalog-filter';
 import { buildFacets } from './catalog-facets';
 
-/** Module-local store. `src/mocks/browser.ts` calls `loadCatalogFixture(store)`. */
+/** Module-local store. `projects/shop-mocks/src/browser.ts` calls `loadCatalogFixture(store)`. */
 export const catalogStore: { current: CatalogStore | null } = { current: null };
 
 /** Loads the supplied fixture into the store, replacing any prior load. */
@@ -65,21 +67,10 @@ function traceId(options: CreateHandlersOptions): string {
   return (hex + '0000000000000000').slice(0, 24);
 }
 
-interface ProblemBody {
-  type: string;
-  title: string;
-  status: number;
-  code: string;
-  detail: string;
-  traceId: string;
-  fieldErrors: readonly { path: string; code: string }[];
-  params?: Readonly<Record<string, unknown>>;
-}
-
 /** Map a parse-time error onto the 400 Problem. */
 function invalidRequest(options: CreateHandlersOptions, error: FilterError): Response {
   const detail = error.kind === 'invalid-value' ? error.detail : `${error.parameter} is invalid`;
-  const body: ProblemBody = {
+  const body: Problem = {
     type: 'urn:mi-bolt:problem:invalid-request',
     title: 'Invalid request',
     status: 400,
@@ -100,7 +91,7 @@ function notFoundProblem(
   detail: string,
   params: Readonly<Record<string, unknown>>,
 ): Response {
-  const body: ProblemBody = {
+  const body: Problem = {
     type: 'urn:mi-bolt:problem:not-found',
     title: 'Resource not found',
     status: 404,
@@ -261,7 +252,7 @@ export function buildMediaHandler(
     const imageId = String(params['imageId']);
     const bytes = await loader(imageId);
     if (bytes === undefined) {
-      const body: ProblemBody = {
+      const body: Problem = {
         type: 'urn:mi-bolt:problem:not-found',
         title: 'Resource not found',
         status: 404,

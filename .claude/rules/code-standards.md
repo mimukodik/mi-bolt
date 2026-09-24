@@ -36,15 +36,18 @@ path-scoped rules trigger only on a read.
   chrome-devtools subagent, per `.claude/rules/browser-verification.md`.
   Typecheck and unit tests alone are never enough.
 - **Coverage is an aggregate floor here, not a per-line gate.**
-  `frontend/angular.json`'s `coverageThresholds` measures the whole of
-  `frontend/projects/storefront/src/**` rather than each file: 80% statements,
-  lines and functions, 75% branches, which `npm --prefix frontend run test`
-  enforces and which passes today with three to five points of headroom. The
-  numbers sit just under the real figures deliberately, so the gate blocks
-  nothing being written now and fails the moment coverage decays. The
-  backend's floor is the JaCoCo line-coverage verification its `build` task
-  runs, a bundle ratio and a per-class ratio with the generated code
-  excluded; `backend/services/commerce/build.gradle` owns those numbers.
+  `frontend/angular.json` gives every frontend app, and every library with a
+  `test` target, a floor, in that project's own `coverageThresholds`,
+  measured over the project as a whole rather than per file and enforced by
+  `npm --prefix frontend run test`, which CI runs as well. The generated
+  `shop-api` library has no `test` target and so no floor. The floors are
+  identical across projects and sit below each one's measured coverage, so
+  they block nothing being written now and do not fail the moment coverage
+  decays, only once it has fallen below the floor. The backend's floor is
+  the JaCoCo line-coverage
+  verification its `build` task runs, a bundle ratio and a per-class ratio
+  with the generated code excluded; `backend/services/commerce/build.gradle`
+  owns those numbers.
 
   This replaces a 100% changed-line requirement, and the user set the budget:
   "haladnunk kene es ez demo mvp app ami sosem lesz eles" ("we need to make
@@ -114,7 +117,7 @@ path-scoped rules trigger only on a read.
   feature, it goes out of every layer in the same change: the type union, the
   template, the SCSS, the handler, the fixture, and its tests. No compatibility
   shim, no "the old payload still parses so nothing breaks", no code parked
-  against a future rebuild. What `frontend/projects/storefront/src/mocks/`
+  against a future rebuild. What `frontend/projects/shop-mocks/src/`
   already serves is not a reason to keep one either: a fixture in a shape the
   code no longer knows is not a case to design for, and a handler that tolerates
   it is work spent on a hypothetical. It goes out with the rest.
