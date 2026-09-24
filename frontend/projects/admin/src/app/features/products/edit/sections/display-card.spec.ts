@@ -118,6 +118,18 @@ describe('DisplayCard', () => {
     target.dispatchEvent(new Event('blur'));
   }
 
+  /**
+   * The touch a blur writes arrives late for the toggle: `MatSlideToggle` calls
+   * `onTouched` inside the `Promise.resolve().then(...)` of its
+   * `ngAfterContentInit` focus-monitor subscription (the installed
+   * `@angular/material/fesm2022/slide-toggle.mjs`), so the first `whenStable`
+   * can resolve before the field state carries it and the second settles it.
+   */
+  async function settleTouch(): Promise<void> {
+    await fixture.whenStable();
+    await fixture.whenStable();
+  }
+
   it('1: renders Kiemelt unchecked, the featured count and the two numbers', () => {
     // Fails if the hint stops counting the others, the toggle renders checked,
     // or the numbers are not written into their inputs.
@@ -149,10 +161,7 @@ describe('DisplayCard', () => {
     toggleButton().click();
     await fixture.whenStable();
     blur(toggleButton());
-    // Material's focus monitor marks the toggle touched from a microtask, so the
-    // first `whenStable` can resolve before the field state carries it.
-    await fixture.whenStable();
-    await fixture.whenStable();
+    await settleTouch();
 
     expect(hint()).toBe('5 / 4 kiemelt termék');
     expect(controlError()).toBe('Legfeljebb 4 kiemelt termék lehet.');
@@ -172,8 +181,7 @@ describe('DisplayCard', () => {
     toggleButton().click();
     await fixture.whenStable();
     blur(toggleButton());
-    await fixture.whenStable();
-    await fixture.whenStable();
+    await settleTouch();
 
     expect(host.form.featured().touched()).toBe(true);
     expect(controlError()).toBe('');

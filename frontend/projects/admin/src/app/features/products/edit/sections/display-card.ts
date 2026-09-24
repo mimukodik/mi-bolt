@@ -39,6 +39,9 @@ export class DisplayCard {
   readonly attempted = input.required<boolean>();
   readonly featuredOthers = input.required<number | null>();
 
+  /** The featured cap the hint counts against, the same number `productFormSchema`'s `featuredLimit` uses. */
+  protected readonly max = 4;
+
   /** The featured products counted with this one, or `null` while the others are unknown. */
   protected readonly featuredCount = computed(() => {
     const others = this.featuredOthers();
@@ -47,7 +50,7 @@ export class DisplayCard {
 
   protected readonly featuredHint = computed(() => {
     const count = this.featuredCount();
-    return count === null ? '' : `${String(count)} / 4 kiemelt termék`;
+    return count === null ? '' : `${String(count)} / ${String(this.max)} kiemelt termék`;
   });
 
   /** Errors of this section's fields, shown once a save was attempted. */
