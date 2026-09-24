@@ -2,7 +2,7 @@
   "deliveryOptions": [
     {
       "id": "home_delivery",
-      "label": "Házhozszállítás",
+      "label": "Házhoz szállítás",
       "description": "Kiszállítás a megadott címre",
       "fee": {
         "amount": 1990,
