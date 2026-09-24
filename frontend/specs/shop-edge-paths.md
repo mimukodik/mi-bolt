@@ -1,0 +1,119 @@
+# MiBolt shop edge-path test plan
+
+## Application Overview
+
+MiBolt is a Hungarian demo storefront: an Angular application served from the Playwright base URL with the in-page MSW mock behind it (no backend, no database). This plan covers the shop's error, recovery and less-travelled paths outside the checkout wizard: the cart page under a refused mutation, the product page's per-line quantity limit, an unknown product slug and an unknown variant link, the product gallery and the purchase messages' dismiss control, the catalogue opened from a URL that carries its state, the mobile filter drawer, the demo access gate, and the header navigation at the mobile width. The happy paths — the catalogue's filters, sorting, paging and page size, the variant choice, the out-of-stock variant, add to cart, the repeat add, the cart line removal and the empty cart, and the whole checkout wizard — are `specs/storefront-integration.md` and none of them is repeated here.
+
+Three facts govern every scenario. First, each test starts in a fresh browser context, and the mock keeps its cart in that context's `sessionStorage` keyed by the scenario name, so a fresh page is an empty cart; the demo gate starts signed in on every scenario except `?mi-scenario=demo-signed-out`. Second, the mock reads its scenario from `?mi-scenario=<name>` when the document loads and the MSW worker is started once per document, so an in-app navigation keeps the scenario while a `page.goto` without the query loads the default scenario again: a scenario that has to survive a navigation stays inside one page load. `?mi-scenario=cart-mutation-fails` makes removing a cart line and clearing the cart answer 503 and leave the cart exactly as it was, while additions and quantity changes still succeed. Third, the same specs run in both integration viewports: at 1920x1080 and wider the catalogue's filters are the sidebar (`filter-panel`), the product page's add control is `add-to-cart-button`, the filter drawer's trigger `filter-trigger` is `display: none` and the header shows its desktop nav; at 390x844 the filters are the drawer the trigger opens, the add control is the sticky rail's `purchase-cta`, and the header shows `menu-trigger` with the mobile search bar. A step therefore names the mount the viewport shows, and the data-layout facts are asserted where they hold. Controls built on the `app-button` primitive are host elements carrying the test id, so a press targets the native `button` inside them: `page.getByTestId('<id>').getByRole('button')`.
+
+Products are never named by slug or product name: every scenario picks its card by what the screen shows (the first card with no "Elfogyott" marker). The one literal slug a scenario uses is the unknown `/telefonok/nem-letezo-telefon`.
+
+## Test Scenarios
+
+### 1. Shop: edge paths
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 1.1. a refused cart removal and a refused clear leave the cart as it was
+
+**File:** `e2e/integration/cart-refused-removal-and-clear.spec.ts`
+
+**Steps:**
+
+1. Open `/telefonok?mi-scenario=cart-mutation-fails` and wait for the grid. - expect: `result-count` reads "55 találat a szűrt feltételek szerint" and `product-card` elements are rendered. - expect: `cart-badge` reads "0": a fresh context holds no cart under this scenario either, because the mock keys its snapshot by the scenario name and this scenario's cart was never filled.
+2. Open the first `product-card` that has no `product-card-stock` marker through its `product-card-cta`, then press the inner button of `add-to-cart-button` ("Kosárba teszem"). - expect: `product-page` is visible and `product-stock` reads "Raktáron a demó készletben". - expect: The confirmation reads "<product name>, <colour>, <n> GB – 1 darab a kosárban." and `cart-badge` reads "1": additions still succeed, because the scenario intercepts only the cart's two DELETE routes.
+3. Open the cart with the header's `cart-link`. - expect: `cart-page` is visible with the checkout header (`checkout-header`; the checkout layout carries no `cart-badge`) and the heading "A kosarad". - expect: Exactly one `cart-line` is rendered, `cart-count` reads "Kosárban található termékek (1)" and the inner button of `cart-continue` is enabled: the cart is not empty and nothing is in flight.
+4. Press the line's `cart-line-remove` ("Törlöm"). - expect: A status message appears reading "A kosár módosítása nem sikerült; a kosár változatlan." - expect: The cart is untouched: one `cart-line` remains and `cart-count` still reads "Kosárban található termékek (1)". - expect: The refusal blocks nothing: `cart-continue` is still enabled and `cart-line-remove` is enabled again, so the removal can be tried once more. - expect: The message carries no "Bezárás" control: the page shows a failed mutation as a persistent error, not as a dismissible notice.
+5. Press `cart-clear` ("Kosár ürítése"). - expect: The status message still reads "A kosár módosítása nem sikerült; a kosár változatlan." - expect: The cart is untouched again: one `cart-line` remains, `cart-count` reads "Kosárban található termékek (1)", and the page has not switched to its empty state ("A kosarad még üres." is not rendered).
+6. Recover through the way out the failure did not block: press "Vásárlás folytatása". - expect: The catalogue is shown: `/telefonok` with the `h1` "Mobiltelefonok" and `product-card` elements rendered. - expect: `cart-badge` reads "1": the two refused mutations left the cart exactly as it was.
+7. Add the same variant again from the first card without a `product-card-stock` marker, then open the cart with `cart-link`. - expect: The confirmation reads "<product name>, <colour>, <n> GB – 2 darab a kosárban." and `cart-badge` reads "2". - expect: `cart-page` shows one `cart-line` whose `cart-line-quantity` reads "2 db": the mutations this scenario refuses are the only ones that fail.
+
+#### 1.2. adding the same variant past its per-line limit is refused
+
+**File:** `e2e/integration/product-per-line-quantity-limit.spec.ts`
+
+**Steps:**
+
+1. Open `/telefonok` and wait for the grid. - expect: `cart-badge` reads "0" and `result-count` reads "55 találat a szűrt feltételek szerint".
+2. Open the first `product-card` that has no `product-card-stock` marker through its `product-card-cta`, and read the purchase controls. - expect: `product-page` is visible, `product-stock` reads "Raktáron a demó készletben", and the add control the viewport shows is enabled: the inner button of `add-to-cart-button` at 1024 px and wider, the inner button of `purchase-cta` below 1024 px. - expect: That variant's line maximum is 5: the first in-stock entry of the fixture carries a `maxQuantity` of 5, and the cart store refuses a merged quantity above the variant's `maxQuantity` with a 409 `QUANTITY_LIMIT`.
+3. Press the add control the viewport shows five times, reading the message after every press. - expect: The messages read "<product name>, <colour>, <n> GB – 1 darab a kosárban." through "… – 5 darab a kosárban.", each naming the cart line's quantity rather than the amount just dispatched. - expect: `cart-badge` counts up to "5".
+4. Press the same control once more. - expect: The refusal reads "Ebből a termékből legfeljebb 5 db lehet a kosárban.": the page names the server's `max` parameter of the 409 rather than a generic sentence. - expect: The refusal replaced the previous confirmation, and `cart-badge` still reads "5": the refused add left the cart unchanged. - expect: The refusal carries a "Bezárás" control in the mount the viewport shows — inside `add-to-cart` at 1024 px and wider, inside `purchase-rail` below — because a refusal is not the page's persistent error form.
+5. Press that "Bezárás" control, then press the add control once more. - expect: The message disappears from its mount and the add control stays enabled. - expect: The next press is refused with the same sentence, because the cap belongs to the cart line and is not spent by one refusal.
+6. Open the cart with `cart-link`. - expect: `cart-page` shows one `cart-line` whose `cart-line-quantity` reads "5 db", and `cart-count` reads "Kosárban található termékek (1)". - expect: `cart-badge` reads "5": no refused add ever reached the cart.
+
+#### 1.3. an unknown product slug and an unknown variant link are both reported
+
+**File:** `e2e/integration/product-unknown-slug-and-variant-link.spec.ts`
+
+**Steps:**
+
+1. Open the unknown slug `/telefonok/nem-letezo-telefon`. - expect: `product-page` renders the not-found state instead of a product: `error-state` with the title "A termék nem található" and the message "A(z) „nem-letezo-telefon” azonosítójú termék nem található. Nézd meg a telefonok listáját." - expect: `error-hint` reads "A korábban megadott értékeket megőrizzük." - expect: No product chrome is rendered: `product-name`, `product-gallery`, `variant-color-group`, `variant-storage-group` and `add-to-cart` are absent, and `cart-badge` still reads "0".
+2. Read the state's single action and press it. - expect: The action's label is "Vissza a telefonokhoz": an unknown slug is answered with the not-found branch rather than the transient-error branch, and its retry label is this copy. - expect: The catalogue is shown: `/telefonok` with the `h1` "Mobiltelefonok", `product-card` elements rendered and `result-count` "55 találat a szűrt feltételek szerint".
+3. Open a real product with a variant id it does not carry: take the URL of the first `product-card` without a `product-card-stock` marker (the href of its `product-card-cta` link) and replace the `variant` query value with `nem-letezo-valtozat`. - expect: `product-page` renders the product with its default variant selected: `variant-color-group`'s legend names the colour the card showed and `variant-storage-group`'s its storage, because an unknown variant id falls back to the product's first variant. - expect: A status paragraph reads "A linkben megadott változat nem található: nem-letezo-valtozat. Válassz a fenti listából." - expect: The purchase controls refuse the selection: the reason the viewport shows — `add-to-cart-reason` at 1024 px and wider, `purchase-rail-reason` below — reads "A linkben megadott változat nem található; válassz a listából.", and the add control the viewport shows is disabled.
+4. Choose a storage option from the selector: press the first `variant-storage-*` button whose `aria-pressed` is not "true". - expect: The warning paragraph and the refusal are gone, and the address bar's `variant` is the chosen variant's id. - expect: `variant-storage-group`'s legend names the newly chosen size and the colour selection is preserved. - expect: The stock line and the add control follow the chosen variant: `product-stock` reads either "Raktáron a demó készletben" with the add control enabled, or "Ez a konfiguráció elfogyott a demó készletből." with the control disabled and the reason "Ez a változat jelenleg nem elérhető."
+
+#### 1.4. the gallery's image and zoom dialog, and the purchase messages' dismiss control
+
+**File:** `e2e/integration/product-gallery-and-message-dismiss.spec.ts`
+
+**Steps:**
+
+1. Open `/telefonok`, wait for the grid and open the first `product-card` that has no `product-card-stock` marker through its `product-card-cta`. - expect: `product-page` is visible, `product-stock` reads "Raktáron a demó készletben" and `cart-badge` reads "0".
+2. Read the gallery. - expect: `product-gallery` is visible with the frame `gallery-main`, one thumbnail button `gallery-thumb-0`, and `gallery-zoom-open` whose accessible name is "Kép nagyítása". - expect: No `gallery-prev`, no `gallery-next` and no `gallery-count` are rendered: every variant of the fixture carries exactly one image, so the gallery's "several images" state is never reached and the previous/next pair and the counter do not exist on screen.
+3. Press `gallery-thumb-0`. - expect: The main image stays the one on screen and the thumbnail keeps `aria-current="true"`: the click re-selects the variant's only image.
+4. Press `gallery-zoom-open`. - expect: A dialog opens: an element with `role="dialog"` and `aria-modal="true"`, labelled "Nagyított kép: <product name>", whose heading reads the same sentence and which holds the image. - expect: The dialog carries a `dialog-close` control whose accessible name is "Bezárás".
+5. Press `dialog-close`. - expect: The dialog is gone: no element with `role="dialog"` remains and `product-gallery` is visible again.
+6. Add the shown variant with the add control the viewport shows: the inner button of `add-to-cart-button` at 1024 px and wider, of `purchase-cta` below. - expect: The confirmation reads "<product name>, <colour>, <n> GB – 1 darab a kosárban." in the mount the viewport shows: in the buy column beside `add-to-cart-button` at the desktop width, and inside `purchase-rail` below it. - expect: That message carries a "Bezárás" control, and `cart-badge` reads "1".
+7. Press the confirmation's "Bezárás" control. - expect: The message disappears from its mount, the add control stays enabled, and the shopper can add again.
+
+#### 1.5. the catalogue opens from a URL that carries its state
+
+**File:** `e2e/integration/catalogue-url-carried-state.spec.ts`
+
+**Steps:**
+
+1. Open `/telefonok?inStock=true&is5g=true&sort=price_desc&page=2&pageSize=12` and wait for the grid. - expect: `result-count` reads "54 találat a szűrt feltételek szerint". - expect: `catalog-sort` reads "Ár szerint csökkenő" and `catalog-page-size` reads "12 / oldal". - expect: `applied-filters` holds two `applied-chip` elements reading "Csak raktáron" and "Csak 5G"; `filter-inStock` and `filter-is5g` carry `aria-pressed="true"`, and `filter-trigger` reports "Szűrők (2)". - expect: The pager is on its second page — `pagination-current` reads "2" — and the 12 rendered `product-card` prices are in non-increasing order.
+2. Open `/telefonok?q=motorola&minPrice=80000&maxPrice=100000`. - expect: `result-count` reads "1 találat a szűrt feltételek szerint" and one `product-card` is rendered. - expect: The chips read "Keresés: „motorola”", "Min. ár: 80 000 Ft" and "Max. ár: 100 000 Ft", and `filter-trigger` reports "Szűrők (3)". - expect: The sidebar's price inputs hold what the URL carried, as the sidebar's own test ids: `filter-min-price` reads "80000" and `filter-max-price` reads "100000".
+3. Open `/telefonok?featured=true`. - expect: `result-count` reads "4 találat a szűrt feltételek szerint" and exactly four `product-card` elements are rendered: the featured flag caps the list at four entries. - expect: The chip reads "Kiemelt termékek" and `filter-trigger` reports "Szűrők (1)".
+4. Open a URL that mixes one value the page understands with values it does not: `/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=`. - expect: The catalogue renders rather than an error state: no `error-state` is shown, 12 `product-card` elements are rendered and `result-count` reads "55 találat a szűrt feltételek szerint". - expect: The accepted key still applies: `catalog-sort` reads "Legújabb elöl". - expect: Every value the parser rejects falls back to its documented default: `catalog-page-size` reads "12 / oldal", `pagination-current` reads "1", `applied-filters` is not rendered at all and `filter-trigger` reports "Szűrők" — the malformed `page`, the `pageSize` outside the two allowed sizes, the storage bucket outside the enum, the non-literal `inStock`, the negative `minPrice`, the non-literal `featured`, the empty `color` and the empty `q` are all dropped rather than applied. - expect: The address bar still holds the URL exactly as it was opened: loading a stored link issues no navigation that would rewrite it.
+5. Open a page past the last one: `/telefonok?page=99`. - expect: `result-count` still reads "55 találat a szűrt feltételek szerint". - expect: No `product-card` is rendered, and `catalog-empty` is shown with "Nincs a szűrőknek megfelelő készülék.", "Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket." and the action "Szűrők törlése".
+
+#### 1.6. the mobile filter drawer keeps its edits until they are applied
+
+**File:** `e2e/integration/catalogue-mobile-filter-drawer.spec.ts`
+
+**Steps:**
+
+1. Open `/telefonok` and read the toolbar. - expect: `result-count` reads "55 találat a szűrt feltételek szerint". - expect: Below 1024 px the filter mount is the drawer: the catalogue's host carries `data-layout-mode="drawer"`, `filter-trigger` is shown reading "Szűrők", and the sidebar `filter-sidebar` is not shown. At 1024 px and wider the trigger is `display: none` and the same filters live in the sidebar, which applies every edit immediately, so the steps that open the drawer are taken where `filter-trigger` is shown. - expect: `filter-trigger` carries `aria-expanded="false"`.
+2. Press `filter-trigger`. - expect: A dialog opens — an element with `role="dialog"` labelled "Szűrők" — holding `filter-drawer` with the intro "Állítsd be a szűrőket, majd az „Alkalmazás" gombra kattints." - expect: `filter-trigger` now carries `aria-expanded="true"`. - expect: The "Gyártó" group lists five `drawer-brand-*` buttons and the `filter-brand-more` control reading "Még több gyártó"; the "Szín" group carries `filter-color-more` reading "Még több szín": both lists are collapsed to five entries. - expect: The "Tárhely" group lists `drawer-storage-128`, `drawer-storage-256` and `drawer-storage-512`; `drawer-min-price` and `drawer-max-price` are empty with the result set's price range as their placeholders; and the footer holds `drawer-cancel` ("Mégse") and `drawer-apply` ("Szűrők alkalmazása").
+3. Edit the draft: press `drawer-storage-256` and `drawer-inStock` ("Csak raktáron"). - expect: Both buttons carry `aria-pressed="true"` and show their "✓" mark. - expect: Nothing is applied yet: the address bar still reads `/telefonok`, `result-count` still reads "55 találat a szűrt feltételek szerint" and `applied-filters` is not rendered — the drawer's edits are a transient draft.
+4. Press `drawer-cancel` ("Mégse"). - expect: The drawer is gone: no element with `role="dialog"` remains, and `filter-trigger` reads "Szűrők" with `aria-expanded="false"`. - expect: The draft went with it: the address bar still reads `/telefonok`, `result-count` still reads "55 találat a szűrt feltételek szerint" and `applied-filters` is not rendered.
+5. Open the drawer again and type a range it refuses: "900000" into `drawer-min-price` and "100" into `drawer-max-price`. - expect: `drawer-price-error` reads "A minimum nem lehet nagyobb a maximum árnál." - expect: `drawer-min-price` carries `aria-invalid="true"`.
+6. Press `drawer-apply` ("Szűrők alkalmazása"). - expect: Nothing is applied: the drawer stays open, the error message is still shown, the address bar still reads `/telefonok` and `result-count` still reads "55 találat a szűrt feltételek szerint".
+7. Clear `drawer-min-price` and `drawer-max-price`, select `drawer-storage-256` and `drawer-inStock` again, then press `drawer-apply`. - expect: The error message is gone and the drawer closes. - expect: The address bar carries `storageGb=256` and `inStock=true`; `applied-filters` shows two `applied-chip` elements reading "256 GB" and "Csak raktáron"; `filter-trigger` reports "Szűrők (2)". - expect: The grid follows: `result-count` reads "27 találat a szűrt feltételek szerint" and 12 `product-card` elements are rendered.
+
+#### 1.7. the demo gate sends a signed-out visitor to the sign-in page and back
+
+**File:** `e2e/integration/demo-gate-sign-in.spec.ts`
+
+**Steps:**
+
+1. Open a protected route while signed out: `/penztar/kosar?mi-scenario=demo-signed-out`. - expect: The browser lands on the sign-in page carrying the requested page in `vissza`: `/belepes?vissza=%2Fpenztar%2Fkosar%3Fmi-scenario%3Ddemo-signed-out` — the query string travels with it — and the document title reads "MiBolt — Belépés". - expect: `cart-page` is not rendered.
+2. Read the sign-in page. - expect: The `h1` reads "Belépés a demóba" and the lede "A MiBolt demó bolt jelszóval érhető el." - expect: `demo-sign-in-form` holds one field, `demo-password-input` (labelled "Jelszó"), and the submit control `demo-sign-in-submit` reading "Belépés". - expect: No shop chrome surrounds it: `main-header`, `cart-link` and the demo notice are not rendered.
+3. Press `demo-sign-in-submit` with the field empty. - expect: The field's message reads "Add meg a jelszót." and `demo-password-input` carries `aria-invalid="true"`. - expect: The browser stays on `/belepes` with the same `vissza`.
+4. Type a wrong password (for example "rossz-jelszo") and press `demo-sign-in-submit`. - expect: `demo-sign-in-error` reads "Hibás jelszó. Próbáld újra.", the field's own message is gone, and the browser stays on `/belepes` with the same `vissza`.
+5. Type "1MiBoltDemo1" and press `demo-sign-in-submit`. - expect: The error clears and the shopper lands back on the page they came from: `/penztar/kosar?mi-scenario=demo-signed-out` with `cart-page` visible and the checkout header `checkout-header` around it. - expect: That cart is empty, because the mock keys its cart by the scenario name and this scenario's cart was never filled: `cart-page` shows "A kosarad még üres." with the message "Nézd meg a demókészülékeket, és válaszd ki a kedvenced." and the action "Telefonokat nézek".
+6. Open `/belepes?vissza=https%3A%2F%2Fevil.example&mi-scenario=demo-signed-out`, type "1MiBoltDemo1" and press `demo-sign-in-submit`. - expect: The `vissza` is refused because it is not a same-origin absolute path, so the browser lands on the home page: `/` with `hero-heading` visible.
+7. Open `/belepes?mi-scenario=demo-signed-out` with no `vissza` at all, type "1MiBoltDemo1" and press `demo-sign-in-submit`. - expect: The browser lands on the home page again: `/` with `hero-heading` visible.
+
+#### 1.8. the header navigation at the mobile width
+
+**File:** `e2e/integration/header-navigation-mobile.spec.ts`
+
+**Steps:**
+
+1. Open `/` and read the header in the mount the viewport shows. - expect: At the mobile viewport `menu-trigger` is shown with the accessible name "Menü megnyitása" and `aria-expanded="false"`, `mobile-search` holds `mobile-search-input` whose placeholder is "Keresés a telefonok között…", and `header-search` is not shown. - expect: At 1024 px and wider `menu-trigger` and `mobile-search` are not shown instead: the `nav` labelled "Fő navigáció" carries the "Mobiltelefonok" link and `header-search-input` is the search field. - expect: In both mounts `cart-link`'s accessible name is "Kosár megnyitása, jelenleg üres" and `cart-badge` reads "0".
+2. Press `menu-trigger` (the trigger is only shown below 1024 px). - expect: `menu-trigger` carries `aria-expanded="true"`. - expect: A dialog opens with the label "Menü", holding a `nav` labelled "Mobil navigáció" with one link reading "Mobiltelefonok" and a `dialog-close` control whose accessible name is "Bezárás".
+3. Press that "Mobiltelefonok" link. - expect: The browser is on `/telefonok` with the catalogue rendered: the `h1` "Mobiltelefonok" and `product-card` elements. - expect: The drawer closed on the navigation: no element with `role="dialog"` remains and `menu-trigger` reads `aria-expanded="false"`.
+4. Search from the field the viewport shows: type "motorola" into `mobile-search-input` at the mobile viewport (`header-search-input` at 1024 px and wider) and press Enter. - expect: The browser is on `/telefonok?q=motorola`, and the field still holds "motorola" because it mirrors the URL's `q`. - expect: `result-count` reads "1 találat a szűrt feltételek szerint", one `product-card` is rendered, and `applied-filters` shows one chip reading "Keresés: „motorola”".
+5. Press `cart-link`. - expect: The browser is on `/penztar/kosar` with `cart-page` visible.
