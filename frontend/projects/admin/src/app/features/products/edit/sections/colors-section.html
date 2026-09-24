@@ -1,0 +1,72 @@
+<adm-section-card title="Színek és képek" [errorCount]="errorCount()" [number]="3">
+  <button admSectionActions matButton type="button" (click)="add()">
+    <mat-icon>add</mat-icon>
+    Szín
+  </button>
+  <div cdkDropList class="flex flex-col gap-4" (cdkDropListDropped)="drop($event)">
+    @for (color of field(); track color; let index = $index, first = $first, last = $last) {
+      @let key = color().value().key;
+      <div cdkDrag class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-start gap-2">
+          <button cdkDragHandle class="adm-drag-handle" matIconButton type="button">
+            <mat-icon>drag_indicator</mat-icon>
+          </button>
+          <input
+            class="adm-swatch-picker"
+            type="color"
+            [value]="pickerValue(color.swatchHex().value())"
+            (input)="setSwatch(color, $event)"
+          />
+          <mat-form-field class="w-32" subscriptSizing="dynamic">
+            <mat-label>Hex</mat-label>
+            <input matInput [formField]="color.swatchHex" />
+            <mat-error>{{ color.swatchHex().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <mat-form-field class="w-40" subscriptSizing="dynamic">
+            <mat-label>Kód</mat-label>
+            <input matInput [formField]="color.code" />
+            <mat-error>{{ color.code().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <mat-form-field class="min-w-40 flex-1" subscriptSizing="dynamic">
+            <mat-label>Név</mat-label>
+            <input matInput [formField]="color.name" />
+            <mat-error>{{ color.name().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <button
+            class="adm-row-menu-trigger"
+            matIconButton
+            type="button"
+            [matMenuTriggerFor]="rowMenu"
+          >
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #rowMenu="matMenu">
+            <button mat-menu-item type="button" [disabled]="first" (click)="move(index, -1)">
+              <mat-icon>arrow_upward</mat-icon>
+              <span>Feljebb</span>
+            </button>
+            <button mat-menu-item type="button" [disabled]="last" (click)="move(index, 1)">
+              <mat-icon>arrow_downward</mat-icon>
+              <span>Lejjebb</span>
+            </button>
+            <button mat-menu-item type="button" (click)="remove(index)">
+              <mat-icon>delete</mat-icon>
+              <span>Törlés</span>
+            </button>
+          </mat-menu>
+        </div>
+        <mat-form-field class="adm-color-indent" subscriptSizing="dynamic">
+          <mat-label>Alt szöveg</mat-label>
+          <input matInput [formField]="color.alt" />
+          <mat-hint align="end">{{ color.alt().value().length }} / 280</mat-hint>
+          <mat-error>{{ color.alt().errors()[0]?.message }}</mat-error>
+        </mat-form-field>
+        <div class="adm-color-indent">
+          <adm-image-upload [formField]="color.image" />
+          <adm-control-error [errorId]="`adm-color-image-${key}`" [field]="color.image" />
+        </div>
+      </div>
+    }
+  </div>
+  <p class="adm-array-error">{{ arrayError() }}</p>
+</adm-section-card>
