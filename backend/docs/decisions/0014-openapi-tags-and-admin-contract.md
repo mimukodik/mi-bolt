@@ -96,3 +96,4 @@ already runs.
 ## Note: paths after the monorepo move (MIM-411)
 
 - The gate `grep -rn -E 'ProductsApi\b|PaymentIntentsApi\b' src/main/java` ran from the backend repository root; from the git root it is `grep -rn -E 'ProductsApi\b|PaymentIntentsApi\b' backend/services/commerce/src/main/java`.
+- In the monorepo `api:sync` is gone: `frontend/ng-openapi-gen.json` reads `contracts/commerce/openapi.yaml` directly, so a contract change reaches the frontend with the next `npm --prefix frontend run api:generate`, and `api:drift` in CI fails when it did not.

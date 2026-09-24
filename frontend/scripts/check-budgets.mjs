@@ -18,8 +18,7 @@
 // The script emits a single table on stdout and exits 1 when any
 // threshold is violated. It is the source of truth for the
 // `300 KiB / 1 MiB / 150 KiB` numbers that the design review
-// records; any change to the thresholds must be made here AND in
-// `docs/mi-bolt/execution/deployment.md`.
+// records; any change to the thresholds is made here.
 //
 // Usage:
 //

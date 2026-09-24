@@ -29,8 +29,7 @@
 import { http, HttpResponse, passthrough, type HttpHandler } from 'msw';
 import { setupWorker } from 'msw/browser';
 
-import { environment } from '../environments/environment';
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
 import { Repository } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
@@ -221,15 +220,16 @@ export function resolveMockWorkerUrl(baseUri: string): string {
 }
 
 /**
- * Boots the MSW service worker. Production builds skip the boot
- * entirely; the demo configuration registers the handlers built
+ * Boots the MSW service worker. Callers gate the boot (the shop on
+ * `environment.demo`, the payment app on `isDevMode()`), and production
+ * builds swap this file for `browser.production.ts`; the demo configuration
+ * registers the handlers built
  * by `createHandlers` behind the `/api/...` network-error catch-all
  * that keeps them the only way out. The optional snapshot is
  * forwarded to `buildBrowserHandlers` so the repository is seeded
  * with the persisted cart before the first request is dispatched.
  */
 export async function startMockWorker(snapshot: MockSnapshot | null = null): Promise<void> {
-  if (!environment.demo) return;
   if (worker === undefined) {
     throw new Error(
       '[browser] startMockWorker called outside a browser; MSW setupWorker was skipped at module load',

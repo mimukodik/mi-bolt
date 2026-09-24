@@ -99,12 +99,14 @@ than one agent can reach at once while their file lists stay disjoint.
   checkout builds and tests with its own `coverage/`, so agents in separate
   worktrees do not contend here at all. Two agents in the same checkout still
   do, and there the resolution is that only one of them runs the suite.
-- **The generated API client.** `mise run api:generate` rewrites
-  `frontend/projects/storefront/src/app/api/generated/`, and
-  `mise run api:drift` fails when that output
-  differs from what is committed. One agent regenerating underneath another's
-  build is the same contention the coverage report has, and a worktree does not
-  escape it when both work from the same `frontend/ng-openapi-gen.json`.
+- **The generated API clients.** `mise run api:generate` rewrites
+  `frontend/projects/shop-api/src/generated/` and
+  `frontend/projects/admin/src/app/api/generated/`, and `mise run api:drift`
+  regenerates both before failing on any difference from what is committed,
+  so it rewrites them too. One agent regenerating underneath another's build
+  is the same contention the coverage report has, and a git worktree removes
+  it the same way: each checkout generates into its own `frontend/`, so only
+  two agents in the same checkout contend.
 - **The dev server and its port.** `mise run storefront` (`ng serve`) binds one
   port, and a browser verification driving it is invalidated by any restart
   underneath. Name the server rather than one command that touches it: a
@@ -116,7 +118,7 @@ than one agent can reach at once while their file lists stay disjoint.
   deleted from disk.
 - **The database, once the backend runs.** The frontend's own backend is MSW,
   served in-process, so a frontend suite shares no container and no rows, and
-  `frontend/projects/storefront/src/mocks/` state lives and dies with each
+  `frontend/projects/shop-mocks/src/` state lives and dies with each
   suite run. Every root task that starts PostgreSQL, which
   `.claude/rules/session-lifecycle.md` ("Tools and startup") lists, shares one
   container and its data, which the orchestrator starts and stops.

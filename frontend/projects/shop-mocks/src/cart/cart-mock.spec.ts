@@ -9,17 +9,17 @@
 
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import catalogFixture from '../../../../../docs/api/fixtures/catalog.json';
-import { createHandlers } from '../../mocks/create-handlers';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import { createHandlers } from '../create-handlers';
 import {
   catalogStore,
   isCatalogFixtureShape,
   loadCatalogFixture,
-} from '../../mocks/catalog/catalog.handlers';
-import { type VariantLookup } from '../../mocks/catalog/catalog-store';
-import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/cart-store';
-import '../../mocks/cart/cart.handlers';
-import { Repository } from '../../mocks/repository';
+} from '../catalog/catalog.handlers';
+import { type VariantLookup } from '../catalog/catalog-store';
+import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../cart/cart-store';
+import '../cart/cart.handlers';
+import { Repository } from '../repository';
 import {
   BUILT_IN_SCENARIOS,
   createDeterministicIds,
@@ -27,9 +27,9 @@ import {
   DEFAULT_SCENARIO,
   type Clock,
   type Ids,
-} from '../../mocks/scenarios';
-import { server, useMswServer } from '../../../../../tests/msw-server';
-import { isRecord } from '../../mocks/is-record';
+} from '../scenarios';
+import { server, useMswServer } from '../../../../tests/msw-server';
+import { isRecord } from '../is-record';
 
 useMswServer();
 

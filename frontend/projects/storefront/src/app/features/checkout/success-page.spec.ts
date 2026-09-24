@@ -38,21 +38,21 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
-import { createHandlers } from '../../../mocks/create-handlers';
-import { Repository } from '../../../mocks/repository';
+import { createHandlers } from '@mi-bolt/mocks/create-handlers';
+import { Repository } from '@mi-bolt/mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
-} from '../../../mocks/scenarios';
-import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
+} from '@mi-bolt/mocks/scenarios';
+import { TERMS_VERSION } from '@mi-bolt/mocks/checkout/checkout-store';
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
-import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
+import { isCatalogFixtureShape, loadCatalogFixture } from '@mi-bolt/mocks/catalog/catalog.handlers';
 
-import '../../../mocks/cart/cart.handlers';
-import '../../../mocks/checkout/checkout.handlers';
-import '../../../mocks/payment/payment.handlers';
-import '../../../mocks/orders/order.handlers';
+import '@mi-bolt/mocks/cart/cart.handlers';
+import '@mi-bolt/mocks/checkout/checkout.handlers';
+import '@mi-bolt/mocks/payment/payment.handlers';
+import '@mi-bolt/mocks/orders/order.handlers';
 
 import type { Address } from '@mi-bolt/api/models/address';
 import type { BillingDetails } from '@mi-bolt/api/models/billing-details';

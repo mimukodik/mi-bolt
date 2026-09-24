@@ -5,7 +5,7 @@
  * session hydration, the four section writes, conflict and error
  * recovery, payment-intent idempotency, and order submit — measured
  * against the configured backend values that
- * `src/mocks/checkout/checkout-store.ts` and `application.properties`
+ * `projects/shop-mocks/src/checkout/checkout-store.ts` and `application.properties`
  * lock in. Every assertion names an exact wire value (version, header,
  * body key set, amount, orderNumber), never `.exists()`-style coverage.
  *
@@ -35,20 +35,20 @@ import { provideRouter } from '@angular/router';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
-import { createHandlers } from '../../../mocks/create-handlers';
-import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
-import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
-import { isRecord } from '../../../mocks/is-record';
-import '../../../mocks/cart/cart.handlers';
-import '../../../mocks/checkout/checkout.handlers';
-import '../../../mocks/payment/payment.handlers';
-import '../../../mocks/orders/order.handlers';
-import { Repository } from '../../../mocks/repository';
+import { createHandlers } from '@mi-bolt/mocks/create-handlers';
+import { isCatalogFixtureShape, loadCatalogFixture } from '@mi-bolt/mocks/catalog/catalog.handlers';
+import { TERMS_VERSION } from '@mi-bolt/mocks/checkout/checkout-store';
+import { isRecord } from '@mi-bolt/mocks/is-record';
+import '@mi-bolt/mocks/cart/cart.handlers';
+import '@mi-bolt/mocks/checkout/checkout.handlers';
+import '@mi-bolt/mocks/payment/payment.handlers';
+import '@mi-bolt/mocks/orders/order.handlers';
+import { Repository } from '@mi-bolt/mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
-} from '../../../mocks/scenarios';
+} from '@mi-bolt/mocks/scenarios';
 
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import type { Address } from '@mi-bolt/api/models/address';
@@ -957,7 +957,7 @@ describe('orders', () => {
     expect(post.headers['idempotency-key']).toMatch(KEY_PATTERN);
 
     // The mock's order-store replay branch runs before any completeness
-    // check (`src/mocks/orders/order-store.ts:365-373`): on a second
+    // check (`projects/shop-mocks/src/orders/order-store.ts:365-373`): on a second
     // POST /orders carrying the same X-Demo-Session, Idempotency-Key
     // and body, it returns the cached receipt. The raw fetch below
     // proves that contract from outside the facade.

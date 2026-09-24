@@ -19,7 +19,7 @@ registerLocaleData(localeHu, 'hu-HU');
  * intercepted. The worker is only started when `environment.demo`
  * is true so production builds never ship a mocking surface.
  *
- * The MSW module graph (`./core/bootstrap-demo` -> `./mocks/browser`
+ * The MSW module graph (`./core/bootstrap-demo` -> `projects/shop-mocks/src/browser`
  * -> MSW handler factory) is loaded via `import()` so the production
  * bundle's treeshaker can isolate the dependency chain into a chunk
  * that is only fetched when `environment.production === false`. A

@@ -111,7 +111,7 @@ function capture(request: Request, bodyText: string): void {
 /**
  * MSW handlers: one per 2.0.0 operation. The capture happens before the
  * response resolves so a failing test sees the exact request the SDK
- * produced. The handlers under `src/mocks/**` require a session-scoped
+ * produced. The handlers under `projects/shop-mocks/src/**` require a session-scoped
  * `X-Demo-Session` header that the 2.0.0 contract does not declare (the
  * contract's session is the `mibolt_session` cookie — `contracts/commerce/openapi.yaml`
  * line 936-939). The contract suite must assert the wire contract, so this

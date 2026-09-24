@@ -379,10 +379,10 @@ beforeEach(() => {
         return HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:not-found',
-            title: 'A kért végpont vagy erőforrás nem található.',
+            title: 'Not found',
             status: 404,
             code: 'NOT_FOUND',
-            detail: `Ismeretlen termék: ${slug}.`,
+            detail: `Unknown product: ${slug}.`,
             traceId: 'mock-trace-test',
             fieldErrors: [],
           },

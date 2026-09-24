@@ -73,6 +73,14 @@ jobs:
         if: always()
         timeout-minutes: 2
         run: node scripts/coverage-summary.mjs coverage/admin/coverage-summary.json '### Admin coverage' >> "$GITHUB_STEP_SUMMARY"
+      - name: Coverage summary (core-api)
+        if: always()
+        timeout-minutes: 2
+        run: node scripts/coverage-summary.mjs coverage/core-api/coverage-summary.json '### Core-api coverage' >> "$GITHUB_STEP_SUMMARY"
+      - name: Coverage summary (shop-mocks)
+        if: always()
+        timeout-minutes: 2
+        run: node scripts/coverage-summary.mjs coverage/shop-mocks/coverage-summary.json '### Shop-mocks coverage' >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage report
         if: always()
         timeout-minutes: 5
@@ -83,6 +91,8 @@ jobs:
             frontend/coverage/unit/
             frontend/coverage/demo-payment/
             frontend/coverage/admin/
+            frontend/coverage/core-api/
+            frontend/coverage/shop-mocks/
           if-no-files-found: error
           overwrite: true
 

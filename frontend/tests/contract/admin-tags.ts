@@ -9,7 +9,7 @@
 // place lets every spec-load point and the SDK-split spec reference the
 // same constant.
 
-import { isRecord } from '../../projects/storefront/src/mocks/is-record';
+import { isRecord } from '../../projects/shop-mocks/src/is-record';
 
 export const ADMIN_TAGS = ['AdminAuth', 'AdminUsers', 'AdminProducts', 'AdminMedia'] as const;
 

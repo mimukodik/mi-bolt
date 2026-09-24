@@ -414,7 +414,7 @@ work") force constant clarification.
 - **Every bug gets a test in the same commit as its fix**, so it cannot come
   back, measured red before the fix and green after. Coverage itself is an
   aggregate floor rather than a per-line gate here; see
-  `.claude/rules/code-standards.md` for the numbers and why.
+  `.claude/rules/code-standards.md` for where the floors live and why.
 - **Debugging maps the entire error space**: all occurrences, the root cause,
   and related locations. I do not stop at the first match. **The map is drawn
   once for the class, before the first fix in it is spawned**, and what
