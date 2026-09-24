@@ -756,6 +756,26 @@ nearest yettel choice control, the §5 variant chip, and scales it to a row:
   alone at the `md` size, where the option's name used to sit as the
   amount's label above a 28px figure.
 
+### Review step: price change, payment status and the order button
+
+The same facelift reaches the review step, where three surfaces still wore
+the look the §5 Alert left behind:
+
+- **The price-change notice** keeps its warning colours (the
+  `--color-status-warning-soft` ground and the `--color-status-warning-text`
+  text, §9) and drops the 1px warning border and the 4px left bar, as the
+  Alert did; its radius becomes the Alert's 8px (`--radius-control`) and the
+  16px padding stays. It stays a block of its own rather than a
+  `StatusMessage`, because it carries the two totals and the confirm button.
+- **The card payment status** (paid, declined, pending, unfinished, missing)
+  leaves the grey bordered box and becomes a `StatusMessage`: success for a
+  confirmed payment, error for a declined one, info for every other state;
+  persistent and not live, the wrapper around it keeping its own
+  `role="status"`. The state's buttons sit under it, with no box around them.
+- **The order button's explanation** (why "Demórendelés véglegesítése" is
+  disabled) starts at the button's left edge instead of being centred under a
+  button that sits on the left.
+
 ## 9. Token mapping
 
 The Angular build keeps the legacy token names the ~1000 existing `var(--…)`
