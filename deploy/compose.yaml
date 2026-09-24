@@ -44,6 +44,8 @@ services:
       MIBOLT_PAYMENT_REDIRECT_URL_PREFIX: "${MIBOLT_PAYMENT_ORIGIN:-http://localhost:4210}/demo-fizetes/"
       MIBOLT_PAYMENT_RETURN_URL_PREFIX: "${MIBOLT_SHOP_ORIGIN:-http://localhost:4200}/penztar?paymentIntentId="
       MIBOLT_ADMIN_INITIAL_PASSWORD: "${MIBOLT_ADMIN_INITIAL_PASSWORD:-}"
+      MIBOLT_DEMO_USERNAME: "${MIBOLT_DEMO_USERNAME:-MiBoltDemoUser}"
+      MIBOLT_DEMO_PASSWORD: "${MIBOLT_DEMO_PASSWORD:-1MiBoltDemo1}"
     ports:
       - "${MIBOLT_BACKEND_PORT:-8080}:8080"
     healthcheck:

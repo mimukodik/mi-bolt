@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/changes/0008-product-admin-columns.yaml
   - include:
       file: db/changelog/changes/0009-featured-limit-lock.yaml
+  - include:
+      file: db/changelog/changes/0010-demo-access.yaml

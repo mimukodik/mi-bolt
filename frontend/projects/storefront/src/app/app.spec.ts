@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
 import { appConfig, providerManifest } from './app.config';
+import { DemoAccess } from './core/demo-access/demo-access';
 
 function hasInternalProviders(value: unknown): value is { ɵproviders: unknown[] } {
   return (
@@ -62,7 +63,10 @@ describe('T01-AC05: root component', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(routes)],
+      providers: [
+        provideRouter(routes),
+        { provide: DemoAccess, useValue: { check: () => Promise.resolve(true) } },
+      ],
     });
   });
 

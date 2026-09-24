@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0010-demo-access
+      author: mi-bolt
+      comment: |
+        The demo gate (MIM-423): the one demo user created at startup from
+        MIBOLT_DEMO_USERNAME / MIBOLT_DEMO_PASSWORD, and the demo access sessions
+        behind the mibolt_demo_access cookie. Only the SHA-256 hex digest of a
+        cookie value is stored (token_hash), as in shop_session.
+      changes:
+        - createTable:
+            tableName: demo_user
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: username
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: password_hash
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: demo_user
+            columnNames: username
+            constraintName: uq_demo_user_username
+        - createTable:
+            tableName: demo_access_session
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: token_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false

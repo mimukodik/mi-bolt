@@ -1,0 +1,77 @@
+<!--
+  The demo gate (MIM-423). No shop chrome: the visitor has not been let in
+  yet, so there is no header, footer or `ShopLayout` around this card.
+  Colour, radius and button recipes come from frontend/docs/design/yettel.md.
+-->
+<main
+  class="flex min-h-screen items-center justify-center bg-surface-alt px-4 py-8"
+  id="main-content"
+>
+  <section
+    class="w-full max-w-[540px] overflow-hidden rounded-card bg-surface shadow-[0_12px_12px_rgba(0,0,0,0.05),0_24px_48px_rgba(0,0,0,0.2)]"
+  >
+    <div class="flex items-center gap-2 bg-accent px-6 py-4 text-primary">
+      <span
+        aria-hidden="true"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-input bg-primary text-accent [font-family:var(--font-family-bold)]"
+        >M</span
+      >
+      <span class="tracking-wide [font-family:var(--font-family-bold)]">MiBolt</span>
+    </div>
+
+    <div class="flex flex-col gap-5 p-6">
+      <h1
+        class="m-0 text-primary text-(length:--type-page-title-mobile) sm:text-(length:--type-page-title) [font-weight:var(--weight-bold)] leading-(--line-height-heading)"
+      >
+        Belépés a demóba
+      </h1>
+      <p class="m-0 text-text-muted">A MiBolt demó bolt jelszóval érhető el.</p>
+
+      @if (signInError(); as message) {
+        <app-status-message
+          data-testid="demo-sign-in-error"
+          severity="error"
+          [message]="message"
+          [persistent]="true"
+        />
+      }
+
+      <form
+        class="flex flex-col gap-5"
+        data-testid="demo-sign-in-form"
+        novalidate
+        (submit)="onSubmit($event)"
+      >
+        <label class="flex flex-col gap-2">
+          <span class="font-medium text-primary">Jelszó</span>
+          <input
+            aria-describedby="demo-password-message"
+            autocomplete="current-password"
+            class="min-h-(--size-control) rounded-input border border-(--color-border-control) bg-surface px-3 py-2 text-primary"
+            data-testid="demo-password-input"
+            id="demo-password-input"
+            type="password"
+            [attr.aria-invalid]="passwordShowsInvalid() ? 'true' : null"
+            [formField]="form.password"
+          />
+          <app-form-field-message
+            fieldId="demo-password"
+            [errors]="passwordErrors()"
+            [submitted]="submitted()"
+            [touched]="form.password().touched()"
+          />
+        </label>
+
+        <app-button
+          data-testid="demo-sign-in-submit"
+          label="Belépés"
+          loadingLabel="Belépés…"
+          type="submit"
+          variant="navy"
+          [block]="true"
+          [loading]="pending()"
+        />
+      </form>
+    </div>
+  </section>
+</main>
