@@ -111,7 +111,9 @@
                   />
                 }
                 @if (addToCartReason() !== null && !addToCartEnabled()) {
-                  <p class="hint m-0" role="status">{{ addToCartReason() }}</p>
+                  <p class="hint m-0" data-testid="add-to-cart-reason" role="status">
+                    {{ addToCartReason() }}
+                  </p>
                 }
                 @if (addSuccessMessage(); as message) {
                   <app-status-message
@@ -183,6 +185,7 @@
       [error]="addError()"
       [money]="devicePrice()"
       [pending]="addPending()"
+      [reason]="addToCartReason()"
       [success]="addSuccessMessage()"
       (addRequested)="onRailAddRequested()"
       (errorDismissed)="addError.set(null)"

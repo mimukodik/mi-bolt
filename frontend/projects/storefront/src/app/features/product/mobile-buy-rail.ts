@@ -46,6 +46,11 @@ export class MobileBuyRail {
    *  on narrow viewports where the desktop CTA column is hidden. */
   readonly success = input<string | null>(null);
 
+  /** Why the variant cannot be added, from the page's add-to-cart state;
+   *  shown under the button on narrow viewports, where the desktop hint is
+   *  hidden. */
+  readonly reason = input<string | null>(null);
+
   readonly addRequested = output();
 
   /** Emitted when the user closes the error banner via the StatusMessage
@@ -86,6 +91,8 @@ export class MobileBuyRail {
   readonly priceStatus = computed<'idle' | 'success'>(() =>
     this.money() === null ? 'idle' : 'success',
   );
+
+  readonly visibleReason = computed<string | null>(() => (this.available() ? null : this.reason()));
 
   onPress(): void {
     if (!this.available() || this.pending()) return;
