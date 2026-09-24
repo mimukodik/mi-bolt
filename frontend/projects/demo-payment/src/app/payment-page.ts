@@ -97,6 +97,15 @@ const OUTCOME_LABELS: Readonly<Record<Outcome, string>> = {
   pending: 'Függőben marad',
 };
 
+/**
+ * The demo gate's refusal: the 401 `DemoAccessRequired` any of the page's own
+ * calls answers while the visitor has not signed in to the demo shop
+ * (MIM-423). Written once because all three call sites branch on it.
+ */
+function isDemoAccessRefusal(err: unknown): boolean {
+  return err instanceof HttpErrorResponse && err.status === 401;
+}
+
 @Component({
   selector: 'pay-payment-page',
   imports: [CurrencyPipe],
@@ -280,7 +289,7 @@ export class PaymentPage implements OnInit {
           : { kind: 'closed', intent },
       );
     } catch (err: unknown) {
-      if (err instanceof HttpErrorResponse && err.status === 401) {
+      if (isDemoAccessRefusal(err)) {
         this.state.set({ kind: 'demo-access' });
         return;
       }
@@ -313,7 +322,7 @@ export class PaymentPage implements OnInit {
       this.state.set({ kind: 'redirecting', intent });
       this.navigator(intent.returnUrl);
     } catch (err: unknown) {
-      if (err instanceof HttpErrorResponse && err.status === 401) {
+      if (isDemoAccessRefusal(err)) {
         this.state.set({ kind: 'demo-access' });
         return;
       }
@@ -340,7 +349,7 @@ export class PaymentPage implements OnInit {
       this.state.set({ kind: 'closed', intent: booked });
     } catch (err: unknown) {
       this.state.set(
-        err instanceof HttpErrorResponse && err.status === 401
+        isDemoAccessRefusal(err)
           ? { kind: 'demo-access' }
           : { kind: 'error', failed: { step: 'load' } },
       );

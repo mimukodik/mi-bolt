@@ -112,10 +112,11 @@ function fill(fixture: ComponentFixture<PaymentPage>, selector: string, value: s
 function demoAccessRequired(): Response {
   return HttpResponse.json(
     {
-      type: 'https://mi-bolt.example/problems/unauthenticated',
+      type: 'urn:mi-bolt:problem:unauthenticated',
       title: 'Demo access required',
       status: 401,
       code: 'UNAUTHENTICATED',
+      detail: 'Sign in with the demo password first.',
       traceId: 't',
       fieldErrors: [],
     },
