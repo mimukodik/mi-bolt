@@ -35,7 +35,8 @@ def scheduled_publisher():
         if not any(a['name'] == 'candidate-receipt' and not a['expired'] for a in artifacts):
             continue
         receipt = download(run['id'], 'candidate-receipt', 'candidate.json')
-        if receipt['pr'] in available or not any(p['number'] == receipt['pr'] and p['head']['sha'] == receipt['headSha'] for p in prs):
+        if receipt['pr'] in available or not any(p['number'] == receipt['pr'] and p['head']['sha'] == receipt['headSha']
+                and any(label['name'] == 'bolt-preview' for label in p['labels']) for p in prs):
             continue
         try:
             fence(receipt)
@@ -54,7 +55,19 @@ def scheduled_publisher():
         if any(a['name'] == 'preview-smoke-receipt' and not a['expired'] for a in artifacts):
             receipt = download(run['id'], 'preview-smoke-receipt', 'smoke.json')
             accepted.add(receipt['publisherRunId'])
-    remaining = [available[key] for key in keys if available[key]['id'] not in accepted]
+    def accepted_now(key):
+        run = available[key]
+        if run['id'] not in accepted:
+            return False
+        receipt = download(run['id'], 'candidate-receipt', 'candidate.json')
+        deployments = api(f'deployments?environment=preview-pr-{key}&per_page=100')
+        matching = next((item for item in deployments if item['sha'] == receipt['headSha']), None)
+        if matching is None:
+            return False
+        statuses = api(f"deployments/{matching['id']}/statuses?per_page=1")
+        return bool(statuses and statuses[0]['state'] == 'success')
+
+    remaining = [available[key] for key in keys if not accepted_now(key)]
     return remaining[int(time.time() // 600) % len(remaining)] if remaining else None
 
 
@@ -93,15 +106,16 @@ def resolve():
                 or type(receipt['pr']) is not int or not 0 < receipt['pr'] < 100000000):
             raise ValueError('candidate receipt identity mismatch')
         pr = api(f"pulls/{receipt['pr']}")
-        if pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']:
+        if (pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']
+                or not any(label['name'] == 'bolt-preview' for label in pr['labels'])):
             output.write('ready=false\n')
             return
         Path('candidate.json').write_text(json.dumps(receipt))
         output.write(f"ready=true\nhead={receipt['headSha']}\npr={receipt['pr']}\n")
 
 
-def fence(receipt):
-    origin = f"https://bolt-pr-{receipt['pr']}.mimukodik.hu"
+def fence(receipt, origin=None):
+    origin = origin or f"https://bolt-pr-{receipt['pr']}.mimukodik.hu"
     # Cache busting plus no-cache response prevents an edge cache from accepting
     # a receipt from a previous generation sharing the PR hostname.
     headers = {'User-Agent': 'Mozilla/5.0 (compatible; MiBoltPreviewSmoke/1.0)',

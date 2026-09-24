@@ -45,19 +45,21 @@ def api(path: str, query: dict[str, str] | None = None) -> dict | list:
         return json.load(response)
 
 
-def runs(workflow: str, head_sha: str, pr: dict) -> list[dict]:
+def runs(workflow: str, head_sha: str, pr: dict | None) -> list[dict]:
+    event = "pull_request" if pr is not None else "push"
     data = api(f"actions/workflows/{workflow}/runs",
-               {"event": "pull_request", "head_sha": head_sha, "per_page": "100"})
+               {"event": event, "head_sha": head_sha, "per_page": "100"})
     return [run for run in data["workflow_runs"]
             if run["head_sha"] == head_sha
-            and run["event"] == "pull_request"
+            and run["event"] == event
             and run.get("repository", {}).get("full_name") == REPO
             and run.get("path", "").split("@", 1)[0] == f".github/workflows/{workflow}"
-            and (any(item["number"] == pr["number"] for item in run.get("pull_requests", []))
+            and ((pr is None and run.get("head_branch") == "main")
+                 or (pr is not None and (any(item["number"] == pr["number"] for item in run.get("pull_requests", []))
                  or (not run.get("pull_requests") and
                      run.get("head_repository", {}).get("full_name") ==
                      pr["head"]["repo"]["full_name"] and
-                     run.get("head_branch") == pr["head"]["ref"]))]
+                     run.get("head_branch") == pr["head"]["ref"]))))]
 
 
 def ci_ok(run_id: int) -> bool:
@@ -75,7 +77,7 @@ def current_pr(number: int, head_sha: str) -> dict:
     return pr
 
 
-def choose_runs(pr: dict, head_sha: str) -> tuple[dict, dict] | None:
+def choose_runs(pr: dict | None, head_sha: str) -> tuple[dict, dict] | None:
     ci = runs("ci.yml", head_sha, pr)
     build = runs("candidate.yml", head_sha, pr)
     if not ci or not build:
@@ -98,11 +100,26 @@ def write_outputs(values: dict) -> None:
 def resolve(event_path: Path) -> None:
     event = json.loads(event_path.read_text())["workflow_run"]
     require(event["name"] in {"CI", "Candidate Build"}, "unexpected source workflow")
-    if event["conclusion"] != "success" or event["event"] != "pull_request":
+    if event["conclusion"] != "success" or event["event"] not in {"pull_request", "push"}:
         write_outputs({"ready": "false"})
         return
     head_sha = event["head_sha"]
     require(bool(SHA.fullmatch(head_sha)), "invalid source SHA")
+    if event["event"] == "push":
+        if (event.get("head_branch") != "main"
+                or event.get("repository", {}).get("full_name") != REPO
+                or api("commits/main")["sha"] != head_sha):
+            write_outputs({"ready": "false"})
+            return
+        chosen = choose_runs(None, head_sha)
+        if chosen is None:
+            write_outputs({"ready": "false"})
+            return
+        ci, build = chosen
+        write_outputs({"ready": "true", "pr": 0, "head_sha": head_sha,
+                       "source_repository": REPO, "ci_run_id": ci["id"],
+                       "build_run_id": build["id"], "candidate_id": f"main-{head_sha[:12]}"})
+        return
     # A fork run may have no pull_requests association. Match the live open PR
     # by both its tested head and head repository rather than trusting the run.
     prs = api("pulls", {"state": "open", "per_page": "100"})
@@ -128,7 +145,11 @@ def resolve(event_path: Path) -> None:
 
 
 def fresh(pr_number: int, head_sha: str, ci_run_id: int, build_run_id: int) -> None:
-    pr = current_pr(pr_number, head_sha)
+    if pr_number == 0:
+        require(api("commits/main")["sha"] == head_sha, "main advanced before publication")
+        pr = None
+    else:
+        pr = current_pr(pr_number, head_sha)
     chosen = choose_runs(pr, head_sha)
     require(chosen is not None and chosen[0]["id"] == ci_run_id and
             chosen[1]["id"] == build_run_id, "CI or candidate build is no longer current")
@@ -225,14 +246,14 @@ def candidate_chart_values(values: dict, candidate_id: str, head_sha: str, image
 
 
 def package_chart(chart_source: Path, output: Path, candidate_id: str, head_sha: str,
-                  images: dict, trusted_revision: str) -> dict:
+                  images: dict, trusted_revision: str, stable: bool = False) -> dict:
     chart_copy = output / "chart" / "mi-bolt"
     shutil.copytree(chart_source, chart_copy)
     values_path = chart_copy / "values.yaml"
     values = candidate_chart_values(yaml.safe_load(values_path.read_text()),
                                     candidate_id, head_sha, images, int(os.environ["GITHUB_RUN_ID"]))
     values_path.write_text(yaml.safe_dump(values, sort_keys=False))
-    version = f"0.1.0-pr.{candidate_id.replace('-', '.')}.run.{os.environ['GITHUB_RUN_ID']}"
+    version = f"0.2.{os.environ['GITHUB_RUN_ID']}" if stable else f"0.1.0-pr.{candidate_id.replace('-', '.')}.run.{os.environ['GITHUB_RUN_ID']}"
     packaged = subprocess.run(["helm", "package", str(chart_copy), "--destination", str(output),
                                "--version", version], text=True, capture_output=True)
     require(packaged.returncode == 0, f"helm package failed: {packaged.stderr}")
@@ -269,7 +290,7 @@ def publish(args: argparse.Namespace) -> None:
     chart_source = Path(__file__).resolve().parents[1] / "helm" / "mi-bolt"
     args.output.mkdir(parents=True, exist_ok=True)
     chart = package_chart(chart_source, args.output, args.candidate_id,
-                          args.head_sha, images, args.publisher_revision)
+                          args.head_sha, images, args.publisher_revision, stable=args.pr == 0)
     receipt = {"schemaVersion": 1, "candidateId": args.candidate_id,
                "repo": REPO, "pr": args.pr, "headSha": args.head_sha,
                "testedSha": args.head_sha, "sourceRunId": args.build_run_id,

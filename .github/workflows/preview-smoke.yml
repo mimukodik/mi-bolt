@@ -15,11 +15,16 @@ permissions:
   contents: read
   actions: read
   pull-requests: read
+  deployments: read
 jobs:
   smoke:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 50
+    outputs:
+      ready: ${{ steps.candidate.outputs.ready }}
+      head: ${{ steps.candidate.outputs.head }}
+      pr: ${{ steps.candidate.outputs.pr }}
     steps:
       - name: Trusted receipt and fencing wrapper
         uses: actions/checkout@v7
@@ -90,3 +95,28 @@ jobs:
             source/frontend/preview-smoke-results.json
           if-no-files-found: warn
           retention-days: 14
+  report:
+    needs: smoke
+    if: needs.smoke.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: bolt-preview-${{ needs.smoke.outputs.pr }}
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Report accepted preview to GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.smoke.outputs.pr }}
+          HEAD_SHA: ${{ needs.smoke.outputs.head }}
+        run: |
+          python3 -c 'import json, os; open("candidate.json", "w").write(json.dumps({"pr": int(os.environ["PR_NUMBER"]), "headSha": os.environ["HEAD_SHA"]}))'
+          python3 deploy/candidate/github_deployment.py success candidate.json
