@@ -129,6 +129,11 @@ export class FilterPanel {
    *  at most five before "more"). */
   protected readonly brandSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
 
+  /** Three placeholder colour rows: the five capped chips wrap into three
+   *  44px lines in the 280px panel, so the skeleton is as tall as the
+   *  loaded list (148px, measured in the browser, MIM-405). */
+  protected readonly colorSkeletonRows: readonly number[] = [0, 1, 2];
+
   /** Storage buckets exposed by the documented storage enum, paired with
    *  the facet count so the chip can show "128 GB (3)". Falls back to
    *  the documented enum with `null` counts when no `Facets` is loaded
@@ -204,6 +209,35 @@ export class FilterPanel {
 
   /** Colour facets, falling back to an empty list when none are present. */
   readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
+
+  /** The colour list collapses to the first five chips behind a
+   *  `Még több szín` text link, like the brand list, so the list has
+   *  the same height before and after the first response (MIM-405).
+   *  A colour selected beyond the first five keeps the list expanded. */
+  readonly colorsExpanded = signal(false);
+
+  /** Colours to render: the first five when collapsed, otherwise all. */
+  readonly visibleColorFacets = computed<readonly ColorFacetValue[]>(() => {
+    const all = this.colorFacets();
+    if (this.colorsExpanded()) return all;
+    if (all.length <= 5) return all;
+    const selectedColors = this.value().colors ?? [];
+    const hasDeeperSelection = selectedColors.some((c) => {
+      const idx = all.findIndex((f) => f.value === c);
+      return idx >= 5;
+    });
+    if (hasDeeperSelection) return all;
+    return all.slice(0, 5);
+  });
+
+  /** Whether every colour facet is rendered; drives the toggle's label. */
+  readonly colorsAllVisible = computed(
+    () => this.visibleColorFacets().length === this.colorFacets().length,
+  );
+
+  toggleColorsExpanded(): void {
+    this.colorsExpanded.update((v) => !v);
+  }
 
   // Local drafts for the controls that need an "in progress" copy. Each
   // is a linkedSignal sourced from its applied field plus the "any
