@@ -34,13 +34,6 @@
   letter-spacing: 0.05em;
 }
 
-.receipt__heading {
-  margin: 0;
-  font-size: var(--type-card-title);
-  font-weight: var(--weight-bold);
-  line-height: var(--line-height-heading);
-}
-
 .receipt__order-number {
   display: flex;
   flex-direction: column;

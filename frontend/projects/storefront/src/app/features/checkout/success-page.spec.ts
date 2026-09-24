@@ -349,6 +349,27 @@ describe('OrderReceiptComponent', () => {
     ).toContain(PriceBlock.formatHuf(90_480));
   });
 
+  it('SP-01b the receipt prints each total label once and no heading of its own', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt());
+    fixture.detectChanges();
+
+    expect(queryHTMLElement(document, '[data-testid="receipt-heading"]')).toBeNull();
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"] h2')).toBeNull();
+    const rows: readonly (readonly [string, string])[] = [
+      ['receipt-row-subtotal', 'Részösszeg'],
+      ['receipt-row-shipping', 'Szállítási díj'],
+      ['receipt-row-payment-fee', 'Fizetési díj'],
+      ['receipt-row-total', 'Végösszeg'],
+    ];
+    for (const [testId, label] of rows) {
+      const row = queryHTMLElement(document, `[data-testid="${testId}"]`);
+      expect(row?.textContent.split(label)).toHaveLength(2);
+      expect(queryHTMLElement(document, `[data-testid="${testId}"] dd .label`)).toBeNull();
+    }
+  });
+
   it('SP-02 the receipt renders the Hungarian payment and delivery labels the component maps', () => {
     const fixture: ComponentFixture<OrderReceiptComponent> =
       TestBed.createComponent(OrderReceiptComponent);
