@@ -1116,6 +1116,63 @@ describe('payment intents', () => {
     expect(checkout.intentDropped()).toBe('stale');
   });
 
+  it('F-31m: a 422 PAYMENT_REQUIRED for an intent that still requires action keeps it', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error('createPaymentIntent failed');
+    const id = created.value.id;
+    expect(checkout.paymentIntent()?.status).toBe('requires_action');
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.status).toBe(422);
+    expect(placed.error.code).toBe('PAYMENT_REQUIRED');
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkout.paymentIntent()?.status).toBe('requires_action');
+    expect(checkoutKeys.activeIntentId()).toBe(id);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31n: the mock refuses an intent that already backs an order, and the facade drops it as refused', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const first = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(first.ok).toBe(true);
+
+    // A fresh app on the same mock and demo session, as F-31g: the
+    // shopper comes back holding the intent the placed order used.
+    TestBed.resetTestingModule();
+    configureTestBed();
+    const returning = await setupCompleteCardDraft();
+    const read = await returning.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(returning.paymentIntent()?.status).toBe('succeeded');
+
+    const again = await returning.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(again.ok).toBe(false);
+    if (again.ok) return;
+    expect(again.error.status).toBe(422);
+    expect(again.error.code).toBe('PAYMENT_REQUIRED');
+    expect(returning.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(returning.intentDropped()).toBe('refused');
+  });
+
   it('F-32: a contact or billing write keeps the held intent', async () => {
     const checkout = await setupCompleteCardDraft();
     const created = await checkout.createPaymentIntent();
