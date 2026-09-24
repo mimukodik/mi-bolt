@@ -752,6 +752,7 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     const noIntentRoot = getRoot(noIntent);
     const noIntentButton = getButton(noIntentRoot, 'review-submit');
     expect(noIntentButton.disabled).toBe(true);
+    expect(noIntent.componentInstance.canSubmit()).toBe(false);
     let noIntentEmitted = 0;
     const noIntentSub = noIntent.componentInstance.submitRequested.subscribe(
       () => (noIntentEmitted += 1),

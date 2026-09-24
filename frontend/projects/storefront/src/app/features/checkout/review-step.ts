@@ -394,8 +394,8 @@ export class ReviewStep {
    *  cannot submit marks the terms and, in the conflict, stock-error
    *  and error states moves focus to that state's banner (its
    *  explanation), otherwise to the unticked terms, and with the
-   *  terms ticked to the explanation under the button. Disabled only
-   *  while submitting. */
+   *  terms ticked to the explanation under the button. Disabled while
+   *  submitting and for an unpaid card draft. */
   onSubmit(): void {
     if (this.state() === 'submitting') return;
     this.submitted.set(true);
