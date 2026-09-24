@@ -239,16 +239,14 @@
     >
       <div class="status-row flex flex-col gap-(--space-3)" data-testid="review-status">
         @if (paymentIntent(); as intent) {
-          <div
-            class="branch flex flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
-            role="status"
-          >
-            <p
-              class="branch-message m-0 text-(length:--type-body) leading-(--line-height-body)"
+          <div class="branch flex flex-col gap-(--space-3)" role="status">
+            <app-status-message
               data-testid="review-payment-status"
-            >
-              {{ paymentStatusMessage() }}
-            </p>
+              [live]="false"
+              [message]="paymentStatusMessage() ?? ''"
+              [persistent]="true"
+              [severity]="paymentSeverity()"
+            />
             @switch (intent.status) {
               @case ('declined') {
                 <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
@@ -289,16 +287,14 @@
             }
           </div>
         } @else if (paymentIntentMissing()) {
-          <div
-            class="branch flex flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
-            role="status"
-          >
-            <p
-              class="branch-message m-0 text-(length:--type-body) leading-(--line-height-body)"
+          <div class="branch flex flex-col gap-(--space-3)" role="status">
+            <app-status-message
               data-testid="review-payment-status"
-            >
-              {{ paymentStatusMessage() }}
-            </p>
+              [live]="false"
+              [message]="paymentStatusMessage() ?? ''"
+              [persistent]="true"
+              [severity]="paymentSeverity()"
+            />
             <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
               <app-button
                 data-testid="review-payment-new"

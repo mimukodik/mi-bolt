@@ -483,6 +483,34 @@ describe('PS-12 no intent after the server refused a used payment says it alread
 });
 
 // ---------------------------------------------------------------------------
+// PS-13 — the payment status wears the severity of the payment
+// ---------------------------------------------------------------------------
+describe('PS-13 the payment status is a StatusMessage whose severity follows the payment', () => {
+  it.each([
+    ['succeeded', 'is-success'],
+    ['declined', 'is-error'],
+    ['pending', 'is-info'],
+    ['requires_action', 'is-info'],
+  ] as const)('a %s intent renders the status with %s', (status, severityClass) => {
+    const fixture = createFixture({ paymentIntent: makeIntent(status) });
+    const host = getElement(getRootElement(fixture), '[data-testid="review-payment-status"]');
+    const message = getElement(host, '[data-testid="status-message"]');
+    expect(message.classList.contains(severityClass)).toBe(true);
+  });
+
+  it('a missing intent renders the status as info', () => {
+    const fixture = createFixture({
+      paymentIntent: null,
+      paymentIntentMissing: true,
+      paymentStarted: true,
+    });
+    const host = getElement(getRootElement(fixture), '[data-testid="review-payment-status"]');
+    const message = getElement(host, '[data-testid="status-message"]');
+    expect(message.classList.contains('is-info')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PC-01 — price-changed: both totals side by side
 // ---------------------------------------------------------------------------
 describe('PC-01 the price-changed state renders both totals side by side', () => {

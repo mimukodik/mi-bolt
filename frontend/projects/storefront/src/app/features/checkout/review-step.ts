@@ -42,7 +42,7 @@ import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
-import { StatusMessage } from '../../shared/ui/status-message/status-message';
+import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 import { OrderSummary } from '../cart/order-summary';
 import { cartLinesKey, checkoutKeys } from './checkout-keys';
@@ -262,6 +262,20 @@ export class ReviewStep {
         return 'Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.';
       case 'requires_action':
         return 'A fizetés nem fejeződött be.';
+    }
+  });
+
+  /** The severity the payment status wears (docs/design/yettel.md §8,
+   *  "Review step"): a confirmed payment is a success, a declined one an
+   *  error, and every other state, a missing intent included, is info. */
+  readonly paymentSeverity = computed<StatusSeverity>(() => {
+    switch (this.paymentIntent()?.status) {
+      case 'succeeded':
+        return 'success';
+      case 'declined':
+        return 'error';
+      default:
+        return 'info';
     }
   });
 
