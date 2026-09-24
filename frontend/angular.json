@@ -201,7 +201,8 @@
           },
           "configurations": {
             "production": { "buildTarget": "demo-payment:build:production" },
-            "development": { "buildTarget": "demo-payment:build:development" }
+            "development": { "buildTarget": "demo-payment:build:development" },
+            "local-backend": { "buildTarget": "demo-payment:build:production" }
           },
           "defaultConfiguration": "development"
         },
