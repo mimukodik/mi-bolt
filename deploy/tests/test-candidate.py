@@ -38,18 +38,9 @@ class CandidateTests(unittest.TestCase):
             "backend:\n"
             "  - 'backend/**'\n  - 'contracts/**'\n  - 'data/catalog/**'\n"
             "  - 'mise.toml'\n  - '.github/**'\n  - 'tools/ci/**'\n")
+        # Use the actual build contract, including Compose's implicit web Dockerfile.
         (self.root / "deploy/compose.yaml").write_text(
-            "services:\n"
-            "  web:\n"
-            "    build:\n"
-            "      context: ../frontend\n"
-            "      dockerfile: Dockerfile\n"
-            "      additional_contexts: {catalog: ../data/catalog}\n"
-            "  commerce:\n"
-            "    build:\n"
-            "      context: ../backend\n"
-            "      dockerfile: services/commerce/Dockerfile\n"
-            "      additional_contexts: {contracts: ../contracts, catalog: ../data/catalog}\n")
+            (Path(__file__).resolve().parents[1] / "compose.yaml").read_text())
         subprocess.run(["git", "add", "."], cwd=self.root, check=True)
         self.artifact = self.root / "artifact"
         self.artifact.mkdir()
@@ -119,6 +110,13 @@ class CandidateTests(unittest.TestCase):
             import publish
             publish.REPO = "mimukodik/mi-bolt"
             self.assertEqual(verify(self.artifact, self.root, 123, self.sha, 456), image_hashes)
+            compose_path = self.root / "deploy/compose.yaml"
+            original_compose = compose_path.read_text()
+            compose_path.write_text(original_compose.replace(
+                "context: ../frontend", "context: ../outside-checkout"))
+            with self.assertRaisesRegex(ValueError, "web Compose build contexts changed"):
+                verify(self.artifact, self.root, 123, self.sha, 456)
+            compose_path.write_text(original_compose)
             metadata["inputHashes"]["web"] = "0" * 64
             (self.artifact / "build.json").write_text(json.dumps(metadata))
             with self.assertRaisesRegex(ValueError, "build input hash mismatch"):

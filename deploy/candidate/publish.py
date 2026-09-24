@@ -158,7 +158,8 @@ def verify(artifact: Path, source: Path, pr_number: int, head_sha: str,
     }
     for component, expected_build in expected_builds.items():
         build = compose["services"][component]["build"]
-        require({key: build[key] for key in expected_build} == expected_build,
+        require({key: build.get(key, "Dockerfile" if key == "dockerfile" else None)
+                 for key in expected_build} == expected_build,
                 f"{component} Compose build contexts changed")
     expected = hashes(source)
     require(metadata["inputHashes"] == expected, "build input hash mismatch")
