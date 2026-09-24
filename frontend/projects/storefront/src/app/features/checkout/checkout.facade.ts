@@ -481,15 +481,16 @@ export class CheckoutFacade {
             await this.recordPriceChange(error);
             return { ok: false, error };
           }
-          // The server refuses an intent the facade thought paid, so the
-          // review asks for a new payment instead of redirecting to a used
-          // one.
+          // The refused intent is one the facade can no longer use, so
+          // it and its stored id go and the next submit asks for a new
+          // payment. The caller's own outcome still carries the intent
+          // it read before this call, so a redirect built from that
+          // snapshot is not suppressed here.
           if (
             error.code === 'PAYMENT_REQUIRED' &&
             this.paymentIntentWritable()?.status === 'succeeded'
           ) {
-            this.paymentIntentWritable.set(null);
-            checkoutKeys.clearActiveIntentId();
+            this.clearHeldIntent();
           }
           if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateOrderKey();
@@ -549,6 +550,17 @@ export class CheckoutFacade {
   }
 
   /**
+   * Drops the held intent and its stored id together: a held intent
+   * with no stored id, or a stored id with no intent, is a state the
+   * review and return legs cannot tell apart from "no payment was
+   * started".
+   */
+  private clearHeldIntent(): void {
+    this.paymentIntentWritable.set(null);
+    checkoutKeys.clearActiveIntentId();
+  }
+
+  /**
    * The held intent backs a card draft for exactly its amount. A session
    * whose payment method is no longer card, or whose total differs from
    * the amount the intent paid, drops it and its stored id, so the review
@@ -568,8 +580,7 @@ export class CheckoutFacade {
     ) {
       return;
     }
-    this.paymentIntentWritable.set(null);
-    checkoutKeys.clearActiveIntentId();
+    this.clearHeldIntent();
   }
 
   /**
