@@ -2,7 +2,7 @@
  * MIM-423 — demo access gate focused unit suite.
  *
  * Ten cases covering the gate's whole surface: the 401 that a gated read,
- * a gated write and GET /demo/session answer while signed out; the open
+ * a gated write and GET /demo/session answer while signed out; the gated
  * /media/... route; a wrong password; the demo password signing in and
  * opening the shop; the signed-in default of every other scenario; the
  * injected storage keeping a sign-in; `isOpenPath`'s table; and the
@@ -39,7 +39,7 @@ useMswServer();
 
 const API = 'http://localhost/api/v1';
 
-/** `GET /media/{imageId}` is the one shop operation the contract leaves ungated. */
+/** A seeded image id; `GET /media/{imageId}` is gated like every other shop operation. */
 const MEDIA_IMAGE_ID = '0494688791f55f77852d95d4aff487aa89ffd0d6c300a64c56ed4ff08c3be5b8';
 
 /** The gate's key for the one scenario that starts signed out. */
@@ -127,14 +127,16 @@ describe('demo access gate', () => {
     expect(res.status).toBe(401);
   });
 
-  it('signed out: media stays open', async () => {
-    // Fails if `isOpenPath` loses its `/media/` prefix arm, which is the one
-    // shop operation the contract leaves outside the gate.
+  it('signed out: media is gated', async () => {
+    // Fails if `isOpenPath` regains a `/media/` prefix arm: contract 2.3.0
+    // puts catalogue images behind the gate like every other shop path.
     useSignedOut();
 
     const res = await fetch(`${API}/media/${MEDIA_IMAGE_ID}`);
 
-    expect(res.status).not.toBe(401);
+    expect(res.status).toBe(401);
+    const body = await readProblem(res);
+    expect(body['code']).toBe('UNAUTHENTICATED');
   });
 
   it('a wrong password keeps the visitor signed out', async () => {
@@ -204,14 +206,14 @@ describe('demo access gate', () => {
 
   it('isOpenPath', () => {
     // Fails if `isOpenPath` stops stripping the `/api/v1` prefix or loses any
-    // of its open arms (or gains a too-broad one, which `/mediafoo` and
-    // `/administrator` catch).
+    // of its open arms (or gains a too-broad one, which `/media/abc`,
+    // `/mediafoo` and `/administrator` catch).
     expect(isOpenPath('/api/v1/demo/session')).toBe(true);
-    expect(isOpenPath('/api/v1/media/abc')).toBe(true);
     expect(isOpenPath('/api/v1/admin/products')).toBe(true);
     expect(isOpenPath('/api/v1/actuator/health')).toBe(true);
 
     expect(isOpenPath('/api/v1/products')).toBe(false);
+    expect(isOpenPath('/api/v1/media/abc')).toBe(false);
     expect(isOpenPath('/api/v1/demo/sessions')).toBe(false);
     expect(isOpenPath('/api/v1/mediafoo')).toBe(false);
     expect(isOpenPath('/api/v1/administrator')).toBe(false);
