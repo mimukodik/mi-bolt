@@ -1,10 +1,10 @@
 // tests/contract/admin-tags.ts — shared list of admin-tagged operations
 // (MIM-331, plan F4 D13).
 //
-// The OpenAPI contract 2.1.0 declares 32 operations: 17 shop operations
+// The OpenAPI contract 2.2.0 declares 34 operations: 19 shop operations
 // plus 15 admin operations, each admin operation tagged exactly one of
 // `AdminAuth`, `AdminUsers`, `AdminProducts`, `AdminMedia`. The shop
-// contract suite asserts the 17-operation shape; the shop SDK excludes
+// contract suite asserts the 19-operation shape; the shop SDK excludes
 // the four tags; the admin SDK includes them. Keeping the tag list in one
 // place lets every spec-load point and the SDK-split spec reference the
 // same constant.

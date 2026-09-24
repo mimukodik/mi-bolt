@@ -49,6 +49,7 @@ import './cart/cart.handlers';
 import './checkout/checkout.handlers';
 import './payment/payment.handlers';
 import './orders/order.handlers';
+import './demo/demo.handlers';
 
 // `setupWorker()` from `msw/browser` requires a real Service Worker API:
 // jsdom ships `window` and `navigator` but no `navigator.serviceWorker`,

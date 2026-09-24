@@ -88,11 +88,13 @@ interface DereferencedSpec {
 const EXPECTED_OPERATION_IDS = [
   'addCartItem',
   'clearCart',
+  'createDemoSession',
   'createOrder',
   'createPaymentIntent',
   'getCart',
   'getCheckout',
   'getCheckoutOptions',
+  'getDemoSession',
   'getMedia',
   'getOrder',
   'getPaymentIntent',
@@ -129,7 +131,7 @@ beforeAll(async () => {
 });
 
 describe('T03-AC01 operationIds', () => {
-  it('declares exactly the 17 operationIds of the 2.0.0 contract', () => {
+  it('declares exactly the 19 shop operationIds of the 2.2.0 contract', () => {
     const ids: string[] = [];
     for (const pathItem of Object.values(spec.paths)) {
       for (const op of Object.values(pathItem)) {
@@ -291,8 +293,20 @@ describe('T03-AC02 status codes & repeated query arrays', () => {
   it('every operation response is one of the documented status codes', () => {
     // Measured from the spec:
     //   grep -oE "^\s+'[0-9]{3}':" contracts/commerce/openapi.yaml | sort -u
-    // → 200, 201, 400, 404, 409, 410, 412, 422, 503.
-    const known = new Set(['200', '201', '400', '404', '409', '410', '412', '422', '503']);
+    // → 200, 201, 204, 400, 401, 404, 409, 410, 412, 422, 503.
+    const known = new Set([
+      '200',
+      '201',
+      '204',
+      '400',
+      '401',
+      '404',
+      '409',
+      '410',
+      '412',
+      '422',
+      '503',
+    ]);
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       for (const [method, op] of Object.entries(pathItem)) {
         if (

@@ -6,7 +6,7 @@
 //   - every operation under a path beginning with `/admin/` carries
 //     exactly one tag and that tag is one of `ADMIN_TAGS`;
 //   - every operation carrying an `ADMIN_TAGS` tag sits under `/admin/`;
-//   - the spec declares exactly 15 admin operations and 17 others;
+//   - the spec declares exactly 15 admin operations and 19 others;
 //   - no admin `operationId` is exported by the shop SDK functions module;
 //   - every admin `operationId` is exported by the admin SDK functions
 //     module.
@@ -120,10 +120,10 @@ describe('sdk-split: tag lists and admin coverage', () => {
     }
   });
 
-  it('declares exactly 15 admin operations and 17 others', async () => {
+  it('declares exactly 15 admin operations and 19 others', async () => {
     const operations = await loadOperations();
     expect(operations.filter(isAdminTagged)).toHaveLength(15);
-    expect(operations.filter((operation) => !isAdminTagged(operation))).toHaveLength(17);
+    expect(operations.filter((operation) => !isAdminTagged(operation))).toHaveLength(19);
   });
 });
 
