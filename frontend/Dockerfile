@@ -28,4 +28,6 @@ COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist/storefront/browser/ /usr/share/nginx/html/
 COPY --from=build /app/dist/admin/browser/ /usr/share/nginx/html/admin/
 COPY --from=build /app/dist/demo-payment/browser/ /usr/share/nginx/html/demo-fizetes/
+# Every robot is turned away from the whole demo (MIM-423).
+COPY nginx/robots.txt /usr/share/nginx/html/robots.txt
 EXPOSE 8080

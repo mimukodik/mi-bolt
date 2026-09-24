@@ -24,11 +24,17 @@ Environment variables the service reads, with their defaults:
 | `MIBOLT_DB_USER`                     | `mi_bolt`                                                                                                   |
 | `MIBOLT_DB_PASSWORD`                 | `mi_bolt_local`                                                                                             |
 | `MIBOLT_ADMIN_INITIAL_PASSWORD`      | empty (a generated password is printed once at WARN)                                                        |
+| `MIBOLT_DEMO_USERNAME`               | `MiBoltDemoUser` (read only while the `demo_user` table is empty)                                           |
+| `MIBOLT_DEMO_PASSWORD`               | `1MiBoltDemo1` (not a secret; read only while the `demo_user` table is empty)                               |
 | `MIBOLT_PAYMENT_REDIRECT_URL_PREFIX` | `http://localhost:4210/demo-fizetes/`                                                                       |
 | `MIBOLT_PAYMENT_RETURN_URL_PREFIX`   | `http://localhost:4200/penztar?paymentIntentId=`                                                            |
 | `MIBOLT_CATALOG_PATH`                | `../../../data/catalog` (relative to `services/commerce/`; the Docker image sets it to `/app/data/catalog`) |
 
 The service answers on port 8080, under the context path `/api/v1`.
+Every shop call except `GET` and `POST /demo/session` and
+`GET /media/{imageId}` needs the demo gate's cookie (`mibolt_demo_access`,
+30 days), which `POST /demo/session` issues for the demo password; the admin
+API keeps its own sign-in (docs/decisions/0022-demo-access-gate.md).
 
 ## 📋 The stack
 
@@ -189,6 +195,7 @@ that registry is not named here.
 - `docs/decisions/0020-admin-catalogue-write-api.md` — admin catalogue
   write API.
 - `docs/decisions/0021-admin-media-upload.md` — admin media upload.
+- `docs/decisions/0022-demo-access-gate.md` — demo access gate.
 
 Further reading:
 

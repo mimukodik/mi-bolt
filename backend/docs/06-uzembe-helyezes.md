@@ -17,7 +17,8 @@ lépései külön szakaszként ide kerülnek.
 
 Az alkalmazás Spring Boot Actuatort használ; az élőségellenőrzés a
 `GET /api/v1/actuator/health/readiness` kérés válasza: 503, amíg az indítási
-lépések (katalógusbetöltés, admin bootstrap) le nem futottak, utána 200.
+lépések (katalógusbetöltés, admin bootstrap, demó-felhasználó) le nem futottak,
+utána 200.
 
 ## 2. Konfiguráció
 
@@ -31,9 +32,12 @@ alapértelmezést.
 | `MIBOLT_DB_USER` | `mi_bolt` | az adatbázis-felhasználó |
 | `MIBOLT_DB_PASSWORD` | `mi_bolt_local` | a jelszó; soha nem kerül fájlba a repóban |
 | `MIBOLT_ADMIN_INITIAL_PASSWORD` | üres (generált) | az első admin jelszava; ha üres, a szerver generálja, és induláskor egyszer kiírja a logba |
+| `MIBOLT_DEMO_USERNAME` | `MiBoltDemoUser` | a demó egyetlen felhasználója; üres `demo_user` tábla esetén jön létre, később már nem érvényesül |
+| `MIBOLT_DEMO_PASSWORD` | `1MiBoltDemo1` | a demó belépési jelszava; **nem titok** (a repóban is benne van), és csak üres `demo_user` tábla esetén érvényesül |
 
 Az üzleti paraméterek (`mibolt.checkout.*`, `mibolt.payment.*`,
-`mibolt.session.lifetime`, `mibolt.idempotency.retention`) az
+`mibolt.session.lifetime`, `mibolt.demo.access-lifetime`,
+`mibolt.idempotency.retention`) az
 `application.properties`-ben vannak; a demóhoz az alapértékek valók.
 
 ## 3. Kép építése és kiadása
@@ -81,23 +85,36 @@ compose fájl alapértékei érvényesek, és csak a jelszót kell megadni a
 
 Induláskor sorrendben:
 
-1. A Liquibase lefuttatja a `db/changelog` változásait (0001–0009); ismételt
+1. A Liquibase lefuttatja a `db/changelog` változásait (0001–0010); ismételt
    induláskor csak az újakat.
 2. A Hibernate `ddl-auto=validate` összeveti az entitásokat a sémával; eltérés
    esetén az alkalmazás nem indul el, és a log megmondja, melyik oszlop.
-3. `Started MiBoltBackendApplication in … seconds` — helyi mérés szerint kb. 5 mp. Ezután futnak az indítási lépések; eddig a `GET /api/v1/actuator/health/readiness` 503-at ad, a `GET /api/v1/products` pedig üres listát, amíg a katalógus be nem töltődött.
+3. `Started MiBoltBackendApplication in … seconds` — helyi mérés szerint kb. 5 mp. Ezután futnak az indítási lépések; eddig a `GET /api/v1/actuator/health/readiness` 503-at ad, a `GET /api/v1/products` pedig demó-belépés nélkül 401, belépés után üres listát, amíg a katalógus be nem töltődött.
 4. A `CatalogLoader` üres `product` tábla esetén betölti a katalógust
    (`catalogue loaded: 48 products, …`), különben átugorja
    (`catalogue present, 48 products, loader skipped`).
 5. Üres `admin_user` tábla esetén létrejön az `admin` felhasználó. A jelszót egyszer, WARN szinten írja ki: generált jelszónál magát a jelszót (`initial admin created: username=admin password=… (shown once; …)`), a `MIBOLT_ADMIN_INITIAL_PASSWORD` megadásakor csak a változó nevét. Ha már van admin: `admin users present, N, bootstrap skipped`. Kikeresése: `docker logs mi-bolt-commerce 2>&1 | grep 'initial admin'` (compose: `docker compose logs commerce | grep 'initial admin'`). Az első bejelentkezés után a jelszót érdemes megváltoztatni.
+6. Üres `demo_user` tábla esetén létrejön a demó egyetlen felhasználója a
+   `MIBOLT_DEMO_USERNAME` / `MIBOLT_DEMO_PASSWORD` értékéből, bcrypt-hash formában
+   (`demo user created: username=…`); a jelszó nem kerül a logba. Ha már van sor:
+   `demo user present, bootstrap skipped`, és a később beállított jelszó **nem**
+   érvényesül — a demó jelszava csak üres táblánál vehető fel, cserélni a sor
+   törlésével és újraindítással lehet. Üres vagy 64 karakternél hosszabb jelszó,
+   illetve üres vagy 80 karakternél hosszabb felhasználónév esetén az alkalmazás nem
+   indul el. A `demo_access_session` sorok a `mibolt_demo_access` sütit szolgálják ki
+   (30 nap).
 
 Ellenőrzés:
 
 ```bash
-docker logs mi-bolt-commerce 2>&1 | grep -E 'Started|catalogue|initial admin|admin users|FAILED'
+docker logs mi-bolt-commerce 2>&1 | grep -E 'Started|catalogue|initial admin|admin users|demo user|FAILED'
 curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/api/v1/actuator/health/readiness   # 503, majd az indítási lépések után 200
-curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/api/v1/products   # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://<host>:8080/api/v1/products   # 401: a bolt demó-belépés nélkül nem válaszol
 ```
+
+A bolt kipróbálásához előbb be kell lépni: a `POST /api/v1/demo/session` a
+`MIBOLT_DEMO_PASSWORD` jelszóval 204-et és `mibolt_demo_access` sütit ad (a
+`scripts/smoke.sh` pontosan ezt teszi), utána a `/products` 200-at.
 
 ## 5. Frissítés és visszagörgetés
 

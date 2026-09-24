@@ -9,39 +9,18 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { isRecord } from '../app/core/is-record';
 import { useMswServer, server } from '../testing/msw-server';
+import { ANY_TRACE_ID, SESSION_URL, jsonRecord, xsrfCookie } from '../testing/mock-spec-helpers';
 import { authHandlers } from './auth.handlers';
 import { createDb } from './db';
 import { issueXsrfCookie } from './guards';
 import { SEED_ADMIN, SEED_ADMIN_PASSWORD } from './seed';
 
-/** The random `traceId` of every Problem body, typed `unknown` so an object literal may carry it. */
-const ANY_TRACE_ID: unknown = expect.any(String);
-
 useMswServer();
 
-const SESSION_URL = new URL('/api/v1/admin/auth/session', document.baseURI).href;
 const LOGIN_URL = new URL('/api/v1/admin/auth/login', document.baseURI).href;
 const LOGOUT_URL = new URL('/api/v1/admin/auth/logout', document.baseURI).href;
 const PASSWORD_URL = new URL('/api/v1/admin/auth/password', document.baseURI).href;
-
-function xsrfCookie(): string | null {
-  const jar = document.cookie.split('; ');
-  for (const cookie of jar) {
-    const eq = cookie.indexOf('=');
-    if (eq < 0) continue;
-    if (cookie.slice(0, eq) === 'XSRF-TOKEN') return cookie.slice(eq + 1);
-  }
-  return null;
-}
-
-/** Reads a JSON response body as a record, asserting the wire shape first. */
-async function jsonRecord(res: Response): Promise<Record<string, unknown>> {
-  const body: unknown = await res.json();
-  expect(isRecord(body)).toBe(true);
-  return isRecord(body) ? body : {};
-}
 
 function login(username: string, password: string, token: string): Promise<Response> {
   return fetch(LOGIN_URL, {

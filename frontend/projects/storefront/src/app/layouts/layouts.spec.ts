@@ -18,6 +18,7 @@ import { Location } from '@angular/common';
 import { routes } from '../../app/app.routes';
 import { checkoutRoutes } from '../../app/features/checkout/checkout.routes';
 import { App } from '../../app/app';
+import { DemoAccess } from '../../app/core/demo-access/demo-access';
 import { CartCountFacade } from '../../app/core/navigation/cart-count-facade';
 import { MarketingLayout } from '../../app/layouts/marketing-layout';
 import { ShopLayout } from '../../app/layouts/shop-layout';
@@ -441,7 +442,11 @@ describe('T11-AC03 skip link, single H1, route title, history', () => {
   it('browser back preserves URL query filters on /telefonok', async () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [provideRouter(routes), provideZonelessChangeDetection()],
+      providers: [
+        provideRouter(routes),
+        provideZonelessChangeDetection(),
+        { provide: DemoAccess, useValue: { check: () => Promise.resolve(true) } },
+      ],
     });
     const router = TestBed.inject(Router);
     const location = TestBed.inject(Location);

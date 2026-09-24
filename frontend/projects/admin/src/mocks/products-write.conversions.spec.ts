@@ -18,149 +18,25 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AdminProduct } from '../app/api/generated/models/admin-product';
-import type { ProblemCode } from '../app/api/generated/models/problem-code';
-import type { AdminProductInput } from '../app/api/generated/models/admin-product-input';
-import { isRecord } from '../app/core/is-record';
 
-import { useMswServer, server } from '../testing/msw-server';
-import { createDb } from './db';
-import type { MockDb } from './db';
-import { XSRF_HEADER, issueXsrfCookie } from './guards';
-import { productsWriteHandlers } from './products-write.handlers';
-import type { ScenarioName } from './scenario';
-import { SEED_ADMIN } from './seed';
+import { useMswServer } from '../testing/msw-server';
+import {
+  action,
+  archiveUrl,
+  expectProblem,
+  expectRecord,
+  fieldErrorsOf,
+  inputOf,
+  productUrl,
+  put,
+  readString,
+  requireProduct,
+  setup,
+} from '../testing/mock-spec-helpers';
 
 useMswServer();
 
 const STALE_IF_MATCH = '"999999"';
-
-function productUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}`, document.baseURI).href;
-}
-
-function archiveUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}/archive`, document.baseURI).href;
-}
-
-function setup(scenario: ScenarioName = 'default'): MockDb {
-  const db = createDb(scenario);
-  db.sessionAdminId = SEED_ADMIN.id;
-  issueXsrfCookie(db);
-  server?.use(...productsWriteHandlers(db));
-  return db;
-}
-
-function requireProduct(db: MockDb, id: number): AdminProduct {
-  const product = db.products.get(id);
-  if (product === undefined) throw new Error(`product ${String(id)} missing from seed`);
-  return product;
-}
-
-/** Maps an `AdminProduct` back to a valid `AdminProductInput`, as the edit form would. */
-function inputOf(product: AdminProduct): AdminProductInput {
-  return {
-    slug: product.slug,
-    brand: product.brand,
-    name: product.name,
-    description: product.description,
-    is5g: product.is5g,
-    releasedAt: product.releasedAt,
-    rank: product.rank,
-    popularityScore: product.popularityScore,
-    featured: product.featured,
-    highlights: product.highlights,
-    colors: product.colors.map((color) => ({
-      code: color.code,
-      name: color.name,
-      swatchHex: color.swatchHex,
-      imageId: color.image.id,
-      alt: color.image.alt,
-    })),
-    variants: product.variants.map((variant) => ({
-      slug: variant.slug,
-      colorCode: variant.colorCode,
-      storageGb: variant.storageGb,
-      price: variant.price,
-      stock: variant.stock,
-    })),
-    specGroups: product.specGroups,
-  };
-}
-
-function headersFor(db: MockDb, overrides: Record<string, string | undefined> = {}): HeadersInit {
-  const merged: Record<string, string | undefined> = {
-    'content-type': 'application/json',
-    [XSRF_HEADER]: db.xsrfToken ?? '',
-    ...overrides,
-  };
-  const present = Object.entries(merged).filter(
-    (entry): entry is [string, string] => entry[1] !== undefined,
-  );
-  return Object.fromEntries(present);
-}
-
-function put(
-  url: string,
-  db: MockDb,
-  body: unknown,
-  headerOverrides: Record<string, string | undefined> = {},
-): Promise<Response> {
-  return fetch(url, {
-    method: 'PUT',
-    headers: headersFor(db, headerOverrides),
-    body: JSON.stringify(body),
-  });
-}
-
-function action(
-  url: string,
-  db: MockDb,
-  headerOverrides: Record<string, string | undefined> = {},
-): Promise<Response> {
-  return fetch(url, { method: 'POST', headers: headersFor(db, headerOverrides) });
-}
-
-function expectRecord(value: unknown): asserts value is Record<string, unknown> {
-  expect(isRecord(value)).toBe(true);
-}
-
-function readString(body: Record<string, unknown>, key: string): string {
-  const value = body[key];
-  expect(typeof value).toBe('string');
-  if (typeof value !== 'string') throw new Error(`${key} is not a string`);
-  return value;
-}
-
-function readArray(body: Record<string, unknown>, key: string): unknown[] {
-  const value = body[key];
-  expect(Array.isArray(value)).toBe(true);
-  if (!Array.isArray(value)) throw new Error(`${key} is not an array`);
-  return value;
-}
-
-function fieldErrorsOf(body: Record<string, unknown>): Record<string, unknown>[] {
-  return readArray(body, 'fieldErrors').map((item) => {
-    expectRecord(item);
-    return item;
-  });
-}
-
-async function readJsonRecord(response: Response): Promise<Record<string, unknown>> {
-  const body: unknown = await response.json();
-  expectRecord(body);
-  return body;
-}
-
-async function expectProblem(
-  response: Response,
-  status: number,
-  code: ProblemCode,
-): Promise<Record<string, unknown>> {
-  expect(response.status).toBe(status);
-  const body = await readJsonRecord(response);
-  expect(readString(body, 'code')).toBe(code);
-  return body;
-}
 
 async function expectConflict(response: Response): Promise<void> {
   await expectProblem(response, 412, 'PRODUCT_VERSION_CONFLICT');

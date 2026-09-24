@@ -19,23 +19,12 @@ import { HttpResponse, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { useMswServer, server } from '../testing/msw-server';
+import { SESSION_URL, xsrfCookie } from '../testing/mock-spec-helpers';
 import { createDb } from './db';
 import { csrfRejection, issueXsrfCookie, sessionAdmin, sessionRejection } from './guards';
 import { SEED_ADMIN } from './seed';
 
 useMswServer();
-
-const SESSION_URL = new URL('/api/v1/admin/auth/session', document.baseURI).href;
-
-function readSessionCookie(): string | null {
-  const jar = document.cookie.split('; ');
-  for (const cookie of jar) {
-    const eq = cookie.indexOf('=');
-    if (eq < 0) continue;
-    if (cookie.slice(0, eq) === 'XSRF-TOKEN') return cookie.slice(eq + 1);
-  }
-  return null;
-}
 
 describe('issueXsrfCookie', () => {
   it('sets the db token and returns the Set-Cookie value', () => {
@@ -153,6 +142,6 @@ describe('XSRF round trip over MSW', () => {
     );
 
     await fetch(SESSION_URL);
-    expect(readSessionCookie()).toBe(token);
+    expect(xsrfCookie()).toBe(token);
   });
 });

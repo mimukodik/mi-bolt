@@ -2,7 +2,7 @@
 //
 // Every operation declared in contracts/commerce/openapi.yaml must reach MSW through the
 // generated SDK, which itself uses Angular's real HttpClient. The test asserts
-// (1) the 17 operations are present and each one round-trips with the
+// (1) the 19 operations are present and each one round-trips with the
 // documented URL, method, body and headers; (2) repeated brand[] and
 // storageGb[] query-array parameters are encoded with style=form,
 // explode=true (the spec-mandated encoding); (3) `If-Match` and
@@ -203,6 +203,14 @@ const handlers = [
     capture(request, '');
     return HttpResponse.json(MINIMAL_ORDER);
   }),
+  http.get(`${BASE_URL}/demo/session`, ({ request }) => {
+    capture(request, '');
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.post(`${BASE_URL}/demo/session`, async ({ request }) => {
+    capture(request, await request.text());
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];
 
 const EMPTY_PRODUCT_PAGE = {
@@ -355,7 +363,7 @@ function makeSdk(): { api: Api; httpClient: HttpClient; config: ApiConfig } {
 // ---------------------------------------------------------------------------
 
 describe('T04-AC04 every generated operation reaches MSW', () => {
-  it('exercises all 17 operations end-to-end through the real HttpClient', async () => {
+  it('exercises all 19 operations end-to-end through the real HttpClient', async () => {
     const { api } = makeSdk();
     expect(TestBed.inject(ApiConfig).rootUrl).toBe(BASE_URL);
 
@@ -426,6 +434,10 @@ describe('T04-AC04 every generated operation reaches MSW', () => {
       withIfMatch('1'),
     );
     await callOperation(api, 'getOrder', { orderId: 'order-demo-001' });
+
+    // demo access — contracts/commerce/openapi.yaml /demo/session
+    await callOperation(api, 'getDemoSession');
+    await callOperation(api, 'createDemoSession', { body: { password: '1MiBoltDemo1' } });
 
     // The OpenAPI spec declares one `getMedia` operationId; the generated SDK
     // splits it across three content-type variants (`getMedia$Jpeg`,

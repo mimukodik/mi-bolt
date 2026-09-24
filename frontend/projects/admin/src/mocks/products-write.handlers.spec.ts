@@ -13,176 +13,31 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import type { AdminProduct } from '../app/api/generated/models/admin-product';
 import type { AdminProductInput } from '../app/api/generated/models/admin-product-input';
-import type { ProblemCode } from '../app/api/generated/models/problem-code';
-import { isRecord } from '../app/core/is-record';
 
-import { useMswServer, server } from '../testing/msw-server';
-import { createDb } from './db';
-import type { MockDb } from './db';
-import { XSRF_HEADER, issueXsrfCookie } from './guards';
-import { productsWriteHandlers } from './products-write.handlers';
-import type { ScenarioName } from './scenario';
-import { SEED_ADMIN } from './seed';
+import { useMswServer } from '../testing/msw-server';
+import {
+  action,
+  archiveUrl,
+  expectProblem,
+  expectRecord,
+  fieldErrorsOf,
+  inputOf,
+  jsonRecord,
+  post,
+  productUrl,
+  productsUrl,
+  put,
+  readArray,
+  readNumber,
+  readString,
+  requireProduct,
+  restoreUrl,
+  setup,
+} from '../testing/mock-spec-helpers';
+import { XSRF_HEADER } from './guards';
 
 useMswServer();
-
-function productsUrl(): string {
-  return new URL('/api/v1/admin/products', document.baseURI).href;
-}
-
-function productUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}`, document.baseURI).href;
-}
-
-function archiveUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}/archive`, document.baseURI).href;
-}
-
-function restoreUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}/restore`, document.baseURI).href;
-}
-
-function setup(scenario: ScenarioName = 'default'): MockDb {
-  const db = createDb(scenario);
-  db.sessionAdminId = SEED_ADMIN.id;
-  issueXsrfCookie(db);
-  server?.use(...productsWriteHandlers(db));
-  return db;
-}
-
-function requireProduct(db: MockDb, id: number): AdminProduct {
-  const product = db.products.get(id);
-  if (product === undefined) throw new Error(`product ${String(id)} missing from seed`);
-  return product;
-}
-
-/** Maps an `AdminProduct` back to a valid `AdminProductInput`, as the edit form would. */
-function inputOf(product: AdminProduct): AdminProductInput {
-  return {
-    slug: product.slug,
-    brand: product.brand,
-    name: product.name,
-    description: product.description,
-    is5g: product.is5g,
-    releasedAt: product.releasedAt,
-    rank: product.rank,
-    popularityScore: product.popularityScore,
-    featured: product.featured,
-    highlights: product.highlights,
-    colors: product.colors.map((color) => ({
-      code: color.code,
-      name: color.name,
-      swatchHex: color.swatchHex,
-      imageId: color.image.id,
-      alt: color.image.alt,
-    })),
-    variants: product.variants.map((variant) => ({
-      slug: variant.slug,
-      colorCode: variant.colorCode,
-      storageGb: variant.storageGb,
-      price: variant.price,
-      stock: variant.stock,
-    })),
-    specGroups: product.specGroups,
-  };
-}
-
-function headersFor(db: MockDb, overrides: Record<string, string | undefined> = {}): HeadersInit {
-  const merged: Record<string, string | undefined> = {
-    'content-type': 'application/json',
-    [XSRF_HEADER]: db.xsrfToken ?? '',
-    ...overrides,
-  };
-  const present = Object.entries(merged).filter(
-    (entry): entry is [string, string] => entry[1] !== undefined,
-  );
-  return Object.fromEntries(present);
-}
-
-function post(
-  url: string,
-  db: MockDb,
-  body: unknown,
-  headerOverrides: Record<string, string | undefined> = {},
-): Promise<Response> {
-  return fetch(url, {
-    method: 'POST',
-    headers: headersFor(db, headerOverrides),
-    body: JSON.stringify(body),
-  });
-}
-
-function put(
-  url: string,
-  db: MockDb,
-  body: unknown,
-  headerOverrides: Record<string, string | undefined> = {},
-): Promise<Response> {
-  return fetch(url, {
-    method: 'PUT',
-    headers: headersFor(db, headerOverrides),
-    body: JSON.stringify(body),
-  });
-}
-
-function action(
-  url: string,
-  db: MockDb,
-  headerOverrides: Record<string, string | undefined> = {},
-): Promise<Response> {
-  return fetch(url, { method: 'POST', headers: headersFor(db, headerOverrides) });
-}
-
-function expectRecord(value: unknown): asserts value is Record<string, unknown> {
-  expect(isRecord(value)).toBe(true);
-}
-
-function readString(body: Record<string, unknown>, key: string): string {
-  const value = body[key];
-  expect(typeof value).toBe('string');
-  if (typeof value !== 'string') throw new Error(`${key} is not a string`);
-  return value;
-}
-
-function readNumber(body: Record<string, unknown>, key: string): number {
-  const value = body[key];
-  expect(typeof value).toBe('number');
-  if (typeof value !== 'number') throw new Error(`${key} is not a number`);
-  return value;
-}
-
-function readArray(body: Record<string, unknown>, key: string): unknown[] {
-  const value = body[key];
-  expect(Array.isArray(value)).toBe(true);
-  if (!Array.isArray(value)) throw new Error(`${key} is not an array`);
-  return value;
-}
-
-function fieldErrorsOf(body: Record<string, unknown>): Record<string, unknown>[] {
-  return readArray(body, 'fieldErrors').map((item) => {
-    expectRecord(item);
-    return item;
-  });
-}
-
-async function readJsonRecord(response: Response): Promise<Record<string, unknown>> {
-  const body: unknown = await response.json();
-  expectRecord(body);
-  return body;
-}
-
-async function expectProblem(
-  response: Response,
-  status: number,
-  code: ProblemCode,
-): Promise<Record<string, unknown>> {
-  expect(response.status).toBe(status);
-  const body = await readJsonRecord(response);
-  expect(readString(body, 'code')).toBe(code);
-  return body;
-}
 
 describe('productsWriteHandlers', () => {
   describe('create', () => {
@@ -200,7 +55,7 @@ describe('productsWriteHandlers', () => {
       expect(response.status).toBe(201);
       expect(response.headers.get('ETag')).toBe('"0"');
       expect(response.headers.get('Location')).toBe('/api/v1/admin/products/49');
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'id')).toBe(49);
       expect(readString(body, 'status')).toBe('active');
       expect(readNumber(body, 'version')).toBe(0);
@@ -353,7 +208,7 @@ describe('productsWriteHandlers', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('ETag')).toBe('"1"');
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'version')).toBe(1);
       expect(readString(body, 'name')).toBe('Honor 600 Lite Plus');
       const variants = readArray(body, 'variants');
@@ -507,7 +362,7 @@ describe('productsWriteHandlers', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('ETag')).toBe('"1"');
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readString(body, 'status')).toBe('archived');
       expect(typeof body['archivedAt']).toBe('string');
       expect(readNumber(body, 'version')).toBe(1);
@@ -521,7 +376,7 @@ describe('productsWriteHandlers', () => {
       const second = await action(archiveUrl(5), db, { 'If-Match': '"1"' });
 
       expect(second.status).toBe(200);
-      const body = await readJsonRecord(second);
+      const body = await jsonRecord(second);
       expect(readNumber(body, 'version')).toBe(1);
     });
 
@@ -579,7 +434,7 @@ describe('productsWriteHandlers', () => {
       const response = await action(restoreUrl(47), db, { 'If-Match': '"0"' });
 
       expect(response.status).toBe(200);
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readString(body, 'status')).toBe('active');
       expect(body['archivedAt']).toBeUndefined();
       expect(readNumber(body, 'version')).toBe(1);
@@ -591,7 +446,7 @@ describe('productsWriteHandlers', () => {
       const response = await action(restoreUrl(5), db, { 'If-Match': '"0"' });
 
       expect(response.status).toBe(200);
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'version')).toBe(0);
     });
 

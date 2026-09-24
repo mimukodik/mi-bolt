@@ -21,6 +21,7 @@ export type { Contact } from './models/contact';
 export type { DeliveryOption } from './models/delivery-option';
 export type { DeliveryOptionId } from './models/delivery-option-id';
 export type { DeliverySelection } from './models/delivery-selection';
+export type { DemoSessionRequest } from './models/demo-session-request';
 export type { Facets } from './models/facets';
 export type { FacetValue } from './models/facet-value';
 export type { FieldError } from './models/field-error';

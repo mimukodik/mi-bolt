@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MiBolt Commerce API
-  version: 2.1.0
+  version: 2.2.0
   description: >-
     Contract-first commerce API for the MiBolt webshop. No real payment,
     fulfillment or email takes place; the shop is a demonstration and says so in
@@ -29,6 +29,12 @@ info:
     and option labels is server-side data and is returned in Hungarian.
 
 
+    Demo access: the demo shop is not public. POST /demo/session with the demo
+    password issues the demo access cookie (mibolt_demo_access, 30 days), and
+    every shop operation except GET /media/{imageId} answers 401
+    UNAUTHENTICATED without it.
+
+
     Admin API: every operation under /admin serves the separate admin
     application and is authenticated by the admin session cookie
     (mibolt_admin_session) that POST /admin/auth/login issues. Every POST, PUT
@@ -48,7 +54,7 @@ servers:
 security: []
 tags:
 - name: Catalog
-  description: Product search, product detail and related products. Public.
+  description: Product search, product detail and related products. Needs the demo access cookie.
 - name: Cart
   description: Server-side cart bound to the session cookie.
 - name: Checkout
@@ -59,6 +65,8 @@ tags:
   description: Order placement and the order receipt.
 - name: Media
   description: Catalogue image delivery. Public.
+- name: DemoAccess
+  description: Password-only demo sign-in that issues the demo access cookie.
 - name: AdminAuth
   description: Admin sign-in, session and own password. Admin application only.
 - name: AdminUsers
@@ -171,6 +179,8 @@ paths:
           - 12
           - 24
           default: 12
+      security:
+      - demoAccess: []
       responses:
         '200':
           description: A page of catalogue entries with facet counts.
@@ -188,6 +198,8 @@ paths:
                 $ref: '#/components/schemas/ProductPage'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /products/{slug}:
@@ -202,6 +214,8 @@ paths:
         inside one product.
       parameters:
       - $ref: '#/components/parameters/ProductSlug'
+      security:
+      - demoAccess: []
       responses:
         '200':
           description: The product and every variant.
@@ -217,6 +231,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -231,6 +249,8 @@ paths:
         placeholder while the recommendations arrive.
       parameters:
       - $ref: '#/components/parameters/ProductSlug'
+      security:
+      - demoAccess: []
       responses:
         '200':
           description: Related catalogue entries, at most four, in relevance order.
@@ -249,6 +269,10 @@ paths:
                 items:
                   $ref: '#/components/schemas/CatalogItem'
                 maxItems: 4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -299,6 +323,8 @@ paths:
               schema:
                 type: string
                 format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -314,7 +340,8 @@ paths:
         session has none. After an order is placed the session receives a fresh
         empty cart, so this operation never returns an already ordered cart.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       responses:
         '200':
           description: The current cart.
@@ -325,6 +352,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '410':
           $ref: '#/components/responses/Gone'
         '503':
@@ -345,7 +376,8 @@ paths:
         Server-initiated adjustments — a stock drop, a price change, an item that
         sold out — are reported in the cart's notices array instead.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -366,6 +398,8 @@ paths:
                 $ref: '#/components/schemas/Cart'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -412,7 +446,8 @@ paths:
       description: Empties the cart in one request. The cart and the session survive,
         and the version is incremented once.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       responses:
@@ -425,6 +460,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '410':
           $ref: '#/components/responses/Gone'
         '412':
@@ -442,7 +481,8 @@ paths:
       description: The quantity is absolute, never a delta, so a retried request
         cannot double it.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -463,6 +503,8 @@ paths:
                 $ref: '#/components/schemas/Cart'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -483,7 +525,8 @@ paths:
         the cart returns 200 with the current cart, because the requested end
         state already holds. A variant unknown to the catalogue returns 404.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       responses:
@@ -496,6 +539,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '410':
@@ -516,7 +563,8 @@ paths:
         threshold, and an option that the cart value rules out is returned with
         available set to false and a reason code the user interface can explain.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       responses:
         '200':
           description: The available options and the current terms version.
@@ -524,6 +572,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CheckoutOptions'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '410':
           $ref: '#/components/responses/Gone'
         '503':
@@ -539,7 +591,8 @@ paths:
         is cleared when the order is placed. The summary is recomputed on every
         read, so it is always current; there is no separate quote step.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       responses:
         '200':
           description: The checkout draft with freshly computed totals.
@@ -550,6 +603,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CheckoutSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '410':
           $ref: '#/components/responses/Gone'
         '503':
@@ -564,7 +621,8 @@ paths:
         retained. Partial state is allowed until the order is placed. Paid extras
         are never added implicitly.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -585,6 +643,8 @@ paths:
                 $ref: '#/components/schemas/CheckoutSession'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '410':
           $ref: '#/components/responses/Gone'
         '412':
@@ -633,7 +693,8 @@ paths:
         key, so no second authorisation is started. A deliberate new attempt
         after a decline uses a new key.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       - $ref: '#/components/parameters/IdempotencyKey'
@@ -652,6 +713,8 @@ paths:
                 $ref: '#/components/schemas/PaymentIntent'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '409':
           description: The request conflicts with current state.
           content:
@@ -715,7 +778,8 @@ paths:
       description: Read after the shopper returns. A pending intent reaches a terminal
         status before expiresAt.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/PaymentIntentId'
       responses:
@@ -725,6 +789,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentIntent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -750,7 +818,8 @@ paths:
         repeat call returns 409. A caller that lost the response should read the
         intent with getPaymentIntent rather than calling again.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/PaymentIntentId'
       requestBody:
@@ -768,6 +837,8 @@ paths:
                 $ref: '#/components/schemas/PaymentIntent'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -814,7 +885,8 @@ paths:
         pending returns 422 PAYMENT_PENDING because the outcome has not settled,
         and declined returns 422 PAYMENT_DECLINED.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/IfMatch'
       - $ref: '#/components/parameters/IdempotencyKey'
@@ -839,6 +911,8 @@ paths:
                 $ref: '#/components/schemas/OrderReceipt'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '409':
           description: The order conflicts with current state.
           content:
@@ -957,7 +1031,8 @@ paths:
       description: Only the session that placed the order can read it; any other
         session receives 404.
       security:
-      - sessionCookie: []
+      - demoAccess: []
+        sessionCookie: []
       parameters:
       - $ref: '#/components/parameters/OrderId'
       responses:
@@ -967,8 +1042,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /demo/session:
+    get:
+      operationId: getDemoSession
+      tags:
+      - DemoAccess
+      summary: Check the demo access cookie
+      description: >-
+        Answers 204 when the request carries a valid demo access cookie and 401
+        otherwise, so the storefront knows whether to show its sign-in page.
+      security:
+      - demoAccess: []
+      - {}
+      responses:
+        '204':
+          description: The demo access cookie is valid.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createDemoSession
+      tags:
+      - DemoAccess
+      summary: Sign in to the demo with its password
+      description: >-
+        Checks the demo password. On success the response sets the demo access
+        cookie (mibolt_demo_access, 30 days). A wrong password receives 401
+        UNAUTHENTICATED and no cookie.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoSessionRequest'
+      responses:
+        '204':
+          description: Signed in; the response sets the demo access cookie.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: The demo password is wrong. Code UNAUTHENTICATED.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /admin/auth/session:
@@ -1576,6 +1705,16 @@ components:
         ends after 30 minutes without a request or at POST /admin/auth/logout.
         Mutating admin requests also need the X-XSRF-TOKEN header echoing the
         XSRF-TOKEN cookie.
+    demoAccess:
+      type: apiKey
+      in: cookie
+      name: mibolt_demo_access
+      description: >-
+        Demo access cookie issued by POST /demo/session for the demo password.
+        HttpOnly, Secure, SameSite=Lax, Path=/api/v1, Max-Age 30 days. Every
+        shop operation except GET /media/{imageId} needs it and answers 401
+        UNAUTHENTICATED without a valid one. It carries no identity beyond the
+        one demo user.
   headers:
     ETag:
       description: The current session state version, quoted. Send it back in If-Match
@@ -1739,6 +1878,14 @@ components:
             $ref: '#/components/schemas/Problem'
     Unauthorized:
       description: No valid admin session. Code UNAUTHENTICATED.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    DemoAccessRequired:
+      description: >-
+        No valid demo access cookie. Code UNAUTHENTICATED. The storefront sends
+        the visitor to its demo sign-in page.
       content:
         application/problem+json:
           schema:
@@ -2854,6 +3001,17 @@ components:
           type: string
           minLength: 1
           maxLength: 80
+        password:
+          type: string
+          minLength: 1
+          maxLength: 64
+    DemoSessionRequest:
+      type: object
+      additionalProperties: false
+      description: The demo password. There is one demo user, so no username is sent.
+      required:
+      - password
+      properties:
         password:
           type: string
           minLength: 1

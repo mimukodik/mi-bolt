@@ -32,7 +32,7 @@ import { withoutAdminOperations } from './admin-tags';
 export const REPO_ROOT = resolve(__dirname, '../..');
 export const SPEC_PATH = resolve(REPO_ROOT, '../contracts/commerce/openapi.yaml');
 
-export const REQUIRED_OPERATION_COUNT = 17;
+export const REQUIRED_OPERATION_COUNT = 19;
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -152,7 +152,7 @@ function buildAjv(): Ajv2020 {
 /**
  * Walks `paths` and returns one descriptor per HTTP operation. The
  * caller uses this to drive every assertion in the contract suite so
- * adding a 17th operation to the spec cannot go unnoticed.
+ * adding an operation to the spec cannot go unnoticed.
  */
 export function collectOperations(
   spec: OpenApiSpec = derefSpecCache ?? ensureRawSpec(),
@@ -233,7 +233,7 @@ export function openApiPathToMswPath(path: string): string {
 /**
  * Builds a `{status: validator}` map for the given operation so the
  * contract suite can validate every documented response status. The
- * cache is shared across the whole process so 17 operations × N
+ * cache is shared across the whole process so 19 operations × N
  * statuses compile exactly once.
  */
 export function compileResponseValidator(

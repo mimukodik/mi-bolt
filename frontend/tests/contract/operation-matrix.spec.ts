@@ -2,7 +2,7 @@
 //
 // Every assertion in this file is derived from contracts/commerce/openapi.yaml
 // (title "MiBolt Commerce API", version 2.0.0) at test time. The
-// 17 operationIds, the 4xx/5xx status codes, the Problem codes and
+// 19 operationIds, the 4xx/5xx status codes, the Problem codes and
 // the documented response shapes all come from the spec; nothing is
 // hand-maintained. A new operation added to the spec either (a) gets
 // a matching MSW handler and an SDK transport test, or (b) trips a
@@ -53,6 +53,7 @@ import '../../projects/shop-mocks/src/cart/cart.handlers';
 import '../../projects/shop-mocks/src/checkout/checkout.handlers';
 import '../../projects/shop-mocks/src/payment/payment.handlers';
 import '../../projects/shop-mocks/src/orders/order.handlers';
+import '../../projects/shop-mocks/src/demo/demo.handlers';
 
 import {
   REQUIRED_OPERATION_COUNT,
@@ -77,7 +78,7 @@ import catalogFixture from '../../docs/api/fixtures/catalog.json';
 const BASE_URL = 'http://localhost/api/v1';
 const API_ROOT = '/api/v1';
 
-// 2.0.0 contract: 17 operations (contracts/commerce/openapi.yaml:55-933), ProblemCode at 1453-1470.
+// 2.2.0 contract: 19 shop operations (contracts/commerce/openapi.yaml).
 
 let dereferencedSpec: OpenApiSpec;
 let operationsById: Map<string, OperationDescriptor>;
@@ -109,7 +110,7 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('T26-AC01 operation inventory parity', () => {
-  it('declares exactly 17 operationIds in the spec', () => {
+  it('declares exactly 19 operationIds in the spec', () => {
     expect(operationsById.size).toBe(REQUIRED_OPERATION_COUNT);
   });
 
@@ -175,11 +176,13 @@ describe('T26-AC02 request/response + Problem-code contract', () => {
       // getMedia returns binary content (image/webp, image/jpeg,
       // image/png) under contracts/commerce/openapi.yaml:216-265; no JSON
       // schema applies, so a missing validator is the expected shape
-      // for that one operation.
+      // for that one operation. The two demo access operations answer a
+      // body-less 204, which carries no JSON body either.
       if (!validator) {
-        expect(op.operationId === 'getMedia', `${op.operationId} has no 2xx JSON validator`).toBe(
-          true,
-        );
+        expect(
+          ['getMedia', 'getDemoSession', 'createDemoSession'].includes(op.operationId),
+          `${op.operationId} has no 2xx JSON validator`,
+        ).toBe(true);
         continue;
       }
       const fixture = buildHappyPathFixture(op, dereferencedSpec);
@@ -673,7 +676,7 @@ describe('T26-AC05 schema fixtures are enforced at runtime', () => {
     expect(ok, 'Variant.maxQuantity=11 must fail the contract validator').toBe(false);
   });
 
-  it('the openapi.yaml document on disk resolves to 17 operations (spec drift check)', async () => {
+  it('the openapi.yaml document on disk resolves to 19 operations (spec drift check)', async () => {
     const text = await readFile(SPEC_PATH, 'utf8');
     expect(text).toContain('MiBolt Commerce API');
     expect(operationsById.size).toBe(REQUIRED_OPERATION_COUNT);
@@ -971,6 +974,10 @@ function sampleRequestFixture(op: OperationDescriptor): unknown {
         termsVersion: 'demo-1',
         acceptedTerms: true,
       };
+    }
+    case 'createDemoSession': {
+      // DemoSessionRequest requires password (contracts/commerce/openapi.yaml).
+      return { password: '1MiBoltDemo1' };
     }
     default: {
       return {};

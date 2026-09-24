@@ -31,6 +31,7 @@ import { setupWorker } from 'msw/browser';
 
 import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
+import { createDemoGateHandler } from './demo/demo-access';
 import { Repository } from './repository';
 import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
@@ -49,6 +50,7 @@ import './cart/cart.handlers';
 import './checkout/checkout.handlers';
 import './payment/payment.handlers';
 import './orders/order.handlers';
+import './demo/demo.handlers';
 
 // `setupWorker()` from `msw/browser` requires a real Service Worker API:
 // jsdom ships `window` and `navigator` but no `navigator.serviceWorker`,
@@ -64,6 +66,15 @@ const isBrowserProcess = typeof navigator !== 'undefined' && 'serviceWorker' in 
 export const worker: ReturnType<typeof setupWorker> | undefined = isBrowserProcess
   ? setupWorker()
   : undefined;
+
+/** The page's sessionStorage, or undefined where it is missing or denied (the demo gate then keeps its flag in memory). */
+function browserSessionStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
+  try {
+    return typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Build the handler factory options the browser worker uses. T05
@@ -85,6 +96,7 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
     ids,
     scenario,
     apiRoot: '/api/v1',
+    demoAccessStorage: browserSessionStorage(),
     persist: (sessionId: string) => {
       const cart = cartStore.current;
       const checkout = checkoutStore.current;
@@ -198,7 +210,12 @@ export function buildBrowserHandlers(
   options.snapshot = snapshot;
   // The demo configuration adds the dispatcher shell so a misrouted
   // curl does not produce a stack trace inside the page.
-  return createHandlers(options);
+  //
+  // The demo access gate goes LAST: `startMockWorker` registers the list
+  // with `worker.use(handler)` one element at a time, and `use` prepends,
+  // so the last array element is the first one consulted and the gate runs
+  // ahead of every business handler.
+  return [...createHandlers(options), createDemoGateHandler(options)];
 }
 
 /**

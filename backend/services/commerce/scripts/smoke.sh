@@ -6,6 +6,7 @@ BASE=${BASE:-http://localhost:8080/api/v1}
 J=$(mktemp); H=$(mktemp); B=$(mktemp)
 trap 'rm -f "$J" "$H" "$B" "$B.first" "$B.big"' EXIT
 FAIL=0
+DEMO_PASSWORD=${MIBOLT_DEMO_PASSWORD:-1MiBoltDemo1}
 
 req() { # req <expected-status> <label> <curl args...>
 	local expect=$1 label=$2; shift 2
@@ -19,6 +20,15 @@ req() { # req <expected-status> <label> <curl args...>
 }
 etag() { grep -i '^etag:' "$H" | tr -d '\r' | awk '{print $2}'; }
 json() { python3 -c "import json; d=json.load(open('$B')); print($1)"; }
+
+demo_sign_in() { req 204 "POST /demo/session" -X POST -H 'Content-Type: application/json' -d "{\"password\":\"$DEMO_PASSWORD\"}" "$BASE/demo/session"; }
+
+# Demo gate (MIM-423): nothing of the shop answers before the demo sign-in.
+req 401 "GET /products without demo access" "$BASE/products?pageSize=12&sort=price_asc"
+req 401 "GET /demo/session without demo access" "$BASE/demo/session"
+req 401 "POST /demo/session with a wrong password" -X POST -H 'Content-Type: application/json' -d '{"password":"not-the-demo-password"}' "$BASE/demo/session"
+demo_sign_in
+req 204 "GET /demo/session" "$BASE/demo/session"
 
 req 200 "GET /products" "$BASE/products?pageSize=12&sort=price_asc"
 COUNT=$(json "len(d['items'])")
@@ -72,6 +82,7 @@ req 200 "GET /cart after the order" "$BASE/cart"
 [ "$(json "len(d['items'])")" = "0" ] && echo "ok   cart empty after the order" || { echo "FAIL cart not empty after the order"; FAIL=1; }
 
 rm -f "$J"
+demo_sign_in
 req 200 "GET /cart (second session)" "$BASE/cart"
 E=$(etag)
 req 200 "POST /cart/items (card flow)" -X POST -H "If-Match: $E" -H 'Content-Type: application/json' \

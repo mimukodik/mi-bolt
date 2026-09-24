@@ -45,6 +45,13 @@ export interface CreateHandlersOptions {
    * bootstrap passes the value `Persistence.hydrate(...)` returned.
    */
   snapshot?: MockSnapshot | null;
+  /**
+   * Where the demo access gate keeps its signed-in flag (MIM-423). The
+   * browser bootstrap passes `sessionStorage`, so a reload keeps the
+   * visitor signed in; the Node and unit paths omit it and the flag lives
+   * in memory for the handler list's lifetime.
+   */
+  demoAccessStorage?: Pick<Storage, 'getItem' | 'setItem'>;
 }
 
 /**

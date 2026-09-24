@@ -1,0 +1,54 @@
+<adm-section-card title="Változatok" [errorCount]="errorCount()" [number]="4">
+  <button admSectionActions matButton type="button" (click)="add()">
+    <mat-icon>add</mat-icon>
+    Változat
+  </button>
+  <div class="flex flex-col gap-3">
+    @for (variant of form().variants; track variant; let index = $index) {
+      @let value = variant().value();
+      <div class="flex flex-col">
+        <div class="flex flex-wrap items-start gap-2">
+          <mat-form-field class="min-w-40 flex-1" subscriptSizing="dynamic">
+            <mat-label>Szín</mat-label>
+            <mat-select [formField]="variant.colorKey">
+              @for (color of colors(); track color.key) {
+                <mat-option [value]="color.key">
+                  <span class="adm-swatch" [style.background]="color.swatchHex"></span>
+                  {{ colorName(color) }}
+                </mat-option>
+              }
+            </mat-select>
+            <mat-error>{{ variant.colorKey().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <div class="flex flex-col">
+            <mat-button-toggle-group [formField]="variant.storageGb">
+              <mat-button-toggle [value]="128">128 GB</mat-button-toggle>
+              <mat-button-toggle [value]="256">256 GB</mat-button-toggle>
+              <mat-button-toggle [value]="512">512 GB</mat-button-toggle>
+            </mat-button-toggle-group>
+            <adm-control-error
+              [errorId]="`adm-variant-storage-${value.key}`"
+              [field]="variant.storageGb"
+            />
+          </div>
+          <mat-form-field class="w-40" subscriptSizing="dynamic">
+            <mat-label>Ár</mat-label>
+            <input matInput type="number" [formField]="variant.price" />
+            <span matTextSuffix>Ft</span>
+            <mat-error>{{ variant.price().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <mat-form-field class="w-28" subscriptSizing="dynamic">
+            <mat-label>Készlet</mat-label>
+            <input matInput type="number" [formField]="variant.stock" />
+            <mat-error>{{ variant.stock().errors()[0]?.message }}</mat-error>
+          </mat-form-field>
+          <button class="adm-row-delete" matIconButton type="button" (click)="remove(index)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+        <p class="adm-variant-id">{{ idText(value) }}</p>
+      </div>
+    }
+  </div>
+  <p class="adm-array-error">{{ arrayError() }}</p>
+</adm-section-card>

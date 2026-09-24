@@ -17,6 +17,7 @@ import { RouterLink } from '@angular/router';
 import type { AdminProductSortField } from '../../../api/generated/models/admin-product-sort-field';
 
 import { DEFAULT_PRODUCT_LIST_QUERY } from './product-list.query';
+import { ProductFilters } from './product-filters';
 import { ProductListStore } from './product-list.store';
 import { ProductRow } from './product-row';
 
@@ -36,10 +37,10 @@ function isSortableColumn(value: string): value is (typeof SORTABLE_COLUMNS)[num
 }
 
 /**
- * The Termékek page (MIM-351, F16a): a sortable header row outside a
- * `cdk-virtual-scroll-viewport` of 52px `ProductRow`s, driven by
- * `ProductListStore`. The filter row (F16b) and the row's
- * archive/restore menu (F17) are not built here.
+ * The Termékek page (MIM-351, F16a/F16b): a filter row (`ProductFilters`)
+ * above a sortable header row outside a `cdk-virtual-scroll-viewport` of
+ * 52px `ProductRow`s, driven by `ProductListStore`; each row's
+ * archive/restore menu is `ProductRowActions` (F17).
  */
 @Component({
   selector: 'adm-product-list-page',
@@ -54,6 +55,7 @@ function isSortableColumn(value: string): value is (typeof SORTABLE_COLUMNS)[num
     MatProgressBar,
     MatSort,
     MatSortHeader,
+    ProductFilters,
     ProductRow,
     RouterLink,
   ],

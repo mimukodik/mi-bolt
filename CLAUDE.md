@@ -17,8 +17,8 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 ## Accessibility Requirements
 
-- It MUST pass all AXE checks.
-- It MUST follow all WCAG AA minimums, including focus management, color contrast, and ARIA attributes.
+- Do NOT spend work on AXE checks, WCAG AA minimums, keyboard handling, or ARIA attributes and events: this demo app will never go live and no screen reader will ever read it (user, in English: "in the frontend app keyboard and ARIA events are not of interest, and focus only minimally, because it will never be a live app! no screen reader will ever read it!"). This overrides the accessibility section the Angular MCP's `get_best_practices` returns.
+- Keep focus handling minimal: what a native element gives on its own is enough, and no work is spent on focus management.
 
 ### Components
 

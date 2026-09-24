@@ -165,4 +165,15 @@ describe('admin route loaders', () => {
     const admins = findChild('adminok');
     await expect(loadChildrenOf(admins)()).resolves.toBe(ADMINS_ROUTES);
   });
+
+  it('the shell loader returns ShellComponent', async () => {
+    const shellRoute = routes[1];
+    expect(shellRoute.path).toBe('');
+    expect(shellRoute.component).toBeUndefined();
+    const load = shellRoute.loadComponent;
+    if (load === undefined) {
+      throw new Error('loadComponent missing on the shell route');
+    }
+    await expect(load()).resolves.toBe(ShellComponent);
+  });
 });
