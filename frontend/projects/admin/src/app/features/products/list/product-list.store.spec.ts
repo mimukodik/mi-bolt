@@ -381,7 +381,7 @@ describe('ProductListStore', () => {
     expect(sentIfMatch).toBe('"0"');
   });
 
-  it('a successful archive drops the other cached data sources, so another tab loads afresh', async () => {
+  it('after an archive, a tab visited before loads afresh', async () => {
     const { store } = await setup();
     const router = TestBed.inject(Router);
     const activeSource = store.dataSource();
@@ -406,7 +406,7 @@ describe('ProductListStore', () => {
     expect(store.dataSource()).not.toBe(activeSource);
   });
 
-  it('a successful restore drops the other cached data sources too', async () => {
+  it('after a restore, a tab visited before loads afresh', async () => {
     const { store } = await setup();
     const router = TestBed.inject(Router);
     const activeSource = store.dataSource();
@@ -429,6 +429,34 @@ describe('ProductListStore', () => {
     store.setQuery({ status: 'active' });
     await toActive;
     expect(store.dataSource()).not.toBe(activeSource);
+  });
+
+  it('going back to a tab builds a live data source, so an archive there updates the row in place', async () => {
+    const { store } = await setup();
+    const router = TestBed.inject(Router);
+    const activeSource = store.dataSource();
+    await firstValueFrom(activeSource.connect(noopViewer()));
+
+    const toAll = nextNavigationEnd(router);
+    store.setQuery({ status: 'all' });
+    await toAll;
+    // The view disconnects the source it leaves (CdkVirtualForOf).
+    activeSource.disconnect();
+
+    const backToActive = nextNavigationEnd(router);
+    store.setQuery({ status: 'active' });
+    await backToActive;
+    const revisited = store.dataSource();
+    expect(revisited).not.toBe(activeSource);
+
+    const rows$ = revisited.connect(noopViewer());
+    const first = await firstValueFrom(rows$.pipe(filter((rows) => rows.length > 0)));
+    const row = first[0];
+    if (row === undefined) throw new Error('row 1 missing');
+    const result = await store.archive(row);
+    expect(result.kind).toBe('done');
+    const after = await firstValueFrom(rows$);
+    expect(after[0]?.status).toBe('archived');
   });
 
   it('archive with a stale version returns { kind: "conflict" }', async () => {

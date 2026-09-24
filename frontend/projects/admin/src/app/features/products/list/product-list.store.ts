@@ -13,12 +13,13 @@
  *
  * The brief calls out the property: a late response of an old query
  * must never reach the new data source. The store realises that by
- * caching data sources by the serialised params, so a different
- * query always gets a different instance. `replaceItem` updates only
- * the cache of the *current* data source; an archive or a restore
- * therefore never bleeds across a query change, and after one the
- * store drops every other cached source, whose rows predate it, so
- * the next visit to another tab loads afresh (MIM-361, F27).
+ * building a new data source for every distinct query and every
+ * `retry()`, and never handing one out twice: the view disconnects
+ * the source it leaves (`CdkVirtualForOf`), and a disconnected source
+ * neither loads pages nor shows an in-place row update, so going back
+ * to a tab loads it afresh (MIM-361, F27). `replaceItem` updates only
+ * the *current* data source; an archive or a restore therefore never
+ * bleeds across a query change.
  *
  * `archive` and `restore` are the two wire actions. Each one posts
  * the current row's `version` quoted as the `If-Match` header
@@ -68,11 +69,19 @@ export type RowActionResult =
  *  `rowAction` helper instead of two. */
 type RowActionFn = typeof archiveAdminProduct | typeof restoreAdminProduct;
 
+/** Two parsed queries are the same query when they serialise to the
+ *  same URL params, so a router emission that leaves the query as it
+ *  was builds no new data source. */
+function sameQuery(a: ProductListQuery, b: ProductListQuery): boolean {
+  return (
+    JSON.stringify(serializeProductListQuery(a)) === JSON.stringify(serializeProductListQuery(b))
+  );
+}
+
 /**
  * `@Injectable()` — the Termékek page provides this store in its own
  * injector, so a fresh store is built for every navigation to the
- * page (the canonical URL state is recreated, and the data source
- * cache is empty).
+ * page (the canonical URL state is recreated).
  */
 @Injectable()
 export class ProductListStore {
@@ -84,7 +93,9 @@ export class ProductListStore {
   /** Re-parse every router `queryParamMap` emission through the
    *  codec, into the canonical typed query. The codec is the single
    *  source of normalisations. */
-  private readonly parsedQuery = signal<ProductListQuery>(DEFAULT_PRODUCT_LIST_QUERY);
+  private readonly parsedQuery = signal<ProductListQuery>(DEFAULT_PRODUCT_LIST_QUERY, {
+    equal: sameQuery,
+  });
 
   /** Public view of the typed query. The codec guarantees the
    *  default-when-junk rule, so consumers can rely on the union. */
@@ -94,27 +105,17 @@ export class ProductListStore {
    *  computed can depend on it without depending on the query. */
   private readonly retryTick = signal<number>(0);
 
-  /** Cache of `ProductListDataSource` instances keyed by serialised
-   *  params. A different query always gets a different instance; the
-   *  same query always gets the same one until `retry()` discards it. */
-  private readonly cache = new Map<string, ProductListDataSource>();
-
-  /** The data source the page renders. A new instance for every
-   *  distinct query (or for every `retry()` call against the same
-   *  query). */
+  /** The data source the page renders: a new instance for every
+   *  distinct query and for every `retry()`, never one handed out
+   *  before, because the view disconnects the source it leaves. */
   readonly dataSource: Signal<ProductListDataSource> = computed(() => {
     // Read `retryTick` so the computed re-evaluates on retry even
     // when the query itself has not changed.
     this.retryTick();
     const q = this.parsedQuery();
-    const key = JSON.stringify(serializeProductListQuery(q));
-    const cached = this.cache.get(key);
-    if (cached !== undefined) return cached;
     const loader: ProductListPageLoader = (page: number) =>
       this.api.invoke(listAdminProducts, toListParams(q, page));
-    const ds = new ProductListDataSource(loader);
-    this.cache.set(key, ds);
-    return ds;
+    return new ProductListDataSource(loader);
   });
 
   /** `total` signal — delegates to the current data source. */
@@ -146,18 +147,11 @@ export class ProductListStore {
   }
 
   /**
-   * Re-fire the current query. Discards the cached data source for
-   * the same query and bumps `retryTick` so the computed rebuilds;
+   * Re-fire the current query. Bumps `retryTick` so the computed
+   * builds a new data source for the same query;
    * the page receives a fresh data source whose page 1 is in flight.
    */
   retry(): void {
-    const q = this.parsedQuery();
-    const key = JSON.stringify(serializeProductListQuery(q));
-    const cached = this.cache.get(key);
-    if (cached !== undefined) {
-      cached.disconnect();
-      this.cache.delete(key);
-    }
     this.retryTick.update((n) => n + 1);
   }
 
@@ -198,25 +192,8 @@ export class ProductListStore {
           version: body.version,
         };
         this.dataSource().replaceItem(next);
-        this.dropOtherSources();
         return { kind: 'done', item: next };
       })
       .catch(handle);
-  }
-
-  /**
-   * Discard every cached data source except the one on screen. Called
-   * after a successful archive or restore: the other queries' rows were
-   * loaded before it, so a tab switch must load afresh instead of
-   * showing them (MIM-361, F27). The current source keeps its instance,
-   * so the table on screen does not shift.
-   */
-  private dropOtherSources(): void {
-    const current = this.dataSource();
-    for (const [key, source] of this.cache) {
-      if (source === current) continue;
-      source.disconnect();
-      this.cache.delete(key);
-    }
   }
 }
