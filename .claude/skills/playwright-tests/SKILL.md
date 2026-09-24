@@ -60,7 +60,7 @@ a `coder-agent.sh` runner and every other agent keep out of those files.
   browsers. The CI matrix in `.github/workflows/frontend.yml` installs each
   matrix entry's browser per-job.
 - The backend of `e2e/integration/**` is MSW inside the page. There is no server
-  to seed: `projects/storefront/src/mocks/repository.ts` is page-side memory.
+  to seed: `projects/shop-mocks/src/repository.ts` is page-side memory.
   `e2e/smoke/**` waits on the `local-backend` configuration.
 
 ## 3. Flow A: writing tests
