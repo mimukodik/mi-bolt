@@ -1,0 +1,98 @@
+name: Smoke
+
+# The browser smoke specs (frontend/e2e/smoke/) against the whole system in
+# containers, built from this commit on an empty database: the same command as
+# `mise run stack` (root mise.toml), web on 4200, backend on 8080, PostgreSQL on
+# 55433. A compose project and volume of its own, so `down -v` removes only
+# what this job created.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke on the real stack
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 45
+    env:
+      COMPOSE_PROJECT_NAME: mi-bolt-smoke-ci
+      MIBOLT_POSTGRES_VOLUME: mi-bolt-smoke-ci-pgdata
+      # The web container serves the payment app too, so the backend's payment
+      # redirect and return point at the web origin (as `mise run stack` sets them).
+      MIBOLT_PAYMENT_ORIGIN: http://localhost:4200
+      MIBOLT_SHOP_ORIGIN: http://localhost:4200
+      # Playwright starts no web server when a base URL is supplied (playwright.config.ts).
+      E2E_BASE_URL: http://localhost:4200
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        timeout-minutes: 3
+        with:
+          persist-credentials: false
+      - name: Docker and Compose versions
+        timeout-minutes: 1
+        run: |
+          docker version
+          docker compose version
+      - name: Start the stack from this commit
+        timeout-minutes: 30
+        run: deploy/compose.sh up -d --build --wait
+      - name: Backend readiness through the web container
+        timeout-minutes: 2
+        run: |
+          curl -fsS -o readiness.json http://localhost:4200/api/v1/actuator/health/readiness
+          cat readiness.json
+      - uses: actions/setup-node@v7
+        timeout-minutes: 3
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm ci
+        working-directory: frontend
+        timeout-minutes: 5
+        run: npm ci
+      - name: Install Chromium
+        working-directory: frontend
+        timeout-minutes: 10
+        run: npx playwright install --with-deps chromium
+      - name: Smoke specs
+        working-directory: frontend
+        timeout-minutes: 15
+        run: |
+          set -o pipefail
+          npm run e2e:smoke 2>&1 | tee smoke.log
+      - name: Run summary
+        if: always()
+        timeout-minutes: 1
+        run: |
+          {
+            echo '### Smoke on the real stack'
+            echo "- Commit: \`${HEAD_SHA}\`"
+            echo "- Readiness: \`$(cat readiness.json 2>/dev/null || echo 'not reached')\`"
+            echo '- Tests:'
+            echo '```'
+            grep -E '^ +[0-9]+ (passed|failed|flaky|skipped|interrupted|did not run)' frontend/smoke.log || echo 'no test summary'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Stack logs
+        if: failure()
+        timeout-minutes: 2
+        run: deploy/compose.sh logs --no-color --tail 300
+      - name: Upload the Playwright report
+        if: always()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-smoke
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            frontend/smoke.log
+          if-no-files-found: ignore
+      - name: Stop the stack
+        if: always()
+        timeout-minutes: 3
+        run: deploy/compose.sh down -v
