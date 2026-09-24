@@ -1151,10 +1151,11 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     await tick();
 
     // The first request is still hanging, so the related signal has
-    // not been written to. assert it's [] and no section renders.
+    // not been written to. assert it's [] and the strip shows its four card skeletons.
     expect(facade.vm().related).toEqual([]);
     expect(facade.vm().relatedLoading).toBe(true);
-    expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
+    const loadingStrip = queryElement(root, '[data-testid="related-products"]');
+    expect(loadingStrip.querySelectorAll('[data-testid="product-card-skeleton"]').length).toBe(4);
 
     // Navigate to a second product; the route change must reset the
     // related signal synchronously, before the in-flight first response
