@@ -16,6 +16,7 @@ import { filter, map } from 'rxjs/operators';
 
 import { AdminSession } from '../core/auth/admin-session';
 import { LOGIN_PATH } from '../core/auth/login-path';
+import { applyMaterialSymbolsFont } from '../core/icons/icon-font';
 import type { PasswordChangeDialog } from '../features/account/password-change-dialog';
 
 /**
@@ -60,6 +61,8 @@ export class ShellComponent {
   );
 
   constructor() {
+    applyMaterialSymbolsFont();
+
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
