@@ -15,15 +15,19 @@ import { dismissSplash } from '@mi-bolt/core-api/splash';
 
 /**
  * Whether the router has finished a navigation, however it ended. A guard's
- * redirect cancels with `NavigationCancellationCode.Redirect` and starts the
- * next navigation, so that cancellation does not count.
+ * redirect cancels with `NavigationCancellationCode.Redirect`, and a newer
+ * navigation cancels the running one with
+ * `NavigationCancellationCode.SupersededByNewNavigation`; a next navigation
+ * follows either, so those cancellations do not count.
  */
 function isSettledNavigation(event: RoutingEvent): boolean {
   return (
     event instanceof NavigationEnd ||
     event instanceof NavigationError ||
     event instanceof NavigationSkipped ||
-    (event instanceof NavigationCancel && event.code !== NavigationCancellationCode.Redirect)
+    (event instanceof NavigationCancel &&
+      event.code !== NavigationCancellationCode.Redirect &&
+      event.code !== NavigationCancellationCode.SupersededByNewNavigation)
   );
 }
 
