@@ -9,12 +9,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
  * Meta-annotation for integration tests: full Spring context on the H2 test profile,
- * with MockMvc wired for HTTP-layer assertions.
+ * with MockMvc wired for HTTP-layer assertions. Every MockMvc request carries a valid
+ * demo access cookie ({@link DemoAccessTestConfiguration}).
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
@@ -23,5 +25,6 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @Tag("integration")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(DemoAccessTestConfiguration.class)
 public @interface IntegrationTest {
 }
