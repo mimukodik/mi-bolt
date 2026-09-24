@@ -114,6 +114,7 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
     order.seedFromSnapshot(options.snapshot.simulatedSessionId, {
       intents: options.snapshot.paymentIntents,
       receipts: options.snapshot.receipts,
+      usedIntentIds: options.snapshot.usedPaymentIntentIds,
     });
     order.seedIdempotency(options.snapshot.idempotency);
   }
