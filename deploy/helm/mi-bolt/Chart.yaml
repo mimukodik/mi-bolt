@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mi-bolt
+description: MiBolt web and commerce apps for a pre-provisioned preview environment
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

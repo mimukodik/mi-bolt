@@ -1,0 +1,67 @@
+name: Candidate Build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candidate-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - name: Compute tracked build inputs
+        id: inputs
+        run: uv run --no-project --with PyYAML==6.0.2 python deploy/candidate/inputs.py --github-output "$GITHUB_OUTPUT"
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.2
+      - name: Check candidate provenance and app chart
+        run: |
+          uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-candidate.py
+          uv run --no-project --with PyYAML==6.0.2 python deploy/tests/test-preview-smoke.py
+          uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py
+      - uses: docker/setup-buildx-action@v3
+      - name: Build both images from the Compose definition
+        working-directory: deploy
+        env:
+          POSTGRES_PASSWORD: placeholder-for-compose-interpolation
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          WEB_HASH: ${{ steps.inputs.outputs.web_hash }}
+          COMMERCE_HASH: ${{ steps.inputs.outputs.commerce_hash }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/candidate-build"
+          docker buildx bake -f compose.yaml web commerce \
+            --allow fs.read=../frontend --allow fs.read=../backend \
+            --allow fs.read=../contracts --allow fs.read=../data/catalog \
+            --allow "fs.write=${GITHUB_WORKSPACE}/candidate-build" \
+            --set "web.tags=mi-bolt-web:input-${WEB_HASH}" \
+            --set "commerce.tags=mi-bolt-commerce:input-${COMMERCE_HASH}" \
+            --set "web.labels.org.opencontainers.image.revision=${SOURCE_SHA}" \
+            --set "commerce.labels.org.opencontainers.image.revision=${SOURCE_SHA}" \
+            --set "web.output=type=docker,dest=${GITHUB_WORKSPACE}/candidate-build/web.tar" \
+            --set "commerce.output=type=docker,dest=${GITHUB_WORKSPACE}/candidate-build/commerce.tar"
+      - name: Record build inputs and archive checksums
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || 0 }}
+        run: uv run --no-project --with PyYAML==6.0.2 python deploy/candidate/build_metadata.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidate-build
+          path: candidate-build/
+          if-no-files-found: error
+          retention-days: 7

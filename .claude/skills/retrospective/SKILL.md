@@ -80,9 +80,10 @@ Look for:
   during the session. Compare against the rule text in those files directly,
   do not rely on memory of them.
 - Uncommitted work. Run `git status --porcelain` and `git log --oneline -3`.
-  `kötelező mindig commitolni` is a standing rule, so a working tree full of
-  the session's own output is a finding, not background noise. Report it in
-  the summary even when it produces no proposal.
+  Committing is always mandatory (`.claude/rules/session-lifecycle.md`,
+  "Commits"), so a working tree full of the session's own output is a
+  finding, not background noise. Report it in the summary even when it
+  produces no proposal.
 - Run `mise run claude:memory status`. When it reports a review is
   due, say so in the Session summary with the reason the command gave, and
   tell the user that `/memory-review` is theirs to run: the skill is

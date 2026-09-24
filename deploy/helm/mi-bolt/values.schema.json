@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["candidate", "web", "commerce", "publicOrigin", "ingress"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate": {
+      "type": "object",
+      "required": ["id", "headCommit", "publisherRunId", "webCommit", "commerceCommit"],
+      "properties": {
+        "publisherRunId": { "type": "integer", "minimum": 1 },
+        "headCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "id": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" },
+        "webCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "commerceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+      }
+    },
+    "web": {
+      "allOf": [
+        { "$ref": "#/$defs/app" },
+        { "type": "object", "required": ["replicas"], "properties": {
+          "replicas": { "type": "integer", "minimum": 1, "maximum": 3 }
+        } }
+      ]
+    },
+    "commerce": {
+      "allOf": [
+        { "$ref": "#/$defs/app" },
+        { "type": "object", "required": ["existingSecret", "replicas"], "properties": {
+          "existingSecret": { "$ref": "#/$defs/dnsLabel" },
+          "replicas": { "const": 1 }
+        } }
+      ]
+    },
+    "publicOrigin": { "type": "string", "pattern": "^https://[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?$" },
+    "ingress": {
+      "type": "object",
+      "required": ["host", "className", "tlsSecretName"],
+      "properties": {
+        "host": { "type": "string", "maxLength": 253, "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$" },
+        "className": { "$ref": "#/$defs/dnsLabel" },
+        "tlsSecretName": { "$ref": "#/$defs/dnsLabel" }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": { "type": "object", "required": ["name"], "properties": {
+        "name": { "$ref": "#/$defs/dnsLabel" }
+      } }
+    }
+  },
+  "$defs": {
+    "dnsLabel": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", "maxLength": 63 },
+    "app": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "replicas": { "type": "integer" },
+        "existingSecret": { "$ref": "#/$defs/dnsLabel" },
+        "image": {
+          "type": "object",
+          "required": ["repository", "digest"],
+          "properties": {
+            "repository": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9.:/_-]+$" },
+            "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+          }
+        },
+        "resources": { "type": "object" }
+      }
+    }
+  }
+}
