@@ -86,16 +86,18 @@
     <legend class="legend">Szín</legend>
     <ul class="color-options" role="list">
       @if (facets() === null && busy()) {
-        <li
-          aria-hidden="true"
-          class="facet-skeleton-row facet-skeleton-row--chip"
-          data-testid="color-skeleton-row"
-        >
-          <span class="facet-skeleton-bar facet-skeleton-bar--label"></span>
-          <span class="facet-skeleton-bar facet-skeleton-bar--count"></span>
-        </li>
+        @for (row of colorSkeletonRows; track row) {
+          <li
+            aria-hidden="true"
+            class="facet-skeleton-row facet-skeleton-row--chip"
+            data-testid="color-skeleton-row"
+          >
+            <span class="facet-skeleton-bar facet-skeleton-bar--label"></span>
+            <span class="facet-skeleton-bar facet-skeleton-bar--count"></span>
+          </li>
+        }
       }
-      @for (color of colorFacets(); track color.value) {
+      @for (color of visibleColorFacets(); track color.value) {
         <li>
           <button
             class="color-chip"
@@ -125,6 +127,16 @@
         </li>
       }
     </ul>
+    @if (colorFacets().length > 5) {
+      <button
+        class="more"
+        data-testid="filter-color-more"
+        type="button"
+        (click)="toggleColorsExpanded()"
+      >
+        {{ colorsAllVisible() ? 'Kevesebb szín' : 'Még több szín' }}
+      </button>
+    }
   </fieldset>
 
   <fieldset class="group" data-testid="filter-group-storage">
