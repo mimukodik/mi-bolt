@@ -372,7 +372,7 @@ describe('OrderReceiptComponent', () => {
     fixture.detectChanges();
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-payment"] dd')?.textContent.trim(),
-    ).toBe('Bankkártya (szimulált)');
+    ).toBe('Kártya (szimulált)');
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd')?.textContent.trim(),
     ).toBe('Bemutatótermi átvétel (demó)');

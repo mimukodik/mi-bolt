@@ -37,7 +37,7 @@ import type { OrderLine } from '@mi-bolt/api/models/order-line';
 import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 
 const PAYMENT_LABELS: Readonly<Record<OrderReceipt['paymentMethod'], string>> = {
-  card: 'Bankkártya (szimulált)',
+  card: 'Kártya (szimulált)',
   cash_on_delivery: 'Utánvét (demó)',
 };
 
