@@ -39,3 +39,7 @@ export type { CreateOrder$Params as CreateOrder$Params } from './fn/orders/creat
 export { createOrder as createOrder } from './fn/orders/create-order';
 export type { GetOrder$Params as GetOrder$Params } from './fn/orders/get-order';
 export { getOrder as getOrder } from './fn/orders/get-order';
+export type { GetDemoSession$Params as GetDemoSession$Params } from './fn/demo-access/get-demo-session';
+export { getDemoSession as getDemoSession } from './fn/demo-access/get-demo-session';
+export type { CreateDemoSession$Params as CreateDemoSession$Params } from './fn/demo-access/create-demo-session';
+export { createDemoSession as createDemoSession } from './fn/demo-access/create-demo-session';
