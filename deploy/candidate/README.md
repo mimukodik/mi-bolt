@@ -83,8 +83,14 @@ can retry an older candidate using its own approved baseline suite.
 
 The first rollout needs an open same-repository PR after the publisher workflow
 has landed on `main`. A successful build of `main`, or of a PR that has already
-closed, does not publish a preview candidate. Keep the verification PR open
-until its deployed browser checks finish; closing it requests preview cleanup.
+closed, does not publish a preview candidate. Keep the verification PR open,
+preferably as a draft, until its deployed browser checks finish. Run the manual
+`Toggle Bolt Preview` Actions workflow with its PR number and `enable` to add
+the `bolt-preview` label. The coordinator admits only labeled PRs. Run it with
+`disable` to remove the label and clean up the release and cloned database;
+enabling the same head again creates a fresh clone. Closing the PR also requests
+cleanup. Build and publication still run for unlabeled PRs so the candidate
+receipt is ready when deployment is enabled.
 
 Use the PR's current head to find the matching `CI` and `Candidate Build` runs,
 then inspect `Publish Candidate` and its `candidate-receipt` artifact. A green
