@@ -470,4 +470,13 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
       expect(block).not.toContain('"//frontend:start:payment"');
     }
   });
+
+  it('the payment app ships its icon in every build, so /demo-fizetes/favicon.ico answers', () => {
+    const icon = { glob: 'favicon.ico', input: 'projects/storefront/public' };
+    expect(readBuildAssets('demo-payment')).toContainEqual(icon);
+    expect(readBuildAssets('demo-payment', 'development')).toContainEqual(icon);
+    expect(existsSync(join(REPO_ROOT, 'projects/storefront/public/favicon.ico'))).toBe(true);
+    const indexHtml = readFileSync(join(REPO_ROOT, 'projects/demo-payment/src/index.html'), 'utf8');
+    expect(indexHtml).toContain('<link href="favicon.ico" rel="icon" type="image/x-icon" />');
+  });
 });
