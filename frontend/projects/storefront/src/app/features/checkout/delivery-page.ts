@@ -24,6 +24,7 @@ import { NavigationReasonBanner } from './navigation-reason-banner';
 
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
@@ -40,7 +41,14 @@ type LoadState =
 
 @Component({
   selector: 'app-delivery-page',
-  imports: [DeliveryStep, ErrorState, LoadingState, NavigationReasonBanner, StatusMessage],
+  imports: [
+    DeliveryStep,
+    ErrorState,
+    LoadingState,
+    NavigationReasonBanner,
+    SkeletonLeave,
+    StatusMessage,
+  ],
   templateUrl: './delivery-page.html',
   styleUrl: './delivery-page.scss',
 })

@@ -38,6 +38,7 @@ import { Button } from '../../shared/ui/button/button';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { UiProblem } from '../../shared/types/ui-problem';
@@ -106,6 +107,7 @@ function describeAddFailure(failure: CartError | null): string {
     PriceBlock,
     ErrorState,
     LoadingState,
+    SkeletonLeave,
     AddToCart,
     MobileBuyRail,
     StatusMessage,

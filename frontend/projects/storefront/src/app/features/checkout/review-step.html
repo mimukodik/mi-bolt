@@ -208,7 +208,7 @@
           [subtotal]="totals.subtotal"
         />
       } @else {
-        <div class="summary-loading" data-testid="review-summary-loading">
+        <div appSkeletonLeave class="summary-loading" data-testid="review-summary-loading">
           <app-loading-state label="Összesítő betöltése" variant="lines" />
         </div>
       }
@@ -379,10 +379,14 @@
             </div>
           }
           @case ('submitting') {
-            <app-loading-state label="Feldolgozás…" variant="lines" />
+            <app-loading-state appSkeletonLeave label="Feldolgozás…" variant="lines" />
           }
           @case ('loading') {
-            <app-loading-state label="Rendelés adatainak betöltése" variant="lines" />
+            <app-loading-state
+              appSkeletonLeave
+              label="Rendelés adatainak betöltése"
+              variant="lines"
+            />
           }
         }
       </div>

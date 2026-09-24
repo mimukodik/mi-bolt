@@ -44,6 +44,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from '../../shared/ui/button/button';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import { CartFacade } from '../cart/cart.facade';
@@ -65,6 +66,7 @@ const ORDER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,80}$/;
     ErrorState,
     LoadingState,
     OrderReceiptComponent,
+    SkeletonLeave,
     StatusMessage,
   ],
   templateUrl: './success-step.html',

@@ -1,5 +1,9 @@
 /* MiBolt LoadingState primitive. Reserved skeletons, restrained motion. */
 
+:host {
+  display: block;
+}
+
 .root {
   display: flex;
   flex-direction: column;

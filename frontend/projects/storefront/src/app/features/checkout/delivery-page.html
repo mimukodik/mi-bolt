@@ -2,7 +2,7 @@
 
 @switch (state().kind) {
   @case ('loading') {
-    <div class="loading" data-testid="delivery-loading">
+    <div appSkeletonLeave class="loading" data-testid="delivery-loading">
       <app-loading-state label="Szállítási és fizetési opciók betöltése" variant="lines" />
     </div>
   }

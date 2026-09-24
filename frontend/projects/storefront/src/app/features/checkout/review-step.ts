@@ -41,6 +41,7 @@ import type { ElementRef } from '@angular/core';
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 import { OrderSummary } from '../cart/order-summary';
@@ -87,6 +88,7 @@ const UNKNOWN_LABEL = '—';
     LoadingState,
     OrderSummary,
     PriceBlock,
+    SkeletonLeave,
     StatusMessage,
     TermsDialog,
   ],

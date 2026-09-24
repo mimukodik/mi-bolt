@@ -10,7 +10,12 @@
   }
   @switch (status()) {
     @case ('loading') {
-      <span aria-hidden="true" class="skeleton inline-block" data-testid="price-skeleton"></span>
+      <span
+        appSkeletonLeave
+        aria-hidden="true"
+        class="skeleton inline-block"
+        data-testid="price-skeleton"
+      ></span>
       <span class="sr-only absolute w-px h-px overflow-hidden">Ár betöltése…</span>
     }
     @case ('success') {

@@ -11,3 +11,4 @@ export { FormFieldMessage, type FieldError } from './form-field-message/form-fie
 export { AccessibleDialog } from './accessible-dialog/accessible-dialog';
 export { StatusMessage, type StatusSeverity } from './status-message/status-message';
 export { AsyncContent } from './async-content/async-content';
+export { SkeletonLeave } from './skeleton-leave/skeleton-leave';

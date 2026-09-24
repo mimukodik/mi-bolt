@@ -38,12 +38,12 @@
       </div>
     }
   } @else {
-    <div class="loading" data-testid="review-loading">
+    <div appSkeletonLeave class="loading" data-testid="review-loading">
       <app-loading-state label="Rendelés adatainak betöltése" variant="lines" />
     </div>
   }
 } @else {
-  <div class="loading" data-testid="review-loading">
+  <div appSkeletonLeave class="loading" data-testid="review-loading">
     <app-loading-state label="Kosár betöltése" variant="lines" />
   </div>
 }

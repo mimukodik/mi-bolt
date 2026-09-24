@@ -29,6 +29,7 @@
     />
     @if (status() === 'loading') {
       <span
+        appSkeletonLeave
         aria-hidden="true"
         class="skeleton absolute inset-0"
         data-testid="image-skeleton"

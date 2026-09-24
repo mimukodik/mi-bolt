@@ -5,6 +5,7 @@ import type { UiProblem } from '../../types/ui-problem';
 import { EmptyState } from '../empty-state/empty-state';
 import { ErrorState } from '../error-state/error-state';
 import { LoadingState } from '../loading-state/loading-state';
+import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
 
 /**
  * `AsyncContent` — `docs/spec/components.md:176`.
@@ -37,7 +38,7 @@ import { LoadingState } from '../loading-state/loading-state';
  */
 @Component({
   selector: 'app-async-content',
-  imports: [LoadingState, EmptyState, ErrorState],
+  imports: [LoadingState, EmptyState, ErrorState, SkeletonLeave],
   templateUrl: './async-content.html',
   styleUrl: './async-content.scss',
 })
