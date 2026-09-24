@@ -1,4 +1,4 @@
-import { HttpClient, HttpContext, HttpEventType } from '@angular/common/http';
+import { HttpClient, HttpEventType } from '@angular/common/http';
 import type { HttpEvent } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
@@ -9,7 +9,7 @@ import { uploadAdminMedia } from '../../api/generated/fn/admin-media/upload-admi
 import type { UploadedImage } from '../../api/generated/models/uploaded-image';
 import { RequestBuilder } from '../../api/generated/request-builder';
 
-import { USE_XHR } from '../../core/api/transport.interceptor';
+import { withUseXhr } from '../../core/api/transport.interceptor';
 
 /** One event of an in-progress upload: a percent tick, or the finished image. */
 export type UploadProgress =
@@ -66,7 +66,7 @@ export class MediaUploader {
           responseType: 'json',
           accept: 'application/json',
           reportProgress: true,
-          context: new HttpContext().set(USE_XHR, true),
+          context: withUseXhr(),
         }),
       )
       .pipe(mergeMap((event) => toUploadProgress(event)));

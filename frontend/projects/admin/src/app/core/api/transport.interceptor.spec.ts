@@ -17,6 +17,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import type { Observable } from 'rxjs';
 
+import { unauthorizedInterceptor } from '../auth/unauthorized.interceptor';
 import { ifMatchInterceptor, withIfMatch } from './if-match.interceptor';
 import { USE_XHR, transportInterceptor } from './transport.interceptor';
 
@@ -35,7 +36,9 @@ describe('transportInterceptor', () => {
     } satisfies HttpBackend;
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withInterceptors([ifMatchInterceptor, transportInterceptor])),
+        provideHttpClient(
+          withInterceptors([ifMatchInterceptor, unauthorizedInterceptor, transportInterceptor]),
+        ),
         provideHttpClientTesting(),
         { provide: HttpXhrBackend, useValue: xhrBackend },
       ],
