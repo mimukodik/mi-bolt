@@ -858,7 +858,23 @@ hairline and take that pixel back out of each padding edge
 | navy | `is-navy` | white on navy `#002340`, hover `#01385e` | `.btn--primary` (§5); the "Belépés" pill on the lime bar in `home-1920.png` |
 | secondary | `is-secondary` | navy text and border on white, hover tint `#c4dfe9` | `.btn-outline-navy` (§5) |
 | secondary on dark | `is-secondary-on-dark` | lime text and 1px lime border on a transparent fill, hover lime fill with navy text | `.btn-outline-lime` (§5), for the navy grounds in `home-1920.png`'s footer and `device-1920.png`'s configurator card |
-| disabled (all) | `:disabled` | `#80919f` on `#e5e9ec` | `.btn--primary[disabled]` (§5) |
+| disabled (all) | `:disabled:not([aria-busy])` | 2px dashed `#80919f` border, `#4e4e4e` text, transparent fill; on a navy ground (`is-primary-on-dark`, `is-secondary-on-dark`) the border is white at 60% and the text white at 80% | departs from `.btn--primary[disabled]` (§5), see below |
+
+**Disabled is this project's own look, not yettel's.** yettel's
+`.btn--primary[disabled]` (`#80919f` on `#e5e9ec`) reads as a paler twin of
+an enabled button, and on the lime primary the owner could hardly tell the
+two apart (in English: "the yettel-coloured disabled button is not well
+visible, you can hardly notice that it is disabled"). Every disabled control
+therefore wears one recipe: a 2px dashed `--color-disabled-border` edge,
+`--color-disabled-text`, a transparent `--color-disabled-bg`, full opacity and
+`cursor: not-allowed`, the owner's pick of a dashed outline over a paler fill.
+The button takes the 2px edge back out of its padding (`10px 22px`), so the
+pill stays 48px; a button busy with its own request (`aria-busy`) keeps its
+variant look and its spinner. The same edge marks the catalogue pager's
+boundary arrows, the brand and colour facets with no matching phone
+(`is-unavailable`), the product page's unavailable variant chips and the
+gallery's end arrows; a control dimmed only while a refetch runs keeps its
+plain opacity dim, because it is busy rather than unavailable.
 
 `is-secondary-on-dark` is the outlined lime button rather than a second copy
 of the lime pill: the first version of this table gave it the same fill as
