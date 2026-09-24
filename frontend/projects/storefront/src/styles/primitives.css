@@ -82,11 +82,6 @@ h6 {
   font-family: var(--font-family-bold);
   font-weight: var(--weight-bold);
   line-height: var(--line-height-heading);
-  margin: 0;
-}
-
-p {
-  margin: 0;
 }
 
 /* The accessibility focus indicator referenced by every primitive.
