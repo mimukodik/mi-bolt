@@ -82,8 +82,14 @@
   outline-color: var(--color-focus-input);
 }
 
+/* An unavailable variant wears the shared disabled look: dashed edge,
+   grey text, full opacity (owner: a disabled control must be easy to
+   spot). The outline sits inside the box like the chip's inset ring. */
 .option:disabled {
-  opacity: 0.6;
+  box-shadow: none;
+  outline: 2px dashed var(--color-disabled-border);
+  outline-offset: -2px;
+  color: var(--color-disabled-text);
   cursor: not-allowed;
 }
 

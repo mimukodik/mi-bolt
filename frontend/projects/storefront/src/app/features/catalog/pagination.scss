@@ -48,3 +48,13 @@
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+/* A boundary with nowhere to go wears the shared disabled look: dashed
+   ring and grey chevron at full opacity (owner: a disabled control must
+   be easy to spot). The 0.3 dim above stays for the brief refetch. */
+.page--boundary.is-unavailable:disabled {
+  opacity: 1;
+  border-style: dashed;
+  border-color: var(--color-disabled-border);
+  color: var(--color-disabled-text);
+}

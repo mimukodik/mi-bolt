@@ -93,6 +93,12 @@ describe('Pagination', () => {
     expect(root.querySelector<HTMLButtonElement>('[data-testid="pagination-next"]')?.disabled).toBe(
       false,
     );
+    expect(
+      root.querySelector('[data-testid="pagination-prev"]')?.classList.contains('is-unavailable'),
+    ).toBe(true);
+    expect(
+      root.querySelector('[data-testid="pagination-next"]')?.classList.contains('is-unavailable'),
+    ).toBe(false);
 
     host.page.set(2);
     fixture.detectChanges();
@@ -102,6 +108,23 @@ describe('Pagination', () => {
     expect(root.querySelector<HTMLButtonElement>('[data-testid="pagination-next"]')?.disabled).toBe(
       true,
     );
+    expect(
+      root.querySelector('[data-testid="pagination-prev"]')?.classList.contains('is-unavailable'),
+    ).toBe(false);
+    expect(
+      root.querySelector('[data-testid="pagination-next"]')?.classList.contains('is-unavailable'),
+    ).toBe(true);
+  });
+
+  it('a refetch disables Előző on page 2 without marking it unavailable', () => {
+    const { fixture, host } = setup();
+    const root = getNativeElement(fixture);
+    host.page.set(2);
+    host.disabled.set(true);
+    fixture.detectChanges();
+    const prev = root.querySelector<HTMLButtonElement>('[data-testid="pagination-prev"]');
+    expect(prev?.disabled).toBe(true);
+    expect(prev?.classList.contains('is-unavailable')).toBe(false);
   });
 
   it('clicking Következő onto the last page moves focus to the current-page button, not <body>', () => {
