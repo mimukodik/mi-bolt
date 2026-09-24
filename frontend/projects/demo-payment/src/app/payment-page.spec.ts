@@ -105,6 +105,43 @@ function fill(fixture: ComponentFixture<PaymentPage>, selector: string, value: s
   el.dispatchEvent(new Event('input'));
 }
 
+/**
+ * The 401 the contract answers every shop operation with when the visitor has
+ * not signed in to the demo and the `mibolt_demo_access` cookie is missing.
+ */
+function demoAccessRequired(): Response {
+  return HttpResponse.json(
+    {
+      type: 'urn:mi-bolt:problem:unauthenticated',
+      title: 'Demo access required',
+      status: 401,
+      code: 'UNAUTHENTICATED',
+      detail: 'Sign in with the demo password first.',
+      traceId: 't',
+      fieldErrors: [],
+    },
+    { status: 401, headers: { 'content-type': 'application/problem+json' } },
+  );
+}
+
+/**
+ * The one rendering a 401 must produce, whichever call it came from: the
+ * alert asks for the demo password, the shop's sign-in is the only way out,
+ * and nothing offers a retry that could never succeed (MIM-423).
+ */
+function expectSignInPrompt(fixture: ComponentFixture<PaymentPage>): void {
+  expect(text(fixture, '[role="alert"]')).toBe(
+    'A demó bolt jelszóval érhető el. Előbb lépj be a boltba.',
+  );
+  expect(text(fixture, '[data-testid="pay-sign-in"]')).toBe('Belépés a boltba');
+  const signIn = hostElement(fixture).querySelector('[data-testid="pay-sign-in"]');
+  expect(signIn?.getAttribute('href')).toBe('/belepes');
+  expect(hostElement(fixture).querySelector('[data-testid="pay-retry"]')).toBeNull();
+  expect(hostElement(fixture).querySelector('[data-testid="pay-back"]')).toBeNull();
+  expect(hostElement(fixture).querySelector('h1')).toBeNull();
+  expect(document.activeElement).toBe(hostElement(fixture).querySelector('[role="alert"]'));
+}
+
 beforeEach(() => {
   captured.length = 0;
   assigned.length = 0;
@@ -421,6 +458,57 @@ describe('PaymentPage', () => {
     const posts = captured.filter((c) => c.method === 'POST');
     expect(posts).toHaveLength(1);
     expect(posts[0]?.body).toBe('{"outcome":"succeeded"}');
+  });
+
+  it('P-13: a 401 on load asks the visitor to sign in to the shop', async () => {
+    await configureTestBed();
+    server.use(http.get(`${BASE_URL}/payment-intents/:id`, () => demoAccessRequired()));
+    const fixture = await render('pi_test_1');
+    await flush();
+
+    expectSignInPrompt(fixture);
+    expect(captured.filter((c) => c.method === 'POST')).toHaveLength(0);
+  });
+
+  it('P-14: a 401 on the post asks the visitor to sign in to the shop', async () => {
+    await configureTestBed();
+    server.use(
+      http.get(`${BASE_URL}/payment-intents/:id`, () => HttpResponse.json(intentOpen)),
+      http.post(`${BASE_URL}/payment-intents/:id/outcome`, () => demoAccessRequired()),
+    );
+    const fixture = await render('pi_test_1');
+    click(fixture, '[data-testid="pay-succeeded"]');
+    await fixture.whenStable();
+    await flush();
+
+    expectSignInPrompt(fixture);
+    expect(captured.filter((c) => c.method === 'POST')).toHaveLength(1);
+    expect(assigned).toEqual([]);
+  });
+
+  it('P-15: a 401 on the re-read after a 409 asks the visitor to sign in', async () => {
+    await configureTestBed();
+    let getCalls = 0;
+    server.use(
+      http.get(`${BASE_URL}/payment-intents/:id`, () => {
+        getCalls += 1;
+        return getCalls === 1 ? HttpResponse.json(intentOpen) : demoAccessRequired();
+      }),
+      http.post(`${BASE_URL}/payment-intents/:id/outcome`, () =>
+        HttpResponse.json(
+          { type: 'about:blank', title: 'Conflict', status: 409 },
+          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+    const fixture = await render('pi_test_1');
+    click(fixture, '[data-testid="pay-succeeded"]');
+    await fixture.whenStable();
+    await flush();
+
+    expectSignInPrompt(fixture);
+    expect(captured.filter((c) => c.method === 'POST')).toHaveLength(1);
+    expect(captured.filter((c) => c.method === 'GET')).toHaveLength(2);
   });
 
   it('MIM-260: the card fields never reach the posted body', async () => {
