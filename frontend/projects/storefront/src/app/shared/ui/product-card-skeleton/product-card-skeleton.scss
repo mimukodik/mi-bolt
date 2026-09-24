@@ -1,0 +1,32 @@
+/* Tailwind utilities in product-card-skeleton.html carry the frame, the
+   sizes and the radii (the card's own: product-card.scss `.card`, and
+   docs/design/yettel.md, "Product card on the list page"). This sheet holds
+   what they cannot express: the host box and LoadingState's shimmer
+   (loading-state.scss `.block`). `.bar` sets no radius and no display: an
+   unlayered rule for an element that carries utilities would override
+   them, and the utilities sit in a layer. The host box is what the
+   utilities cannot reach. */
+:host {
+  display: block;
+  height: 100%;
+}
+
+.bar {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-section) 0%,
+    var(--color-border-subtle) 50%,
+    var(--color-surface-section) 100%
+  );
+  background-size: 200% 100%;
+  animation: card-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes card-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

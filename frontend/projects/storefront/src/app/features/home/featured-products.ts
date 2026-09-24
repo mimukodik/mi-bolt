@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
 import { ProductCard } from '../catalog/product-card';
 import { Button } from '../../shared/ui/button/button';
+import { ProductCardSkeleton } from '../../shared/ui/product-card-skeleton/product-card-skeleton';
 import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 
 /** Status of the whole featured grid in the home page. */
@@ -31,7 +32,7 @@ export interface FeaturedState {
  */
 @Component({
   selector: 'app-featured-products',
-  imports: [RouterLink, Button, ProductCard, SkeletonLeave],
+  imports: [RouterLink, Button, ProductCard, ProductCardSkeleton, SkeletonLeave],
   templateUrl: './featured-products.html',
   styleUrl: './featured-products.scss',
 })
