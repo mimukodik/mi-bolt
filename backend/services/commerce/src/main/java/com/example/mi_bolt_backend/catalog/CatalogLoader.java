@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -99,7 +100,14 @@ public class CatalogLoader implements ApplicationRunner {
 
 		CatalogValidator.ValidatedCatalog validated = validator.validate(catalog, imagesDir);
 
-		transactionTemplate.executeWithoutResult(status -> persist(validated));
+		try {
+			transactionTemplate.executeWithoutResult(status -> persist(validated));
+		}
+		catch (DataIntegrityViolationException ex) {
+			if (log.isInfoEnabled()) {
+				log.info("catalogue already loaded by another instance, loader skipped");
+			}
+		}
 	}
 
 	private void persist(CatalogValidator.ValidatedCatalog validated) {

@@ -1,6 +1,7 @@
 package com.example.mi_bolt_backend.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -80,6 +81,22 @@ class CatalogLoaderTest {
 		loader.run(new DefaultApplicationArguments());
 		assertThat(productRepository.count()).isEqualTo(before);
 		assertThat(imageRepository.count()).isEqualTo(imagesBefore);
+	}
+
+	// Fails if the DataIntegrityViolationException catch in CatalogLoader#run is removed, or if the
+	// real duplicate insert surfaces as another exception type than the one it catches.
+	@Test
+	void aRealDuplicateFirstCatalogueInsertIsSkipped() {
+		long before = productRepository.count();
+		ProductRepository zeroCount = Mockito.mock(ProductRepository.class,
+				AdditionalAnswers.delegatesTo(productRepository));
+		Mockito.doReturn(0L).when(zeroCount).count();
+		CatalogLoader isolated = new CatalogLoader(zeroCount, imageRepository,
+				validator, jsonMapper, transactionManager, Path.of("src/test/resources/catalog"));
+
+		assertThatCode(() -> isolated.run(null)).doesNotThrowAnyException();
+
+		assertThat(productRepository.count()).isEqualTo(before);
 	}
 
 	@Test
