@@ -26,6 +26,7 @@ import {
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { cartStore } from '../cart/cart.handlers';
+import { faultResponse } from '../faults';
 import { IdempotencyStore } from '../idempotency';
 import { invalidRequest, problemResponse } from '../problem-response';
 
@@ -120,6 +121,8 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
   }
 
   const getOptions: RequestHandler = http.get('*/api/v1/checkout/options', ({ request }) => {
+    const fault = faultResponse(options, 'checkout-options');
+    if (fault !== null) return fault;
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -128,6 +131,8 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
   });
 
   const getCheckout: RequestHandler = http.get('*/api/v1/checkout', ({ request }) => {
+    const fault = faultResponse(options, 'checkout');
+    if (fault !== null) return fault;
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -138,6 +143,8 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
   });
 
   const patchCheckout: RequestHandler = http.patch('*/api/v1/checkout', async ({ request }) => {
+    const fault = faultResponse(options, 'checkout-update');
+    if (fault !== null) return fault;
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});

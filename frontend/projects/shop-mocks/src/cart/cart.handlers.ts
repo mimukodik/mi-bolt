@@ -29,6 +29,7 @@ import {
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
+import { faultResponse } from '../faults';
 import { isRecord } from '../is-record';
 
 import { buildTraceId, CartStore, problemType } from './cart-store';
@@ -153,6 +154,8 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   }
 
   const getCart: RequestHandler = http.get('*/api/v1/cart', ({ request }) => {
+    const fault = faultResponse(options, 'cart');
+    if (fault !== null) return fault;
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -161,6 +164,8 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   });
 
   const addCartItem: RequestHandler = http.post('*/api/v1/cart/items', async ({ request }) => {
+    const fault = faultResponse(options, 'cart-add');
+    if (fault !== null) return fault;
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -192,6 +197,8 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   const setCartItemQuantity: RequestHandler = http.patch(
     '*/api/v1/cart/items/:variantId',
     async ({ request, params }) => {
+      const fault = faultResponse(options, 'cart-quantity');
+      if (fault !== null) return fault;
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) {
         return invalidRequest(options, 'Missing X-Demo-Session header', {});

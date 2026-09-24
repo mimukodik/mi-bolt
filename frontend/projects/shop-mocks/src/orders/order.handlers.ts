@@ -24,6 +24,7 @@ import {
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
+import { faultResponse } from '../faults';
 import { invalidRequest, problemResponse } from '../problem-response';
 
 import { orderStore } from '../checkout/checkout.handlers';
@@ -47,6 +48,8 @@ export const orderHandlersEntry: BusinessHandlerEntry = (
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] => {
   const createOrder: RequestHandler = http.post('*/api/v1/orders', async ({ request }) => {
+    const fault = faultResponse(options, 'order');
+    if (fault !== null) return fault;
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -67,6 +70,8 @@ export const orderHandlersEntry: BusinessHandlerEntry = (
   });
 
   const getOrder: RequestHandler = http.get('*/api/v1/orders/:orderId', ({ request, params }) => {
+    const fault = faultResponse(options, 'order-read');
+    if (fault !== null) return fault;
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
