@@ -15,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -160,30 +161,35 @@ class OrdersApiTest {
 		String intentId = createResolvedIntent(cookie, etag);
 		long ordersBefore = orders.count();
 
-		String key = "key-" + UUID.randomUUID();
-		String body = "{\"paymentMethod\":\"card\",\"paymentIntentId\":\"" + intentId
-				+ "\",\"termsVersion\":\"2026-09\",\"acceptedTerms\":true}";
-		MvcResult first = mockMvc.perform(post("/orders")
-				.cookie(cookie(cookie))
-				.header("If-Match", "\"" + etag + "\"")
-				.header("Idempotency-Key", key)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(body))
-				.andExpect(status().isCreated())
-				.andReturn();
-		MvcResult replay = mockMvc.perform(post("/orders")
-				.cookie(cookie(cookie))
-				.header("If-Match", "\"3\"")
-				.header("Idempotency-Key", key)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(body))
-				.andExpect(status().isCreated())
-				.andReturn();
-		assertEquals(first.getResponse().getContentAsString(),
-				replay.getResponse().getContentAsString(),
-				"the replayed receipt must equal the first response byte-for-byte");
-		assertEquals(ordersBefore + 1, orders.count(),
-				"a replayed request must not create a second order");
+		try {
+			String key = "key-" + UUID.randomUUID();
+			String body = "{\"paymentMethod\":\"card\",\"paymentIntentId\":\"" + intentId
+					+ "\",\"termsVersion\":\"2026-09\",\"acceptedTerms\":true}";
+			MvcResult first = mockMvc.perform(post("/orders")
+					.cookie(cookie(cookie))
+					.header("If-Match", "\"" + etag + "\"")
+					.header("Idempotency-Key", key)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(body))
+					.andExpect(status().isCreated())
+					.andReturn();
+			MvcResult replay = mockMvc.perform(post("/orders")
+					.cookie(cookie(cookie))
+					.header("If-Match", "\"3\"")
+					.header("Idempotency-Key", key)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(body))
+					.andExpect(status().isCreated())
+					.andReturn();
+			assertEquals(first.getResponse().getContentAsString(),
+					replay.getResponse().getContentAsString(),
+					"the replayed receipt must equal the first response byte-for-byte");
+			assertEquals(ordersBefore + 1, orders.count(),
+					"a replayed request must not create a second order");
+		}
+		finally {
+			jdbcTemplate.update("UPDATE product_variant SET stock = 7 WHERE id = ?", NAVY_128);
+		}
 	}
 
 	@Test
@@ -192,24 +198,29 @@ class OrdersApiTest {
 		String etag = completeCardDraft(cookie);
 		String intentId = createResolvedIntent(cookie, etag);
 
-		String key = "key-" + UUID.randomUUID();
-		mockMvc.perform(post("/orders")
-				.cookie(cookie(cookie))
-				.header("If-Match", "\"" + etag + "\"")
-				.header("Idempotency-Key", key)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"paymentMethod\":\"card\",\"paymentIntentId\":\"" + intentId
-						+ "\",\"termsVersion\":\"2026-09\",\"acceptedTerms\":true}"))
-				.andExpect(status().isCreated());
-		mockMvc.perform(post("/orders")
-				.cookie(cookie(cookie))
-				.header("If-Match", "\"" + etag + "\"")
-				.header("Idempotency-Key", key)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"paymentMethod\":\"card\",\"paymentIntentId\":\"" + intentId
-						+ "\",\"termsVersion\":\"2026-09\",\"acceptedTerms\":false}"))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("IDEMPOTENCY_CONFLICT"));
+		try {
+			String key = "key-" + UUID.randomUUID();
+			mockMvc.perform(post("/orders")
+					.cookie(cookie(cookie))
+					.header("If-Match", "\"" + etag + "\"")
+					.header("Idempotency-Key", key)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"paymentMethod\":\"card\",\"paymentIntentId\":\"" + intentId
+							+ "\",\"termsVersion\":\"2026-09\",\"acceptedTerms\":true}"))
+					.andExpect(status().isCreated());
+			mockMvc.perform(post("/orders")
+					.cookie(cookie(cookie))
+					.header("If-Match", "\"" + etag + "\"")
+					.header("Idempotency-Key", key)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"paymentMethod\":\"card\",\"paymentIntentId\":\"" + intentId
+							+ "\",\"termsVersion\":\"2026-09\",\"acceptedTerms\":false}"))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.code").value("IDEMPOTENCY_CONFLICT"));
+		}
+		finally {
+			jdbcTemplate.update("UPDATE product_variant SET stock = 7 WHERE id = ?", NAVY_128);
+		}
 	}
 
 	@Test
@@ -393,12 +404,15 @@ class OrdersApiTest {
 			// first order committed: existsByPaymentIntentId answers false, so only the
 			// uq_shop_order_payment_intent constraint can refuse the insert. A delegating proxy
 			// rather than a spy, for the reasons OrderNumberRetryApiTest's Javadoc gives.
-			ReflectionTestUtils.setField(orderService, "orders", existsByPaymentIntentIdAlwaysFalse());
+			AtomicInteger existsCalls = new AtomicInteger();
+			ReflectionTestUtils.setField(orderService, "orders", existsByPaymentIntentIdAlwaysFalse(existsCalls));
 
 			mockMvc.perform(cardOrder(cookie, secondEtag, intentId))
 					.andExpect(status().isUnprocessableEntity())
 					.andExpect(jsonPath("$.code").value("PAYMENT_REQUIRED"));
 
+			assertEquals(1, existsCalls.get(),
+					"OrderService must consult existsByPaymentIntentId once, so the 422 comes from the constraint behind a passed check");
 			assertEquals(ordersBefore + 1, orders.count(), "the constraint must leave no second order behind");
 			assertEquals(stockBefore - 1, variants.findById(NAVY_128).orElseThrow().getStock().longValue(),
 					"the rolled-back second order must not decrement stock");
@@ -636,16 +650,18 @@ class OrdersApiTest {
 
 	/**
 	 * A {@link ShopOrderRepository} that delegates every call to {@link #orders}
-	 * except {@code existsByPaymentIntentId}, which always answers {@code false},
-	 * so only the real {@code uq_shop_order_payment_intent} constraint can refuse
-	 * a reused intent.
+	 * except {@code existsByPaymentIntentId}, which always answers {@code false}
+	 * and counts the call in {@code calls}, so only the real
+	 * {@code uq_shop_order_payment_intent} constraint can refuse a reused intent
+	 * and the test can prove the service consulted the check first.
 	 */
-	private ShopOrderRepository existsByPaymentIntentIdAlwaysFalse() {
+	private ShopOrderRepository existsByPaymentIntentIdAlwaysFalse(AtomicInteger calls) {
 		return (ShopOrderRepository) Proxy.newProxyInstance(
 				ShopOrderRepository.class.getClassLoader(),
 				new Class<?>[] { ShopOrderRepository.class },
 				(proxyInstance, method, args) -> {
 					if ("existsByPaymentIntentId".equals(method.getName())) {
+						calls.incrementAndGet();
 						return false;
 					}
 					try {
