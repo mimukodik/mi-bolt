@@ -78,3 +78,35 @@ execute in the receipt-producing workflow. PR test changes still run in ordinary
 read-only CI; changing the deployed acceptance suite requires approving a new
 publisher revision. The platform separately approves wrapper revisions; a newer approved wrapper
 can retry an older candidate using its own approved baseline suite.
+
+## First deployment and troubleshooting
+
+The first rollout needs an open same-repository PR after the publisher workflow
+has landed on `main`. A successful build of `main`, or of a PR that has already
+closed, does not publish a preview candidate. Keep the verification PR open
+until its deployed browser checks finish; closing it requests preview cleanup.
+
+Use the PR's current head to find the matching `CI` and `Candidate Build` runs,
+then inspect `Publish Candidate` and its `candidate-receipt` artifact. A green
+publisher run can be a deliberate no-op when the eligibility checks do not
+match; the receipt is the evidence that publication actually happened.
+
+The expected URL is `https://bolt-pr-<PR-number>.mimukodik.hu`. Its
+`/__candidate.json` must match the receipt's head, publisher run ID and both
+image digests. Readiness alone does not mean browser acceptance: wait for the
+`Preview Smoke` workflow and its `preview-smoke-receipt` artifact as well.
+If platform activation or admission took longer than the initial smoke wait,
+retry the successful publisher run explicitly:
+
+```sh
+gh workflow run preview-smoke.yml --repo mimukodik/mi-bolt \
+  -f publisher_run_id=<successful-publisher-run-id>
+```
+
+Each new PR head receives a fresh template database. Retrying the same head
+preserves its current clone. Schema or catalogue changes need a newly approved
+template fingerprint in Berek before admission. Stable promotion to
+`https://bolt.mimukodik.hu` reuses the accepted chart and image digests and
+preserves the stable database. Database bootstrap, coordinator configuration,
+capacity/expiry, and explicit stable resets belong to Berek's
+[`docs/mibolt-preview-release.md`](https://github.com/mimukodik/berek/blob/main/docs/mibolt-preview-release.md).
