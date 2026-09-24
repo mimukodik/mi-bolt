@@ -19,7 +19,8 @@
  *   - on 409 `PRICE_CHANGED` refetches, captures both totals and
  *     arms `priceChange`; the submit CTA stays dead until
  *     `confirmPriceChange()` runs (§8.2, "az új összeg néma elfogadása
- *     tilos");
+ *     tilos"); a failed refetch is retried once, and a second failure
+ *     is returned as the submit's own failure;
  *   - idempotency keys live in `checkoutKeys`; `uncertain retains,
  *     definite rotates` (design §3.6).
  */
@@ -491,8 +492,7 @@ export class CheckoutFacade {
         } catch (err) {
           const error = mapError(err);
           if (error.code === 'PRICE_CHANGED') {
-            await this.recordPriceChange(error);
-            return { ok: false, error };
+            return { ok: false, error: await this.recordPriceChange(error) };
           }
           // The refused intent is one the facade can no longer use, so
           // it and its stored id go and the next submit asks for a new
@@ -734,31 +734,33 @@ export class CheckoutFacade {
    * The §8.2 sequence for a 409 PRICE_CHANGED on POST /orders: the
    * shopper must see the old and the new total and confirm before a
    * resubmit, so the caller's promise resolves only once `priceChange`
-   * is armed (design §3.7).
+   * is armed (design §3.7). Neither read throws: `cart.refetch()` keeps
+   * its failure to itself and `ensureSession` returns it, so a failed
+   * session read is retried once (the owner's decision). When the retry
+   * fails too the new total is unknown, and the read's failure is
+   * returned in place of the 409, so the submit surfaces as a failure
+   * instead of a live CTA over the old total.
    */
-  private async recordPriceChange(error: CheckoutError): Promise<void> {
+  private async recordPriceChange(error: CheckoutError): Promise<CheckoutError> {
     const shownTotal = this.summary()?.total;
     checkoutKeys.rotateOrderKey();
-    try {
+    await this.cart.refetch();
+    let read = await this.ensureSession(true);
+    if (!read.ok) {
       await this.cart.refetch();
-      await this.ensureSession(true);
-    } catch {
-      // A failed refetch must not strand the user on the review step
-      // without an error surface. Fall through with the totals the
-      // facade already had; the error is set below so the banner
-      // appears even when the refetch did not.
+      read = await this.ensureSession(true);
     }
-    const currentTotal = this.summary()?.total;
-    if (
-      shownTotal !== undefined &&
-      currentTotal !== undefined &&
-      shownTotal.amount !== currentTotal.amount
-    ) {
+    if (!read.ok) {
+      return read.error;
+    }
+    const currentTotal = read.value.summary.total;
+    if (shownTotal !== undefined && shownTotal.amount !== currentTotal.amount) {
       this.priceChangeWritable.set({ shownTotal, currentTotal, awaitingConfirmation: true });
     }
     this.errorWritable.set(error);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
+    return error;
   }
 
   private clearFailureOverlay(): void {

@@ -1432,6 +1432,7 @@ describe('orders', () => {
     });
 
     expect(requestsTo('POST', '/orders')).toHaveLength(1);
+    expect(requestsTo('GET', '/checkout')).toHaveLength(1);
     const change = checkout.priceChange();
     expect(change).not.toBeNull();
     expect(change?.shownTotal).toEqual({ amount: 89_990, currency: 'HUF' });
@@ -1529,6 +1530,163 @@ describe('orders', () => {
     const newKey = posts[0]?.headers['idempotency-key'] ?? '';
     expect(newKey).toMatch(KEY_PATTERN);
     expect(newKey).not.toBe('');
+  });
+
+  it('F-26b: a failed read after a 409 PRICE_CHANGED is retried once, and the retry arms priceChange', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    await seedMoto();
+    await checkout.ensureOptions();
+    await seedCompleteDraft(checkout, 'card');
+
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    await resolveSucceeded(created.value.id);
+
+    const addHonor = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'If-Match': '"6"',
+        'X-Demo-Session': capturedDemoSession ?? '',
+      },
+      body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
+    });
+    expect(addHonor.status).toBe(200);
+
+    let checkoutReads = 0;
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:price-changed',
+            title: 'Conflict',
+            status: 409,
+            code: 'PRICE_CHANGED',
+            detail: 'Cart prices were updated; the shopper must review the new total.',
+            params: { intentAmount: 89_990, total: 159_980 },
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+      http.get('*/api/v1/checkout', () => {
+        checkoutReads += 1;
+        if (checkoutReads === 1) {
+          return HttpResponse.json(
+            {
+              type: 'urn:mi-bolt:problem:service-unavailable',
+              title: 'Service unavailable',
+              status: 503,
+              code: 'SERVICE_UNAVAILABLE',
+              detail: 'downstream',
+              params: {},
+              traceId: 'mock-trace-test',
+              fieldErrors: [],
+            },
+            { status: 503, headers: { 'content-type': 'application/problem+json' } },
+          );
+        }
+        // The retried read must reach the default mock.
+        return undefined;
+      }),
+    );
+
+    captures.length = 0;
+    const result = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: created.value.id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    await flushCaptures();
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('PRICE_CHANGED');
+    expect(checkoutReads).toBe(2);
+    expect(requestsTo('POST', '/orders')).toHaveLength(1);
+    const change = checkout.priceChange();
+    expect(change?.shownTotal).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(change?.currentTotal).toEqual({ amount: 159_980, currency: 'HUF' });
+    expect(change?.awaitingConfirmation).toBe(true);
+  });
+
+  it('F-26c: when the read after a 409 PRICE_CHANGED fails twice, the submit returns the read failure and arms no priceChange', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    await seedMoto();
+    await checkout.ensureOptions();
+    await seedCompleteDraft(checkout, 'card');
+
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    await resolveSucceeded(created.value.id);
+
+    const addHonor = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'If-Match': '"6"',
+        'X-Demo-Session': capturedDemoSession ?? '',
+      },
+      body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
+    });
+    expect(addHonor.status).toBe(200);
+
+    let checkoutReads = 0;
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:price-changed',
+            title: 'Conflict',
+            status: 409,
+            code: 'PRICE_CHANGED',
+            detail: 'Cart prices were updated; the shopper must review the new total.',
+            params: { intentAmount: 89_990, total: 159_980 },
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 409, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+      http.get('*/api/v1/checkout', () => {
+        checkoutReads += 1;
+        return HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:service-unavailable',
+            title: 'Service unavailable',
+            status: 503,
+            code: 'SERVICE_UNAVAILABLE',
+            detail: 'downstream',
+            params: {},
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 503, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    captures.length = 0;
+    const result = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: created.value.id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    await flushCaptures();
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(result.error.status).toBe(503);
+    expect(checkoutReads).toBe(2);
+    expect(requestsTo('POST', '/orders')).toHaveLength(1);
+    expect(checkout.priceChange()).toBeNull();
+    expect(checkout.error()?.code).toBe('SERVICE_UNAVAILABLE');
   });
 
   it('F-29: startNewPurchase() clears the receipt and the session so the guards see no order', async () => {
