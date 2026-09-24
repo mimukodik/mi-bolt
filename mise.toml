@@ -96,3 +96,7 @@ run = "npm --prefix .claude/hooks test"
 [tasks."claude:hooks:typecheck"]
 description = "Typecheck the Claude Code hooks"
 run = "npm --prefix .claude/hooks run typecheck"
+
+[tasks."deploy:check"]
+description = "Lint and inspect the MiBolt Helm app chart with synthetic candidate values"
+run = "uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-chart.py"

@@ -325,3 +325,6 @@ blob-report/
 /tools/catalog-import/.cache/
 /data/catalog/catalog.invalid.json
 /data/catalog/catalog.partial.json
+
+# Deployment helper bytecode
+/deploy/**/__pycache__/

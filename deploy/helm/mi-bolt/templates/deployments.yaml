@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mi-bolt.fullname" . }}-commerce
+  labels:
+    {{- include "mi-bolt.labels" . | nindent 4 }}
+    app.kubernetes.io/component: commerce
+  annotations:
+    {{- include "mi-bolt.candidateAnnotations" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.commerce.replicas }} # Admin sessions are process-local.
+  strategy:
+    type: Recreate # Avoid overlapping app revisions during migrations.
+  selector:
+    matchLabels:
+      {{- include "mi-bolt.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: commerce
+  template:
+    metadata:
+      labels:
+        {{- include "mi-bolt.labels" . | nindent 8 }}
+        app.kubernetes.io/component: commerce
+      annotations:
+        {{- include "mi-bolt.candidateAnnotations" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: commerce
+          image: {{ printf "%s@%s" .Values.commerce.image.repository .Values.commerce.image.digest | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: {{ .Values.commerce.existingSecret | quote }}
+          env:
+            - name: MIBOLT_PAYMENT_REDIRECT_URL_PREFIX
+              value: {{ printf "%s/demo-fizetes/" .Values.publicOrigin | quote }}
+            - name: MIBOLT_PAYMENT_RETURN_URL_PREFIX
+              value: {{ printf "%s/penztar?paymentIntentId=" .Values.publicOrigin | quote }}
+          startupProbe:
+            httpGet:
+              path: /api/v1/actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              path: /api/v1/actuator/health/readiness
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/v1/actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.commerce.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mi-bolt.fullname" . }}-web
+  labels:
+    {{- include "mi-bolt.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+  annotations:
+    {{- include "mi-bolt.candidateAnnotations" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      {{- include "mi-bolt.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "mi-bolt.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+      annotations:
+        {{- include "mi-bolt.candidateAnnotations" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: candidate
+          configMap:
+            name: {{ include "mi-bolt.fullname" . }}-candidate
+      containers:
+        - name: web
+          volumeMounts:
+            - name: candidate
+              mountPath: /usr/share/nginx/html/__candidate.json
+              subPath: __candidate.json
+              readOnly: true
+          image: {{ printf "%s@%s" .Values.web.image.repository .Values.web.image.digest | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: BACKEND_ORIGIN
+              value: {{ printf "http://%s-commerce:8080" (include "mi-bolt.fullname" .) | quote }}
+          readinessProbe:
+            httpGet:
+              path: /robots.txt
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /robots.txt
+              port: http
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
