@@ -29,84 +29,24 @@
 import { describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../testing/msw-server';
+import {
+  LIST_URL,
+  arrayOf,
+  asListPage,
+  asProblem,
+  detailUrl,
+  getJson,
+  numberOf,
+  signedIn,
+  stringOf,
+} from '../testing/mock-spec-helpers';
 import { isRecord } from '../app/core/is-record';
-import type { MockDb } from './db';
 import { createDb } from './db';
 import { adminHandlers } from './handlers';
-import { SEED_ADMIN } from './seed';
 
 useMswServer();
 
-const LIST_URL = new URL('/api/v1/admin/products', document.baseURI).href;
 const BRANDS_URL = new URL('/api/v1/admin/brands', document.baseURI).href;
-const detailUrl = (id: number): string =>
-  new URL(`/api/v1/admin/products/${String(id)}`, document.baseURI).href;
-
-function signedIn(scenario: 'default' | 'empty-catalog' | 'list-error' = 'default'): MockDb {
-  const db = createDb(scenario);
-  db.sessionAdminId = SEED_ADMIN.id;
-  server?.use(...adminHandlers(db));
-  return db;
-}
-
-interface JsonResponse {
-  readonly status: number;
-  readonly body: unknown;
-  readonly headers: Headers;
-}
-
-async function getJson(url: string): Promise<JsonResponse> {
-  const response = await fetch(url);
-  return { status: response.status, body: await response.json(), headers: response.headers };
-}
-
-function arrayOf(value: unknown): readonly unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function numberOf(value: unknown): number {
-  return typeof value === 'number' ? value : 0;
-}
-
-function stringOf(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
-interface ListItemShape {
-  readonly id: number;
-  readonly slug: string;
-  readonly brand: string;
-  readonly featured: boolean;
-}
-
-function asListItem(value: unknown): ListItemShape {
-  if (!isRecord(value)) throw new Error('expected list item');
-  return {
-    id: numberOf(value['id']),
-    slug: stringOf(value['slug']),
-    brand: stringOf(value['brand']),
-    featured: value['featured'] === true,
-  };
-}
-
-interface ListPageShape {
-  readonly items: readonly ListItemShape[];
-  readonly page: number;
-  readonly pageSize: number;
-  readonly totalElements: number;
-  readonly totalPages: number;
-}
-
-function asListPage(value: unknown): ListPageShape {
-  if (!isRecord(value)) throw new Error('expected list page');
-  return {
-    items: arrayOf(value['items']).map(asListItem),
-    page: numberOf(value['page']),
-    pageSize: numberOf(value['pageSize']),
-    totalElements: numberOf(value['totalElements']),
-    totalPages: numberOf(value['totalPages']),
-  };
-}
 
 interface DetailShape {
   readonly id: number;
@@ -125,26 +65,6 @@ function asDetail(value: unknown): DetailShape {
 
 function asStringArray(value: unknown): readonly string[] {
   return arrayOf(value).map(stringOf);
-}
-
-/** The five fields every `Problem` rejection is pinned on: status, code, title, detail, params. */
-interface ProblemShape {
-  readonly status: number;
-  readonly code: string;
-  readonly title: string;
-  readonly detail: string;
-  readonly params: unknown;
-}
-
-function asProblem(value: unknown): ProblemShape {
-  if (!isRecord(value)) throw new Error('expected a problem');
-  return {
-    status: numberOf(value['status']),
-    code: stringOf(value['code']),
-    title: stringOf(value['title']),
-    detail: stringOf(value['detail']),
-    params: value['params'],
-  };
 }
 
 describe('productsReadHandlers list — auth and validation', () => {
