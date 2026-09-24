@@ -118,20 +118,38 @@ export function demoAccessStateFor(options: CreateHandlersOptions): DemoAccessSt
   return state;
 }
 
-/** The contract's 401 for a gated operation reached without demo access. */
-export function demoAccessRequired(options: CreateHandlersOptions): HttpResponse<DefaultBodyType> {
+/**
+ * The contract's 401 Problem for both demo-access refusals — the gate's
+ * "no access yet" and the sign-in handler's wrong password — which
+ * differ only in title and detail, so the seven-field body is written
+ * once rather than copied per caller.
+ */
+export function unauthenticatedProblem(
+  options: CreateHandlersOptions,
+  title: string,
+  detail: string,
+): HttpResponse<DefaultBodyType> {
   return problemResponse({
     ok: false,
     problem: {
       type: problemType('UNAUTHENTICATED'),
-      title: 'Demo access required',
+      title,
       status: 401,
       code: 'UNAUTHENTICATED',
-      detail: 'Sign in with the demo password first.',
+      detail,
       traceId: buildTraceId(options),
       fieldErrors: [],
     },
   });
+}
+
+/** The contract's 401 for a gated operation reached without demo access. */
+export function demoAccessRequired(options: CreateHandlersOptions): HttpResponse<DefaultBodyType> {
+  return unauthenticatedProblem(
+    options,
+    'Demo access required',
+    'Sign in with the demo password first.',
+  );
 }
 
 /**

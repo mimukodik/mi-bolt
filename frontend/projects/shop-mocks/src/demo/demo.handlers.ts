@@ -11,17 +11,16 @@
  * password signs in.
  */
 
-import { http, HttpResponse, type DefaultBodyType, type RequestHandler } from 'msw';
+import { http, HttpResponse, type RequestHandler } from 'msw';
 
-import { buildTraceId, problemType } from '../cart/cart-store';
 import {
   registerBusinessHandlers,
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
 import { isRecord } from '../is-record';
-import { invalidRequest, problemResponse } from '../problem-response';
-import { demoAccessRequired, demoAccessStateFor } from './demo-access';
+import { invalidRequest } from '../problem-response';
+import { demoAccessRequired, demoAccessStateFor, unauthenticatedProblem } from './demo-access';
 
 /** DemoSessionRequest.password caps the body at 64 characters. */
 const DEMO_PASSWORD_MAX_LENGTH = 64;
@@ -35,21 +34,6 @@ async function readJsonBody(request: Request): Promise<unknown> {
   } catch {
     return null;
   }
-}
-
-function wrongPassword(options: CreateHandlersOptions): HttpResponse<DefaultBodyType> {
-  return problemResponse({
-    ok: false,
-    problem: {
-      type: problemType('UNAUTHENTICATED'),
-      title: 'Wrong demo password',
-      status: 401,
-      code: 'UNAUTHENTICATED',
-      detail: 'The demo password is wrong.',
-      traceId: buildTraceId(options),
-      fieldErrors: [],
-    },
-  });
 }
 
 export const demoHandlersEntry: BusinessHandlerEntry = (
@@ -76,7 +60,9 @@ export const demoHandlersEntry: BusinessHandlerEntry = (
         {},
       );
     }
-    if (body['password'] !== DEMO_PASSWORD) return wrongPassword(options);
+    if (body['password'] !== DEMO_PASSWORD) {
+      return unauthenticatedProblem(options, 'Wrong demo password', 'The demo password is wrong.');
+    }
     demoAccessStateFor(options).signIn();
     return new HttpResponse(null, { status: 204 });
   });
