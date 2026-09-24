@@ -19,6 +19,7 @@ import { CurrencyPipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
+  DOCUMENT,
   InjectionToken,
   computed,
   effect,
@@ -33,6 +34,7 @@ import { firstValueFrom } from 'rxjs';
 import { Api } from '@mi-bolt/api/api';
 import { ApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { getPaymentIntent, resolvePaymentIntent } from '@mi-bolt/api/functions';
+import { dismissSplash } from '@mi-bolt/core-api/splash';
 
 import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
 import type { PaymentOutcomeRequest } from '@mi-bolt/api/models/payment-outcome-request';
@@ -118,6 +120,7 @@ export class PaymentPage implements OnInit {
 
   private readonly api: Api;
   private readonly navigator = inject(LOCATION_ASSIGN);
+  private readonly document = inject(DOCUMENT);
 
   private readonly state = signal<PageState>({ kind: 'loading' });
 
@@ -242,6 +245,12 @@ export class PaymentPage implements OnInit {
         alert.nativeElement.focus();
       }
       this.focusedFor = target;
+    });
+
+    // The index.html cover screen stays up while the intent loads and leaves on
+    // the first state that is not loading: the card, or an alert (MIM-404).
+    effect(() => {
+      if (this.display() !== 'loading') void dismissSplash(this.document);
     });
   }
 
