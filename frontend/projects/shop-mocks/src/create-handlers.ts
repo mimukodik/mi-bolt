@@ -17,6 +17,8 @@
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
+import type { Problem } from '@mi-bolt/api/models/problem';
+
 import type { Repository } from './repository';
 import type { Clock, Ids, ScenarioDescriptor } from './scenarios';
 import type { MockSnapshot } from './persistence';
@@ -87,23 +89,13 @@ export function createHandlers(options: CreateHandlersOptions): RequestHandler[]
 }
 
 /** 404 Problem JSON for any `/api/v1/*` route the business slices did not register. */
-interface NotFoundBody {
-  type: string;
-  title: string;
-  status: number;
-  code: string;
-  detail: string;
-  traceId: string;
-  fieldErrors: readonly { path: string; code: string }[];
-}
-
-function notFoundBody(options: CreateHandlersOptions): NotFoundBody {
+function notFoundBody(options: CreateHandlersOptions): Problem {
   return {
     type: 'urn:mi-bolt:problem:not-found',
-    title: 'A kért végpont nem található',
+    title: 'Resource not found',
     status: 404,
     code: 'NOT_FOUND',
-    detail: 'A mock dispatcher nem talált kezelőt ehhez az útvonalhoz.',
+    detail: 'No mock handler is registered for this route.',
     traceId: `mock-trace-${options.scenario.name}`,
     fieldErrors: [],
   };

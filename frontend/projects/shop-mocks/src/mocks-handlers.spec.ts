@@ -1376,3 +1376,30 @@ describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
     expect(JSON.stringify(replayBody)).toBe(JSON.stringify(firstBody));
   });
 });
+
+describe('dispatcher shell', () => {
+  it('answers an unregistered /api/v1 route with the English NOT_FOUND Problem', async () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    server.use(
+      ...createHandlers({
+        repository: new Repository(DEFAULT_SCENARIO, createDeterministicIds(1), clock),
+        clock,
+        ids: createDeterministicIds(1),
+        scenario: DEFAULT_SCENARIO,
+        apiRoot: 'http://localhost/api/v1',
+      }),
+    );
+    const res = await fetch('http://localhost/api/v1/no-such-route');
+    expect(res.status).toBe(404);
+    expect(res.headers.get('content-type')).toBe('application/problem+json');
+    expect(await res.json()).toEqual({
+      type: 'urn:mi-bolt:problem:not-found',
+      title: 'Resource not found',
+      status: 404,
+      code: 'NOT_FOUND',
+      detail: 'No mock handler is registered for this route.',
+      traceId: 'mock-trace-default',
+      fieldErrors: [],
+    });
+  });
+});
