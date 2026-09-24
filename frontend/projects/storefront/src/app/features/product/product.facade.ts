@@ -29,7 +29,17 @@
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import type { Subscription } from 'rxjs';
-import { catchError, distinctUntilChanged, map, of, Subject, switchMap, take, tap } from 'rxjs';
+import {
+  catchError,
+  distinctUntilChanged,
+  finalize,
+  map,
+  of,
+  Subject,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 
 import { Api } from '@mi-bolt/api/api';
 import { getProduct } from '@mi-bolt/api/fn/catalog/get-product';
@@ -79,6 +89,11 @@ export interface ProductVm {
    *  never an error state on its own — a failed request renders no
    *  section rather than blocking the product. */
   readonly related: readonly CatalogItem[];
+  /** True while the related request for the loaded product runs, so
+   *  the strip can show its card skeletons (docs/design/yettel.md,
+   *  "Product card skeleton"). False before the product loads, after
+   *  the related request answers or fails, and on a route change. */
+  readonly relatedLoading: boolean;
 }
 
 /** Extract a human-readable message from an SDK error. */
@@ -123,6 +138,8 @@ export class ProductFacade {
    *  related request settles; reset to `[]` on every route change so
    *  the strip never lingers over the next product. */
   private readonly relatedSignal = signal<readonly CatalogItem[]>([]);
+  /** True while the related request runs; see `ProductVm.relatedLoading`. */
+  private readonly relatedLoadingSignal = signal(false);
   /** In-flight related request. The product stream must not cancel
    *  this — `switchMap` would drop the related list when a fast route
    *  change arrives, so the related call subscribes separately and is
@@ -163,6 +180,7 @@ export class ProductFacade {
             this.relatedSub = null;
           }
           this.relatedSignal.set([]);
+          this.relatedLoadingSignal.set(false);
         }),
         switchMap(({ slug }) =>
           this.api.invoke(getProduct, { slug }).pipe(
@@ -341,9 +359,19 @@ export class ProductFacade {
     // (including a 404 for an unknown slug the related endpoint
     // disagrees on) leaves the strip empty; the product itself is
     // already in the success state and stays there.
+    this.relatedLoadingSignal.set(true);
     this.relatedSub = this.api
       .invoke(listRelatedProducts, { slug: product.slug })
-      .pipe(take(1))
+      .pipe(
+        take(1),
+        // The flag clears on every way out of the request — a value, an
+        // error, a completion with no value, or the unsubscription a route
+        // change performs — so the strip can never keep its skeletons for a
+        // request that is no longer running.
+        finalize(() => {
+          this.relatedLoadingSignal.set(false);
+        }),
+      )
       .subscribe({
         next: (items) => {
           this.relatedSignal.set(items);
@@ -407,6 +435,7 @@ export class ProductFacade {
         variantQuery,
         slug,
         related: [],
+        relatedLoading: false,
       };
     }
 
@@ -434,6 +463,7 @@ export class ProductFacade {
       variantQuery,
       slug,
       related: this.relatedSignal(),
+      relatedLoading: this.relatedLoadingSignal(),
     };
   }
 }

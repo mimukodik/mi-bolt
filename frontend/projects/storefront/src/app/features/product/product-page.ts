@@ -31,6 +31,7 @@ import { SpecificationAccordion } from './specification-accordion';
 import { AddToCart } from './add-to-cart';
 import { MobileBuyRail } from './mobile-buy-rail';
 import { ProductCard } from '../catalog/product-card';
+import { ProductCardSkeleton } from '../../shared/ui/product-card-skeleton/product-card-skeleton';
 
 import { CartFacade, type CartError } from '../cart/cart.facade';
 
@@ -112,6 +113,7 @@ function describeAddFailure(failure: CartError | null): string {
     MobileBuyRail,
     StatusMessage,
     ProductCard,
+    ProductCardSkeleton,
     RouterLink,
   ],
   templateUrl: './product-page.html',
@@ -240,6 +242,8 @@ export class ProductPage {
   readonly invalidQuery = computed<string | null>(() => this.vm().invalidVariantQuery);
 
   readonly related = computed<readonly CatalogItem[]>(() => this.vm().related);
+
+  readonly relatedLoading = computed<boolean>(() => this.vm().relatedLoading);
 
   readonly errorMessage = computed<string>(() => this.vm().error ?? 'Ismeretlen hiba.');
 
