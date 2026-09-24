@@ -47,6 +47,7 @@ import { OrderSummary } from './order-summary';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
 import { isRecord } from '../../shared/utils/is-record';
@@ -117,6 +118,7 @@ function sameLines(onScreen: Cart, fresh: Cart): boolean {
     EmptyState,
     ErrorState,
     LoadingState,
+    SkeletonLeave,
     Button,
     StatusMessage,
   ],

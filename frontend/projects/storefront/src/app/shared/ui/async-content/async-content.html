@@ -17,7 +17,7 @@
       />
     </div>
   } @else if (status() === 'loading' && !hasPrevious()) {
-    <div class="state state--loading" data-testid="catalog-loading">
+    <div appSkeletonLeave class="state state--loading" data-testid="catalog-loading">
       <app-loading-state label="Katalógus betöltése" variant="card" />
     </div>
   } @else {

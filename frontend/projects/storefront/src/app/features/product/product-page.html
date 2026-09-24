@@ -11,7 +11,7 @@
   <article class="card">
     @switch (state()) {
       @case ('loading') {
-        <div class="loading" data-testid="product-loading">
+        <div appSkeletonLeave class="loading" data-testid="product-loading">
           <app-loading-state label="Termék betöltése" variant="card" />
         </div>
       }

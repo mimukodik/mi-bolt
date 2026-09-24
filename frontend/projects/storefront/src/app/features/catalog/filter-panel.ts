@@ -8,6 +8,7 @@ import type { Facets } from '@mi-bolt/api/models/facets';
 
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 /** What one storage chip needs to render: the size, its label and
@@ -102,7 +103,7 @@ function keepDraftUnlessAppliedChanged(
  */
 @Component({
   selector: 'app-filter-panel',
-  imports: [Button, FormFieldMessage],
+  imports: [Button, FormFieldMessage, SkeletonLeave],
   templateUrl: './filter-panel.html',
   styleUrl: './filter-panel.scss',
 })

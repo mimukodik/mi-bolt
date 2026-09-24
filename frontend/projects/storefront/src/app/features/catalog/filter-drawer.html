@@ -18,7 +18,12 @@
       <ul class="options" role="list">
         @if (facets() === null && busy()) {
           @for (row of brandSkeletonRows; track row) {
-            <li aria-hidden="true" class="facet-skeleton-row" data-testid="brand-skeleton-row">
+            <li
+              appSkeletonLeave
+              aria-hidden="true"
+              class="facet-skeleton-row"
+              data-testid="brand-skeleton-row"
+            >
               <span class="facet-skeleton-bar facet-skeleton-bar--label"></span>
               <span class="facet-skeleton-bar facet-skeleton-bar--count"></span>
             </li>
@@ -72,6 +77,7 @@
         @if (facets() === null && busy()) {
           @for (row of colorSkeletonRows; track row) {
             <li
+              appSkeletonLeave
               aria-hidden="true"
               class="facet-skeleton-row facet-skeleton-row--chip"
               data-testid="color-skeleton-row"

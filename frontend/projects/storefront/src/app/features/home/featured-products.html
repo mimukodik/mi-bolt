@@ -38,6 +38,7 @@
         @if (loading()) {
           @for (placeholder of [0, 1, 2, 3]; track placeholder) {
             <li
+              appSkeletonLeave
               class="featured__card flex flex-col overflow-hidden"
               [attr.data-testid]="`featured-card-skeleton-${placeholder}`"
             >

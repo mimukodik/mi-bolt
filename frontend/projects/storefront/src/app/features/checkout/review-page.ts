@@ -22,6 +22,7 @@ import { Router } from '@angular/router';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { CartFacade } from '../cart/cart.facade';
 import { checkoutKeys } from './checkout-keys';
@@ -51,7 +52,7 @@ interface SubmitFailure {
 
 @Component({
   selector: 'app-review-page',
-  imports: [Button, LoadingState, ReviewStep, StatusMessage],
+  imports: [Button, LoadingState, ReviewStep, SkeletonLeave, StatusMessage],
   templateUrl: './review-page.html',
   styleUrl: './review-page.scss',
 })
