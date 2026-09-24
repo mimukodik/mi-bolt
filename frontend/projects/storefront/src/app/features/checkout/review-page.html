@@ -3,6 +3,7 @@
     <app-review-step
       [cart]="cart"
       [draft]="session"
+      [intentDropped]="checkoutFacade.intentDropped()"
       [options]="checkoutFacade.options()"
       [paymentIntent]="checkoutFacade.paymentIntent()"
       [paymentIntentMissing]="paymentIntentMissing()"

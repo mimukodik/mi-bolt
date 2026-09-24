@@ -55,7 +55,7 @@ import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
 import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
 import type { Money } from '@mi-bolt/api/models/money';
 import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
-import type { PriceChange } from './checkout.facade';
+import type { IntentDropReason, PriceChange } from './checkout.facade';
 
 /**
  * The seven states the review surface can be in (design §6.3).
@@ -111,6 +111,9 @@ export class ReviewStep {
    *  is what tells "the intent is gone" apart from "no payment has
    *  been started yet" (design §5.3's 404 row). */
   readonly paymentStarted = input<boolean>(false);
+  /** Why the facade dropped the card intent this draft held, when it
+   *  did; the missing-payment sentence names it. */
+  readonly intentDropped = input<IntentDropReason | null>(null);
 
   readonly editRequested = output<'contact' | 'delivery'>();
   readonly submitRequested = output();
@@ -237,9 +240,16 @@ export class ReviewStep {
     const intent = this.paymentIntent();
     if (intent === null) {
       if (!this.paymentIntentMissing()) return null;
-      return this.paymentStarted()
-        ? 'A fizetési szándék nem található.'
-        : 'A kártyás fizetéshez indítsd el a fizetést.';
+      switch (this.intentDropped()) {
+        case 'stale':
+          return 'A korábbi kártyás fizetés már nem érvényes, mert közben megváltozott a rendelés. Indíts új fizetést.';
+        case 'refused':
+          return 'Ez a fizetés már egy leadott rendeléshez tartozik. Indíts új fizetést.';
+        case null:
+          return this.paymentStarted()
+            ? 'A fizetési szándék nem található.'
+            : 'A kártyás fizetéshez indítsd el a fizetést.';
+      }
     }
     switch (intent.status) {
       case 'succeeded':
@@ -254,9 +264,11 @@ export class ReviewStep {
   });
 
   /** Label of the control that starts a payment. Names what the press
-   *  does in each of the two missing-intent cases. */
+   *  does in each of the missing-intent cases. */
   readonly newPaymentLabel = computed<string>(() =>
-    this.paymentStarted() ? 'Új fizetés indítása' : 'Fizetés indítása',
+    this.paymentStarted() || this.intentDropped() !== null
+      ? 'Új fizetés indítása'
+      : 'Fizetés indítása',
   );
 
   // ---------------------------------------------------------------------------
@@ -321,9 +333,18 @@ export class ReviewStep {
     return true;
   });
 
-  /** The first unmet condition, in `canSubmit`'s own order. Null when
-   *  the CTA is live, and null for the three failure states whose
-   *  banner already says what happened. */
+  /** A card draft whose intent has not succeeded. The CTA is natively
+   *  disabled while this holds, because a card order is never placed
+   *  without a payment (owner's decision); cash on delivery keeps the
+   *  always-active CTA. */
+  readonly cardPaymentMissing = computed<boolean>(
+    () => this.draft().payment?.method === 'card' && this.paymentIntent()?.status !== 'succeeded',
+  );
+
+  /** The first unmet condition, in price change, missing data, card
+   *  payment, terms, in that order. Null when the CTA is live, and null
+   *  for the three failure states whose banner already says what
+   *  happened. */
   readonly ctaExplanation = computed<string | null>(() => {
     if (this.canSubmit()) return null;
     const state = this.state();
@@ -336,10 +357,10 @@ export class ReviewStep {
     if (!this.draft().complete) {
       return 'Hiányzó adatok: egészítsd ki a korábbi lépéseket a rendelés leadásához.';
     }
-    if (!this.acceptedTerms()) return 'A demó feltételek elfogadása szükséges a leadáshoz.';
-    if (this.draft().payment?.method === 'card') {
+    if (this.cardPaymentMissing()) {
       return 'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.';
     }
+    if (!this.acceptedTerms()) return 'A demó feltételek elfogadása szükséges a leadáshoz.';
     return null;
   });
 
@@ -379,13 +400,14 @@ export class ReviewStep {
     this.termsTouched.set(true);
   }
 
-  /** The CTA is never disabled for an unmet condition (owner,
-   *  2026-09-22: "Mindig aktív, kattintásra hibák"): a click that
+  /** The CTA is never disabled for an unmet condition except an unpaid
+   *  card draft (`cardPaymentMissing`) (owner, 2026-09-22: "Mindig
+   *  aktív, kattintásra hibák"): a click that
    *  cannot submit marks the terms and, in the conflict, stock-error
    *  and error states moves focus to that state's banner (its
    *  explanation), otherwise to the unticked terms, and with the
-   *  terms ticked to the explanation under the button. Disabled only
-   *  while submitting. */
+   *  terms ticked to the explanation under the button. Disabled while
+   *  submitting and for an unpaid card draft. */
   onSubmit(): void {
     if (this.state() === 'submitting') return;
     this.submitted.set(true);

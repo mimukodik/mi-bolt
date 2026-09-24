@@ -892,6 +892,299 @@ describe('payment intents', () => {
     expect(readMissing.error.status).toBe(404);
     expect(checkout.error()).toBeNull();
   });
+
+  /** A paid card draft with the intent read back as succeeded. */
+  async function setupPaidCardDraft(): Promise<{ checkout: CheckoutFacade; id: string }> {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error('createPaymentIntent failed');
+    await resolveSucceeded(created.value.id);
+    await checkout.readPaymentIntent(created.value.id);
+    expect(checkout.paymentIntent()?.status).toBe('succeeded');
+    expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+    return { checkout, id: created.value.id };
+  }
+
+  it('F-31: a payment write to cash on delivery drops the held intent and its stored id', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31b: re-saving the same delivery and card payment keeps the paid intent', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    expect(
+      (
+        await checkout.updateDelivery({
+          optionId: 'home_delivery',
+          address: VALID_DELIVERY_ADDRESS,
+        })
+      ).ok,
+    ).toBe(true);
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkoutKeys.activeIntentId()).toBe(id);
+  });
+
+  it('F-31c: a session read whose total differs from the paid amount drops the intent', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    expect((await checkout.ensureSession(true)).ok).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
+  it('F-31d: a card order refused with 409 PRICE_CHANGED drops the stale intent, so the review can ask for a new payment', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.code).toBe('PRICE_CHANGED');
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31e: a 422 PAYMENT_REQUIRED for an intent the facade holds as succeeded drops it', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:payment-required',
+            title: 'Payment required',
+            status: 422,
+            code: 'PAYMENT_REQUIRED',
+            detail:
+              'The referenced payment intent already backs an order; a new card order needs a new payment',
+            params: { paymentIntentId: id, status: 'succeeded' },
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 422, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.code).toBe('PAYMENT_REQUIRED');
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('refused');
+  });
+
+  it('F-31f: a section write after the cart changed drops the intent the new total no longer matches', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    expect(
+      (
+        await checkout.updateDelivery({
+          optionId: 'home_delivery',
+          address: VALID_DELIVERY_ADDRESS,
+        })
+      ).ok,
+    ).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31g: the return leg does not adopt an intent the session it read first no longer matches', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const paidAmount = checkout.paymentIntent()?.amount.amount ?? 0;
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+
+    // The cold return starts a fresh app and hydrates the session before
+    // it reads the intent (`payment-return-page.ts`), so the read is the
+    // only place that can see the intent no longer matches the session.
+    TestBed.resetTestingModule();
+    configureTestBed();
+    const returning = TestBed.inject(CheckoutFacade);
+    await bootCart();
+    const session = await returning.ensureSession(true);
+    expect(session.ok).toBe(true);
+    if (!session.ok) return;
+    expect(session.value.summary.total.amount).not.toBe(paidAmount);
+
+    const read = await returning.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(returning.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31h: a session read that no longer pays by card drops the intent even when the total is unchanged', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const current = checkout.session();
+    if (current === null) throw new Error('no session');
+    server.use(
+      http.get('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          { ...current, payment: { method: 'cash_on_delivery' } },
+          { headers: { ETag: `"${String(current.version)}"` } },
+        ),
+      ),
+    );
+    expect((await checkout.ensureSession(true)).ok).toBe(true);
+    expect(checkout.session()?.summary.total.amount).toBe(current.summary.total.amount);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
+  it('F-31i: a new payment intent clears the drop reason', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31j: a placed order clears the drop reason', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'cash_on_delivery',
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(true);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31k: reading back the intent after a drop clears the drop reason when it still matches', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    const read = await checkout.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31l: a 410 drops the held intent and its stored id with the session', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    server.use(
+      http.patch('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:cart-expired',
+            title: 'Gone',
+            status: 410,
+            code: 'CART_EXPIRED',
+            detail: 'The cart is no longer available',
+            params: {},
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 410, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const result = await checkout.updateContact(VALID_CONTACT);
+    expect(result.ok).toBe(false);
+    expect(checkout.cartExpired()).toBe(true);
+    expect(checkout.session()).toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
+  it('F-31m: a 422 PAYMENT_REQUIRED for an intent that still requires action keeps it', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error('createPaymentIntent failed');
+    const id = created.value.id;
+    expect(checkout.paymentIntent()?.status).toBe('requires_action');
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.status).toBe(422);
+    expect(placed.error.code).toBe('PAYMENT_REQUIRED');
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkout.paymentIntent()?.status).toBe('requires_action');
+    expect(checkoutKeys.activeIntentId()).toBe(id);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31n: the mock refuses an intent that already backs an order, and the facade drops it as refused', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const first = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(first.ok).toBe(true);
+
+    // A fresh app on the same mock and demo session, as F-31g: the
+    // shopper comes back holding the intent the placed order used.
+    TestBed.resetTestingModule();
+    configureTestBed();
+    const returning = await setupCompleteCardDraft();
+    const read = await returning.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(returning.paymentIntent()?.status).toBe('succeeded');
+
+    const again = await returning.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(again.ok).toBe(false);
+    if (again.ok) return;
+    expect(again.error.status).toBe(422);
+    expect(again.error.code).toBe('PAYMENT_REQUIRED');
+    expect(returning.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(returning.intentDropped()).toBe('refused');
+  });
+
+  it('F-32: a contact or billing write keeps the held intent', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    expect((await checkout.updateContact(VALID_CONTACT)).ok).toBe(true);
+    expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
+
+    expect(checkout.paymentIntent()?.id).toBe(created.value.id);
+    expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+  });
 });
 
 // ---------------------------------------------------------------------------

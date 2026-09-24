@@ -167,12 +167,17 @@ export class ReviewPage {
           // reached submit with no intent at all, which `canSubmit()`
           // already refuses for a card draft: the step's
           // "Fizetés indítása" control is the way forward, so this
-          // arm only records that the submit did not land.
+          // arm only records that the submit did not land. After the
+          // facade dropped the intent (stale or refused), the step's
+          // branch is the whole answer.
           if (outcome.redirectUrl !== null) {
             if (this.destroyRef.destroyed) return;
             this.locationAssign(outcome.redirectUrl);
             return;
           }
+          // A dropped intent: the step's missing-payment branch says why
+          // and offers the new payment, so no failure banner joins it.
+          if (this.checkoutFacade.intentDropped() !== null) return;
           this.submitFailure.set({ kind: 'error', code: 'PAYMENT_REQUIRED' });
           return;
         case 'incomplete':

@@ -63,6 +63,7 @@ import { checkoutKeys } from '../../../app/features/checkout/checkout-keys';
 import {
   type CheckoutConflict,
   CheckoutFacade,
+  type IntentDropReason,
   type PriceChange,
 } from '../../../app/features/checkout/checkout.facade';
 import { LOCATION_ASSIGN, ReviewPage } from '../../../app/features/checkout/review-page';
@@ -401,6 +402,26 @@ describe('ReviewPage maps submit outcomes', () => {
     const host = hostOf(h.fixture);
     expect(countTestId(host, 'review-submit-failure')).toBe(1);
     expect(readDataErrorCode(host, 'review-submit-failure')).toBe('PAYMENT_REQUIRED');
+  });
+
+  it('RP-06b a payment-required outcome after the facade dropped the intent records no failure banner', async () => {
+    const h = harness();
+    writableOf<IntentDropReason | null>(
+      TestBed.inject(CheckoutFacade),
+      'intentDroppedWritable',
+    ).set('refused');
+    stubSubmitOutcome({
+      kind: 'payment-required',
+      intentId: null,
+      redirectUrl: null,
+    });
+
+    await h.fixture.whenStable();
+    await h.fixture.componentInstance.onSubmitRequested();
+
+    expect(h.assignSpy).not.toHaveBeenCalled();
+    h.fixture.detectChanges();
+    expect(countTestId(hostOf(h.fixture), 'review-submit-failure')).toBe(0);
   });
 
   it('RP-07 an incomplete outcome navigates by url so the navigationReason query parameter survives', async () => {

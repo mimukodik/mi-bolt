@@ -20,7 +20,7 @@ import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ReviewStep, type CheckoutViewState } from './review-step';
-import type { PriceChange } from './checkout.facade';
+import type { IntentDropReason, PriceChange } from './checkout.facade';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
 import type { Cart } from '@mi-bolt/api/models/cart';
@@ -175,6 +175,7 @@ interface FixtureOverrides {
   readonly priceChange?: PriceChange | null;
   readonly paymentIntentMissing?: boolean;
   readonly paymentStarted?: boolean;
+  readonly intentDropped?: IntentDropReason | null;
 }
 
 function createFixture(overrides: FixtureOverrides = {}): ComponentFixture<ReviewStep> {
@@ -191,6 +192,7 @@ function createFixture(overrides: FixtureOverrides = {}): ComponentFixture<Revie
   fixture.componentRef.setInput('priceChange', overrides.priceChange ?? null);
   fixture.componentRef.setInput('paymentIntentMissing', overrides.paymentIntentMissing ?? false);
   fixture.componentRef.setInput('paymentStarted', overrides.paymentStarted ?? false);
+  fixture.componentRef.setInput('intentDropped', overrides.intentDropped ?? null);
   fixture.detectChanges();
   return fixture;
 }
@@ -435,6 +437,48 @@ describe('PS-10 the new-payment control emits newPaymentRequested once, and the 
     const absentRoot = getRootElement(absentFixture);
     expect(absentRoot.querySelectorAll('[data-testid="review-payment-status"]').length).toBe(0);
     expect(queryElement(absentRoot, '[data-testid="review-payment-new"]')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PS-11 — missing intent after the facade dropped a stale one
+// ---------------------------------------------------------------------------
+describe('PS-11 no intent after a stale payment was dropped says the earlier payment no longer applies', () => {
+  it('the status message names the changed order and the new-payment label is "Új fizetés indítása"', () => {
+    const fixture = createFixture({
+      paymentIntent: null,
+      paymentIntentMissing: true,
+      paymentStarted: false,
+      intentDropped: 'stale',
+    });
+    const root = getRootElement(fixture);
+
+    const status = getElement(root, '[data-testid="review-payment-status"]');
+    expect(status.textContent.trim()).toBe(
+      'A korábbi kártyás fizetés már nem érvényes, mert közben megváltozott a rendelés. Indíts új fizetést.',
+    );
+    expect(getButton(root, 'review-payment-new').textContent.trim()).toBe('Új fizetés indítása');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PS-12 — missing intent after the server refused a used one
+// ---------------------------------------------------------------------------
+describe('PS-12 no intent after the server refused a used payment says it already backs an order', () => {
+  it('the status message names the placed order and the new-payment label is "Új fizetés indítása"', () => {
+    const fixture = createFixture({
+      paymentIntent: null,
+      paymentIntentMissing: true,
+      paymentStarted: true,
+      intentDropped: 'refused',
+    });
+    const root = getRootElement(fixture);
+
+    const status = getElement(root, '[data-testid="review-payment-status"]');
+    expect(status.textContent.trim()).toBe(
+      'Ez a fizetés már egy leadott rendeléshez tartozik. Indíts új fizetést.',
+    );
+    expect(getButton(root, 'review-payment-new').textContent.trim()).toBe('Új fizetés indítása');
   });
 });
 
