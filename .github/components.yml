@@ -21,3 +21,11 @@ tools:
   - 'mise.toml'
   - '.github/**'
   - '.claude/hooks/**'
+smoke:
+  - 'frontend/**'
+  - 'backend/**'
+  - 'contracts/**'
+  - 'data/catalog/**'
+  - 'deploy/**'
+  - 'mise.toml'
+  - '.github/**'

@@ -59,12 +59,13 @@ Each workspace's own tasks live in `frontend/mise.toml`, `backend/mise.toml`,
 changed path matches that component's filter; `ci-ok` then passes when every
 needed branch succeeded or was skipped.
 
-| Component   | Paths (`.github/components.yml`)                                                           | Workflow it runs                                |
-| ----------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| `frontend`  | `frontend/**`, `contracts/**`, `data/catalog/**`, `mise.toml`, `.github/**`, `tools/ci/**` | `.github/workflows/frontend.yml` ("Frontend")   |
-| `backend`   | `backend/**`, `contracts/**`, `data/catalog/**`, `mise.toml`, `.github/**`, `tools/ci/**`  | `.github/workflows/backend.yml` ("Backend")     |
-| `contracts` | `contracts/**`                                                                             | `.github/workflows/contracts.yml` ("Contracts") |
-| `tools`     | `tools/**`, `mise.toml`, `.github/**`, `.claude/hooks/**`                                  | `.github/workflows/tools.yml` ("Tools")         |
+| Component   | Paths (`.github/components.yml`)                                                                       | Workflow it runs                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `frontend`  | `frontend/**`, `contracts/**`, `data/catalog/**`, `mise.toml`, `.github/**`, `tools/ci/**`             | `.github/workflows/frontend.yml` ("Frontend")                                                                    |
+| `backend`   | `backend/**`, `contracts/**`, `data/catalog/**`, `mise.toml`, `.github/**`, `tools/ci/**`              | `.github/workflows/backend.yml` ("Backend")                                                                      |
+| `contracts` | `contracts/**`                                                                                         | `.github/workflows/contracts.yml` ("Contracts")                                                                  |
+| `tools`     | `tools/**`, `mise.toml`, `.github/**`, `.claude/hooks/**`                                              | `.github/workflows/tools.yml` ("Tools")                                                                          |
+| `smoke`     | `frontend/**`, `backend/**`, `contracts/**`, `data/catalog/**`, `deploy/**`, `mise.toml`, `.github/**` | `.github/workflows/smoke.yml` ("Smoke"): the browser smoke specs against the compose stack built from the commit |
 
 `ci.yml` runs on every pull request whatever its base, plus on every push to
 `main`.
