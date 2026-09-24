@@ -39,7 +39,7 @@ The machine-readable task, requirement and acceptance descriptors (`tasks/`) and
 
 ## Important execution details
 
-Every `docs/...` reference in this package is relative to the Angular workspace root (`frontend/`); `src/...` paths point at the shop's source (`frontend/projects/storefront/src/...`). The OpenAPI source is `contracts/commerce/openapi.yaml` at the git root; the shop SDK is generated into `frontend/projects/storefront/src/app/api/generated/`. The [API entry](api/README.md) records the details.
+Every `docs/...` reference in this package is relative to the Angular workspace root (`frontend/`); `src/...` paths point at the shop's source (`frontend/projects/storefront/src/...`). The OpenAPI source is `contracts/commerce/openapi.yaml` at the git root; the shop SDK is generated into the `shop-api` library, `frontend/projects/shop-api/src/generated/`. The [API entry](api/README.md) records the details.
 
 The work log, reviewer reports and evidence are tracked in Linear. The package contains no empty or pre-set "PASS" evidence. The old visual prototype does not replace the fresh tests and browser verification of the Angular application being built.
 

@@ -37,7 +37,7 @@ Example planned angular.json test target:
   "options": {
     "coverage": true,
     "coverageInclude": ["projects/storefront/src/**/*.ts"],
-    "coverageExclude": ["**/*.spec.ts", "**/*.test.ts", "**/*.d.ts", "projects/storefront/src/app/api/generated/**", "tests/**"],
+    "coverageExclude": ["**/*.spec.ts", "**/*.test.ts", "**/*.d.ts", "tests/**"],
     "coverageThresholds": {"perFile":false,"statements":80,"branches":75,"functions":80,"lines":80},
     "coverageReporters": ["html","lcov","json","json-summary"]
   }

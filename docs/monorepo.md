@@ -7,19 +7,20 @@ deployment compose file, and the import/agent tooling. This page is the map;
 
 ## Where everything lives
 
-| Path                  | Holds                                                                                                                                                                                   |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `frontend/`           | The Angular workspace (Angular CLI 22), with its three apps under `frontend/projects/`: `storefront` (the shop), `admin` (the admin app) and `demo-payment` (the demo payment gateway). |
-| `backend/`            | The Gradle build, with the one service `backend/services/commerce/` (Spring Boot / Java, the `mi-bolt-commerce` image).                                                                 |
-| `contracts/commerce/` | The one OpenAPI contract (`openapi.yaml`), its `samples/`, its `sequences/` (PlantUML), and `kommunikacio.md`.                                                                          |
-| `data/catalog/`       | The tracked product catalogue: `catalog.json`, `catalog.schema.json`, and the product `images/`.                                                                                        |
-| `deploy/`             | The container stack: `compose.yaml` and the `compose.sh` wrapper.                                                                                                                       |
-| `tools/`              | The import script and agent tooling that run outside the frontend and backend workspaces (`catalog-import/`, `agent-memory/`).                                                          |
-| `.github/`            | The CI workflows and the `components.yml` path filters they read.                                                                                                                       |
-| `.claude/`            | The agent rules, skills, agent definitions and shared memory for this workspace.                                                                                                        |
-| `mise.toml`           | The root command list; see "Root commands" below.                                                                                                                                       |
-| `README.md`           | The frontend dev-server and CI walkthrough.                                                                                                                                             |
-| `CLAUDE.md`           | The Angular/TypeScript conventions this repository follows.                                                                                                                             |
+| Path                       | Holds                                                                                                                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `frontend/`                | The Angular workspace (Angular CLI 22), with its three apps under `frontend/projects/`: `storefront` (the shop), `admin` (the admin app) and `demo-payment` (the demo payment gateway). |
+| `frontend/projects/<lib>/` | The shared libraries: `core-api` (API root, demo-session interceptor), `shop-api` (shop SDK) and `shop-mocks` (shop's MSW mock backend), reached only through its `@mi-bolt/*` alias.   |
+| `backend/`                 | The Gradle build, with the one service `backend/services/commerce/` (Spring Boot / Java, the `mi-bolt-commerce` image).                                                                 |
+| `contracts/commerce/`      | The one OpenAPI contract (`openapi.yaml`), its `samples/`, its `sequences/` (PlantUML), and `kommunikacio.md`.                                                                          |
+| `data/catalog/`            | The tracked product catalogue: `catalog.json`, `catalog.schema.json`, and the product `images/`.                                                                                        |
+| `deploy/`                  | The container stack: `compose.yaml` and the `compose.sh` wrapper.                                                                                                                       |
+| `tools/`                   | The import script and agent tooling that run outside the frontend and backend workspaces (`catalog-import/`, `agent-memory/`).                                                          |
+| `.github/`                 | The CI workflows and the `components.yml` path filters they read.                                                                                                                       |
+| `.claude/`                 | The agent rules, skills, agent definitions and shared memory for this workspace.                                                                                                        |
+| `mise.toml`                | The root command list; see "Root commands" below.                                                                                                                                       |
+| `README.md`                | The frontend dev-server and CI walkthrough.                                                                                                                                             |
+| `CLAUDE.md`                | The Angular/TypeScript conventions this repository follows.                                                                                                                             |
 
 ## Root commands
 
