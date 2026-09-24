@@ -808,7 +808,7 @@ describe('MIM-228 facet skeleton', () => {
       '[data-testid="filter-group-color"] [data-testid="color-skeleton-row"]',
     );
     expect(brandSkeletons.length).toBe(5);
-    expect(colorSkeletons.length).toBe(5);
+    expect(colorSkeletons.length).toBe(3);
     expect(panel.querySelectorAll('[data-testid="filter-group-brand"] button.option').length).toBe(
       0,
     );
@@ -842,7 +842,7 @@ describe('MIM-228 facet skeleton', () => {
     host.busy.set(true);
     fixture.detectChanges();
     expect(panel.querySelectorAll('[data-testid="brand-skeleton-row"]').length).toBe(5);
-    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(5);
+    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(3);
 
     host.facets.set(loadedFacets());
     host.busy.set(false);

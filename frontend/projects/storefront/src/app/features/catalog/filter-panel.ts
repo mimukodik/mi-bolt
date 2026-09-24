@@ -129,9 +129,10 @@ export class FilterPanel {
    *  at most five before "more"). */
   protected readonly brandSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
 
-  /** One placeholder colour chip row per visible colour slot (the list
-   *  shows at most five before "Még több szín", MIM-405). */
-  protected readonly colorSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
+  /** Three placeholder colour rows: the five capped chips wrap into three
+   *  44px lines in the 280px panel, so the skeleton is as tall as the
+   *  loaded list (148px, measured in the browser, MIM-405). */
+  protected readonly colorSkeletonRows: readonly number[] = [0, 1, 2];
 
   /** Storage buckets exposed by the documented storage enum, paired with
    *  the facet count so the chip can show "128 GB (3)". Falls back to

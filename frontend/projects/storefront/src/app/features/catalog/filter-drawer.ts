@@ -86,9 +86,10 @@ export class FilterDrawer {
    *  at most five before "more"). */
   protected readonly brandSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
 
-  /** One placeholder colour chip row per visible colour slot (the list
-   *  shows at most five before "Még több szín", MIM-405). */
-  protected readonly colorSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
+  /** Three placeholder colour rows: the five capped chips wrap into three
+   *  44px lines in the 308px drawer, so the skeleton is as tall as the
+   *  loaded list (148px, measured in the browser, MIM-405). */
+  protected readonly colorSkeletonRows: readonly number[] = [0, 1, 2];
 
   /** Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop). */
   readonly closed = output();
