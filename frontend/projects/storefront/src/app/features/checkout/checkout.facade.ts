@@ -290,6 +290,7 @@ export class CheckoutFacade {
     try {
       const session = await firstValueFrom(this.api.invoke(getCheckout, {}));
       this.sessionWritable.set(session);
+      this.dropStaleIntent(session);
       this.cart.acceptServerVersion(session.version);
       return { ok: true, value: session };
     } catch (err) {
@@ -337,13 +338,7 @@ export class CheckoutFacade {
             this.api.invoke(updateCheckout, { body }, withIfMatch(expectedVersion)),
           );
           this.sessionWritable.set(session);
-          if (kind === 'delivery' || kind === 'payment') {
-            // A delivery or payment write after a payment changes what
-            // the intent paid for, so the held intent no longer backs
-            // this draft: the review step asks for a new payment.
-            this.paymentIntentWritable.set(null);
-            checkoutKeys.clearActiveIntentId();
-          }
+          this.dropStaleIntent(session);
           this.cart.acceptServerVersion(session.version);
           return { ok: true, value: session };
         } catch (err) {
@@ -528,6 +523,27 @@ export class CheckoutFacade {
    */
   confirmPriceChange(): void {
     this.priceChangeWritable.set(null);
+  }
+
+  /**
+   * The held intent backs a card draft for exactly its amount. A session
+   * whose payment method is no longer card, or whose total differs from
+   * the amount the intent paid, drops it and its stored id, so the review
+   * step asks for a new payment instead of placing the order on a stale
+   * one or dead-ending on a 409 (owner: a card order is never closed
+   * without paying for it). A re-save that changes neither keeps it.
+   */
+  private dropStaleIntent(session: CheckoutSession): void {
+    const intent = this.paymentIntentWritable();
+    if (intent === null) return;
+    if (
+      session.payment?.method === 'card' &&
+      intent.amount.amount === session.summary.total.amount
+    ) {
+      return;
+    }
+    this.paymentIntentWritable.set(null);
+    checkoutKeys.clearActiveIntentId();
   }
 
   /**

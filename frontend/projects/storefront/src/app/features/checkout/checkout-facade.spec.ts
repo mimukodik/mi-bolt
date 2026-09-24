@@ -893,31 +893,68 @@ describe('payment intents', () => {
     expect(checkout.error()).toBeNull();
   });
 
-  it.each<'delivery' | 'payment'>(['delivery', 'payment'])(
-    'F-31: a %s write after a payment drops the held intent and its stored id',
-    async (section) => {
-      const checkout = await setupCompleteCardDraft();
-      const created = await checkout.createPaymentIntent();
-      expect(created.ok).toBe(true);
-      if (!created.ok) return;
-      await resolveSucceeded(created.value.id);
-      await checkout.readPaymentIntent(created.value.id);
-      expect(checkout.paymentIntent()?.status).toBe('succeeded');
-      expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+  /** A paid card draft with the intent read back as succeeded. */
+  async function setupPaidCardDraft(): Promise<{ checkout: CheckoutFacade; id: string }> {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error('createPaymentIntent failed');
+    await resolveSucceeded(created.value.id);
+    await checkout.readPaymentIntent(created.value.id);
+    expect(checkout.paymentIntent()?.status).toBe('succeeded');
+    expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+    return { checkout, id: created.value.id };
+  }
 
-      const written =
-        section === 'delivery'
-          ? await checkout.updateDelivery({
-              optionId: 'home_delivery',
-              address: VALID_DELIVERY_ADDRESS,
-            })
-          : await checkout.updatePayment({ method: 'card' });
-      expect(written.ok).toBe(true);
+  it('F-31: a payment write to cash on delivery drops the held intent and its stored id', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
 
-      expect(checkout.paymentIntent()).toBeNull();
-      expect(checkoutKeys.activeIntentId()).toBeNull();
-    },
-  );
+  it('F-31b: re-saving the same delivery and card payment keeps the paid intent', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    expect(
+      (
+        await checkout.updateDelivery({
+          optionId: 'home_delivery',
+          address: VALID_DELIVERY_ADDRESS,
+        })
+      ).ok,
+    ).toBe(true);
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkoutKeys.activeIntentId()).toBe(id);
+  });
+
+  it('F-31c: a session read whose total differs from the paid amount drops the intent', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    expect((await checkout.ensureSession(true)).ok).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31d: a card order refused with 409 PRICE_CHANGED drops the stale intent, so the review can ask for a new payment', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.code).toBe('PRICE_CHANGED');
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
 
   it('F-32: a contact or billing write keeps the held intent', async () => {
     const checkout = await setupCompleteCardDraft();
