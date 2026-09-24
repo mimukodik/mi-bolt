@@ -166,8 +166,11 @@ Every endpoint is under `/api/v1` and described in
 | Cart            | `GET /cart`, `POST /cart/items`, `DELETE /cart/items`, `PATCH` and `DELETE /cart/items/{variantId}`; `ETag` / `If-Match` on the session state version | 0011 |
 | Checkout        | `GET /checkout/options`, `GET /checkout`, `PATCH /checkout`                                                                  | 0010 |
 | Payment, orders | `POST /payment-intents`, `GET /payment-intents/{id}`, `POST /payment-intents/{id}/outcome`, `POST /orders` (idempotent, `Idempotency-Key`), `GET /orders/{orderId}` | 0012 |
+| Demo access     | `GET /demo/session`, `POST /demo/session`; every other shop call but `GET /media/{imageId}` needs the `mibolt_demo_access` cookie | 0022 |
 
-The session is a cookie (`mibolt_session`) issued by the first `GET /cart`.
+The session is a cookie (`mibolt_session`) issued by the first `GET /cart`;
+the demo gate's cookie (`mibolt_demo_access`, 30 days) comes from
+`POST /demo/session` with the demo password.
 Fees, thresholds and lifetimes are configuration under `mibolt.*` in
 `services/commerce/src/main/resources/application.properties`.
 
@@ -193,5 +196,5 @@ Paths are relative to `backend/` unless they start at the repository root.
 - `contracts/commerce/kommunikacio.md` (root) API conventions and errors,
   `docs/02-backend.md` backend rules, `docs/04-adatbazis.md` database
   rules, `docs/06-uzembe-helyezes.md` deployment.
-- `docs/decisions/` holds one record per decision, 0001–0021, referenced
+- `docs/decisions/` holds one record per decision, 0001–0022, referenced
   from the tables above.

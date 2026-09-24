@@ -327,8 +327,9 @@ elbuknak, semmi mással nem érdemes foglalkozni.
 érvényes, az alkalmazáskontextus hiba nélkül betöltődik.
 
 **F2 — A katalógus válaszol**
-*Adott* betöltött kezdőadat. *Amikor* `GET /products`. *Akkor* 200; az `items` nem üres; a
-`total` pozitív; a `facets` minden ága kitöltött; a `totalPages` és a `total` konzisztens a
+*Adott* betöltött kezdőadat és demó-belépés (`POST /demo/session` a demó jelszóval). *Amikor*
+`GET /products`. *Akkor* 200; az `items` nem üres;
+a `total` pozitív; a `facets` minden ága kitöltött; a `totalPages` és a `total` konzisztens a
 `pageSize`-zal.
 
 **F3 — Teljes vásárlás utánvéttel**
@@ -382,8 +383,9 @@ Az API tesztek a HTTP réteget mérik: útvonal, státuszkód, fejléc, törzs.
 - **Fejlécek**: az `ETag` jelenléte és értéke a mutációk után; az `If-Match` hiányának és
   eltérésének kezelése; a `Location` a 201-es válaszokon; a `Set-Cookie` az első munkamenetes
   kérésnél a helyes attribútumokkal.
-- **Munkamenet-hatókör**: a katalógus és a képkiszolgálás süti nélkül is válaszol; a kosár,
-  checkout, fizetés és rendelés nem.
+- **Munkamenet-hatókör**: a képkiszolgálás süti nélkül is válaszol; minden más bolt-művelet a
+  demó-belépés sütijét (`mibolt_demo_access`, lásd `docs/decisions/0022`) kéri, a kosár, checkout,
+  fizetés és rendelés pedig ezen felül a munkamenet-sütit is. Az admin API-t a saját sütije védi.
 - A `fieldErrors` `path` értékei valóban a kérés törzsébe mutatnak.
 
 ### 7.4 Szerződés-ellenőrzés

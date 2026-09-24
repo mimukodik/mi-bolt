@@ -56,8 +56,20 @@ must actually guarantee this: state must not live anywhere that is a separate
 instance per tab.
 
 **Scope.** The catalogue endpoints (`/products*`) and image serving
-(`/media/*`) are reachable without a session. The `/cart*`, `/checkout*`,
-`/payment-intents*` and `/orders*` endpoints are session-bound.
+(`/media/*`) are reachable without a session; the catalogue still needs demo
+access (below). The `/cart*`, `/checkout*`, `/payment-intents*` and
+`/orders*` endpoints are session-bound.
+
+**Demo access.** The demo is kept away from robots by a second cookie,
+`mibolt_demo_access`, which `POST /demo/session` issues for the demo password
+(`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/api/v1`, `Max-Age` 30 days;
+`backend/docs/decisions/0022`). Without it every shop operation except
+`GET /media/{imageId}` and the two `/demo/session` operations answers 401
+`UNAUTHENTICATED` (the contract's `DemoAccessRequired`), and no
+`mibolt_session` is issued. `GET /demo/session` answers 204 or 401, so the
+storefront knows whether to show its sign-in page. The admin API is not
+behind it. As with `mibolt_session`, the frontend neither reads nor sends the
+cookie itself; the browser does.
 
 ---
 
