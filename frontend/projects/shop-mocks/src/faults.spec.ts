@@ -23,6 +23,7 @@ import { isRecord } from './is-record';
 import { PROBLEM_CONTENT_TYPE } from './problem-response';
 import { Repository } from './repository';
 import {
+  BUILT_IN_SCENARIOS,
   createDeterministicIds,
   createFixedClock,
   resolveScenario,
@@ -36,7 +37,9 @@ useMswServer();
 /** One endpoint a fault scenario can break. */
 interface FaultCase {
   readonly operation: FaultOperation;
-  readonly method: string;
+  /** Narrow on purpose: a typo'd method would make `fetch` reject with the
+   *  same `TypeError` the `offline-*` suite asserts. */
+  readonly method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   readonly url: string;
 }
 
@@ -70,6 +73,9 @@ const FAULT_CASES: readonly FaultCase[] = [
 
 let clock: Clock;
 let ids: Ids;
+
+/** Every built-in scenario name, so the no-fault check cannot miss one. */
+const REGISTERED_SCENARIOS: string[] = Object.keys(BUILT_IN_SCENARIOS);
 
 beforeAll(() => {
   if (!isCatalogFixtureShape(catalogFixture)) {
@@ -142,12 +148,14 @@ describe('fault scoping', () => {
 });
 
 describe('faultResponse outside a fault scenario', () => {
-  it.each(FAULT_OPERATIONS)('returns null for %s under the default scenario', (operation) => {
-    expect(faultResponse(buildOptions('default'), operation)).toBeNull();
-  });
-
-  it.each(FAULT_OPERATIONS)('returns null for %s under cart-mutation-fails', (operation) => {
-    expect(faultResponse(buildOptions('cart-mutation-fails'), operation)).toBeNull();
+  // Driven off the registry rather than two hand-picked names, so a
+  // built-in scenario added later cannot silently start matching the
+  // `fail-<operation>` / `offline-<operation>` name pattern.
+  it.each(REGISTERED_SCENARIOS)('returns null for every operation under %s', (scenarioName) => {
+    const options = buildOptions(scenarioName);
+    for (const operation of FAULT_OPERATIONS) {
+      expect(faultResponse(options, operation)).toBeNull();
+    }
   });
 });
 
