@@ -109,3 +109,10 @@ Actions candidate receipt and wait for the deployed `Preview Smoke` receipt.
 The local `smoke` run and a healthy deployment are separate checks. See the
 [candidate rollout guide](../deploy/candidate/README.md) for eligibility and
 retry commands. A new PR commit resets preview data from the approved template.
+
+Once a preview is healthy, run the same two purchase flows against its public
+URL from the repository root:
+
+```sh
+E2E_BASE_URL=https://bolt-pr-<PR-number>.mimukodik.hu npm --prefix frontend run e2e:smoke
+```
