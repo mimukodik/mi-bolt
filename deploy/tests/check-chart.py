@@ -4,7 +4,10 @@ Run with: uv run --no-project --with PyYAML==6.0.2 python deploy/tests/check-cha
 """
 
 from pathlib import Path
+import re
+import shutil
 import subprocess
+import tempfile
 
 import yaml
 
@@ -27,11 +30,11 @@ VALUES = {
 }
 
 
-def helm(command: str, values: dict[str, str] | None = VALUES) -> subprocess.CompletedProcess[str]:
+def helm(command: str, values: dict[str, str] | None = VALUES, chart: Path = CHART) -> subprocess.CompletedProcess[str]:
     args = ["helm", command]
     if command == "template":
         args.append("pr-123")
-    args.append(str(CHART))
+    args.append(str(chart))
     if values is not None:
         for key, value in values.items():
             args.extend(["--set" if (key.endswith(".replicas") or key == "candidate.publisherRunId") else "--set-string",
@@ -106,6 +109,32 @@ require(len(paths) == 1 and paths[0]["path"] == "/" and
         paths[0]["backend"]["service"]["name"] == services["web"]["metadata"]["name"],
         "all public paths must route through web")
 
+# Flux appends an OCI digest as SemVer build metadata to published versions.
+# Validate real candidate-shaped versions and truncation at punctuation boundaries.
+with tempfile.TemporaryDirectory() as temp:
+    packaged_chart = Path(temp) / "mi-bolt"
+    shutil.copytree(CHART, packaged_chart)
+    metadata = yaml.safe_load((packaged_chart / "Chart.yaml").read_text())
+    versions = (
+        "0.1.0-pr.pr.345.893ad1633cb1.run.36012105446+f69bbcd8c634",
+        "0.1.0-" + "a" * 48 + ".b",
+        "0.1.0-" + "a" * 48 + "+b",
+    )
+    for version in versions:
+        metadata["version"] = version
+        (packaged_chart / "Chart.yaml").write_text(yaml.safe_dump(metadata))
+        result = helm("template", chart=packaged_chart)
+        require(result.returncode == 0, f"published chart render failed: {result.stderr}")
+        for doc in yaml.safe_load_all(result.stdout):
+            labels = [doc["metadata"]["labels"]]
+            if doc["kind"] == "Deployment":
+                labels.append(doc["spec"]["template"]["metadata"]["labels"])
+            for group in labels:
+                value = group["helm.sh/chart"]
+                require(len(value) <= 63 and re.fullmatch(
+                    r"[a-zA-Z0-9](?:[-_.a-zA-Z0-9]*[a-zA-Z0-9])?", value) is not None,
+                    f"invalid chart label for published version: {value}")
+
 for description, values in (
     ("missing required values", None),
     ("missing image digest", {**VALUES, "web.image.digest": ""}),
@@ -117,4 +146,4 @@ for description, values in (
     result = helm("template", values)
     require(result.returncode != 0, f"chart accepted {description}")
 
-print("chart check passed: rendered resources and six rejection cases")
+print("chart check passed: rendered resources, published version labels and six rejection cases")
