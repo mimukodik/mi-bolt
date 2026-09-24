@@ -53,8 +53,9 @@ app-product-image {
 }
 
 .step:disabled {
-  background: var(--color-surface-section);
-  color: var(--color-text-secondary);
+  border-style: dashed;
+  border-color: var(--color-disabled-border);
+  color: var(--color-disabled-text);
   cursor: not-allowed;
 }
 
