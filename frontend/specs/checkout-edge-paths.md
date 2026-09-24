@@ -1,0 +1,226 @@
+# MiBolt checkout edge paths test plan
+
+## Application Overview
+
+MiBolt is a Hungarian demo storefront served from the Playwright base URL with the in-page MSW mock behind it: there is no backend and no database, and every product, price, order and payment is demo data. The purchase path is the catalogue `/telefonok`, the product page `/telefonok/<slug>`, the cart `/penztar/kosar` and the checkout wizard `/penztar/adatok` -> `/penztar/szallitas` -> `/penztar/ellenorzes` -> `/penztar/siker/<orderId>`; a card payment leaves the SPA for the demo payment application served on the same origin under `/demo-fizetes/<paymentIntentId>` and comes back through the cold-start page at `/penztar?paymentIntentId=<id>`.
+
+This plan covers the wizard's error, recovery and redirect paths that `specs/storefront-integration.md` does not drive: the guards that refuse a step whose earlier sections are missing, the review step's payment-return and price-change states, the consent gate and the terms dialog, a server-side contact error, the delivery step's separate billing address and the refusal of an unavailable payment method, and the receipt page's other states. Its happy paths and its already-covered errors (the cart line removal, the empty cart, the contact and delivery client-side validation, the review page's edit links, cash on delivery, the card round trip, the declined card retry) stay in that plan and are not repeated here.
+
+Two facts govern every scenario. First, the mock keeps its state (cart, checkout draft, payment intents, receipts) in the browsing context's `sessionStorage`, and the demo access gate starts signed in, so one fresh browser context IS an empty cart with no sign-in step; every scenario here is therefore independent and can run in any order. Second, products are never named by slug or product name: a scenario picks a card by what the screen shows, the first `product-card` that carries no `product-card-stock` marker (that element is what reads "Elfogyott"), and picks a variant by the colour and storage the card already shows.
+
+Locator conventions this plan relies on: controls built on the `app-button` primitive are host elements carrying the test id, so a press targets the native button inside them, `page.getByTestId('<id>').getByRole('button')`; prices come from the `app-price-block` primitive, whose digits sit in `[data-testid="price-amount"]` with the "Ft" glyph as a separate span beside them; the delivery step renders two address forms with identical inner test ids, so each is read inside its own container (`address-form` for the delivery address, `billing-address-form` for the billing one); `page.reload()` is banned by `e2e/seed.spec.ts`, so a reopen is `page.goto(page.url())`. The browser Back button is used deliberately in two scenarios, where the assertion is about what the wizard's guard does with a history navigation.
+
+## Test Scenarios
+
+### 1. Checkout: edge paths
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 1.1. the wizard refuses a step whose earlier sections are missing
+
+**File:** `e2e/integration/checkout-guards-refuse-incomplete-steps.spec.ts`
+
+**Steps:**
+  1. Open `/telefonok`, wait for the grid, open the first `product-card` that has no `product-card-stock` marker through its `product-card-cta`, press the inner button of `add-to-cart-button`, then open the cart with `cart-link` and press the inner button of `cart-continue` ("Tovább az adatokhoz").
+    - expect: `contact-page` is visible and its `h1` reads "Kapcsolattartási adatok".
+    - expect: The URL is `/penztar/adatok`.
+  2. Deep-link the delivery step before the contact section is saved: open `/penztar/szallitas`.
+    - expect: The URL is `/penztar/adatok?navigationReason=incomplete`.
+    - expect: The `navigation-reason` banner reads "Előbb ezt a lépést kell kitöltened, utána léphetsz tovább." and its dismiss control is labelled "Bezárás".
+    - expect: `contact-page` is visible and `delivery-step` is not rendered.
+  3. Fill the contact form with "Teszt Elek", "teszt@example.test" and "+36 30 123 4567", then press the inner button of `contact-submit` ("Tovább a szállításhoz").
+    - expect: The URL is `/penztar/szallitas` and `delivery-step` is visible with the `h1` "Átvétel és fizetés".
+    - expect: No `navigation-reason` banner is rendered, because the step was reached through the wizard rather than by a deep link.
+  4. Deep-link the review step with the delivery section still unsaved: open `/penztar/ellenorzes`.
+    - expect: The URL is `/penztar/szallitas?navigationReason=incomplete`.
+    - expect: The `navigation-reason` banner reads "Előbb ezt a lépést kell kitöltened, utána léphetsz tovább.".
+    - expect: `delivery-step` is visible and `review-page` is not rendered.
+
+#### 1.2. the review step's return from an unfinished and from a pending payment
+
+**File:** `e2e/integration/checkout-payment-return-branches.spec.ts`
+
+**Steps:**
+  1. Reach the review page with a card draft: open `/telefonok`, open the first card without a `product-card-stock` marker, add it with the inner button of `add-to-cart-button`, open the cart with `cart-link`, press `cart-continue`, fill the contact step with "Teszt Elek", "teszt@example.test" and "+36 30 123 4567" and submit it, then on the delivery step choose "Házhoz szállítás", fill "1052" / "Budapest" / "Fő utca 1.", choose "Bankkártya" and press the inner button of `delivery-confirm`.
+    - expect: `review-page` is visible on `/penztar/ellenorzes` and `review-payment` reads "Bankkártya".
+    - expect: `review-payment-status` reads "A kártyás fizetéshez indítsd el a fizetést." and `review-payment-new` offers "Fizetés indítása".
+  2. Press the inner button of `review-payment-new` and read the demo payment page.
+Note the payment intent id: it is the path segment of the address bar after `/demo-fizetes/`.
+    - expect: The URL is `/demo-fizetes/<paymentIntentId>` and the page is a separate document from the shop.
+    - expect: `pay-amount` shows the cart's total in Ft and `pay-ref` shows the same intent id.
+    - expect: `pay-succeeded`, `pay-declined` and `pay-pending` are offered.
+  3. Return to the shop while the payment is still unfinished, through the return URL the payment application carries: open `/penztar?paymentIntentId=<id>`.
+    - expect: The browser lands on `/penztar/ellenorzes` with `review-page` visible.
+    - expect: `review-payment-status` reads "A fizetés nem fejeződött be.".
+    - expect: `review-payment-back` offers "Vissza a fizetéshez" and no `review-payment-check` is rendered.
+  4. Press the inner button of `review-payment-back`.
+    - expect: The browser is back on `/demo-fizetes/<the same intent id>`, not on a new payment.
+    - expect: `pay-pending` ("Függőben marad") is offered again.
+  5. Press `pay-pending`.
+    - expect: The browser passes through `/penztar?paymentIntentId=<id>` and lands on `/penztar/ellenorzes`.
+    - expect: `review-payment-status` reads "Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.".
+    - expect: `review-payment-check` offers "Állapot ellenőrzése" and `review-payment-back` is gone.
+    - expect: `review-cta-explanation` reads "A kártyás fizetés jóváhagyása szükséges a rendelés leadásához." and the inner button of `review-submit` is disabled.
+  6. Press the inner button of `review-payment-check` and read the status again.
+    - expect: Exactly one further read of the intent is issued (`GET /api/v1/payment-intents/<id>`); the press starts no payment and repeats on no schedule of its own.
+    - expect: `review-payment-status` still reads "Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak." and `review-payment-check` is still offered, because the intent is still pending.
+    - expect: No `review-payment-retry` and no `review-payment-new` is rendered.
+
+#### 1.3. a cart change under a paid intent shows the price change banner
+
+**File:** `e2e/integration/checkout-price-change-banner.spec.ts`
+
+**Steps:**
+  1. Reach the review page with a card draft and pay it: open `/telefonok`, open the first card without a `product-card-stock` marker, add it with `add-to-cart-button`, open the cart with `cart-link`, press `cart-continue`, fill the contact step with "Teszt Elek", "teszt@example.test" and "+36 30 123 4567" and submit it, choose "Házhoz szállítás", fill "1052" / "Budapest" / "Fő utca 1.", choose "Bankkártya" and press `delivery-confirm`; then press `review-payment-new` and `pay-succeeded` on the demo payment page.
+    - expect: The browser is back on `/penztar/ellenorzes` with `review-page` visible.
+    - expect: `review-payment-status` reads "A fizetés jóváhagyva.".
+    - expect: The summary's "Végösszeg" amount and the line's "1 × <unit price> Ft" agree; note that amount.
+  2. Change the cart under the paid intent: press `back-to-shop`, open the same first card again through its `product-card-cta`, and press the inner button of `add-to-cart-button`.
+    - expect: The confirmation message ends with "2 darab a kosárban.".
+    - expect: `cart-badge` in the shop header reads "2".
+  3. Return to the review step through the browser history: press the browser's Back button twice (the catalogue, then the review step).
+    - expect: `review-page` is visible on `/penztar/ellenorzes`.
+    - expect: `review-line-quantity` reads "2 × <unit price> Ft" while the `review-summary` block still shows the one-unit "Végösszeg" noted before, because the checkout session was not re-read.
+    - expect: `review-payment-status` still reads "A fizetés jóváhagyva.".
+  4. Tick `review-consent-terms-input` and press the inner button of `review-submit` ("Demórendelés véglegesítése").
+    - expect: The URL stays `/penztar/ellenorzes` and `review-page` now carries `data-status="price-changed"`.
+    - expect: `review-price-change` reads "A végösszeg időközben megváltozott." with `review-price-change-old` showing "Korábban <the old total> Ft" and `review-price-change-new` showing "Most <the doubled total> Ft".
+    - expect: The conflict control `review-price-change-confirm` names the new amount in its own label: "Elfogadom az új végösszeget: <the doubled total> Ft".
+    - expect: `review-payment-status` reads "A korábbi kártyás fizetés már nem érvényes, mert közben megváltozott a rendelés. Indíts új fizetést." and `review-payment-new` offers "Új fizetés indítása".
+    - expect: `review-cta-explanation` reads "Erősítsd meg az új végösszeget a rendelés leadásához." and the inner button of `review-submit` is disabled.
+  5. Press the inner button of `review-price-change-confirm`.
+    - expect: The price change banner is gone: no `review-price-change` is rendered and `review-page` is back to `data-status="ready"`.
+    - expect: The summary's "Végösszeg" is the new amount the control named.
+    - expect: `review-cta-explanation` reads "A kártyás fizetés jóváhagyása szükséges a rendelés leadásához." and the inner button of `review-submit` stays disabled, because the paid intent no longer matches the order.
+
+#### 1.4. the consent gate and the demo terms dialog on the review page
+
+**File:** `e2e/integration/checkout-consent-gate-and-terms-dialog.spec.ts`
+
+**Steps:**
+  1. Reach the review page with a cash-on-delivery draft: open `/telefonok`, open the first card without a `product-card-stock` marker, add it with `add-to-cart-button`, open the cart with `cart-link`, press `cart-continue`, fill the contact step with "Teszt Elek", "teszt@example.test" and "+36 30 123 4567" and submit it, then choose "Házhoz szállítás", fill "1052" / "Budapest" / "Fő utca 1.", keep the billing "A számlázási cím megegyezik a szállítási címmel" tick, choose "Utánvét" and press `delivery-confirm`.
+    - expect: `review-page` is visible on `/penztar/ellenorzes` and `review-payment` reads "Utánvét".
+    - expect: No `review-payment-status` is rendered, because cash on delivery starts no payment.
+    - expect: `review-cta-explanation` reads "A demó feltételek elfogadása szükséges a leadáshoz." while the inner button of `review-submit` is enabled.
+  2. Press the inner button of `review-submit` without ticking the terms.
+    - expect: The URL stays `/penztar/ellenorzes` and no order is placed.
+    - expect: `review-consent-terms` carries `data-state="submitted-invalid"` and `review-consent-terms-message` reads "A demó feltételek elfogadása kötelező.".
+    - expect: `review-consent-terms-input` carries `aria-invalid="true"` and is still unchecked.
+  3. Open the demo terms from the consent card: press `review-consent-terms-button` ("demó rendelési feltételeit").
+    - expect: A `role="dialog"` panel is open with the accessible name and heading "Demó pénztár — feltételek".
+    - expect: `terms-body` (inside the `review-terms-dialog` primitive) opens with "Ez a pénztár demó folyamat: a leadott rendelés nem valós, nem küldünk sem e-mailt, sem csomagot, és a fizetés sem valós pénzmozgás." and closes with "A demó feltételek verziója: demo-1".
+    - expect: `review-consent-terms-input` is still unchecked: opening the terms is not accepting them.
+  4. Close the dialog with its `dialog-close` button ("Bezárás").
+    - expect: No `role="dialog"` element remains on the page.
+    - expect: `review-consent-terms-input` is still unchecked and `review-consent-terms-message` still reads "A demó feltételek elfogadása kötelező.".
+  5. Tick `review-consent-terms-input` and read the CTA area again.
+    - expect: `review-consent-terms` is back to `data-state="default"` and `review-consent-terms-message` is gone.
+    - expect: `review-cta-explanation` is no longer rendered and the inner button of `review-submit` is enabled.
+
+#### 1.5. a server-side contact error reaches the form and its summary
+
+**File:** `e2e/integration/checkout-contact-server-side-error.spec.ts`
+
+**Steps:**
+  1. Reach the contact step: open `/telefonok`, open the first card without a `product-card-stock` marker, add it with the inner button of `add-to-cart-button`, open the cart with `cart-link`, press the inner button of `cart-continue`.
+    - expect: `contact-page` is visible and its `h1` reads "Kapcsolattartási adatok".
+    - expect: `contact-submit`'s inner button is enabled only once the form is complete; nothing is prefilled.
+  2. Type "Teszt Elek" into `contact-fullname-input`, "+36 30 123 4567" into `contact-phone-input` and "teszt@-example.test" into `contact-email-input` (an address the form's own rules accept but the mock refuses).
+    - expect: No message is rendered under `contact-email-input` and no `aria-invalid` is set on it: the form itself considers the address valid.
+    - expect: No `contact-summary` is rendered.
+    - expect: The inner button of `contact-submit` is enabled.
+  3. Press the inner button of `contact-submit`.
+    - expect: The URL stays `/penztar/adatok` and `contact-page` stays visible: the step does not advance.
+    - expect: `contact-summary` appears with the title "Kérlek, javítsd a következő mezőket a folytatás előtt:" and lists exactly one link: "E-mail cím: Adj meg egy érvényes e-mail címet.".
+    - expect: That link's `href` is "#contact-email-input" and its `data-pointer` is "/email".
+    - expect: The message under `contact-email-input` reads "Adj meg egy érvényes e-mail címet." and the input carries `aria-invalid="true"`.
+    - expect: `contact-save-error` is not rendered, because a per-field refusal is not the generic save failure.
+  4. Click the summary's "E-mail cím: Adj meg egy érvényes e-mail címet." link.
+    - expect: The browser stays on `/penztar/adatok` with `contact-page` visible: the link is an in-page anchor to the field, not a navigation.
+    - expect: The summary is still rendered.
+  5. Correct the address: type "teszt@example.test" into `contact-email-input`.
+    - expect: The server error disappears with the edit: no `contact-summary` is rendered.
+    - expect: The message under `contact-email-input` is gone and its `aria-invalid` is removed.
+  6. Press the inner button of `contact-submit` again.
+    - expect: The URL is `/penztar/szallitas` and `delivery-step` is visible with the `h1` "Átvétel és fizetés".
+    - expect: No `navigation-reason` banner is rendered.
+
+#### 1.6. the delivery step's separate billing address and optional second address line
+
+**File:** `e2e/integration/checkout-delivery-billing-address-and-second-line.spec.ts`
+
+**Steps:**
+  1. Reach the delivery step: open `/telefonok`, open the first card without a `product-card-stock` marker, add it with `add-to-cart-button`, open the cart with `cart-link`, press `cart-continue`, fill the contact step with "Teszt Elek", "teszt@example.test" and "+36 30 123 4567" and submit it.
+    - expect: `delivery-step` is visible and its `h1` reads "Átvétel és fizetés".
+    - expect: No `delivery-radio` and no `payment-radio` is checked.
+  2. Choose "Házhoz szállítás" by its `delivery-radio` and fill the delivery address: "1052" into `address-input-postalCode`, "Budapest" into `address-input-city`, "Fő utca 1." into `address-input-line1` and the optional second line "2. emelet 5. ajtó" into `address-input-line2`.
+    - expect: The chosen option shows its `delivery-selected-badge` reading "Kiválasztva" and `summary-row-delivery` names "Házhoz szállítás".
+    - expect: Exactly one `address-form` is rendered: the billing address form is hidden while `billing-same-as-delivery` is ticked.
+  3. Untick `billing-same-as-delivery` ("A számlázási cím megegyezik a szállítási címmel").
+    - expect: A second address form appears as `billing-address-form`, with its own `address-input-postalCode`, `address-input-city`, `address-input-line1` and `address-input-line2`, all empty.
+    - expect: `billing-name-input` already holds "Teszt Elek", prefilled from the contact step.
+    - expect: The delivery address fields keep their values, and both forms carry the same inner test ids, so each field is read inside its own form.
+  4. Choose "Utánvét" by its `payment-radio` and press the inner button of `delivery-confirm` ("Tovább az ellenőrzéshez") with the billing address still empty.
+    - expect: The URL stays `/penztar/szallitas` and `delivery-step` stays visible: the step does not advance.
+    - expect: The billing block reports "Az irányítószám megadása kötelező.", "A város megadása kötelező." and "A cím megadása kötelező." under its own fields.
+    - expect: No message is rendered under the delivery address fields, because that address is filled.
+  5. Fill the billing address: "4024" into the billing postal code, "Debrecen" into its city and "Piac utca 10." into its first line, leaving its second line empty; choose "Utánvét" if it is not already selected, then press the inner button of `delivery-confirm`.
+    - expect: The URL is `/penztar/ellenorzes` and `review-page` is visible.
+    - expect: The chosen payment option shows its "Kiválasztva" badge and `summary-row-payment` names "Utánvét".
+  6. Read the two address blocks on the review page.
+    - expect: `review-delivery-address` shows the delivery address on three lines: "Fő utca 1.", "2. emelet 5. ajtó" and "1052 Budapest" — the optional second line travels with it.
+    - expect: `review-billing-address` shows the separate billing address on its own two lines: "Piac utca 10." and "4024 Debrecen", without the delivery address's second line.
+
+#### 1.7. the delivery step refuses a payment method the cart has outgrown
+
+**File:** `e2e/integration/checkout-delivery-payment-unavailable.spec.ts`
+
+**Steps:**
+  1. Reach the review page with a cash-on-delivery draft on a cart below the demo's cash-on-delivery ceiling: open `/telefonok`, open the first card without a `product-card-stock` marker, add it with `add-to-cart-button`, open the cart with `cart-link`, press `cart-continue`, fill the contact step with "Teszt Elek", "teszt@example.test" and "+36 30 123 4567" and submit it, then choose "Házhoz szállítás", fill "1052" / "Budapest" / "Fő utca 1.", keep the billing tick, choose "Utánvét" and press `delivery-confirm`.
+    - expect: `review-page` is visible on `/penztar/ellenorzes`.
+    - expect: `review-payment` reads "Utánvét" and `review-delivery` names "Házhoz szállítás".
+  2. Grow the cart above the ceiling: press `back-to-shop`, reopen the same card through its `product-card-cta` and press the inner button of `add-to-cart-button`, repeating the two steps until the cart's "Részösszeg" is above 300 000 Ft (`cart-badge` counts each unit as it is added).
+    - expect: Each press raises `cart-badge`.
+    - expect: The demo's cash-on-delivery ceiling is 300 000 Ft, so the cart must end up above it.
+  3. Read the cart: open it with `cart-link`.
+    - expect: `cart-page` is visible with exactly one `cart-line`: the repeated adds merged into one line.
+    - expect: `cart-line-quantity` reads "<the number of adds> db" and the "Részösszeg" inside `order-summary` is above 300 000 Ft.
+  4. Open the delivery step through the URL, so the step re-reads the options: open `/penztar/szallitas`.
+    - expect: `delivery-step` is visible with the saved draft: "Házhoz szállítás" checked, the address filled, and the billing tick kept.
+    - expect: The "Utánvét" `payment-option` is **disabled**, still checked, and carries the sentence "A kosár értéke meghaladja az ennél az opciónál megengedett összeget." together with its "Kiválasztva" badge.
+    - expect: The "Bankkártya" `payment-option` stays enabled.
+  5. Press the inner button of `delivery-confirm` while the selected payment method is unavailable.
+    - expect: The URL stays `/penztar/szallitas` and `delivery-step` stays visible: no part of the step is saved and the wizard does not advance.
+    - expect: `delivery-save-failure-detail` is rendered and ends with "A kosarad és az adataid megmaradtak. Próbáld újra." (in the run this plan was written from it read "One or more supplied fields are not acceptable. A kosarad és az adataid megmaradtak. Próbáld újra.").
+    - expect: `delivery-save-failure` reads "A mentés sikertelen. Próbáld újra." and `delivery-retry` offers "Újrapróbálom".
+  6. Press the inner button of `delivery-retry`.
+    - expect: `delivery-save-failure-detail`, `delivery-save-failure` and `delivery-retry` are all gone.
+    - expect: `delivery-step` is visible again with the re-read options: the "Utánvét" option is still unavailable and still marked "Kiválasztva", because the cart has not changed.
+
+#### 1.8. the receipt page's unknown order, its reopen and the guard that keeps it
+
+**File:** `e2e/integration/checkout-receipt-reopen-and-unknown-order.spec.ts`
+
+**Steps:**
+  1. Open a receipt URL with an order id the mock does not know: `/penztar/siker/nem-letezo-rendeles-1234`.
+    - expect: `success-page` is visible with `success-missing` and no `success-check`.
+    - expect: `success-heading` reads "A rendelés nem található".
+    - expect: The recovery text reads "A(z) nem-letezo-rendeles-1234 azonosítójú rendelés nem található a rendszerben. Indíts egy új pénztárat, vagy térj vissza a kosaradhoz." and its control offers "Vissza a kosárhoz".
+    - expect: `success-demo-notice` reads "Demó pénztár. A sikeroldal csupán a működést mutatja be — nem történt valódi fizetés, szállítás vagy e-mail-küldés.".
+  2. Press the "Vissza a kosárhoz" control.
+    - expect: The URL is `/penztar/kosar` and `cart-page` is visible.
+    - expect: No receipt is rendered: the missing order is never invented.
+  3. Open a receipt URL whose order id does not fit the contract's shape: `/penztar/siker/` followed by 82 "a" characters.
+    - expect: `success-heading` reads "A rendelés nem található".
+    - expect: The recovery text reads "A keresett rendelés nem található. Indíts egy új pénztárat, vagy térj vissza a kosaradhoz." — the malformed id is not echoed back and no order read is issued for it.
+  4. Place a cash-on-delivery order from a fresh start: open `/telefonok`, open the first card without a `product-card-stock` marker, add it with `add-to-cart-button`, open the cart with `cart-link`, press `cart-continue`, fill the contact step with "Teszt Elek", "teszt@example.test" and "+36 30 123 4567" and submit it, choose "Házhoz szállítás", fill "1052" / "Budapest" / "Fő utca 1.", keep the billing tick, choose "Utánvét" and press `delivery-confirm`, then tick `review-consent-terms-input` and press the inner button of `review-submit`.
+    - expect: The URL is `/penztar/siker/<orderId>` with an order id in the path.
+    - expect: `order-receipt` and `success-page` are visible, `success-heading` reads "Elkészült a demórendelésed." and `success-check` is rendered.
+    - expect: `receipt-order-number` is not empty and `receipt-demo-badge` reads "DEMO".
+    - expect: `receipt-row-payment` contains "Utánvét" and `receipt-row-status` reads "Demó rendelés visszaigazolva".
+  5. Press the browser's Back button, which points at the review step the order was submitted from.
+    - expect: The wizard does not reopen: the browser is back on `/penztar/siker/<the same orderId>`.
+    - expect: `success-page` and `order-receipt` are rendered and `review-page` is not, because the placed order sends a back-navigation to the shopper's own receipt.
+  6. Reopen the receipt with a full page load of its own URL (`page.goto(page.url())`, never a reload).
+    - expect: `order-receipt` is rendered again with the same `receipt-order-number` and `receipt-demo-badge` "DEMO", read back through the order's own GET rather than from memory.
+    - expect: `success-heading` reads "Elkészült a demórendelésed." and no `success-missing` or `success-error` is rendered.
