@@ -23,7 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * {@code mibolt_demo_access} cookie and is not on an open prefix (MIM-423), answering the
  * house 401 {@code UNAUTHENTICATED} Problem.
  *
- * <p>Deny by default: {@code /admin}, {@code /demo/session}, {@code /media} and
+ * <p>Deny by default: {@code /admin}, {@code /demo/session} and
  * {@code /actuator} are open — each as the path itself or as the path followed by a
  * segment — and every other path in the context needs the cookie, so a path added later
  * is gated without anyone remembering to list it. The refusal goes through the MVC
@@ -38,7 +38,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Order(Ordered.HIGHEST_PRECEDENCE + 5)
 public class DemoAccessFilter extends OncePerRequestFilter {
 
-	private static final Set<String> OPEN_PREFIXES = Set.of("/admin", "/demo/session", "/media", "/actuator");
+	private static final Set<String> OPEN_PREFIXES = Set.of("/admin", "/demo/session", "/actuator");
 
 	private final DemoAccessService demoAccess;
 

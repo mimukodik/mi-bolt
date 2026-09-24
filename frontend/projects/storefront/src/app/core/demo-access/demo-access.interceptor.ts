@@ -11,8 +11,9 @@
  *
  * Only a 401 under `/api/v1` counts, and `/demo/session` is excluded from
  * that: the sign-in call's own 401 is a wrong password rather than a
- * refusal, and the page shows it in place. `GET /media/{imageId}` is the
- * contract's one open shop operation, so it never answers this 401 at all.
+ * refusal, and the page shows it in place. A catalogue image is gated too,
+ * but the browser loads it through `<img src>`, never through `HttpClient`,
+ * so its 401 never reaches this interceptor.
  */
 
 import { inject } from '@angular/core';

@@ -1,8 +1,8 @@
 /**
  * MIM-423 — the demo access gate of the shop mock.
  *
- * Contract 2.2.0 puts every shop operation except `GET /media/{imageId}`
- * and `/demo/session` behind the `mibolt_demo_access` cookie; without it
+ * Contract 2.3.0 puts every shop operation except `/demo/session`,
+ * catalogue images included, behind the `mibolt_demo_access` cookie; without it
  * they answer 401 with the `DemoAccessRequired` response, a Problem whose
  * code is `UNAUTHENTICATED` (`contracts/commerce/openapi.yaml:1885`). The
  * mock keeps that flag in one state object per `CreateHandlersOptions`,
@@ -48,10 +48,10 @@ const API_PREFIX = '/api/v1';
 
 /**
  * Path prefixes the backend leaves outside the demo gate, after the
- * `/api/v1` prefix is removed. `/media/` also covers the contract's one
- * open shop operation, `GET /media/{imageId}`.
+ * `/api/v1` prefix is removed. Catalogue images (`/media/`) are gated
+ * like every other shop path.
  */
-const OPEN_PREFIXES = ['/media/', '/admin/', '/actuator/'] as const;
+const OPEN_PREFIXES = ['/admin/', '/actuator/'] as const;
 
 /** Paths that are open as a bare segment, with nothing after them. */
 const OPEN_BARE_PATHS = ['/admin', '/actuator'] as const;
@@ -155,7 +155,7 @@ export function demoAccessRequired(options: CreateHandlersOptions): HttpResponse
 /**
  * True when a request path is outside the demo gate. The path is taken
  * with everything up to and including `/api/v1` removed, so the decision
- * matches the backend's open list (`/admin`, `/demo/session`, `/media`,
+ * matches the backend's open list (`/admin`, `/demo/session`,
  * `/actuator`) whatever host and origin the request came from.
  */
 export function isOpenPath(pathname: string): boolean {
