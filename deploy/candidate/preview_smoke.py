@@ -106,7 +106,8 @@ def resolve():
                 or type(receipt['pr']) is not int or not 0 < receipt['pr'] < 100000000):
             raise ValueError('candidate receipt identity mismatch')
         pr = api(f"pulls/{receipt['pr']}")
-        if pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']:
+        if (pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']
+                or not any(label['name'] == 'bolt-preview' for label in pr['labels'])):
             output.write('ready=false\n')
             return
         Path('candidate.json').write_text(json.dumps(receipt))
