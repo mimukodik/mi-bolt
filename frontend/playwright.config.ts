@@ -10,13 +10,18 @@ const configDir = __dirname;
 // Default port 4400 (or 4410 for the local-backend smoke config) is chosen to
 // avoid collision with the regular dev server on 4200 and the demo-payment
 // dev server on 4210. E2E_PORT overrides the default for a second or third
-// worktree running at the same time. `local-backend` is the S5/MIM-214 serve
-// configuration and does not exist yet: `npm run e2e:smoke` fails with
-// "Configuration 'local-backend' is not set" until that task lands.
+// worktree running at the same time. E2E_BASE_URL points a run at an app that
+// is already serving, such as the container stack (`mise run stack`, web on
+// 4200) or a preview deployment, and then no server is started for it.
 const smoke = process.env['E2E_TARGET'] === 'local-backend';
 const port = Number(process.env['E2E_PORT'] ?? (smoke ? 4410 : 4400));
 const serveConfiguration = smoke ? 'local-backend' : 'development';
-const baseURL = `http://localhost:${port}`;
+// Treat E2E_BASE_URL="" the same as unset everywhere it is read below: an
+// empty string passed through as a URL would break baseURL (and downstream
+// `new URL(...)` calls), while `=== undefined` would still skip the
+// webServer, leaving the two halves of the config disagreeing.
+const suppliedBaseURL = process.env['E2E_BASE_URL'] || undefined;
+const baseURL = suppliedBaseURL ?? `http://localhost:${port}`;
 const ngServeCommand = `npx ng serve storefront --configuration ${serveConfiguration} --port ${port}`;
 // In CI, Playwright runs against the built app served by scripts/serve-static.mjs (user, 2026-09-22).
 // The smoke config keeps `ng serve` in CI because its /api proxy lives in the dev server.
@@ -165,5 +170,7 @@ export default defineConfig({
     integration('webkit-mobile', { ...devices['Desktop Safari'], ...mobile }),
     { name: 'smoke', testDir: './e2e/smoke', use: { ...devices['Desktop Chrome'], ...fullHd } },
   ],
-  webServer,
+  // A supplied base URL is already serving: no local server is started for it.
+  webServer: suppliedBaseURL === undefined ? webServer : undefined,
+  globalSetup: smoke ? './e2e/fixtures/backend-ready.ts' : undefined,
 });
