@@ -71,7 +71,11 @@ jobs:
           {
             echo '### Smoke on the real stack'
             echo "- Commit: \`${HEAD_SHA}\`"
-            echo "- Readiness: \`$(cat readiness.json 2>/dev/null || echo 'not reached')\`"
+            if [ -s readiness.json ]; then
+              echo "- Readiness: \`$(cat readiness.json)\`"
+            else
+              echo "- Readiness: \`not reached\`"
+            fi
             echo '- Tests:'
             echo '```'
             grep -E '^ +[0-9]+ (passed|failed|flaky|skipped|interrupted|did not run)' frontend/smoke.log || echo 'no test summary'
