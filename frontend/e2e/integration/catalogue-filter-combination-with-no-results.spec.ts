@@ -3,10 +3,11 @@
 
 import { test, expect } from '../fixtures/coverage';
 
-// The sidebar filter mount takes over at 1024px (catalog-page.scss:86-102).
-// Below that the catalogue hides the sidebar (catalog-page.scss:98-102) and
-// serves the same facet groups in the drawer the toolbar's `filter-trigger`
-// opens, committing its draft with `drawer-apply` (filter-drawer.ts:322-343).
+// The sidebar filter mount takes over at 1024px (the `.layout` grid and
+// `.sidebar` in the catalogue page stylesheet). Below that the catalogue
+// hides the sidebar (`.sidebar` in the catalogue page stylesheet) and serves
+// the same facet groups in the drawer the toolbar's `filter-trigger` opens,
+// committing its draft with `drawer-apply` (FilterDrawer.applyDraft()).
 const SIDEBAR_MIN_WIDTH = 1024;
 
 // The loaded counter reads "<n> találat a szűrt feltételek szerint"; while the
@@ -30,13 +31,14 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       const maxPriceTestId = desktopViewport ? 'filter-max-price' : 'drawer-max-price';
       const priceErrorTestId = desktopViewport ? 'filter-price-error' : 'drawer-price-error';
       // The brand rows are the group's own facet buttons; the "Még több gyártó"
-      // toggle carries `filter-brand-more` in both mounts (filter-panel.html:72-82,
-      // filter-drawer.html:55-65), so it is excluded by name rather than by prefix.
+      // toggle carries `filter-brand-more` in both mounts (the filter panel and
+      // drawer templates), so it is excluded by name rather than by prefix.
       const brandRowSelector = `button[data-testid^="${brandFacetPrefix}"]:not([data-testid="filter-brand-more"])`;
       const brandGroup = page.getByTestId(brandGroupTestId);
       // The catalogue lists every brand, a zero count included, and disables a
-      // zero-count row (filter-panel.html:52): the facet this scenario picks is
-      // the first one a click can apply.
+      // zero-count row (the `filter-brand-*` facet rows in the filter panel
+      // template): the facet this scenario picks is the first one a click can
+      // apply.
       const firstEnabledBrand = brandGroup.locator(`${brandRowSelector}:enabled`).first();
       const cards = page.getByTestId('product-card');
       const resultCount = page.getByTestId('result-count');
@@ -61,11 +63,11 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         await expect(resultCount).toHaveText(RESULT_COUNT_PATTERN);
         unfilteredTotal = Number.parseInt((await resultCount.innerText()).trim(), 10);
 
-        // The sidebar mount is `display: none` below 1024px
-        // (catalog-page.scss:98-102) but stays in the DOM, and the price inputs
-        // are unconditional in its template (filter-panel.html:177-224), so its
-        // Max placeholder is readable at both viewports and carries the
-        // ceiling of the whole catalogue while nothing is filtered.
+        // The sidebar mount is `display: none` below 1024px (`.sidebar` in the
+        // catalogue page stylesheet) but stays in the DOM, and the price
+        // inputs are unconditional in its template (the `filter-group-price`
+        // fieldset), so its Max placeholder is readable at both viewports and
+        // carries the ceiling of the whole catalogue while nothing is filtered.
         const catalogueCeilingInput = page.getByTestId('filter-max-price');
         await expect(catalogueCeilingInput).toHaveAttribute('placeholder', /^\d+$/);
         catalogueCeiling = Number.parseInt(
@@ -79,14 +81,15 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       await test.step('2. Apply a manufacturer filter: activate the first ENABLED facet button of the "Gyártó" group — filter-brand-<value> in the sidebar, or drawer-brand-<value> after opening the drawer with filter-trigger at the mobile viewport: the chip row applied-filters shows one chip and the result count drops.', async () => {
         if (!desktopViewport) {
           // Below 1024px the facets exist only inside the drawer, and it is
-          // `drawer-apply` that commits the draft (filter-drawer.ts:322-343).
+          // `drawer-apply` that commits the draft (FilterDrawer.applyDraft()).
           await page.getByTestId('filter-trigger').click();
           await expect(page.getByTestId('filter-drawer')).toBeVisible();
         }
 
         await expect(firstEnabledBrand).toBeVisible();
         await firstEnabledBrand.click();
-        // The facet reports its own selection state (filter-panel.html:49-57).
+        // The facet reports its own selection state (the `filter-brand-*`
+        // facet button in the filter panel template).
         await expect(firstEnabledBrand).toHaveAttribute('aria-pressed', 'true');
 
         if (!desktopViewport) {
@@ -134,23 +137,23 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       await test.step('4. Type into "Min." a value above the ceiling read in the previous step: the price filter applies, the URL query string carries minPrice=<value>, an applied chip reads "Min. ár: <value> Ft", and no error message (filter-price-error) is shown, because a lone minimum is a valid range.', async () => {
         // The value has to clear every variant, not only the ceiling the panel
         // prints: the price filter matches any variant of an entry
-        // (shop-mocks catalog-filter.ts:290-299) while the panel's Max
+        // (the shop mocks' `variantMatches()`) while the panel's Max
         // placeholder is the ceiling of the entries' shown variants
-        // (catalog-facets.ts:148-165) — the manufacturer-filtered ceiling is
-        // 699 990 and a 708 990 variant survives ceiling + 1. The catalogue's
-        // own ceiling read in step 1 is the fixture's highest price, so one
-        // above it matches nothing.
+        // (the shop mocks' `buildPriceRange()`) — the manufacturer-filtered
+        // ceiling is 699 990 and a 708 990 variant survives ceiling + 1. The
+        // catalogue's own ceiling read in step 1 is the fixture's highest
+        // price, so one above it matches nothing.
         minPriceValue = catalogueCeiling + 1;
         expect(minPriceValue).toBeGreaterThan(priceCeiling);
 
         await page.getByTestId(minPriceTestId).fill(String(minPriceValue));
         // A lone minimum is a valid range, so the validation under the group
-        // stays silent (filter-panel.ts:300-311).
+        // stays silent (FilterPanel.priceValidation).
         await expect(page.getByTestId(priceErrorTestId)).toBeHidden();
 
         if (!desktopViewport) {
           // The drawer's price inputs edit its draft; `drawer-apply` is what
-          // commits them to the URL (filter-drawer.ts:322-343).
+          // commits them to the URL (FilterDrawer.applyDraft()).
           await page.getByTestId('drawer-apply').getByRole('button').click();
           await expect(page.getByTestId('filter-drawer')).toBeHidden();
         }
@@ -161,8 +164,8 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
           .toBe(String(minPriceValue));
 
         // The chip's label separates its thousands with a no-break space
-        // (catalog-query.ts:360-367), so the whitespace is dropped before the
-        // exact comparison rather than guessed at.
+        // (`buildChips()`), so the whitespace is dropped before the exact
+        // comparison rather than guessed at.
         const minPriceChipLabel = appliedChip
           .filter({ hasText: 'Min. ár:' })
           .locator('.chip__label');
@@ -187,9 +190,10 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
           }),
         ).toBeVisible();
 
-        // The action is a projected `app-button` (catalog-page.html:60-65), so
-        // its host carries `data-async-empty-action` and the press targets the
-        // native button inside it.
+        // The action is a projected `app-button` (the `app-async-content`
+        // empty-state action in the catalogue page template), so its host
+        // carries `data-async-empty-action` and the press targets the native
+        // button inside it.
         await expect(emptyState.locator('[data-async-empty-action]')).toBeVisible();
         await expect(emptyState.getByRole('button', { name: 'Szűrők törlése' })).toBeVisible();
 

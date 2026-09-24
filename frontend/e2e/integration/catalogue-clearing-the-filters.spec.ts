@@ -4,10 +4,11 @@
 import { test, expect } from '../fixtures/coverage';
 import type { Locator } from '@playwright/test';
 
-// The sidebar filter mount takes over at 1024px (catalog-page.scss:86-102).
-// Below that the catalogue hides the sidebar (catalog-page.scss:98-102) and
-// serves the same facet groups in the drawer the toolbar's `filter-trigger`
-// opens, committing its draft with `drawer-apply` (filter-drawer.ts:322-343).
+// The sidebar filter mount takes over at 1024px (the `.layout` grid and
+// `.sidebar` in the catalogue page stylesheet). Below that the catalogue
+// hides the sidebar (`.sidebar` in the catalogue page stylesheet) and serves
+// the same facet groups in the drawer the toolbar's `filter-trigger` opens,
+// committing its draft with `drawer-apply` (FilterDrawer.applyDraft()).
 const SIDEBAR_MIN_WIDTH = 1024;
 
 // The loaded counter reads "<n> találat a szűrt feltételek szerint"; while the
@@ -16,7 +17,8 @@ const SIDEBAR_MIN_WIDTH = 1024;
 const RESULT_COUNT_PATTERN = /^\s*[1-9]\d* találat a szűrt feltételek szerint\s*$/;
 
 // The catalogue's own default page size: it lists one card per
-// (product, storage) entry, 12 of them per page (catalog-query.ts:58-62).
+// (product, storage) entry, 12 of them per page (the catalogue query module's
+// `DEFAULT_PAGE_SIZE`).
 const DEFAULT_PAGE_SIZE = 12;
 
 test.describe('Catalogue: browse, filter, sort and page', () => {
@@ -42,17 +44,18 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       const colorFacetPrefix = desktopViewport ? 'filter-color-' : 'drawer-color-';
       const storageFacetPrefix = desktopViewport ? 'filter-storage-' : 'drawer-storage-';
       // The brand rows are the group's own facet buttons; the "Még több gyártó"
-      // toggle carries `filter-brand-more` in both mounts (filter-panel.html:72-82,
-      // filter-drawer.html:55-65), so it is excluded by name. The colour group's
+      // toggle carries `filter-brand-more` in both mounts (the filter panel and
+      // drawer templates), so it is excluded by name. The colour group's
       // "Még több szín" toggle is a plain `.more` button rather than a
       // `.color-chip`, so the chip class already keeps it out of the chip list.
       const brandRowSelector = `button[data-testid^="${brandFacetPrefix}"]:not([data-testid="filter-brand-more"])`;
       const colorChipSelector = `button.color-chip[data-testid^="${colorFacetPrefix}"]`;
       const storageFacets = storageGroup.locator(`button[data-testid^="${storageFacetPrefix}"]`);
       // The catalogue lists every brand and every colour, a zero count included,
-      // and disables a zero-count row while it is unselected
-      // (filter-panel.html:52, filter-panel.html:108): the facets this scenario
-      // picks are the first ones a click can still apply.
+      // and disables a zero-count row while it is unselected (the
+      // `filter-brand-*` rows and `filter-color-*` chips in the filter panel
+      // template): the facets this scenario picks are the first ones a click can
+      // still apply.
       const firstEnabledBrand = brandGroup.locator(`${brandRowSelector}:enabled`).first();
       const firstEnabledColor = colorGroup.locator(`${colorChipSelector}:enabled`).first();
       const firstStorage = storageFacets.first();
@@ -91,28 +94,31 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
 
       /** Apply one facet control and return the value its own test id carries.
        *
-       *  The mount decides the order: at full HD the sidebar control is already
-       *  on screen, while below 1024px the drawer has to be opened first — its
-       *  content is not mounted while the dialog is closed (accessible-dialog.ts:82-91)
-       *  — and a facet is read only once it is there. After the click the draft
-       *  is committed where the drawer carries it, and the counter is then left
-       *  to settle on the filtered response: it keeps the previous total while a
-       *  refresh is in flight, "Keresés a katalógusban…" being the first load's
-       *  wording (catalog-toolbar.ts:53-58), so a different text is the response
-       *  landing. The facet the next step picks is read from the list this
-       *  filter recalculated — the same list the sidebar shows at full HD. */
+       *  The mount decides the order: at full HD the sidebar control is
+       *  already on screen, while below 1024px the drawer has to be opened
+       *  first — its content is not mounted while the dialog is closed (the
+       *  open/close effect in `AccessibleDialog`) — and a facet is read only
+       *  once it is there. After the click the draft is committed where the
+       *  drawer carries it, and the counter is then left to settle on the
+       *  filtered response: it keeps the previous total while a refresh is in
+       *  flight, "Keresés a katalógusban…" being the first load's wording
+       *  (`CatalogToolbar.resultCountLabel`), so a different text is the
+       *  response landing. The facet the next step picks is read from the list
+       *  this filter recalculated — the same list the sidebar shows at full HD. */
       const applyFacet = async (facet: Locator, facetPrefix: string): Promise<string> => {
         const previousCountText = (await resultCount.innerText()).trim();
         await openDrawer();
-        // A zero-count brand or colour is disabled while unselected
-        // (filter-panel.html:52, filter-panel.html:108), so this pins the picked
-        // facet as one a click can actually apply.
+        // A zero-count brand or colour is disabled while unselected (the
+        // `filter-brand-*` rows and `filter-color-*` chips in the filter panel
+        // template), so this pins the picked facet as one a click can actually
+        // apply.
         await expect(facet).toBeEnabled();
         const facetTestId = (await facet.getAttribute('data-testid')) ?? '';
         const facetValue = facetTestId.slice(facetPrefix.length);
         expect(facetValue.length).toBeGreaterThan(0);
         await facet.click();
-        // The facet reports its own selection state (filter-panel.html:49-57).
+        // Every facet button in the filter panel template reports its own
+        // selection state.
         await expect(facet).toHaveAttribute('aria-pressed', 'true');
         await applyDrawer();
         await expect(resultCount).not.toHaveText(previousCountText);
@@ -153,7 +159,7 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         await expect(page.getByTestId('applied-filters')).toBeVisible();
         await expect(appliedChip).toHaveCount(3);
         // `brand`, `color` and `storageGb` are the canonical query keys the
-        // catalogue serialises (catalog-query.ts:288-297); each value is read
+        // catalogue serialises (`serializeCatalogQuery()`); each value is read
         // from the page's own query, so it is compared decoded.
         await expect(page).toHaveURL(/\/telefonok(\?|$)/);
         await expect.poll(() => new URL(page.url()).searchParams.get('brand')).toBe(brandValue);
@@ -208,8 +214,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         await expect(page.getByTestId('applied-filters-clear')).toBeVisible();
         await page.getByTestId('applied-filters-clear').click();
 
-        // The chip row renders only while a chip is left (applied-filters.html:1),
-        // so an empty row is removed from the DOM rather than hidden.
+        // The chip row renders only while a chip is left (the `@if` chip guard
+        // in the applied-filters template), so an empty row is removed from the
+        // DOM rather than hidden.
         await expect(page.getByTestId('applied-filters')).toHaveCount(0);
 
         // Every facet button in every group carries its own aria-pressed (the
@@ -233,7 +240,7 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         }
 
         // The clear writes every canonical key as an explicit removal
-        // (catalog-page.ts:388-396), so none of them may survive in the URL.
+        // (`serializeForRouter()`), so none of them may survive in the URL.
         await expect(page).not.toHaveURL(
           /[?&](?:q|brand|color|storageGb|minPrice|maxPrice|inStock|is5g)=/,
         );
