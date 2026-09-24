@@ -202,7 +202,7 @@ The `Cart.notices` array carries this: `code`, optional `variantId` and
 `params`. Its codes: `QUANTITY_REDUCED`, `PRICE_CHANGED`, `ITEM_REMOVED`.
 
 **Backend expectation.** When stock drops below the quantity in the cart, the
-server reduces the line's quantity and gives a notice; it never leaves a
+server reduces the line's quantity and gives a notice; it leaves no
 contradictory state where `quantity` is greater than `maxQuantity`.
 
 **Frontend expectation.** The cart page must display these notices as a top
@@ -283,7 +283,7 @@ protects against a back button or a refresh overwriting a payment already
 recorded. After a lost response, the intent must not be resent but queried
 instead.
 
-**This operation exists only because there is no real payment provider.** In
+**This operation exists because there is no real payment provider.** In
 production, the browser could never decide for itself whether its own payment
 was successful; there, the provider notifies the shop behind the scenes. This
 endpoint must not be carried into a production integration.
