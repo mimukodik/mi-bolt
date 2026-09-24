@@ -97,6 +97,11 @@ export type CheckoutIntentKind =
 export type CheckoutResult<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: CheckoutError };
 
+/** Why the facade dropped the card intent it held: `'stale'` when the
+ *  draft stopped matching what the intent paid for, `'refused'` when the
+ *  server answered that the intent already backs an order. */
+export type IntentDropReason = 'stale' | 'refused';
+
 /**
  * Internal dispatch shape. Carries the intent kind so 412 routing
  * can record which mutation conflicted and `retry()` can replay it.
@@ -204,6 +209,12 @@ export class CheckoutFacade {
 
   /** Public readonly payment intent signal. Null until created or read. */
   readonly paymentIntent: Signal<PaymentIntent | null> = this.paymentIntentWritable.asReadonly();
+
+  private readonly intentDroppedWritable = signal<IntentDropReason | null>(null);
+
+  /** Why the last held intent was dropped; null until a drop, and again
+   *  once a new payment intent is created or the order is placed. */
+  readonly intentDropped: Signal<IntentDropReason | null> = this.intentDroppedWritable.asReadonly();
 
   /** Internal writable snapshot of the active order receipt. */
   private readonly orderWritable = signal<OrderReceipt | null>(null);
@@ -375,6 +386,7 @@ export class CheckoutFacade {
           );
           checkoutKeys.setActiveIntentId(intent.id);
           this.paymentIntentWritable.set(intent);
+          this.intentDroppedWritable.set(null);
           return { ok: true, value: intent };
         } catch (err) {
           // Definite outcomes (412, 410, 422, 409) must rotate the key
@@ -483,14 +495,14 @@ export class CheckoutFacade {
           }
           // The refused intent is one the facade can no longer use, so
           // it and its stored id go and the next submit asks for a new
-          // payment. The caller's own outcome still carries the intent
-          // it read before this call, so a redirect built from that
-          // snapshot is not suppressed here.
+          // payment. The order submission builds its outcome from what
+          // the facade holds after this call, so no redirect leads back
+          // to the refused intent's payment page.
           if (
             error.code === 'PAYMENT_REQUIRED' &&
             this.paymentIntentWritable()?.status === 'succeeded'
           ) {
-            this.clearHeldIntent();
+            this.clearHeldIntent('refused');
           }
           if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateOrderKey();
@@ -553,11 +565,13 @@ export class CheckoutFacade {
    * Drops the held intent and its stored id together: a held intent
    * with no stored id, or a stored id with no intent, is a state the
    * review and return legs cannot tell apart from "no payment was
-   * started".
+   * started". The reason is kept on `intentDropped` so the review
+   * step can say why a new payment is needed.
    */
-  private clearHeldIntent(): void {
+  private clearHeldIntent(reason: IntentDropReason): void {
     this.paymentIntentWritable.set(null);
     checkoutKeys.clearActiveIntentId();
+    this.intentDroppedWritable.set(reason);
   }
 
   /**
@@ -580,7 +594,7 @@ export class CheckoutFacade {
     ) {
       return;
     }
-    this.clearHeldIntent();
+    this.clearHeldIntent('stale');
   }
 
   /**
@@ -593,6 +607,7 @@ export class CheckoutFacade {
     checkoutKeys.clearAll();
     this.sessionWritable.set(null);
     this.paymentIntentWritable.set(null);
+    this.intentDroppedWritable.set(null);
     this.clearFailureOverlay();
   }
 

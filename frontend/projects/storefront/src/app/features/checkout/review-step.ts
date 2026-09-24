@@ -55,7 +55,7 @@ import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
 import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
 import type { Money } from '@mi-bolt/api/models/money';
 import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
-import type { PriceChange } from './checkout.facade';
+import type { IntentDropReason, PriceChange } from './checkout.facade';
 
 /**
  * The seven states the review surface can be in (design §6.3).
@@ -111,6 +111,9 @@ export class ReviewStep {
    *  is what tells "the intent is gone" apart from "no payment has
    *  been started yet" (design §5.3's 404 row). */
   readonly paymentStarted = input<boolean>(false);
+  /** Why the facade dropped the card intent this draft held, when it
+   *  did; the missing-payment sentence names it. */
+  readonly intentDropped = input<IntentDropReason | null>(null);
 
   readonly editRequested = output<'contact' | 'delivery'>();
   readonly submitRequested = output();
@@ -237,9 +240,16 @@ export class ReviewStep {
     const intent = this.paymentIntent();
     if (intent === null) {
       if (!this.paymentIntentMissing()) return null;
-      return this.paymentStarted()
-        ? 'A fizetési szándék nem található.'
-        : 'A kártyás fizetéshez indítsd el a fizetést.';
+      switch (this.intentDropped()) {
+        case 'stale':
+          return 'A korábbi kártyás fizetés már nem érvényes, mert közben megváltozott a rendelés. Indíts új fizetést.';
+        case 'refused':
+          return 'Ez a fizetés már egy leadott rendeléshez tartozik. Indíts új fizetést.';
+        case null:
+          return this.paymentStarted()
+            ? 'A fizetési szándék nem található.'
+            : 'A kártyás fizetéshez indítsd el a fizetést.';
+      }
     }
     switch (intent.status) {
       case 'succeeded':
@@ -254,9 +264,11 @@ export class ReviewStep {
   });
 
   /** Label of the control that starts a payment. Names what the press
-   *  does in each of the two missing-intent cases. */
+   *  does in each of the missing-intent cases. */
   readonly newPaymentLabel = computed<string>(() =>
-    this.paymentStarted() ? 'Új fizetés indítása' : 'Fizetés indítása',
+    this.paymentStarted() || this.intentDropped() !== null
+      ? 'Új fizetés indítása'
+      : 'Fizetés indítása',
   );
 
   // ---------------------------------------------------------------------------

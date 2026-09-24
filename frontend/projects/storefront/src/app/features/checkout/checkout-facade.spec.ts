@@ -936,6 +936,7 @@ describe('payment intents', () => {
     expect((await checkout.ensureSession(true)).ok).toBe(true);
     expect(checkout.paymentIntent()).toBeNull();
     expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
   });
 
   it('F-31d: a card order refused with 409 PRICE_CHANGED drops the stale intent, so the review can ask for a new payment', async () => {
@@ -966,8 +967,9 @@ describe('payment intents', () => {
             title: 'Payment required',
             status: 422,
             code: 'PAYMENT_REQUIRED',
-            detail: 'The referenced payment intent already backs an order.',
-            params: {},
+            detail:
+              'The referenced payment intent already backs an order; a new card order needs a new payment',
+            params: { paymentIntentId: id, status: 'succeeded' },
             traceId: 'mock-trace-test',
             fieldErrors: [],
           },
@@ -987,6 +989,7 @@ describe('payment intents', () => {
     expect(placed.error.code).toBe('PAYMENT_REQUIRED');
     expect(checkout.paymentIntent()).toBeNull();
     expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('refused');
   });
 
   it('F-31f: a section write after the cart changed drops the intent the new total no longer matches', async () => {
@@ -1029,6 +1032,48 @@ describe('payment intents', () => {
     expect(read.ok).toBe(true);
     expect(returning.paymentIntent()).toBeNull();
     expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31h: a session read that no longer pays by card drops the intent even when the total is unchanged', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const current = checkout.session();
+    if (current === null) throw new Error('no session');
+    server.use(
+      http.get('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          { ...current, payment: { method: 'cash_on_delivery' } },
+          { headers: { ETag: `"${String(current.version)}"` } },
+        ),
+      ),
+    );
+    expect((await checkout.ensureSession(true)).ok).toBe(true);
+    expect(checkout.session()?.summary.total.amount).toBe(current.summary.total.amount);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
+  it('F-31i: a new payment intent clears the drop reason', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31j: a placed order clears the drop reason', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'cash_on_delivery',
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(true);
+    expect(checkout.intentDropped()).toBeNull();
   });
 
   it('F-32: a contact or billing write keeps the held intent', async () => {
