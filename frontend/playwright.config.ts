@@ -106,11 +106,14 @@ const integration = (name: string, use: Record<string, unknown>) => ({
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  // The four values below are Playwright's own recommended CI block:
+  // forbidOnly, retries and reporter below follow Playwright's recommended CI block:
   // https://playwright.dev/docs/test-configuration (read 2026-09-22).
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 2 : 0,
-  workers: process.env['CI'] ? 1 : undefined,
+  // At most three workers on a developer machine (the owner's rule); CI takes
+  // Playwright's default, half of the logical CPU cores:
+  // https://playwright.dev/docs/api/class-testconfig#test-config-workers
+  workers: process.env['CI'] ? undefined : 3,
   reporter: [
     ...(process.env['CI'] ? [['blob'] as const] : []),
     ['list'],
