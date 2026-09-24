@@ -1,0 +1,64 @@
+<adm-section-card title="Alapadatok" [errorCount]="errorCount()" [number]="1">
+  <div class="grid gap-x-4 md:grid-cols-2">
+    <mat-form-field class="md:col-span-2">
+      <mat-label>Név</mat-label>
+      <input matInput [formField]="form().name" />
+      <mat-hint align="end">{{ form().name().value().length }} / 200</mat-hint>
+      <mat-error>{{ form().name().errors()[0]?.message }}</mat-error>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Márka</mat-label>
+      <input matInput [formField]="form().brand" [matAutocomplete]="brandAuto" />
+      <mat-autocomplete #brandAuto="matAutocomplete">
+        @for (brand of brandOptions(); track brand) {
+          <mat-option [value]="brand">{{ brand }}</mat-option>
+        }
+      </mat-autocomplete>
+      <mat-error>{{ form().brand().errors()[0]?.message }}</mat-error>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Slug</mat-label>
+      <input matInput [formField]="form().slug" />
+      @if (!form().slug().readonly()) {
+        <button
+          class="adm-generate-slug"
+          matIconButton
+          matSuffix
+          type="button"
+          (click)="generateSlug()"
+        >
+          <mat-icon>autorenew</mat-icon>
+        </button>
+      }
+      <mat-hint>{{
+        form().slug().readonly()
+          ? 'A slug létrehozás után nem módosítható.'
+          : 'Kisbetű, szám, kötőjel'
+      }}</mat-hint>
+      <mat-error>{{ form().slug().errors()[0]?.message }}</mat-error>
+    </mat-form-field>
+    <mat-form-field class="md:col-span-2">
+      <mat-label>Leírás</mat-label>
+      <textarea
+        cdkAutosizeMaxRows="12"
+        cdkAutosizeMinRows="3"
+        cdkTextareaAutosize
+        matInput
+        [formField]="form().description"
+      ></textarea>
+      <mat-hint align="end">{{ form().description().value().length }} / 2000</mat-hint>
+      <mat-error>{{ form().description().errors()[0]?.message }}</mat-error>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Megjelenés dátuma</mat-label>
+      <input matInput [formField]="form().releasedAt" [matDatepicker]="releasedPicker" />
+      <mat-datepicker-toggle matIconSuffix [for]="releasedPicker" />
+      <mat-datepicker #releasedPicker />
+      <mat-hint>ÉÉÉÉ. HH. NN.</mat-hint>
+      <mat-error>{{ form().releasedAt().errors()[0]?.message }}</mat-error>
+    </mat-form-field>
+    <div class="flex min-h-14 items-center">
+      <mat-slide-toggle [formField]="form().is5g">5G</mat-slide-toggle>
+    </div>
+  </div>
+</adm-section-card>
