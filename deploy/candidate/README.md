@@ -12,9 +12,10 @@ It runs the focused candidate and chart checks before building. Bake runs from
 `deploy/`, so the Compose file's `../` contexts resolve inside the checkout.
 
 `Publish Candidate` runs only from the default branch after a CI or Candidate
-Build run completes. It requires a current open PR and the latest CI and build
-runs for exactly its head SHA to have succeeded; it also checks CI's `ci-ok`
-job. It downloads the exact build-run artifact, checks its fixed file names,
+Build run completes. It requires either a current open PR or the current `main`
+commit, and successful latest CI and build runs for exactly that SHA. Main
+releases require `push` runs on `main`; PR releases require `pull_request` runs.
+It also checks CI's `ci-ok` job. It downloads the exact build-run artifact, checks its fixed file names,
 checks the bounded Compose build contexts, recomputes both input hashes using
 trusted publisher code over a separate
 read-only PR checkout, and treats image archives as data. PR scripts and chart
@@ -61,8 +62,28 @@ the full trusted chart template. The chart's candidate head commit is the
 tested PR SHA; its per-image commit annotations preserve each image's original
 build commit when a content-hash tag is reused.
 The artifact is evidence only when fetched from a successful trusted publisher
-run whose revision is allowlisted by the preview platform. Promotion reuses
-the chart and image digests recorded here, without rebuilding them.
+run whose revision is allowlisted by the preview platform.
+
+## Automatic stable releases
+
+After a merge to `main`, successful matching CI and Candidate Build runs publish
+a stable chart version `0.2.<publisher-run-id>`, containing both immutable image
+digests. The `stable-release-receipt` artifact uses the same schema with `pr: 0`
+and a `main-<sha12>` candidate ID. Berek Flux follows only the stable `0.2.*`
+chart channel; PR charts remain in the separate `0.1.0-pr.*` channel.
+No additional promotion is required. Superseded main commits are rejected
+before publication.
+
+Stable upgrades retain the existing runtime Secret and `mibolt` database. They
+apply application migrations without cloning or resetting demo data.
+`Stable Smoke` waits for the exact public deployment and runs both checkout
+flows, requiring no retries or skips. These checks create demo orders. Failure
+is reported after deployment; it does not automatically roll back migrations.
+
+To freeze or roll back the application, replace the OCI source semver selector
+in Berek with a reviewed chart digest. The chart contains the paired images.
+Only roll back to a version compatible with the current database schema.
+Restore the semver selector to resume automatic releases.
 
 Run local checks with:
 
@@ -112,8 +133,8 @@ gh workflow run preview-smoke.yml --repo mimukodik/mi-bolt \
 
 Each new PR head receives a fresh template database. Retrying the same head
 preserves its current clone. Schema or catalogue changes need a newly approved
-template fingerprint in Berek before admission. Stable promotion to
-`https://bolt.mimukodik.hu` reuses the accepted chart and image digests and
-preserves the stable database. Database bootstrap, coordinator configuration,
+template fingerprint in Berek before preview admission. Stable releases to
+`https://bolt.mimukodik.hu` deploy automatically after main CI and preserve
+the stable database. Database bootstrap, coordinator configuration,
 capacity/expiry, and explicit stable resets belong to Berek's
 [`docs/mibolt-preview-release.md`](https://github.com/mimukodik/berek/blob/main/docs/mibolt-preview-release.md).

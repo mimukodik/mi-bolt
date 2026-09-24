@@ -114,8 +114,8 @@ def resolve():
         output.write(f"ready=true\nhead={receipt['headSha']}\npr={receipt['pr']}\n")
 
 
-def fence(receipt):
-    origin = f"https://bolt-pr-{receipt['pr']}.mimukodik.hu"
+def fence(receipt, origin=None):
+    origin = origin or f"https://bolt-pr-{receipt['pr']}.mimukodik.hu"
     # Cache busting plus no-cache response prevents an edge cache from accepting
     # a receipt from a previous generation sharing the PR hostname.
     headers = {'User-Agent': 'Mozilla/5.0 (compatible; MiBoltPreviewSmoke/1.0)',
