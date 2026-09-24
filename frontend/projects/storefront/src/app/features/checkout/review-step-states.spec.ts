@@ -666,9 +666,9 @@ describe('ST-04 the conflict, stock-error and error states render no CTA explana
 // ---------------------------------------------------------------------------
 // ST-05 — a click in a failure state moves the focus to that state's banner
 // ---------------------------------------------------------------------------
-describe('ST-05 a click in the conflict, stock-error or error state focuses its banner and submits nothing (owner 2026-09-22: "Mindig aktív, kattintásra hibák")', () => {
-  it('focuses the state banner with the terms ticked, in each of the three states', async () => {
-    for (const state of ['conflict', 'stock-error', 'error'] as const) {
+describe('ST-05 a click in the conflict or stock-error state focuses its banner and submits nothing (owner 2026-09-22: "Mindig aktív, kattintásra hibák")', () => {
+  it('focuses the state banner with the terms ticked, in the conflict and stock-error states', async () => {
+    for (const state of ['conflict', 'stock-error'] as const) {
       TestBed.resetTestingModule();
       const fixture = createFixture({ state });
       fixture.componentInstance.acceptedTerms.set(true);
@@ -694,6 +694,42 @@ describe('ST-05 a click in the conflict, stock-error or error state focuses its 
     fixture.detectChanges();
     await fixture.whenStable();
     await Promise.resolve();
+    expect(document.activeElement).toBe(root.querySelector('[data-testid="review-state-banner"]'));
+    expect(fixture.componentInstance.termsConsentState()).toBe('submitted-invalid');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ST-06 — after a failed submit, the CTA resubmits (owner: "Igen, F3-mal
+// együtt", in English "yes, together with F3")
+// ---------------------------------------------------------------------------
+describe('ST-06 in the error state the CTA resubmits once the other conditions hold', () => {
+  it('ST-06a emits submitRequested once for a complete cash on delivery draft with the terms ticked', async () => {
+    const fixture = createFixture({ state: 'error' });
+    fixture.componentInstance.acceptedTerms.set(true);
+    const emitted: unknown[] = [];
+    fixture.componentInstance.submitRequested.subscribe((v) => emitted.push(v));
+    const root = getRootElement(fixture);
+    const button = getButton(root, 'review-submit');
+    expect(button.disabled).toBe(false);
+    button.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(emitted.length).toBe(1);
+    expect(fixture.componentInstance.canSubmit()).toBe(true);
+  });
+
+  it('ST-06b still needs the terms: unticked, a click emits nothing and focuses the banner', async () => {
+    const fixture = createFixture({ state: 'error' });
+    const emitted: unknown[] = [];
+    fixture.componentInstance.submitRequested.subscribe((v) => emitted.push(v));
+    const root = getRootElement(fixture);
+    const button = getButton(root, 'review-submit');
+    button.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+    expect(emitted.length).toBe(0);
     expect(document.activeElement).toBe(root.querySelector('[data-testid="review-state-banner"]'));
     expect(fixture.componentInstance.termsConsentState()).toBe('submitted-invalid');
   });
