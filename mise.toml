@@ -43,11 +43,11 @@ run = "deploy/compose.sh up -d --build --wait postgres commerce"
 
 [tasks.dev]
 description = "The three apps against the native backend, PostgreSQL in its container"
-depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment", "backend"]
+depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment:local-backend", "backend"]
 
 [tasks."dev:docker"]
 description = "The three apps against the backend container, PostgreSQL in its container"
-depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment", "backend:docker"]
+depends = ["//frontend:start:storefront:local-backend", "//frontend:start:admin:local-backend", "//frontend:start:payment:local-backend", "backend:docker"]
 
 [tasks.stack]
 description = "The whole system in containers: web on 4200, backend on 8080, PostgreSQL on 55433"
