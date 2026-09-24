@@ -30,7 +30,15 @@ test.describe('Product: variant choice and add to cart', () => {
       // below 1024px `display: none` hides `.cta-desktop` (product-page.scss),
       // and a hidden element is not matched by role.
       const addToCartButton = page.getByTestId('add-to-cart-button').locator('button');
-      const unavailableHint = page.getByText('Ez a változat jelenleg nem elérhető.');
+      // The reason renders in two mounts and the viewport decides which one is
+      // shown: the desktop CTA block's `add-to-cart-reason` hint at 1024px and
+      // wider, the sticky `purchase-rail`'s `purchase-rail-reason` paragraph
+      // below it, the other being `display: none`. The locator is the shown
+      // mount's own test id rather than the copy both mounts share.
+      const desktopViewport = (page.viewportSize()?.width ?? 0) >= 1024;
+      const unavailableHint = desktopViewport
+        ? page.getByTestId('add-to-cart-reason')
+        : page.getByTestId('purchase-rail-reason');
 
       let candidateCount = 0;
       let chosenColourIndex = -1;

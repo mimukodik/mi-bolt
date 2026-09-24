@@ -3,12 +3,14 @@
 
 import { test, expect } from '../fixtures/coverage';
 
-// Below 1024px the desktop CTA block — the `add-to-cart-button` and the reason
-// hint beside it — is `display: none` (product-page.scss:120-124); the sticky
-// `purchase-rail` carries the visible `purchase-cta` there and the visible
-// reason is the `product-stock` status line. The reason hint is therefore
-// asserted only at the desktop mount.
+// The same reason renders in two mounts: the desktop CTA block's
+// `add-to-cart-reason` hint, which the `cta-desktop` block hides below 1024px,
+// and the sticky `purchase-rail`'s `purchase-rail-reason` paragraph, which the
+// rail's own `.rail` rule hides at 1024px and wider. Exactly one of the two is
+// shown at any width, so the reason is asserted on the mount the viewport
+// shows, keyed by that mount's test id and never by its text alone.
 const DESKTOP_MIN_WIDTH = 1024;
+const UNAVAILABLE_REASON = 'Ez a változat jelenleg nem elérhető.';
 
 test.describe('Product: variant choice and add to cart', { tag: '@integration' }, () => {
   test('an out-of-stock variant cannot be added to the cart', async ({ page }) => {
@@ -19,6 +21,11 @@ test.describe('Product: variant choice and add to cart', { tag: '@integration' }
     const addToCartCta = desktopViewport
       ? page.getByTestId('add-to-cart-button').getByRole('button')
       : page.getByTestId('purchase-cta').getByRole('button');
+    // The reason's shown mount, keyed by its own test id: the desktop CTA hint
+    // at the desktop width, the rail's paragraph at the mobile one.
+    const unavailableReason = desktopViewport
+      ? page.getByTestId('add-to-cart-reason')
+      : page.getByTestId('purchase-rail-reason');
 
     await test.step('Open `/telefonok`, wait for the grid, and page forward until a card carries the `product-card-stock` marker', async () => {
       await page.goto('/telefonok');
@@ -68,9 +75,8 @@ test.describe('Product: variant choice and add to cart', { tag: '@integration' }
     });
 
     await test.step('Read the purchase controls of that variant', async () => {
-      if (desktopViewport) {
-        await expect(page.getByText('Ez a változat jelenleg nem elérhető.')).toBeVisible();
-      }
+      await expect(unavailableReason).toBeVisible();
+      await expect(unavailableReason).toHaveText(UNAVAILABLE_REASON);
       await expect(addToCartCta).toBeDisabled();
       await expect(page.getByTestId('cart-badge')).toHaveText('0');
     });
@@ -110,13 +116,11 @@ test.describe('Product: variant choice and add to cart', { tag: '@integration' }
             'Ez a konfiguráció elfogyott a demó készletből.',
           );
           await expect(addToCartCta).toBeDisabled();
-          if (desktopViewport) {
-            await expect(page.getByText('Ez a változat jelenleg nem elérhető.')).toBeVisible();
-          }
+          await expect(unavailableReason).toHaveText(UNAVAILABLE_REASON);
         } else {
           await expect(page.getByTestId('product-stock')).toHaveText('Raktáron a demó készletben');
           await expect(addToCartCta).toBeEnabled();
-          await expect(page.getByText('Ez a változat jelenleg nem elérhető.')).not.toBeVisible();
+          await expect(unavailableReason).not.toBeVisible();
         }
       }
 
@@ -126,9 +130,7 @@ test.describe('Product: variant choice and add to cart', { tag: '@integration' }
         'Ez a konfiguráció elfogyott a demó készletből.',
       );
       await expect(addToCartCta).toBeDisabled();
-      if (desktopViewport) {
-        await expect(page.getByText('Ez a változat jelenleg nem elérhető.')).toBeVisible();
-      }
+      await expect(unavailableReason).toHaveText(UNAVAILABLE_REASON);
     });
   });
 });

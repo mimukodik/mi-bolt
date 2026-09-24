@@ -25,6 +25,7 @@ import type { Money } from '../../shared/ui/price-block/price-block';
       [error]="error()"
       [money]="money()"
       [pending]="pending()"
+      [reason]="reason()"
       [success]="success()"
       (addRequested)="onAddRequested()"
       (errorDismissed)="onErrorDismissed()"
@@ -38,6 +39,7 @@ class TestHostComponent {
   readonly pending = signal<boolean>(false);
   readonly error = signal<UiProblem | null>(null);
   readonly success = signal<string | null>(null);
+  readonly reason = signal<string | null>(null);
   readonly presses: number[] = [];
   readonly errorDismissals = signal<number>(0);
   readonly successDismissals = signal<number>(0);
@@ -299,6 +301,38 @@ describe('MobileBuyRail (FIX-50 extraction from product-page.html)', () => {
     expect(row).not.toBeNull();
     expect(row?.parentElement).toBe(rail);
     expect(rail.firstElementChild).toBe(row);
+  });
+
+  it('shows the reason under the button while the variant is unavailable', async () => {
+    const { host, root, fixture } = await createHarness();
+    host.available.set(false);
+    host.reason.set('Ez a változat jelenleg nem elérhető.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(root.querySelector('[data-testid="purchase-rail-reason"]')?.textContent.trim()).toBe(
+      'Ez a változat jelenleg nem elérhető.',
+    );
+  });
+
+  it('shows no reason while the variant is available', async () => {
+    const { host, root, fixture } = await createHarness();
+    host.available.set(true);
+    host.reason.set('Ez a változat jelenleg nem elérhető.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(root.querySelector('[data-testid="purchase-rail-reason"]')).toBeNull();
+  });
+
+  it('shows no reason when none is given', async () => {
+    const { host, root, fixture } = await createHarness();
+    host.available.set(false);
+    host.reason.set(null);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(root.querySelector('[data-testid="purchase-rail-reason"]')).toBeNull();
   });
 });
 
