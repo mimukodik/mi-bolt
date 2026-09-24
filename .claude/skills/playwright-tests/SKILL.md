@@ -42,7 +42,10 @@ a `coder-agent.sh` runner and every other agent keep out of those files.
   does not repeat them**), `e2e/integration/` (specs on the MSW-mocked app),
   `e2e/smoke/` (specs on the real backend), `e2e/fixtures/` (the `coverage`
   fixture every spec imports `test` from), `specs/` (the planner's Markdown
-  plans).
+  plans). **An instruction or example the agents need goes into
+  `e2e/seed.spec.ts`, never into the three `playwright-test-*` definitions**,
+  whose text is not edited at all (`.claude/agents/CLAUDE.md`, "Report
+  shape", carries the owner's ruling).
 - `playwright.config.ts` has eight projects: `seed` (only `e2e/seed.spec.ts`)
   and six `integration-{chromium,firefox,webkit}-{fullhd,mobile}` projects
   (each runs `e2e/integration/**`) start the development build with MSW on
