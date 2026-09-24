@@ -91,6 +91,8 @@ jobs:
             frontend/coverage/unit/
             frontend/coverage/demo-payment/
             frontend/coverage/admin/
+            frontend/coverage/core-api/
+            frontend/coverage/shop-mocks/
           if-no-files-found: error
           overwrite: true
 
