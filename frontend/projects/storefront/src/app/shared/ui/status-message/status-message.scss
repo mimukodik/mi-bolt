@@ -1,39 +1,51 @@
 /* MiBolt StatusMessage primitive. The row wraps: the text keeps 12rem and grows, the close button drops under it when both do not fit (MIM-216). */
 
+/* The look is yettel's .information-box (docs/design/yettel.md §5, "Alert"):
+   no border and no left bar, an 8px radius, 16px padding and a severity
+   icon in front of the text. The info ground is yettel's sky #c4dfe9; the
+   success and error grounds are this project's --color-status-*-soft tints
+   (src/styles/tokens.css). */
 .root {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
+  border: 0;
   border-radius: var(--radius-control);
-  border: 1px solid var(--color-border-subtle);
-  border-left-width: 4px;
   background: var(--color-surface-light);
   color: var(--color-text-primary);
 }
 
-/* Severity looks: a tinted ground and a 4px bar on the left edge (MIM-240).
-   The info ground is yettel's .information-box sky #c4dfe9 with a navy bar
-   (docs/design/yettel.md §2); the success and error grounds are the
-   --color-status-*-soft tokens (src/styles/tokens.css). yettel's boxes carry
-   no border and no left bar, so the bar and the mixes are this project's own
-   treatment. */
+.icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
 .root.is-info {
-  border-color: var(--color-status-info);
-  border-left-color: var(--color-brand-ink);
   background: var(--color-status-info);
 }
 
+.root.is-info .icon {
+  color: var(--color-brand-ink);
+}
+
 .root.is-success {
-  border-color: var(--color-status-success);
   background: var(--color-status-success-soft);
 }
 
+.root.is-success .icon {
+  color: var(--color-status-success);
+}
+
 .root.is-error {
-  border-color: var(--color-status-error);
   background: var(--color-status-error-soft);
+}
+
+.root.is-error .icon {
+  color: var(--color-status-error);
 }
 
 .message {
