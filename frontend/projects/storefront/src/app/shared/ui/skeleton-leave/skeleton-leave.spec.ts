@@ -4,13 +4,20 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { describe, expect, it, vi } from 'vitest';
 
-import { RELEASE_AFTER_MS, SkeletonLeave } from './skeleton-leave';
+import { SkeletonLeave } from './skeleton-leave';
 
 @Component({
   imports: [SkeletonLeave],
   template: `<div appSkeletonLeave data-testid="skeleton"><span data-testid="bar"></span></div>`,
 })
 class SkeletonHost {}
+
+/** What the stubbed `getAnimations()` returns: jsdom implements no Web Animations. */
+interface FakeAnimation {
+  readonly transitionProperty?: string;
+  readonly animationName?: string;
+  readonly finished: Promise<unknown>;
+}
 
 function hostElement(root: unknown): HTMLElement {
   if (!(root instanceof HTMLElement)) {
@@ -19,7 +26,7 @@ function hostElement(root: unknown): HTMLElement {
   return root;
 }
 
-function setUp(): { directive: SkeletonLeave; skeleton: HTMLElement; bar: HTMLElement } {
+function setUp(): { directive: SkeletonLeave; skeleton: HTMLElement } {
   const fixture = TestBed.createComponent(SkeletonHost);
   fixture.detectChanges();
   const directive = fixture.debugElement
@@ -27,11 +34,34 @@ function setUp(): { directive: SkeletonLeave; skeleton: HTMLElement; bar: HTMLEl
     .injector.get(SkeletonLeave);
   const root = hostElement(fixture.nativeElement);
   const skeleton = root.querySelector('[data-testid="skeleton"]');
-  const bar = root.querySelector('[data-testid="bar"]');
-  if (!(skeleton instanceof HTMLElement) || !(bar instanceof HTMLElement)) {
+  if (!(skeleton instanceof HTMLElement)) {
     throw new Error('the skeleton did not render');
   }
-  return { directive, skeleton, bar };
+  return { directive, skeleton };
+}
+
+function stubAnimations(el: HTMLElement, read: () => readonly FakeAnimation[]): void {
+  Object.defineProperty(el, 'getAnimations', { value: read, configurable: true });
+}
+
+function never(): Promise<unknown> {
+  return new Promise<unknown>(() => {
+    // never settles
+  });
+}
+
+function deferred(): { promise: Promise<unknown>; resolve: () => void; reject: () => void } {
+  let resolve: () => void = () => undefined;
+  let reject: () => void = () => undefined;
+  const promise = new Promise<unknown>((onResolve, onReject) => {
+    resolve = () => {
+      onResolve(undefined);
+    };
+    reject = () => {
+      onReject(new DOMException('cancelled', 'AbortError'));
+    };
+  });
+  return { promise, resolve, reject };
 }
 
 describe('SkeletonLeave', () => {
@@ -41,6 +71,7 @@ describe('SkeletonLeave', () => {
     Object.defineProperty(skeleton, 'offsetLeft', { value: 34 });
     Object.defineProperty(skeleton, 'offsetWidth', { value: 560 });
     Object.defineProperty(skeleton, 'offsetHeight', { value: 78 });
+    stubAnimations(skeleton, () => [{ transitionProperty: 'opacity', finished: never() }]);
     const animationComplete = vi.fn();
     const event: AnimationCallbackEvent = { target: skeleton, animationComplete };
 
@@ -56,24 +87,33 @@ describe('SkeletonLeave', () => {
     expect(animationComplete).not.toHaveBeenCalled();
   });
 
-  it('SL-02 the skeleton goes when its own transition ends', () => {
+  it('SL-02 the skeleton goes once its fade finishes, not before', async () => {
     const { directive, skeleton } = setUp();
+    const fade = deferred();
+    stubAnimations(skeleton, () => [{ transitionProperty: 'opacity', finished: fade.promise }]);
     const animationComplete = vi.fn();
     directive.fadeOut({ target: skeleton, animationComplete });
-
-    skeleton.dispatchEvent(new Event('transitionend'));
-
-    expect(animationComplete).toHaveBeenCalledTimes(1);
-  });
-
-  it('SL-03 a transition ending inside the skeleton does not end the fade', () => {
-    const { directive, skeleton, bar } = setUp();
-    const animationComplete = vi.fn();
-    directive.fadeOut({ target: skeleton, animationComplete });
-
-    bar.dispatchEvent(new Event('transitionend', { bubbles: true }));
 
     expect(animationComplete).not.toHaveBeenCalled();
+    fade.resolve();
+
+    await vi.waitFor(() => {
+      expect(animationComplete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('SL-03 a shimmer animation on the skeleton itself does not hold it', async () => {
+    const { directive, skeleton } = setUp();
+    stubAnimations(skeleton, () => [
+      { animationName: 'price-shimmer', finished: never() },
+      { transitionProperty: 'opacity', finished: Promise.resolve() },
+    ]);
+    const animationComplete = vi.fn();
+    directive.fadeOut({ target: skeleton, animationComplete });
+
+    await vi.waitFor(() => {
+      expect(animationComplete).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('SL-04 an element with no HTML box is released at once and left untouched', () => {
@@ -87,45 +127,41 @@ describe('SkeletonLeave', () => {
     expect(svg.classList.contains('skeleton-leave')).toBe(false);
   });
 
-  it('SL-05 a skeleton whose transition never ends is released once, RELEASE_AFTER_MS after the fade starts', () => {
+  it('SL-05 a skeleton that is not rendered runs no fade and goes at once', async () => {
     const { directive, skeleton } = setUp();
-    vi.useFakeTimers();
-    try {
-      const animationComplete = vi.fn();
-      directive.fadeOut({ target: skeleton, animationComplete });
+    stubAnimations(skeleton, () => []);
+    const animationComplete = vi.fn();
+    directive.fadeOut({ target: skeleton, animationComplete });
 
-      vi.advanceTimersByTime(RELEASE_AFTER_MS - 1);
-      expect(animationComplete).not.toHaveBeenCalled();
-
-      vi.advanceTimersByTime(1);
+    await vi.waitFor(() => {
       expect(animationComplete).toHaveBeenCalledTimes(1);
-
-      skeleton.dispatchEvent(new Event('transitionend'));
-      vi.advanceTimersByTime(RELEASE_AFTER_MS);
-      expect(animationComplete).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 
-  it('SL-06 a transition that ends first releases the skeleton once and the timer adds nothing', () => {
+  it('SL-06 a cancelled fade still releases the skeleton once', async () => {
     const { directive, skeleton } = setUp();
-    vi.useFakeTimers();
-    try {
-      const animationComplete = vi.fn();
-      directive.fadeOut({ target: skeleton, animationComplete });
+    const fade = deferred();
+    stubAnimations(skeleton, () => [{ transitionProperty: 'opacity', finished: fade.promise }]);
+    const animationComplete = vi.fn();
+    directive.fadeOut({ target: skeleton, animationComplete });
 
-      skeleton.dispatchEvent(new Event('transitionend'));
-      expect(animationComplete).toHaveBeenCalledTimes(1);
+    fade.reject();
 
-      vi.advanceTimersByTime(RELEASE_AFTER_MS);
+    await vi.waitFor(() => {
       expect(animationComplete).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 
-  it('RELEASE_AFTER_MS is the 200ms fade plus 100ms slack', () => {
-    expect(RELEASE_AFTER_MS).toBe(300);
+  it('SL-07 the animations are read after the fade class is on the element', () => {
+    const { directive, skeleton } = setUp();
+    let classWhenRead = false;
+    stubAnimations(skeleton, () => {
+      classWhenRead = skeleton.classList.contains('skeleton-leave');
+      return [];
+    });
+
+    directive.fadeOut({ target: skeleton, animationComplete: vi.fn() });
+
+    expect(classWhenRead).toBe(true);
   });
 });
