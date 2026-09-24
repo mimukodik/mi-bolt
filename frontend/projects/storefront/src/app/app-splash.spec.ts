@@ -74,6 +74,53 @@ describe('MIM-404 App splash', () => {
     });
   });
 
+  it('waits past a superseded first navigation and leaves after the newer one ends', async () => {
+    const guardCalls: number[] = [];
+    TestBed.configureTestingModule({
+      imports: [App],
+      providers: [
+        provideRouter([
+          {
+            path: '',
+            canActivate: [
+              () => {
+                guardCalls.push(1);
+                return new Promise<boolean>(() => {
+                  void 0;
+                });
+              },
+            ],
+            children: [],
+          },
+          { path: 'masik', children: [] },
+        ]),
+        provideZonelessChangeDetection(),
+      ],
+    });
+    const splash = addSplash();
+    TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const leavingAtCancel: boolean[] = [];
+    router.events.subscribe((event) => {
+      if (event instanceof NavigationCancel) {
+        leavingAtCancel.push(splash.classList.contains(SPLASH_LEAVING_CLASS));
+      }
+    });
+
+    const firstNavigation = router.navigateByUrl('/');
+    await vi.waitFor(() => {
+      expect(guardCalls).toHaveLength(1);
+    });
+    await router.navigateByUrl('/masik');
+
+    await expect(firstNavigation).resolves.toBe(false);
+    expect(leavingAtCancel).toEqual([false]);
+    expect(router.url).toBe('/masik');
+    await vi.waitFor(() => {
+      expect(splash.isConnected).toBe(false);
+    });
+  });
+
   it('removes the cover when the first navigation fails', async () => {
     TestBed.configureTestingModule({
       imports: [App],
