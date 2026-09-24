@@ -57,8 +57,10 @@ class DemoAccessApiTest {
 	}
 
 	// Fails if DemoAccessService#signIn stops throwing UNAUTHENTICATED on a password mismatch.
+	// "IssuesNoCookie" is about the response: the request carries the default demo cookie
+	// DemoAccessTestConfiguration attaches.
 	@Test
-	void signInWithAWrongPasswordIs401WithoutACookie() throws Exception {
+	void signInWithAWrongPasswordIs401AndIssuesNoCookie() throws Exception {
 		mockMvc.perform(post("/demo/session")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"password\":\"not-the-demo-password\"}"))
