@@ -59,6 +59,12 @@ Egy második stack a fejlesztőé mellett saját `COMPOSE_PROJECT_NAME`, `MIBOLT
 és portok mellett fut; a `deploy/compose.sh` megtagadja, hogy egy másik projekt a fejlesztő
 kötetét használja.
 
+Egy git worktree-nek saját stackje van a `deploy/stack.sh` paranccsal: ez egy port-sávot
+(„slot”) foglal le magának egy 20 elemű, gépszintű nyilvántartásból, és a saját projektnevét,
+portjait meg kötetét a gitignore-olt `deploy/.worktree-stack.env` fájlban tárolja. A worktree
+törlése előtt a `deploy/stack.sh reset --yes` törli a saját kötetét és felszabadítja a foglalt
+sávot, különben a konténer, a kötet és a port a worktree eltávolítása után is megmarad.
+
 **Adatmentés és költöztetés:** a kötet szándékosan named volume, ezért az adat mozgatása
 `pg_dump` / `pg_restore` útján történik, nem a kötet másolásával.
 
