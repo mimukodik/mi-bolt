@@ -18,6 +18,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { CheckoutFacade } from './checkout.facade';
 import { ContactPage } from './contact-page';
 import { CartFacade } from '../cart/cart.facade';
+import type { Money } from '../../shared/ui/price-block/price-block';
 import {
   CONTACT_DRAFT_SAVER,
   ContactStep,
@@ -60,7 +61,7 @@ function provideSessionStub(session: CheckoutSession | null): Provider {
  *  hands to the step's order summary; the stub supplies exactly that. */
 function provideCartStub(): Provider {
   const stub = {
-    subtotal: signal({ amount: 235990, currency: 'HUF' as const }).asReadonly(),
+    subtotal: signal<Money>({ amount: 235990, currency: 'HUF' }).asReadonly(),
   } satisfies Pick<CartFacade, 'subtotal'>;
   return { provide: CartFacade, useValue: stub };
 }
