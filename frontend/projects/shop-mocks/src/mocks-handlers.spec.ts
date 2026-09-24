@@ -572,13 +572,6 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
       }),
     },
     {
-      name: 'usedPaymentIntentIds',
-      // The validator checks every element with `typeof`, so the array must
-      // carry a non-string at runtime; the cast past the `readonly string[]`
-      // type is the only way to smuggle one in.
-      patch: (b) => ({ ...b, usedPaymentIntentIds: [42] as unknown as readonly string[] }),
-    },
-    {
       name: 'orderReceipt',
       patch: (b) => ({
         ...b,
@@ -672,6 +665,15 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
       expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
     });
   }
+
+  it('rejects a usedPaymentIntentIds entry that is not a string', () => {
+    writeRaw(JSON.stringify({ ...makeSnapshot(), usedPaymentIntentIds: [42] }));
+    const persistence = createBrowserPersistence({
+      nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+    });
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+  });
 });
 
 describe('CartStore seed / persist round-trip (MIM-212 Unit 1)', () => {
