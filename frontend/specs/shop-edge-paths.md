@@ -16,7 +16,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.1. a refused cart removal and a refused clear leave the cart as it was
 
-**File:** `e2e/integration/cart-refused-removal-and-clear.spec.ts`
+**File:** `e2e/integration/shop-edge-refused-cart-removal-and-clear.spec.ts`
 
 **Steps:**
 
@@ -30,7 +30,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.2. adding the same variant past its per-line limit is refused
 
-**File:** `e2e/integration/product-per-line-quantity-limit.spec.ts`
+**File:** `e2e/integration/shop-edge-per-line-quantity-limit.spec.ts`
 
 **Steps:**
 
@@ -43,7 +43,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.3. an unknown product slug and an unknown variant link are both reported
 
-**File:** `e2e/integration/product-unknown-slug-and-variant-link.spec.ts`
+**File:** `e2e/integration/shop-edge-unknown-slug-and-variant-link.spec.ts`
 
 **Steps:**
 
@@ -54,7 +54,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.4. the gallery's image and zoom dialog, and the purchase messages' dismiss control
 
-**File:** `e2e/integration/product-gallery-and-message-dismiss.spec.ts`
+**File:** `e2e/integration/shop-edge-gallery-zoom-and-message-dismiss.spec.ts`
 
 **Steps:**
 
@@ -68,7 +68,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.5. the catalogue opens from a URL that carries its state
 
-**File:** `e2e/integration/catalogue-url-carried-state.spec.ts`
+**File:** `e2e/integration/shop-edge-catalogue-from-url-state.spec.ts`
 
 **Steps:**
 
@@ -80,7 +80,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.6. the mobile filter drawer keeps its edits until they are applied
 
-**File:** `e2e/integration/catalogue-mobile-filter-drawer.spec.ts`
+**File:** `e2e/integration/shop-edge-mobile-filter-drawer.spec.ts`
 
 **Steps:**
 
@@ -94,7 +94,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.7. the demo gate sends a signed-out visitor to the sign-in page and back
 
-**File:** `e2e/integration/demo-gate-sign-in.spec.ts`
+**File:** `e2e/integration/shop-edge-demo-gate-sign-in.spec.ts`
 
 **Steps:**
 
@@ -108,7 +108,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 #### 1.8. the header navigation at the mobile width
 
-**File:** `e2e/integration/header-navigation-mobile.spec.ts`
+**File:** `e2e/integration/shop-edge-header-navigation-mobile.spec.ts`
 
 **Steps:**
 
