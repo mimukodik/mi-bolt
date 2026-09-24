@@ -16,7 +16,11 @@ const configDir = __dirname;
 const smoke = process.env['E2E_TARGET'] === 'local-backend';
 const port = Number(process.env['E2E_PORT'] ?? (smoke ? 4410 : 4400));
 const serveConfiguration = smoke ? 'local-backend' : 'development';
-const suppliedBaseURL = process.env['E2E_BASE_URL'];
+// Treat E2E_BASE_URL="" the same as unset everywhere it is read below: an
+// empty string passed through as a URL would break baseURL (and downstream
+// `new URL(...)` calls), while `=== undefined` would still skip the
+// webServer, leaving the two halves of the config disagreeing.
+const suppliedBaseURL = process.env['E2E_BASE_URL'] || undefined;
 const baseURL = suppliedBaseURL ?? `http://localhost:${port}`;
 const ngServeCommand = `npx ng serve storefront --configuration ${serveConfiguration} --port ${port}`;
 // In CI, Playwright runs against the built app served by scripts/serve-static.mjs (user, 2026-09-22).

@@ -7,6 +7,10 @@ import { dirname, join } from 'node:path';
 import type { FullConfig } from '@playwright/test';
 
 const READINESS_PATH = '/api/v1/actuator/health/readiness';
+// Node's fetch has no default timeout; a hung backend (TCP accepts but no
+// HTTP reply) would block globalSetup forever. 30 s mirrors the webServer
+// readiness budget at this layer.
+const READINESS_TIMEOUT_MS = 30_000;
 
 interface ProxyEntry {
   readonly target: string;
@@ -49,17 +53,24 @@ export function readinessUrl(config: Pick<FullConfig, 'configFile'>): string {
 
 export default async function backendReady(config: FullConfig): Promise<void> {
   const url = readinessUrl(config);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), READINESS_TIMEOUT_MS);
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetch(url, { signal: controller.signal });
   } catch (error: unknown) {
     throw new Error(
       `Smoke needs the real backend, but ${url} did not answer (${String(error)}). ` +
         'Start it first: mise run dev:docker, or mise run stack with E2E_BASE_URL=http://localhost:4200.',
       { cause: error },
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
   if (!response.ok) {
+    // Drain the body so the connection returns to the pool; the response is
+    // not read on either branch otherwise.
+    await response.arrayBuffer().catch(() => undefined);
     throw new Error(`Smoke needs a ready backend, but ${url} answered ${String(response.status)}.`);
   }
 }
