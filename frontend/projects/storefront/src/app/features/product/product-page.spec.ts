@@ -841,6 +841,7 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
       variantQuery: null,
       slug: DEMO_PRODUCT.slug,
       related: [],
+      relatedLoading: false,
     });
     const facadeStub: Pick<ProductFacade, 'vm'> = { vm };
     const cartFacadeStub = {
@@ -1052,6 +1053,7 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     expect(facade.vm().status).toBe('success');
     expect(facade.vm().related).toEqual([]);
+    expect(facade.vm().relatedLoading).toBe(false);
     expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
   });
 
@@ -1151,6 +1153,7 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     // The first request is still hanging, so the related signal has
     // not been written to. assert it's [] and no section renders.
     expect(facade.vm().related).toEqual([]);
+    expect(facade.vm().relatedLoading).toBe(true);
     expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
 
     // Navigate to a second product; the route change must reset the
@@ -1162,6 +1165,7 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     expect(facade.vm().slug).toBe('demo-pro-5g');
     expect(facade.vm().related).toEqual([]);
+    expect(facade.vm().relatedLoading).toBe(false);
 
     // Now resolve the dangling first request — the facade must not let
     // it repopulate the list for the new product. The subscription was
@@ -1175,6 +1179,7 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     expect(facade.vm().slug).toBe('demo-pro-5g');
     expect(facade.vm().related).toEqual([]);
+    expect(facade.vm().relatedLoading).toBe(false);
     expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
   });
 
