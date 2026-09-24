@@ -381,10 +381,10 @@ describe('OrderReceiptComponent', () => {
     fixture.detectChanges();
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-payment"] dd')?.textContent.trim(),
-    ).toBe('Utánvét (demó)');
+    ).toBe('Utánvét');
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd')?.textContent.trim(),
-    ).toBe('Házhozszállítás');
+    ).toBe('Házhoz szállítás');
 
     fixture.componentRef.setInput(
       'receipt',
@@ -393,10 +393,10 @@ describe('OrderReceiptComponent', () => {
     fixture.detectChanges();
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-payment"] dd')?.textContent.trim(),
-    ).toBe('Bankkártya (szimulált)');
+    ).toBe('Bankkártya');
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd')?.textContent.trim(),
-    ).toBe('Bemutatótermi átvétel (demó)');
+    ).toBe('Átvételi pont');
   });
 
   it('SP-03 the receipt renders the wire notice, and its own sentence only when the wire sends none', () => {
