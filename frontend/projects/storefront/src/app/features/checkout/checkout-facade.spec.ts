@@ -1087,6 +1087,35 @@ describe('payment intents', () => {
     expect(checkout.intentDropped()).toBeNull();
   });
 
+  it('F-31l: a 410 drops the held intent and its stored id with the session', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    server.use(
+      http.patch('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:cart-expired',
+            title: 'Gone',
+            status: 410,
+            code: 'CART_EXPIRED',
+            detail: 'The cart is no longer available',
+            params: {},
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 410, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const result = await checkout.updateContact(VALID_CONTACT);
+    expect(result.ok).toBe(false);
+    expect(checkout.cartExpired()).toBe(true);
+    expect(checkout.session()).toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
   it('F-32: a contact or billing write keeps the held intent', async () => {
     const checkout = await setupCompleteCardDraft();
     const created = await checkout.createPaymentIntent();

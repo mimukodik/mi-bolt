@@ -15,7 +15,7 @@
  *   - on 412 surfaces a `conflict` signal, refetches both the cart
  *     and the session in the background, and waits for an explicit
  *     `retry()`; the failed intent is NOT auto-replayed;
- *   - on 410 raises `cartExpired` and drops the session snapshot;
+ *   - on 410 raises `cartExpired` and drops the session snapshot and the held intent;
  *   - on 409 `PRICE_CHANGED` refetches, captures both totals and
  *     arms `priceChange`; the submit CTA stays dead until
  *     `confirmPriceChange()` runs (§8.2, "az új összeg néma elfogadása
@@ -709,6 +709,10 @@ export class CheckoutFacade {
     }
     if (error.code === 'CART_EXPIRED') {
       this.sessionWritable.set(null);
+      // The intent paid for the draft this 410 ended, so it goes too.
+      if (this.paymentIntentWritable() !== null) {
+        this.clearHeldIntent('stale');
+      }
       this.cartExpiredWritable.set(true);
       this.conflictWritable.set(null);
       this.errorWritable.set(null);
