@@ -315,6 +315,8 @@ node_modules/
 .tmp-browser-report/
 .playwright-mcp/
 blob-report/
+# The smoke run's signed-in demo cookie (frontend/e2e/fixtures/backend-ready.ts)
+/frontend/e2e/.auth/
 /.spring-tools/
 /deploy/.env
 

@@ -2,6 +2,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import type { CoverageResults, V8CoverageEntry } from 'monocart-coverage-reports';
+import { DEMO_STORAGE_STATE } from './e2e/fixtures/backend-ready';
 
 // Resolved from this file's own location, not the cwd: `-c <path>` runs and
 // IDE runs start Playwright from other directories.
@@ -168,7 +169,12 @@ export default defineConfig({
     integration('firefox-mobile', { ...devices['Desktop Firefox'], ...mobileFirefox }),
     integration('webkit-fullhd', { ...devices['Desktop Safari'], ...fullHd }),
     integration('webkit-mobile', { ...devices['Desktop Safari'], ...mobile }),
-    { name: 'smoke', testDir: './e2e/smoke', use: { ...devices['Desktop Chrome'], ...fullHd } },
+    {
+      name: 'smoke',
+      testDir: './e2e/smoke',
+      // Signed in to the demo access gate by the global setup (MIM-423).
+      use: { ...devices['Desktop Chrome'], ...fullHd, storageState: DEMO_STORAGE_STATE },
+    },
   ],
   // A supplied base URL is already serving: no local server is started for it.
   webServer: suppliedBaseURL === undefined ? webServer : undefined,
