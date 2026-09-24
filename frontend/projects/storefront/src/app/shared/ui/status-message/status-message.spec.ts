@@ -72,6 +72,21 @@ describe('StatusMessage primitive', () => {
     expect(root?.getAttribute('aria-live')).toBe('assertive');
   });
 
+  it.each<[StatusSeverity, string]>([
+    ['info', 'is-info'],
+    ['success', 'is-success'],
+    ['error', 'is-error'],
+  ])('severity %s carries exactly the %s class (MIM-240)', (severity, expected) => {
+    const { fixture, host } = setup();
+    host.severity.set(severity);
+    fixture.detectChanges();
+    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
+    const severityClasses = ['is-info', 'is-success', 'is-error'].filter(
+      (name) => root?.classList.contains(name) === true,
+    );
+    expect(severityClasses).toEqual([expected]);
+  });
+
   it('decision 16: live=false renders the message with no role and no aria-live', () => {
     const { fixture, host } = setup();
     host.severity.set('info');
