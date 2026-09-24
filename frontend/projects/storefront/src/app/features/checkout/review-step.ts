@@ -316,14 +316,16 @@ export class ReviewStep {
   });
 
   /**
-   * The CTA is live only when the state is `ready`, the server calls
-   * the draft complete, the terms are accepted, no price change is
-   * awaiting confirmation (§3.7), and — for a card draft — the
+   * The CTA is live only when the state is `ready`, or `error` after a
+   * failed submit, where a click resubmits (the owner's decision), the
+   * server calls the draft complete, the terms are accepted, no price
+   * change is awaiting confirmation (§3.7), and — for a card draft — the
    * payment has already succeeded. A card order is never placed on
    * an unauthorised intent.
    */
   readonly canSubmit = computed<boolean>(() => {
-    if (this.state() !== 'ready') return false;
+    const state = this.state();
+    if (state !== 'ready' && state !== 'error') return false;
     if (!this.draft().complete) return false;
     if (!this.acceptedTerms()) return false;
     if (this.priceChange() !== null) return false;
@@ -407,7 +409,8 @@ export class ReviewStep {
    *  and error states moves focus to that state's banner (its
    *  explanation), otherwise to the unticked terms, and with the
    *  terms ticked to the explanation under the button. Disabled while
-   *  submitting and for an unpaid card draft. */
+   *  submitting and for an unpaid card draft. In the error state a
+   *  click that can submit resubmits. */
   onSubmit(): void {
     if (this.state() === 'submitting') return;
     this.submitted.set(true);
