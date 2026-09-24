@@ -131,6 +131,9 @@ function isOrderReceipt(value: unknown): value is OrderReceipt {
 export class OrderStore {
   private readonly intents = new Map<string, StoredIntent>();
   private readonly orders = new Map<string, StoredOrder>();
+  /** Card intents that already back an order: one order per intent, as
+   *  on the backend (`POST /orders` in the contract). */
+  private readonly usedIntentIds = new Set<string>();
   private orderSequence = 0;
 
   constructor(
@@ -431,6 +434,18 @@ export class OrderStore {
           ),
         };
       }
+      if (this.usedIntentIds.has(intentId)) {
+        return {
+          ok: false,
+          problem: this.problem(
+            422,
+            'PAYMENT_REQUIRED',
+            'The referenced payment intent already backs an order; a new card order needs a new payment',
+            { paymentIntentId: intentId, status: stored.status },
+            [],
+          ),
+        };
+      }
       const summaryTotal = readResult.session.summary.total;
       if (stored.amount.amount !== summaryTotal.amount) {
         return {
@@ -487,8 +502,10 @@ export class OrderStore {
     this.orders.set(orderId, { receipt, sessionId });
 
     this.checkout.clearDraft(sessionId);
+    // The intent stays readable, as on the backend; it only cannot back
+    // a second order.
     if (orderRequest.paymentMethod === 'card') {
-      this.intents.delete(orderRequest.paymentIntentId);
+      this.usedIntentIds.add(orderRequest.paymentIntentId);
     }
     this.cart().resetForOrder(sessionId);
     this.idempotency.record(key, hash, { status: 201, body: receipt });
@@ -508,7 +525,7 @@ export class OrderStore {
   }
 
   /**
-   * Seeds the store's intents and orders from a hydrated snapshot.
+   * Seeds the store's intents, orders and the used intent ids from a hydrated snapshot.
    * Called once at handler-construction time when
    * `options.snapshot.paymentIntents` or `options.snapshot.receipts`
    * is non-empty. Each record is stamped with `sessionId` so the
@@ -519,7 +536,11 @@ export class OrderStore {
    */
   seedFromSnapshot(
     sessionId: string,
-    persisted: { intents: readonly PaymentIntent[]; receipts: readonly OrderReceipt[] },
+    persisted: {
+      intents: readonly PaymentIntent[];
+      receipts: readonly OrderReceipt[];
+      usedIntentIds: readonly string[];
+    },
   ): void {
     for (const intent of persisted.intents) {
       this.intents.set(intent.id, { ...intent, sessionId });
@@ -528,6 +549,9 @@ export class OrderStore {
       this.orders.set(receipt.id, { receipt, sessionId });
       const seq = parseOrderSequence(receipt.orderNumber);
       if (seq !== null) this.orderSequence = Math.max(this.orderSequence, seq);
+    }
+    for (const id of persisted.usedIntentIds) {
+      this.usedIntentIds.add(id);
     }
   }
 
@@ -541,6 +565,7 @@ export class OrderStore {
   toPersistedOrderState(sessionId: string): {
     intents: readonly PaymentIntent[];
     receipts: readonly OrderReceipt[];
+    usedIntentIds: readonly string[];
   } {
     const intents: PaymentIntent[] = [];
     for (const s of this.intents.values()) {
@@ -550,7 +575,11 @@ export class OrderStore {
     for (const s of this.orders.values()) {
       if (s.sessionId === sessionId) receipts.push(s.receipt);
     }
-    return { intents, receipts };
+    const usedIntentIds: string[] = [];
+    for (const id of this.usedIntentIds) {
+      if (this.intents.get(id)?.sessionId === sessionId) usedIntentIds.push(id);
+    }
+    return { intents, receipts, usedIntentIds };
   }
 
   /** The idempotency cache for the snapshot; see `IdempotencyStore.toPersisted`. */

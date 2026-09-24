@@ -110,6 +110,7 @@ function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
     cart: undefined,
     paymentIntents: [],
     receipts: [],
+    usedPaymentIntentIds: [],
     idempotency: [],
     ...overrides,
   };
@@ -571,6 +572,13 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
       }),
     },
     {
+      name: 'usedPaymentIntentIds',
+      // The validator checks every element with `typeof`, so the array must
+      // carry a non-string at runtime; the cast past the `readonly string[]`
+      // type is the only way to smuggle one in.
+      patch: (b) => ({ ...b, usedPaymentIntentIds: [42] as unknown as readonly string[] }),
+    },
+    {
       name: 'orderReceipt',
       patch: (b) => ({
         ...b,
@@ -820,6 +828,7 @@ describe('OrderStore.seedFromSnapshot leaves next orderNumber above restored one
           total: { amount: 0, currency: 'HUF' },
         },
       ],
+      usedIntentIds: [],
     });
 
     const committed = order.createOrder('sess-orders', 'idem-key-neworder-1', `"2"`, {
@@ -832,6 +841,71 @@ describe('OrderStore.seedFromSnapshot leaves next orderNumber above restored one
     const num = Number(committed.receipt.orderNumber.replace(/^DEMO-/, ''));
     expect(Number.isFinite(num)).toBe(true);
     expect(num).toBeGreaterThan(42);
+  });
+});
+
+describe('OrderStore used card intents (MIM-293)', () => {
+  it('a used intent restored from the snapshot cannot back a second order', () => {
+    const clock = createFixedClock('2026-09-14T10:00:00.000Z');
+    const ids = createDeterministicIds(1);
+    const options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+    const lookup: VariantLookupFn = (variantId): VariantLookup | undefined =>
+      variantId === 'demo-one-5g-graphite-256'
+        ? { product: LOOKUP_PRODUCT, variant: LOOKUP_VARIANT }
+        : undefined;
+    const cart = new CartStore(options, lookup);
+    const checkout = new CheckoutStore(options, () => cart);
+    const idempotency = new IdempotencyStore(clock);
+    const order = new OrderStore(options, checkout, idempotency, () => cart);
+
+    cart.add('sess-orders', '"1"', 'demo-one-5g-graphite-256', 1);
+    checkout.seedFromSnapshot('sess-orders', {
+      contact: { fullName: 'a', email: 'a@b.c', phone: '+361' },
+      billing: {
+        name: 'a',
+        address: { countryCode: 'HU', postalCode: '1', city: 'a', line1: 'a' },
+      },
+      delivery: { optionId: 'pickup_point' },
+      payment: { method: 'card' },
+    });
+
+    order.seedFromSnapshot('sess-orders', {
+      intents: [
+        {
+          id: 'pi-used',
+          createdAt: '2026-09-14T10:00:00.000Z',
+          expiresAt: '2026-09-14T10:30:00.000Z',
+          redirectUrl: '/demo-fizetes/pi-used',
+          returnUrl: '/penztar?paymentIntentId=pi-used',
+          status: 'succeeded',
+          amount: { amount: 0, currency: 'HUF' },
+        },
+      ],
+      receipts: [],
+      usedIntentIds: ['pi-used'],
+    });
+    expect(order.toPersistedOrderState('sess-orders').usedIntentIds).toEqual(['pi-used']);
+
+    const reused = order.createOrder('sess-orders', 'idem-key-reuse-1', `"2"`, {
+      acceptedTerms: true,
+      termsVersion: '2026-09',
+      paymentMethod: 'card',
+      paymentIntentId: 'pi-used',
+    });
+    expect(reused.ok).toBe(false);
+    if (reused.ok) return;
+    expect(reused.problem.status).toBe(422);
+    expect(reused.problem.code).toBe('PAYMENT_REQUIRED');
+    expect(reused.problem.detail).toBe(
+      'The referenced payment intent already backs an order; a new card order needs a new payment',
+    );
+    expect(reused.problem.params).toEqual({ paymentIntentId: 'pi-used', status: 'succeeded' });
   });
 });
 
@@ -861,6 +935,7 @@ describe('snapshot v2 — buildSnapshot reads from stores and yields exactly the
       'savedAt',
       'schemaVersion',
       'simulatedSessionId',
+      'usedPaymentIntentIds',
     ]);
   });
 });
@@ -1044,8 +1119,16 @@ describe('OrderStore.toPersistedOrderState isolates per-session data (MIM-212 Un
       },
     };
 
-    order.seedFromSnapshot('sess-a', { intents: [intentA], receipts: [receiptA] });
-    order.seedFromSnapshot('sess-b', { intents: [intentB], receipts: [receiptB] });
+    order.seedFromSnapshot('sess-a', {
+      intents: [intentA],
+      receipts: [receiptA],
+      usedIntentIds: [],
+    });
+    order.seedFromSnapshot('sess-b', {
+      intents: [intentB],
+      receipts: [receiptB],
+      usedIntentIds: [],
+    });
 
     const a = order.toPersistedOrderState('sess-a');
     expect(a.intents).toEqual([intentA]);
