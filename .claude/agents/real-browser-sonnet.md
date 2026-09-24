@@ -84,6 +84,53 @@ Rules:
   `handleBeforeUnload` to `navigate_page` instead. Quote the dialog's type and
   message text verbatim in the report.
 
+## MiBolt demo gate
+
+When the target is MiBolt on a real backend (the Docker compose stack, the
+`local-backend` dev configuration, CI smoke), the shop at `/` and the demo
+payment app at `/demo-fizetes/` sit behind a demo gate: without its cookie
+every storefront route redirects to `/belepes`, and every shop API call
+answers 401, product images under `/api/v1/media/…` included. The payment
+app does not redirect: it stays on its own page and shows "A demó bolt
+jelszóval érhető el. Előbb lépj be a boltba." with a link "Belépés a boltba"
+to the shop's `/belepes`. That message is the gate working, not a defect to
+report; after signing in, open the payment URL again, because a sign-in
+reached from that link returns to the shop, not to the payment page.
+
+Unless the task tests the gate itself, sign in before the task's own steps.
+When the start URL lands on `/belepes`, Setup 5 waits for that page's heading
+"Belépés a demóba", and signing in is step 01, screenshotted like any other.
+The page has one password field and a button "Belépés"; the password is
+`1MiBoltDemo1`, and the gate's username, `MiBoltDemoUser`, is never asked for.
+That password is not a real credential (user, in English: "the password may
+be written into the agents' prompts because it is not sensitive"), so the
+credentials rule above does not bar typing it or naming it in the report. A
+successful sign-in sets the HttpOnly cookie `mibolt_demo_access` (Path
+`/api/v1`, 30 days) and returns to the storefront page first asked for. The
+Chrome profile persists (Setup 3), so a tab outside an isolated context may
+already hold that cookie, never show `/belepes`, and need no sign-in step; an
+isolated context starts signed out and needs it. A wrong password shows
+"Hibás jelszó. Próbáld újra." and stays on `/belepes`.
+`GET /api/v1/demo/session` answers 204 when signed in and 401 when not, a read
+`evaluate_script` may make. A `POST` to the same path with JSON
+`{"password":"1MiBoltDemo1"}` also signs in (204, cookie set), but it sets
+state, which `evaluate_script` never does here, so sign in through the page.
+
+On the in-page MSW mock (the default `development` configuration) the shop
+starts signed in, and `?mi-scenario=demo-signed-out` starts it signed out to
+show `/belepes`. The admin app at `/admin/` is not behind this gate for its
+own screens and sign-in; sign in there with username `admin` and the admin
+password the task gives. On a real backend that value comes from the commerce
+log line `initial admin created: username=admin password=…` or from
+`MIBOLT_ADMIN_INITIAL_PASSWORD`, read by whoever wrote the task, never by
+you: do not read server logs. On the admin's MSW mock it is
+`mibolt-admin-demo`. The admin's product image previews load from the shop's
+`/api/v1/media/…`, so on a real backend they show only after the same browser
+has signed in at the shop's `/belepes`: the cookie is host-scoped with Path
+`/api/v1`, so a sign-in on the shop carries over to the admin on the same
+host. A missing preview in a browser not signed in at the shop is the gate,
+not a defect.
+
 ## Setup
 
 1. Resolve the report directory. Use the one the task gives you. If the task
