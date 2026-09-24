@@ -25,6 +25,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       contracts: ${{ steps.filter.outputs.contracts }}
       tools: ${{ steps.filter.outputs.tools }}
+      smoke: ${{ steps.filter.outputs.smoke }}
     steps:
       - uses: actions/checkout@v7
       - id: filter
@@ -52,9 +53,14 @@ jobs:
     if: needs.changes.outputs.tools == 'true'
     uses: ./.github/workflows/tools.yml
 
+  smoke:
+    needs: changes
+    if: needs.changes.outputs.smoke == 'true'
+    uses: ./.github/workflows/smoke.yml
+
   ci-ok:
     name: ci-ok
-    needs: [changes, frontend, backend, contracts, tools]
+    needs: [changes, frontend, backend, contracts, tools, smoke]
     if: always()
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
