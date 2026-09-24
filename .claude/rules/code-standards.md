@@ -32,6 +32,17 @@ path-scoped rules trigger only on a read.
   without opening the file. A script directory with more than one file keeps
   its modules in named subdirectories with a `CLAUDE.md`, the same as
   `.claude/hooks/`.
+- **A Python tool runs through uv, pinned in the `mise.toml` of the area that
+  uses it**, the way `contracts/mise.toml` does: `uv` pinned under `[tools]`,
+  the tool beside it as `"pypi:<name>" = "<version>"`, and `pypi.uvx = true`
+  under `[settings]`, so mise installs it with that uv rather than falling
+  back to pipx, at the same version locally and in CI. A one-off run of a
+  tool no `mise.toml` pins is `uvx <name>@<version>`. Nothing Python is
+  installed with `pip`, `pipx` or a global or system Python, whose version is
+  whatever that machine has; a tool that cannot run through uv goes to the
+  user as a question before it is installed any other way. The rule is the
+  user's, in English: "if there is anything Python, let us preferably use uv
+  and uvx".
 - Every user-visible change is tested in a real browser with the
   chrome-devtools subagent, per `.claude/rules/browser-verification.md`.
   Typecheck and unit tests alone are never enough.
