@@ -400,11 +400,24 @@ export class CheckoutFacade {
    * result on `paymentIntent`. A 404 is returned in the result as a
    * `CheckoutError` and is NOT recorded on `error`, so the return
    * page can render its own recovery.
+   *
+   * A read is the other place the held intent is set, so it runs the
+   * same `dropStaleIntent` check against the session already in hand:
+   * the cold return adopts the session before it reads the intent
+   * (`payment-return-page.ts`), so a session-side-only guard would
+   * never see the stale intent and the review step would reach the
+   * CTA on it, which `dropStaleIntent` exists to prevent. The check
+   * is skipped before any session is loaded, where there is nothing
+   * to compare against.
    */
   async readPaymentIntent(paymentIntentId: string): Promise<CheckoutResult<PaymentIntent>> {
     try {
       const intent = await firstValueFrom(this.api.invoke(getPaymentIntent, { paymentIntentId }));
       this.paymentIntentWritable.set(intent);
+      const session = this.sessionWritable();
+      if (session !== null) {
+        this.dropStaleIntent(session);
+      }
       return { ok: true, value: intent };
     } catch (err) {
       const error = mapError(err);
@@ -532,6 +545,9 @@ export class CheckoutFacade {
    * step asks for a new payment instead of placing the order on a stale
    * one or dead-ending on a 409 (owner: a card order is never closed
    * without paying for it). A re-save that changes neither keeps it.
+   * Runs wherever the intent or the session is adopted — a section
+   * write, a session refetch, or a read of the intent — so the order the
+   * two arrive in cannot leave a stale intent in the signal.
    */
   private dropStaleIntent(session: CheckoutSession): void {
     const intent = this.paymentIntentWritable();

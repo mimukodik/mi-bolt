@@ -956,6 +956,48 @@ describe('payment intents', () => {
     expect(checkoutKeys.activeIntentId()).toBeNull();
   });
 
+  it('F-31f: a section write after the cart changed drops the intent the new total no longer matches', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    expect(
+      (
+        await checkout.updateDelivery({
+          optionId: 'home_delivery',
+          address: VALID_DELIVERY_ADDRESS,
+        })
+      ).ok,
+    ).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31g: the return leg does not adopt an intent the session it read first no longer matches', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const paidAmount = checkout.paymentIntent()?.amount.amount ?? 0;
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+
+    // The cold return starts a fresh app and hydrates the session before
+    // it reads the intent (`payment-return-page.ts`), so the read is the
+    // only place that can see the intent no longer matches the session.
+    TestBed.resetTestingModule();
+    configureTestBed();
+    const returning = TestBed.inject(CheckoutFacade);
+    await bootCart();
+    const session = await returning.ensureSession(true);
+    expect(session.ok).toBe(true);
+    if (!session.ok) return;
+    expect(session.value.summary.total.amount).not.toBe(paidAmount);
+
+    const read = await returning.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(returning.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
   it('F-32: a contact or billing write keeps the held intent', async () => {
     const checkout = await setupCompleteCardDraft();
     const created = await checkout.createPaymentIntent();
