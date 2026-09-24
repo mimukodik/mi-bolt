@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isRecord } from '../app/core/is-record';
+import { ANY_TRACE_ID } from '../testing/mock-spec-helpers';
 import {
   asText,
   bodyViolations,
@@ -26,9 +27,6 @@ import {
   unknownQueryParameter,
   wrongType,
 } from './backend-answers';
-
-/** The random `traceId` of every Problem body, typed `unknown` so an object literal may carry it. */
-const ANY_TRACE_ID: unknown = expect.any(String);
 
 async function bodyOf(response: Response): Promise<Record<string, unknown>> {
   const body: unknown = await response.json();

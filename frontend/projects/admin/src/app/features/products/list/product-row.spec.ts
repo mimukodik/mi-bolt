@@ -9,13 +9,16 @@
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { ANIMATION_MODULE_TYPE, Component } from '@angular/core';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { provideApiConfiguration } from '../../../api/generated/api-configuration';
 import type { AdminProductListItem } from '../../../api/generated/models/admin-product-list-item';
 
 import { formatPriceRange } from './price-range';
 import { ProductRow } from './product-row';
+import { ProductListStore } from './product-list.store';
 
 // See confirm-dialog.spec.ts:25 — the NoopAnimations spelling this
 // workspace uses, since `@angular/platform-browser/animations` is not
@@ -61,6 +64,13 @@ function createFixture(): ComponentFixture<ProductRow> {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ path: 'termekek/:productId', component: ProductEditStub }]),
+      provideHttpClient(withXhr()),
+      provideApiConfiguration(new URL('/api/v1', document.baseURI).href),
+      // The row now hosts `ProductRowActions` (F17), which injects the
+      // page's store; here the row is mounted on its own, so the store
+      // is provided directly. No request is made: nothing reads
+      // `dataSource()` in this spec.
+      ProductListStore,
       NOOP_ANIMATIONS,
     ],
   });

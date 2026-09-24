@@ -5,6 +5,7 @@ import { MatChip, MatChipSet } from '@angular/material/chips';
 import { MatIcon } from '@angular/material/icon';
 
 import type { ProductListRow } from './product-list.data-source';
+import { ProductRowActions } from './product-row-actions';
 import { formatPriceRange } from './price-range';
 
 /**
@@ -12,14 +13,14 @@ import { formatPriceRange } from './price-range';
  * loaded `AdminProductListItem` or `undefined` while its page is still
  * in flight. The whole row is a `role="row"` that navigates to the
  * edit screen on click or Enter, except when the interaction started
- * on the explicit edit link (or, later, F17's row menu button) — those
+ * on the explicit edit link (or F17's row menu button) — those
  * handle their own activation, so `open` steps aside for them.
  */
 @Component({
   selector: 'adm-product-row',
   templateUrl: './product-row.html',
   styleUrl: './product-row.css',
-  imports: [MatChip, MatChipSet, MatIcon, MatIconButton, RouterLink],
+  imports: [MatChip, MatChipSet, MatIcon, MatIconButton, ProductRowActions, RouterLink],
   host: {
     role: 'row',
     '[attr.aria-rowindex]': 'rowIndex()',

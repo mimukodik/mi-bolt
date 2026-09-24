@@ -39,8 +39,8 @@ function isSortableColumn(value: string): value is (typeof SORTABLE_COLUMNS)[num
 /**
  * The Termékek page (MIM-351, F16a/F16b): a filter row (`ProductFilters`)
  * above a sortable header row outside a `cdk-virtual-scroll-viewport` of
- * 52px `ProductRow`s, driven by `ProductListStore`. The row's
- * archive/restore menu (F17) is not built here.
+ * 52px `ProductRow`s, driven by `ProductListStore`; each row's
+ * archive/restore menu is `ProductRowActions` (F17).
  */
 @Component({
   selector: 'adm-product-list-page',

@@ -10,13 +10,11 @@ import { describe, expect, it } from 'vitest';
 
 import { isRecord } from '../app/core/is-record';
 import { useMswServer, server } from '../testing/msw-server';
+import { ANY_TRACE_ID, jsonRecord } from '../testing/mock-spec-helpers';
 import { createDb, type MockDb } from './db';
 import { issueXsrfCookie } from './guards';
 import { SEED_ADMIN } from './seed';
 import { usersHandlers } from './users.handlers';
-
-/** The random `traceId` of every Problem body, typed `unknown` so an object literal may carry it. */
-const ANY_TRACE_ID: unknown = expect.any(String);
 
 useMswServer();
 
@@ -37,13 +35,6 @@ function primeToken(db: MockDb): string {
 
 function isRecordArray(value: unknown): value is Record<string, unknown>[] {
   return Array.isArray(value) && value.every(isRecord);
-}
-
-/** Reads a JSON response body as a record, asserting the wire shape first. */
-async function jsonRecord(res: Response): Promise<Record<string, unknown>> {
-  const body: unknown = await res.json();
-  expect(isRecord(body)).toBe(true);
-  return isRecord(body) ? body : {};
 }
 
 /** Reads a JSON response body as an array of records, asserting the wire shape first. */
