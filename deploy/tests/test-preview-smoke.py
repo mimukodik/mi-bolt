@@ -125,6 +125,10 @@ class PreviewSmokeTests(unittest.TestCase):
             smoke.resolve()
             self.assertEqual(output.read_text(), "ready=false\n")
             output.write_text("")
+            self.pr = {**pr_state(), "labels": []}
+            smoke.resolve()
+            self.assertEqual(output.read_text(), "ready=false\n")
+            output.write_text("")
             self.pr = pr_state()
             old = Path.cwd()
             os.chdir(self.directory)
