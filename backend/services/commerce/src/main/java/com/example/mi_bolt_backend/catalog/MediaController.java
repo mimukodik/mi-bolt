@@ -16,8 +16,9 @@ import com.example.mi_bolt_backend.problem.ErrorCode;
 /**
  * Serves catalogue images. The image id is content-addressed: the SHA-256 hex
  * of the bytes is the file name, so an old URL never serves new bytes and
- * the response can carry a one-year immutable Cache-Control header. Public:
- * {@code /media/{imageId}} sits outside the scoped session-cookie prefixes.
+ * the response can carry a one-year immutable Cache-Control header. No
+ * session: {@code /media/{imageId}} sits outside the scoped session-cookie
+ * prefixes, while the demo gate still applies to it (MIM-423).
  */
 @RestController
 public class MediaController implements MediaApi {
