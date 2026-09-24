@@ -10,9 +10,91 @@
       name="description"
     />
     <link href="favicon.ico" rel="icon" type="image/x-icon" />
+    <!-- Cover screen until the first navigation settles; App removes it after its exit animation (MIM-404). -->
+    <style>
+      #mi-bolt-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 1100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #002340;
+        color: #ffffff;
+        font:
+          700 20px/1.2 'portal-font-bold',
+          ui-sans-serif,
+          system-ui,
+          'Segoe UI',
+          Arial,
+          sans-serif;
+      }
+      #mi-bolt-splash .splash__mark {
+        display: grid;
+        place-items: center;
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        background: #b4ff00;
+        color: #002340;
+        font-size: 40px;
+        line-height: 1;
+      }
+      #mi-bolt-splash .splash__label {
+        margin: 0;
+        letter-spacing: 0.02em;
+      }
+      #mi-bolt-splash .splash__dots {
+        display: flex;
+        gap: 8px;
+      }
+      #mi-bolt-splash .splash__dots span {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #b4ff00;
+        opacity: 0.3;
+        animation: shop-splash-pulse 1s ease-in-out infinite;
+      }
+      #mi-bolt-splash .splash__dots span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      #mi-bolt-splash .splash__dots span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      #mi-bolt-splash.splash--leaving {
+        animation: shop-splash-leave 250ms ease-in forwards;
+        pointer-events: none;
+      }
+      @keyframes shop-splash-pulse {
+        50% {
+          opacity: 1;
+          transform: scale(1.2);
+        }
+      }
+      @keyframes shop-splash-leave {
+        to {
+          opacity: 0;
+          transform: scale(1.03);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #mi-bolt-splash,
+        #mi-bolt-splash * {
+          animation: none !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <app-root></app-root>
+    <div id="mi-bolt-splash">
+      <div class="splash__mark">M</div>
+      <p class="splash__label">MiBolt</p>
+      <div class="splash__dots"><span></span><span></span><span></span></div>
+    </div>
     <template id="mi-bolt-fatal">
       <div aria-live="assertive" class="app-fatal" role="alert">
         <h1 class="app-fatal__title">A MiBolt demó indítása sikertelen</h1>

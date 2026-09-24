@@ -1,11 +1,39 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, DOCUMENT, inject } from '@angular/core';
+import {
+  NavigationCancel,
+  NavigationCancellationCode,
+  NavigationEnd,
+  NavigationError,
+  NavigationSkipped,
+  Router,
+  RouterOutlet,
+} from '@angular/router';
+import type { Event as RoutingEvent } from '@angular/router';
+import { first } from 'rxjs';
+
+import { dismissSplash } from '@mi-bolt/core-api/splash';
+
+/**
+ * Whether the router has finished a navigation, however it ended. A guard's
+ * redirect cancels with `NavigationCancellationCode.Redirect` and starts the
+ * next navigation, so that cancellation does not count.
+ */
+function isSettledNavigation(event: RoutingEvent): boolean {
+  return (
+    event instanceof NavigationEnd ||
+    event instanceof NavigationError ||
+    event instanceof NavigationSkipped ||
+    (event instanceof NavigationCancel && event.code !== NavigationCancellationCode.Redirect)
+  );
+}
 
 /**
  * `App` is the standalone root component that hosts the router
  * outlet. The class is intentionally thin: every behaviour is
  * colocated with the route or feature it serves, and providers are
  * wired in `appConfig`.
+ * Its one start-up duty: the index.html cover screen (`#mi-bolt-splash`,
+ * MIM-404) leaves once the first navigation has settled.
  */
 @Component({
   selector: 'app-root',
@@ -15,6 +43,15 @@ import { RouterOutlet } from '@angular/router';
 })
 export class App {
   protected readonly tag = 'app-root';
+
+  constructor() {
+    const document = inject(DOCUMENT);
+    inject(Router)
+      .events.pipe(first(isSettledNavigation))
+      .subscribe(() => {
+        void dismissSplash(document);
+      });
+  }
 
   /**
    * The skip link keeps its `#main-content` href for assistive tech, but the
