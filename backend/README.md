@@ -217,7 +217,13 @@ Liquibase migrations. The catalog loader and initial admin bootstrap skip
 already-populated data; rotating the initial password does not reset an
 existing admin account. A rehearsal reset is an explicit platform operation.
 The bootstrap username is `admin`. Stable receives its initial password from
-1Password; each preview gets an independent generated initial password.
+1Password. All previews share a separate preview-only admin password and a
+separate preview-only database password, both stored in the `berek` 1Password
+vault (`MIBOLT_PREVIEW_ADMIN_PASSWORD` and `MIBOLT_PREVIEW_DB_PASSWORD`).
+To rotate, update the item, wait for External Secrets to sync, then let existing
+previews expire or recreate them by removing and re-adding `bolt-preview` after
+teardown. Existing accounts and database roles keep their copied password until
+that preview is destroyed.
 
 Changes under the Liquibase migrations or `data/catalog/` require a new approved
 template fingerprint before preview admission. See the
