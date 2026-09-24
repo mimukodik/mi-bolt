@@ -1,9 +1,17 @@
-import { HttpErrorResponse, HttpEventType, provideHttpClient, withXhr } from '@angular/common/http';
+import {
+  HttpBackend,
+  HttpErrorResponse,
+  HttpEventType,
+  HttpXhrBackend,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
 import { provideApiConfiguration } from '../../api/generated/api-configuration';
 import type { UploadedImage } from '../../api/generated/models/uploaded-image';
+import { USE_XHR, transportInterceptor } from '../../core/api/transport.interceptor';
 
 import { MediaUploader } from './media-uploader';
 import type { UploadProgress } from './media-uploader';
@@ -17,8 +25,10 @@ describe('MediaUploader', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withXhr()),
+        provideHttpClient(withInterceptors([transportInterceptor])),
         provideHttpClientTesting(),
+        // The upload goes to HttpXhrBackend (transportInterceptor); map it onto the testing backend so HttpTestingController sees it.
+        { provide: HttpXhrBackend, useExisting: HttpBackend },
         provideApiConfiguration('http://api.test/api/v1'),
       ],
     });
@@ -37,6 +47,7 @@ describe('MediaUploader', () => {
 
     const request = controller.expectOne(UPLOAD_URL);
     expect(request.request.method).toBe('POST');
+    expect(request.request.context.get(USE_XHR)).toBe(true);
     // The generated RequestBuilder (api/generated/request-builder.ts) only ever
     // sets this deprecated flag; the XHR backend still honours it (OR'd with the
     // newer reportUploadProgress/reportDownloadProgress, _module-chunk.mjs:1954-1955).

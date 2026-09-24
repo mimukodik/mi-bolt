@@ -1,7 +1,7 @@
 /**
  * MIM-423 — the demo gate as the storefront sees it.
  *
- * The contract puts every shop operation except `GET /media/{imageId}`
+ * The contract puts every shop operation, catalogue images included,
  * behind the `mibolt_demo_access` cookie: without it they answer 401
  * `DemoAccessRequired`. The owner's goal is keeping robots out of the demo
  * rather than a security boundary, so only that 401 closes the shop. A

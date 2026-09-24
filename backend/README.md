@@ -31,9 +31,8 @@ Environment variables the service reads, with their defaults:
 | `MIBOLT_CATALOG_PATH`                | `../../../data/catalog` (relative to `services/commerce/`; the Docker image sets it to `/app/data/catalog`) |
 
 The service answers on port 8080, under the context path `/api/v1`.
-Every shop call except `GET` and `POST /demo/session` and
-`GET /media/{imageId}` needs the demo gate's cookie (`mibolt_demo_access`,
-30 days), which `POST /demo/session` issues for the demo password; the admin
+Every shop call except `GET` and `POST /demo/session`, product images
+included, needs the demo gate's cookie (`mibolt_demo_access`, 30 days), which `POST /demo/session` issues for the demo password; the admin
 API keeps its own sign-in (docs/decisions/0022-demo-access-gate.md).
 
 ## 📋 The stack

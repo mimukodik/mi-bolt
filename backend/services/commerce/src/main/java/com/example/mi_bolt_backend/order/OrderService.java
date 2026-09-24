@@ -167,6 +167,11 @@ public class OrderService {
 						"The referenced payment intent was declined. A new attempt needs a new idempotency key",
 						Map.of("paymentIntentId", paymentIntentId, "status", intent.status()));
 			}
+			if (orders.existsByPaymentIntentId(paymentIntentId)) {
+				throw new DomainException(ErrorCode.PAYMENT_REQUIRED,
+						"The referenced payment intent already backs an order; a new card order needs a new payment",
+						Map.of("paymentIntentId", paymentIntentId, "status", intent.status()));
+			}
 			if (intent.amount() != checkout.summary().total()) {
 				throw new DomainException(ErrorCode.PRICE_CHANGED,
 						"The payment intent amount does not match the current total",

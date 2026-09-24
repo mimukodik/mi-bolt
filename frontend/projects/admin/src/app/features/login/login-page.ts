@@ -12,6 +12,7 @@ import type { TreeValidationResult } from '@angular/forms/signals';
 
 import { AdminSession } from '../../core/auth/admin-session';
 import { isLoginPath } from '../../core/auth/login-path';
+import { applyMaterialSymbolsFont } from '../../core/icons/icon-font';
 import { MESSAGES } from '../../shared/forms/messages';
 import { SubmitAttempt } from '../../shared/forms/submit-attempt';
 
@@ -78,6 +79,10 @@ export class LoginPage {
   });
 
   protected readonly passwordVisible = signal(false);
+
+  constructor() {
+    applyMaterialSymbolsFont();
+  }
 
   protected togglePassword(): void {
     this.passwordVisible.update((visible) => !visible);

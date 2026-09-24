@@ -14,6 +14,7 @@ import { HttpResponse, http } from 'msw';
 import { of } from 'rxjs';
 import { MatSidenav } from '@angular/material/sidenav';
 import { MatDialog } from '@angular/material/dialog';
+import { MatIconRegistry } from '@angular/material/icon';
 import type { MockResult } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -156,6 +157,13 @@ describe('ShellComponent', () => {
       const brandBar = toolbars[1];
       const text = brandBar.textContent;
       expect(text).toContain('MiBolt Admin');
+    });
+
+    it('points mat-icon at the self-hosted Material Symbols font', () => {
+      // Fails if the constructor stops calling applyMaterialSymbolsFont().
+      expect(TestBed.inject(MatIconRegistry).getDefaultFontSetClass()).toEqual([
+        'material-symbols-outlined',
+      ]);
     });
 
     it('lays the content area out as a column, so main can take the remaining height', () => {

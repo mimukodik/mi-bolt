@@ -9,7 +9,7 @@ stored in the database on the first start, and a gate over the SPA and the
 API, while the admin application keeps its own sign-in. Contract 2.2.0
 declares it: the `demoAccess` cookie scheme (`mibolt_demo_access`),
 `GET` and `POST /demo/session`, and a 401 `DemoAccessRequired` on every shop
-operation except `GET /media/{imageId}`.
+operation except `GET /media/{imageId}`; contract 2.3.0 gates that one too.
 
 ## Decision
 
@@ -34,13 +34,18 @@ operation except `GET /media/{imageId}`.
   page.
 - `DemoAccessFilter` (`@Order(HIGHEST_PRECEDENCE + 5)`: after `TraceIdFilter`,
   before `SessionCookieFilter`) gates by default and leaves open `/admin`,
-  `/demo/session`, `/media` and `/actuator`, each as the path itself or the
-  path plus `/`. A refused request gets the house Problem through the
+  `/demo/session` and `/actuator`, each as the path itself or the path plus
+  `/`. A refused request gets the house Problem through the
   `handlerExceptionResolver`, as `ProblemAuthenticationEntryPoint` renders
   it, and is never issued a `mibolt_session`.
-- `/media` stays open (away decision 1 on MIM-430): the admin previews load
-  images from there without a demo cookie, and an image id is a content hash
-  a client can only learn from the gated catalogue.
+- `/media` is gated too (contract 2.3.0). The first version left it open
+  (away decision 1 on MIM-430) so the admin previews would load without a
+  demo cookie; the owner reversed that in the away-mode walk. An admin image
+  preview now shows only after the same browser has signed in at the shop's
+  `/belepes` (the cookie is host-scoped with `Path=/api/v1`); the missing
+  preview fallback is MIM-444. `Cache-Control: public, max-age=31536000,
+  immutable` stays: the bytes are the same for every visitor and nginx adds
+  no shared cache.
 - Every `@IntegrationTest` MockMvc request carries a valid demo cookie through
   a `MockMvcBuilderCustomizer` default request, so the shop tests stay as
   they were; a test that sets its own `mibolt_demo_access` cookie replaces it.
@@ -52,8 +57,8 @@ operation except `GET /media/{imageId}`.
 - Robots get a 401 from every shop call; nginx adds `robots.txt`
   (`Disallow: /`) and `X-Robots-Tag: noindex, nofollow` on top (MIM-423
   nginx unit).
-- A leaked image URL opens without the cookie; nothing links to one outside
-  the gated catalogue.
+- A leaked image URL answers 401 without the cookie, unless a shared cache
+  between the visitor and the server already holds it under `public`.
 - Expired `demo_access_session` rows are kept; there is no cleanup job.
 - The Atlassian validator checks only that a security cookie is present, so
   a contract-validated 401 test sends an invalid cookie rather than none; the
