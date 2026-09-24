@@ -41,6 +41,23 @@
   --color-status-warning: var(--color-warning);
   --color-status-warning-text: var(--color-warning-text);
   --color-status-info: var(--color-surface-sky);
+  /* Alert grounds (MIM-240): each status colour mixed onto the light surface.
+     yettel's alerts use solid grounds; these mixes are this project's own. */
+  --color-status-success-soft: color-mix(
+    in srgb,
+    var(--color-status-success) 12%,
+    var(--color-surface-light)
+  );
+  --color-status-warning-soft: color-mix(
+    in srgb,
+    var(--color-status-warning) 22%,
+    var(--color-surface-light)
+  );
+  --color-status-error-soft: color-mix(
+    in srgb,
+    var(--color-status-error) 8%,
+    var(--color-surface-light)
+  );
 
   /* color focus */
   --color-focus-light: var(--color-primary);
