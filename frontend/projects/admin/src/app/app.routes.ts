@@ -2,7 +2,6 @@ import type { Routes } from '@angular/router';
 
 import { adminAuthGuard } from './core/auth/admin-auth.guard';
 import { guestOnlyGuard } from './core/auth/guest-only.guard';
-import { ShellComponent } from './layout/shell.component';
 
 export const routes: Routes = [
   {
@@ -12,7 +11,10 @@ export const routes: Routes = [
   },
   {
     path: '',
-    component: ShellComponent,
+    // The shell (toolbar, side navigation, account menu, and the MatDialog and
+    // MatSnackBar it injects) loads with this route, so none of it is in the
+    // initial bundle (MIM-404).
+    loadComponent: () => import('./layout/shell.component').then((m) => m.ShellComponent),
     canActivate: [adminAuthGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'attekintes' },
