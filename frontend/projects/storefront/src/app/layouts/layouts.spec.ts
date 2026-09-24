@@ -581,6 +581,30 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     // same check has to come back negative for it.
     expect(getComponentDependencies(HeaderNav)).not.toContain(AccessibleDialog);
   });
+
+  it('HeaderNav defers the mobile drawer instead of depending on it directly (MIM-443)', () => {
+    // A dependency used only inside @defer is compiled into the defer block's
+    // own loader, not into the component's dependency list, which is what
+    // keeps @angular/cdk out of the initial bundle.
+    expect(getComponentDependencies(HeaderNav)).not.toContain(MobileDrawer);
+  });
+
+  it('HeaderNav renders the drawer dialog on the first menu press (MIM-443)', async () => {
+    const f = TestBed.createComponent(HeaderNav);
+    f.componentRef.setInput('variant', 'marketing');
+    await f.whenStable();
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const trigger = raw.querySelector('[data-testid="menu-trigger"]');
+    if (!(trigger instanceof HTMLButtonElement))
+      throw new Error('Expected the menu trigger button');
+    trigger.click();
+    await f.whenStable();
+
+    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+  });
 });
 
 describe('T11-AC05 demo notice and cart badge wiring', () => {
