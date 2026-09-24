@@ -13,6 +13,8 @@ server {
 
     # The backend owns every header on its responses (ADR 0018); no fallback under /api/.
     location ^~ /api/ {
+        # gzip weakens a strong ETag to W/"n"; keep the backend's strong ETag for If-Match writes.
+        gzip off;
         client_max_body_size 2m;
         proxy_pass ${BACKEND_ORIGIN};
         proxy_set_header Host $http_host;
