@@ -19,7 +19,8 @@ deployment compose file, and the import/agent tooling. This page is the map;
 | `.github/`                 | The CI workflows and the `components.yml` path filters they read.                                                                                                                       |
 | `.claude/`                 | The agent rules, skills, agent definitions and shared memory for this workspace.                                                                                                        |
 | `mise.toml`                | The root command list; see "Root commands" below.                                                                                                                                       |
-| `README.md`                | The frontend dev-server and CI walkthrough.                                                                                                                                             |
+| `README.md`                | The monorepo's entry point: install, start modes, workflows, command reference.                                                                                                         |
+| `frontend/README.md`       | The Angular workspace: projects, npm scripts, configurations, tests.                                                                                                                    |
 | `CLAUDE.md`                | The Angular/TypeScript conventions this repository follows.                                                                                                                             |
 
 ## Root commands
