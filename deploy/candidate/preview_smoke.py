@@ -7,7 +7,7 @@ import re
 import subprocess
 import tempfile
 import time
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 REPO = 'mimukodik/mi-bolt'
 
@@ -104,14 +104,18 @@ def fence(receipt):
     origin = f"https://bolt-pr-{receipt['pr']}.mimukodik.hu"
     # Cache busting plus no-cache response prevents an edge cache from accepting
     # a receipt from a previous generation sharing the PR hostname.
-    with urlopen(origin + '/__candidate.json?t=' + str(time.time_ns()), timeout=15) as response:
+    headers = {'User-Agent': 'Mozilla/5.0 (compatible; MiBoltPreviewSmoke/1.0)',
+               'Accept': 'application/json'}
+    request = Request(origin + '/__candidate.json?t=' + str(time.time_ns()), headers=headers)
+    with urlopen(request, timeout=15) as response:
         observed = json.load(response)
     expected = {'candidateId': receipt['candidateId'], 'headSha': receipt['headSha'],
                 'publisherRunId': receipt['publisherRunId'],
                 'images': {c: receipt['images'][c]['digest'] for c in ('web', 'commerce')}}
     if observed != expected:
         raise ValueError('preview is not the requested candidate')
-    with urlopen(origin + '/api/v1/actuator/health/readiness', timeout=15) as response:
+    request = Request(origin + '/api/v1/actuator/health/readiness', headers=headers)
+    with urlopen(request, timeout=15) as response:
         if json.load(response)['status'] != 'UP':
             raise ValueError('backend not ready')
     return origin

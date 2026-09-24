@@ -55,9 +55,9 @@ class PreviewSmokeTests(unittest.TestCase):
         def request(observed, health="UP"):
             calls = []
 
-            def open_url(url, timeout):
-                calls.append(url)
-                body = observed if "/__candidate.json" in url else {"status": health}
+            def open_url(request, timeout):
+                calls.append(request)
+                body = observed if "/__candidate.json" in request.full_url else {"status": health}
                 return io.BytesIO(json.dumps(body).encode())
 
             with patch.object(smoke, "urlopen", side_effect=open_url):
@@ -65,8 +65,10 @@ class PreviewSmokeTests(unittest.TestCase):
 
         origin, calls = request(expected)
         self.assertEqual(origin, "https://bolt-pr-123.mimukodik.hu")
-        self.assertIn("/__candidate.json?t=", calls[0])
-        self.assertEqual(calls[1], origin + "/api/v1/actuator/health/readiness")
+        self.assertIn("/__candidate.json?t=", calls[0].full_url)
+        self.assertEqual(calls[1].full_url, origin + "/api/v1/actuator/health/readiness")
+        self.assertTrue(all(call.get_header("User-agent") for call in calls))
+        self.assertTrue(all(call.get_header("Accept") == "application/json" for call in calls))
         for mutation in (
             {**expected, "publisherRunId": 457},
             {**expected, "headSha": "f" * 40},
@@ -77,8 +79,8 @@ class PreviewSmokeTests(unittest.TestCase):
                     smoke, "urlopen", return_value=io.BytesIO(json.dumps(mutation).encode())):
                 with self.assertRaisesRegex(ValueError, "not the requested candidate"):
                     smoke.fence(receipt)
-        with patch.object(smoke, "urlopen", side_effect=lambda url, timeout:
-                          io.BytesIO(json.dumps(expected if "/__candidate.json" in url
+        with patch.object(smoke, "urlopen", side_effect=lambda request, timeout:
+                          io.BytesIO(json.dumps(expected if "/__candidate.json" in request.full_url
                                                 else {"status": "DOWN"}).encode())):
             with self.assertRaisesRegex(ValueError, "backend not ready"):
                 smoke.fence(receipt)
