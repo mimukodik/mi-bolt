@@ -242,7 +242,14 @@ this section: Playwright generates them (`npx playwright init-agents
 --loop=claude`, https://playwright.dev/docs/test-agents, which has them
 regenerated whenever Playwright is updated), and what each hands back is a
 plan, a spec file or a repaired test on disk, which the `playwright-tests`
-skill has the orchestrator read itself.
+skill has the orchestrator read itself. **Their text is never edited, not
+even to add a section**: an instruction or an example those three agents
+need goes into `frontend/e2e/seed.spec.ts`, as a comment or as example code,
+because that file is what they read while they work, and a regeneration would
+drop anything written into the definitions (user, in English: "rewriting the
+playwright-* agents' prompts is forbidden!!! that is what seed.spec.ts is
+for!!!! everything that is an instruction goes in there, as an example or in
+a comment, because that is what the playwright agents read when they work").
 
 **"What was verified" is the section that does the work.** A claim with no
 command, path or URL behind it is what this shape exists to make visible, and

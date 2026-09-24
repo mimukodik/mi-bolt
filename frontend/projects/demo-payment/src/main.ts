@@ -3,6 +3,8 @@ import localeHu from '@angular/common/locales/hu';
 import { isDevMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 
+import { SPLASH_ID } from '@mi-bolt/core-api/splash';
+
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 
@@ -79,4 +81,6 @@ const start = async (): Promise<void> => {
 
 void start().catch((err: unknown) => {
   console.error(err);
+  // A failed start never reaches the payment page, so the cover screen goes here.
+  document.getElementById(SPLASH_ID)?.remove();
 });

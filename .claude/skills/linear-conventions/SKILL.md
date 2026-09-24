@@ -404,9 +404,8 @@ required unless a `template` is passed. Filing it is an outward-facing action
 like a comment on a related issue, so the **Who writes it.** paragraph below
 governs who asks and who writes. On PX-614 the finding sat in a summary
 comment on an issue that was minutes from `Done`, and the issue owner caught
-it: "de miert oda?
-zarni fogjuk a taskot most hogy befejeztuk!" ("but why there? we are going to
-close the task now that we have finished!"). It became PX-756 under PX-488.
+it (in English: "but why there? we are going to close the task now that we
+have finished!"). It became PX-756 under PX-488.
 
 **Who writes it.** A subagent doing the work never writes to a related issue
 on its own initiative; it reports the finding upward and stops there. Both the

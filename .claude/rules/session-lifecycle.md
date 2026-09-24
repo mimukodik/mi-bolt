@@ -222,9 +222,9 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   orchestrator measures it or decides the work goes on without it. One
   read-back agent built a repository and a second directory to act as its
   remote, both inside the session scratchpad, and pushed between them to see
-  how a remote-tracking ref behaved; the user's reply was "Nem ugy volt hogy
-  csak te pusholhatsz? mert aki dolgozik eppen agent pusholt" ("Wasn't it that
-  only you may push? Because the agent that is currently working pushed").
+  how a remote-tracking ref behaved; the user's reply was, in English:
+  "Wasn't it that only you may push? Because the agent that is currently
+  working pushed".
 - **Nothing is undone with git.** No `git checkout --`, `git restore`,
   `git stash`, `git reset`, or `git clean` to remove work, mine or anyone
   else's, however out of scope it turned out to be. Work that does not belong
@@ -429,8 +429,6 @@ behind a quoted fragment, and as a separate paragraph directly under a block
 quote or a code block. A path, an identifier, a command and a commit subject
 stay exactly as they are, with no second copy, because a translated one no
 longer matches anything a search would find. One session had to be told twice
-in the same run, "forditsd le magyarra mert nem ertem" ("translate it into
-Hungarian because I do not understand it") and then "magyarul ird le a
-valaszban angolul irt reszeket mert nem ertem igy az indoklast" ("write the
-parts of the reply that are in English in Hungarian, because I cannot follow
-the reasoning this way").
+in the same run by the user, in English: "translate it into Hungarian
+because I do not understand it" and then "write the parts of the reply that
+are in English in Hungarian, because I cannot follow the reasoning this way".

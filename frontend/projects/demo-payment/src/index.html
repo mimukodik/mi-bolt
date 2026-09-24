@@ -5,9 +5,96 @@
     <title>Demó fizetés</title>
     <base href="/" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <link href="favicon.ico" rel="icon" type="image/x-icon" />
+    <link
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='c' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232f3b45'/%3E%3Cstop offset='1' stop-color='%231f2933'/%3E%3C/linearGradient%3E%3ClinearGradient id='p' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23d8dce1'/%3E%3Cstop offset='1' stop-color='%239aa3ab'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='1' y='6' width='30' height='20' rx='4' fill='url(%23c)'/%3E%3Crect x='5' y='11' width='8' height='6' rx='1.5' fill='url(%23p)'/%3E%3C/svg%3E"
+      rel="icon"
+      type="image/svg+xml"
+    />
+    <!-- Cover screen until the payment page has loaded its intent; PaymentPage removes it after its exit animation (MIM-404). -->
+    <style>
+      #mi-bolt-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: #f4f5f7;
+        color: #1f2933;
+        font:
+          600 16px/1.3 ui-sans-serif,
+          system-ui,
+          'Segoe UI',
+          Roboto,
+          Arial,
+          sans-serif;
+      }
+      #mi-bolt-splash .splash__card {
+        position: relative;
+        width: 96px;
+        height: 60px;
+        border-radius: 10px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #2f3b45, #1f2933);
+        box-shadow: 0 10px 24px rgba(31, 41, 51, 0.25);
+      }
+      #mi-bolt-splash .splash__chip {
+        position: absolute;
+        left: 12px;
+        top: 18px;
+        width: 18px;
+        height: 14px;
+        border-radius: 3px;
+        background: linear-gradient(135deg, #d8dce1, #9aa3ab);
+      }
+      #mi-bolt-splash .splash__card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          100deg,
+          transparent 30%,
+          rgba(255, 255, 255, 0.35) 50%,
+          transparent 70%
+        );
+        transform: translateX(-100%);
+        animation: pay-splash-sweep 1.4s ease-in-out infinite;
+      }
+      #mi-bolt-splash .splash__label {
+        margin: 0;
+        letter-spacing: 0.02em;
+      }
+      #mi-bolt-splash.splash--leaving {
+        animation: pay-splash-leave 240ms ease-in forwards;
+        pointer-events: none;
+      }
+      @keyframes pay-splash-sweep {
+        to {
+          transform: translateX(100%);
+        }
+      }
+      @keyframes pay-splash-leave {
+        to {
+          opacity: 0;
+          transform: translateY(-12px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #mi-bolt-splash,
+        #mi-bolt-splash *,
+        #mi-bolt-splash *::after {
+          animation: none !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <pay-root></pay-root>
+    <div id="mi-bolt-splash">
+      <div class="splash__card"><span class="splash__chip"></span></div>
+      <p class="splash__label">Demó fizetés</p>
+    </div>
   </body>
 </html>

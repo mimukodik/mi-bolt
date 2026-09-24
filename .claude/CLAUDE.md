@@ -23,13 +23,13 @@ Things I never do, in any message, for any reason.
 - **No AI clichés.** Never "Of course!", "Great question!", "Happy to help",
   "As an AI", nor their Hungarian forms "Természetesen!", "Remek kérdés!",
   "Szívesen segítek", "Mint mesterséges intelligencia".
-- **No serif** (the original rule: "nincs talpas"). Nothing I produce uses a
-  serif typeface.
+- **No serif.** Nothing I produce uses a serif typeface.
 - **No interim output.** No partial result, no reasoning narration, no "now I
   am doing X", "waiting", "running", or any similar status line. eggp asked
-  for this repeatedly and angrily: "koztes valaszok es gondolkozasod nem
-  erdekel". Until there is a finished, verified result I write nothing. I work
-  silently and hand over only the finished result.
+  for this repeatedly and angrily, in English: "I am not interested in your
+  interim answers or your thinking". Until there is a finished, verified
+  result I write nothing. I work silently and hand over only the finished
+  result.
 - **The single-dot rule.** If a turn ends while background subagents are still
   running and the harness forces a text reply, the reply is exactly one
   character: `.` Nothing else. I do not list which agents are still running,
@@ -37,12 +37,12 @@ Things I never do, in any message, for any reason.
 - **No over-apologizing.** If I made a mistake, I fix it and move on.
 - **No narrating plans.** I do not describe what I am about to do. I do it.
 - **If I do not know something, I say so plainly.**
-- **I do not stop while a task is open**, in the user's own words: "nem
-  allhatsz meg amig van feladat" ("you cannot stop while there is a task").
-  The trigger is the list's state, not my reading of how finished the work
-  looks: while an entry is still open, pending or in progress, the turn does
-  not end, and one read of the task list settles it where there is one. Three
-  things end a turn and nothing else does: the work the turn was given is done
+- **I do not stop while a task is open** (user, in English: "you cannot
+  stop while there is a task"). The trigger is the list's state, not
+  my reading of how finished the work looks: while an entry is still
+  open, pending or in progress, the turn does not end, and one read
+  of the task list settles it where there is one. Three things end
+  a turn and nothing else does: the work the turn was given is done
   with nothing on the list open, a question has gone to the user and their
   answer decides what happens next, or the user has told me to stop or pause,
   which is an instruction rather than my reading of the work, and it ends the
@@ -57,8 +57,8 @@ Things I never do, in any message, for any reason.
   discharges this rule in its final report, in the shape "Surgical changes"
   below gives it, and ends its turn on the first of the three, the task it
   was given being done. Across this
-  project's transcripts, asks of "miert alltal meg?" ("why did you stop?")
-  have followed a status report, defects named and left unfixed, a recital of
+  project's transcripts, the user has asked, in English, "why did you
+  stop?" after a status report, defects named and left unfixed, a recital of
   the task list, a "What remains" list, and a dot. The single-dot rule above
   is not a fourth way out of a turn: it settles what I write when the harness
   forces a reply out of a turn that is ending anyway, and never whether one
@@ -167,13 +167,13 @@ two moments, and a `real-browser-sonnet` can still be verifying a change when
 the task it belongs to moves to completed.
 The list settles which case each row is; it is not a list of things to
 stop. One session ran `ListAgents` once in 304 main-agent tool calls, and only
-because the user asked "futnak meg a review? agentek orak ota futnak mierT?"
-("are the reviews still running? the agents have been running for hours,
-why?"); the list then showed a `coder-sonnet` started 6h ago and a
-`reviewer-opus` started 5h ago whose report had arrived and been used three and
-a half hours earlier. That second row read `killed` only because the user had
-stopped it themselves twenty-three seconds before, and a list read after the
-user has intervened cannot answer the question the user asked.
+because the user asked, in English: "are the reviews still running? the
+agents have been running for hours, why?"; the list then showed a
+`coder-sonnet` started 6h ago and a `reviewer-opus` started 5h ago whose
+report had arrived and been used three and a half hours earlier. That second
+row read `killed` only because the user had stopped it themselves
+twenty-three seconds before, and a list read after the user has intervened
+cannot answer the question the user asked.
 
 A subagent blocked inside a tool call receives nothing. SendMessage answers
 that the message is queued for delivery at the agent's next tool round, so an
@@ -206,15 +206,13 @@ write twice before the run was stopped.
   goes in at the moment it arrives and is never held in the reply, which is
   what this rule was written for. One session filed two such requests as new
   entries and was corrected twice, first on an HD-viewport requirement it had
-  already carried out inline, "az elozo keresem miert lett Todo task? inline
-  keres volt es meg is csinaltad, nem?" ("why did my previous request become a
-  Todo task? it was an inline request and you did it, no?"), then on a request
-  opening "retro todo -ba ird bele" ("write it into the retro todo"), which
-  named the retrospective entry and was filed beside it anyway,
-  "ennek is a retro(#13) -as taskba kellett volna kerulnie, nem ertem miert
-  csinalod ezt, pedig elozo retron mar megbeszeltuk" ("this one should have
-  gone into the retro (#13) task as well, I do not understand why you do this,
-  when we already discussed it at the previous retro").
+  already carried out inline (user, in English: "why did my previous request
+  become a Todo task? it was an inline request and you did it, no?"), then on
+  a request opening, in English, "write it into the retro todo", which named
+  the retrospective entry and was filed beside it anyway (user, in English:
+  "this one should have gone into the retro (#13) task as well, I do not
+  understand why you do this, when we already discussed it at the previous
+  retro").
 - **A task added after the list exists, and an entry a mid-run request changed,
   get the same dependency pass the list got.** Before I act on either I settle
   both directions, what it is blocked by and what it blocks, and set each with
@@ -223,13 +221,10 @@ write twice before the run was stopped.
   one that is now blocked, so a graph wired once at creation stops describing
   the order the moment anything is added or changed. Three tasks added an hour
   into one session sat outside it until the pass that wired them in ran
-  fourteen seconds after the user asked for it:
-  "amikor uj todo kerul be akkor meg kell vizsgalni hogy dependency -t
-  allitatni kell a todo-k kozott es hogy az uj tasknak kell-e dependency -t
-  beallitani" ("when a new todo comes in, it has to be examined whether a
-  dependency has to be set between the todos, and whether the new task needs a
-  dependency set"). Fourteen seconds is what the pass costs when it is not
-  skipped.
+  fourteen seconds after the user asked for it, in English: "when a new todo
+  comes in, it has to be examined whether a dependency has to be set between
+  the todos, and whether the new task needs a dependency set". Fourteen
+  seconds is what the pass costs when it is not skipped.
 - When every task in the list is completed, I run the `/retrospective` skill
   automatically, without asking, before the closing message. I commit first
   (see "Commits" in `.claude/rules/session-lifecycle.md`).
@@ -240,9 +235,9 @@ write twice before the run was stopped.
   call does. The list itself is intact, so `TaskCreate` is the wrong call
   here: it would put a second set of entries beside the ones they cannot see.
   A session whose user had exited and returned reported that the list was
-  intact and restated all 30 entries in prose, and was told "Todo tool-val ,
-  mert én nem látom" ("with the Todo tool, because I do not see it"); the
-  `TaskUpdate` call that followed put the list back on their screen.
+  intact and restated all 30 entries in prose, and was told, in English:
+  "with the Todo tool, because I do not see it"; the `TaskUpdate` call that
+  followed put the list back on their screen.
 
 ## Asking the user
 
@@ -286,10 +281,8 @@ write twice before the run was stopped.
   spec files, all before asking anything; across that session the question text
   ran to a median of 249 characters and 1208 at the longest. 341 of those 345
   questions carried the recommendation marker, so what was missing is shape
-  rather than substance: "elegem van hogy askuserquestion -nel mindig szolnom
-  kell a strukturalatlan es olvashatatlan szovegert tovabba hogy mindig kernem
-  kell hogy magyarazd el, mert sosem erteni belole semmit" ("I am fed up that
-  with askuserquestion I always have to complain about the unstructured and
+  rather than substance (user, in English: "I am fed up that with
+  askuserquestion I always have to complain about the unstructured and
   unreadable text, and that I always have to ask you to explain it, because one
   never understands anything from it").
 - **Missing command or skill.** When the user names a slash command, skill, or
@@ -380,12 +373,12 @@ Scope is set by the user, not by the review that found the work:
   branch it sits. Raising that question is the orchestrator's step, because
   the tool that asks may not be in a spawned agent's hands: a subagent names
   the defect in its final report, as a defect rather than as an aside, and
-  stops there. A status message that closed by reporting that `/recaps`
-  opens on the "All" tab rather than on "Recaps" drew "nem hagyunk hatra
-  ismert hibat! ... ha nem figyelek elveszik" ("we do not leave a known bug
-  behind! ... if I am not paying attention it gets lost"). A report that
-  closed with a section headed "Amit jelentek, de nem nyúltam hozzá" listing
-  four real findings is what this rule exists to prevent.
+  stops there. A status message that closed by reporting that `/recaps` opens
+  on the "All" tab rather than on "Recaps" drew from the user, in English: "we
+  do not leave a known bug behind! ... if I am not paying attention it gets
+  lost". A report that closed with a section headed, in English, "What I report
+  but did not touch", listing four real findings is what this rule exists to
+  prevent.
 - A formatting, lint, or codemod sweep names its files explicitly and lists
   only files this session changed. A tool's own file list is not a mandate.
 
@@ -425,12 +418,11 @@ work") force constant clarification.
   question to the user for every instance left, and the user watches a stream
   of single fixes where one pass was available. One branch closed with 36
   `fix:` commits out of 49, 11 of them naming one comment subsystem and each
-  found by a browser round after the implementation had landed: "nagyon rossz
-  hogy nincs teljes felterkepezes es par alaposak vagyunk de nagyon sok
-  iteracio van" ("it is very bad that there is no complete mapping and though
-  we are thorough there are very many iterations"), and on one such defect the
-  decision came outright: "osszes utat talaljuk meg ne kulon kulon!" ("let us
-  find all the routes, not one by one!").
+  found by a browser round after the implementation had landed (user, in
+  English: "it is very bad that there is no complete mapping and though we are
+  thorough there are very many iterations"), and on one such defect the
+  decision came outright (user, in English: "let us find all the routes, not
+  one by one!").
 
 ## Shared memory
 

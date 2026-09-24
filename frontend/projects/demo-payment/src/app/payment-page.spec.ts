@@ -10,12 +10,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 
 import { server, useMswServer } from '../../../../tests/msw-server';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
+import { SPLASH_ID } from '@mi-bolt/core-api/splash';
 
 import { PaymentPage, LOCATION_ASSIGN } from './payment-page';
 import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
@@ -385,6 +386,39 @@ describe('PaymentPage', () => {
     expect(text(fixture, 'h1')).toBe('Fizetés jóváhagyása');
     expect(captured.filter((c) => c.method === 'GET')).toHaveLength(2);
     expect(document.activeElement).not.toBe(hostElement(fixture).querySelector('h1'));
+  });
+
+  it('MIM-404: the cover screen stays while the intent loads and leaves once it has loaded', async () => {
+    await configureTestBed();
+    let release: (() => void) | undefined;
+    const loaded = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${BASE_URL}/payment-intents/:id`, async () => {
+        await loaded;
+        return HttpResponse.json(intentOpen);
+      }),
+    );
+    const splash = document.createElement('div');
+    splash.id = SPLASH_ID;
+    // jsdom has no Web Animations API: no animation runs, so the element goes once dismissed.
+    Object.defineProperty(splash, 'getAnimations', { value: () => [] });
+    document.body.append(splash);
+
+    const fixture = TestBed.createComponent(PaymentPage);
+    fixture.componentRef.setInput('paymentIntentId', 'pi_test_1');
+    fixture.detectChanges();
+    await flush();
+    expect(text(fixture, '[role="status"]')).toBe('Fizetési adatok betöltése…');
+    expect(splash.isConnected).toBe(true);
+
+    release?.();
+    await fixture.whenStable();
+    await vi.waitFor(() => {
+      expect(splash.isConnected).toBe(false);
+    });
+    expect(text(fixture, 'h1')).toBe('Fizetés jóváhagyása');
   });
 
   it('P-11: a failed post offers a retry that re-posts the same outcome', async () => {

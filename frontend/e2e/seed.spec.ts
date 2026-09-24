@@ -42,6 +42,30 @@
 //    --grep / --grep-invert.  https://playwright.dev/docs/test-annotations#tag-tests
 // 10. Never commit test.only. Never leave a test.fixme() without a comment
 //    saying what the application actually does instead.
+// 11. The demo gate. Signed out, every storefront route redirects to
+//    /belepes, and every product, cart, checkout, order and payment call
+//    answers 401. The demo payment page does not redirect: it shows "A demó
+//    bolt jelszóval érhető el. Előbb lépj be a boltba." and a "Belépés a
+//    boltba" link. /belepes has one password field and a "Belépés" button;
+//    the password is 1MiBoltDemo1 (the backend's default; MIBOLT_DEMO_PASSWORD
+//    overrides it, but is read only while the demo_user table is empty) and
+//    is not a secret, so a spec may type it as a literal. A
+//    wrong password shows "Hibás jelszó. Próbáld újra." The MSW projects
+//    start signed in, and `?mi-scenario=demo-signed-out` starts the shop
+//    signed out. The smoke project runs on the real backend and is already
+//    signed in: its global setup, fixtures/backend-ready.ts, posts
+//    /api/v1/demo/session once and saves a storageState that
+//    playwright.config.ts gives the project. A smoke spec that needs the
+//    signed-out state starts without it:
+//    test.use({ storageState: { cookies: [], origins: [] } }).
+//    https://playwright.dev/docs/auth#avoid-authentication-in-some-tests
+//    The admin at /admin/ is not behind this gate. It has its own sign-in,
+//    username `admin`, password `mibolt-admin-demo` on its MSW mock and on
+//    the real backend the one the task gives. Signed out, product images
+//    under /api/v1/media/ answer 401 too, and the storefront then shows its
+//    first-letter fallback (data-testid image-fallback); on the real backend
+//    the admin's product image previews load from that same path, so they
+//    show only after the same browser has signed in at the shop's /belepes.
 
 import { test, expect } from './fixtures/coverage';
 

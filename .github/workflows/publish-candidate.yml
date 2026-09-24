@@ -1,0 +1,87 @@
+name: Publish Candidate
+
+on:
+  workflow_run:
+    workflows: [CI, Candidate Build]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+  pull-requests: read
+
+# Serialize tag creation and chart publication. A later trigger rechecks the
+# live PR head before it publishes a receipt.
+concurrency:
+  group: publish-candidate-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 45
+    steps:
+      - name: Checkout trusted publisher and chart
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.2
+      - name: Require matching successful CI and build runs on an open PR
+        id: candidate
+        working-directory: trusted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-project --with PyYAML==6.0.2 python deploy/candidate/publish.py resolve --event "$GITHUB_EVENT_PATH"
+      - name: Checkout tested source as data
+        if: steps.candidate.outputs.ready == 'true'
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.candidate.outputs.source_repository }}
+          ref: ${{ steps.candidate.outputs.head_sha }}
+          path: source
+          persist-credentials: false
+      - name: Download exact successful build artifact
+        if: steps.candidate.outputs.ready == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: candidate-build
+          run-id: ${{ steps.candidate.outputs.build_run_id }}
+          github-token: ${{ github.token }}
+          path: incoming
+      - name: Login to GHCR for images and Helm
+        if: steps.candidate.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          printf '%s' "$GH_TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Verify inputs, publish immutable images and chart, write receipt
+        if: steps.candidate.outputs.ready == 'true'
+        working-directory: trusted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run --no-project --with PyYAML==6.0.2 python deploy/candidate/publish.py publish \
+            --artifact "${GITHUB_WORKSPACE}/incoming" \
+            --source "${GITHUB_WORKSPACE}/source" \
+            --output "${GITHUB_WORKSPACE}/published" \
+            --pr '${{ steps.candidate.outputs.pr }}' \
+            --head-sha '${{ steps.candidate.outputs.head_sha }}' \
+            --ci-run-id '${{ steps.candidate.outputs.ci_run_id }}' \
+            --build-run-id '${{ steps.candidate.outputs.build_run_id }}' \
+            --candidate-id '${{ steps.candidate.outputs.candidate_id }}' \
+            --publisher-revision '${{ github.sha }}'
+      - name: Upload trusted candidate receipt
+        if: steps.candidate.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-receipt
+          path: published/candidate.json
+          if-no-files-found: error
+          retention-days: 30

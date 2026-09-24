@@ -30,7 +30,9 @@ archived products and refuse to sell a variant of an archived product.
     Apple never appears in the related list.
 - `GET /media/{imageId}` is unchanged by design. The URL is content-
   addressed and may be cached or hot-linked, so an archived product's
-  image stays reachable.
+  image stays reachable. Since contract 2.3.0 it needs the demo access
+  cookie like every shop call, so a hot-link from outside the demo answers
+  401 (ADR 0022).
 - The cart uses `CatalogService.orderableMax(ProductVariant)` at the four
   call sites that previously called `maxQuantity(stock)`: `addItem` (line 92),
   `setQuantity` (line 133), `reconcile` (line 214), and the per-line max on

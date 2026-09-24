@@ -149,22 +149,25 @@
       </label>
     </div>
   </header>
-  <app-mobile-drawer
-    id="mobile-drawer"
-    label="Menü"
-    [opened]="drawerOpen()"
-    [triggerEl]="menuTriggerEl()"
-    (closed)="closeDrawer()"
-  >
-    @for (link of navLinks(); track link.label) {
-      <a
-        ariaCurrentWhenActive="page"
-        class="block no-underline"
-        routerLinkActive="is-active"
-        [routerLink]="link.routerLink"
-        (click)="closeDrawer()"
-        >{{ link.label }}</a
-      >
-    }
-  </app-mobile-drawer>
+  <!-- Deferred so @angular/cdk (the dialog under the drawer) stays out of the initial bundle (MIM-443). -->
+  @defer (when drawerOpen(); prefetch on idle) {
+    <app-mobile-drawer
+      id="mobile-drawer"
+      label="Menü"
+      [opened]="drawerOpen()"
+      [triggerEl]="menuTriggerEl()"
+      (closed)="closeDrawer()"
+    >
+      @for (link of navLinks(); track link.label) {
+        <a
+          ariaCurrentWhenActive="page"
+          class="block no-underline"
+          routerLinkActive="is-active"
+          [routerLink]="link.routerLink"
+          (click)="closeDrawer()"
+          >{{ link.label }}</a
+        >
+      }
+    </app-mobile-drawer>
+  }
 }

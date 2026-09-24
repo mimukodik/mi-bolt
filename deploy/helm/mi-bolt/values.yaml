@@ -1,0 +1,44 @@
+# Supply all required candidate, image, origin, ingress, and Secret values at install time.
+candidate:
+  id: ""
+  headCommit: ""
+  publisherRunId: 0
+  webCommit: ""
+  commerceCommit: ""
+
+web:
+  replicas: 1
+  image:
+    repository: ""
+    digest: ""
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+commerce:
+  replicas: 1
+  image:
+    repository: ""
+    digest: ""
+  existingSecret: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# HTTPS origin without a trailing slash, for example https://pr-123.example.test.
+publicOrigin: ""
+
+ingress:
+  host: ""
+  className: traefik
+  tlsSecretName: ""
+
+imagePullSecrets: []

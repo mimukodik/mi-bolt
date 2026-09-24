@@ -348,6 +348,24 @@ class OrderServiceTest {
 	}
 
 	@Test
+	void aSucceededIntentThatAlreadyBacksAnOrderIs422PaymentRequired() {
+		when(orders.existsByPaymentIntentId("pi-1")).thenReturn(true);
+
+		assertThatThrownBy(() -> service.place(session, "\"4\"", "card", "pi-1", TERMS_VERSION, true))
+				.isInstanceOf(DomainException.class)
+				.matches(ex -> {
+					DomainException de = (DomainException) ex;
+					if (de.code() != ErrorCode.PAYMENT_REQUIRED) {
+						return false;
+					}
+					return "pi-1".equals(de.params().get("paymentIntentId"))
+							&& "succeeded".equals(de.params().get("status"));
+				});
+		verify(orders, never()).save(any(ShopOrder.class));
+		verify(variants, never()).decrementStock(anyString(), anyInt());
+	}
+
+	@Test
 	void pendingIs422PaymentPending() {
 		when(intentService.get(session, "pi-1")).thenReturn(intentView("pending", 299990L));
 

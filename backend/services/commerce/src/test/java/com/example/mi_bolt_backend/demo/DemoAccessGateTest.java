@@ -78,10 +78,13 @@ class DemoAccessGateTest {
 	}
 
 	@Test
-	void mediaIsOpenWithoutDemoAccess() throws Exception {
+	void mediaWithoutDemoAccessIs401AndPassesTheContract() throws Exception {
 		mockMvc.perform(get("/media/0494688791f55f77852d95d4aff487aa89ffd0d6c300a64c56ed4ff08c3be5b8")
 						.cookie(NOT_VALID))
-				.andExpect(status().isOk());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+				.andExpect(header().doesNotExist("Set-Cookie"))
+				.andExpect(validAgainstContract());
 	}
 
 	@Test

@@ -277,6 +277,19 @@ it and navigates on to the receipt.
 
 ## 🎯 Workflows
 
+Pull requests and `main` also run `Candidate Build`: it builds the web and
+commerce images from `deploy/compose.yaml` on a Blacksmith runner and retains
+the image archives as a short-lived GitHub Actions artifact. Once both that
+run and CI pass for the same current, open PR head, the trusted default-branch
+`Publish Candidate` workflow can publish content-hash image tags and a Helm OCI
+chart with their exact digests. Its `candidate-receipt` artifact records the
+tested head, source runs, original image build commits, chart revision and
+digest, and template fingerprint. A closed PR or changed head is not published.
+Automatic publication is limited to same-repository PRs.
+Promotion uses the recorded chart and image digests; it does not rebuild them.
+The chart and preview platform contract are described in
+[`deploy/helm/mi-bolt/README.md`](deploy/helm/mi-bolt/README.md).
+
 1. **Frontend-only work on the mock**
 
    ```bash

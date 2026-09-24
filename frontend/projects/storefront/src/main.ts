@@ -1,17 +1,10 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { registerLocaleData } from '@angular/common';
-import localeHu from '@angular/common/locales/hu';
 
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { environment } from './environments/environment';
 import { PERSISTENCE_MODE } from './app/core/persistence-mode';
-
-// Register Hungarian locale data before bootstrap so the DatePipe,
-// CurrencyPipe and friends format Hungarian numbers, dates and
-// currency values. Locale data is referenced by `hu-HU` everywhere
-// in the application; redeclaring here is a no-op for re-imports.
-registerLocaleData(localeHu, 'hu-HU');
+import { SPLASH_ID } from '@mi-bolt/core-api/splash';
 
 /**
  * Boot the MSW service worker BEFORE Angular bootstraps so any
@@ -69,10 +62,12 @@ const start = async (): Promise<void> => {
   }).catch(showFatal);
 };
 
-void start();
+void start().catch(showFatal);
 
 function showFatal(err: unknown): void {
   console.error('[MiBolt] Bootstrap failed:', err);
+  // A failed start never reaches the first navigation, so the cover screen goes here.
+  document.getElementById(SPLASH_ID)?.remove();
   const template = document.querySelector<HTMLTemplateElement>('#mi-bolt-fatal');
   if (template === null) {
     throw new Error(
