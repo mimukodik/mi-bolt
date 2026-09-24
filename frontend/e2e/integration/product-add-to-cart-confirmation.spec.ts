@@ -4,11 +4,12 @@
 import { test, expect } from '../fixtures/coverage';
 
 // Below 1024px the desktop CTA block — `add-to-cart-button` and its siblings —
-// is `display: none` (product-page.scss:120-124), so the element is present but
-// hidden and carries no role to match; on a phone the visible add control is
-// the sticky purchase rail's `purchase-cta`. At 1024px and above the desktop
-// block is the visible one and the rail is `display: none` (mobile-buy-rail.scss).
-// The add CTA is therefore selected by viewport, never as a single test id.
+// is `display: none` (the `.cta-desktop` rule in the product page stylesheet),
+// so the element is present but hidden and carries no role to match; on a phone
+// the visible add control is the sticky purchase rail's `purchase-cta`. At
+// 1024px and above the desktop block is the visible one and the rail is
+// `display: none` (mobile-buy-rail.scss). The add CTA is therefore selected by
+// viewport, never as a single test id.
 const DESKTOP_MIN_WIDTH = 1024;
 
 test.describe('Product: variant choice and add to cart', () => {

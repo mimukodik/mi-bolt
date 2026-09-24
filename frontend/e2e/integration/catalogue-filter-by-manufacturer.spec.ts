@@ -3,10 +3,11 @@
 
 import { test, expect } from '../fixtures/coverage';
 
-// The sidebar filter mount takes over at 1024px (catalog-page.scss:86-102).
-// Below that the catalogue hides the sidebar (catalog-page.scss:98-102) and
-// serves the same facet groups in the drawer the toolbar's `filter-trigger`
-// opens, committing its draft with `drawer-apply` (filter-drawer.ts:322-343).
+// The sidebar filter mount takes over at 1024px (the `.layout` grid and
+// `.sidebar` in the catalogue page stylesheet). Below that the catalogue
+// hides the sidebar (`.sidebar` in the catalogue page stylesheet) and serves
+// the same facet groups in the drawer the toolbar's `filter-trigger` opens,
+// committing its draft with `drawer-apply` (FilterDrawer.applyDraft()).
 const SIDEBAR_MIN_WIDTH = 1024;
 
 // The loaded counter reads "<n> találat a szűrt feltételek szerint"; while the
@@ -27,14 +28,15 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       const brandGroupTestId = desktopViewport ? 'filter-group-brand' : 'drawer-group-brand';
       const brandFacetPrefix = desktopViewport ? 'filter-brand-' : 'drawer-brand-';
       // The brand rows are the group's own facet buttons; the "Még több gyártó"
-      // toggle carries `filter-brand-more` in both mounts (filter-panel.html:72-82,
-      // filter-drawer.html:55-65), so it is excluded by name rather than by prefix.
+      // toggle carries `filter-brand-more` in both mounts (the filter panel and
+      // drawer templates), so it is excluded by name rather than by prefix.
       const brandRowSelector = `[data-testid^="${brandFacetPrefix}"]:not([data-testid="filter-brand-more"])`;
       const brandGroup = page.getByTestId(brandGroupTestId);
       const brandFacets = brandGroup.locator(`button${brandRowSelector}`);
       // The catalogue lists every brand, a zero count included, and disables a
-      // zero-count row (filter-panel.html:52): the facet this scenario picks is
-      // the first one a click can apply.
+      // zero-count row (the `filter-brand-*` facet rows in the filter panel
+      // template): the facet this scenario picks is the first one a click can
+      // apply.
       const enabledBrandFacets = brandGroup.locator(`button${brandRowSelector}:enabled`);
       const firstEnabledBrand = enabledBrandFacets.first();
       const cards = page.getByTestId('product-card');
@@ -75,8 +77,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         brandValue = brandTestId.slice(brandFacetPrefix.length);
 
         // The label reads "<brand display name> (<count>)" with the count in its
-        // own span behind a non-breaking space (filter-panel.html:58-67), so the
-        // text is normalised before it is split.
+        // own span behind a non-breaking space (the `filter-brand-*` facet
+        // button's label in the filter panel template), so the text is
+        // normalised before it is split.
         const labelText = (await firstEnabledBrand.innerText()).replace(/\s+/g, ' ').trim();
         const labelMatch = /^(.+?) \((\d+)\)$/.exec(labelText);
         expect(labelMatch).not.toBeNull();
@@ -90,10 +93,11 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       await test.step('3. Activate that manufacturer filter: the button exposes aria-pressed="true" and shows its "✓" mark, the URL query string carries brand=<value>, applied-filters appears with exactly one applied-chip whose text is the lowercased brand key and applied-chip-remove-brand is present, and the mobile trigger reports its selected count as "Szűrők (1)".', async () => {
         await firstEnabledBrand.click();
 
-        // The facet reports its own selection state (filter-panel.html:49-57):
-        // aria-pressed flips and the check mark renders inside the button. At the
-        // mobile mount the drawer is still open here, because it is `drawer-apply`
-        // that commits the draft (filter-drawer.ts:322-343).
+        // The facet reports its own selection state (the `filter-brand-*` facet
+        // button in the filter panel template): aria-pressed flips and the check
+        // mark renders inside the button. At the mobile mount the drawer is still
+        // open here, because it is `drawer-apply` that commits the draft
+        // (FilterDrawer.applyDraft()).
         await expect(firstEnabledBrand).toHaveAttribute('aria-pressed', 'true');
         await expect(firstEnabledBrand.locator('.check')).toHaveText('✓');
 
@@ -103,7 +107,7 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         }
 
         // `brand` is the canonical query key the catalogue serialises
-        // (catalog-query.ts:283-286); the value is read from the page's own
+        // (`serializeCatalogQuery()`); the value is read from the page's own
         // query, so it is compared decoded.
         await expect(page).toHaveURL(/\/telefonok(\?|$)/);
         await expect.poll(() => new URL(page.url()).searchParams.get('brand')).toBe(brandValue);
@@ -116,8 +120,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
 
         if (!desktopViewport) {
           // The trigger carries the applied count beside the drawer it opens
-          // (catalog-toolbar.html:6-16); at 1024px and above it is display:none
-          // (catalog-toolbar.scss:93-96), so the count is read at its own mount.
+          // (`filter-trigger` in the catalogue toolbar template); at 1024px and
+          // above it is `display: none` (`.trigger` in the catalogue toolbar
+          // stylesheet), so the count is read at its own mount.
           await expect(page.getByTestId('filter-trigger')).toHaveText('Szűrők (1)');
         }
       });
@@ -125,7 +130,8 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       // 4. Check the effect on the grid.
       await test.step('4. Check the effect on the grid: every visible product-card name starts with that brand’s display name, the result count reads "<m> találat a szűrt feltételek szerint" with m smaller than the unfiltered n, and the manufacturer facet buttons still list every brand, each with its own recalculated count.', async () => {
         // Each card carries exactly one level-3 heading, its product name
-        // (product-card.html:38-42), so the flattened list is one name per card.
+        // (the `h3.name` heading in the product card template), so the
+        // flattened list is one name per card.
         const cardNames = cards.getByRole('heading', { level: 3 });
 
         /** Whether the card at `index` opens with the chosen brand's name. */
@@ -159,8 +165,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         }
 
         // The group still lists every brand, each row keeping its own count: the
-        // brand facet excludes its own filter (catalog-facets.ts:43-44), so the
-        // rows do not collapse to the one the click selected.
+        // brand facet excludes its own filter (the shop mocks'
+        // `buildBrandFacet()`), so the rows do not collapse to the one the click
+        // selected.
         await expect(firstEnabledBrand).toHaveAttribute('aria-pressed', 'true');
         await expect(brandFacets).toHaveCount(listedBrandCount);
         const brandFacetCount = await brandFacets.count();

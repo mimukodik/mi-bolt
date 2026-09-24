@@ -4,8 +4,8 @@
 import { test, expect } from '../fixtures/coverage';
 
 // The facet groups the sidebar offers at the full HD viewport. Below 1024px
-// the sidebar is `display: none` (catalog-page.scss:98-102) and the filters
-// live in the drawer the `filter-trigger` opens.
+// the sidebar is `display: none` (`.sidebar` in the catalogue page stylesheet)
+// and the filters live in the drawer the `filter-trigger` opens.
 const SIDEBAR_FACET_GROUPS: readonly string[] = [
   'Keresés',
   'Gyártó',
@@ -14,9 +14,10 @@ const SIDEBAR_FACET_GROUPS: readonly string[] = [
   'Ár (Ft, egész szám)',
   'Egyéb',
 ];
-// The drawer carries no "Keresés" group (filter-drawer.html:16-265): at the
-// mobile viewport the search facet is the header's own `mobile-search-input`
-// (header-nav.html:130-150), which is what this mount offers for it.
+// The drawer carries no "Keresés" group (the drawer's facet groups in
+// `filter-drawer.html`): at the mobile viewport the search facet is the
+// header's own `mobile-search-input` (in `header-nav.html`), which is what this
+// mount offers for it.
 const DRAWER_FACET_GROUPS: readonly string[] = [
   'Gyártó',
   'Szín',
@@ -25,7 +26,8 @@ const DRAWER_FACET_GROUPS: readonly string[] = [
   'Egyéb',
 ];
 
-// The sidebar filter mount takes over at 1024px (catalog-page.scss:86-102).
+// The sidebar filter mount takes over at 1024px (the `.layout` breakpoint in
+// the catalogue page stylesheet).
 const SIDEBAR_MIN_WIDTH = 1024;
 
 test.describe('Catalogue: browse, filter, sort and page', () => {
@@ -64,12 +66,14 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         await expect(nameHeading).not.toBeEmpty();
         const productName = (await nameHeading.innerText()).trim();
 
-        // The variant line reads "<colour name> · <n> GB" (product-card.html:43-47).
+        // The variant line reads "<colour name> · <n> GB" (the `.variant` line
+        // in `product-card.html`).
         await expect(card.locator('p.variant')).toHaveText(/^\s*\S+\s*·\s*\d+\s*GB\s*$/);
 
         // The price block is labelled for the one-time device price and keeps
-        // the "Ft" glyph in its own span beside the digits (price-block.html:14-26);
-        // the digits carry U+00A0 group separators (price-block.ts:63-76).
+        // the "Ft" glyph in its own span beside the digits (the `price-amount`
+        // element and its `.currency` span in `price-block.html`); the digits
+        // carry U+00A0 group separators (`PriceBlock.formatHuf()`).
         const priceBlock = card.locator('app-price-block');
         await expect(priceBlock).toContainText('Egyszeri készülékár');
         await expect(priceBlock.getByTestId('price-amount')).toHaveText(/^\s*\d[\d\s]*$/);
@@ -90,9 +94,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
           await expect(stockMarkers.nth(index)).toHaveText('Elfogyott');
         }
 
-        // An in-stock card renders no marker at all (product-card.html:60-62),
-        // and the later scenarios of this plan select their buyable card by
-        // exactly that absence.
+        // An in-stock card renders no marker at all (the `product-card-stock`
+        // marker in `product-card.html`), and the later scenarios of this plan
+        // select their buyable card by exactly that absence.
         await expect(
           cards.filter({ hasNot: page.getByTestId('product-card-stock') }).first(),
         ).toBeVisible();

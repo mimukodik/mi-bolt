@@ -9,11 +9,12 @@ test.describe('Checkout: from the cart to the receipt', () => {
     { tag: '@integration' },
     async ({ page }) => {
       // The purchase control is laid out differently at the two integration
-      // viewports: below 1024px the desktop CTA column is `display: none`
-      // (product-page.scss:120-124) and the sticky `purchase-rail` carries the
-      // same "Kosárba teszem" press as its `purchase-cta`
-      // (mobile-buy-rail.scss:13-39). Both mounts stay in the DOM at either
-      // width, so the viewport decides which one the test drives.
+      // viewports: below 1024px the desktop CTA column is `display: none` (the
+      // `.cta-desktop` rule in the product page stylesheet) and the sticky
+      // `purchase-rail` carries the same "Kosárba teszem" press as its
+      // `purchase-cta` (the mobile buy rail's `@media (max-width: 1023px)`
+      // block). Both mounts stay in the DOM at either width, so the viewport
+      // decides which one the test drives.
       const narrowViewport = (page.viewportSize()?.width ?? 0) < 1024;
       const addToCartButton = narrowViewport
         ? page.getByTestId('purchase-rail').getByTestId('purchase-cta').getByRole('button')

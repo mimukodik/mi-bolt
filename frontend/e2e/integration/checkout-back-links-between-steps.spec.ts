@@ -9,11 +9,11 @@ test.describe('Checkout: from the cart to the receipt', () => {
     { tag: '@integration' },
     async ({ page }) => {
       // The purchase control is laid out differently at the two integration
-      // viewports: below 1024px the desktop CTA column is `display: none`
-      // (product-page.scss:120-124) and the sticky `purchase-rail` carries the
-      // same "Kosárba teszem" press as its `purchase-cta`
-      // (mobile-buy-rail.scss). Both mounts stay in the DOM at either width, so
-      // the viewport decides which one the test drives.
+      // viewports: below 1024px the desktop CTA column is `display: none` (the
+      // `.cta-desktop` rule in the product page stylesheet) and the sticky
+      // `purchase-rail` carries the same "Kosárba teszem" press as its
+      // `purchase-cta` (mobile-buy-rail.scss). Both mounts stay in the DOM at
+      // either width, so the viewport decides which one the test drives.
       const narrowViewport = (page.viewportSize()?.width ?? 0) < 1024;
       const addToCartButton = narrowViewport
         ? page.getByTestId('purchase-rail').getByTestId('purchase-cta').getByRole('button')
@@ -27,8 +27,9 @@ test.describe('Checkout: from the cart to the receipt', () => {
       const reviewSummary = page.getByTestId('review-summary');
       const reviewActions = page.getByTestId('review-actions');
       // Each card's header carries its own `Módosítás` control, and the
-      // `data-testid` sits on the button itself rather than on a wrapper
-      // (review-step.html:36-43, 71-78, 112-119).
+      // `data-testid` sits on the button itself rather than on a wrapper (the
+      // `review-edit-contact`, `review-edit-billing` and `review-edit-delivery`
+      // buttons in review-step.html).
       const editContact = page.getByTestId('review-edit-contact');
       const editBilling = page.getByTestId('review-edit-billing');
       const editDelivery = page.getByTestId('review-edit-delivery');
@@ -44,8 +45,9 @@ test.describe('Checkout: from the cart to the receipt', () => {
       const billingSameAsDelivery = page.getByTestId('billing-same-as-delivery');
       // Each option is a `li` with a test id (`delivery-option`,
       // `payment-option`) whose label wraps the radio, so the option is
-      // addressed by the row the screen shows (delivery-step.html:34-93,
-      // payment-method-selector.html:16-62).
+      // addressed by the row the screen shows (the `delivery-option` rows in
+      // delivery-step.html and the `payment-option` rows in
+      // payment-method-selector.html).
       const homeDeliveryOption = page
         .getByTestId('delivery-option')
         .filter({ hasText: 'Házhoz szállítás' });
@@ -53,8 +55,9 @@ test.describe('Checkout: from the cart to the receipt', () => {
         .getByTestId('payment-option')
         .filter({ hasText: 'Utánvét' });
       // The banner host leaves the flow and its `navigation-reason` element is
-      // rendered only while a reason sentence exists
-      // (navigation-reason-banner.ts:26-39), so no reason means no element.
+      // rendered only while a reason sentence exists (the `navigation-reason`
+      // template and the host display binding in navigation-reason-banner.ts),
+      // so no reason means no element.
       const navigationReason = page.getByTestId('navigation-reason');
 
       // 1. Reach the review page: add the first in-stock product, press
@@ -154,14 +157,14 @@ test.describe('Checkout: from the cart to the receipt', () => {
         await editBilling.click();
 
         // Billing is entered on the delivery step, so its edit control asks for
-        // that step rather than one of its own (review-step.ts:358-362).
+        // that step rather than one of its own (ReviewStep.onEditBilling()).
         await expect(page).toHaveURL(/\/penztar\/szallitas$/);
         await expect(deliveryStep).toBeVisible();
         await expect(billingNameInput).toHaveValue('Teszt Elek');
         // The saved billing address equals the delivery address field by field,
         // so the "same as delivery" tick is restored from it
-        // (delivery-page.ts:218-225) and the invoice's address is the one the
-        // shared address inputs hold.
+        // (DeliveryPage.buildInitialModel()) and the invoice's address is the
+        // one the shared address inputs hold.
         await expect(billingSameAsDelivery).toBeChecked();
         await expect(addressPostalInput).toHaveValue('1052');
         await expect(addressCityInput).toHaveValue('Budapest');

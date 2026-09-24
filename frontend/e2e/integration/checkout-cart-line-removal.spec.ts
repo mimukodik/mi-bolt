@@ -6,11 +6,12 @@ import { test, expect } from '../fixtures/coverage';
 test.describe('Checkout: from the cart to the receipt', () => {
   test('removing the cart line empties the cart', { tag: '@integration' }, async ({ page }) => {
     // The purchase control is laid out differently at the two integration
-    // viewports: below 1024px the desktop CTA column is `display: none`
-    // (product-page.scss:120-124) and the sticky `purchase-rail` carries the
-    // same "Kosárba teszem" press as its `purchase-cta`
-    // (mobile-buy-rail.scss:13-39). Both mounts stay in the DOM at either
-    // width, so the viewport decides which one the test drives.
+    // viewports: below 1024px the desktop CTA column is `display: none` (the
+    // `.cta-desktop` rule in the product page stylesheet) and the sticky
+    // `purchase-rail` carries the same "Kosárba teszem" press as its
+    // `purchase-cta` (the mobile buy rail's `@media (max-width: 1023px)`
+    // block). Both mounts stay in the DOM at either width, so the viewport
+    // decides which one the test drives.
     const narrowViewport = (page.viewportSize()?.width ?? 0) < 1024;
     const addToCartButton = narrowViewport
       ? page.getByTestId('purchase-rail').getByTestId('purchase-cta').getByRole('button')
@@ -70,9 +71,9 @@ test.describe('Checkout: from the cart to the receipt', () => {
       await expect(page.getByTestId('product-card').first()).toBeVisible();
       // `cart-badge` is read here rather than on the cart page: `/penztar/*`
       // runs under the checkout layout, whose header renders no badge at all
-      // (header-nav.html:1-32 carries "Vissza a shopba" instead), so the
-      // badge the removed line leaves at "0" is the shop header's, and that
-      // header returns with the catalogue.
+      // (the `checkout-header` template in header-nav.html carries "Vissza a
+      // shopba" instead), so the badge the removed line leaves at "0" is the
+      // shop header's, and that header returns with the catalogue.
       await expect(cartBadge).toHaveText('0');
     });
   });
