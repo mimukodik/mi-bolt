@@ -666,7 +666,7 @@ describe('ST-04 the conflict, stock-error and error states render no CTA explana
 // ---------------------------------------------------------------------------
 // ST-05 — a click in a failure state moves the focus to that state's banner
 // ---------------------------------------------------------------------------
-describe('ST-05 a click in the conflict, stock-error or error state focuses its banner and submits nothing (owner 2026-09-22: "Mindig aktív, kattintásra hibák")', () => {
+describe('ST-05 a click in the conflict or stock-error state focuses its banner and submits nothing (owner 2026-09-22: "Mindig aktív, kattintásra hibák")', () => {
   it('focuses the state banner with the terms ticked, in the conflict and stock-error states', async () => {
     for (const state of ['conflict', 'stock-error'] as const) {
       TestBed.resetTestingModule();
