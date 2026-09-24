@@ -35,10 +35,21 @@ import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import type { ColorFacetValue } from '@mi-bolt/api/models/color-facet-value';
 import type { Facets } from '@mi-bolt/api/models/facets';
 
 import { DEFAULT_CATALOG_QUERY, type CatalogQuery } from './catalog-query';
 import { FilterPanel } from './filter-panel';
+
+const SEVEN_COLORS: readonly ColorFacetValue[] = [
+  { value: 'fekete', label: 'Fekete', swatchHex: '#000000', count: 3 },
+  { value: 'feher', label: 'Fehér', swatchHex: '#ffffff', count: 2 },
+  { value: 'kek', label: 'Kék', swatchHex: '#1e4fd8', count: 4 },
+  { value: 'zold', label: 'Zöld', swatchHex: '#2e8b57', count: 1 },
+  { value: 'szurke', label: 'Szürke', swatchHex: '#808080', count: 5 },
+  { value: 'lila', label: 'Lila', swatchHex: '#7b3fb0', count: 2 },
+  { value: 'piros', label: 'Piros', swatchHex: '#d0021b', count: 1 },
+];
 
 beforeAll(async () => {
   await TestBed.compileComponents();
@@ -547,6 +558,53 @@ describe('FilterPanel — facets wire-up', () => {
     expect(more.getAttribute('aria-expanded')).toBe('true');
     expect(more.textContent.trim()).toBe('Kevesebb gyártó');
   });
+
+  it('the colour list shows five chips and a "Még több szín" toggle (MIM-405)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [],
+      colors: [...SEVEN_COLORS],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const chips = (): number =>
+      root.querySelectorAll('[data-testid="filter-group-color"] button.color-chip').length;
+
+    expect(chips()).toBe(5);
+    const more = queryButton(root, '[data-testid="filter-color-more"]');
+    expect(more.textContent.trim()).toBe('Még több szín');
+
+    more.click();
+    fixture.detectChanges();
+    expect(chips()).toBe(7);
+    expect(more.textContent.trim()).toBe('Kevesebb szín');
+  });
+
+  it('a colour selected beyond chip five keeps the colour list open (MIM-405)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [],
+      colors: [...SEVEN_COLORS],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    host.query.set({ ...DEFAULT_CATALOG_QUERY, colors: ['piros'] });
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+
+    expect(
+      root.querySelectorAll('[data-testid="filter-group-color"] button.color-chip').length,
+    ).toBe(7);
+    expect(queryButton(root, '[data-testid="filter-color-more"]').textContent.trim()).toBe(
+      'Kevesebb szín',
+    );
+  });
 });
 
 describe('MIM-228: a selected facet row with a zero count stays clickable', () => {
@@ -750,7 +808,7 @@ describe('MIM-228 facet skeleton', () => {
       '[data-testid="filter-group-color"] [data-testid="color-skeleton-row"]',
     );
     expect(brandSkeletons.length).toBe(5);
-    expect(colorSkeletons.length).toBe(1);
+    expect(colorSkeletons.length).toBe(3);
     expect(panel.querySelectorAll('[data-testid="filter-group-brand"] button.option').length).toBe(
       0,
     );
@@ -784,7 +842,7 @@ describe('MIM-228 facet skeleton', () => {
     host.busy.set(true);
     fixture.detectChanges();
     expect(panel.querySelectorAll('[data-testid="brand-skeleton-row"]').length).toBe(5);
-    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(1);
+    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(3);
 
     host.facets.set(loadedFacets());
     host.busy.set(false);

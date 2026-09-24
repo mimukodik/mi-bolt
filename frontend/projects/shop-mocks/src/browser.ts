@@ -39,6 +39,7 @@ import { isSameOriginNonBusiness } from './business-route-predicates';
 import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
 import { cartStore } from './cart/cart.handlers';
 import { checkoutStore, orderStore } from './checkout/checkout.handlers';
+import { waitForController } from './wait-for-controller';
 
 // Force-load the slice handler modules so their module-level
 // registerBusinessHandlers(...) calls populate the create-handlers
@@ -255,4 +256,5 @@ export async function startMockWorker(snapshot: MockSnapshot | null = null): Pro
       url: resolveMockWorkerUrl(document.baseURI),
     },
   });
+  await waitForController(navigator.serviceWorker);
 }
