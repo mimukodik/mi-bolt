@@ -4,8 +4,9 @@ The shop's back-office application, a second Angular application in this
 workspace beside `mi-bolt` and `demo-payment`. Selector prefix `adm`, zoneless,
 standalone, Angular Material with the `azure-blue` theme, Hungarian locale
 (`hu-HU`), `HttpClient` on the XHR backend. It is served under `/admin/` and
-built into `dist/admin`. The page is an empty `<router-outlet />` for now; the
-shell and the screens are later units.
+built into `dist/admin`. It has the sign-in page, the shell (side navigation
+and the account menu, loaded with its route) and the Áttekintés, Termékek
+(list and product editor) and Adminok screens.
 
 ## Commands
 
@@ -29,6 +30,29 @@ also printed to the browser console once the worker starts. `?mi-scenario=`
 selects one of the scenarios in `src/mocks/scenario.ts`'s `SCENARIOS`:
 `default`, `empty-catalog`, `list-error`, `save-conflict`, `upload-error`. A
 reload resets the mock data, since it lives only in memory for the tab.
+
+## Real backend
+
+`npm run start:admin:local-backend` serves the admin on the same port and
+proxies `/api` to the Spring backend on http://localhost:8080
+(`proxy.local-backend.conf.json`). Start the backend first, from the
+monorepo root:
+
+- `mise run backend:docker` runs the backend in its container, with
+  PostgreSQL in its container on 55433;
+- `mise run backend` runs it natively (`bootRun`) against the same
+  PostgreSQL container.
+
+`mise run dev:docker` (or `mise run dev`) starts that backend together with
+the shop, payment and admin dev servers.
+
+The first start on a database with no admin creates one, `admin`, and
+prints its password once in the backend log at WARN:
+`initial admin created: username=admin password=… (shown once; change it after the first sign-in)`.
+For the container, `deploy/compose.sh logs commerce` shows it. Set
+`MIBOLT_ADMIN_INITIAL_PASSWORD` (15 to 64 characters) before that first
+start to choose the password instead (`backend/README.md`). After signing
+in, change it under the account menu's `Jelszó módosítása`.
 
 ## Fonts
 
