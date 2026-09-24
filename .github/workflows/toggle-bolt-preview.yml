@@ -37,9 +37,10 @@ jobs:
           [[ "$(jq -r '.state' <<< "$pr")" == open ]] || { echo 'PR is closed'; exit 1; }
           [[ "$(jq -r '.head.repo.full_name' <<< "$pr")" == "$GITHUB_REPOSITORY" ]] || { echo 'Fork PR is not eligible'; exit 1; }
           if [[ "$PREVIEW_STATE" == enable ]]; then
-            gh label create bolt-preview --repo "$GITHUB_REPOSITORY" --color 1D76DB --description 'Deploy an isolated Bolt PR preview' --force
+            echo 'Enabling Bolt preview label'
             gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels" -f 'labels[]=bolt-preview' >/dev/null
           elif [[ "$PREVIEW_STATE" == disable ]]; then
+            echo 'Disabling Bolt preview label'
             if gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels" --jq '.[].name' | grep -Fxq bolt-preview; then
               gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels/bolt-preview" >/dev/null
             fi
