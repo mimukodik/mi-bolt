@@ -23,12 +23,12 @@ import {
   expectRecord,
   fieldErrorsOf,
   inputOf,
+  jsonRecord,
   post,
   productUrl,
   productsUrl,
   put,
   readArray,
-  readJsonRecord,
   readNumber,
   readString,
   requireProduct,
@@ -55,7 +55,7 @@ describe('productsWriteHandlers', () => {
       expect(response.status).toBe(201);
       expect(response.headers.get('ETag')).toBe('"0"');
       expect(response.headers.get('Location')).toBe('/api/v1/admin/products/49');
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'id')).toBe(49);
       expect(readString(body, 'status')).toBe('active');
       expect(readNumber(body, 'version')).toBe(0);
@@ -208,7 +208,7 @@ describe('productsWriteHandlers', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('ETag')).toBe('"1"');
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'version')).toBe(1);
       expect(readString(body, 'name')).toBe('Honor 600 Lite Plus');
       const variants = readArray(body, 'variants');
@@ -362,7 +362,7 @@ describe('productsWriteHandlers', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('ETag')).toBe('"1"');
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readString(body, 'status')).toBe('archived');
       expect(typeof body['archivedAt']).toBe('string');
       expect(readNumber(body, 'version')).toBe(1);
@@ -376,7 +376,7 @@ describe('productsWriteHandlers', () => {
       const second = await action(archiveUrl(5), db, { 'If-Match': '"1"' });
 
       expect(second.status).toBe(200);
-      const body = await readJsonRecord(second);
+      const body = await jsonRecord(second);
       expect(readNumber(body, 'version')).toBe(1);
     });
 
@@ -434,7 +434,7 @@ describe('productsWriteHandlers', () => {
       const response = await action(restoreUrl(47), db, { 'If-Match': '"0"' });
 
       expect(response.status).toBe(200);
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readString(body, 'status')).toBe('active');
       expect(body['archivedAt']).toBeUndefined();
       expect(readNumber(body, 'version')).toBe(1);
@@ -446,7 +446,7 @@ describe('productsWriteHandlers', () => {
       const response = await action(restoreUrl(5), db, { 'If-Match': '"0"' });
 
       expect(response.status).toBe(200);
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'version')).toBe(0);
     });
 

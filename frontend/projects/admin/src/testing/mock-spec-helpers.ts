@@ -39,26 +39,29 @@ export function xsrfCookie(): string | null {
 /** Reads a JSON response body as a record, asserting the wire shape first. */
 export async function jsonRecord(res: Response): Promise<Record<string, unknown>> {
   const body: unknown = await res.json();
-  expect(isRecord(body)).toBe(true);
-  return isRecord(body) ? body : {};
+  expectRecord(body);
+  return body;
 }
 
 // Shared by the products-write mock specs.
 
+/** The admin products path, written once: every products URL below derives from it. */
+const PRODUCTS_PATH = '/api/v1/admin/products';
+
 export function productsUrl(): string {
-  return new URL('/api/v1/admin/products', document.baseURI).href;
+  return new URL(PRODUCTS_PATH, document.baseURI).href;
 }
 
 export function productUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}`, document.baseURI).href;
+  return new URL(`${PRODUCTS_PATH}/${String(id)}`, document.baseURI).href;
 }
 
 export function archiveUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}/archive`, document.baseURI).href;
+  return new URL(`${PRODUCTS_PATH}/${String(id)}/archive`, document.baseURI).href;
 }
 
 export function restoreUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}/restore`, document.baseURI).href;
+  return new URL(`${PRODUCTS_PATH}/${String(id)}/restore`, document.baseURI).href;
 }
 
 export function setup(scenario: ScenarioName = 'default'): MockDb {
@@ -187,29 +190,23 @@ export function fieldErrorsOf(body: Record<string, unknown>): Record<string, unk
   });
 }
 
-export async function readJsonRecord(response: Response): Promise<Record<string, unknown>> {
-  const body: unknown = await response.json();
-  expectRecord(body);
-  return body;
-}
-
 export async function expectProblem(
   response: Response,
   status: number,
   code: ProblemCode,
 ): Promise<Record<string, unknown>> {
   expect(response.status).toBe(status);
-  const body = await readJsonRecord(response);
+  const body = await jsonRecord(response);
   expect(readString(body, 'code')).toBe(code);
   return body;
 }
 
 // Shared by the products-read mock specs.
 
-export const LIST_URL = new URL('/api/v1/admin/products', document.baseURI).href;
+export const LIST_URL = new URL(PRODUCTS_PATH, document.baseURI).href;
 
-export const detailUrl = (id: number): string =>
-  new URL(`/api/v1/admin/products/${String(id)}`, document.baseURI).href;
+/** The read specs' alias of {@link productUrl}, which builds the same detail URL. */
+export const detailUrl = (id: number): string => productUrl(id);
 
 export function signedIn(scenario: 'default' | 'empty-catalog' | 'list-error' = 'default'): MockDb {
   const db = createDb(scenario);

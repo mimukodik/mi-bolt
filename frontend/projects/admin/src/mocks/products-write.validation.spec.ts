@@ -25,9 +25,9 @@ import {
   expectRecord,
   fieldErrorsOf,
   headersFor,
+  jsonRecord,
   productUrl,
   productsUrl,
-  readJsonRecord,
   readNumber,
   readString,
   restoreUrl,
@@ -90,7 +90,7 @@ async function expectProblem(
   detail: string,
 ): Promise<Record<string, unknown>> {
   expect(response.status).toBe(status);
-  const body = await readJsonRecord(response);
+  const body = await jsonRecord(response);
   expect(readString(body, 'code')).toBe(code);
   expect(readString(body, 'title')).toBe(title);
   expect(readString(body, 'detail')).toBe(detail);
@@ -235,7 +235,7 @@ describe('products-write validation', () => {
       const db = setup();
       const response = await postJson(productsUrl(), db, withChanges(baseBody(), ['rank', '12']));
       expect(response.status).toBe(201);
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'rank')).toBe(12);
     });
 
@@ -244,7 +244,7 @@ describe('products-write validation', () => {
       const db = setup();
       const response = await postJson(productsUrl(), db, withChanges(baseBody(), ['rank', 1.5]));
       expect(response.status).toBe(201);
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(readNumber(body, 'rank')).toBe(1);
     });
 
@@ -287,7 +287,7 @@ describe('products-write validation', () => {
         withChanges(baseBody(), ['featured', 'true']),
       );
       expect(response.status).toBe(201);
-      const body = await readJsonRecord(response);
+      const body = await jsonRecord(response);
       expect(body['featured']).toBe(true);
     });
 
