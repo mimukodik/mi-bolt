@@ -157,7 +157,12 @@ Ez a dokumentum lényege. Minden pont **kötelező viselkedés**.
     hivatkozott szándék **mind a négy állapotára** határozott válasz jár: `succeeded` megy
     tovább, `requires_action` → **422 `PAYMENT_REQUIRED`** (a vásárló nem ment végig a fizetési
     oldalon), `pending` → **422 `PAYMENT_PENDING`** (még nem dőlt el), `declined` → **422
-    `PAYMENT_DECLINED`** (új kísérlet kell, új idempotencia-kulccsal).
+    `PAYMENT_DECLINED`** (új kísérlet kell, új idempotencia-kulccsal). Egy sikeres szándék
+    **egy rendelést fedez**: ha a hivatkozott szándékot már viseli egy rendelés, a válasz
+    **422 `PAYMENT_REQUIRED`**, és az új kártyás rendeléshez új fizetés kell. A
+    `shop_order.payment_intent_id` egyedi megkötése
+    (`0011-order-payment-intent-unique.yaml`) a két párhuzamos kérés védőhálója, amelyek
+    ugyanezt az ellenőrzést még a másik tranzakció commitja előtt átengedték.
 39. Utánvétnél a `paymentIntentId` mező **nem létezik** a kérésben.
 40. Az `acceptedTerms: false` **422**-t ad `fieldErrors: [{ path: "/acceptedTerms" }]`
     tartalommal — nem sémahibát, mert a felületnek meg kell tudnia jelölni a checkboxot.
@@ -243,8 +248,9 @@ bemutatón, és pont az nem látszik, amire a katalógus épült.
 A képeket **a backend tárolja és szolgálja ki**. Ez tudatosan ideiglenes: most a működő backend a
 cél, a tartalomszolgáltató hálózatra költözés egy későbbi refactor-kör.
 
-**A kiszolgáló művelet: `GET /media/{imageId}`.** Nyilvános, munkamenet nélkül elérhető — a kép
-semmilyen munkamenethez kötött adatot nem hordoz.
+**A kiszolgáló művelet: `GET /media/{imageId}`.** Munkamenet nélkül elérhető — a kép
+semmilyen munkamenethez kötött adatot nem hordoz —, de a demókapu sütije (`mibolt_demo_access`)
+kell hozzá, mint minden bolti híváshoz (ADR 0022).
 
 Elvárások a művelettől:
 

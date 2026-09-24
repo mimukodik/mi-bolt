@@ -19,3 +19,5 @@ databaseChangeLog:
       file: db/changelog/changes/0009-featured-limit-lock.yaml
   - include:
       file: db/changelog/changes/0010-demo-access.yaml
+  - include:
+      file: db/changelog/changes/0011-order-payment-intent-unique.yaml

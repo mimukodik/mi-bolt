@@ -88,7 +88,7 @@ class DemoAccessFilterTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {"/admin", "/admin/users", "/demo/session", "/media/abc", "/actuator/health/readiness"})
+	@ValueSource(strings = {"/admin", "/admin/users", "/demo/session", "/actuator/health/readiness"})
 	void openPathsSkipTheGate(String path) throws Exception {
 		MockHttpServletRequest request = request(path);
 		MockHttpServletResponse response = new MockHttpServletResponse();

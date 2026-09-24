@@ -32,6 +32,17 @@ path-scoped rules trigger only on a read.
   without opening the file. A script directory with more than one file keeps
   its modules in named subdirectories with a `CLAUDE.md`, the same as
   `.claude/hooks/`.
+- **A Python tool runs through uv, pinned in the `mise.toml` of the area that
+  uses it**, the way `contracts/mise.toml` does: `uv` pinned under `[tools]`,
+  the tool beside it as `"pypi:<name>" = "<version>"`, and `pypi.uvx = true`
+  under `[settings]`, so mise installs it with that uv rather than falling
+  back to pipx, at the same version locally and in CI. A one-off run of a
+  tool no `mise.toml` pins is `uvx <name>@<version>`. Nothing Python is
+  installed with `pip`, `pipx` or a global or system Python, whose version is
+  whatever that machine has; a tool that cannot run through uv goes to the
+  user as a question before it is installed any other way. The rule is the
+  user's, in English: "if there is anything Python, let us preferably use uv
+  and uvx".
 - Every user-visible change is tested in a real browser with the
   chrome-devtools subagent, per `.claude/rules/browser-verification.md`.
   Typecheck and unit tests alone are never enough.
@@ -49,14 +60,13 @@ path-scoped rules trigger only on a read.
   with the generated code excluded; `backend/services/commerce/build.gradle`
   owns those numbers.
 
-  This replaces a 100% changed-line requirement, and the user set the budget:
-  "haladnunk kene es ez demo mvp app ami sosem lesz eles" ("we need to make
-  progress and this is a demo MVP app that will never go live"), and
-  "browser testben ugyis kijon a hiba" ("the bug comes out in the browser
-  test anyway"). `.claude/rules/planning-deliverables.md` ("An MVP instruction
-  is a budget, not a mood") is why that caps verification rather than being
-  weighed against tidiness, and it is written down here so the next reader can
-  see it was applied rather than forgotten.
+  This replaces a 100% changed-line requirement, and the user set the budget
+  (in English: "we need to make progress and this is a demo MVP app that will
+  never go live", and "the bug comes out in the browser test anyway").
+  `.claude/rules/planning-deliverables.md` ("An MVP instruction is a budget,
+  not a mood") is why that caps verification rather than being weighed against
+  tidiness, and it is written down here so the next reader can see it was
+  applied rather than forgotten.
 
   Two things survive the relaxation, because they are what actually caught
   defects here rather than what the percentage claimed to:
@@ -126,11 +136,9 @@ path-scoped rules trigger only on a read.
   that nothing here touches stays where it is, per `.claude/CLAUDE.md`
   ("Surgical changes").
 
-  The rule is the user's, in their own words, after two block types were kept
-  under a "deferred scope" heading on exactly the reasoning above: "de
-  nem!!!!!!!!! elmondtam mar millioszor mvp, nem hagyunk szemetet, es nem
-  szamit a db!!!!!!! es nincs legacy kod iras!!!!!" ("but no!!!!!!!!! I have
-  said a million times, MVP, we leave no rubbish, and the db does not
+  The rule is the user's, after two block types were kept under a "deferred
+  scope" heading on exactly the reasoning above (in English: "but no!!!!!!!!!
+  I have said a million times, MVP, we leave no rubbish, and the db does not
   matter!!!!!!! and there is no writing legacy code!!!!!"). Both went out
   entirely, e2e tests with them.
 

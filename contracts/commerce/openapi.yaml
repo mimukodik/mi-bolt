@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MiBolt Commerce API
-  version: 2.2.0
+  version: 2.3.0
   description: >-
     Contract-first commerce API for the MiBolt webshop. No real payment,
     fulfillment or email takes place; the shop is a demonstration and says so in
@@ -31,8 +31,8 @@ info:
 
     Demo access: the demo shop is not public. POST /demo/session with the demo
     password issues the demo access cookie (mibolt_demo_access, 30 days), and
-    every shop operation except GET /media/{imageId} answers 401
-    UNAUTHENTICATED without it.
+    every shop operation except the two /demo/session operations answers 401
+    UNAUTHENTICATED without it, catalogue images included.
 
 
     Admin API: every operation under /admin serves the separate admin
@@ -64,7 +64,7 @@ tags:
 - name: Orders
   description: Order placement and the order receipt.
 - name: Media
-  description: Catalogue image delivery. Public.
+  description: Catalogue image delivery. Needs the demo access cookie.
 - name: DemoAccess
   description: Password-only demo sign-in that issues the demo access cookie.
 - name: AdminAuth
@@ -284,8 +284,9 @@ paths:
       - Media
       summary: Serve a catalogue image
       description: >-
-        Returns the image bytes for a media identifier. Public: no session is
-        required, because images carry nothing session-specific.
+        Returns the image bytes for a media identifier. It needs the demo access
+        cookie like every shop operation, but no session, because images carry
+        nothing session-specific.
 
 
         The identifier is content-addressed, so a changed image gets a new
@@ -297,7 +298,8 @@ paths:
         `src`, and the client puts that value into the markup unchanged. That is
         what makes a later move to a content delivery network a change of stored
         values rather than a change of contract.
-      security: []
+      security:
+      - demoAccess: []
       parameters:
       - $ref: '#/components/parameters/ImageId'
       responses:
@@ -325,6 +327,8 @@ paths:
                 format: binary
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/DemoAccessRequired'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -884,6 +888,9 @@ paths:
         PAYMENT_REQUIRED because the shopper never completed the payment page,
         pending returns 422 PAYMENT_PENDING because the outcome has not settled,
         and declined returns 422 PAYMENT_DECLINED.
+        A succeeded intent backs one order only: an intent that an earlier
+        order already carries returns 422 PAYMENT_REQUIRED, and the next card
+        order needs a new payment.
       security:
       - demoAccess: []
         sessionCookie: []
@@ -1712,9 +1719,9 @@ components:
       description: >-
         Demo access cookie issued by POST /demo/session for the demo password.
         HttpOnly, Secure, SameSite=Lax, Path=/api/v1, Max-Age 30 days. Every
-        shop operation except GET /media/{imageId} needs it and answers 401
-        UNAUTHENTICATED without a valid one. It carries no identity beyond the
-        one demo user.
+        shop operation except the two /demo/session operations needs it and
+        answers 401 UNAUTHENTICATED without a valid one. It carries no identity
+        beyond the one demo user.
   headers:
     ETag:
       description: The current session state version, quoted. Send it back in If-Match

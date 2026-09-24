@@ -34,9 +34,11 @@ alapértelmezést.
 | `MIBOLT_ADMIN_INITIAL_PASSWORD` | üres (generált) | az első admin jelszava; ha üres, a szerver generálja, és induláskor egyszer kiírja a logba |
 | `MIBOLT_DEMO_USERNAME` | `MiBoltDemoUser` | a demó egyetlen felhasználója; üres `demo_user` tábla esetén jön létre, később már nem érvényesül |
 | `MIBOLT_DEMO_PASSWORD` | `1MiBoltDemo1` | a demó belépési jelszava; **nem titok** (a repóban is benne van), és csak üres `demo_user` tábla esetén érvényesül |
+| `MIBOLT_PAYMENT_REDIRECT_URL_PREFIX` | `http://localhost:4210/demo-fizetes/` | a demófizetés oldalának nyilvános címe, pl. `https://<domain>/demo-fizetes/`: ide küldi a pénztár a vásárlót kártyás fizetéskor |
+| `MIBOLT_PAYMENT_RETURN_URL_PREFIX` | `http://localhost:4200/penztar?paymentIntentId=` | a bolt pénztárának nyilvános címe, pl. `https://<domain>/penztar?paymentIntentId=`: ide tér vissza a vásárló a fizetés után |
 
-Az üzleti paraméterek (`mibolt.checkout.*`, `mibolt.payment.*`,
-`mibolt.session.lifetime`, `mibolt.demo.access-lifetime`,
+Az üzleti paraméterek (`mibolt.checkout.*`, a fenti két cím kivételével a
+`mibolt.payment.*`, `mibolt.session.lifetime`, `mibolt.demo.access-lifetime`,
 `mibolt.idempotency.retention`) az
 `application.properties`-ben vannak; a demóhoz az alapértékek valók.
 
@@ -73,15 +75,22 @@ docker run -d --name mi-bolt-commerce \
   -e MIBOLT_DB_URL='jdbc:postgresql://<host>:5432/<db>' \
   -e MIBOLT_DB_USER='<user>' \
   -e MIBOLT_DB_PASSWORD='<jelszó>' \
+  -e MIBOLT_PAYMENT_REDIRECT_URL_PREFIX='https://<domain>/demo-fizetes/' \
+  -e MIBOLT_PAYMENT_RETURN_URL_PREFIX='https://<domain>/penztar?paymentIntentId=' \
   -v /opt/mi-bolt/catalog:/app/data/catalog:ro \
   <registry>/mi-bolt-commerce:<verzió>
 ```
 
 A `/opt/mi-bolt/catalog` a repó `data/catalog` könyvtárának másolata a
-szerveren. Ugyanez a `deploy/compose.sh`-val is megy: a `deploy/compose.yaml`
-a PostgreSQL-t is konténerben indítja (`mi-bolt-local` Compose-projekt), a
-compose fájl alapértékei érvényesek, és csak a jelszót kell megadni a
-`deploy/.env` fájlban (minta: `deploy/.env.example`).
+szerveren. A két fizetési cím nélkül a szerver a vásárlót `localhost`-ra
+küldené fizetni és vissza, ezért szerveren mindkettőt meg kell adni.
+
+A `deploy/compose.sh` a fejlesztői gép helyi stackje, szerverre nem való: a
+`deploy/compose.yaml` a PostgreSQL-t is konténerben indítja
+(`mi-bolt-local` Compose-projekt), és a `deploy/.env.example` szerint a
+jelszava eldobható helyi érték. A compose stackben a fizetési címeket a
+`MIBOLT_PAYMENT_ORIGIN` és a `MIBOLT_SHOP_ORIGIN` adja (alapértékük
+`http://localhost:4210` és `http://localhost:4200`).
 
 Induláskor sorrendben:
 

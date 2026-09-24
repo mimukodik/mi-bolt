@@ -1,0 +1,92 @@
+name: Preview Smoke
+on:
+  workflow_run:
+    workflows: [Publish Candidate]
+    types: [completed]
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      publisher_run_id:
+        description: Successful trusted publisher run to verify again
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  smoke:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 50
+    steps:
+      - name: Trusted receipt and fencing wrapper
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - id: candidate
+        working-directory: trusted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 deploy/candidate/preview_smoke.py resolve
+      - name: Wait for the exact deployed candidate
+        if: steps.candidate.outputs.ready == 'true'
+        working-directory: trusted
+        timeout-minutes: 32
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 deploy/candidate/preview_smoke.py wait
+      - name: Checkout the approved acceptance suite
+        if: steps.candidate.outputs.ready == 'true'
+        uses: actions/checkout@v7
+        with:
+          # Only the approved baseline may produce acceptance receipts.
+          # Never substitute a PR head: npm hooks could overwrite the wrapper.
+          ref: ${{ github.sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        if: steps.candidate.outputs.ready == 'true'
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: source/frontend/package-lock.json
+      - name: Install smoke dependencies
+        if: steps.candidate.outputs.ready == 'true'
+        working-directory: source/frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Existing smoke tests against the public preview
+        if: steps.candidate.outputs.ready == 'true'
+        working-directory: source/frontend
+        env:
+          E2E_BASE_URL: https://bolt-pr-${{ steps.candidate.outputs.pr }}.mimukodik.hu
+          PLAYWRIGHT_JSON_OUTPUT_FILE: preview-smoke-results.json
+        run: npm run e2e:smoke -- --reporter=line,json,html
+      - name: Require passing tests and unchanged candidate
+        if: steps.candidate.outputs.ready == 'true'
+        working-directory: trusted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 deploy/candidate/preview_smoke.py passed --report ../source/frontend/preview-smoke-results.json
+      - uses: actions/upload-artifact@v4
+        if: steps.candidate.outputs.ready == 'true'
+        with:
+          name: preview-smoke-receipt
+          path: trusted/smoke.json
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.candidate.outputs.ready == 'true'
+        with:
+          name: preview-browser-report
+          path: |
+            source/frontend/playwright-report/
+            source/frontend/test-results/
+            source/frontend/preview-smoke-results.json
+          if-no-files-found: warn
+          retention-days: 14
