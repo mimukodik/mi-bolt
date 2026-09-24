@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SkeletonLeave } from './skeleton-leave';
+import { RELEASE_AFTER_MS, SkeletonLeave } from './skeleton-leave';
 
 @Component({
   imports: [SkeletonLeave],
@@ -85,5 +85,47 @@ describe('SkeletonLeave', () => {
 
     expect(animationComplete).toHaveBeenCalledTimes(1);
     expect(svg.classList.contains('skeleton-leave')).toBe(false);
+  });
+
+  it('SL-05 a skeleton whose transition never ends is released once, RELEASE_AFTER_MS after the fade starts', () => {
+    const { directive, skeleton } = setUp();
+    vi.useFakeTimers();
+    try {
+      const animationComplete = vi.fn();
+      directive.fadeOut({ target: skeleton, animationComplete });
+
+      vi.advanceTimersByTime(RELEASE_AFTER_MS - 1);
+      expect(animationComplete).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(animationComplete).toHaveBeenCalledTimes(1);
+
+      skeleton.dispatchEvent(new Event('transitionend'));
+      vi.advanceTimersByTime(RELEASE_AFTER_MS);
+      expect(animationComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('SL-06 a transition that ends first releases the skeleton once and the timer adds nothing', () => {
+    const { directive, skeleton } = setUp();
+    vi.useFakeTimers();
+    try {
+      const animationComplete = vi.fn();
+      directive.fadeOut({ target: skeleton, animationComplete });
+
+      skeleton.dispatchEvent(new Event('transitionend'));
+      expect(animationComplete).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(RELEASE_AFTER_MS);
+      expect(animationComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('RELEASE_AFTER_MS is the 200ms fade plus 100ms slack', () => {
+    expect(RELEASE_AFTER_MS).toBe(300);
   });
 });
