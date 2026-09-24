@@ -312,6 +312,7 @@ coverage/
 dist/
 node_modules/
 .visual-screenshots/
+.tmp-browser-report/
 .playwright-mcp/
 blob-report/
 /.spring-tools/
