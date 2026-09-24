@@ -137,10 +137,10 @@ what gets re-read whenever the run has to check itself against the task.
    12 is not in the list and nothing after the branch is cut reads the start
    point, so there the merge target is the one to write down. **Another of
    those questions is whether the user wants to check the finished work by
-   hand**, on both ways in: a yes puts entry 11 in the list and a no leaves it
-   out. A no is an answer rather than a postponement, because the user who
-   asked for this gate called it "ez egy gate, de nincs ra mindig szukseg"
-   ("this is a gate, but it isn't always needed"), so no run adds the entry on
+   hand**, on both ways in: a yes puts entry 11 in the list and a no
+   leaves it out. A no is an answer rather than a postponement, because
+   the user who asked for this gate called it, in English, "this is
+   a gate, but it isn't always needed", so no run adds the entry on
    its own reading of how risky the change looks. Marking an option here would
    be that reading, so this question reserves its decision in the sense
    `.claude/CLAUDE.md` ("Asking the user") means. What is being asked for is
@@ -162,10 +162,10 @@ what gets re-read whenever the run has to check itself against the task.
    `MUHELY_MCP_SERVER=on` on its own answered every request with HTTP 500 and
    "Reader auth configuration was requested in legacy mode", the plugin
    wanting `MUHELY_AUTH_MODE=reader` and six further environment variables
-   besides. The run measured that, routed around it through another write
-   path, and recorded the decision in its report and in a tracker comment;
-   the user's reply was "nem értem miért nem kérted, miért dobtad el" ("I do
-   not understand why you did not ask for it, why you dropped it").
+   besides. The run measured that, routed around it through another
+   write path, and recorded the decision in its report and in a
+   tracker comment; the user's reply, in English, was "I do not
+   understand why you did not ask for it, why you dropped it".
    **Make the switch step 4 held, where the branch step 4 read is not this
    work's own, as soon as these answers come back**, cutting a branch that has
    to be created from the start point those answers settled, and before the
@@ -252,9 +252,8 @@ of what happened, when what it was needed for was deciding what to do next.
    apply half is routed and split the same way (`model-routing`, "Step 4: pick
    the row"), rather than going to one agent because the findings arrived in
    one report. One run handed a single `coder-sonnet` all three findings of a
-   review round, and the user asked why: "megint azt látom hogy egy coder agent
-   kapott minden review finding javitást" ("again I see that one coder agent
-   got every review finding fix").
+   review round, and the user asked why, in English: "again I see that one
+   coder agent got every review finding fix".
 5. Final review of the whole change, after the findings are applied, spawned as
    its own unit and never skipped because the round before it passed. The
    measured run closed this entry with `/code-review xhigh --fix`, which
@@ -272,11 +271,11 @@ of what happened, when what it was needed for was deciding what to do next.
 9. Push this run's branch and open the pull request, once every commit the work
    itself produced has landed. **A push is allowed from this entry onward, and
    at no point before it**, other than a push the user asks for directly, which
-   `.claude/rules/session-lifecycle.md` ("Pushing is not part of committing")
-   covers. What the user granted is narrow in when rather than in how many
-   times: "ezentúl a legvégén engedi ezzel van a push de csak a legvégén"
-   ("from now on a push is allowed at the very end, that is what this is about,
-   but only at the very end"). Nothing goes up part-way through the work, and
+   `.claude/rules/session-lifecycle.md` ("Pushing is not part of
+   committing") covers. What the user granted is narrow in when rather
+   than in how many times (user, in English: "from now on a push is
+   allowed at the very end, that is what this is about, but only at
+   the very end"). Nothing goes up part-way through the work, and
    the tail of the run is where the branch is published, so the pushes the
    entries below can still need, one for each fix entry 11's manual check
    turned up and one for what entry 13 commits, are this same permission
@@ -471,11 +470,10 @@ For each derived entry, in order:
    agent is already building correctly waits for the next spawn. Messaging is
    otherwise ordinary, which `model-routing` ("A finished agent is never
    continued") says in its own terms, and directing an agent this session
-   spawned is this session's own job: "amit te inditasz azoknak barmikor
-   szolhatsz ha ugy veled hogy kell vagy en kerem, mivel azok iranyitasaert te
-   vagy a felelos" ("the ones you spawn you may message at any time if you
-   judge it necessary or I ask for it, since you are responsible for directing
-   them"). On 2026-09-09 an orchestrator crossed two of its own spawns, one of
+   spawned is this session's own job (user, in English: "the ones
+   you spawn you may message at any time if you judge it necessary or
+   I ask for it, since you are responsible for directing them"). On
+   2026-09-09 an orchestrator crossed two of its own spawns, one of
    them told to import `stateVectorCovers` from a file it was forbidden to edit
    while that symbol was still module-private, and the two messages that
    repaired it, one asking the owner to export the symbol and one telling the
