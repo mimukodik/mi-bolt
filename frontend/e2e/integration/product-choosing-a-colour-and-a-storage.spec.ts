@@ -184,6 +184,11 @@ test.describe('Product: variant choice and add to cart', () => {
           const button = storageButtons.nth(i);
           if (await button.isDisabled()) continue;
           await button.click();
+          // `showsInStock()` reads the stock line with a one-shot
+          // `textContent()`, so the loop's next condition must not run until
+          // this click has rendered. The pressed state and the stock line
+          // change in the same render.
+          await expect(button).toHaveAttribute('aria-pressed', 'true');
         }
         const colourCount = await colourButtons.count();
         for (let i = 0; i < colourCount && !(await showsInStock()); i += 1) {
@@ -191,6 +196,7 @@ test.describe('Product: variant choice and add to cart', () => {
           if ((await button.getAttribute('aria-pressed')) === 'true') continue;
           if (await button.isDisabled()) continue;
           await button.click();
+          await expect(button).toHaveAttribute('aria-pressed', 'true');
         }
 
         await expect(page.getByTestId('product-stock')).toHaveText(inStockText);

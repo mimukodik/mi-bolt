@@ -76,7 +76,12 @@ test.describe('Product: variant choice and add to cart', { tag: '@integration' }
     });
 
     await test.step('Select another colour whose variant is also out of stock, then come back to the out-of-stock one', async () => {
-      const colourButtons = page.locator('[data-testid^="variant-color-"]');
+      // Scoped to the buttons: the group's own testid is `variant-color-group`,
+      // which the `^=` prefix matches too (a `<fieldset>`, not a button, and it
+      // carries no `aria-pressed`).
+      const colourButtons = page
+        .getByTestId('variant-color-group')
+        .locator('button[data-testid^="variant-color-"]');
       const colourCount = await colourButtons.count();
 
       let selectedIndex = -1;
@@ -93,6 +98,10 @@ test.describe('Product: variant choice and add to cart', { tag: '@integration' }
         if (i === selectedIndex) continue;
 
         await colourButtons.nth(i).click();
+        // The storefront renders the new variant asynchronously; the pressed
+        // state and the stock line change in the same render, so waiting for
+        // this button to read pressed is what makes the read below current.
+        await expect(colourButtons.nth(i)).toHaveAttribute('aria-pressed', 'true');
 
         const stockText = await page.getByTestId('product-stock').textContent();
 
@@ -112,6 +121,7 @@ test.describe('Product: variant choice and add to cart', { tag: '@integration' }
       }
 
       await colourButtons.nth(selectedIndex).click();
+      await expect(colourButtons.nth(selectedIndex)).toHaveAttribute('aria-pressed', 'true');
       await expect(page.getByTestId('product-stock')).toHaveText(
         'Ez a konfiguráció elfogyott a demó készletből.',
       );
