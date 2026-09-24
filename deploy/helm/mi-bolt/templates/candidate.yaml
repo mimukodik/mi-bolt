@@ -1,0 +1,9 @@
+# Public, non-secret receipt used to fence external smoke tests to this head.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mi-bolt.fullname" . }}-candidate
+  labels:
+    {{- include "mi-bolt.labels" . | nindent 4 }}
+data:
+  __candidate.json: {{ dict "candidateId" .Values.candidate.id "headSha" .Values.candidate.headCommit "publisherRunId" .Values.candidate.publisherRunId "images" (dict "web" .Values.web.image.digest "commerce" .Values.commerce.image.digest) | toJson | quote }}
