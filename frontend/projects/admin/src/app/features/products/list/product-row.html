@@ -21,7 +21,7 @@
         <mat-chip>{{ row.status === 'active' ? 'Aktív' : 'Archivált' }}</mat-chip>
       </mat-chip-set>
     </div>
-    <div role="cell">
+    <div class="flex items-center" role="cell">
       <a
         matIconButton
         [attr.aria-label]="`Szerkesztés: ${row.name}`"
@@ -29,6 +29,7 @@
       >
         <mat-icon>edit</mat-icon>
       </a>
+      <adm-product-row-actions [item]="row" />
     </div>
   } @else {
     <img
@@ -66,7 +67,7 @@
         <mat-chip>{{ row.status === 'active' ? 'Aktív' : 'Archivált' }}</mat-chip>
       </mat-chip-set>
     </div>
-    <div role="cell">
+    <div class="flex items-center" role="cell">
       <a
         matIconButton
         [attr.aria-label]="`Szerkesztés: ${row.name}`"
@@ -74,6 +75,7 @@
       >
         <mat-icon>edit</mat-icon>
       </a>
+      <adm-product-row-actions [item]="row" />
     </div>
   }
 } @else {
