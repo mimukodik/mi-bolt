@@ -43,15 +43,15 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
-import { type CreateHandlersOptions, createHandlers } from '../../../mocks/create-handlers';
-import '../../../mocks/cart/cart.handlers';
-import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
-import { Repository } from '../../../mocks/repository';
+import { type CreateHandlersOptions, createHandlers } from '@mi-bolt/mocks/create-handlers';
+import '@mi-bolt/mocks/cart/cart.handlers';
+import { isCatalogFixtureShape, loadCatalogFixture } from '@mi-bolt/mocks/catalog/catalog.handlers';
+import { Repository } from '@mi-bolt/mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
-} from '../../../mocks/scenarios';
+} from '@mi-bolt/mocks/scenarios';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { Button } from '../../shared/ui/button/button';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';

@@ -17,7 +17,7 @@
     "paths": {
       "@mi-bolt/api/*": ["./projects/shop-api/src/generated/*"],
       "@mi-bolt/core-api/*": ["./projects/core-api/src/*"],
-      "@mi-bolt/mocks/*": ["./projects/storefront/src/mocks/*"]
+      "@mi-bolt/mocks/*": ["./projects/shop-mocks/src/*"]
     }
   },
   "angularCompilerOptions": {
@@ -60,6 +60,12 @@
     },
     {
       "path": "./projects/shop-api/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/shop-mocks/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/shop-mocks/tsconfig.spec.json"
     }
   ]
 }

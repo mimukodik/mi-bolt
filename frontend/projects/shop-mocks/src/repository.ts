@@ -134,7 +134,7 @@ export class Repository {
   }
 
   /**
-   * Mirrors `CartDomain.isExpired` (src/mocks/cart/cart-domain.ts)
+   * Mirrors `CartDomain.isExpired` (projects/shop-mocks/src/cart/cart-domain.ts)
    * in the repository's own terms — `Repository` cannot import
    * `CartDomain`, since the dependency runs the other way. Keep the
    * two predicates in step: an unparseable date is not expired, and

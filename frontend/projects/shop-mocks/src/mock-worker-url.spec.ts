@@ -49,7 +49,7 @@ describe('MIM-254 resolveMockWorkerUrl', () => {
   // `ng test` runs from the workspace root, so `process.cwd()` is where
   // `angular.json` sits, with coverage on or off. `import.meta.dirname` is
   // not: it is the root only while coverage instrumentation is on, and
-  // `--no-coverage` resolved it to `src/mocks/` (ENOENT, measured
+  // `--no-coverage` resolved it to `projects/shop-mocks/src/` (ENOENT, measured
   // 2026-09-22).
   it('MIM-254: the demo payment baseHref ends in a slash', () => {
     const raw = readFileSync(pathResolve(process.cwd(), 'angular.json'), 'utf8');

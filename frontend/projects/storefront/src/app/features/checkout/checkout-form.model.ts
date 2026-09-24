@@ -121,7 +121,7 @@ export function createInitialCheckoutFormModel(): CheckoutFormModel {
 
 /**
  * Schema bound to the form model. The rules below mirror the wire
- * constraints in `src/mocks/checkout/validate-checkout.ts` so the
+ * constraints in `projects/shop-mocks/src/checkout/validate-checkout.ts` so the
  * client never advertises a value the mock would reject. Hidden
  * fields (the address when `deliveryOptionId === 'pickup_point'`, and
  * the billing address when `billingSameAsDelivery` is true) are

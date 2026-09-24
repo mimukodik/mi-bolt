@@ -9,8 +9,8 @@
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createHandlers } from '../mocks/create-handlers';
-import { Repository } from '../mocks/repository';
+import { createHandlers } from './create-handlers';
+import { Repository } from './repository';
 import {
   SNAPSHOT_SCHEMA_VERSION,
   createBrowserPersistence,
@@ -18,7 +18,7 @@ import {
   type MockSnapshot,
   type PersistedCart,
   type PersistedCheckoutDraft,
-} from '../mocks/persistence';
+} from './persistence';
 import {
   createDeterministicIds,
   createFixedClock,
@@ -27,7 +27,7 @@ import {
   resolveScenario,
   type Clock,
   type Ids,
-} from '../mocks/scenarios';
+} from './scenarios';
 import { buildSnapshot } from './snapshot';
 import { CartStore, type VariantLookupFn } from './cart/cart-store';
 import { CheckoutStore } from './checkout/checkout-store';
@@ -40,8 +40,8 @@ import './orders/order.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
 import { isRecord } from './is-record';
 import type { VariantLookup } from './catalog/catalog-store';
-import { server, useMswServer } from '../../../../tests/msw-server';
-import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
+import { server, useMswServer } from '../../../tests/msw-server';
+import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 
 // Stand-in literals typed directly against `VariantLookup`'s own
 // shape — the generated SDK types — and shared by every `describe`
@@ -328,7 +328,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
   });
 
   it('falls back to in-memory storage when globalThis.sessionStorage is not storage-like', () => {
-    // Reject arm of `hasSessionStorage` (src/mocks/persistence.ts):
+    // Reject arm of `hasSessionStorage` (projects/shop-mocks/src/persistence.ts):
     // an object present at `globalThis.sessionStorage` but missing the
     // getItem/setItem/removeItem methods is treated the same as no
     // sessionStorage at all, rather than being handed to the adapter and
@@ -404,7 +404,7 @@ describe('T05-AC06 scenario isolation', () => {
   });
 
   it('parseScenarioFromLocation falls back to default when location.search is not a string', () => {
-    // Reject arm of `hasLocationSearch` (src/mocks/scenarios.ts): a
+    // Reject arm of `hasLocationSearch` (projects/shop-mocks/src/scenarios.ts): a
     // `location` object is present, but `search` is missing/non-string.
     // An array is used (rather than e.g. a number) because
     // `new URLSearchParams(...)` would otherwise silently coerce a

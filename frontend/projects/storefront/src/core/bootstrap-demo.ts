@@ -17,9 +17,9 @@
  */
 
 import { environment } from '../environments/environment';
-import { startMockWorker } from '../mocks/browser';
-import { createBrowserPersistence } from '../mocks/persistence';
-import { createRealClock, parseScenarioFromLocation } from '../mocks/scenarios';
+import { startMockWorker } from '@mi-bolt/mocks/browser';
+import { createBrowserPersistence } from '@mi-bolt/mocks/persistence';
+import { createRealClock, parseScenarioFromLocation } from '@mi-bolt/mocks/scenarios';
 
 /** Tracks the last prepared scenario for diagnostics. */
 let preparedScenario: string | null = null;

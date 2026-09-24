@@ -19,7 +19,7 @@
 import { HttpResponse, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { server, useMswServer } from '../../../../tests/msw-server';
+import { server, useMswServer } from '../../../tests/msw-server';
 
 useMswServer();
 

@@ -4,7 +4,7 @@
  * service-worker script is served at the app's own base path. This is the
  * gate MIM-254 adds: the `demo-payment` project had no `assets` entry in
  * `angular.json`, so the MSW worker bundle was never copied into
- * `dist/demo-payment/**`, and `src/mocks/browser.ts` hard-coded a
+ * `dist/demo-payment/**`, and `projects/shop-mocks/src/browser.ts` hard-coded a
  * root-absolute URL that the dev server's base-path middleware 404s. MIM-332
  * (unit F5) reuses the same gate for the `admin` project via `--project` and
  * `--base-path`, since the failure mode — an `assets` entry missing from the

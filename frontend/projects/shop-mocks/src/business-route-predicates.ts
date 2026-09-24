@@ -3,7 +3,7 @@
  * so unknown API endpoints cannot pass through and external scripts,
  * fonts, telemetry and business hosts are disallowed. Kept in a module of
  * their own, with no `msw` import, so a unit test can exercise them
- * directly: `src/mocks/browser.ts`'s module scope calls
+ * directly: `projects/shop-mocks/src/browser.ts`'s module scope calls
  * `setupWorker()` from `msw/browser`, which throws outside a real
  * browser (`Invariant Violation: [MSW] Failed to execute setupWorker
  * in a non-browser environment` — see `src/main.spec.ts`'s own guard

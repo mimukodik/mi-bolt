@@ -24,18 +24,18 @@ import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import type { Cart } from '@mi-bolt/api/models/cart';
 
-import { createHandlers } from '../../../mocks/create-handlers';
-import { CART_TTL_MS } from '../../../mocks/cart/cart-store';
-import '../../../mocks/cart/cart.handlers';
-import { loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
-import { isCatalogFixtureShape } from '../../../mocks/catalog/catalog.handlers';
+import { createHandlers } from '@mi-bolt/mocks/create-handlers';
+import { CART_TTL_MS } from '@mi-bolt/mocks/cart/cart-store';
+import '@mi-bolt/mocks/cart/cart.handlers';
+import { loadCatalogFixture } from '@mi-bolt/mocks/catalog/catalog.handlers';
+import { isCatalogFixtureShape } from '@mi-bolt/mocks/catalog/catalog.handlers';
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
-} from '../../../mocks/scenarios';
-import { Repository } from '../../../mocks/repository';
+} from '@mi-bolt/mocks/scenarios';
+import { Repository } from '@mi-bolt/mocks/repository';
 
 import { CartFacade } from './cart.facade';
 import { CartCountFacade } from '../../core/navigation/cart-count-facade';

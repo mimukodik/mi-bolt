@@ -1,9 +1,9 @@
 /**
- * Spec for the `isRecord` type guard (`src/mocks/is-record.ts`).
+ * Spec for the `isRecord` type guard (`projects/shop-mocks/src/is-record.ts`).
  *
  * Each case asserts the exact boolean the guard must return for the
  * canonical "is this an indexable plain object?" question the nine
- * call sites under `src/mocks/` need answered. Truthiness checks would
+ * call sites under `projects/shop-mocks/src/` need answered. Truthiness checks would
  * not settle a boolean, so every assertion is `expect(...).toBe(...)`.
  */
 import { describe, expect, it } from 'vitest';

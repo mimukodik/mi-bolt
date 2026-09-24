@@ -9,7 +9,7 @@
  *   - getMedia             → GET  /api/v1/media/{imageId}
  *
  * The handlers live on top of `catalogStore` (this file's module
- * local). The store is loaded by `src/mocks/browser.ts` from
+ * local). The store is loaded by `projects/shop-mocks/src/browser.ts` from
  * `docs/api/fixtures/catalog.json`; the spec loads its own copy.
  */
 
@@ -37,7 +37,7 @@ import {
 } from './catalog-filter';
 import { buildFacets } from './catalog-facets';
 
-/** Module-local store. `src/mocks/browser.ts` calls `loadCatalogFixture(store)`. */
+/** Module-local store. `projects/shop-mocks/src/browser.ts` calls `loadCatalogFixture(store)`. */
 export const catalogStore: { current: CatalogStore | null } = { current: null };
 
 /** Loads the supplied fixture into the store, replacing any prior load. */

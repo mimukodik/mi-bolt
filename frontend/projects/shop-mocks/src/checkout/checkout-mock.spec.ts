@@ -10,41 +10,37 @@
  * layer, not a guide to what it should answer.
  *
  * Header shape and helpers are copied from
- * `src/mocks/cart/cart-mock.spec.ts:1-105`. The shared `server` and
+ * `projects/shop-mocks/src/cart/cart-mock.spec.ts:1-105`. The shared `server` and
  * the per-file MSW lifecycle come from `tests/msw-server.ts`.
  */
 
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import catalogFixture from '../../../../../docs/api/fixtures/catalog.json';
+import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
 import {
   catalogStore,
   isCatalogFixtureShape,
   loadCatalogFixture,
-} from '../../mocks/catalog/catalog.handlers';
-import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../../mocks/cart/cart-store';
-import { CheckoutStore, TERMS_VERSION } from '../../mocks/checkout/checkout-store';
-import { IDEMPOTENCY_WINDOW_MS } from '../../mocks/idempotency';
-import '../../mocks/checkout/checkout.handlers';
-import '../../mocks/payment/payment.handlers';
-import '../../mocks/orders/order.handlers';
-import { IdempotencyStore } from '../../mocks/idempotency';
-import {
-  PAYMENT_INTENT_TTL_MS,
-  OrderStore,
-  SIMULATION_NOTICE,
-} from '../../mocks/orders/order-store';
-import { Repository } from '../../mocks/repository';
+} from '../catalog/catalog.handlers';
+import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../cart/cart-store';
+import { CheckoutStore, TERMS_VERSION } from '../checkout/checkout-store';
+import { IDEMPOTENCY_WINDOW_MS } from '../idempotency';
+import '../checkout/checkout.handlers';
+import '../payment/payment.handlers';
+import '../orders/order.handlers';
+import { IdempotencyStore } from '../idempotency';
+import { PAYMENT_INTENT_TTL_MS, OrderStore, SIMULATION_NOTICE } from '../orders/order-store';
+import { Repository } from '../repository';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
   type Clock,
   type Ids,
-} from '../../mocks/scenarios';
-import { server, useMswServer } from '../../../../../tests/msw-server';
-import { isRecord } from '../../mocks/is-record';
-import { createHandlers } from '../../mocks/create-handlers';
+} from '../scenarios';
+import { server, useMswServer } from '../../../../tests/msw-server';
+import { isRecord } from '../is-record';
+import { createHandlers } from '../create-handlers';
 
 useMswServer();
 

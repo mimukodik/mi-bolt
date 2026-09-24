@@ -29,22 +29,22 @@ import { Router, UrlSegment, UrlTree, convertToParamMap, provideRouter } from '@
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
-import { createHandlers } from '../../../mocks/create-handlers';
-import { IdempotencyStore } from '../../../mocks/idempotency';
-import { Repository } from '../../../mocks/repository';
+import { createHandlers } from '@mi-bolt/mocks/create-handlers';
+import { IdempotencyStore } from '@mi-bolt/mocks/idempotency';
+import { Repository } from '@mi-bolt/mocks/repository';
 import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
-} from '../../../mocks/scenarios';
-import { TERMS_VERSION } from '../../../mocks/checkout/checkout-store';
+} from '@mi-bolt/mocks/scenarios';
+import { TERMS_VERSION } from '@mi-bolt/mocks/checkout/checkout-store';
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
-import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
+import { isCatalogFixtureShape, loadCatalogFixture } from '@mi-bolt/mocks/catalog/catalog.handlers';
 
-import '../../../mocks/cart/cart.handlers';
-import '../../../mocks/checkout/checkout.handlers';
-import '../../../mocks/payment/payment.handlers';
-import '../../../mocks/orders/order.handlers';
+import '@mi-bolt/mocks/cart/cart.handlers';
+import '@mi-bolt/mocks/checkout/checkout.handlers';
+import '@mi-bolt/mocks/payment/payment.handlers';
+import '@mi-bolt/mocks/orders/order.handlers';
 
 import type { Address } from '@mi-bolt/api/models/address';
 import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
@@ -73,7 +73,7 @@ const VALID_CONTACT: Contact = {
 };
 
 /** `VALID_CONTACT` as the server stores it: the email is lower-cased
- *  by `normalizeContactEmail` (`src/mocks/checkout/validate-checkout.ts`). */
+ *  by `normalizeContactEmail` (`projects/shop-mocks/src/checkout/validate-checkout.ts`). */
 const STORED_CONTACT: Contact = {
   fullName: 'Teszt Elek',
   email: 'teszt.elek@pelda.hu',
@@ -227,7 +227,7 @@ async function saveBilling(): Promise<void> {
  * Fails every `GET /cart` with the 503 the contract declares for the
  * operation (`contracts/commerce/openapi.yaml:290-291`), in the Problem shape the
  * generated model requires: the `urn:mi-bolt:problem:…` type
- * `problemType()` builds (`src/mocks/cart/cart-store.ts`), plus the
+ * `problemType()` builds (`projects/shop-mocks/src/cart/cart-store.ts`), plus the
  * mandatory `traceId` and `fieldErrors`.
  */
 function failCartReads(): void {
@@ -533,7 +533,7 @@ describe('reviewGuard', () => {
     // rather than merely finding a missing section. A section cannot be
     // written against an empty cart: the delivery option and the
     // payment method are both unavailable while the cart has no lines
-    // (`src/mocks/checkout/checkout-store.ts`, `CART_EMPTY`).
+    // (`projects/shop-mocks/src/checkout/checkout-store.ts`, `CART_EMPTY`).
     await seedCartWithItem();
     await saveContact();
     await saveDelivery();
@@ -587,7 +587,7 @@ describe('guards redirect to the success URL once an order exists', () => {
     await saveDelivery();
     // The draft's payment method and the order body's must agree, or
     // the server answers 422 PAYMENT_METHOD_MISMATCH
-    // (`src/mocks/orders/order-store.ts`), so the draft carries the
+    // (`projects/shop-mocks/src/orders/order-store.ts`), so the draft carries the
     // cash-on-delivery method this case submits.
     await savePayment(COD_PAYMENT);
     await saveBilling();

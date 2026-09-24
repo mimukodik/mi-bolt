@@ -12,7 +12,7 @@ import { App } from './app/app';
 registerLocaleData(localeHu, 'hu-HU');
 
 /**
- * Snapshot key prefix, mirrored from `src/mocks/persistence.ts:32`. The
+ * Snapshot key prefix, mirrored from `projects/shop-mocks/src/persistence.ts:35`. The
  * constant is module-private there, so it is repeated rather than
  * imported; the two must stay in step, and the scan below is the only
  * reader of it in this application.

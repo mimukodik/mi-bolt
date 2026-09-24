@@ -1,8 +1,8 @@
 /**
  * Pure object-shape predicate for the mocks layer (see
- * `src/mocks/business-route-predicates.ts`, the precedent for a small
+ * `projects/shop-mocks/src/business-route-predicates.ts`, the precedent for a small
  * mocks-local predicate module with no external imports). Each of the
- * nine call sites under `src/mocks/` previously narrowed an `unknown`
+ * nine call sites under `projects/shop-mocks/src/` previously narrowed an `unknown`
  * value to a record with a bare cast; `code-standards.md` forbids that
  * — a cast asserts, a guard proves. This predicate is that proof.
  */
