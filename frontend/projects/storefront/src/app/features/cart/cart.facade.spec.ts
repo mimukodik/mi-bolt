@@ -20,9 +20,9 @@ import { HttpResponse, http } from 'msw';
 
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
-import type { Cart } from '../../../app/api/generated/models/cart';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
+import type { Cart } from '@mi-bolt/api/models/cart';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { CART_TTL_MS } from '../../../mocks/cart/cart-store';

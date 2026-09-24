@@ -58,7 +58,7 @@ import {
 import { ContactStep } from './contact-step';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { Contact } from '../../api/generated/models/contact';
+import type { Contact } from '@mi-bolt/api/models/contact';
 
 function getRootElement(fixture: { nativeElement: unknown }): HTMLElement {
   const raw: unknown = fixture.nativeElement;

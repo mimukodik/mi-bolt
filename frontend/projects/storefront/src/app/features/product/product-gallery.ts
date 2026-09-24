@@ -3,7 +3,7 @@ import { Component, computed, effect, input, output, signal } from '@angular/cor
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { ProductImage } from '../../shared/ui/product-image/product-image';
 
-import type { Image } from '../../api/generated/models/image';
+import type { Image } from '@mi-bolt/api/models/image';
 
 /**
  * T16 — product image gallery.

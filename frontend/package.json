@@ -28,7 +28,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "api:generate": "ng-openapi-gen --config ng-openapi-gen.json && ng-openapi-gen --config ng-openapi-gen.admin.json",
-    "api:drift": "npm run api:generate && git diff --exit-code -- projects/storefront/src/app/api/generated projects/admin/src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- projects/storefront/src/app/api/generated projects/admin/src/app/api/generated)\"",
+    "api:drift": "npm run api:generate && git diff --exit-code -- projects/shop-api/src/generated projects/admin/src/app/api/generated && test -z \"$(git ls-files --others --exclude-standard -- projects/shop-api/src/generated projects/admin/src/app/api/generated)\"",
     "fixtures:catalog": "node scripts/build-catalog-fixture.mjs",
     "fixtures:catalog:check": "node scripts/build-catalog-fixture.mjs --check"
   },
@@ -74,6 +74,7 @@
     "monocart-reporter": "2.13.1",
     "msw": "^2.15.0",
     "ng-openapi-gen": "^1.0.5",
+    "ng-packagr": "^22.1.0",
     "postcss": "^8.5.3",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.12",

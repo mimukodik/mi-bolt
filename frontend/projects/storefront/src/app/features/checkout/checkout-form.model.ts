@@ -40,9 +40,9 @@ import {
   hidden,
 } from '@angular/forms/signals';
 import type { WritableSignal } from '@angular/core';
-import type { DeliveryOptionId as GeneratedDeliveryOptionId } from '../../api/generated/models/delivery-option-id';
-import type { PaymentMethodId as GeneratedPaymentMethodId } from '../../api/generated/models/payment-method-id';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
+import type { DeliveryOptionId as GeneratedDeliveryOptionId } from '@mi-bolt/api/models/delivery-option-id';
+import type { PaymentMethodId as GeneratedPaymentMethodId } from '@mi-bolt/api/models/payment-method-id';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
 import { PHONE_INTERNATIONAL } from './contact.schema';
 
 /** Allowed delivery option ids (matches the generated OpenAPI union plus

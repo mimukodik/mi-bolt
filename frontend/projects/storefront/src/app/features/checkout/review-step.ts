@@ -48,13 +48,13 @@ import { cartLinesKey, checkoutKeys } from './checkout-keys';
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { TermsDialog } from './terms-dialog';
 
-import type { Address } from '../../api/generated/models/address';
-import type { Cart } from '../../api/generated/models/cart';
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
-import type { Money } from '../../api/generated/models/money';
-import type { PaymentIntent } from '../../api/generated/models/payment-intent';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
+import type { Money } from '@mi-bolt/api/models/money';
+import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
 import type { PriceChange } from './checkout.facade';
 
 /**

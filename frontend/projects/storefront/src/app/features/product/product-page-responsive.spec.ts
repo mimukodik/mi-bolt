@@ -23,8 +23,8 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { server, useMswServer } from '../../../../../../tests/msw-server';
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { ProductPage } from './product-page';
 import { DEMO_PRODUCT } from './demo-product.fixture';
 

@@ -1,4 +1,4 @@
-// src/app/core/api/api-root.ts — T04-AC05
+// projects/core-api/src/api-root.ts — T04-AC05
 //
 // Derives the SDK's runtime root URL from `document.baseURI` so every generated
 // API call resolves against the same origin Angular itself was bootstrapped
@@ -14,7 +14,7 @@
 
 const API_PATH = '/api/v1';
 
-export function resolveApiRoot(documentLike?: Document): string {
+export function resolveApiRoot(documentLike?: Pick<Document, 'baseURI'>): string {
   if (typeof documentLike === 'undefined' && typeof document === 'undefined') {
     throw new Error(
       '[mi-bolt] resolveApiRoot(): document is missing; SDK cannot derive a same-origin root.',
@@ -28,6 +28,11 @@ export function resolveApiRoot(documentLike?: Document): string {
     throw new Error(
       `[mi-bolt] resolveApiRoot(): cannot parse document.baseURI "${baseUri}" as a URL (${String(err)})`,
       { cause: err },
+    );
+  }
+  if (origin === 'null') {
+    throw new Error(
+      `[mi-bolt] resolveApiRoot(): document.baseURI "${baseUri}" has an opaque origin; SDK cannot derive a same-origin root.`,
     );
   }
   return `${origin}${API_PATH}`;

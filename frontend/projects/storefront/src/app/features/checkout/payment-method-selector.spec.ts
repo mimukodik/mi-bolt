@@ -17,8 +17,8 @@ import { describe, expect, it } from 'vitest';
 import { PaymentMethodSelector } from './payment-method-selector';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
-import type { PaymentMethodId } from '../../api/generated/models/payment-method-id';
-import type { PaymentMethodOption } from '../../api/generated/models/payment-method-option';
+import type { PaymentMethodId } from '@mi-bolt/api/models/payment-method-id';
+import type { PaymentMethodOption } from '@mi-bolt/api/models/payment-method-option';
 
 function getRootElement(fixture: ComponentFixture<unknown>): HTMLElement {
   const raw: unknown = fixture.nativeElement;

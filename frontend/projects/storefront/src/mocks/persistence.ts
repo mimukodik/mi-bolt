@@ -18,14 +18,14 @@
  * understands why a reload would lose the cart.
  */
 
-import type { BillingDetails } from '../app/api/generated/models/billing-details';
-import type { Contact } from '../app/api/generated/models/contact';
-import type { DeliverySelection } from '../app/api/generated/models/delivery-selection';
-import type { OrderReceipt } from '../app/api/generated/models/order-receipt';
-import type { PaymentIntent } from '../app/api/generated/models/payment-intent';
-import type { PaymentSelection } from '../app/api/generated/models/payment-selection';
-import type { Address } from '../app/api/generated/models/address';
-import type { OrderLine } from '../app/api/generated/models/order-line';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
+import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
+import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { OrderLine } from '@mi-bolt/api/models/order-line';
 
 import { isRecord } from './is-record';
 import type { ScenarioName } from './scenarios';

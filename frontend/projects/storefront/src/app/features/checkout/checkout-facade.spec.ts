@@ -32,8 +32,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
-import { provideApiConfiguration } from '../../../app/api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../../app/core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
 import { createHandlers } from '../../../mocks/create-handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from '../../../mocks/catalog/catalog.handlers';
@@ -51,8 +51,8 @@ import {
 } from '../../../mocks/scenarios';
 
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
-import type { Address } from '../../../app/api/generated/models/address';
-import type { BillingDetails } from '../../../app/api/generated/models/billing-details';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
 
 import { CartFacade } from '../cart/cart.facade';
 import { CheckoutFacade } from './checkout.facade';

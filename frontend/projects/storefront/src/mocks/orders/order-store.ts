@@ -23,23 +23,23 @@
  * `mibolt.payment.intent-lifetime=30m`.
  */
 
-import type { Problem } from '../../app/api/generated/models/problem';
-import type { ProblemCode } from '../../app/api/generated/models/problem-code';
-import type { FieldError } from '../../app/api/generated/models/field-error';
-import type { PaymentIntent } from '../../app/api/generated/models/payment-intent';
-import type { PaymentIntentStatus } from '../../app/api/generated/models/payment-intent-status';
-import type { OrderRequest } from '../../app/api/generated/models/order-request';
-import type { CardOrderRequest } from '../../app/api/generated/models/card-order-request';
-import type { CashOnDeliveryOrderRequest } from '../../app/api/generated/models/cash-on-delivery-order-request';
-import type { OrderReceipt } from '../../app/api/generated/models/order-receipt';
-import type { OrderLine } from '../../app/api/generated/models/order-line';
-import type { Cart } from '../../app/api/generated/models/cart';
-import type { Money } from '../../app/api/generated/models/money';
-import type { StorageGb } from '../../app/api/generated/models/storage-gb';
-import type { Contact } from '../../app/api/generated/models/contact';
-import type { BillingDetails } from '../../app/api/generated/models/billing-details';
-import type { DeliverySelection } from '../../app/api/generated/models/delivery-selection';
-import type { PaymentSelection } from '../../app/api/generated/models/payment-selection';
+import type { Problem } from '@mi-bolt/api/models/problem';
+import type { ProblemCode } from '@mi-bolt/api/models/problem-code';
+import type { FieldError } from '@mi-bolt/api/models/field-error';
+import type { PaymentIntent } from '@mi-bolt/api/models/payment-intent';
+import type { PaymentIntentStatus } from '@mi-bolt/api/models/payment-intent-status';
+import type { OrderRequest } from '@mi-bolt/api/models/order-request';
+import type { CardOrderRequest } from '@mi-bolt/api/models/card-order-request';
+import type { CashOnDeliveryOrderRequest } from '@mi-bolt/api/models/cash-on-delivery-order-request';
+import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
+import type { OrderLine } from '@mi-bolt/api/models/order-line';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { Money } from '@mi-bolt/api/models/money';
+import type { StorageGb } from '@mi-bolt/api/models/storage-gb';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
 
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';

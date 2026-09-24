@@ -44,12 +44,12 @@ import {
   tap,
 } from 'rxjs';
 
-import { Api } from '../../api/generated/api';
-import { listProducts } from '../../api/generated/fn/catalog/list-products';
-import type { CatalogItem } from '../../api/generated/models/catalog-item';
-import type { ColorFacetValue } from '../../api/generated/models/color-facet-value';
-import type { FacetValue } from '../../api/generated/models/facet-value';
-import type { Facets } from '../../api/generated/models/facets';
+import { Api } from '@mi-bolt/api/api';
+import { listProducts } from '@mi-bolt/api/fn/catalog/list-products';
+import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { ColorFacetValue } from '@mi-bolt/api/models/color-facet-value';
+import type { FacetValue } from '@mi-bolt/api/models/facet-value';
+import type { Facets } from '@mi-bolt/api/models/facets';
 import {
   DEFAULT_CATALOG_QUERY,
   parseCatalogQuery,

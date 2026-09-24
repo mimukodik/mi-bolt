@@ -26,7 +26,7 @@ import yaml from 'js-yaml';
 
 import { isRecord } from '../../projects/storefront/src/mocks/is-record';
 import { ADMIN_TAGS, HTTP_METHOD_KEYS, isAdminTag } from './admin-tags';
-import * as shopOperations from '../../projects/storefront/src/app/api/generated/functions';
+import * as shopOperations from '../../projects/shop-api/src/generated/functions';
 import * as adminOperations from '../../projects/admin/src/app/api/generated/functions';
 
 interface SpecOperation {

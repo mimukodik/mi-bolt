@@ -15,8 +15,8 @@ import { CONTACT_DRAFT_SAVER, ContactStep } from './contact-step';
 import type { ContactServerErrors } from './contact-server-errors';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { Contact } from '../../api/generated/models/contact';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { Contact } from '@mi-bolt/api/models/contact';
 
 /**
  * The contact section the draft already holds, copied field by field

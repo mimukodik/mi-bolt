@@ -30,7 +30,7 @@ import {
   validate,
 } from '@angular/forms/signals';
 import type { WritableSignal } from '@angular/core';
-import type { Contact } from '../../api/generated/models/contact';
+import type { Contact } from '@mi-bolt/api/models/contact';
 
 export type ContactFieldKey = 'fullName' | 'email' | 'phone';
 

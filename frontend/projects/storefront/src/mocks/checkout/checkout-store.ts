@@ -17,26 +17,26 @@
  * `OrderReceipt.notice`.
  */
 
-import type { Address } from '../../app/api/generated/models/address';
-import type { BillingDetails } from '../../app/api/generated/models/billing-details';
-import type { Cart } from '../../app/api/generated/models/cart';
-import type { CheckoutOptions } from '../../app/api/generated/models/checkout-options';
-import type { CheckoutSession } from '../../app/api/generated/models/checkout-session';
-import type { CheckoutSummary } from '../../app/api/generated/models/checkout-summary';
-import type { Contact } from '../../app/api/generated/models/contact';
-import type { DeliveryOption } from '../../app/api/generated/models/delivery-option';
-import type { DeliveryOptionId } from '../../app/api/generated/models/delivery-option-id';
-import type { DeliverySelection } from '../../app/api/generated/models/delivery-selection';
-import type { FieldError } from '../../app/api/generated/models/field-error';
-import type { HomeDeliverySelection } from '../../app/api/generated/models/home-delivery-selection';
-import type { Money } from '../../app/api/generated/models/money';
-import type { PaymentMethodId } from '../../app/api/generated/models/payment-method-id';
-import type { PaymentMethodOption } from '../../app/api/generated/models/payment-method-option';
-import type { PaymentSelection } from '../../app/api/generated/models/payment-selection';
-import type { PickupPointSelection } from '../../app/api/generated/models/pickup-point-selection';
-import type { Problem } from '../../app/api/generated/models/problem';
-import type { ProblemCode } from '../../app/api/generated/models/problem-code';
-import type { UnavailableReason } from '../../app/api/generated/models/unavailable-reason';
+import type { Address } from '@mi-bolt/api/models/address';
+import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
+import type { Cart } from '@mi-bolt/api/models/cart';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { DeliveryOption } from '@mi-bolt/api/models/delivery-option';
+import type { DeliveryOptionId } from '@mi-bolt/api/models/delivery-option-id';
+import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
+import type { FieldError } from '@mi-bolt/api/models/field-error';
+import type { HomeDeliverySelection } from '@mi-bolt/api/models/home-delivery-selection';
+import type { Money } from '@mi-bolt/api/models/money';
+import type { PaymentMethodId } from '@mi-bolt/api/models/payment-method-id';
+import type { PaymentMethodOption } from '@mi-bolt/api/models/payment-method-option';
+import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
+import type { PickupPointSelection } from '@mi-bolt/api/models/pickup-point-selection';
+import type { Problem } from '@mi-bolt/api/models/problem';
+import type { ProblemCode } from '@mi-bolt/api/models/problem-code';
+import type { UnavailableReason } from '@mi-bolt/api/models/unavailable-reason';
 
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';

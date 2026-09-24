@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 
-import type { Variant } from '../../api/generated/models/variant';
+import type { Variant } from '@mi-bolt/api/models/variant';
 
 /**
  * T16 — color and storage variant selector (T16-AC03).

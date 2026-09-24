@@ -28,7 +28,7 @@ import type { ElementRef } from '@angular/core';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
 import { ProductImage, type ImageLike } from '../../shared/ui/product-image/product-image';
 
-import type { CartItem } from '../../api/generated/models/cart-item';
+import type { CartItem } from '@mi-bolt/api/models/cart-item';
 
 @Component({
   selector: 'app-cart-line',

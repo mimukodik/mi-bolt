@@ -24,17 +24,17 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideZonelessChangeDetection, computed } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
 
-import { provideApiConfiguration } from '../../api/generated/api-configuration';
-import { demoSessionInterceptor } from '../../core/api/demo-session.interceptor';
+import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
+import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
 import { CheckoutFacade, type CheckoutError, type CheckoutResult } from './checkout.facade';
 import { DeliveryPage } from './delivery-page';
 
-import type { CheckoutOptions } from '../../api/generated/models/checkout-options';
-import type { CheckoutSession } from '../../api/generated/models/checkout-session';
-import type { CheckoutSummary } from '../../api/generated/models/checkout-summary';
-import type { Contact } from '../../api/generated/models/contact';
-import type { Money } from '../../api/generated/models/money';
+import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
+import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
+import type { Contact } from '@mi-bolt/api/models/contact';
+import type { Money } from '@mi-bolt/api/models/money';
 
 const BASE_URL = 'http://localhost/api/v1';
 

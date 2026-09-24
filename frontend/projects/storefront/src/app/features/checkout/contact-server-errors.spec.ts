@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { toContactFieldErrors } from './contact-server-errors';
 
-import type { FieldError as WireFieldError } from '../../api/generated/models/field-error';
+import type { FieldError as WireFieldError } from '@mi-bolt/api/models/field-error';
 
 describe('toContactFieldErrors — wire → local field map', () => {
   it('maps a /contact/email wire error onto email with the schema email message', () => {

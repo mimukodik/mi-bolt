@@ -30,18 +30,18 @@ import { server, useMswServer } from '../msw-server';
 
 import { withoutAdminOperations } from './admin-tags';
 
-import { Api } from '../../projects/storefront/src/app/api/generated/api';
-import type { Cart } from '../../projects/storefront/src/app/api/generated/models/cart';
-import type { Product } from '../../projects/storefront/src/app/api/generated/models/product';
+import { Api } from '../../projects/shop-api/src/generated/api';
+import type { Cart } from '../../projects/shop-api/src/generated/models/cart';
+import type { Product } from '../../projects/shop-api/src/generated/models/product';
 import {
   ApiConfiguration as ApiConfig,
   provideApiConfiguration as provideApiConfig,
-} from '../../projects/storefront/src/app/api/generated/api-configuration';
-import * as operations from '../../projects/storefront/src/app/api/generated/functions';
+} from '../../projects/shop-api/src/generated/api-configuration';
+import * as operations from '../../projects/shop-api/src/generated/functions';
 import {
   demoSessionInterceptor,
   withIfMatch,
-} from '../../projects/storefront/src/app/core/api/demo-session.interceptor';
+} from '../../projects/core-api/src/demo-session.interceptor';
 
 // The shared MSW server's lifecycle is registered here, in this file, because
 // the Angular unit-test builder evaluates `tests/setup-msw.ts` once per worker

@@ -21,9 +21,9 @@ import { Component, model, output, input } from '@angular/core';
 
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
-import type { PaymentMethodId } from '../../api/generated/models/payment-method-id';
-import type { PaymentMethodOption } from '../../api/generated/models/payment-method-option';
-import type { UnavailableReason } from '../../api/generated/models/unavailable-reason';
+import type { PaymentMethodId } from '@mi-bolt/api/models/payment-method-id';
+import type { PaymentMethodOption } from '@mi-bolt/api/models/payment-method-option';
+import type { UnavailableReason } from '@mi-bolt/api/models/unavailable-reason';
 
 @Component({
   selector: 'app-payment-method-selector',
