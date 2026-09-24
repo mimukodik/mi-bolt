@@ -3,7 +3,7 @@
  *
  * The 2.0.0 payment application returns the shopper to
  * `/penztar?paymentIntentId=...` with a full page load; the SPA is
- * destroyed by the redirect (`01-kommunikacio.md` §8.3) and starts
+ * destroyed by the redirect (`contracts/commerce/kommunikacio.md` §8.3) and starts
  * cold on return. This page is the landing target: it hydrates the
  * cart and the session, reads the payment intent through the
  * facade, then navigates to `/penztar/ellenorzes`. The review page

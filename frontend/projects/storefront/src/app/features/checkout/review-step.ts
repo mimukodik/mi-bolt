@@ -9,7 +9,7 @@
  *     recomputes on every read (`CheckoutSummary`);
  *   - the delivery and payment labels taken from the wire
  *     (`CheckoutOptions`), never a hard-coded Hungarian option name
- *     (`01-kommunikacio.md` §160-163);
+ *     (`contracts/commerce/kommunikacio.md` §6);
  *   - the payment-return branches: a succeeded, declined, pending,
  *     unfinished or missing intent, each with the control that
  *     recovers it and no polling loop of any kind (design §5.3);

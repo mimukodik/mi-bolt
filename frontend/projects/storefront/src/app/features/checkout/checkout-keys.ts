@@ -3,7 +3,7 @@
  *
  * Four namespaced entries live in `sessionStorage` so they survive a
  * reload of the same tab (the SPA is destroyed by the payment redirect
- * — `01-kommunikacio.md` §8.3 — and is rebuilt cold on return). A new
+ * — `contracts/commerce/kommunikacio.md` §8.3 — and is rebuilt cold on return). A new
  * tab gets fresh keys because sessionStorage is not shared across
  * tabs. A storage-denied context (private browsing, Node unit runner)
  * degrades to page-local: the key is generated and used once, never

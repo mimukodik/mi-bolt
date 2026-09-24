@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Loads an existing session by its token hash or creates a new one.
  *
  * <p>Expiry and cookie lifetime come from the configured {@code mibolt.session.lifetime}
- * (default 30 days per docs/01 §2).
+ * (default 30 days per contracts/commerce/kommunikacio.md §2).
  */
 @Service
 public class SessionService {

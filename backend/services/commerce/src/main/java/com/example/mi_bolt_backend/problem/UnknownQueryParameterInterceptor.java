@@ -17,7 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Rejects requests whose query parameters include names the handler does not
- * declare (docs/01-kommunikacio.md 5.1 and 5.3; docs/02-backend.md 4.1/8). Spring's default behaviour is to ignore
+ * declare (contracts/commerce/kommunikacio.md 5.1 and 5.3; docs/02-backend.md 4.1/8). Spring's default behaviour is to ignore
  * them silently, which the contract forbids. A handler that declares zero
  * {@code @RequestParam}s is treated as declaring the empty set — every
  * query parameter on the request is unknown.

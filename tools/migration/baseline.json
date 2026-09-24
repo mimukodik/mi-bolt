@@ -1,9 +1,0 @@
-{
-  "frontendUnit": { "tests": 2064, "testFiles": 136, "coverageBlocks": 3 },
-  "coverageThresholds": { "Statements": 80, "Branches": 75, "Functions": 80, "Lines": 80 },
-  "frontendContract": { "tests": 82 },
-  "playwright": { "passed": 1 },
-  "backendTest": { "tests": 332 },
-  "backendIntegration": { "tests": 382 },
-  "skipped": 0
-}
