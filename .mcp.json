@@ -18,7 +18,7 @@
       "command": "sh",
       "args": [
         "-c",
-        "cd \"${CLAUDE_PROJECT_DIR:-.}/frontend\" && exec npx playwright run-test-mcp-server"
+        "cd \"${CLAUDE_PROJECT_DIR:-.}/frontend\" && exec npx playwright run-test-mcp-server -c playwright.config.ts"
       ]
     },
     "spring-tools": {
