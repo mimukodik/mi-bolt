@@ -41,6 +41,6 @@ The machine-readable task, requirement and acceptance descriptors (`tasks/`) and
 
 Every `docs/...` reference in this package is relative to the Angular workspace root (`frontend/`); `src/...` paths point at the shop's source (`frontend/projects/storefront/src/...`). The OpenAPI source is `contracts/commerce/openapi.yaml` at the git root; the shop SDK is generated into `frontend/projects/storefront/src/app/api/generated/`. The [API entry](api/README.md) records the details.
 
-Execution creates the real work log, skill location, reviewer reports and evidence under `docs/mi-bolt/execution/`. The package contains no empty or pre-set "PASS" evidence. The old visual prototype does not replace the fresh tests and browser verification of the Angular application being built.
+The work log, reviewer reports and evidence are tracked in Linear. The package contains no empty or pre-set "PASS" evidence. The old visual prototype does not replace the fresh tests and browser verification of the Angular application being built.
 
 O01 3D is not part of the baseline without separate approval. The unit coverage threshold is 80/75/80/80 per project (statements/branches/functions/lines), and the e2e suite has been part of the project again since 2026-09-22; the authoritative description is the [test strategy](spec/testing.md). Versions must be checked again at execution time; the documentation's dated version data is not automatically current.
