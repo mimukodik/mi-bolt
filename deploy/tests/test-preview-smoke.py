@@ -38,7 +38,8 @@ def publisher_run(run_id=456):
 
 
 def pr_state(pr=123, head=HEAD, state="open"):
-    return {"number": pr, "state": state, "head": {"sha": head}}
+    return {"number": pr, "state": state, "head": {"sha": head},
+            "labels": [{"name": "bolt-preview"}]}
 
 
 class PreviewSmokeTests(unittest.TestCase):
@@ -121,6 +122,10 @@ class PreviewSmokeTests(unittest.TestCase):
             self.assertEqual(output.read_text(), "ready=false\n")
             output.write_text("")
             self.pr = pr_state(state="closed")
+            smoke.resolve()
+            self.assertEqual(output.read_text(), "ready=false\n")
+            output.write_text("")
+            self.pr = {**pr_state(), "labels": []}
             smoke.resolve()
             self.assertEqual(output.read_text(), "ready=false\n")
             output.write_text("")
@@ -209,12 +214,22 @@ class PreviewSmokeTests(unittest.TestCase):
             "workflow_runs": [{"id": 789, "head_sha": PUBLISHER_SHA}]}
         paths["actions/runs/789/artifacts"] = {"artifacts": [
             {"name": "preview-smoke-receipt", "expired": False}]}
+        paths["deployments?environment=preview-pr-123&per_page=100"] = [
+            {"id": 7, "sha": HEAD}]
+        paths["deployments/7/statuses?per_page=1"] = [{"state": "success"}]
         with patch.dict(os.environ, {"GITHUB_SHA": PUBLISHER_SHA}), \
                 patch.object(smoke, "api", side_effect=lambda path: paths[path]), \
                 patch.object(smoke, "download", side_effect=lambda run_id, artifact, filename:
                              {"publisherRunId": 456} if artifact == "preview-smoke-receipt" else receipt), \
                 patch.object(smoke, "fence", return_value="origin"):
             self.assertIsNone(smoke.scheduled_publisher())
+        paths["deployments/7/statuses?per_page=1"] = [{"state": "inactive"}]
+        with patch.dict(os.environ, {"GITHUB_SHA": PUBLISHER_SHA}), \
+                patch.object(smoke, "api", side_effect=lambda path: paths[path]), \
+                patch.object(smoke, "download", side_effect=lambda run_id, artifact, filename:
+                             {"publisherRunId": 456} if artifact == "preview-smoke-receipt" else receipt), \
+                patch.object(smoke, "fence", return_value="origin"):
+            self.assertEqual(smoke.scheduled_publisher(), publisher_run())
 
     def test_schedule_selects_unaccepted_preview_when_another_is_accepted(self):
         receipts = {456: candidate(pr=123, run_id=456), 457: candidate(pr=124, run_id=457)}
@@ -230,6 +245,8 @@ class PreviewSmokeTests(unittest.TestCase):
                 {"workflow_runs": [{"id": 789, "head_sha": PUBLISHER_SHA}]},
             "actions/runs/789/artifacts": {"artifacts": [
                 {"name": "preview-smoke-receipt", "expired": False}]},
+            "deployments?environment=preview-pr-123&per_page=100": [{"id": 7, "sha": HEAD}],
+            "deployments/7/statuses?per_page=1": [{"state": "success"}],
         }
 
         def download(run_id, artifact, filename):
