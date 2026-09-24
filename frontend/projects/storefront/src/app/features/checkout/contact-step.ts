@@ -58,8 +58,10 @@ import {
 } from '../../shared/ui/form-field-message/form-field-message';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { NavigationReasonBanner } from './navigation-reason-banner';
+import { OrderSummary } from '../cart/order-summary';
 
 import type { AsyncStatus } from '../../shared/types/async-status';
+import type { Money } from '../../shared/ui/price-block/price-block';
 import type { Contact } from '@mi-bolt/api/models/contact';
 
 import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
@@ -136,6 +138,7 @@ function toFieldErrors(errors: readonly ValidationError.WithFieldTree[]): readon
     FormField,
     FormFieldMessage,
     NavigationReasonBanner,
+    OrderSummary,
     StatusMessage,
   ],
   templateUrl: './contact-step.html',
@@ -145,6 +148,10 @@ export class ContactStep {
   readonly contactFields = input.required<FieldTree<Contact>>();
   readonly saveState = input<AsyncStatus>('idle');
   readonly serverErrors = input<ContactServerErrors | null>(null);
+
+  /** The cart subtotal for the order summary beside the form; no
+   *  summary renders while it is null. */
+  readonly subtotal = input<Money | null>(null);
 
   readonly continueRequested = output();
 

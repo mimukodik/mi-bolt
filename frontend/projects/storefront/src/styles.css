@@ -33,8 +33,14 @@
   --color-warning: #ffd500;
   --color-warning-text: #332b00;
 
-  --color-disabled-bg: #e5e9ec;
-  --color-disabled-text: #80919f;
+  /* Disabled: a dashed outline on a transparent fill (owner's ask; a
+     departure from yettel's .btn--primary[disabled], recorded in
+     docs/design/yettel.md). The on-dark pair serves the navy buy box. */
+  --color-disabled-bg: transparent;
+  --color-disabled-border: #80919f;
+  --color-disabled-text: #4e4e4e;
+  --color-disabled-on-dark-border: rgb(255 255 255 / 60%);
+  --color-disabled-on-dark-text: rgb(255 255 255 / 80%);
 
   /* Radii — docs/design/yettel.md §4. */
   --radius-input: 8px;

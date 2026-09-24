@@ -17,6 +17,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { CheckoutFacade } from './checkout.facade';
 import { ContactPage } from './contact-page';
+import { CartFacade } from '../cart/cart.facade';
+import type { Money } from '../../shared/ui/price-block/price-block';
 import {
   CONTACT_DRAFT_SAVER,
   ContactStep,
@@ -55,6 +57,15 @@ function provideSessionStub(session: CheckoutSession | null): Provider {
   return { provide: CheckoutFacade, useValue: stub };
 }
 
+/** `ContactPage` reads one member of the cart facade, the subtotal it
+ *  hands to the step's order summary; the stub supplies exactly that. */
+function provideCartStub(): Provider {
+  const stub = {
+    subtotal: signal<Money>({ amount: 235990, currency: 'HUF' }).asReadonly(),
+  } satisfies Pick<CartFacade, 'subtotal'>;
+  return { provide: CartFacade, useValue: stub };
+}
+
 function createContactPage(
   saver: ContactDraftSaver,
   session: CheckoutSession | null = null,
@@ -65,6 +76,7 @@ function createContactPage(
       provideRouter([{ path: '**', component: ContactPage }]),
       { provide: CONTACT_DRAFT_SAVER, useValue: saver },
       provideSessionStub(session),
+      provideCartStub(),
     ],
   });
   const fixture = TestBed.createComponent(ContactPage);
@@ -112,6 +124,15 @@ describe('ContactPage owns the save call and post-save navigation', () => {
     const root = getRootElement(fixture);
 
     expect(root.querySelector('nav.breadcrumbs')).toBeNull();
+  });
+
+  it('hands the cart subtotal to the step, which shows it in the order summary (checkout facelift)', () => {
+    const fixture = createContactPage(() => Promise.resolve({ ok: true }));
+    expect(
+      getRootElement(fixture)
+        .querySelector('[data-testid="order-summary-subtotal"] [data-testid="price-amount"]')
+        ?.textContent.trim(),
+    ).toBe('235 990');
   });
 
   it('calls the injected CONTACT_DRAFT_SAVER with the normalized contact and navigates to /penztar/szallitas on success', async () => {

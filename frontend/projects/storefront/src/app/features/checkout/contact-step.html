@@ -22,131 +22,159 @@
     </div>
   }
 
-  <form
-    class="form flex flex-col gap-5 max-w-xl lg:max-w-3xl"
-    data-testid="contact-form"
-    novalidate
-    (submit)="onSubmit($event)"
+  <div
+    class="layout flex flex-col gap-(--space-5) lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-(--space-6) lg:items-start"
+    data-testid="contact-layout"
   >
-    <p class="form-hint m-0" id="contact-form-hint">
-      A csillaggal jelölt mezők kitöltése kötelező.
-    </p>
-
-    <label class="field flex flex-col gap-2" [attr.data-state]="fullNameFieldState()">
-      <span class="field__label font-medium">
-        Teljes név <span aria-hidden="true" class="required-mark ml-1">*</span>
-      </span>
-      <input
-        aria-describedby="contact-fullname-message"
-        autocomplete="name"
-        class="min-h-10 p-2 px-3 font-inherit rounded"
-        data-testid="contact-fullname-input"
-        id="contact-fullname-input"
-        inputmode="text"
-        placeholder="Teszt Elek"
-        type="text"
-        [attr.aria-invalid]="fullNameShowsInvalid() ? 'true' : null"
-        [formField]="contactFields().fullName"
-      />
-      <app-form-field-message
-        fieldId="contact-fullname"
-        helpText="A számlán is ez a név fog megjelenni."
-        [errors]="fullNameErrors()"
-        [submitted]="submitted()"
-        [touched]="fullNameTouched()"
-      />
-    </label>
-
-    <label class="field flex flex-col gap-2" [attr.data-state]="emailFieldState()">
-      <span class="field__label font-medium">
-        E-mail cím <span aria-hidden="true" class="required-mark ml-1">*</span>
-      </span>
-      <input
-        aria-describedby="contact-email-message"
-        autocomplete="email"
-        class="min-h-10 p-2 px-3 font-inherit rounded"
-        data-testid="contact-email-input"
-        id="contact-email-input"
-        inputmode="email"
-        placeholder="teszt@example.test"
-        type="email"
-        [attr.aria-invalid]="emailShowsInvalid() ? 'true' : null"
-        [formField]="contactFields().email"
-      />
-      <app-form-field-message
-        fieldId="contact-email"
-        helpText="Ide küldjük a demó visszaigazolást."
-        [errors]="emailErrors()"
-        [submitted]="submitted()"
-        [touched]="emailTouched()"
-      />
-    </label>
-
-    <label class="field flex flex-col gap-2" [attr.data-state]="phoneFieldState()">
-      <span class="field__label font-medium">
-        Telefonszám <span aria-hidden="true" class="required-mark ml-1">*</span>
-      </span>
-      <input
-        aria-describedby="contact-phone-message"
-        autocomplete="tel"
-        class="min-h-10 p-2 px-3 font-inherit rounded"
-        data-testid="contact-phone-input"
-        id="contact-phone-input"
-        inputmode="tel"
-        placeholder="+36201234567"
-        type="tel"
-        [attr.aria-invalid]="phoneShowsInvalid() ? 'true' : null"
-        [formField]="contactFields().phone"
-      />
-      <app-form-field-message
-        fieldId="contact-phone"
-        helpText="Formátum: +36 30 123 4567 vagy +36-1-234-5678."
-        [errors]="phoneErrors()"
-        [submitted]="submitted()"
-        [touched]="phoneTouched()"
-      />
-    </label>
-
-    @if (submitted() && invalidFields().length > 0) {
-      <div
-        #summary
-        aria-labelledby="contact-summary-title"
-        class="form-summary p-4 rounded"
-        data-testid="contact-summary"
-        role="alert"
-        tabindex="-1"
-      >
-        <p class="form-summary__title m-0 mb-2 font-bold" id="contact-summary-title">
-          Kérlek, javítsd a következő mezőket a folytatás előtt:
-        </p>
-        <ul class="form-summary__list m-0 pl-5 flex flex-col gap-1">
-          @for (item of invalidFields(); track item.field) {
-            <li>
-              <a
-                [attr.data-pointer]="item.pointer ?? null"
-                [href]="`#${inputId(item.field)}`"
-                (click)="focusField(item.field, $event)"
-              >
-                {{ item.label }}: {{ item.message }}
-              </a>
-            </li>
-          }
-        </ul>
-      </div>
-    }
-
-    <div
-      class="form-actions flex flex-col-reverse gap-3 lg:flex-row lg:justify-between lg:items-center"
+    <form
+      class="form grid grid-cols-1 gap-5 lg:grid-cols-2 p-(--space-5) sm:p-(--space-6) bg-(--color-surface-light) border border-(--color-border-subtle) rounded-(--radius-card)"
+      data-testid="contact-form"
+      novalidate
+      (submit)="onSubmit($event)"
     >
-      <app-button
-        data-testid="contact-submit"
-        label="Tovább a szállításhoz"
-        loadingLabel="Mentés…"
-        type="submit"
-        variant="primary"
-        [disabled]="!canSubmit()"
-        [loading]="saveState() === 'loading'"
-      />
-    </div>
-  </form>
+      <p class="form-hint lg:col-span-2 m-0" id="contact-form-hint">
+        A csillaggal jelölt mezők kitöltése kötelező.
+      </p>
+
+      <label
+        class="field lg:col-span-2 flex flex-col gap-2"
+        [attr.data-state]="fullNameFieldState()"
+      >
+        <span class="field__label font-medium">
+          Teljes név <span aria-hidden="true" class="required-mark ml-1">*</span>
+        </span>
+        <input
+          aria-describedby="contact-fullname-message"
+          autocomplete="name"
+          class="min-h-10 p-2 px-3 font-inherit rounded"
+          data-testid="contact-fullname-input"
+          id="contact-fullname-input"
+          inputmode="text"
+          placeholder="Teszt Elek"
+          type="text"
+          [attr.aria-invalid]="fullNameShowsInvalid() ? 'true' : null"
+          [formField]="contactFields().fullName"
+        />
+        <app-form-field-message
+          fieldId="contact-fullname"
+          helpText="A számlán is ez a név fog megjelenni."
+          [errors]="fullNameErrors()"
+          [submitted]="submitted()"
+          [touched]="fullNameTouched()"
+        />
+      </label>
+
+      <label class="field flex flex-col gap-2" [attr.data-state]="emailFieldState()">
+        <span class="field__label font-medium">
+          E-mail cím <span aria-hidden="true" class="required-mark ml-1">*</span>
+        </span>
+        <input
+          aria-describedby="contact-email-message"
+          autocomplete="email"
+          class="min-h-10 p-2 px-3 font-inherit rounded"
+          data-testid="contact-email-input"
+          id="contact-email-input"
+          inputmode="email"
+          placeholder="teszt@example.test"
+          type="email"
+          [attr.aria-invalid]="emailShowsInvalid() ? 'true' : null"
+          [formField]="contactFields().email"
+        />
+        <app-form-field-message
+          fieldId="contact-email"
+          helpText="Ide küldjük a demó visszaigazolást."
+          [errors]="emailErrors()"
+          [submitted]="submitted()"
+          [touched]="emailTouched()"
+        />
+      </label>
+
+      <label class="field flex flex-col gap-2" [attr.data-state]="phoneFieldState()">
+        <span class="field__label font-medium">
+          Telefonszám <span aria-hidden="true" class="required-mark ml-1">*</span>
+        </span>
+        <input
+          aria-describedby="contact-phone-message"
+          autocomplete="tel"
+          class="min-h-10 p-2 px-3 font-inherit rounded"
+          data-testid="contact-phone-input"
+          id="contact-phone-input"
+          inputmode="tel"
+          placeholder="+36201234567"
+          type="tel"
+          [attr.aria-invalid]="phoneShowsInvalid() ? 'true' : null"
+          [formField]="contactFields().phone"
+        />
+        <app-form-field-message
+          fieldId="contact-phone"
+          helpText="Formátum: +36 30 123 4567 vagy +36-1-234-5678."
+          [errors]="phoneErrors()"
+          [submitted]="submitted()"
+          [touched]="phoneTouched()"
+        />
+      </label>
+
+      @if (submitted() && invalidFields().length > 0) {
+        <div
+          #summary
+          aria-labelledby="contact-summary-title"
+          class="form-summary lg:col-span-2"
+          data-testid="contact-summary"
+          role="alert"
+          tabindex="-1"
+        >
+          <svg
+            aria-hidden="true"
+            class="form-summary__icon"
+            focusable="false"
+            height="20"
+            viewBox="0 0 32 32"
+            width="20"
+          >
+            <path
+              d="M16.056 29.3332C8.70399 29.3332 2.72266 23.3518 2.72266 15.9998C2.72266 8.64784 8.70399 2.6665 16.056 2.6665C23.408 2.6665 29.3893 8.64784 29.3893 15.9998C29.3893 23.3518 23.408 29.3332 16.056 29.3332ZM16.056 5.33317C10.1747 5.33317 5.38932 10.1185 5.38932 15.9998C5.38932 21.8812 10.1747 26.6665 16.056 26.6665C21.9373 26.6665 26.7227 21.8812 26.7227 15.9998C26.7227 10.1185 21.9373 5.33317 16.056 5.33317Z"
+              fill="currentColor"
+            />
+            <rect fill="currentColor" height="9.333" rx="1.333" width="2.667" x="14.723" y="8" />
+            <circle cx="16.056" cy="22" fill="currentColor" r="1.667" />
+          </svg>
+          <div class="form-summary__body">
+            <p class="form-summary__title m-0 mb-2 font-bold" id="contact-summary-title">
+              Kérlek, javítsd a következő mezőket a folytatás előtt:
+            </p>
+            <ul class="form-summary__list m-0 pl-5 flex flex-col gap-1">
+              @for (item of invalidFields(); track item.field) {
+                <li>
+                  <a
+                    [attr.data-pointer]="item.pointer ?? null"
+                    [href]="`#${inputId(item.field)}`"
+                    (click)="focusField(item.field, $event)"
+                  >
+                    {{ item.label }}: {{ item.message }}
+                  </a>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+
+      <div
+        class="form-actions lg:col-span-2 flex flex-col-reverse gap-3 lg:flex-row lg:justify-between lg:items-center"
+      >
+        <app-button
+          data-testid="contact-submit"
+          label="Tovább a szállításhoz"
+          loadingLabel="Mentés…"
+          type="submit"
+          variant="primary"
+          [disabled]="!canSubmit()"
+          [loading]="saveState() === 'loading'"
+        />
+      </div>
+    </form>
+    @if (subtotal(); as amount) {
+      <app-order-summary [subtotal]="amount" />
+    }
+  </div>
 </section>
