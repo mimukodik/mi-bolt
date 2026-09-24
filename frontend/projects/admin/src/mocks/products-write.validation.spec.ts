@@ -18,51 +18,25 @@ import type { ProblemCode } from '../app/api/generated/models/problem-code';
 import type { AdminProductInput } from '../app/api/generated/models/admin-product-input';
 import { isRecord } from '../app/core/is-record';
 
-import { useMswServer, server } from '../testing/msw-server';
-import { createDb } from './db';
+import { useMswServer } from '../testing/msw-server';
+import {
+  action,
+  archiveUrl,
+  expectRecord,
+  fieldErrorsOf,
+  headersFor,
+  productUrl,
+  productsUrl,
+  readJsonRecord,
+  readNumber,
+  readString,
+  restoreUrl,
+  setup,
+} from '../testing/mock-spec-helpers';
 import type { MockDb } from './db';
-import { XSRF_HEADER, issueXsrfCookie } from './guards';
-import { productsWriteHandlers } from './products-write.handlers';
-import type { ScenarioName } from './scenario';
-import { SEED_ADMIN, seedCatalog } from './seed';
+import { seedCatalog } from './seed';
 
 useMswServer();
-
-function productsUrl(): string {
-  return new URL('/api/v1/admin/products', document.baseURI).href;
-}
-
-function productUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}`, document.baseURI).href;
-}
-
-function archiveUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}/archive`, document.baseURI).href;
-}
-
-function restoreUrl(id: number | string): string {
-  return new URL(`/api/v1/admin/products/${String(id)}/restore`, document.baseURI).href;
-}
-
-function setup(scenario: ScenarioName = 'default'): MockDb {
-  const db = createDb(scenario);
-  db.sessionAdminId = SEED_ADMIN.id;
-  issueXsrfCookie(db);
-  server?.use(...productsWriteHandlers(db));
-  return db;
-}
-
-function headersFor(db: MockDb, overrides: Record<string, string | undefined> = {}): HeadersInit {
-  const merged: Record<string, string | undefined> = {
-    'content-type': 'application/json',
-    [XSRF_HEADER]: db.xsrfToken ?? '',
-    ...overrides,
-  };
-  const present = Object.entries(merged).filter(
-    (entry): entry is [string, string] => entry[1] !== undefined,
-  );
-  return Object.fromEntries(present);
-}
 
 function postJson(
   url: string,
@@ -106,52 +80,6 @@ function putRaw(
   headerOverrides: Record<string, string | undefined> = {},
 ): Promise<Response> {
   return fetch(url, { method: 'PUT', headers: headersFor(db, headerOverrides), body: rawBody });
-}
-
-function action(
-  url: string,
-  db: MockDb,
-  headerOverrides: Record<string, string | undefined> = {},
-): Promise<Response> {
-  return fetch(url, { method: 'POST', headers: headersFor(db, headerOverrides) });
-}
-
-function expectRecord(value: unknown): asserts value is Record<string, unknown> {
-  expect(isRecord(value)).toBe(true);
-}
-
-function readString(body: Record<string, unknown>, key: string): string {
-  const value = body[key];
-  expect(typeof value).toBe('string');
-  if (typeof value !== 'string') throw new Error(`${key} is not a string`);
-  return value;
-}
-
-function readNumber(body: Record<string, unknown>, key: string): number {
-  const value = body[key];
-  expect(typeof value).toBe('number');
-  if (typeof value !== 'number') throw new Error(`${key} is not a number`);
-  return value;
-}
-
-function readArray(body: Record<string, unknown>, key: string): unknown[] {
-  const value = body[key];
-  expect(Array.isArray(value)).toBe(true);
-  if (!Array.isArray(value)) throw new Error(`${key} is not an array`);
-  return value;
-}
-
-function fieldErrorsOf(body: Record<string, unknown>): Record<string, unknown>[] {
-  return readArray(body, 'fieldErrors').map((item) => {
-    expectRecord(item);
-    return item;
-  });
-}
-
-async function readJsonRecord(response: Response): Promise<Record<string, unknown>> {
-  const body: unknown = await response.json();
-  expectRecord(body);
-  return body;
 }
 
 async function expectProblem(
