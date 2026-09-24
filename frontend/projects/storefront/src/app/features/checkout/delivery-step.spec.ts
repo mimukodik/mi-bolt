@@ -282,24 +282,54 @@ describe('DS-05 the fee shown per option is the wire fee, zero on both options a
   });
 });
 
-describe('DS-06 the summary fee row follows the selected option fee and label', () => {
-  it('after selecting pickup_point the summary fee row carries formatHuf(990) and the pickup label', () => {
+describe('DS-05b the fee on each delivery option prints the amount alone, at the md size', () => {
+  it('no option price-block renders its label and each carries data-size md', () => {
+    const fixture = createFixture();
+    const root = getRootElement(fixture);
+    const blocks = Array.from(
+      root.querySelectorAll('[data-testid="delivery-option"] app-price-block'),
+    );
+    expect(blocks.length).toBe(2);
+    for (const block of blocks) {
+      expect(block.querySelector('.label')).toBeNull();
+      expect(getElement(block, '.root').getAttribute('data-size')).toBe('md');
+    }
+    expect(getElement(root, '[data-testid="delivery-options"]').textContent).not.toContain(
+      'Szállítási díj',
+    );
+  });
+});
+
+describe('DS-06 the summary names the selected option in its own row and prints the fee alone', () => {
+  it('after selecting pickup_point the delivery row reads Átvételi pont and the fee row carries formatHuf(990) with no label', () => {
     const fixture = createFixture();
     selectDelivery(fixture, 'pickup_point');
 
     const root = getRootElement(fixture);
+    const deliveryRow = getElement(root, '[data-testid="summary-row-delivery"]');
+    expect(getElement(deliveryRow, 'dt').textContent.trim()).toBe('Szállítási mód');
+    expect(getElement(deliveryRow, 'dd').textContent.trim()).toBe('Átvételi pont');
+
     const feeRow = getElement(root, '[data-testid="summary-row-fee"]');
-    expect(feeRow.textContent).toContain(PriceBlock.formatHuf(990));
-    expect(feeRow.textContent).toContain('Átvételi pont');
+    expect(getElement(feeRow, '[data-testid="price-amount"]').textContent.trim()).toBe(
+      PriceBlock.formatHuf(990),
+    );
+    expect(queryElement(feeRow, 'dd .label')).toBeNull();
+    expect(getElement(feeRow, 'dd .root').getAttribute('data-size')).toBe('md');
+    expect(feeRow.textContent).not.toContain('Átvételi pont');
   });
 });
 
-describe('DS-07 the summary fee row reads "Nincs kiválasztva" before a delivery option is chosen', () => {
-  it('on a fresh field tree the summary fee row carries the unselected label', () => {
+describe('DS-07 the summary delivery row reads "Nincs kiválasztva" before a delivery option is chosen', () => {
+  it('on a fresh field tree the delivery row carries the unselected label and the fee row shows no amount', () => {
     const fixture = createFixture();
     const root = getRootElement(fixture);
+    const deliveryRow = getElement(root, '[data-testid="summary-row-delivery"]');
+    expect(getElement(deliveryRow, 'dd').textContent.trim()).toBe('Nincs kiválasztva');
+
     const feeRow = getElement(root, '[data-testid="summary-row-fee"]');
-    expect(feeRow.textContent).toContain('Nincs kiválasztva');
+    expect(queryElement(feeRow, '[data-testid="price-amount"]')).toBeNull();
+    expect(getElement(feeRow, '[data-testid="price-empty"]').textContent.trim()).toBe('—');
   });
 });
 
@@ -353,8 +383,8 @@ describe('DS-09 an unavailable delivery option cannot be selected', () => {
     fixture.detectChanges();
 
     expect(root.querySelectorAll('[data-testid="delivery-selected-badge"]').length).toBe(0);
-    const feeRow = getElement(root, '[data-testid="summary-row-fee"]');
-    expect(feeRow.textContent).toContain('Nincs kiválasztva');
+    const deliveryRow = getElement(root, '[data-testid="summary-row-delivery"]');
+    expect(getElement(deliveryRow, 'dd').textContent.trim()).toBe('Nincs kiválasztva');
   });
 });
 
@@ -420,7 +450,7 @@ describe('DS-11 home delivery renders the address form and pickup renders the pi
 });
 
 describe('DS-12 the pickup notice states that the virtual pickup is not a real pickup place', () => {
-  it('the pickup notice text mentions nincs valós üzletcím and valós átvételi pont nélkül with role note', () => {
+  it('the pickup notice is a persistent, non-live info StatusMessage with role note that says nincs valós üzletcím and valós átvételi pont nélkül', () => {
     const fixture = createFixture();
     selectDelivery(fixture, 'pickup_point');
     const root = getRootElement(fixture);
@@ -428,6 +458,12 @@ describe('DS-12 the pickup notice states that the virtual pickup is not a real p
     expect(notice.textContent).toContain('nincs valós üzletcím');
     expect(notice.textContent).toContain('valós átvételi pont nélkül');
     expect(notice.getAttribute('role')).toBe('note');
+    expect(notice.tagName.toLowerCase()).toBe('app-status-message');
+    const box = getElement(notice, '[data-testid="status-message"]');
+    expect(box.classList.contains('is-info')).toBe(true);
+    expect(box.getAttribute('role')).toBeNull();
+    expect(box.getAttribute('aria-live')).toBeNull();
+    expect(queryElement(notice, 'app-button')).toBeNull();
   });
 });
 

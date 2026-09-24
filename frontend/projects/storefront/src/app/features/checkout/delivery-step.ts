@@ -352,6 +352,10 @@ export class DeliveryStep {
    *  banner alongside this component, per R15 and FIX-56 item 4. */
   readonly saveErrorMessage = 'A mentés sikertelen. Próbáld újra.';
 
+  /** The pickup option's demo notice, shown in place of the address form. */
+  readonly pickupNoticeMessage =
+    'A virtuális átvétel egy demó szállítási opció: nincs valós üzletcím, a rendelés a pénztár demófolyamatán belül készül, valós átvételi pont nélkül.';
+
   // ---------------------------------------------------------------------------
   // User interactions
   // ---------------------------------------------------------------------------

@@ -721,6 +721,41 @@ reference for the cart page's surfaces (line items, the sticky order button,
 the summary). On the mobile cart capture yettel's own chat bubble overlaps the
 sticky order button, which the MiBolt cart avoids.
 
+### Delivery step: option rows, pickup note and summary
+
+The owner asked for a minimal facelift of the order flow (in English: "the
+order flow needs a minimal facelift too, I don't like the layout or the
+elements"). With no captured yettel checkout, the delivery step borrows the
+nearest yettel choice control, the §5 variant chip, and scales it to a row:
+
+- **Option rows** (delivery options and payment methods alike): a white
+  ground (`--color-surface-light`), no border, the chip's
+  `box-shadow: 0 0 0 1px #e5e9ec inset` (`--color-line-thumb`) and an 8px
+  radius (`--radius-control`); the 16px padding stays. An available row
+  that is not selected takes the chip's 1px navy ring on hover. The
+  selected row takes the chip's `0 0 0 2px #002340 inset` ring
+  (`--color-brand-ink`) and a bold title, on the same white ground: the
+  sky fill and the navy border it replaces are gone. The lime
+  "Kiválasztva" badge stays, because the specs and the screen reader's
+  polite announcement both hang on it.
+- **Unavailable rows** wear the shared disabled look (§9, "Button variants
+  after the remap"): a 2px dashed `--color-disabled-border` edge drawn as an
+  inset outline like the product page's unavailable chips,
+  `--color-disabled-text` on the title and the description, full opacity
+  instead of the old 0.6, and `cursor: not-allowed`; the reason sentence
+  keeps its error red.
+- **The fee** sits right-aligned on the title line as the 20px `md` amount
+  with no label (`PriceBlock` `showLabel` false): a price beside an option
+  reads as that option's price, the way the receipt rows print theirs, so
+  the small "Szállítási díj" / "Fizetési díj" above a 28px figure goes.
+- **The pickup note** is an info `StatusMessage` (§5 Alert), persistent and
+  not live, because it is part of the page rather than news about it; the
+  host keeps `role="note"`.
+- **The summary sidebar** names the chosen delivery option in a row of its
+  own ("Szállítási mód"), so the "Szállítási díj" row prints the amount
+  alone at the `md` size, where the option's name used to sit as the
+  amount's label above a 28px figure.
+
 ## 9. Token mapping
 
 The Angular build keeps the legacy token names the ~1000 existing `var(--…)`
