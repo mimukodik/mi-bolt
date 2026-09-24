@@ -316,12 +316,13 @@ export class ReviewStep {
   });
 
   /**
-   * The CTA is live only when the state is `ready`, or `error` after a
-   * failed submit, where a click resubmits (the owner's decision), the
-   * server calls the draft complete, the terms are accepted, no price
-   * change is awaiting confirmation (§3.7), and — for a card draft — the
-   * payment has already succeeded. A card order is never placed on
-   * an unauthorised intent.
+   * The CTA is live when the state is `ready`, or `error` after a
+   * failed submit, where a click resubmits the order (the owner's
+   * decision: the error banner's try-again is not a dead end). Beside
+   * the state, the server must call the draft complete, the terms must
+   * be accepted, no price change may be awaiting confirmation (§3.7),
+   * and — for a card draft — the payment must already have succeeded.
+   * A card order is never placed on an unauthorised intent.
    */
   readonly canSubmit = computed<boolean>(() => {
     const state = this.state();
