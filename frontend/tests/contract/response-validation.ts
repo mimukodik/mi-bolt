@@ -152,7 +152,7 @@ function buildAjv(): Ajv2020 {
 /**
  * Walks `paths` and returns one descriptor per HTTP operation. The
  * caller uses this to drive every assertion in the contract suite so
- * adding a 17th operation to the spec cannot go unnoticed.
+ * adding an operation to the spec cannot go unnoticed.
  */
 export function collectOperations(
   spec: OpenApiSpec = derefSpecCache ?? ensureRawSpec(),

@@ -5,13 +5,13 @@
  * GET /demo/session always answers a body-less 204, POST answers 204 for
  * the one demo password, 401 UNAUTHENTICATED for a wrong one, and 400
  * INVALID_REQUEST for a body that is not exactly
- * {"password": <non-empty string>}.
+ * {"password": <string of 1 to 64 characters>}.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createHandlers } from '../create-handlers';
-import './demo.handlers';
+import { DEMO_PASSWORD } from './demo.handlers';
 import { Repository } from '../repository';
 import {
   createDeterministicIds,
@@ -77,7 +77,7 @@ describe('GET /demo/session', () => {
 
 describe('POST /demo/session', () => {
   it('answers 204 for the demo password', async () => {
-    const res = await postSession(JSON.stringify({ password: '1MiBoltDemo1' }));
+    const res = await postSession(JSON.stringify({ password: DEMO_PASSWORD }));
 
     expect(res.status).toBe(204);
     expect(await res.text()).toBe('');
@@ -93,7 +93,7 @@ describe('POST /demo/session', () => {
   });
 
   it('answers 400 INVALID_REQUEST for a malformed body', async () => {
-    const withExtraKey = await postSession(JSON.stringify({ password: '1MiBoltDemo1', extra: 1 }));
+    const withExtraKey = await postSession(JSON.stringify({ password: DEMO_PASSWORD, extra: 1 }));
     expect(withExtraKey.status).toBe(400);
     expect((await readProblem(withExtraKey))['code']).toBe('INVALID_REQUEST');
 
@@ -104,5 +104,11 @@ describe('POST /demo/session', () => {
     const emptyPassword = await postSession(JSON.stringify({ password: '' }));
     expect(emptyPassword.status).toBe(400);
     expect((await readProblem(emptyPassword))['code']).toBe('INVALID_REQUEST');
+
+    // DemoSessionRequest.password is maxLength 64, so above that the body is
+    // malformed (400), never merely a wrong password (401).
+    const tooLong = await postSession(JSON.stringify({ password: 'a'.repeat(65) }));
+    expect(tooLong.status).toBe(400);
+    expect((await readProblem(tooLong))['code']).toBe('INVALID_REQUEST');
   });
 });
