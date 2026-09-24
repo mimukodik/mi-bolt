@@ -105,6 +105,7 @@
   font-size: 14px;
   color: var(--color-text-light);
   font-weight: var(--weight-regular);
+  transition: color 200ms ease;
 }
 
 .more {
@@ -190,6 +191,7 @@
   font-size: 14px;
   color: var(--color-text-light);
   font-weight: var(--weight-regular);
+  transition: color 200ms ease;
 }
 
 // A count being re-fetched keeps its text for its width; the text is
