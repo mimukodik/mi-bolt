@@ -55,3 +55,19 @@
      src/styles/tokens.css (--font-family-bold, --font-family-light). */
   --font-sans: 'portal-font-regular', sans-serif, arial;
 }
+
+/* Headings and paragraphs take the primary text colour here, in Tailwind's
+   base layer, not in src/styles/primitives.css: that sheet is unlayered, and
+   an unlayered rule beats every layered one, so a text colour utility on a
+   paragraph or a heading would never apply. */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p {
+    color: var(--color-text-primary);
+  }
+}
