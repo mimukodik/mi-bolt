@@ -217,6 +217,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -249,6 +251,8 @@ paths:
                 items:
                   $ref: '#/components/schemas/CatalogItem'
                 maxItems: 4
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -299,6 +303,8 @@ paths:
               schema:
                 type: string
                 format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -325,6 +331,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '410':
           $ref: '#/components/responses/Gone'
         '503':
@@ -425,6 +433,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '410':
           $ref: '#/components/responses/Gone'
         '412':
@@ -496,6 +506,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '410':
@@ -524,6 +536,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CheckoutOptions'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '410':
           $ref: '#/components/responses/Gone'
         '503':
@@ -550,6 +564,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CheckoutSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '410':
           $ref: '#/components/responses/Gone'
         '503':
@@ -725,6 +741,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaymentIntent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
@@ -967,6 +985,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '503':
