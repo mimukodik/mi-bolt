@@ -786,3 +786,28 @@ describe('server errors surface under the field and in the summary', () => {
     expect(link?.getAttribute('data-pointer')).toBe('/phone');
   });
 });
+
+describe('checkout facelift: the contact step layout', () => {
+  it('renders the order summary beside the form with the subtotal it is given', () => {
+    const { fixture } = createContactStep();
+    fixture.componentRef.setInput('subtotal', { amount: 235990, currency: 'HUF' });
+    fixture.detectChanges();
+    const root = getRootElement(fixture);
+    const layout = root.querySelector('[data-testid="contact-layout"]');
+    expect(layout?.querySelector(':scope > [data-testid="contact-form"]')).not.toBeNull();
+    expect(layout?.querySelector(':scope > app-order-summary')).not.toBeNull();
+    expect(
+      root
+        .querySelector('[data-testid="order-summary-subtotal"] [data-testid="price-amount"]')
+        ?.textContent.trim(),
+    ).toBe('235 990');
+    expect(root.querySelector('[data-testid="shipping-placeholder"]')?.textContent.trim()).toBe(
+      'A következő lépésben választod ki.',
+    );
+  });
+
+  it('renders no order summary without a subtotal', () => {
+    const { fixture } = createContactStep();
+    expect(getRootElement(fixture).querySelector('app-order-summary')).toBeNull();
+  });
+});
