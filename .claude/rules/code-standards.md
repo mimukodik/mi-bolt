@@ -36,12 +36,15 @@ path-scoped rules trigger only on a read.
   chrome-devtools subagent, per `.claude/rules/browser-verification.md`.
   Typecheck and unit tests alone are never enough.
 - **Coverage is an aggregate floor here, not a per-line gate.**
-  `frontend/angular.json` gives each frontend app and library a floor of its
-  own, in that project's `coverageThresholds`, measured over the project as a
-  whole rather than per file and enforced by `npm --prefix frontend run test`,
-  which CI runs as well. The floors sit just under the real figures
-  deliberately, so they block nothing being written now and fail the moment
-  coverage decays. The backend's floor is the JaCoCo line-coverage
+  `frontend/angular.json` gives every frontend app, and every library with a
+  `test` target, a floor, in that project's own `coverageThresholds`,
+  measured over the project as a whole rather than per file and enforced by
+  `npm --prefix frontend run test`, which CI runs as well. The generated
+  `shop-api` library has no `test` target and so no floor. The floors are
+  identical across projects and sit below each one's measured coverage, so
+  they block nothing being written now and do not fail the moment coverage
+  decays, only once it has fallen below the floor. The backend's floor is
+  the JaCoCo line-coverage
   verification its `build` task runs, a bundle ratio and a per-class ratio
   with the generated code excluded; `backend/services/commerce/build.gradle`
   owns those numbers.

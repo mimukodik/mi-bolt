@@ -6,7 +6,7 @@ These are acceptance requirements for the future application. This planning pack
 
 ## 1. Exact meaning of the coverage thresholds
 
-Four independent unit metrics are measured on each project's aggregate: statements ≥ 80, branches ≥ 75, functions ≥ 80, lines ≥ 80 (`angular.json`, `coverageThresholds`, `perFile: false`). Passing100% of written tests is NOT100% source coverage, nor does source coverage prove correctness. The scenario/state/requirements matrix therefore adds independent behavioral assertions.
+Four independent unit metrics are measured on the aggregate of each project with a `test` target (the generated `shop-api` library has none): statements ≥ 80, branches ≥ 75, functions ≥ 80, lines ≥ 80 (`angular.json`, `coverageThresholds`, `perFile: false`). Passing100% of written tests is NOT100% source coverage, nor does source coverage prove correctness. The scenario/state/requirements matrix therefore adds independent behavioral assertions.
 
 The denominator is explicit and version-controlled in the `coverageInclude` and `coverageExclude` options of the `test` target in `angular.json`. Include **all first-party runtime TypeScript**, including app bootstrap, guards, interceptors, facades, presentational behavior, parsing/validation, shared helpers and MSW mock handler/domain/persistence code. An unimported or unvisited file remains in the denominator with zero execution. Dead or impossible code requires a design correction, not an ignore annotation. No broad `core/**`, `mocks/**` or `errors/**` exclusions are allowed.
 
