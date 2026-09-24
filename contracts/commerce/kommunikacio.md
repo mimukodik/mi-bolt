@@ -1,119 +1,133 @@
-# Kommunikációs elvárások
+# Communication expectations
 
-A frontend és a backend közti szerződés. Mindkét oldalnak, a frontendnek és a backendnek, ugyanezt kell teljesítenie.
+The contract between frontend and backend. Both sides, frontend and backend,
+must satisfy the same thing.
 
-Az alábbiak mindegyike levezethető az `openapi.yaml`-ből; ez a dokumentum azt mondja el, amit a
-gépi leíró önmagában nem tud kikényszeríteni.
-
----
-
-## Az igazság forrása
-
-A `contracts/commerce/openapi.yaml` a szerződés. Ha bármelyik dokumentum és a specfájl
-ellentmond egymásnak, **a specfájl az érvényes**, és a dokumentumot kell javítani.
-
-Ebből következik: sem a backend, sem a frontend nem definiálhat olyan végpontot, mezőt vagy
-státuszkódot, ami nincs a specben. Ha valami hiányzik, előbb a spec bővül.
+Everything below can be derived from `openapi.yaml`; this document states what
+the machine-readable spec cannot enforce on its own.
 
 ---
 
-## 1. Alapok
+## Source of truth
 
-- Minden végpont az `/api/v1` előtag alatt él, azonos origin-ről. A futásidejű gyök tiszteletben
-  tartja az alkalmazás base href-jét.
-- Sikeres válasz: `application/json`. Hibaválasz: **`application/problem+json`**.
-- Pénz: **egész forint**, soha nem fillér és soha nem lebegőpontos. Minden pénzérték
-  `{ amount, currency: "HUF" }` alakú.
-- Dátum és idő: ISO 8601, UTC.
-- Képek: az `Image.src` a szerver által előállított, **használatra kész URL**. A kliens
-  változtatás nélkül használja, és soha nem épít képútvonalat azonosítóból. Ez teszi lehetővé,
-  hogy a képkiszolgálás később máshová költözzön a szerződés érintése nélkül.
+`contracts/commerce/openapi.yaml` is the contract. If any document and the
+spec file contradict each other, **the spec file is authoritative**, and the
+document must be corrected.
+
+It follows that neither the backend nor the frontend may define an endpoint,
+field or status code that is not in the spec. If something is missing, the
+spec is extended first.
 
 ---
 
-## 2. Munkamenet
+## 1. Basics
 
-A munkamenetet a szerver által kiállított **süti** azonosítja: `mibolt_session`.
-
-**Backend elvárás.** Az első olyan kérésnél, ami munkamenethez kötött végpontra érkezik süti
-nélkül, a szerver kiállít egy újat és `Set-Cookie`-val visszaadja. A süti attribútumai:
-`HttpOnly`, `Secure`, `SameSite=Lax`, és a `Max-Age` a kosár élettartamához igazodik (30 nap).
-A süti értéke kitalálhatatlan, és semmilyen azonosítót vagy adatot nem hordoz magában.
-
-**Frontend elvárás.** A frontend **nem** generál, nem tárol és nem küld munkamenet-azonosítót.
-Azonos origin esetén a böngésző magától küldi a sütit; nincs szükség interceptorra.
-
-**Következmény.** Egy böngésző minden füle ugyanazt a kosarat látja. Ezt a backendnek
-ténylegesen biztosítania kell: az állapot nem élhet olyan helyen, ami fülönként külön példány.
-
-**Hatókör.** A katalógus végpontok (`/products*`) és a képkiszolgálás (`/media/*`) munkamenet
-nélkül is elérhetők. A `/cart*`, `/checkout*`, `/payment-intents*` és `/orders*` végpontok
-munkamenethez kötöttek.
+- Every endpoint lives under the `/api/v1` prefix, on the same origin. The
+  runtime root respects the application's base href.
+- Successful response: `application/json`. Error response:
+  **`application/problem+json`**.
+- Money: **whole forint**, never fillér and never floating point. Every
+  monetary value has the shape `{ amount, currency: "HUF" }`.
+- Date and time: ISO 8601, UTC.
+- Images: `Image.src` is a server-produced, **ready-to-use URL**. The client
+  uses it unchanged, and never builds an image path from an identifier. This
+  is what lets image serving move elsewhere later without touching the
+  contract.
 
 ---
 
-## 3. Verziózás és konkurencia
+## 2. Session
 
-A kosár és a checkout piszkozat **egyetlen közös verziószámlálón** osztozik.
+The session is identified by a **cookie** issued by the server:
+`mibolt_session`.
 
-**Minden sikeres mutáció növeli** ezt a számlálót: tétel hozzáadása, mennyiség módosítása,
-sor törlése, kosár ürítése, checkout piszkozat módosítása.
+**Backend expectation.** On the first request that reaches a session-bound
+endpoint without a cookie, the server issues a new one and returns it with
+`Set-Cookie`. The cookie's attributes: `HttpOnly`, `Secure`, `SameSite=Lax`,
+and `Max-Age` matched to the cart's lifetime (30 days). The cookie's value is
+unguessable and carries no identifier or data of its own.
 
-**Minden érintett válasz `ETag` fejlécet ad**, idézőjelbe tett egész számként: `ETag: "7"`.
-Ezt adják: `GET /cart`, minden kosármutáció, `GET /checkout`, `PATCH /checkout`.
+**Frontend expectation.** The frontend **does not** generate, store or send a
+session identifier. On the same origin the browser sends the cookie on its
+own; no interceptor is needed.
 
-**Minden mutáció `If-Match` fejlécet követel** ugyanilyen alakban. Ha az érték nem egyezik a
-szerver aktuális verziójával, a válasz **412 Precondition Failed**, `CART_VERSION_CONFLICT`
-kóddal. Nem 409 — ha feltételes kérést használunk, a feltétel bukása HTTP-ben 412.
+**Consequence.** Every tab of one browser sees the same cart. The backend
+must actually guarantee this: state must not live anywhere that is a separate
+instance per tab.
 
-**Frontend elvárás.** A verziót a válasz `ETag` fejlécéből kell kiolvasni és a következő
-mutációhoz visszaküldeni. 412 esetén a helyes viselkedés: a kosár vagy a checkout újraolvasása,
-a felhasználó tájékoztatása, majd — ha még értelmes — a művelet megismétlése. Soha nem szabad
-automatikusan, a felhasználó tudta nélkül újrapróbálni az új verzióval.
-
----
-
-## 4. Idempotencia
-
-`Idempotency-Key` fejléc **két végponton kötelező**: `POST /payment-intents` és `POST /orders`.
-Máshol nincs rá szükség, és nem is szabad megkövetelni.
-
-Szabályok:
-
-- A kulcs hatóköre: metódus + útvonal + munkamenet. Megőrzési idő 24 óra.
-- Ugyanaz a kulcs ugyanazzal a normalizált törzzsel **az eredeti eredményt játssza vissza**,
-  **mielőtt** a szerver bármilyen állapot- vagy feltétel-ellenőrzést végezne. Ez azt jelenti,
-  hogy egy bizonytalan válasz utáni újraküldés a rendelés visszaigazolását adja vissza, nem
-  hibát.
-- Ugyanaz a kulcs **más** törzzsel: **409 `IDEMPOTENCY_CONFLICT`**.
-
-**Frontend elvárás.** Bizonytalan válasz (időtúllépés, megszakadt kapcsolat) után a kérést
-**pontosan ugyanazzal a kulccsal és törzzsel** kell megismételni. Új kulcsot csak akkor szabad
-generálni, ha a felhasználó tudatosan új kísérletet indít — például egy elutasított fizetés után
-újra megpróbálja.
+**Scope.** The catalogue endpoints (`/products*`) and image serving
+(`/media/*`) are reachable without a session. The `/cart*`, `/checkout*`,
+`/payment-intents*` and `/orders*` endpoints are session-bound.
 
 ---
 
-## 5. Hibakontraktus
+## 3. Versioning and concurrency
 
-Minden hibaválasz `application/problem+json`, a `Problem` séma szerint.
+The cart and the checkout draft share **a single common version counter**.
 
-### 5.1 Státuszkódok szétválasztása
+**Every successful mutation increases** this counter: adding a line item,
+changing a quantity, deleting a line, emptying the cart, modifying the
+checkout draft.
 
-| Státusz | Jelentés |
+**Every affected response carries an `ETag` header**, as a quoted integer:
+`ETag: "7"`. These give it: `GET /cart`, every cart mutation, `GET /checkout`,
+`PATCH /checkout`.
+
+**Every mutation requires an `If-Match` header** in the same form. If the
+value does not match the server's current version, the response is
+**412 Precondition Failed**, with code `CART_VERSION_CONFLICT`. Not 409 — if a
+conditional request is used, a failed condition is 412 in HTTP.
+
+**Frontend expectation.** The version must be read from the response's `ETag`
+header and sent back on the next mutation. On 412 the correct behaviour: reread
+the cart or the checkout, inform the user, then — if it still makes sense —
+repeat the operation. It must never automatically retry with the new version
+without the user's knowledge.
+
+---
+
+## 4. Idempotency
+
+An `Idempotency-Key` header is **mandatory on two endpoints**:
+`POST /payment-intents` and `POST /orders`. It is not needed elsewhere, and
+must not be required there either.
+
+Rules:
+
+- The key's scope: method + path + session. Retention period 24 hours.
+- The same key with the same normalised body **replays the original result**,
+  **before** the server performs any state or condition check. This means
+  that a resend after an uncertain response returns the order confirmation,
+  not an error.
+- The same key with a **different** body: **409 `IDEMPOTENCY_CONFLICT`**.
+
+**Frontend expectation.** After an uncertain response (timeout, dropped
+connection) the request must be repeated **with exactly the same key and
+body**. A new key must only be generated when the user deliberately starts a
+new attempt — for example trying again after a declined payment.
+
+---
+
+## 5. Error contract
+
+Every error response is `application/problem+json`, per the `Problem` schema.
+
+### 5.1 Separation of status codes
+
+| Status | Meaning |
 |---|---|
-| **400** | A kérés **formailag** hibás: rossz típus, hiányzó kötelező mező, ismeretlen query paraméter. |
-| **422** | A kérés formailag helyes, de **üzletileg** nem elfogadható. |
-| 404 | A megcímzett erőforrás nem létezik, **vagy nem ehhez a munkamenethez tartozik**. |
-| 409 | A kérés ütközik az aktuális állapottal. |
-| 410 | A kosár lejárt. |
-| 412 | Az `If-Match` verzió nem egyezik. |
-| 503 | Átmeneti szolgáltatáskiesés. |
+| **400** | The request is **malformed**: wrong type, missing required field, unknown query parameter. |
+| **422** | The request is well-formed, but not **acceptable on business grounds**. |
+| 404 | The addressed resource does not exist, **or does not belong to this session**. |
+| 409 | The request conflicts with the current state. |
+| 410 | The cart has expired. |
+| 412 | The `If-Match` version does not match. |
+| 503 | Temporary service outage. |
 
-Ez a szétválasztás kötelező és következetes. Egy bepipálatlan ÁSZF-checkbox nem 400, hanem
-**422**, mert formailag helyes boolean érkezett.
+This separation is mandatory and consistent. An unchecked terms-and-conditions
+checkbox is not 400, but **422**, because a well-formed boolean arrived.
 
-### 5.2 A hibaválasz tartalma
+### 5.2 The content of the error response
 
 ```json
 {
@@ -128,142 +142,164 @@ Ez a szétválasztás kötelező és következetes. Egy bepipálatlan ÁSZF-chec
 }
 ```
 
-- **`code`** a gépi azonosító. A felület ezen kapcsol, soha nem a `title` vagy a `detail`
-  szövegén.
-- **`params`** a szöveghez behelyettesítendő értékek. Enélkül a felület nem tud pontos üzenetet
-  írni („legfeljebb 5 db rendelhető").
-- **`fieldErrors`** elemei `path` (JSON pointer a kérés törzsébe) és `code` párosok, opcionális
-  `params`-szal. Ebből tudja a felület, **melyik űrlapmezőt** kell megjelölnie.
-- **`traceId`** minden válaszban jelen van, naplóban visszakereshető.
+- **`code`** is the machine identifier. The UI switches on this, never on the
+  text of `title` or `detail`.
+- **`params`** are the values to substitute into the text. Without these the
+  UI cannot write a precise message ("legfeljebb 5 db rendelhető").
+- **`fieldErrors`** entries are `path` (a JSON pointer into the request body)
+  and `code` pairs, with optional `params`. This is how the UI knows **which
+  form field** to flag.
+- **`traceId`** is present in every response, searchable in the logs.
 
-### 5.3 Hibakódok és tipikus helyük
+### 5.3 Error codes and their typical place
 
-| Kód | Státusz | Mikor |
+| Code | Status | When |
 |---|---|---|
-| `INVALID_REQUEST` | 400 | Formai hiba, ismeretlen paraméter. |
-| `VALIDATION_FAILED` | 422 | Üzletileg érvénytelen mezőérték; `fieldErrors` kitöltve. |
-| `NOT_FOUND` | 404 | Nem létező vagy más munkamenethez tartozó erőforrás. |
-| `CART_EXPIRED` | 410 | A kosár lejárt. |
-| `CART_VERSION_CONFLICT` | 412 | `If-Match` eltérés. |
-| `OUT_OF_STOCK` | 409 | A variáns elfogyott. |
-| `QUANTITY_LIMIT` | 409 | A kért mennyiség meghaladja a soronkénti maximumot. |
-| `PRICE_CHANGED` | 409 | A katalógusár változott; a felhasználónak látnia kell az újat. |
-| `CHECKOUT_INCOMPLETE` | 422 | Hiányzó checkout szakasz. |
-| `PAYMENT_REQUIRED` | 422 | A fizetési szándék `requires_action` — a vásárló nem ment végig a fizetési oldalon. |
-| `PAYMENT_DECLINED` | 422 | A fizetési szándék elutasított; új kísérlet kell, új idempotencia-kulccsal. |
-| `PAYMENT_PENDING` | 422 | A fizetési szándék még nem dőlt el; a rendelés nem véglegesíthető. |
-| `PAYMENT_ALREADY_RESOLVED` | 409 | A fizetési szándék már terminális állapotban van, nem írható át. |
-| `IDEMPOTENCY_CONFLICT` | 409 | Ugyanaz a kulcs más törzzsel. |
-| `SERVICE_UNAVAILABLE` | 503 | Átmeneti kiesés. |
+| `INVALID_REQUEST` | 400 | Malformed request, unknown parameter. |
+| `VALIDATION_FAILED` | 422 | Business-invalid field value; `fieldErrors` populated. |
+| `NOT_FOUND` | 404 | Resource that does not exist or belongs to a different session. |
+| `CART_EXPIRED` | 410 | The cart has expired. |
+| `CART_VERSION_CONFLICT` | 412 | `If-Match` mismatch. |
+| `OUT_OF_STOCK` | 409 | The variant is sold out. |
+| `QUANTITY_LIMIT` | 409 | The requested quantity exceeds the per-line maximum. |
+| `PRICE_CHANGED` | 409 | The catalogue price changed; the user must see the new one. |
+| `CHECKOUT_INCOMPLETE` | 422 | Missing checkout section. |
+| `PAYMENT_REQUIRED` | 422 | The payment intent is `requires_action` — the shopper did not go through the payment page. |
+| `PAYMENT_DECLINED` | 422 | The payment intent was declined; a new attempt is needed, with a new idempotency key. |
+| `PAYMENT_PENDING` | 422 | The payment intent has not yet settled; the order cannot be finalised. |
+| `PAYMENT_ALREADY_RESOLVED` | 409 | The payment intent is already in a terminal state and cannot be overwritten. |
+| `IDEMPOTENCY_CONFLICT` | 409 | Same key with a different body. |
+| `SERVICE_UNAVAILABLE` | 503 | Temporary outage. |
 
-**Elvárás mindkét oldalra:** a felületnek **minden** felsorolt kódhoz tartoznia kell magyar
-szöveggel. Ismeretlen kódra generikus üzenet megy ki, de ez naplózandó, mert azt jelenti, hogy a
-két oldal szétcsúszott.
-
----
-
-## 6. Lokalizáció határa
-
-**Hibaüzenet és validáció:** a szerver kódot és paramétereket küld, a szöveget a felület állítja
-össze. A `Problem.title` és `detail` **angol fejlesztői szöveg**, ami naplóba és hibakeresésbe
-való — a felhasználó soha nem látja.
-
-**Tartalom:** a terméknevek, a `highlights`, a specifikációs sorok, a szállítási és fizetési
-módok címkéi és leírásai, valamint az `OrderReceipt.notice` **szerveroldali adat**, és magyarul
-érkezik. A felület ezeket változtatás nélkül jeleníti meg.
-
-A határ egyszerű: ami **üzenet**, az a kliensé; ami **adat**, az a szerveré.
+**Expectation for both sides:** the UI must have Hungarian text for **every**
+listed code. An unknown code gets a generic message, but this must be logged,
+because it means the two sides have drifted apart.
 
 ---
 
-## 7. Szerver által kezdeményezett változások
+## 6. The localisation boundary
 
-Amit a felhasználó kért és nem kaphat meg, az **hiba**. Amit a szerver magától változtatott meg,
-az **értesítés**.
+**Error message and validation:** the server sends a code and parameters, and
+the UI composes the text. `Problem.title` and `detail` are **English
+developer text**, meant for logs and debugging — the user never sees it.
 
-A `Cart.notices` tömb ezt hordozza: `code`, opcionális `variantId` és `params`. Kódjai:
-`QUANTITY_REDUCED`, `PRICE_CHANGED`, `ITEM_REMOVED`.
+**Content:** product names, `highlights`, specification lines, the labels and
+descriptions of delivery and payment methods, and `OrderReceipt.notice` are
+**server-side data**, and arrive in Hungarian. The UI displays these
+unchanged.
 
-**Backend elvárás.** Amikor a készlet a kosárban lévő mennyiség alá csökken, a szerver csökkenti
-a sor mennyiségét és értesítést ad; nem hagy ellentmondó állapotot, ahol a `quantity` nagyobb,
-mint a `maxQuantity`.
-
-**Frontend elvárás.** A kosároldalnak ezeket az értesítéseket felső sávként meg kell jelenítenie.
-Némán elnyelni tilos — a felhasználó árat vagy mennyiséget látna változni magyarázat nélkül.
-
----
-
-## 8. A teljes folyamat
-
-### 8.1 Vásárlás, sikeres úton
-
-1. `GET /products?...` — katalógus, szűrőkkel. Munkamenet nem kell.
-2. `GET /products/{slug}` — termékadatlap a teljes variánsmátrixszal.
-   `GET /products/{slug}/related` külön hívásban, a lap aljára.
-3. `POST /cart/items` — `If-Match` a jelenlegi verzióval. A válasz a **teljes kosár** és az új
-   `ETag`. Ugyanennek a variánsnak az ismételt hozzáadása **összevonódik** a meglévő sorral.
-4. `GET /checkout/options` — szállítási és fizetési módok, **a kosár értékéhez igazítva**.
-5. `PATCH /checkout` — `contact`, `billing`, `delivery`, `payment` szakaszok, egyenként vagy
-   együtt. Csak a küldött szakaszok íródnak felül. Minden sikeres írás növeli a verziót.
-6. `GET /checkout` — a piszkozat és a **frissen számolt** összegzés. Nincs külön árajánlat-lépés.
-7. Kártyás fizetésnél: `POST /payment-intents` — `If-Match` és `Idempotency-Key`. A válasz
-   `redirectUrl`-t ad; a felhasználó odakerül, választ, majd a `returnUrl`-en visszatér.
-   `GET /payment-intents/{id}` adja az eredményt.
-8. `POST /orders` — `If-Match` és `Idempotency-Key`. Kártyás fizetésnél `paymentIntentId`
-   kötelező, utánvétnél a mező nem is létezik. A válasz **201** és a visszaigazolás.
-9. A rendeléssel a kosár lezárul, a piszkozat törlődik, és a munkamenet **azonnal friss, üres
-   kosarat kap**. A következő `GET /cart` üres kosarat ad, nem a megrendeltet.
-
-### 8.2 Ármódosulás a folyamat közben
-
-Ha a katalógusár megváltozik, mielőtt a rendelés véglegesülne: a szerver **atomikusan**
-frissíti a kosár árait, **növeli a verziót**, és a fizetési vagy rendelési kísérletre
-**409 `PRICE_CHANGED`** választ ad.
-
-A felületnek ilyenkor újra kell olvasnia a kosarat, meg kell mutatnia az új összeget, és **a
-felhasználó kifejezett megerősítését** kell kérnie, mielőtt újra próbálkozik. Az új összeg néma
-elfogadása tilos.
-
-### 8.3 Fizetési átirányítás
-
-A `PaymentIntent` négy állapotot vehet fel: `requires_action`, `succeeded`, `declined`,
-`pending`. A `declined` és a `pending` **nem hiba**: a `POST /payment-intents` ezekre is
-**201**-et ad, az állapot a törzsben van.
-
-A fizetési oldal **külön, kicsi Angular alkalmazás** a webshop monorepójában, egyértelműen
-demóként jelölve, generikus néven. **Soha nem viselheti valós fizetési szolgáltató nevét vagy
-arculatát.** Három kimenetet kínál: sikeres, elutasított, függőben.
-
-A teljes menet:
-
-1. `POST /payment-intents` — a bolt létrehozza a szándékot, és megkapja a `redirectUrl`-t.
-2. A böngésző **teljes oldalbetöltéssel** átmegy a fizetési alkalmazásba. A webshop SPA
-   megsemmisül.
-3. A fizetési alkalmazás `GET /payment-intents/{id}` hívással lekéri az összeget.
-4. A vásárló választ, és az alkalmazás **`POST /payment-intents/{id}/outcome`** hívással közli a
-   kimenetet.
-5. Visszatérés a `returnUrl`-re, szintén teljes oldalbetöltéssel és **GET** navigációval. A
-   webshop SPA nulláról indul, és mindent a szerverről tölt vissza.
-6. A bolt `GET /payment-intents/{id}` hívással ellenőrzi az eredményt, majd rendel.
-
-**Az `outcome` művelet egyszer lövő.** Ha a szándék már terminális állapotban van, a válasz
-**409 `PAYMENT_ALREADY_RESOLVED`** — ez véd attól, hogy egy visszagomb vagy egy frissítés
-felülírjon egy már elkönyvelt fizetést. Elveszett válasz után nem újraküldeni kell, hanem a
-szándékot lekérdezni.
-
-**Ez a művelet azért létezik, mert nincs valódi fizetési szolgáltató.** Éles rendszerben a
-böngésző soha nem dönthetné el, hogy a saját fizetése sikeres volt-e; ott a szolgáltató
-értesíti a boltot a háta mögött. Ezt a végpontot nem szabad éles integrációba átvinni.
-
-Függőben lévő szándéknál a bolt lekérdezéssel vár; a szerver garantálja, hogy az állapot az
-`expiresAt` előtt terminálissá válik.
+The boundary is simple: what is a **message** belongs to the client; what is
+**data** belongs to the server.
 
 ---
 
-## 9. Amit egyik oldal sem tehet meg
+## 7. Server-initiated changes
 
-- A kliens **nem** küld árat, részösszeget, végösszeget, szállítási díjat vagy készletadatot.
-  A szerver ilyet nem fogad el a kérésből, akkor sem, ha megérkezik.
-- A kliens **nem** tárol kosarat böngészőtárolóban. Az egyetlen igazság a szerveré.
-- A szerver **nem** küld a felhasználónak szánt hibaszöveget.
-- Egyik oldal sem vezet be olyan mezőt, végpontot vagy státuszkódot, ami nincs a specben.
+What the user requested and cannot get is an **error**. What the server
+changed on its own is a **notice**.
+
+The `Cart.notices` array carries this: `code`, optional `variantId` and
+`params`. Its codes: `QUANTITY_REDUCED`, `PRICE_CHANGED`, `ITEM_REMOVED`.
+
+**Backend expectation.** When stock drops below the quantity in the cart, the
+server reduces the line's quantity and gives a notice; it never leaves a
+contradictory state where `quantity` is greater than `maxQuantity`.
+
+**Frontend expectation.** The cart page must display these notices as a top
+banner. Swallowing them silently is forbidden — the user would see a price or
+quantity change with no explanation.
+
+---
+
+## 8. The whole flow
+
+### 8.1 A purchase, on the successful path
+
+1. `GET /products?...` — catalogue, with filters. No session needed.
+2. `GET /products/{slug}` — product detail page with the full variant matrix.
+   `GET /products/{slug}/related` in a separate call, for the bottom of the
+   page.
+3. `POST /cart/items` — `If-Match` with the current version. The response is
+   the **full cart** and the new `ETag`. Adding the same variant again
+   **merges** into the existing line.
+4. `GET /checkout/options` — delivery and payment methods, **matched to the
+   cart's value**.
+5. `PATCH /checkout` — `contact`, `billing`, `delivery`, `payment` sections,
+   individually or together. Only the sections sent are overwritten. Every
+   successful write increases the version.
+6. `GET /checkout` — the draft and the **freshly computed** summary. There is
+   no separate quote step.
+7. For card payment: `POST /payment-intents` — `If-Match` and
+   `Idempotency-Key`. The response gives a `redirectUrl`; the user is taken
+   there, chooses, then returns on the `returnUrl`. `GET /payment-intents/{id}`
+   gives the result.
+8. `POST /orders` — `If-Match` and `Idempotency-Key`. For card payment
+   `paymentIntentId` is mandatory, for cash on delivery the field does not
+   even exist. The response is **201** and the confirmation.
+9. With the order, the cart closes, the draft is deleted, and the session
+   **immediately gets a fresh, empty cart**. The next `GET /cart` gives an
+   empty cart, not the ordered one.
+
+### 8.2 A price change mid-flow
+
+If the catalogue price changes before the order is finalised: the server
+**atomically** refreshes the cart's prices, **increases the version**, and
+gives a **409 `PRICE_CHANGED`** response to the payment or order attempt.
+
+In this case the UI must reread the cart, show the new total, and ask for the
+**user's explicit confirmation** before trying again. Silently accepting the
+new total is forbidden.
+
+### 8.3 Payment redirect
+
+A `PaymentIntent` can take on four states: `requires_action`, `succeeded`,
+`declined`, `pending`. `declined` and `pending` are **not errors**:
+`POST /payment-intents` gives **201** for these too, the state is in the body.
+
+The payment page is a **separate, small Angular application** in the
+webshop's monorepo, clearly marked as a demo, under a generic name. **It must
+never carry the name or branding of a real payment provider.** It offers
+three outcomes: successful, declined, pending.
+
+The full sequence:
+
+1. `POST /payment-intents` — the shop creates the intent, and gets the
+   `redirectUrl`.
+2. The browser goes to the payment application with a **full page load**. The
+   webshop SPA is destroyed.
+3. The payment application fetches the amount with
+   `GET /payment-intents/{id}`.
+4. The shopper chooses, and the application reports the outcome with
+   **`POST /payment-intents/{id}/outcome`**.
+5. Return to the `returnUrl`, again with a full page load and a **GET**
+   navigation. The webshop SPA starts from zero, and loads everything back
+   from the server.
+6. The shop checks the result with `GET /payment-intents/{id}`, then places
+   the order.
+
+**The `outcome` operation fires once.** If the intent is already in a
+terminal state, the response is **409 `PAYMENT_ALREADY_RESOLVED`** — this
+protects against a back button or a refresh overwriting a payment already
+recorded. After a lost response, the intent must not be resent but queried
+instead.
+
+**This operation exists only because there is no real payment provider.** In
+production, the browser could never decide for itself whether its own payment
+was successful; there, the provider notifies the shop behind the scenes. This
+endpoint must not be carried into a production integration.
+
+For a pending intent, the shop waits by polling; the server guarantees that
+the state becomes terminal before `expiresAt`.
+
+---
+
+## 9. What neither side may do
+
+- The client **does not** send a price, subtotal, total, delivery fee or
+  stock data. The server does not accept such a thing from the request, even
+  if it arrives.
+- The client **does not** store the cart in browser storage. The only source
+  of truth is the server's.
+- The server **does not** send error text meant for the user.
+- Neither side introduces a field, endpoint or status code that is not in the
+  spec.
