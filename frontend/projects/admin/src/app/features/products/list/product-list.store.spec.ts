@@ -381,6 +381,56 @@ describe('ProductListStore', () => {
     expect(sentIfMatch).toBe('"0"');
   });
 
+  it('a successful archive drops the other cached data sources, so another tab loads afresh', async () => {
+    const { store } = await setup();
+    const router = TestBed.inject(Router);
+    const activeSource = store.dataSource();
+
+    const toAll = nextNavigationEnd(router);
+    store.setQuery({ status: 'all' });
+    await toAll;
+    const allSource = store.dataSource();
+    expect(allSource).not.toBe(activeSource);
+    const first = await firstValueFrom(allSource.connect(noopViewer()));
+    const row = first[0];
+    if (row === undefined) throw new Error('row 1 missing');
+
+    const result = await store.archive(row);
+    expect(result.kind).toBe('done');
+    // The tab on screen keeps its instance: its row was replaced in place.
+    expect(store.dataSource()).toBe(allSource);
+
+    const toActive = nextNavigationEnd(router);
+    store.setQuery({ status: 'active' });
+    await toActive;
+    expect(store.dataSource()).not.toBe(activeSource);
+  });
+
+  it('a successful restore drops the other cached data sources too', async () => {
+    const { store } = await setup();
+    const router = TestBed.inject(Router);
+    const activeSource = store.dataSource();
+    const first = await firstValueFrom(activeSource.connect(noopViewer()));
+    const row = first[0];
+    if (row === undefined) throw new Error('row 1 missing');
+    const archived = await store.archive(row);
+    if (archived.kind !== 'done') throw new Error(`archive answered ${archived.kind}`);
+
+    const toArchived = nextNavigationEnd(router);
+    store.setQuery({ status: 'archived' });
+    await toArchived;
+    const archivedSource = store.dataSource();
+
+    const restored = await store.restore(archived.item);
+    expect(restored.kind).toBe('done');
+    expect(store.dataSource()).toBe(archivedSource);
+
+    const toActive = nextNavigationEnd(router);
+    store.setQuery({ status: 'active' });
+    await toActive;
+    expect(store.dataSource()).not.toBe(activeSource);
+  });
+
   it('archive with a stale version returns { kind: "conflict" }', async () => {
     const { db, store } = await setup();
     const product5 = db.products.get(5);

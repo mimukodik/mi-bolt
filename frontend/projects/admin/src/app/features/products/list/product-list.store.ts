@@ -16,7 +16,9 @@
  * caching data sources by the serialised params, so a different
  * query always gets a different instance. `replaceItem` updates only
  * the cache of the *current* data source; an archive or a restore
- * therefore never bleeds across a query change.
+ * therefore never bleeds across a query change, and after one the
+ * store drops every other cached source, whose rows predate it, so
+ * the next visit to another tab loads afresh (MIM-361, F27).
  *
  * `archive` and `restore` are the two wire actions. Each one posts
  * the current row's `version` quoted as the `If-Match` header
@@ -196,8 +198,25 @@ export class ProductListStore {
           version: body.version,
         };
         this.dataSource().replaceItem(next);
+        this.dropOtherSources();
         return { kind: 'done', item: next };
       })
       .catch(handle);
+  }
+
+  /**
+   * Discard every cached data source except the one on screen. Called
+   * after a successful archive or restore: the other queries' rows were
+   * loaded before it, so a tab switch must load afresh instead of
+   * showing them (MIM-361, F27). The current source keeps its instance,
+   * so the table on screen does not shift.
+   */
+  private dropOtherSources(): void {
+    const current = this.dataSource();
+    for (const [key, source] of this.cache) {
+      if (source === current) continue;
+      source.disconnect();
+      this.cache.delete(key);
+    }
   }
 }
