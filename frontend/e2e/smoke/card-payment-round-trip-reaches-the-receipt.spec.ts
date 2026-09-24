@@ -150,7 +150,7 @@ test.describe('Smoke: purchase on the real stack', () => {
       await expect(page.getByTestId('review-page')).toBeVisible();
     });
 
-    await test.step('Back on the review page, the payment-status now reads "A fizetés jóváhagyva." (review-step.ts:246) and the terms are still ticked (MIM-241). Submit the order via review-submit. The browser is redirected to the receipt at /penztar/siker/<orderId>.', async () => {
+    await test.step('Back on the review page, the payment-status now reads "A fizetés jóváhagyva." (ReviewStep.paymentStatusMessage) and the terms are still ticked (MIM-241). Submit the order via review-submit. The browser is redirected to the receipt at /penztar/siker/<orderId>.', async () => {
       await expect(page.getByTestId('review-payment-status')).toContainText(
         'A fizetés jóváhagyva.',
       );

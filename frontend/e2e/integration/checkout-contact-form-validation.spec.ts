@@ -9,11 +9,12 @@ test.describe('Checkout: from the cart to the receipt', () => {
     { tag: '@integration' },
     async ({ page }) => {
       // The purchase control is laid out differently at the two integration
-      // viewports: below 1024px the desktop CTA column is `display: none`
-      // (product-page.scss:120-124) and the sticky `purchase-rail`, hidden
-      // above 1024px (mobile-buy-rail.scss:5-13), carries the same "Kosárba
-      // teszem" press as its `purchase-cta`. Both mounts stay in the DOM at
-      // either width, so the viewport decides which one the test drives.
+      // viewports: below 1024px the desktop CTA column is `display: none` (the
+      // `.cta-desktop` rule in the product page stylesheet) and the sticky
+      // `purchase-rail`, hidden above 1024px (the `.rail` rule in the mobile
+      // buy rail stylesheet), carries the same "Kosárba teszem" press as its
+      // `purchase-cta`. Both mounts stay in the DOM at either width, so the
+      // viewport decides which one the test drives.
       const narrowViewport = (page.viewportSize()?.width ?? 0) < 1024;
       const addToCartButton = narrowViewport
         ? page.getByTestId('purchase-rail').getByTestId('purchase-cta').getByRole('button')
@@ -29,9 +30,10 @@ test.describe('Checkout: from the cart to the receipt', () => {
       const emailInput = page.getByTestId('contact-email-input');
       const phoneInput = page.getByTestId('contact-phone-input');
       const submitButton = page.getByTestId('contact-submit').getByRole('button');
-      // Each input's `aria-describedby` names its own message paragraph
-      // (contact-step.html:40-108), whose id is `<fieldId>-message`
-      // (form-field-message.ts:52), so the message is addressed by that id.
+      // Each input's `aria-describedby` names its own message paragraph (the
+      // `contact-*-input` fields in contact-step.html), whose id is
+      // `<fieldId>-message` (FormFieldMessage.describedById), so the message is
+      // addressed by that id.
       const emailMessage = page.locator('#contact-email-message');
       const phoneMessage = page.locator('#contact-phone-message');
 

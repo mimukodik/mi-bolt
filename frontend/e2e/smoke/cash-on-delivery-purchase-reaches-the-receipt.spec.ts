@@ -38,12 +38,12 @@ test.describe('Smoke: purchase on the real stack', () => {
       await expect(page.getByRole('heading', { level: 1, name: 'Mobiltelefonok' })).toBeVisible();
     });
 
-    await test.step('Pick the first product-card that is in stock (no Elfogyott label) and whose card price is at most 300 000 Ft, the cash-on-delivery cart ceiling (backend/services/commerce/src/main/resources/application.properties:46, mibolt.checkout.cash-on-delivery-max-cart-huf=300000). Read the price as digits from <app-price-block data-testid="price-amount"> inside the card\'s .price-row and compare as a number. Open that card by clicking its product-card-cta.', async () => {
+    await test.step('Pick the first product-card that is in stock (no Elfogyott label) and whose card price is at most 300 000 Ft, the cash-on-delivery cart ceiling (mibolt.checkout.cash-on-delivery-max-cart-huf=300000). Read the price as digits from <app-price-block data-testid="price-amount"> inside the card\'s .price-row and compare as a number. Open that card by clicking its product-card-cta.', async () => {
       // The backend's `codAvailable = !empty && subtotal <= codMaxCart`
       // rule rejects cash on delivery once the cart subtotal exceeds the
-      // ceiling (CheckoutService.java:240). The card's "from" price is
-      // the cheapest variant's price (the catalog's from-price), so
-      // filtering on the card price is a sufficient pre-condition to
+      // ceiling (the `codAvailable` rule in `CheckoutService`). The card's
+      // "from" price is the cheapest variant's price (the catalog's from-price),
+      // so filtering on the card price is a sufficient pre-condition to
       // reach a state where Utánvét stays enabled after adding the
       // selected variant to the cart. The product page may open on a
       // higher-priced variant, so the delivery step still has to assert
@@ -66,7 +66,7 @@ test.describe('Smoke: purchase on the real stack', () => {
         const priceText =
           (await card.locator('app-price-block').getByTestId('price-amount').textContent()) ?? '';
         // The price-block formats whole HUF with U+00A0 separators
-        // (price-block.ts:63); stripping every non-digit yields the
+        // (PriceBlock.formatHuf); stripping every non-digit yields the
         // integer value, e.g. "149990" -> 149990.
         const priceNumber = Number(priceText.replace(/\D/g, ''));
         if (Number.isFinite(priceNumber) && priceNumber <= maxCodCart) {
@@ -149,8 +149,8 @@ test.describe('Smoke: purchase on the real stack', () => {
       // step is reached, and the demo checkout exposes the option here.
       const codOption = page.getByTestId('payment-option').filter({ hasText: 'Utánvét' }).first();
       // The backend's codAvailable = !empty && subtotal <= codMaxCart
-      // rule disables the radio when the cart exceeds the ceiling
-      // (CheckoutService.java:240); the option row also shows the
+      // rule disables the radio when the cart exceeds the ceiling (the
+      // `codAvailable` rule in `CheckoutService`); the option row also shows the
       // explanation under payment-unavailable-reason. Asserting the
       // radio is enabled before the click means a regression in the
       // card-to-variant price mapping would fail here, on the page
