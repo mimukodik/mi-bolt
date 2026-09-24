@@ -216,6 +216,8 @@ Normal releases of `https://bolt.mimukodik.hu` preserve its database and apply
 Liquibase migrations. The catalog loader and initial admin bootstrap skip
 already-populated data; rotating the initial password does not reset an
 existing admin account. A rehearsal reset is an explicit platform operation.
+The bootstrap username is `admin`. Stable receives its initial password from
+1Password; each preview gets an independent generated initial password.
 
 Changes under the Liquibase migrations or `data/catalog/` require a new approved
 template fingerprint before preview admission. See the
