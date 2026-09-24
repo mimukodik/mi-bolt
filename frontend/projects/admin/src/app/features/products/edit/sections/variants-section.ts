@@ -86,9 +86,10 @@ export class VariantsSection {
    */
   protected idText(variant: VariantModel): string {
     const color = this.colors().find((c) => c.key === variant.colorKey);
+    const slug = this.form().slug().value();
     const derived =
-      color !== undefined && color.code !== '' && variant.storageGb !== null
-        ? variantId(this.form().slug().value(), color.code, variant.storageGb)
+      color !== undefined && color.code !== '' && variant.storageGb !== null && slug !== ''
+        ? variantId(slug, color.code, variant.storageGb)
         : null;
     if (variant.id !== null && variant.id === derived) {
       return `azonosító: ${variant.id}`;

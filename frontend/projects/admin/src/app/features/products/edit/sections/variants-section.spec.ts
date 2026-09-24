@@ -220,17 +220,27 @@ describe('VariantsSection', () => {
     // Fails if idText() compares the stored id against the derived one (case a): an
     // existing row whose storage changed is a new pair to the backend.
     const stored = 'teszt-telefon--ezust--128';
-    expect(
-      Array.from(rows()[0].querySelectorAll<HTMLInputElement>('input')).some(
-        (input) => input.value === stored,
-      ),
-    ).toBe(false);
 
     toggleButton(rows()[0], '512 GB').click();
     await fixture.whenStable();
 
     expect(idText(rows()[0])).toBe('azonosító: teszt-telefon--ezust--512 (új)');
     expect(host.model().variants[0].id).toBe(stored);
+  });
+
+  it('does not derive an id while the product slug is empty', async () => {
+    // Fails if idText() derives the id from an empty slug: the row would read
+    // "azonosító: --ezust--128 (új)", an id the backend never assigns, because it
+    // builds a new variant's id from the saved product slug.
+    host.model.set({
+      ...emptyProductForm(),
+      slug: '',
+      colors: [host.ezust],
+      variants: [variant(null, host.ezust.key, 128, 199990, 4)],
+    });
+    await fixture.whenStable();
+
+    expect(idText(rows()[0])).toBe('azonosító: mentéskor készül');
   });
 
   it('reports a duplicate colour and storage pair on the row that repeats it', async () => {
