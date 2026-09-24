@@ -426,6 +426,7 @@ export class CheckoutFacade {
     try {
       const intent = await firstValueFrom(this.api.invoke(getPaymentIntent, { paymentIntentId }));
       this.paymentIntentWritable.set(intent);
+      this.intentDroppedWritable.set(null);
       const session = this.sessionWritable();
       if (session !== null) {
         this.dropStaleIntent(session);

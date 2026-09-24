@@ -1076,6 +1076,17 @@ describe('payment intents', () => {
     expect(checkout.intentDropped()).toBeNull();
   });
 
+  it('F-31k: reading back the intent after a drop clears the drop reason when it still matches', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    const read = await checkout.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
   it('F-32: a contact or billing write keeps the held intent', async () => {
     const checkout = await setupCompleteCardDraft();
     const created = await checkout.createPaymentIntent();
