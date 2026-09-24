@@ -1061,8 +1061,9 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     // The first product's related response is delayed and resolves
     // to a non-empty list. The point is that the list cannot land
     // on the new product's screen: the route change must both
-    // reset the `relatedSignal` synchronously (product.facade.ts:182)
-    // and tear down the in-flight subscription (lines 178-181) so the
+    // reset the `relatedSignal` synchronously (the `tap` at the head of
+    // `ProductFacade`'s route pipeline) and tear down the in-flight
+    // subscription (that `tap`'s `relatedSub.unsubscribe()`) so the
     // dangling response's `next` callback never fires. With those two
     // guards removed, the very last assertion below would fail: the
     // delayed `next` would call `this.relatedSignal.set(items)` and
@@ -1170,8 +1171,9 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     // Now resolve the dangling first request — the facade must not let
     // it repopulate the list for the new product. The subscription was
-    // torn down (lines 178-181), so the `next` callback never fires
-    // and `relatedSignal` stays at the empty array the reset put there.
+    // torn down (the route-change `tap`'s `relatedSub.unsubscribe()`), so
+    // the `next` callback never fires and `relatedSignal` stays at the
+    // empty array the reset put there.
     resolvers.current?.();
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 30);

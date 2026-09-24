@@ -29,7 +29,17 @@
 import { computed, DestroyRef, inject, Service, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import type { Subscription } from 'rxjs';
-import { catchError, distinctUntilChanged, map, of, Subject, switchMap, take, tap } from 'rxjs';
+import {
+  catchError,
+  distinctUntilChanged,
+  finalize,
+  map,
+  of,
+  Subject,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 
 import { Api } from '@mi-bolt/api/api';
 import { getProduct } from '@mi-bolt/api/fn/catalog/get-product';
@@ -352,15 +362,22 @@ export class ProductFacade {
     this.relatedLoadingSignal.set(true);
     this.relatedSub = this.api
       .invoke(listRelatedProducts, { slug: product.slug })
-      .pipe(take(1))
+      .pipe(
+        take(1),
+        // The flag clears on every way out of the request — a value, an
+        // error, a completion with no value, or the unsubscription a route
+        // change performs — so the strip can never keep its skeletons for a
+        // request that is no longer running.
+        finalize(() => {
+          this.relatedLoadingSignal.set(false);
+        }),
+      )
       .subscribe({
         next: (items) => {
           this.relatedSignal.set(items);
-          this.relatedLoadingSignal.set(false);
         },
         error: () => {
           this.relatedSignal.set([]);
-          this.relatedLoadingSignal.set(false);
         },
       });
   }
