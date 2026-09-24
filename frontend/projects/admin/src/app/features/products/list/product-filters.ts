@@ -1,10 +1,12 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, effect, inject, input, output, viewChild } from '@angular/core';
+import type { ElementRef } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of } from 'rxjs';
 import { MatButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import type { MatButtonToggleChange } from '@angular/material/button-toggle';
 import { MatChipListbox, MatChipOption } from '@angular/material/chips';
+import type { MatChipSelectionChange } from '@angular/material/chips';
 import { MatFormField, MatLabel, MatPrefix } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
@@ -72,6 +74,18 @@ export class ProductFilters {
     { initialValue: NO_BRANDS },
   );
 
+  private readonly search = viewChild.required<ElementRef<HTMLInputElement>>('search');
+
+  constructor() {
+    // Every `query()` change rewrites the search input's DOM value, so a
+    // cleared filter (e.g. Szűrők törlése) never leaves a typed-but-not-yet-
+    // committed value behind (https://angular.dev/api/core/viewChild,
+    // https://angular.dev/guide/signals#reactive-contexts).
+    effect(() => {
+      this.search().nativeElement.value = this.query().q;
+    });
+  }
+
   protected onSearchChange(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
@@ -92,11 +106,19 @@ export class ProductFilters {
     this.queryChange.emit({ status: value });
   }
 
-  protected onFeaturedClick(): void {
-    this.queryChange.emit({ featured: !this.query().featured });
+  protected onFeaturedChange(event: MatChipSelectionChange): void {
+    // The programmatic `[selected]` write also emits `selectionChange`, with
+    // `isUserInput` false (chips.mjs: MatChipOption `set selected`, line 880,
+    // calls `_setSelectedState(value, false, true)`); only a real click or
+    // keypress on the chip's primary action reaches here with `true`
+    // (chips.mjs: `_handlePrimaryActionInteraction`, line 906, and
+    // `MatChipAction._handleClick`, line 137).
+    if (!event.isUserInput) return;
+    this.queryChange.emit({ featured: event.selected });
   }
 
-  protected onOutOfStockClick(): void {
-    this.queryChange.emit({ outOfStock: !this.query().outOfStock });
+  protected onOutOfStockChange(event: MatChipSelectionChange): void {
+    if (!event.isUserInput) return;
+    this.queryChange.emit({ outOfStock: event.selected });
   }
 }

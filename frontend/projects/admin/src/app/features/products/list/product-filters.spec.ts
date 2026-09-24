@@ -170,6 +170,17 @@ function chipElement(fixture: ComponentFixture<Host>, label: string): HTMLElemen
   return nativeElementOf(chipDebugElement(fixture, label));
 }
 
+/** The chip's own primary action button (`.mat-mdc-chip-action`, rendered
+ *  by `MatChipOption`'s template as `<button matChipAction>`), not the
+ *  `mat-chip-option` host: only a click here goes through Material's own
+ *  `_handlePrimaryActionInteraction` → `toggleSelected(true)` path and
+ *  reaches `selectionChange` with `isUserInput: true`. */
+function chipActionButton(fixture: ComponentFixture<Host>, label: string): HTMLButtonElement {
+  const found = chipElement(fixture, label).querySelector('.mat-mdc-chip-action');
+  if (!(found instanceof HTMLButtonElement)) throw new Error(`missing ${label} chip action button`);
+  return found;
+}
+
 describe('ProductFilters', () => {
   beforeEach(() => {
     configureTestBed();
@@ -232,6 +243,23 @@ describe('ProductFilters', () => {
     expect(host.queryChanges).toEqual([{ q: 'samsung' }]);
   });
 
+  it('search: a typed but uncommitted value is wiped by the next query change', async () => {
+    // Fails on the old `[value]="query().q"` binding: with `q` staying `''`
+    // on both sides, the binding never re-writes and the input keeps the
+    // typed text.
+    seed();
+    const { fixture, host } = await createFixture(DEFAULT_PRODUCT_LIST_QUERY);
+    const input = searchInput(fixture);
+    expect(host.query().q).toBe('');
+
+    input.value = 'iphonex';
+
+    host.query.set({ ...host.query(), status: 'archived' });
+    fixture.detectChanges();
+
+    expect(input.value).toBe('');
+  });
+
   it('brands: the select options equal the mock brand list, and picking one emits it alone', async () => {
     // Fails if the options stop being rendered "in the order the endpoint
     // returns", or if `onBrandsChange` stops narrowing/forwarding the
@@ -263,13 +291,35 @@ describe('ProductFilters', () => {
     expect(host.queryChanges).toEqual([{ status: 'all' }]);
   });
 
-  it('chips: a click on Készlethiány emits only the flag that changed', async () => {
-    // Fails if the click handler starts emitting the other flag too, or
-    // stops reading the current `query().outOfStock` to compute the toggle.
+  it('chips: a click on the Készlethiány action reads what Material just toggled, not a stale query', async () => {
+    // Fails on the old `!this.query().outOfStock` handler: a second click
+    // before the host's `query` has advanced would emit `{ outOfStock: true }`
+    // twice instead of toggling back to `false` (the double-click case this
+    // unit fixes).
     seed();
     const { fixture, host } = await createFixture(DEFAULT_PRODUCT_LIST_QUERY);
-    chipElement(fixture, 'Készlethiány').click();
+
+    chipActionButton(fixture, 'Készlethiány').click();
     expect(host.queryChanges).toEqual([{ outOfStock: true }]);
+
+    // Second click without the host's `query` having advanced (it never
+    // does in this test): Material's own `selected` state has already
+    // flipped to `false`, so the emission must follow that, not `!query()`.
+    chipActionButton(fixture, 'Készlethiány').click();
+    expect(host.queryChanges).toEqual([{ outOfStock: true }, { outOfStock: false }]);
+  });
+
+  it('chips: a programmatic [selected] write from a query change emits nothing', async () => {
+    // Fails if the handler stops guarding on `event.isUserInput`: the
+    // `[selected]` binding's own write also emits `selectionChange`, with
+    // `isUserInput: false`.
+    seed();
+    const { fixture, host } = await createFixture(DEFAULT_PRODUCT_LIST_QUERY);
+
+    host.query.set({ ...host.query(), featured: true });
+    fixture.detectChanges();
+
+    expect(host.queryChanges).toEqual([]);
   });
 
   it('Szűrők törlése is disabled unless filtered, and emits clear once when clicked', async () => {

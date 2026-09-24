@@ -2,12 +2,7 @@
   <mat-form-field subscriptSizing="dynamic">
     <mat-label>Keresés</mat-label>
     <mat-icon matPrefix>search</mat-icon>
-    <input
-      matInput
-      placeholder="név, márka, slug"
-      [value]="query().q"
-      (change)="onSearchChange($event)"
-    />
+    <input #search matInput placeholder="név, márka, slug" (change)="onSearchChange($event)" />
   </mat-form-field>
 
   <mat-form-field subscriptSizing="dynamic">
@@ -26,10 +21,10 @@
   </mat-button-toggle-group>
 
   <mat-chip-listbox multiple>
-    <mat-chip-option [selected]="query().featured" (click)="onFeaturedClick()"
+    <mat-chip-option [selected]="query().featured" (selectionChange)="onFeaturedChange($event)"
       >Kiemelt</mat-chip-option
     >
-    <mat-chip-option [selected]="query().outOfStock" (click)="onOutOfStockClick()"
+    <mat-chip-option [selected]="query().outOfStock" (selectionChange)="onOutOfStockChange($event)"
       >Készlethiány</mat-chip-option
     >
   </mat-chip-listbox>
