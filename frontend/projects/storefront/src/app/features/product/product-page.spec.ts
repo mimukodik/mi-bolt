@@ -82,7 +82,7 @@ beforeEach(() => {
       return HttpResponse.json(
         {
           type: 'https://example.com/not-found',
-          title: 'Nem található',
+          title: 'Not found',
           status: 404,
           detail: `Product not found`,
         },
@@ -708,7 +708,7 @@ describe('T16 product-page loading and error states', () => {
         HttpResponse.json(
           {
             type: 'https://example.com/server-error',
-            title: 'Szolgáltatás nem elérhető',
+            title: 'Service unavailable',
             status: 503,
             detail: 'Service unavailable',
           },
@@ -965,7 +965,7 @@ describe('FIX-23 product page ?variant= round trip and not-found state', () => {
         HttpResponse.json(
           {
             type: 'https://example.com/not-found',
-            title: 'Nem található',
+            title: 'Not found',
             status: 404,
             detail: 'Product not found',
           },
@@ -1039,7 +1039,7 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
         HttpResponse.json(
           {
             type: 'https://example.com/server-error',
-            title: 'Szolgáltatás nem elérhető',
+            title: 'Service unavailable',
             status: 503,
             detail: 'Service unavailable',
           },

@@ -87,7 +87,7 @@ describe('FIX-29 fact 1 — ProductPage has no nested <main>', () => {
         HttpResponse.json(
           {
             type: 'urn:mi-bolt:problem:not-found',
-            title: 'Nem található',
+            title: 'Not found',
             status: 404,
             detail: 'not found',
           },
