@@ -11,6 +11,13 @@
     </a>
   </div>
 
+  <adm-product-filters
+    [filtered]="filtered()"
+    [query]="store.query()"
+    (clear)="clearFilters(pageTitle)"
+    (queryChange)="store.setQuery($event)"
+  />
+
   <div
     aria-label="Termékek"
     class="adm-table flex min-h-0 flex-1 flex-col"

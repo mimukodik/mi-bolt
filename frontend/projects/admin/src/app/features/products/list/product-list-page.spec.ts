@@ -252,6 +252,32 @@ describe('ProductListPage', () => {
     expect(rowNames(root)[0]).toBe('Samsung Galaxy Z Fold8 Ultra 5G');
   });
 
+  it('clicking the Archivált toggle on the page writes status=archived into the router query and keeps the sort', async () => {
+    // Fails if `ProductFilters` stops being wired to `store.setQuery`
+    // through `(queryChange)`, or if the toggle stops carrying the
+    // `archived` value.
+    seed();
+    const harness = await RouterTestingHarness.create();
+    await nav(harness, '/termekek?sort=name');
+    const root = rootOf(harness);
+    const router = TestBed.inject(Router);
+
+    const toggle = Array.from(root.querySelectorAll<HTMLElement>('mat-button-toggle')).find(
+      (el) => el.textContent.trim() === 'Archivált',
+    );
+    if (toggle === undefined) throw new Error('Archivált toggle missing');
+    const button = toggle.querySelector('button');
+    if (button === null) throw new Error('Archivált toggle button missing');
+
+    const navigated = nextNavigationEnd(router);
+    button.click();
+    await navigated;
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(router.parseUrl(router.url).queryParams).toEqual({ sort: 'name', status: 'archived' });
+  });
+
   it('Enter on the first row and a click on the second row navigate to their product', async () => {
     // Fails if the row's activation stops navigating, or navigates to the
     // wrong id for a row other than the first.
@@ -325,9 +351,11 @@ describe('ProductListPage', () => {
     const root = rootOf(harness);
 
     expect(root.textContent).toContain('Még nincs aktív termék.');
-    const clearButtons = Array.from(root.querySelectorAll('button')).filter(
-      (button) => button.textContent.trim() === 'Szűrők törlése',
-    );
+    // `.adm-state-action` scopes this to the empty-state's own button: the
+    // filter row's Szűrők törlése (F16b) is always rendered, just disabled.
+    const clearButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('button.adm-state-action'),
+    ).filter((button) => button.textContent.trim() === 'Szűrők törlése');
     expect(clearButtons.length).toBe(0);
     expect(root.querySelector('.adm-count')?.textContent.trim()).toBe('0 termék');
     const footer = Array.from(root.querySelectorAll('p')).find((p) =>
@@ -347,9 +375,11 @@ describe('ProductListPage', () => {
     expect(root.textContent).toContain('Nincs a szűrésnek megfelelő termék.');
 
     const router = TestBed.inject(Router);
-    const clearButton = Array.from(root.querySelectorAll('button')).find(
-      (button) => button.textContent.trim() === 'Szűrők törlése',
-    );
+    // `.adm-state-action` scopes this to the empty-state's own button: the
+    // filter row's Szűrők törlése (F16b) renders as well, just elsewhere.
+    const clearButton = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('button.adm-state-action'),
+    ).find((button) => button.textContent.trim() === 'Szűrők törlése');
     if (clearButton === undefined) throw new Error('Szűrők törlése button missing');
     expect(getComputedStyle(clearButton).alignSelf).toBe('flex-start');
 

@@ -1,0 +1,40 @@
+<div class="flex flex-wrap items-center gap-2">
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Keresés</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    <input
+      matInput
+      placeholder="név, márka, slug"
+      [value]="query().q"
+      (change)="onSearchChange($event)"
+    />
+  </mat-form-field>
+
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Márka</mat-label>
+    <mat-select multiple [value]="query().brands" (selectionChange)="onBrandsChange($event)">
+      @for (brand of brands(); track brand) {
+        <mat-option [value]="brand">{{ brand }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-button-toggle-group [value]="query().status" (change)="onStatusChange($event)">
+    <mat-button-toggle value="active">Aktív</mat-button-toggle>
+    <mat-button-toggle value="archived">Archivált</mat-button-toggle>
+    <mat-button-toggle value="all">Mind</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <mat-chip-listbox multiple>
+    <mat-chip-option [selected]="query().featured" (click)="onFeaturedClick()"
+      >Kiemelt</mat-chip-option
+    >
+    <mat-chip-option [selected]="query().outOfStock" (click)="onOutOfStockClick()"
+      >Készlethiány</mat-chip-option
+    >
+  </mat-chip-listbox>
+
+  <button matButton type="button" [disabled]="!filtered()" (click)="clear.emit()">
+    Szűrők törlése
+  </button>
+</div>
