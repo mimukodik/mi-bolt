@@ -271,6 +271,14 @@ Read from the captured `yettel/css/portal.css` on 2026-09-22.
 - Invalid and focused: `.form-control.is-invalid:focus{border-color:#d9534f;box-shadow:0 0 0 .2rem rgba(217,83,79,0.25)}`. MiBolt: `--color-error-halo`.
 - Recorded, not corrected: a border colour change is a weaker focus indicator than the outline ring it replaces. Yettel fidelity decides for this demo (owner, 2026-09-22).
 
+### Alert (`.information-box`)
+
+Read from the captured `yettel/css/portal.css`.
+
+- Box: `.information-box{font-family:"portal-font-light",sans-serif,arial;font-size:14px;line-height:20px;position:relative;margin-top:0;padding:16px 16px 16px 45px;border-radius:8px;background-color:#c4dfe9;color:#002340}`.
+- Icon: `.information-box__icon{display:inline-block;position:absolute;top:16px;left:16px;width:27px;height:24px;background:url(".../exclamation-mark.svg") no-repeat}`.
+- MiBolt: the shared `StatusMessage` and the contact form's error summary take this box: no border and no left bar, `--radius-control` (8px), `--space-4` (16px) padding, and a 20px severity icon in front of the text (an `i`, a `!` or a check, drawn in the ring of the success page's check-circle). The icon is a flex item on the 12px gap, pinned to the top like yettel's (`align-self: flex-start`, 16px from the top edge on a wrapped message), so the text starts at 48px where yettel's starts at 45px. The info ground is the sky `#c4dfe9`; success and error keep this project's `--color-status-*-soft` tints (§9), because yettel's solid `.alert-danger` (`#d9534f`) is too loud for an inline message. The icon carries the severity colour: navy on info, `--color-status-success` on success, `--color-status-error` on error. This replaced the 4px left bar and the 1px border every alert carried before, on the owner's ask for a checkout facelift (in English: "the order flow needs a minimal facelift too, I don't like the layout or the elements, for example alerts").
+
 ### Product card on the list page
 
 The card content block is a flat bordered surface, not a shadowed card:
@@ -750,7 +758,7 @@ tokens to navy.
 | `--color-status-warning` | `--color-warning` | `#ffd500` | `.alert-warning{background-color:#ffd500;color:#332b00}` (§2) — yettel's own warning ground. The first version of this row resolved to navy `#002340` because both consumers wrote white on the token and yellow would have swallowed it; the pair is dark-on-yellow, so the row below supplies the text colour and the two consumers were switched to it on 2026-09-20 |
 | `--color-status-warning-text` | `--color-warning-text` | `#332b00` | `.alert-warning{…;color:#332b00}` (§2) — the dark olive yettel writes on that yellow. It carries the DEMÓ memory bar's text, its hairline and its badge (`demo-notice.scss` `.demo-notice--memory`). Both theme variables are named `--color-warning*` rather than `--color-status-warning*`: a legacy name pointing at a theme variable of the same name is a self-referencing custom property that resolves to nothing, the failure `src/styles/tokens.css` already records for `--radius-card` |
 | `--color-status-info` | `--color-surface-sky` | `#c4dfe9` | `.alert{display:flex;background-color:#c4dfe9;border-radius:0 0 16px 16px}` (§2) |
-| `--color-status-success-soft` | — (a `color-mix` in `tokens.css`) | 12 % `--color-status-success` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of a success alert (StatusMessage `is-success`). yettel's alerts use solid grounds and no left bar; the tinted grounds and the 4px left bar every alert carries are this project's own treatment |
+| `--color-status-success-soft` | — (a `color-mix` in `tokens.css`) | 12 % `--color-status-success` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of a success alert (StatusMessage `is-success`). yettel's alerts use solid grounds, so the tinted grounds are this project's own; the alert's shape is yettel's `.information-box` (§5, "Alert") |
 | `--color-status-warning-soft` | — (a `color-mix` in `tokens.css`) | 22 % `--color-status-warning` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of the checkout's price-change notice (`review-step.scss` `.price-change`); yettel's `.alert-warning` is the solid `#ffd500` |
 | `--color-status-error-soft` | — (a `color-mix` in `tokens.css`) | 8 % `--color-status-error` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of an error alert (StatusMessage `is-error`), of the invalid terms-consent card and of the contact form's error summary |
 | `--color-focus-light` | `--color-primary` | `#002340` | yettel sets `outline:none !important` on `.btn` and carries no focus recipe; navy is the brand ink and is 16.3:1 on white, where lime would be 1.35:1 |

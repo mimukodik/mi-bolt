@@ -1,5 +1,5 @@
 <div
-  class="root flex items-center justify-between gap-3 px-4 py-3 rounded"
+  class="root"
   data-testid="status-message"
   [attr.aria-live]="live() ? (severity() === 'error' ? 'assertive' : 'polite') : null"
   [attr.role]="live() ? (severity() === 'error' ? 'alert' : 'status') : null"
@@ -7,6 +7,37 @@
   [class.is-info]="severity() === 'info'"
   [class.is-success]="severity() === 'success'"
 >
+  <svg
+    aria-hidden="true"
+    class="icon"
+    data-testid="status-icon"
+    focusable="false"
+    height="20"
+    viewBox="0 0 32 32"
+    width="20"
+    [attr.data-icon]="severity()"
+  >
+    <path
+      d="M16.056 29.3332C8.70399 29.3332 2.72266 23.3518 2.72266 15.9998C2.72266 8.64784 8.70399 2.6665 16.056 2.6665C23.408 2.6665 29.3893 8.64784 29.3893 15.9998C29.3893 23.3518 23.408 29.3332 16.056 29.3332ZM16.056 5.33317C10.1747 5.33317 5.38932 10.1185 5.38932 15.9998C5.38932 21.8812 10.1747 26.6665 16.056 26.6665C21.9373 26.6665 26.7227 21.8812 26.7227 15.9998C26.7227 10.1185 21.9373 5.33317 16.056 5.33317Z"
+      fill="currentColor"
+    />
+    @switch (severity()) {
+      @case ('success') {
+        <path
+          d="M14.9346 22.5707L9.54395 17.1801L11.8999 14.8227L14.5093 17.4307L20.0319 9.69873L22.7453 11.6361L14.9346 22.5707Z"
+          fill="currentColor"
+        />
+      }
+      @case ('error') {
+        <rect fill="currentColor" height="9.333" rx="1.333" width="2.667" x="14.723" y="8" />
+        <circle cx="16.056" cy="22" fill="currentColor" r="1.667" />
+      }
+      @default {
+        <circle cx="16.056" cy="10" fill="currentColor" r="1.667" />
+        <rect fill="currentColor" height="9.333" rx="1.333" width="2.667" x="14.723" y="13.333" />
+      }
+    }
+  </svg>
   <p class="message m-0">{{ message() }}</p>
   @if (!persistent()) {
     <div class="actions inline-flex items-center">
