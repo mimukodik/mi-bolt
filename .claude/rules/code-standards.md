@@ -60,14 +60,13 @@ path-scoped rules trigger only on a read.
   with the generated code excluded; `backend/services/commerce/build.gradle`
   owns those numbers.
 
-  This replaces a 100% changed-line requirement, and the user set the budget:
-  "haladnunk kene es ez demo mvp app ami sosem lesz eles" ("we need to make
-  progress and this is a demo MVP app that will never go live"), and
-  "browser testben ugyis kijon a hiba" ("the bug comes out in the browser
-  test anyway"). `.claude/rules/planning-deliverables.md` ("An MVP instruction
-  is a budget, not a mood") is why that caps verification rather than being
-  weighed against tidiness, and it is written down here so the next reader can
-  see it was applied rather than forgotten.
+  This replaces a 100% changed-line requirement, and the user set the budget
+  (in English: "we need to make progress and this is a demo MVP app that will
+  never go live", and "the bug comes out in the browser test anyway").
+  `.claude/rules/planning-deliverables.md` ("An MVP instruction is a budget,
+  not a mood") is why that caps verification rather than being weighed against
+  tidiness, and it is written down here so the next reader can see it was
+  applied rather than forgotten.
 
   Two things survive the relaxation, because they are what actually caught
   defects here rather than what the percentage claimed to:
@@ -137,11 +136,9 @@ path-scoped rules trigger only on a read.
   that nothing here touches stays where it is, per `.claude/CLAUDE.md`
   ("Surgical changes").
 
-  The rule is the user's, in their own words, after two block types were kept
-  under a "deferred scope" heading on exactly the reasoning above: "de
-  nem!!!!!!!!! elmondtam mar millioszor mvp, nem hagyunk szemetet, es nem
-  szamit a db!!!!!!! es nincs legacy kod iras!!!!!" ("but no!!!!!!!!! I have
-  said a million times, MVP, we leave no rubbish, and the db does not
+  The rule is the user's, after two block types were kept under a "deferred
+  scope" heading on exactly the reasoning above (in English: "but no!!!!!!!!!
+  I have said a million times, MVP, we leave no rubbish, and the db does not
   matter!!!!!!! and there is no writing legacy code!!!!!"). Both went out
   entirely, e2e tests with them.
 

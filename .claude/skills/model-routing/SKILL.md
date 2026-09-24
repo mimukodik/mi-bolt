@@ -537,9 +537,8 @@ spec-driven coding however the implementation was routed.
 The commit does not move: one unit is still one commit carrying both agents'
 files, and a commit boundary is not an agent boundary. One session gave a single
 agent a transport unit's implementation and both its suites because the unit was
-one commit, and the user stopped it: „tul nagy feladatot adtal egy agentnek,
-testeket kulon agentnek kellett volna irnia" ("you gave one agent too large a
-task, the tests should have been written by a separate agent").
+one commit, and the user stopped it (in English: "you gave one agent too large
+a task, the tests should have been written by a separate agent").
 
 Split along a boundary that can be verified on its own, not along whatever is
 convenient to describe. Two agents whose results cannot be checked separately

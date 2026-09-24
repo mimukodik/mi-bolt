@@ -95,10 +95,7 @@ probe was never going to surface — projected content is checked when the
 not skip it, and it resolves its dependencies from the **parent's** injector
 rather than the receiving component's `viewProviders`.
 
-The rule is the user's, in their own words: "nem kell angular csapdakat
-merni!!! weben mindent fent van es ott van angular mcp!!!! miert okoskodtok?
-nagyon uj angular verzioval foglalkozzunk amit nem ismertek, tippelgetes
-helyett weben le van irva minden!" ("there is no need to measure Angular
+The rule is the user's, in English: "there is no need to measure Angular
 traps!!! everything is up on the web and the Angular MCP is right there!!!!
 why are you being clever? we are working with a very new Angular version that
-you do not know, instead of guessing everything is written down on the web!").
+you do not know, instead of guessing everything is written down on the web!"

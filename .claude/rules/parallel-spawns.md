@@ -33,9 +33,8 @@ what is running rather than over what was planned, and its findings go to the
 repair route under "What a collision is answered with", the resolutions
 available before a spawn having gone by. Late is how this check is usually
 reached: the user has asked for it fourteen times across six sessions, most
-recently "ellenorizted hogy a 6 agent nem utkozik sehol sem?" ("did you check
-that the 6 agents do not collide anywhere?"), each time after the batch was
-already running.
+recently, in English: "did you check that the 6 agents do not collide
+anywhere?", each time after the batch was already running.
 
 Making it a step is the whole of the fix, because the content was never
 missing: every collision measured here was decidable before the spawn from one
