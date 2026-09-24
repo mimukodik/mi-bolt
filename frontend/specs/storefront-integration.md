@@ -168,8 +168,8 @@ Products are never named by slug or product name: every scenario picks its card 
 **Steps:**
 
 1. Open `/telefonok`, wait for the grid, open the first in-stock card and add it with the inner button of `add-to-cart-button`, then open the cart with the header's `cart-link`. - expect: `cart-page` is visible with exactly one `cart-line`. - expect: `cart-line-remove` ("Törlöm") and `cart-clear` ("Kosár ürítése") are both visible.
-2. Press `cart-line-remove`. - expect: No `cart-line` remains on the page. - expect: `cart-page` switches to the empty state: the title "A kosarad még üres.", the message "Nézd meg a demókészülékeket, és válaszd ki a kedvenced." and the action "Telefonokat nézek". - expect: `cart-count`, `cart-continue` and `order-summary` are gone with the line, and `cart-badge` in the header reads "0".
-3. Press the empty state's "Telefonokat nézek" action. - expect: The browser is on `/telefonok` and the catalogue grid is rendered again.
+2. Press `cart-line-remove`. - expect: No `cart-line` remains on the page. - expect: `cart-page` switches to the empty state: the title "A kosarad még üres.", the message "Nézd meg a demókészülékeket, és válaszd ki a kedvenced." and the action "Telefonokat nézek". - expect: `cart-count`, `cart-continue` and `order-summary` are gone with the line. The checkout layout's header carries no `cart-badge`, so the badge is read in step 3.
+3. Press the empty state's "Telefonokat nézek" action. - expect: The browser is on `/telefonok` and the catalogue grid is rendered again. - expect: `cart-badge` in the header reads "0".
 
 #### 3.3. the empty cart offers its way back to the catalogue
 
@@ -177,8 +177,8 @@ Products are never named by slug or product name: every scenario picks its card 
 
 **Steps:**
 
-1. Open `/penztar/kosar` in the fresh context (the mock keeps the cart in this context's `sessionStorage`, so it starts with no lines). - expect: `cart-page` is visible in its empty state: "A kosarad még üres.", "Nézd meg a demókészülékeket, és válaszd ki a kedvenced." and the action "Telefonokat nézek". - expect: No `cart-line` is rendered and the header's `cart-badge` reads "0".
-2. Press "Telefonokat nézek". - expect: The catalogue is shown: the `h1` reads "Mobiltelefonok" and `product-card` elements are rendered.
+1. Open `/penztar/kosar` in the fresh context (the mock keeps the cart in this context's `sessionStorage`, so it starts with no lines). - expect: `cart-page` is visible in its empty state: "A kosarad még üres.", "Nézd meg a demókészülékeket, és válaszd ki a kedvenced." and the action "Telefonokat nézek". - expect: No `cart-line` is rendered. The checkout layout's header carries no `cart-badge`, so the badge is read in step 2.
+2. Press "Telefonokat nézek". - expect: The catalogue is shown: the `h1` reads "Mobiltelefonok" and `product-card` elements are rendered. - expect: `cart-badge` in the header reads "0".
 3. Deep-link the first checkout step with the cart still empty: open `/penztar/adatok`. - expect: The contact guard sends the empty cart back to the cart page: the URL is `/penztar/kosar?navigationReason=empty-cart`. - expect: The cart page renders the navigation-reason banner with the sentence "A kosarad üres, ezért ide irányítottunk." - expect: `contact-page` is not rendered.
 4. Deep-link the last step as well: open `/penztar/ellenorzes`. - expect: The review guard also lands on the cart page with the same reason sentence, so no step of the wizard is reachable with an empty cart.
 
@@ -214,7 +214,7 @@ Products are never named by slug or product name: every scenario picks its card 
 
 1. Reach the review page: add the first in-stock product, press `cart-continue`, complete the contact step, and on the delivery step choose "Házhoz szállítás", fill the address and choose "Utánvét", then press `delivery-confirm`. - expect: `review-page` is visible with `review-contact`, `review-billing`, `review-delivery`, `review-items`, `review-summary` and `review-actions`. - expect: Each of `review-contact`, `review-billing` and `review-delivery` shows a "Módosítás" control (`review-edit-contact`, `review-edit-billing`, `review-edit-delivery`).
 2. Press `review-edit-contact` ("Módosítás" in the Kapcsolattartási adatok card). - expect: The browser is on `/penztar/adatok` with `contact-page` visible. - expect: The form is prefilled from the saved draft: `contact-fullname-input` holds "Teszt Elek" and `contact-email-input` holds "teszt@example.test".
-3. Press `contact-submit` to go forward again. - expect: The browser is on `/penztar/szallitas` with the saved state restored: the chosen delivery option shows its "Kiválasztva" badge, `address-input-postalCode` holds "1052" and the chosen payment option is still selected. - expect: `navigation-reason-banner` shows no reason sentence, because the step was reached through the wizard rather than by a deep link.
+3. Press `contact-submit` to go forward again. - expect: The browser is on `/penztar/szallitas` with the saved state restored: the chosen delivery option shows its "Kiválasztva" badge, `address-input-postalCode` holds "1052" and the chosen payment option is still selected. - expect: No `navigation-reason` banner is rendered, because the step was reached through the wizard rather than by a deep link.
 4. Press `delivery-confirm` to return to the review page, then press `review-edit-billing` ("Módosítás" in the Számlázási adatok card). - expect: From the review page the billing edit control asks for the same step the billing block is filled on: the browser is on `/penztar/szallitas`. - expect: The billing name and the billing address are the values saved before.
 5. Go forward again with `delivery-confirm` and then press `review-edit-delivery` ("Módosítás" in the Szállítási és fizetési mód card). - expect: The browser is on `/penztar/szallitas` with the saved delivery and payment state restored.
 6. Press the checkout header's `back-to-shop` link ("Vissza a shopba"). - expect: The browser is on `/telefonok` and the catalogue grid is rendered. - expect: The checkout chrome (the step indicator `checkout-steps`) is gone, because the shop layout replaces the checkout layout.
