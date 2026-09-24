@@ -35,7 +35,7 @@ describe('App', () => {
     expect(TestBed.inject(HttpBackend)).toBeInstanceOf(HttpXhrBackend);
   });
 
-  it('points mat-icon at the self-hosted Material Symbols font', () => {
-    expect(TestBed.inject(MAT_ICON_DEFAULT_OPTIONS).fontSet).toBe('material-symbols-outlined');
+  it('provides no mat-icon default options, so Angular Material stays out of the initial bundle (MIM-404)', () => {
+    expect(TestBed.inject(MAT_ICON_DEFAULT_OPTIONS, null)).toBeNull();
   });
 });

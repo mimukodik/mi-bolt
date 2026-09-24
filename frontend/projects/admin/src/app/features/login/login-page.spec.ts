@@ -11,6 +11,7 @@ import { MOCK_PLATFORM_LOCATION_CONFIG } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { MatIconRegistry } from '@angular/material/icon';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
@@ -127,6 +128,15 @@ describe('LoginPage', () => {
     expect(matErrors(harness).length).toBe(0);
     expect(submitButton(harness).disabled).toBe(false);
     expect(alertParagraph(harness).textContent.trim()).toBe('');
+  });
+
+  it('points mat-icon at the self-hosted Material Symbols font', async () => {
+    // Fails if the constructor stops calling applyMaterialSymbolsFont().
+    await harness.navigateByUrl('/bejelentkezes');
+
+    expect(TestBed.inject(MatIconRegistry).getDefaultFontSetClass()).toEqual([
+      'material-symbols-outlined',
+    ]);
   });
 
   it('R2: shows exactly the username error on blur, and none on the password', async () => {

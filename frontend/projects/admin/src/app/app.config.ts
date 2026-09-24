@@ -7,7 +7,6 @@ import {
 import type { ApplicationConfig } from '@angular/core';
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 
 import { resolveApiRoot } from '@mi-bolt/core-api/api-root';
 import { provideApiConfiguration } from './api/generated/api-configuration';
@@ -26,9 +25,10 @@ import { routes } from './app.routes';
  *
  * The XHR backend replaces the default fetch one, which the file-upload
  * screen needs for `reportProgress` events; `LOCALE_ID` plus the locale
- * registration in `main.ts` gives every pipe Hungarian formatting;
- * `MAT_ICON_DEFAULT_OPTIONS` points `mat-icon` at the self-hosted
- * Material Symbols font loaded from npm. The app initializer reads the
+ * registration in `main.ts` gives every pipe Hungarian formatting. Nothing
+ * here imports Angular Material, which would put that module into the
+ * initial bundle: the lazily loaded login page and shell set the icon font
+ * through `applyMaterialSymbolsFont` (MIM-404). The app initializer reads the
  * admin session and primes the `XSRF-TOKEN` cookie before the first
  * route is activated, and `unauthorizedInterceptor` clears the session
  * and returns to the login page on a 401 from any other call.
@@ -41,9 +41,5 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withXhr(), withInterceptors([ifMatchInterceptor, unauthorizedInterceptor])),
     provideAppInitializer(() => inject(AdminSession).refresh()),
     { provide: LOCALE_ID, useValue: 'hu-HU' },
-    {
-      provide: MAT_ICON_DEFAULT_OPTIONS,
-      useValue: { fontSet: 'material-symbols-outlined' },
-    },
   ],
 };
