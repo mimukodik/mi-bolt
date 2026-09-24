@@ -54,7 +54,7 @@ describe('AsyncContent primitive', () => {
     host.hasPrevious.set(false);
     fixture.detectChanges();
     const root = getNativeElement(fixture);
-    expect(root.querySelector('[data-testid="loading-state"]')).not.toBeNull();
+    expect(root.querySelectorAll('[data-testid="product-card-skeleton"]').length).toBe(6);
     expect(root.querySelector('[data-testid="loaded-content"]')).toBeNull();
   });
 
@@ -64,7 +64,7 @@ describe('AsyncContent primitive', () => {
     host.hasPrevious.set(true);
     fixture.detectChanges();
     const root = getNativeElement(fixture);
-    expect(root.querySelector('[data-testid="loading-state"]')).toBeNull();
+    expect(root.querySelector('[data-testid="product-card-skeleton"]')).toBeNull();
     expect(root.querySelector('[data-testid="loaded-content"]')).not.toBeNull();
   });
 
@@ -74,7 +74,7 @@ describe('AsyncContent primitive', () => {
     fixture.detectChanges();
     const root = getNativeElement(fixture);
     expect(root.querySelector('[data-testid="loaded-content"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="loading-state"]')).toBeNull();
+    expect(root.querySelector('[data-testid="product-card-skeleton"]')).toBeNull();
     expect(root.querySelector('[data-testid="empty-state"]')).toBeNull();
     expect(root.querySelector('[data-testid="error-state"]')).toBeNull();
   });

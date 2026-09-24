@@ -701,9 +701,8 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     } satisfies FeaturedState);
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const skeletons = root.querySelectorAll('[data-testid="featured-loading"]');
-    expect(skeletons.length).toBeGreaterThan(0);
-    expect(root.querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
+    const skeletons = root.querySelectorAll('[data-testid="product-card-skeleton"]');
+    expect(skeletons.length).toBe(4);
     expect(root.querySelector('[data-testid="price-amount"]')).toBeNull();
     expect(root.querySelector('[data-testid="error-state"]')).toBeNull();
   });

@@ -40,37 +40,10 @@
   border-radius: var(--radius-card);
 }
 
-.featured__loading,
 .featured__grid-error {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.featured__loading {
-  padding: var(--space-5);
-  min-height: 220px;
-}
-
-.featured__skeleton {
-  display: block;
-  background: var(--color-surface-section);
-  border-radius: var(--radius-badge);
-}
-
-.featured__skeleton--image {
-  height: 200px;
-  margin-bottom: var(--space-3);
-}
-
-.featured__skeleton--title {
-  height: 18px;
-  width: 70%;
-}
-
-.featured__skeleton--price {
-  height: 22px;
-  width: 40%;
 }
 
 .featured__grid-error {

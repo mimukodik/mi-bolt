@@ -42,22 +42,7 @@
               class="featured__card flex flex-col overflow-hidden"
               [attr.data-testid]="`featured-card-skeleton-${placeholder}`"
             >
-              <div class="featured__loading" data-testid="featured-loading">
-                <span
-                  aria-hidden="true"
-                  class="featured__skeleton featured__skeleton--image"
-                ></span>
-                <span
-                  aria-hidden="true"
-                  class="featured__skeleton featured__skeleton--title"
-                ></span>
-                <span
-                  aria-hidden="true"
-                  class="featured__skeleton featured__skeleton--price"
-                  data-testid="price-skeleton"
-                ></span>
-                <span class="sr-only">Termék betöltése…</span>
-              </div>
+              <app-product-card-skeleton />
             </li>
           }
         } @else {
