@@ -15,14 +15,11 @@
 }
 
 /* Severity looks: a tinted ground and a 4px bar on the left edge (MIM-240).
-   The info ground and the warning pair are yettel's own values: the info
-   ground is .information-box's sky #c4dfe9 with its #002340 text
-   (docs/design/yettel.md §2), the warning colours are .alert-warning's yellow
-   #ffd500 with its #332b00 text (§9, --color-status-warning and
-   --color-status-warning-text). yettel's rules carry no border and no left
-   bar, and .alert-warning's ground is the solid yellow rather than a mix, so
-   the 4px bar and the 22%/12%/8% grounds are this component's own treatment
-   and not yettel's. */
+   The info ground is yettel's .information-box sky #c4dfe9 with a navy bar
+   (docs/design/yettel.md §2); the success and error grounds are the
+   --color-status-*-soft tokens (src/styles/tokens.css). yettel's boxes carry
+   no border and no left bar, so the bar and the mixes are this project's own
+   treatment. */
 .root.is-info {
   border-color: var(--color-status-info);
   border-left-color: var(--color-brand-ink);
@@ -31,18 +28,12 @@
 
 .root.is-success {
   border-color: var(--color-status-success);
-  background: color-mix(in srgb, var(--color-status-success) 12%, var(--color-surface-light));
-}
-
-.root.is-warning {
-  border-color: var(--color-status-warning);
-  background: color-mix(in srgb, var(--color-status-warning) 22%, var(--color-surface-light));
-  color: var(--color-status-warning-text);
+  background: var(--color-status-success-soft);
 }
 
 .root.is-error {
   border-color: var(--color-status-error);
-  background: color-mix(in srgb, var(--color-status-error) 8%, var(--color-surface-light));
+  background: var(--color-status-error-soft);
 }
 
 .message {

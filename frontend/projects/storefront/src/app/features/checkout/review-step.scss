@@ -4,9 +4,9 @@
    sheet holds what those utilities cannot express: the data-list row grid
    (`.row`), the cart-line wrapping flex (`.line`, `.line-body`,
    `.line-total`), the link-shaped buttons and their focus ring, the
-   price-change warning look and the consent's invalid ground (both added by
-   MIM-240; the primitive carries the same two treatments in
-   status-message.scss), the checkbox accent, and reduced motion. */
+   price-change warning look and the consent's invalid ground (MIM-240, both
+   from the --color-status-*-soft tokens), the checkbox accent, and reduced
+   motion. */
 
 :host {
   display: block;
@@ -88,23 +88,22 @@
   cursor: pointer;
 }
 
-/* The price-change notice wears the shared warning look (StatusMessage
-   is-warning, MIM-240): the .alert-warning yellow #ffd500 with its #332b00
-   text (docs/design/yettel.md §9) over a 22% mix of that yellow on
-   --color-surface-light, plus the 4px left bar the primitive also draws.
-   yettel's .alert-warning has neither the mix nor the bar; both are the
-   treatment MIM-240 adds, written out in status-message.scss as well. */
+/* The price-change notice wears the warning look (MIM-240): yettel's
+   .alert-warning yellow #ffd500 and its #332b00 text (docs/design/yettel.md
+   §9) as the border and the text, the --color-status-warning-soft ground and
+   a 4px left bar. yettel's .alert-warning has a solid yellow ground and no
+   bar; the mix and the bar are this project's own treatment. */
 .price-change {
   border: 1px solid var(--color-status-warning);
   border-left-width: 4px;
-  background: color-mix(in srgb, var(--color-status-warning) 22%, var(--color-surface-light));
+  background: var(--color-status-warning-soft);
   color: var(--color-status-warning-text);
 }
 
 .consent[data-state='touched-invalid'],
 .consent[data-state='submitted-invalid'] {
   border-color: var(--color-status-error);
-  background: color-mix(in srgb, var(--color-status-error) 8%, var(--color-surface-light));
+  background: var(--color-status-error-soft);
 }
 
 .checkbox {

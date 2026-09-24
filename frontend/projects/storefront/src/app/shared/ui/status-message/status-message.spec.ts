@@ -72,26 +72,16 @@ describe('StatusMessage primitive', () => {
     expect(root?.getAttribute('aria-live')).toBe('assertive');
   });
 
-  it('uses role=status + aria-live=polite for warning (MIM-240)', () => {
-    const { fixture, host } = setup();
-    host.severity.set('warning');
-    fixture.detectChanges();
-    const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
-    expect(root?.getAttribute('role')).toBe('status');
-    expect(root?.getAttribute('aria-live')).toBe('polite');
-  });
-
   it.each<[StatusSeverity, string]>([
     ['info', 'is-info'],
     ['success', 'is-success'],
-    ['warning', 'is-warning'],
     ['error', 'is-error'],
   ])('severity %s carries exactly the %s class (MIM-240)', (severity, expected) => {
     const { fixture, host } = setup();
     host.severity.set(severity);
     fixture.detectChanges();
     const root = getNativeElement(fixture).querySelector<HTMLElement>('.root');
-    const severityClasses = ['is-info', 'is-success', 'is-warning', 'is-error'].filter(
+    const severityClasses = ['is-info', 'is-success', 'is-error'].filter(
       (name) => root?.classList.contains(name) === true,
     );
     expect(severityClasses).toEqual([expected]);
