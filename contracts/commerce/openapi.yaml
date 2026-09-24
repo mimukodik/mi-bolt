@@ -888,6 +888,9 @@ paths:
         PAYMENT_REQUIRED because the shopper never completed the payment page,
         pending returns 422 PAYMENT_PENDING because the outcome has not settled,
         and declined returns 422 PAYMENT_DECLINED.
+        A succeeded intent backs one order only: an intent that an earlier
+        order already carries returns 422 PAYMENT_REQUIRED, and the next card
+        order needs a new payment.
       security:
       - demoAccess: []
         sessionCookie: []

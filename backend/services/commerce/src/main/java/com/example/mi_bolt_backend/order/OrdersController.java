@@ -35,6 +35,9 @@ import jakarta.servlet.http.HttpServletRequest;
  * {@code @Transactional}, so that a request whose drawn order number
  * collided with a concurrent order (MIM-403) can retry the whole transaction
  * with a freshly drawn number instead of committing a rollback-only one.
+ * A violation of {@code uq_shop_order_payment_intent} ({@link PaymentIntentReuse})
+ * is answered with 422 PAYMENT_REQUIRED instead: the intent already backs an
+ * order.
  */
 @RestController
 public class OrdersController implements OrdersApi {
@@ -70,6 +73,11 @@ public class OrdersController implements OrdersApi {
 				return transactionTemplate.execute(status -> placeOrder(ifMatch, idempotencyKey, body));
 			}
 			catch (DataIntegrityViolationException e) {
+				if (PaymentIntentReuse.isPaymentIntentReuse(e)) {
+					throw new DomainException(ErrorCode.PAYMENT_REQUIRED,
+							"The referenced payment intent already backs an order; a new card order needs a new payment",
+							null, null, e);
+				}
 				if (attempt == MAX_ATTEMPTS || !OrderNumberConflict.isOrderNumberConflict(e)) {
 					throw e;
 				}

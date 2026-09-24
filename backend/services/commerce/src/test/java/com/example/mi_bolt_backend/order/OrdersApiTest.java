@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -70,6 +73,9 @@ class OrdersApiTest {
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private OrderService orderService;
 
 	@Test
 	void cardOrderHappyPath() throws Exception {
@@ -349,6 +355,61 @@ class OrdersApiTest {
 	}
 
 	@Test
+	void aSucceededIntentBacksOneOrderOnly() throws Exception {
+		String cookie = newSession();
+		String etag = completeCardDraft(cookie);
+		String intentId = createResolvedIntent(cookie, etag);
+		long ordersBefore = orders.count();
+		long stockBefore = variants.findById(NAVY_128).orElseThrow().getStock().longValue();
+		try {
+			mockMvc.perform(cardOrder(cookie, etag, intentId)).andExpect(status().isCreated());
+			String secondEtag = refillCardDraftAfterAnOrder(cookie);
+
+			mockMvc.perform(cardOrder(cookie, secondEtag, intentId))
+					.andExpect(status().isUnprocessableEntity())
+					.andExpect(jsonPath("$.code").value("PAYMENT_REQUIRED"));
+
+			assertEquals(ordersBefore + 1, orders.count(), "a reused intent must not create a second order");
+			assertEquals(stockBefore - 1, variants.findById(NAVY_128).orElseThrow().getStock().longValue(),
+					"the refused second order must not decrement stock");
+		}
+		finally {
+			jdbcTemplate.update("UPDATE product_variant SET stock = 7 WHERE id = ?", NAVY_128);
+		}
+	}
+
+	@Test
+	void theUniqueConstraintRefusesAReusedIntentThatSlipsPastTheServiceCheck() throws Exception {
+		String cookie = newSession();
+		String etag = completeCardDraft(cookie);
+		String intentId = createResolvedIntent(cookie, etag);
+		long ordersBefore = orders.count();
+		long stockBefore = variants.findById(NAVY_128).orElseThrow().getStock().longValue();
+		try {
+			mockMvc.perform(cardOrder(cookie, etag, intentId)).andExpect(status().isCreated());
+			String secondEtag = refillCardDraftAfterAnOrder(cookie);
+
+			// Stands in for a concurrent request that passed OrderService's check before the
+			// first order committed: existsByPaymentIntentId answers false, so only the
+			// uq_shop_order_payment_intent constraint can refuse the insert. A delegating proxy
+			// rather than a spy, for the reasons OrderNumberRetryApiTest's Javadoc gives.
+			ReflectionTestUtils.setField(orderService, "orders", existsByPaymentIntentIdAlwaysFalse());
+
+			mockMvc.perform(cardOrder(cookie, secondEtag, intentId))
+					.andExpect(status().isUnprocessableEntity())
+					.andExpect(jsonPath("$.code").value("PAYMENT_REQUIRED"));
+
+			assertEquals(ordersBefore + 1, orders.count(), "the constraint must leave no second order behind");
+			assertEquals(stockBefore - 1, variants.findById(NAVY_128).orElseThrow().getStock().longValue(),
+					"the rolled-back second order must not decrement stock");
+		}
+		finally {
+			ReflectionTestUtils.setField(orderService, "orders", orders);
+			jdbcTemplate.update("UPDATE product_variant SET stock = 7 WHERE id = ?", NAVY_128);
+		}
+	}
+
+	@Test
 	void pendingIntentIs422PaymentPending() throws Exception {
 		String cookie = newSession();
 		String etag = completeCardDraft(cookie);
@@ -550,6 +611,50 @@ class OrdersApiTest {
 				.content("{\"outcome\":\"" + outcome + "\"}"))
 				.andExpect(status().isOk());
 		return id;
+	}
+
+	private MockHttpServletRequestBuilder cardOrder(String cookie, String etag, String intentId) {
+		return post("/orders")
+				.cookie(cookie(cookie))
+				.header("If-Match", "\"" + etag + "\"")
+				.header("Idempotency-Key", "key-" + UUID.randomUUID())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"paymentMethod\":\"card\",\"paymentIntentId\":\"" + intentId
+						+ "\",\"termsVersion\":\"2026-09\",\"acceptedTerms\":true}");
+	}
+
+	/**
+	 * After an order the session's fresh cart is at version 4 (cardOrderHappyPath
+	 * asserts ETag "4"); one add and one draft patch bring it to 6.
+	 */
+	private String refillCardDraftAfterAnOrder(String cookie) throws Exception {
+		mockMvc.perform(add(cookie, "\"4\"", NAVY_128, 1)).andExpect(status().isOk());
+		mockMvc.perform(patch(cookie, "\"5\"", "{" + CONTACT + "," + BILLING + "," + HOME + "," + CARD + "}"))
+				.andExpect(status().isOk());
+		return "6";
+	}
+
+	/**
+	 * A {@link ShopOrderRepository} that delegates every call to {@link #orders}
+	 * except {@code existsByPaymentIntentId}, which always answers {@code false},
+	 * so only the real {@code uq_shop_order_payment_intent} constraint can refuse
+	 * a reused intent.
+	 */
+	private ShopOrderRepository existsByPaymentIntentIdAlwaysFalse() {
+		return (ShopOrderRepository) Proxy.newProxyInstance(
+				ShopOrderRepository.class.getClassLoader(),
+				new Class<?>[] { ShopOrderRepository.class },
+				(proxyInstance, method, args) -> {
+					if ("existsByPaymentIntentId".equals(method.getName())) {
+						return false;
+					}
+					try {
+						return method.invoke(orders, args);
+					}
+					catch (InvocationTargetException e) {
+						throw e.getCause();
+					}
+				});
 	}
 
 	private String completeCardDraft(String cookie) throws Exception {
