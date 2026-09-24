@@ -35,7 +35,8 @@ def scheduled_publisher():
         if not any(a['name'] == 'candidate-receipt' and not a['expired'] for a in artifacts):
             continue
         receipt = download(run['id'], 'candidate-receipt', 'candidate.json')
-        if receipt['pr'] in available or not any(p['number'] == receipt['pr'] and p['head']['sha'] == receipt['headSha'] for p in prs):
+        if receipt['pr'] in available or not any(p['number'] == receipt['pr'] and p['head']['sha'] == receipt['headSha']
+                and any(label['name'] == 'bolt-preview' for label in p['labels']) for p in prs):
             continue
         try:
             fence(receipt)
@@ -54,7 +55,19 @@ def scheduled_publisher():
         if any(a['name'] == 'preview-smoke-receipt' and not a['expired'] for a in artifacts):
             receipt = download(run['id'], 'preview-smoke-receipt', 'smoke.json')
             accepted.add(receipt['publisherRunId'])
-    remaining = [available[key] for key in keys if available[key]['id'] not in accepted]
+    def accepted_now(key):
+        run = available[key]
+        if run['id'] not in accepted:
+            return False
+        receipt = download(run['id'], 'candidate-receipt', 'candidate.json')
+        deployments = api(f'deployments?environment=preview-pr-{key}&per_page=100')
+        matching = next((item for item in deployments if item['sha'] == receipt['headSha']), None)
+        if matching is None:
+            return False
+        statuses = api(f"deployments/{matching['id']}/statuses?per_page=1")
+        return bool(statuses and statuses[0]['state'] == 'success')
+
+    remaining = [available[key] for key in keys if not accepted_now(key)]
     return remaining[int(time.time() // 600) % len(remaining)] if remaining else None
 
 
