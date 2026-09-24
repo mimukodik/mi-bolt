@@ -88,6 +88,12 @@ export const BUILT_IN_SCENARIOS: Readonly<Record<ScenarioName, ScenarioDescripto
       clockOffsetMs: 0,
       isolated: true,
     }),
+    'demo-signed-out': Object.freeze({
+      name: 'demo-signed-out',
+      seed: 505,
+      clockOffsetMs: 0,
+      isolated: true,
+    }),
   });
 
 /**
