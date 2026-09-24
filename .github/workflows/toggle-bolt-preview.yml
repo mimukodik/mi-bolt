@@ -14,8 +14,7 @@ on:
         options: [enable, disable]
 
 permissions:
-  issues: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: bolt-preview-toggle-${{ inputs.pr_number }}
