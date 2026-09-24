@@ -2,8 +2,10 @@
    sizes and the radii (the card's own: product-card.scss `.card`, and
    docs/design/yettel.md, "Product card on the list page"). This sheet holds
    what they cannot express: the host box and LoadingState's shimmer
-   (loading-state.scss `.block`). No radius or display here: an unlayered
-   rule in this sheet would override the utilities, which sit in a layer. */
+   (loading-state.scss `.block`). `.bar` sets no radius and no display: an
+   unlayered rule for an element that carries utilities would override
+   them, and the utilities sit in a layer. The host box is what the
+   utilities cannot reach. */
 :host {
   display: block;
   height: 100%;

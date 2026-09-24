@@ -10,10 +10,18 @@ import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
 /**
  * `AsyncContent` — `docs/spec/components.md:176`.
  *
- * Composes the loading/empty/error primitives around whatever content
- * the caller projects, so a list page never repeats the same five-way
+ * Composes the loading/empty/error states around whatever content the
+ * caller projects, so a list page never repeats the same five-way
  * `@switch` inline. `FIX-60` extracts it out of `CatalogPage`, which is
  * its first and only caller today.
+ *
+ * The loading branch is the catalogue's: six `ProductCardSkeleton`s in
+ * the grid's own columns (`docs/design/yettel.md`, "Product card
+ * skeleton"). Its count and shape are baked in rather than projected, so
+ * a caller whose loading state is not a six-slot product card grid (the
+ * product page's four-slot related strip, say) cannot use this component
+ * as it stands: the loading presentation would have to become a
+ * projected slot, the way the empty state's action already is.
  *
  * `status` is `AsyncStatus` (`idle|loading|success|empty|error`), which
  * has no `refreshing` member. The caller maps its own richer status
