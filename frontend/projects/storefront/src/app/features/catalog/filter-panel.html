@@ -60,7 +60,7 @@
               >{{ brand.label
               }}<span
                 aria-label="találatok száma"
-                class="option__count"
+                class="option__count facet-count"
                 [attr.aria-hidden]="busy() ? 'true' : null"
                 [class.facet-count-busy]="busy()"
                 >&nbsp;({{ brand.count }})</span
@@ -119,7 +119,7 @@
               >{{ color.label
               }}<span
                 aria-label="találatok száma"
-                class="color-chip__count"
+                class="color-chip__count facet-count"
                 [attr.aria-hidden]="busy() ? 'true' : null"
                 [class.facet-count-busy]="busy()"
                 >&nbsp;({{ color.count }})</span
@@ -163,7 +163,7 @@
               @if (bucket.count !== null) {
                 <span
                   aria-label="találatok száma"
-                  class="option__count"
+                  class="option__count facet-count"
                   [attr.aria-hidden]="busy() ? 'true' : null"
                   [class.facet-count-busy]="busy()"
                   >&nbsp;({{ bucket.count }})</span
@@ -244,7 +244,7 @@
             @if (inStockCount() !== null) {
               <span
                 aria-label="találatok száma"
-                class="option__count"
+                class="option__count facet-count"
                 [attr.aria-hidden]="busy() ? 'true' : null"
                 [class.facet-count-busy]="busy()"
                 >&nbsp;({{ inStockCount() }})</span
@@ -269,7 +269,7 @@
             @if (fiveGCount() !== null) {
               <span
                 aria-label="találatok száma"
-                class="option__count"
+                class="option__count facet-count"
                 [attr.aria-hidden]="busy() ? 'true' : null"
                 [class.facet-count-busy]="busy()"
                 >&nbsp;({{ fiveGCount() }})</span
