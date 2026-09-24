@@ -13,6 +13,9 @@
       @if (backUrl(); as url) {
         <a class="pay-back" data-testid="pay-back" [href]="url">Vissza a boltba</a>
       }
+      @if (signInUrl(); as url) {
+        <a class="pay-back" data-testid="pay-sign-in" [href]="url">Belépés a boltba</a>
+      }
       @if (retryable()) {
         <button
           class="pay-button pay-button--primary"

@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { Router, type Routes } from '@angular/router';
 
+import { demoAccessGuard } from './core/demo-access/demo-access.guard';
 import { MarketingLayout } from './layouts/marketing-layout';
 import { ShopLayout } from './layouts/shop-layout';
 
@@ -18,6 +19,12 @@ import { ShopLayout } from './layouts/shop-layout';
  *                     `/penztar/szallitas`, `/penztar/ellenorzes`,
  *                     `/penztar/siker/:orderId`
  *
+ * Every route except the `/kosar` redirect carries `demoAccessGuard`
+ * (MIM-423): a signed-out visitor is sent to `/belepes`, the demo sign-in
+ * page, with the page they wanted in `vissza`. The `/kosar` shortcut needs
+ * no guard of its own — it only redirects to `/penztar/kosar`, which the
+ * `penztar` route's guard covers.
+ *
  * Every page is loaded with `loadComponent` so each route ships as its
  * own lazy chunk. The title updates automatically through the Router's
  * `title` data — Angular writes it to `document.title` after every
@@ -31,6 +38,7 @@ import { ShopLayout } from './layouts/shop-layout';
 export const routes: Routes = [
   {
     path: '',
+    canActivate: [demoAccessGuard],
     component: MarketingLayout,
     children: [
       {
@@ -46,6 +54,7 @@ export const routes: Routes = [
   },
   {
     path: 'telefonok',
+    canActivate: [demoAccessGuard],
     component: ShopLayout,
     children: [
       {
@@ -93,6 +102,7 @@ export const routes: Routes = [
   },
   {
     path: 'penztar',
+    canActivate: [demoAccessGuard],
     // The checkout subtree (guards + lazy steps + CheckoutLayout,
     // mounted once per step so its `step` signal input can be a real
     // route `data` binding — FIX-64) lives in
@@ -103,9 +113,17 @@ export const routes: Routes = [
     // every guard and the wizard would not enforce T19 / T24.
     loadChildren: () => import('./features/checkout/checkout.routes').then((m) => m.checkoutRoutes),
   },
+  // Demo sign-in (MIM-423): the one route the demo gate leaves open.
+  {
+    path: 'belepes',
+    loadComponent: () =>
+      import('./features/demo-sign-in/demo-sign-in-page').then((m) => m.DemoSignInPage),
+    title: 'MiBolt — Belépés',
+  },
   // Internal routes ------------------------------------------------------
   {
     path: 'primitives',
+    canActivate: [demoAccessGuard],
     loadComponent: () =>
       import('./features/primitives-showcase/primitives-showcase').then(
         (m) => m.PrimitivesShowcase,
@@ -118,6 +136,7 @@ export const routes: Routes = [
   // route declared after it is unreachable.
   {
     path: '**',
+    canActivate: [demoAccessGuard],
     component: ShopLayout,
     children: [
       {

@@ -9,6 +9,10 @@
  * It carries neither the shop's identity nor a provider's, and it never
  * renders a card field: `PaymentOutcomeRequest` accepts exactly one
  * property (`outcome`), so there is nothing a card number could travel in.
+ *
+ * A 401 on any of its calls means the visitor has not signed in to the demo
+ * shop, so the page says so and links to the shop's sign-in rather than
+ * offering a retry.
  */
 
 import { CurrencyPipe } from '@angular/common';
@@ -66,6 +70,7 @@ type PageState =
   | { readonly kind: 'redirecting'; readonly intent: PaymentIntent }
   | { readonly kind: 'missing-id' }
   | { readonly kind: 'not-found' }
+  | { readonly kind: 'demo-access' }
   | { readonly kind: 'closed'; readonly intent: PaymentIntent }
   | { readonly kind: 'error'; readonly failed: FailedStep };
 
@@ -73,13 +78,14 @@ type PageState =
 type Display = 'loading' | 'card' | 'alert';
 
 /**
- * The four states that replace the card with a `role="alert"` line. A kind
+ * The five states that replace the card with a `role="alert"` line. A kind
  * listed here is an alert state; the lookup is also what `display()` and
  * the focus effect branch on, so the two can never disagree.
  */
 const ALERT_MESSAGES: Partial<Readonly<Record<PageState['kind'], string>>> = {
   'missing-id': 'Hiányzó fizetési azonosító.',
   'not-found': 'Ez a fizetési kérés nem található vagy lejárt.',
+  'demo-access': 'A demó bolt jelszóval érhető el. Előbb lépj be a boltba.',
   closed: 'Ez a fizetés már lezárult.',
   error: 'A fizetés jóváhagyása nem sikerült.',
 };
@@ -90,6 +96,15 @@ const OUTCOME_LABELS: Readonly<Record<Outcome, string>> = {
   declined: 'Elutasított fizetés',
   pending: 'Függőben marad',
 };
+
+/**
+ * The demo gate's refusal: the 401 `DemoAccessRequired` any of the page's own
+ * calls answers while the visitor has not signed in to the demo shop
+ * (MIM-423). Written once because all three call sites branch on it.
+ */
+function isDemoAccessRefusal(err: unknown): boolean {
+  return err instanceof HttpErrorResponse && err.status === 401;
+}
 
 @Component({
   selector: 'pay-payment-page',
@@ -137,6 +152,7 @@ export class PaymentPage implements OnInit {
         return 'loading';
       case 'missing-id':
       case 'not-found':
+      case 'demo-access':
       case 'closed':
       case 'error':
         return 'alert';
@@ -183,6 +199,11 @@ export class PaymentPage implements OnInit {
     const state = this.state();
     return state.kind === 'closed' ? state.intent.returnUrl : null;
   });
+
+  /** The shop's sign-in, offered only when the gate refused the call (MIM-423). */
+  readonly signInUrl = computed<string | null>(() =>
+    this.state().kind === 'demo-access' ? '/belepes' : null,
+  );
 
   /** `aria-labelledby` only where the `h1` it names is actually rendered. */
   readonly labelledBy = computed<string | null>(() =>
@@ -268,6 +289,10 @@ export class PaymentPage implements OnInit {
           : { kind: 'closed', intent },
       );
     } catch (err: unknown) {
+      if (isDemoAccessRefusal(err)) {
+        this.state.set({ kind: 'demo-access' });
+        return;
+      }
       this.state.set(
         err instanceof HttpErrorResponse && err.status === 404
           ? { kind: 'not-found' }
@@ -297,6 +322,10 @@ export class PaymentPage implements OnInit {
       this.state.set({ kind: 'redirecting', intent });
       this.navigator(intent.returnUrl);
     } catch (err: unknown) {
+      if (isDemoAccessRefusal(err)) {
+        this.state.set({ kind: 'demo-access' });
+        return;
+      }
       if (err instanceof HttpErrorResponse && err.status === 409) {
         await this.showBookedOutcome(intent);
         return;
@@ -318,8 +347,12 @@ export class PaymentPage implements OnInit {
         this.api.invoke(getPaymentIntent, { paymentIntentId: intent.id }),
       );
       this.state.set({ kind: 'closed', intent: booked });
-    } catch {
-      this.state.set({ kind: 'error', failed: { step: 'load' } });
+    } catch (err: unknown) {
+      this.state.set(
+        isDemoAccessRefusal(err)
+          ? { kind: 'demo-access' }
+          : { kind: 'error', failed: { step: 'load' } },
+      );
     }
   }
 }
