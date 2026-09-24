@@ -184,11 +184,11 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
   explicit pathspecs and every commit is checked with
   `git diff --staged --name-only` before it is made.
 - After the retrospective has run, I commit every file this session changed
-  under `.claude/retrospectives/` as well, before the closing message: this
-  run's own file, and any earlier run's file whose waiting line this session
-  closed. Every proposal's outcome is recorded first, per "Retrospective"
-  below. The skill itself never commits, so without this step those files stay
-  untracked.
+  under `.claude/retrospectives/` as well, before the session's last message:
+  this run's own file, and any earlier run's file whose waiting line this
+  session closed. Every proposal's outcome is recorded first, per
+  "Retrospective" below. The skill itself never commits, so without this step
+  those files stay untracked.
 - It is not acceptable for a session's entire output to stay untracked. If
   something is deliberately left uncommitted, I state that in the closing
   response, with a reason.
@@ -235,7 +235,15 @@ Loaded at launch as a project rule (no `paths` scope). Referenced from
 
 ## Retrospective
 
-The `/retrospective` skill runs three ways:
+**The `/retrospective` skill runs only when the user asks for it or accepts an
+offer, never on my own initiative**: not when the Todo list empties, not at the
+end of a `task-execute-workflow` run, not because the SessionStart hook lists a
+pending session. **Before this session's retrospective runs, the user gets a
+summary of what happened in the session**: in the message that offers it, or,
+when they ask unprompted, first in the reply (user, in English: "starting the
+retro is not automatic, and before the retro I always ask for a summary of what
+happened in the session"). A subagent neither offers nor runs one, because its
+closing message goes to the orchestrator, not the user. Two ways lead to a run:
 
 1. Offered at the start of the next session: the SessionStart hook lists
    finished previous transcripts with at least 40 main-agent tool calls that
@@ -245,11 +253,9 @@ The `/retrospective` skill runs three ways:
    file was written comes back on the list for that later work, so that offer
    goes to the user like any other rather than being dismissed as a stale
    marker; `.claude/hooks/CLAUDE.md` owns the exact conditions.
-2. Manually with `/retrospective` at any time; recommended at the end of a
-   session.
-3. Automatically, without asking, when a task series is fully completed,
-   meaning every task in the TaskCreate list is completed, before the closing
-   message.
+2. Asked for by the user: `/retrospective` or a request in words at any time,
+   or a yes to the offer the closing message may carry once every task in the
+   TaskCreate list is completed.
 
 The Stop hook does not nudge retrospectives; it only enforces the Todo list.
 The skill runs as a forked background agent, proposes a new skill, a skill

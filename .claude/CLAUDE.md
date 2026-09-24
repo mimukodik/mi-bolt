@@ -162,9 +162,9 @@ with ID: <id>`. Reading the status in the row is the whole of the difference,
 and skipping that read cost one session 32 refused calls out of 50: 21 rows
 already completed, 10 ids gone from the list, and one row killed. An agent
 whose result I am still waiting for is left alone however long its row says it
-has been running: the `/retrospective` fork runs at exactly the second of those
-two moments, and a `real-browser-sonnet` can still be verifying a change when
-the task it belongs to moves to completed.
+has been running: a `/retrospective` fork the user asked for can still be
+running at either of those two moments, and a `real-browser-sonnet` can still
+be verifying a change when the task it belongs to moves to completed.
 The list settles which case each row is; it is not a list of things to
 stop. One session ran `ListAgents` once in 304 main-agent tool calls, and only
 because the user asked, in English: "are the reviews still running? the
@@ -225,9 +225,12 @@ write twice before the run was stopped.
   comes in, it has to be examined whether a dependency has to be set between
   the todos, and whether the new task needs a dependency set". Fourteen
   seconds is what the pass costs when it is not skipped.
-- When every task in the list is completed, I run the `/retrospective` skill
-  automatically, without asking, before the closing message. I commit first
-  (see "Commits" in `.claude/rules/session-lifecycle.md`).
+- When every task in the list is completed, I commit (see "Commits" in
+  `.claude/rules/session-lifecycle.md`) before the closing message, which may
+  offer a retrospective. The `/retrospective` skill runs only when the user
+  asks for it or accepts an offer, never on my own initiative, and the user
+  gets a summary of the session before it runs; "Retrospective" in the same
+  file owns both.
 - **When the user says they cannot see the task list, I put it back with a
   `TaskUpdate` call rather than by retyping it.** Retelling the entries in a
   reply answers a question about the data, while what they have lost is the
@@ -483,7 +486,7 @@ launch, which is why the SessionStart hook does not re-inject them.
   count as verification, and the HTML report verification steps.
 - `session-lifecycle.md`: the root `mise` tasks and where each workspace's
   commands run, the dev servers and the database, commit points and the
-  `git-commit` skill, when a push and a pull request may run, the three ways the
+  `git-commit` skill, when a push and a pull request may run, when the
   `/retrospective` skill runs, hooks, what an agent definition and a subagent
   prompt may carry, the second-reader review every instruction file change gets,
   working beside a parallel session, and the English-only language rule.

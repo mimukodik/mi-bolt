@@ -222,8 +222,8 @@ is the one thing the single read exists to prevent. From entry 9 on, the list
 is a chain and every link in it is real: the how-to-test comment cannot name a
 branch that has not been pushed, the user cannot run the manual check before
 that comment says what to run, the summary cannot report a verdict that has
-not come back, and the retrospective cannot weigh a check that has not
-happened. Block each of those entries on the one before it that this run
+not come back, and a retrospective offered before the check could not weigh
+it. Block each of those entries on the one before it that this run
 actually has, since the free-text way drops entries 10 and 12 and a no in
 fixed step 5 drops entry 11. Numbering is not a dependency, so leave the rest
 unblocked: a block then tells the run what is holding it up instead of
@@ -278,8 +278,9 @@ of what happened, when what it was needed for was deciding what to do next.
    the very end"). Nothing goes up part-way through the work, and
    the tail of the run is where the branch is published, so the pushes the
    entries below can still need, one for each fix entry 11's manual check
-   turned up and one for what entry 13 commits, are this same permission
-   exercised again on the same branch rather than new ones: each runs the
+   turned up and one for what entry 13 commits when the user takes its
+   retrospective offer, are this same permission exercised again on the same
+   branch rather than new ones: each runs the
    command and the guards this entry gives, and the open pull request picks the
    new commit up on its own. Nothing beyond what entries 11 and 13 commit is
    made after this entry, so anything of this run's own that is still
@@ -384,28 +385,26 @@ of what happened, when what it was needed for was deciding what to do next.
     before the second handover, so what this entry does with it is check it
     rather than write it. Where fixed step 5 got a no there was no manual
     check to report, and nothing else about this entry changes. *Issue only.*
-13. Run `/retrospective`, commit every file it leaves to be committed, and
-    delete the run file when the task came in as an issue.
-    `.claude/rules/session-lifecycle.md` ("Commits" and "Retrospective") owns
-    which files those are and the order the commits land in. Nothing here is a
-    second retrospective: this entry is the automatic run that
-    `.claude/CLAUDE.md` ("Task tracking") and
-    `.claude/rules/session-lifecycle.md` ("Retrospective", the third of the
-    three ways it runs) start once the rest of the list is finished, and the
-    two coincide because this entry is last, which is deliberate rather than
-    luck. It is last because what the user's own check turned up in entry 11 is
-    the one kind of finding no agent in the run ever sees, and a retrospective
-    that closed before that verdict could not carry it. The skill runs the
-    shared memory status check itself, so that is not an entry here. What this
-    entry commits is published like the rest of the branch, by entry 9's push
-    run again, because a retrospective committed and never pushed is work the
-    pull request does not carry. It changes nothing the tracker or the pull
-    request's body reports, so the two comments entries 10 and 12 left current
-    and that body stay current: what this commit records is how the session
-    ran, not what the branch changed for the issue's reader. The commit list
-    entry 12 finalised therefore ends short of the branch by whatever this
-    entry commits, which is what its place at the end costs rather than a
-    comment left stale.
+13. Offer the retrospective in the closing message, and delete the run file
+    when the task came in as an issue. The offer is a question and never a
+    run: `.claude/rules/session-lifecycle.md` owns why `/retrospective` starts
+    only on the user's yes and the session summary that comes before it
+    ("Retrospective"), and which files a run leaves to be committed and the
+    order the commits land in ("Commits" and "Retrospective"). On a no the
+    entry closes; on a yes it closes once `/retrospective` has run and those
+    files are committed. The offer is last because what the user's own check
+    turned up in entry 11 is the one kind of finding no agent in the run ever
+    sees, and a retrospective that ran before that verdict could not carry it.
+    The skill runs the shared memory status check itself, so that is not an
+    entry here. What this entry commits on a yes is published like the rest of
+    the branch, by entry 9's push run again, because a retrospective committed and
+    never pushed is work the pull request does not carry. It changes nothing
+    the tracker or the pull request's body reports, so the two comments
+    entries 10 and 12 left current and that body stay current: what this
+    commit records is how the session ran, not what the branch changed for
+    the issue's reader. The commit list entry 12 finalised therefore ends
+    short of the branch by whatever this entry commits, which is what its
+    place at the end costs rather than a comment left stale.
 
 ## The derived entries
 

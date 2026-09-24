@@ -1,11 +1,9 @@
 ---
 name: retrospective
 description: >-
-  End-of-session retrospective for the muhely workspace. Reads the session transcript and proposes,
-  only when warranted, a new skill, a change to an existing skill, or a CLAUDE.md rule change.
-  Use when the SessionStart hook lists a pending session, when a task series has been fully
-  completed, when the user asks for a retro or "what did we learn", or at the end of a working
-  session. Never applies changes itself.
+  Session retrospective: reads a transcript and proposes, only when warranted, a new skill, a
+  skill change or a CLAUDE.md rule change, never applying them. Run it only when the user asks
+  for one ("retro", "what did we learn") or accepts one offered.
 argument-hint: "<absolute path to the session transcript .jsonl>"
 context: fork
 agent: instructions-opus
