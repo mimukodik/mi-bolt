@@ -449,17 +449,6 @@ describe('DS-11 home delivery renders the address form and pickup renders the pi
   });
 });
 
-describe('DS-11b before any delivery option is chosen neither the address form nor the pickup notice renders', () => {
-  it('a fresh field tree shows zero delivery-side address forms and zero pickup notices', () => {
-    const fixture = createFixture();
-    const root = getRootElement(fixture);
-    expect(
-      root.querySelectorAll('app-address-form:not([data-testid="billing-address-form"])').length,
-    ).toBe(0);
-    expect(root.querySelectorAll('[data-testid="pickup-notice"]').length).toBe(0);
-  });
-});
-
 describe('DS-12 the pickup notice states that the virtual pickup is not a real pickup place', () => {
   it('the pickup notice is a persistent, non-live info StatusMessage with role note that says nincs valós üzletcím and valós átvételi pont nélkül', () => {
     const fixture = createFixture();

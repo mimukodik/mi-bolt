@@ -117,7 +117,7 @@
           (line2Change)="setLine2($event)"
           (postalCodeChange)="setPostalCode($event)"
         />
-      } @else if (selectedOptionId() === 'pickup_point') {
+      } @else {
         <app-status-message
           data-testid="pickup-notice"
           role="note"
