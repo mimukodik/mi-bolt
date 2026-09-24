@@ -2,7 +2,7 @@
  * MIM-423 — the demo sign-in page at `/belepes`.
  *
  * The page carries one password field and one Belépés button, nothing of
- * the shop behind it. The seven cases cover what the page itself decides:
+ * the shop behind it. The eight cases cover what the page itself decides:
  * the rendered shape, the required and too-long messages, the wrong-password
  * and generic-failure messages, the `vissza` target, and the edit-clears-
  * the-error rule.
@@ -22,6 +22,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { DEMO_PASSWORD } from '@mi-bolt/mocks/demo/demo.handlers';
 import { isRecord } from '@mi-bolt/mocks/is-record';
 
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
@@ -31,9 +32,6 @@ import { DemoSignInPage } from './demo-sign-in-page';
 useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
-
-/** The one password the demo accepts (MIM-423; the owner ruled it not secret). */
-const DEMO_PASSWORD = '1MiBoltDemo1';
 
 /** An empty standalone component standing in for a routed page. */
 @Component({ selector: 'app-demo-sign-in-stub', template: '' })
@@ -168,6 +166,21 @@ describe('DemoSignInPage', () => {
 
     expect(queryElement(root, '#demo-password-message').textContent).toContain(
       'Add meg a jelszót.',
+    );
+    expect(requestLog).toEqual([]);
+  });
+
+  it('a too-long submit shows the length message and sends nothing', async () => {
+    signInHandler();
+    const harness = await openPage('/belepes');
+    const root = harness.routeNativeElement;
+
+    typePassword(root, 'x'.repeat(65));
+    submitForm(root);
+    await harness.fixture.whenStable();
+
+    expect(queryElement(root, '#demo-password-message').textContent).toContain(
+      'A jelszó legfeljebb 64 karakter lehet.',
     );
     expect(requestLog).toEqual([]);
   });

@@ -23,6 +23,8 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 
+import { DEMO_PASSWORD } from '@mi-bolt/mocks/demo/demo.handlers';
+
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 
 import { DemoAccess } from './demo-access';
@@ -30,9 +32,6 @@ import { DemoAccess } from './demo-access';
 useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
-
-/** The one password the demo accepts (MIM-423; the owner ruled it not secret). */
-const DEMO_PASSWORD = '1MiBoltDemo1';
 
 /** Every request MSW saw, as `"<METHOD> <pathname>"`, in the order it saw it. */
 let requestLog: string[] = [];
