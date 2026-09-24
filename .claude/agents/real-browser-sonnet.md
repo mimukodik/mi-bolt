@@ -56,18 +56,15 @@ Rules:
   after a script mutated the page is not evidence; say in the report which
   script you ran and why.
 - Never point a network read at a request that is still open. A stream that
-  stays open has no completed response to fetch, so `get_network_request` on
-  one never returns, and the calls issued after it do not return either: one
-  such call on `/_agent-native/events`, the framework's SSE route, ran out the
-  harness's 1800-second idle timeout, the two `list_network_requests` calls
-  that followed hung for another twenty-two minutes, and the run was discarded.
-  That measurement was on an SSE stream; a WebSocket has not been measured here
-  and is not to be tried either. Treat one such call as having ended this run's
-  network tooling. `get_network_request` is not in the Setup 2 list and there
-  is no reason to add it. Listing is not the hazard, so the step loop and the
-  closing checks stand as written: on that same page, with the stream open, a
-  filtered `list_network_requests` and one with
-  `includePreservedRequests: true` each answered in under two seconds. Where
+  stays open has no completed response to fetch, so `get_network_request` on one
+  never returns, and the calls issued after it do not return either (measured on
+  an SSE stream; a WebSocket has not been measured and is not to be tried
+  either). Treat one such call as having ended this run's network tooling.
+  `get_network_request` is not in the Setup 2 list and there is no reason to add
+  it. Listing is not the hazard, so the step loop and the closing checks stand
+  as written: with a stream open, a filtered `list_network_requests` and one
+  with `includePreservedRequests: true` each answered in under two seconds
+  (measured). Where
   one request's own detail is needed, read it from the page with
   `evaluate_script` over `performance.getEntriesByType('resource')`. That list
   is a ceiling as well as a substitute: it gives a request's URL, its timings,
@@ -141,7 +138,7 @@ not a defect.
    use absolute paths for every file from here on.
 2. If the `mcp__chrome-devtools__*` tools are deferred, load them with one
    `ToolSearch` call:
-   `select:mcp__chrome-devtools__list_pages,mcp__chrome-devtools__new_page,mcp__chrome-devtools__select_page,mcp__chrome-devtools__navigate_page,mcp__chrome-devtools__take_snapshot,mcp__chrome-devtools__take_screenshot,mcp__chrome-devtools__click,mcp__chrome-devtools__fill,mcp__chrome-devtools__fill_form,mcp__chrome-devtools__type_text,mcp__chrome-devtools__press_key,mcp__chrome-devtools__hover,mcp__chrome-devtools__wait_for,mcp__chrome-devtools__evaluate_script,mcp__chrome-devtools__list_console_messages,mcp__chrome-devtools__get_console_message,mcp__chrome-devtools__list_network_requests,mcp__chrome-devtools__handle_dialog,mcp__chrome-devtools__emulate,mcp__chrome-devtools__resize_page,mcp__chrome-devtools__close_page`
+   `select:mcp__chrome-devtools__list_pages,mcp__chrome-devtools__new_page,mcp__chrome-devtools__navigate_page,mcp__chrome-devtools__take_snapshot,mcp__chrome-devtools__take_screenshot,mcp__chrome-devtools__click,mcp__chrome-devtools__fill,mcp__chrome-devtools__fill_form,mcp__chrome-devtools__type_text,mcp__chrome-devtools__press_key,mcp__chrome-devtools__hover,mcp__chrome-devtools__wait_for,mcp__chrome-devtools__evaluate_script,mcp__chrome-devtools__list_console_messages,mcp__chrome-devtools__get_console_message,mcp__chrome-devtools__list_network_requests,mcp__chrome-devtools__handle_dialog,mcp__chrome-devtools__emulate,mcp__chrome-devtools__close_page`
    Add `drag`, `upload_file`, `lighthouse_audit`, or `performance_*` to the
    same call only when the task needs them; an unloaded tool fails with an
    input validation error.
@@ -153,11 +150,30 @@ not a defect.
    task touches sign-in, sign-out, onboarding, or any first-visit state, pass
    `isolatedContext: "<task-slug>"` to `new_page` and say in the report that
    you did.
-4. Set the viewport with `emulate`. Default is `viewport: "1920x1080x1"`,
-   unless the task names another size or a mobile check. `emulate` is not
-   additive: any option you omit is reset to its default, including the
-   viewport. Pass every option you want to keep on every `emulate` call.
-   Record the size in the report.
+4. Put the page at the size the task names, on every run and never by
+   assuming the window is already at it, with `emulate` on your `pageId`:
+   `viewport` as `<width>x<height>x<devicePixelRatio>`. A task that names no
+   size gets `1920x1080x1` (Full HD), so `emulate` always has a value to
+   take. `emulate` is not additive: any option you omit is reset to its
+   default, including the viewport. Pass every option you want to keep on
+   every `emulate` call.
+   Then one `evaluate_script` on your `pageId` reading `window.innerWidth`,
+   `window.innerHeight` and `window.devicePixelRatio`; the inner pair and the
+   ratio must equal what `emulate` was given, and a mismatch is that call not
+   having taken: stop, report BLOCKED with the readings, do not go on at
+   the wrong size.
+
+   **Never call `select_page` and never call `resize_page`.** Several browser
+   passes can run at the same time on one session's chrome-devtools server,
+   and the server's page-ID routing keeps them apart only as long as every
+   call names its own `pageId` and nothing touches the shared selected page
+   or the window: `select_page` moves the one selected-page pointer every
+   pass shares, and `resize_page` resizes the window, which is not per page.
+   `emulate` on a `pageId` sets that page's viewport alone (measured at 1920
+   by 1080 and at 390 by 844: inner readings matched after `emulate`, before
+   any window resize). Screenshots are of the emulated viewport;
+   `fullPage: true` still captures the whole document.
+
 5. Wait for the page with `wait_for`, whose `text` is a non-empty array of
    strings and resolves when any one of them appears. Use text the task says
    should be visible, or a stable heading. Take `00-initial.png`. Read the
@@ -188,25 +204,21 @@ For each step of the task or each requirement of the spec:
    escaping its card, a row or a column overflowing its container, an element
    cut off at the bottom of its block. Each of those is a finding of its own,
    reported with the screenshot even when the step itself passed.
-   The hovered state is part of the screen: two of the three layout defects one
-   measured run found appeared only on hover, so a region seen only at rest is a
-   region not yet checked. Hover the regions of the screen you read rather than
-   only the elements the step acted on, screenshot each hovered region as
+   The hovered state is part of the screen: a layout defect can appear only on
+   hover (measured), so a region seen only at rest is a region not yet checked.
+   Hover the regions of the screen you read rather than only the elements the
+   step acted on, screenshot each hovered region as
    `NN-<step-slug>-hover-<region>.png`, and read each of those PNGs the same
-   way; a step that only navigates still has a screen to read. In that run
-   `hover`'s synthetic mouse events did not reliably flip that app's own
-   hover-tracking state. Where the screenshot after `hover` shows nothing
-   appeared, reach the hovered state through whatever affordance the app itself
-   provides: the measured example is the Plan editor's block pencil, where
-   clicking it opens the block's popover and dismissing that with Escape leaves
-   the same absolutely positioned button visible at the same coordinates.
+   way; a step that only navigates still has a screen to read. `hover`'s
+   synthetic mouse events do not always flip an app's own hover-tracking state.
+   Where the screenshot after `hover` shows nothing appeared, reach the hovered
+   state through whatever affordance the app itself provides, such as a control
+   that opens the element and is dismissed with Escape, leaving the hover-only
+   control visible where it sits.
    A clean layout verdict is written as what you inspected rather than as an
    assertion: name in the step's `Observed` cell the regions you read and the
-   state each was seen in. The bare sentence is not evidence. One run reported
-   "no layout defects seen at 1920x1080" over a `data-model` block in which
-   every field row drew its field name on top of its type badge, `id` over
-   `uuid`, `kind` over `text`, `content` over `jsonb`, and a later run pointed
-   at that block found it at the same viewport.
+   state each was seen in. The bare sentence is not evidence: it reads the same
+   whether a region was looked at or not.
 6. `list_console_messages` with `types: ["error"]`, and again with
    `types: ["warn"]` when the task asks for warnings. Record every error with
    its text. Use `get_console_message` for the full text when it is truncated.
@@ -224,11 +236,24 @@ than twice.
 
 When the spec covers light, dark, and auto color schemes, run the affected
 steps once per scheme. Each of those `emulate` calls must repeat the
-viewport alongside the scheme, for example
-`{viewport: "1920x1080x1", colorScheme: "dark"}`, because omitting `viewport`
-clears it. When it covers a mobile layout, repeat with
+viewport alongside the scheme,
+`{viewport: <the same viewport string Setup 4 passed>, colorScheme: "dark"}`,
+because omitting `viewport` clears it.
+When it covers a mobile layout, repeat with
 `{viewport: "390x844x3,mobile,touch"}` plus the same scheme, and take one
 screenshot per combination.
+
+**Read the inner pair back with `evaluate_script` after each of those
+`emulate` calls**, the mobile ones included, and compare it against the size
+that call was given. That reading is the whole of the check here, since
+nothing follows an `emulate` to cover for one that did nothing. A mismatch
+gets one retry, which Setup 4 does not give: repeat that `emulate` once with
+every option restated and read the inner pair again. If it still does not
+match, the run ends BLOCKED, as at Setup 4. Ending here is not
+walking away: run the closing checks, `close_page` among them so no tab is
+left open for the next run, and report every step already recorded, since each
+of those was observed at a viewport that did take. Each scheme and each mobile
+combination carries its reading into the `Viewport:` block.
 
 ## Closing checks
 
@@ -253,8 +278,12 @@ screenshot per combination.
 - **PARTIAL**: some requirements passed and the rest could not be observed
   for reasons outside the app (missing test data, a step the task did not
   describe well enough to execute).
-- **BLOCKED**: the browser could not reach or render the app, or the task was
-  impossible to start. Give the exact error.
+- **BLOCKED**: the browser could not reach or render the app, the task was
+  impossible to start, or an `emulate` could not be made to take. At Setup 4
+  that is the run's own viewport failing before any step has run. At a step
+  loop `emulate` (a color scheme or a mobile repeat) the run blocks part-way
+  through, and the steps already recorded at a viewport that did take still
+  stand. Give the exact error or the readings that decided it.
 
 Console errors that do not belong to the flow can be marked "unrelated" and
 do not block PASS on their own, but only with proof: re-run
@@ -277,7 +306,12 @@ must stand on its own and use exactly these sections, in this order:
 - Mode: task | spec
 - Date: <YYYY-MM-DD HH:MM local>
 - Start URL: <url>
-- Viewport: <WxHxDPR>[, mobile][, color schemes run]
+- Viewport:
+  - emulated: <WxHxDPR>
+  - inner after `emulate`: <WxH>
+  - dpr after `emulate`: <number>
+  - mobile repeats: <each combination with its viewport string and inner read-back WxH> | none
+  - color schemes run: <each scheme with its inner read-back WxH> | none
 - Browser: Chrome via chrome-devtools-mcp (page list from `list_pages`: <ids and urls>)
 - Isolated context: <name> | none
 - Git commit: <short sha from `git rev-parse --short HEAD`>
@@ -335,8 +369,8 @@ to make about the task.
 ## What was verified
 
 The console and network checks, the `ls -la` file check with sizes, the
-viewport and color schemes run, the layout pass with the regions it covered and
-the state each was seen in, and the `close_page` result.
+viewport read-backs and the color schemes run, the layout pass with the regions
+it covered and the state each was seen in, and the `close_page` result.
 ```
 
 Screenshot file names in the report are relative to the report dir;
