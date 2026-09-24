@@ -429,4 +429,45 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
     const apiEntry = isRecord(proxy) ? proxy['/api'] : undefined;
     expect(isRecord(apiEntry) ? apiEntry['target'] : undefined).toBe('http://localhost:8080');
   });
+
+  it('MIM-433: dev and dev:docker serve the payment app on its production build, so its mock never starts', () => {
+    // `mise run dev` and `dev:docker` used to serve the payment app's
+    // `development` configuration, whose `main.ts` starts the MSW mock, so a
+    // payment intent the real backend created was unknown to the page.
+    expect(
+      readAngularJson([
+        'projects',
+        'demo-payment',
+        'architect',
+        'serve',
+        'configurations',
+        'local-backend',
+        'buildTarget',
+      ]),
+    ).toBe('demo-payment:build:production');
+    expect(
+      readAngularJson(['projects', 'demo-payment', 'architect', 'serve', 'defaultConfiguration']),
+    ).toBe('development');
+
+    const manifest: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8'));
+    const scripts = isRecord(manifest) ? manifest['scripts'] : undefined;
+    expect(isRecord(scripts) ? scripts['start:payment:local-backend'] : undefined).toBe(
+      'ng serve demo-payment --configuration local-backend',
+    );
+    expect(isRecord(scripts) ? scripts['start:payment'] : undefined).toBe('ng serve demo-payment');
+
+    const frontendMise = readFileSync(join(REPO_ROOT, 'mise.toml'), 'utf8');
+    expect(frontendMise).toContain(
+      '[tasks."start:payment:local-backend"]\nrun = "npm run start:payment:local-backend"',
+    );
+
+    const rootMise = readFileSync(join(REPO_ROOT, '..', 'mise.toml'), 'utf8');
+    for (const task of ['[tasks.dev]', '[tasks."dev:docker"]']) {
+      const start = rootMise.indexOf(task);
+      expect(start).toBeGreaterThanOrEqual(0);
+      const block = rootMise.slice(start, rootMise.indexOf('\n[', start + 1));
+      expect(block).toContain('"//frontend:start:payment:local-backend"');
+      expect(block).not.toContain('"//frontend:start:payment"');
+    }
+  });
 });
