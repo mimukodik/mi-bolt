@@ -4,7 +4,7 @@
  * result reported in a snack-bar. An archive's snack-bar offers
  * Visszavonás, which restores with the version the archive returned.
  */
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { MatIconButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -21,17 +21,17 @@ import { ProductListStore, type RowActionResult } from './product-list.store';
   selector: 'adm-product-row-actions',
   imports: [MatIcon, MatIconButton, MatMenu, MatMenuItem, MatMenuTrigger],
   template: `
-    <button class="adm-row-menu" matIconButton type="button" [matMenuTriggerFor]="menu">
+    <button class="adm-row-menu-trigger" matIconButton type="button" [matMenuTriggerFor]="menu">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
       @if (item().status === 'active') {
-        <button mat-menu-item type="button" (click)="archive()">
+        <button mat-menu-item type="button" [disabled]="busy()" (click)="archive()">
           <mat-icon>archive</mat-icon>
           <span>Archiválás</span>
         </button>
       } @else {
-        <button mat-menu-item type="button" (click)="restore()">
+        <button mat-menu-item type="button" [disabled]="busy()" (click)="restore()">
           <mat-icon>unarchive</mat-icon>
           <span>Visszaállítás</span>
         </button>
@@ -46,7 +46,13 @@ export class ProductRowActions {
 
   readonly item = input.required<AdminProductListItem>();
 
+  /** `true` while a row action's request is in flight. The menu items stay
+   *  natively disabled so a second activation cannot re-post the row's
+   *  version it has already sent. */
+  protected readonly busy = signal(false);
+
   async archive(): Promise<void> {
+    if (this.busy()) return;
     const item = this.item();
     const confirmed = await firstValueFrom(
       openConfirm(this.dialog, {
@@ -58,24 +64,35 @@ export class ProductRowActions {
       }),
     );
     if (!confirmed) return;
-    const result = await this.store.archive(item);
-    if (result.kind === 'done') {
-      this.snackBar
-        .open(`Archiválva: ${item.name}`, 'Visszavonás')
-        .onAction()
-        .subscribe(() => void this.restore(result.item));
-      return;
+    this.busy.set(true);
+    try {
+      const result = await this.store.archive(item);
+      if (result.kind === 'done') {
+        this.snackBar
+          .open(`Archiválva: ${item.name}`, 'Visszavonás')
+          .onAction()
+          .subscribe(() => void this.restore(result.item));
+        return;
+      }
+      this.report(result, 'Az archiválás nem sikerült. Próbáld újra.');
+    } finally {
+      this.busy.set(false);
     }
-    this.report(result, 'Az archiválás nem sikerült. Próbáld újra.');
   }
 
   async restore(item: AdminProductListItem = this.item()): Promise<void> {
-    const result = await this.store.restore(item);
-    if (result.kind === 'done') {
-      this.snackBar.open(`Visszaállítva: ${item.name}`, undefined, { duration: 4000 });
-      return;
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      const result = await this.store.restore(item);
+      if (result.kind === 'done') {
+        this.snackBar.open(`Visszaállítva: ${item.name}`, undefined, { duration: 4000 });
+        return;
+      }
+      this.report(result, 'A visszaállítás nem sikerült. Próbáld újra.');
+    } finally {
+      this.busy.set(false);
     }
-    this.report(result, 'A visszaállítás nem sikerült. Próbáld újra.');
   }
 
   private report(result: Exclude<RowActionResult, { kind: 'done' }>, failed: string): void {

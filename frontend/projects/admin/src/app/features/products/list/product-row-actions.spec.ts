@@ -121,7 +121,7 @@ function snackBarText(): string {
 }
 
 function menuTrigger(row: HTMLElement): HTMLButtonElement {
-  const button = row.querySelector<HTMLButtonElement>('.adm-row-menu');
+  const button = row.querySelector<HTMLButtonElement>('.adm-row-menu-trigger');
   if (button === null) throw new Error('no row menu trigger');
   return button;
 }
