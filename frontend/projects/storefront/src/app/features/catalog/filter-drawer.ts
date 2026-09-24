@@ -86,6 +86,10 @@ export class FilterDrawer {
    *  at most five before "more"). */
   protected readonly brandSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
 
+  /** One placeholder colour chip row per visible colour slot (the list
+   *  shows at most five before "Még több szín", MIM-405). */
+  protected readonly colorSkeletonRows: readonly number[] = [0, 1, 2, 3, 4];
+
   /** Emits when the drawer is closed by any path (Apply, Cancel, Escape, backdrop). */
   readonly closed = output();
 
@@ -174,6 +178,36 @@ export class FilterDrawer {
 
   /** Colour facets, falling back to an empty list when none are present. */
   readonly colorFacets = computed<readonly ColorFacetValue[]>(() => this.facets()?.colors ?? []);
+
+  /** The colour list collapses to the first five chips behind a
+   *  `Még több szín` text link, like the brand list, so the list has
+   *  the same height before and after the first response (MIM-405).
+   *  A colour selected beyond the first five keeps the list expanded.
+   *  It survives closing and reopening the drawer, like the brand list. */
+  readonly colorsExpanded = signal(false);
+
+  /** Colours to render: the first five when collapsed, otherwise all. */
+  readonly visibleColorFacets = computed<readonly ColorFacetValue[]>(() => {
+    const all = this.colorFacets();
+    if (this.colorsExpanded()) return all;
+    if (all.length <= 5) return all;
+    const selectedColors = this.draftColors();
+    const hasDeeperSelection = selectedColors.some((c) => {
+      const idx = all.findIndex((f) => f.value === c);
+      return idx >= 5;
+    });
+    if (hasDeeperSelection) return all;
+    return all.slice(0, 5);
+  });
+
+  /** Whether every colour facet is rendered; drives the toggle's label. */
+  readonly colorsAllVisible = computed(
+    () => this.visibleColorFacets().length === this.colorFacets().length,
+  );
+
+  toggleColorsExpanded(): void {
+    this.colorsExpanded.update((v) => !v);
+  }
 
   /** Element that should regain focus when the dialog closes. The parent
    *  passes its own trigger button through this input so WCAG focus

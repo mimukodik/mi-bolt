@@ -14,10 +14,21 @@ import { Component, signal } from '@angular/core';
 import { DialogModule } from '@angular/cdk/dialog';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import type { ColorFacetValue } from '@mi-bolt/api/models/color-facet-value';
 import type { Facets } from '@mi-bolt/api/models/facets';
 
 import { DEFAULT_CATALOG_QUERY, type CatalogQuery } from './catalog-query';
 import { FilterDrawer } from './filter-drawer';
+
+const SEVEN_COLORS: readonly ColorFacetValue[] = [
+  { value: 'fekete', label: 'Fekete', swatchHex: '#000000', count: 3 },
+  { value: 'feher', label: 'Fehér', swatchHex: '#ffffff', count: 2 },
+  { value: 'kek', label: 'Kék', swatchHex: '#1e4fd8', count: 4 },
+  { value: 'zold', label: 'Zöld', swatchHex: '#2e8b57', count: 1 },
+  { value: 'szurke', label: 'Szürke', swatchHex: '#808080', count: 5 },
+  { value: 'lila', label: 'Lila', swatchHex: '#7b3fb0', count: 2 },
+  { value: 'piros', label: 'Piros', swatchHex: '#d0021b', count: 1 },
+];
 
 beforeAll(async () => {
   await TestBed.compileComponents();
@@ -222,6 +233,84 @@ describe('FilterDrawer — facets wire-up', () => {
     const more = queryElement('[data-testid="drawer-group-brand"] .more');
     expect(more.getAttribute('aria-expanded')).toBe('true');
     expect(more.textContent.trim()).toBe('Kevesebb gyártó');
+  });
+
+  it('the colour list shows five chips and a "Még több szín" toggle (MIM-405)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [],
+      colors: [...SEVEN_COLORS],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+    const chips = (): number =>
+      document.body.querySelectorAll('[data-testid="drawer-group-color"] button.color-chip').length;
+
+    expect(chips()).toBe(5);
+    const more = queryElement('[data-testid="drawer-group-color"] .more');
+    expect(more.textContent.trim()).toBe('Még több szín');
+
+    more.click();
+    fixture.detectChanges();
+    expect(chips()).toBe(7);
+    expect(more.textContent.trim()).toBe('Kevesebb szín');
+  });
+
+  it('a colour selected beyond chip five keeps the colour list open (MIM-405)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [],
+      colors: [...SEVEN_COLORS],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    host.applied.set({ ...DEFAULT_CATALOG_QUERY, colors: ['piros'] });
+    fixture.detectChanges();
+
+    expect(
+      document.body.querySelectorAll('[data-testid="drawer-group-color"] button.color-chip').length,
+    ).toBe(7);
+    expect(queryElement('[data-testid="drawer-group-color"] .more').textContent.trim()).toBe(
+      'Kevesebb szín',
+    );
+  });
+
+  it('the expanded colour list stays expanded when the drawer reopens (MIM-405)', () => {
+    const { fixture, host } = setup();
+    host.facets.set({
+      brands: [],
+      colors: [...SEVEN_COLORS],
+      storageGb: [],
+      inStock: 0,
+      is5g: 0,
+      priceRange: { min: { amount: 0, currency: 'HUF' }, max: { amount: 0, currency: 'HUF' } },
+    });
+    fixture.detectChanges();
+
+    const more = queryElement('[data-testid="drawer-group-color"] .more');
+    expect(more.textContent.trim()).toBe('Még több szín');
+    more.click();
+    fixture.detectChanges();
+    expect(
+      document.body.querySelectorAll('[data-testid="drawer-group-color"] button.color-chip').length,
+    ).toBe(7);
+
+    host.opened.set(false);
+    fixture.detectChanges();
+    host.opened.set(true);
+    fixture.detectChanges();
+
+    expect(
+      document.body.querySelectorAll('[data-testid="drawer-group-color"] button.color-chip').length,
+    ).toBe(7);
+    expect(queryElement('[data-testid="drawer-group-color"] .more').textContent.trim()).toBe(
+      'Kevesebb szín',
+    );
   });
 });
 
@@ -499,7 +588,7 @@ describe('MIM-228 facet skeleton', () => {
       '[data-testid="drawer-group-color"] [data-testid="color-skeleton-row"]',
     );
     expect(brandSkeletons.length).toBe(5);
-    expect(colorSkeletons.length).toBe(1);
+    expect(colorSkeletons.length).toBe(5);
     expect(panel.querySelectorAll('[data-testid="drawer-group-brand"] button.option').length).toBe(
       0,
     );
@@ -534,7 +623,7 @@ describe('MIM-228 facet skeleton', () => {
 
     const panel = drawerRoot();
     expect(panel.querySelectorAll('[data-testid="brand-skeleton-row"]').length).toBe(5);
-    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(1);
+    expect(panel.querySelectorAll('[data-testid="color-skeleton-row"]').length).toBe(5);
 
     host.facets.set(loadedFacets());
     host.busy.set(false);
