@@ -729,7 +729,7 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
   });
 
   it('RS-23 an incomplete draft keeps the CTA from submitting and says which condition is unmet', () => {
-    const fixture = createFixture({ draft: INCOMPLETE_DRAFT });
+    const fixture = createFixture({ draft: INCOMPLETE_DRAFT, paymentIntent: SUCCEEDED_INTENT });
     checkTermsConsent(fixture);
     const root = getRoot(fixture);
     const button = getButton(root, 'review-submit');
@@ -746,12 +746,12 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     );
   });
 
-  it('RS-24 a card draft only submits once the intent has succeeded', () => {
+  it('RS-24 a card draft keeps the CTA disabled until the intent has succeeded', () => {
     const noIntent = createFixture({ draft: CARD_DRAFT_COMPLETE, paymentIntent: null });
     checkTermsConsent(noIntent);
     const noIntentRoot = getRoot(noIntent);
     const noIntentButton = getButton(noIntentRoot, 'review-submit');
-    expect(noIntentButton.disabled).toBe(false);
+    expect(noIntentButton.disabled).toBe(true);
     let noIntentEmitted = 0;
     const noIntentSub = noIntent.componentInstance.submitRequested.subscribe(
       () => (noIntentEmitted += 1),
@@ -780,7 +780,7 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
   });
 
   it('RS-24b a blocked click with the terms ticked moves focus to the explanation', async () => {
-    const fixture = createFixture({ draft: CARD_DRAFT_COMPLETE, paymentIntent: null });
+    const fixture = createFixture({ draft: INCOMPLETE_DRAFT, paymentIntent: SUCCEEDED_INTENT });
     checkTermsConsent(fixture);
     const root = getRoot(fixture);
     getButton(root, 'review-submit').click();
@@ -790,8 +790,36 @@ describe('S3-F2-5 ReviewStep on the 2.0.0 contract', () => {
     expect(document.activeElement).toBe(getByTestId(root, 'review-cta-explanation'));
   });
 
+  it.each<PaymentIntent['status']>(['requires_action', 'pending', 'declined'])(
+    'RS-24c a card draft with a %s intent keeps the CTA disabled',
+    (status) => {
+      const fixture = createFixture({
+        draft: CARD_DRAFT_COMPLETE,
+        paymentIntent: { ...SUCCEEDED_INTENT, status },
+      });
+      checkTermsConsent(fixture);
+      const root = getRoot(fixture);
+      expect(getButton(root, 'review-submit').disabled).toBe(true);
+    },
+  );
+
+  it('RS-24d an unpaid card draft names the payment, not the terms, under the disabled CTA', () => {
+    const fixture = createFixture({ draft: CARD_DRAFT_COMPLETE, paymentIntent: null });
+    const root = getRoot(fixture);
+    expect(getButton(root, 'review-submit').disabled).toBe(true);
+    expect(getByTestId(root, 'review-cta-explanation').textContent.trim()).toBe(
+      'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.',
+    );
+  });
+
+  it('RS-24e a cash on delivery draft keeps the CTA active without the terms', () => {
+    const fixture = createFixture({ draft: CASH_DRAFT_COMPLETE, paymentIntent: null });
+    const root = getRoot(fixture);
+    expect(getButton(root, 'review-submit').disabled).toBe(false);
+  });
+
   it('RS-25 an unconfirmed price change keeps the CTA from submitting ahead of every other reason', () => {
-    const fixture = createFixture({ priceChange: PRICE_CHANGE });
+    const fixture = createFixture({ priceChange: PRICE_CHANGE, paymentIntent: SUCCEEDED_INTENT });
     checkTermsConsent(fixture);
     const root = getRoot(fixture);
     const button = getButton(root, 'review-submit');

@@ -337,6 +337,13 @@ export class CheckoutFacade {
             this.api.invoke(updateCheckout, { body }, withIfMatch(expectedVersion)),
           );
           this.sessionWritable.set(session);
+          if (kind === 'delivery' || kind === 'payment') {
+            // A delivery or payment write after a payment changes what
+            // the intent paid for, so the held intent no longer backs
+            // this draft: the review step asks for a new payment.
+            this.paymentIntentWritable.set(null);
+            checkoutKeys.clearActiveIntentId();
+          }
           this.cart.acceptServerVersion(session.version);
           return { ok: true, value: session };
         } catch (err) {

@@ -190,6 +190,17 @@ export const checkoutKeys = {
     }
   },
 
+  /** Drops the stored active intent id, so a later review or return
+   *  page does not pick up an intent the draft no longer matches. */
+  clearActiveIntentId(): void {
+    const storage = readableStorage();
+    try {
+      storage?.removeItem(INTENT_ID_STORAGE);
+    } catch {
+      // Storage denied — nothing was stored to drop.
+    }
+  },
+
   /** Whether the shopper ticked the demo terms for these cart lines
    *  (`cartLinesKey`); false when nothing is stored, when the lines
    *  differ (a tick stored for other lines is removed), or when storage

@@ -460,7 +460,7 @@
           label="Demórendelés véglegesítése"
           loadingLabel="Feldolgozás…"
           variant="primary"
-          [disabled]="state() === 'submitting'"
+          [disabled]="state() === 'submitting' || cardPaymentMissing()"
           [loading]="state() === 'submitting'"
           (pressed)="onSubmit()"
         />

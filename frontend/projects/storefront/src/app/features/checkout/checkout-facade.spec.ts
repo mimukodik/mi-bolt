@@ -892,6 +892,45 @@ describe('payment intents', () => {
     expect(readMissing.error.status).toBe(404);
     expect(checkout.error()).toBeNull();
   });
+
+  it.each<'delivery' | 'payment'>(['delivery', 'payment'])(
+    'F-31: a %s write after a payment drops the held intent and its stored id',
+    async (section) => {
+      const checkout = await setupCompleteCardDraft();
+      const created = await checkout.createPaymentIntent();
+      expect(created.ok).toBe(true);
+      if (!created.ok) return;
+      await resolveSucceeded(created.value.id);
+      await checkout.readPaymentIntent(created.value.id);
+      expect(checkout.paymentIntent()?.status).toBe('succeeded');
+      expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+
+      const written =
+        section === 'delivery'
+          ? await checkout.updateDelivery({
+              optionId: 'home_delivery',
+              address: VALID_DELIVERY_ADDRESS,
+            })
+          : await checkout.updatePayment({ method: 'card' });
+      expect(written.ok).toBe(true);
+
+      expect(checkout.paymentIntent()).toBeNull();
+      expect(checkoutKeys.activeIntentId()).toBeNull();
+    },
+  );
+
+  it('F-32: a contact or billing write keeps the held intent', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    expect((await checkout.updateContact(VALID_CONTACT)).ok).toBe(true);
+    expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
+
+    expect(checkout.paymentIntent()?.id).toBe(created.value.id);
+    expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+  });
 });
 
 // ---------------------------------------------------------------------------
