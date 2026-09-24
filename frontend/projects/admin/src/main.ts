@@ -1,16 +1,8 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { registerLocaleData } from '@angular/common';
-import localeHu from '@angular/common/locales/hu';
 
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { environment } from './environments/environment';
-
-// Register Hungarian locale data before bootstrap so the DatePipe,
-// CurrencyPipe and friends format Hungarian numbers, dates and
-// currency values. Locale data is referenced by `hu-HU` everywhere
-// in the application; redeclaring here is a no-op for re-imports.
-registerLocaleData(localeHu, 'hu-HU');
 
 /**
  * Starts the in-page mock worker before bootstrap, in a non-production demo
