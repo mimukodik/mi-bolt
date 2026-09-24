@@ -3,10 +3,11 @@
 
 import { test, expect } from '../fixtures/coverage';
 
-// The sidebar filter mount takes over at 1024px (catalog-page.scss:86-102).
-// Below that the catalogue hides the sidebar (catalog-page.scss:98-102) and
-// serves the same facet groups in the drawer the toolbar's `filter-trigger`
-// opens, committing its draft with `drawer-apply` (filter-drawer.ts:322-343).
+// The sidebar filter mount takes over at 1024px (the `.layout` breakpoint in
+// the catalogue page stylesheet); below that it is hidden (`.sidebar` in the
+// same sheet) and the drawer the toolbar's `filter-trigger` opens serves the
+// same facet groups, its `drawer-apply` committing the draft
+// (`FilterDrawer.applyDraft()`).
 const SIDEBAR_MIN_WIDTH = 1024;
 
 // The loaded counter reads "<n> találat a szűrt feltételek szerint"; while the
@@ -16,12 +17,13 @@ const RESULT_COUNT_PATTERN = /^\s*[1-9]\d* találat a szűrt feltételek szerint
 
 // A storage facet button reads "<gb> GB (<count>)": the label stands in
 // `.option__label` and the count in the `.option__count` span nested inside it,
-// which the template opens with `&nbsp;` (filter-panel.html:159-170,
-// filter-drawer.html:142-153). The button's raw text is therefore the label,
-// the template's collapsed whitespace and then that non-breaking space, so the
-// two parts are asserted separately: a string `toContainText` normalises the
-// whitespace between them, while a RegExp `toHaveText` matches the count span's
-// raw text, which starts with the U+00A0 the `&nbsp;` writes.
+// which the template opens with `&nbsp;` (the storage facet button in
+// `filter-panel.html` and `filter-drawer.html`). The button's raw text is
+// therefore the label, the template's collapsed whitespace and then that
+// non-breaking space, so the two parts are asserted separately: a string
+// `toContainText` normalises the whitespace between them, while a RegExp
+// `toHaveText` matches the count span's raw text, which starts with the U+00A0
+// the `&nbsp;` writes.
 const STORAGE_FACET_COUNT_PATTERN = /^\s*\(\d+\)$/;
 
 test.describe('Catalogue: browse, filter, sort and page', () => {
@@ -34,9 +36,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
     const storageGroupTestId = desktopViewport ? 'filter-group-storage' : 'drawer-group-storage';
     const storageFacetPrefix = desktopViewport ? 'filter-storage-' : 'drawer-storage-';
     // The storage group renders one button per documented bucket and never
-    // disables a bucket for a zero count — only `disabled()` does
-    // (filter-panel.html:154, filter-drawer.html:136) — so the first button
-    // is the facet this scenario picks.
+    // disables a bucket for a zero count — only `disabled()` does, on the
+    // storage button's `[disabled]` binding in both templates — so the first
+    // button is the facet this scenario picks.
     const storageGroup = page.getByTestId(storageGroupTestId);
     const storageFacets = storageGroup.locator(`button[data-testid^="${storageFacetPrefix}"]`);
     const firstStorage = storageFacets.first();
@@ -89,8 +91,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       storageLabel = `${String(storageGb)} GB`;
 
       // The label names the bucket and its count, the count behind the
-      // non-breaking space the template writes (filter-panel.html:159-170), so
-      // the text is normalised and the bucket is matched against the test id.
+      // non-breaking space the template writes (the storage facet button in
+      // `filter-panel.html`), so the text is normalised and the bucket is
+      // matched against the test id.
       const labelText = (await firstStorage.innerText()).replace(/\s+/g, ' ').trim();
       const labelMatch = /^(\d+) GB \((\d+)\)$/.exec(labelText);
       expect(labelMatch).not.toBeNull();
@@ -100,10 +103,11 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
 
       await firstStorage.click();
 
-      // The facet reports its own selection state (filter-panel.html:147-158):
+      // The facet reports its own selection state (the storage button's
+      // `aria-pressed` binding and check span in `filter-panel.html`):
       // aria-pressed flips and the check mark renders inside the button. At
       // the mobile mount the drawer is still open here, because it is
-      // `drawer-apply` that commits the draft (filter-drawer.ts:322-343).
+      // `drawer-apply` that commits the draft (`FilterDrawer.applyDraft()`).
       await expect(firstStorage).toHaveAttribute('aria-pressed', 'true');
       await expect(firstStorage).toContainText('✓');
     });
@@ -116,8 +120,8 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       }
 
       // `storageGb` is the canonical query key the catalogue serialises
-      // (catalog-query.ts:288-297); the value is read from the page's own
-      // query, so it is compared decoded.
+      // (the `storageGb` branch of `serializeCatalogQuery()`); the value is
+      // read from the page's own query, so it is compared decoded.
       await expect(page).toHaveURL(/\/telefonok(\?|$)/);
       await expect
         .poll(() => new URL(page.url()).searchParams.get('storageGb'))
@@ -126,8 +130,8 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       const appliedChip = page.getByTestId('applied-chip');
       await expect(page.getByTestId('applied-filters')).toBeVisible();
       await expect(appliedChip).toHaveCount(1);
-      // The chip's label is the bucket itself, "<gb> GB"
-      // (catalog-query.ts:349-356).
+      // The chip's label is the bucket itself, "<gb> GB" (the storage loop
+      // in `buildChips()`).
       await expect(appliedChip.getByText(storageLabel, { exact: true })).toBeVisible();
       await expect(page.getByTestId('applied-chip-remove-storage')).toBeVisible();
 
@@ -144,10 +148,10 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
     // 4. Check the grid.
     await test.step('4. Check the grid: every visible card\'s variant line ends with "<gb> GB", and the storage facet lists every size the catalogue holds, each with its recalculated count.', async () => {
       // Each card shows one variant, and its storage is the item's own bucket
-      // (product-card.html:43-47, product-card.ts:43-46); the catalogue filters
-      // its items by `storageGb`, so the first card settling on the chosen
-      // bucket is what proves the filtered response has landed — and the
-      // counter read below then belongs to the filtered page.
+      // (the `.variant` line in `product-card.html` and `ProductCard.product`);
+      // the catalogue filters its items by `storageGb`, so the first card
+      // settling on the chosen bucket is what proves the filtered response has
+      // landed — and the counter read below then belongs to the filtered page.
       const variantStorages = cards.locator('.variant__storage');
       await expect(variantStorages.first()).toHaveText(storageLabel);
 

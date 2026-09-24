@@ -5,7 +5,7 @@ import { test, expect } from '../fixtures/coverage';
 import type { Locator } from '@playwright/test';
 
 // The default page size: the catalogue lists one card per (product, storage)
-// entry, 12 of them per page (catalog-query.ts:58-62), and `catalog-page-size`
+// entry, 12 of them per page (`DEFAULT_PAGE_SIZE`), and `catalog-page-size`
 // reads "12 / oldal". The sort select sits in the toolbar, which both
 // viewports render — no step below touches a facet, so none of them branches
 // on the sidebar/drawer mount.
@@ -18,8 +18,8 @@ const RESULT_COUNT_PATTERN = /^\s*[1-9]\d* találat a szűrt feltételek szerint
 /** The visible cards' price amounts as integers, in card order. */
 async function readPriceAmounts(cards: Locator): Promise<number[]> {
   // The digits sit in their own `price-amount` element and carry non-breaking
-  // space (U+00A0) group separators, which `\s` matches
-  // (price-block.html:14-21, price-block.ts:62-76).
+  // space (U+00A0) group separators, which `\s` matches (the `price-amount`
+  // element in `price-block.html` and `PriceBlock.formatHuf()`).
   const texts = await cards.getByTestId('price-amount').allTextContents();
   return texts.map((text) => Number.parseInt(text.replace(/\s/g, ''), 10));
 }
@@ -27,7 +27,8 @@ async function readPriceAmounts(cards: Locator): Promise<number[]> {
 /** The visible cards' product names, in card order. */
 async function readCardNames(cards: Locator): Promise<string[]> {
   // Each card carries exactly one level-3 heading, its product name
-  // (product-card.html:38-42), so the flattened list is one name per card.
+  // (the `h3.name` heading in `product-card.html`), so the flattened list is
+  // one name per card.
   const texts = await cards.getByRole('heading', { level: 3 }).allTextContents();
   return texts.map((text) => text.trim());
 }
@@ -70,7 +71,7 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
       expect(firstCardName.length).toBeGreaterThan(0);
 
       // A select reads its selected option, so "Ajánlott sorrend" is the
-      // value plus the label that value carries (catalog-toolbar.ts:91-110).
+      // value plus the label that value carries (`CatalogToolbar.sortLabel()`).
       await expect(sort).toHaveValue('recommended');
       await expect(sort.locator('option[value="recommended"]')).toHaveText('Ajánlott sorrend');
 
@@ -80,18 +81,17 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
 
     // 2. Select "Ár szerint növekvő" in catalog-sort.
     await test.step('2. Select "Ár szerint növekvő" in catalog-sort: the URL query string carries sort=price_asc, the visible price amounts are in non-decreasing order with the first card holding the smallest of them, and the result count is unchanged, because sorting does not filter.', async () => {
-      // Selecting an option fires the toolbar's change handler, which writes
-      // the sort into the URL (catalog-toolbar.ts:112-118,
-      // catalog.facade.ts:331-335). `sort` is the canonical query key
-      // (catalog-query.ts:311).
+      // Selecting an option fires `CatalogToolbar.onSortChange()`, which writes
+      // the sort into the URL through `CatalogFacade.setSort()`. `sort` is the
+      // canonical query key `serializeCatalogQuery()` writes.
       await sort.selectOption('price_asc');
       await expect(sort).toHaveValue('price_asc');
       await expect(page).toHaveURL(/[?&]sort=price_asc(&|$)/);
 
       // While the sorted response is in flight the grid keeps the previous
-      // page's cards on screen (async-content.html:19-33), so the order is
-      // retried rather than read once: `toPass` is the tool the seed names
-      // for a block that has to be retried (e2e/seed.spec.ts, rule 4).
+      // page's cards on screen (the refreshing branch of `async-content.html`),
+      // so the order is retried rather than read once: `toPass` is the tool the
+      // seed names for a block that has to be retried (e2e/seed.spec.ts, rule 4).
       await expect(async () => {
         const sortedPrices = await readPriceAmounts(cards);
         expect(sortedPrices).toHaveLength(DEFAULT_PAGE_SIZE);
@@ -128,8 +128,8 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         const sortedNames = (await readCardNames(cards)).map((name) => name.toLowerCase());
         expect(sortedNames).toHaveLength(DEFAULT_PAGE_SIZE);
         // The mock compares the name sort keys case-insensitively in
-        // code-unit order (catalog-filter.ts:273-283), which is what
-        // JavaScript's own default `sort()` compares.
+        // code-unit order (`compareCaseInsensitive()` in `catalog-filter.ts`),
+        // which is what JavaScript's own default `sort()` compares.
         expect(sortedNames).toEqual([...sortedNames].sort());
       }).toPass();
     });

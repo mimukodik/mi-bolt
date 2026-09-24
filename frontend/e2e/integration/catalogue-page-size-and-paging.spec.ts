@@ -5,7 +5,7 @@ import { test, expect } from '../fixtures/coverage';
 import type { Locator } from '@playwright/test';
 
 // The default page size: the catalogue lists one card per (product, storage)
-// entry, 12 of them per page (catalog-query.ts:58-62), and `catalog-page-size`
+// entry, 12 of them per page (`DEFAULT_PAGE_SIZE`), and `catalog-page-size`
 // reads "12 / oldal". The wider option the select offers is "24 / oldal".
 const DEFAULT_PAGE_SIZE = 12;
 const WIDE_PAGE_SIZE = 24;
@@ -14,7 +14,8 @@ const WIDE_PAGE_SIZE = 24;
 // first response is in flight it reads "Keresés a katalógusban…".
 const RESULT_COUNT_PATTERN = /^\s*[1-9]\d* találat a szűrt feltételek szerint\s*$/;
 
-/** The first card's product name, read from its own level-3 heading (product-card.html:38-42). */
+/** The first card's product name, read from its own level-3 heading
+ *  (the `h3.name` heading in `product-card.html`). */
 async function readFirstName(cards: Locator): Promise<string> {
   return (await cards.first().getByRole('heading', { level: 3 }).innerText()).trim();
 }
@@ -34,8 +35,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
 
       // Read in step 1, checked in steps 2 to 4. No step below touches a facet,
       // and the toolbar carrying both selects renders in the results column at
-      // both viewports (catalog-page.html:34-43, catalog-toolbar.scss:93-123),
-      // so no step branches on the sidebar/drawer mount.
+      // both viewports (the `app-catalog-toolbar` element in `catalog-page.html`
+      // and the 1024px `.toolbar` rules in `catalog-toolbar.scss`), so no step
+      // branches on the sidebar/drawer mount.
       let firstNameOnPageOne = '';
       let unfilteredTotal = 0;
 
@@ -51,7 +53,8 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         await expect(cards).toHaveCount(DEFAULT_PAGE_SIZE);
 
         // A select reads its selected option, so "12 / oldal" is the value plus
-        // the label that value carries (catalog-toolbar.html:37-46).
+        // the label that value carries (the `catalog-page-size` select in
+        // `catalog-toolbar.html`).
         await expect(pageSize).toHaveValue('12');
         await expect(pageSize.locator('option[value="12"]')).toHaveText('12 / oldal');
 
@@ -77,17 +80,17 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
         await expect(next).toHaveAccessibleName('Következő oldal');
         await next.click();
 
-        // A page click writes the page into the URL (catalog.facade.ts:337-342,
-        // catalog-query.ts:313); the canonical form keeps the default page size
-        // out of the query string.
+        // A page click writes the page into the URL through
+        // `CatalogFacade.setPage()` (the `page` key in `serializeCatalogQuery()`);
+        // the canonical form keeps the default page size out of the query string.
         await expect(page).toHaveURL(/[?&]page=2(&|$)/);
         await expect(current).toHaveText('2');
         await expect(prev).toBeEnabled();
 
         // While the page-2 response is in flight the grid keeps page 1's cards
-        // on screen (async-content.html:19-33), so the difference is retried
-        // rather than read once: `toPass` is the tool the seed names for a
-        // block that has to be retried (e2e/seed.spec.ts, rule 4).
+        // on screen (the refreshing branch of `async-content.html`), so the
+        // difference is retried rather than read once: `toPass` is the tool the
+        // seed names for a block that has to be retried (e2e/seed.spec.ts, rule 4).
         await expect(async () => {
           const firstName = await readFirstName(cards);
           expect(firstName.length).toBeGreaterThan(0);
@@ -110,9 +113,9 @@ test.describe('Catalogue: browse, filter, sort and page', () => {
 
       // 4. Select "24 / oldal" in catalog-page-size.
       await test.step('4. Select "24 / oldal" in catalog-page-size: the URL query string carries pageSize=24, 24 product-card elements are rendered (or every entry when the result set holds fewer than 24), and the list is back on its first page with pagination-current reading "1".', async () => {
-        // Selecting an option fires the toolbar's change handler, which writes
-        // the page size into the URL and resets the page to 1
-        // (catalog-toolbar.ts:120-128, catalog.facade.ts:344-349).
+        // Selecting an option fires `CatalogToolbar.onPageSizeChange()`, which
+        // writes the page size into the URL and resets the page to 1 through
+        // `CatalogFacade.setPageSize()`.
         await pageSize.selectOption('24');
         await expect(pageSize).toHaveValue('24');
         await expect(page).toHaveURL(/[?&]pageSize=24(&|$)/);
