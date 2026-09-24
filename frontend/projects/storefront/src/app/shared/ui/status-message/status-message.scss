@@ -15,8 +15,14 @@
 }
 
 /* Severity looks: a tinted ground and a 4px bar on the left edge (MIM-240).
-   Info is yettel's .information-box: sky ground, navy bar. Warning is
-   yettel's .alert-warning: yellow with dark olive text. */
+   The info ground and the warning pair are yettel's own values: the info
+   ground is .information-box's sky #c4dfe9 with its #002340 text
+   (docs/design/yettel.md §2), the warning colours are .alert-warning's yellow
+   #ffd500 with its #332b00 text (§9, --color-status-warning and
+   --color-status-warning-text). yettel's rules carry no border and no left
+   bar, and .alert-warning's ground is the solid yellow rather than a mix, so
+   the 4px bar and the 22%/12%/8% grounds are this component's own treatment
+   and not yettel's. */
 .root.is-info {
   border-color: var(--color-status-info);
   border-left-color: var(--color-brand-ink);

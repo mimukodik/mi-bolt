@@ -1,11 +1,12 @@
 /* Tailwind utility classes in review-step.html carry the layout, the
-   spacing, the colour and the typography (the @theme / tokens.css
-   values through the utility-(--token) shorthand), the same way
-   delivery-step.html does. This sheet holds only what those utilities
-   cannot express: the data-list row grid (`.row`), the cart-line
-   wrapping flex (`.line`, `.line-body`, `.line-total`), the link-shaped
-   buttons and their focus ring, the consent's data-state colouring,
-   the checkbox accent, and reduced motion. */
+   spacing and the typography (the @theme / tokens.css values through the
+   utility-(--token) shorthand), the same way delivery-step.html does. This
+   sheet holds what those utilities cannot express: the data-list row grid
+   (`.row`), the cart-line wrapping flex (`.line`, `.line-body`,
+   `.line-total`), the link-shaped buttons and their focus ring, the
+   price-change warning look and the consent's invalid ground (both added by
+   MIM-240; the primitive carries the same two treatments in
+   status-message.scss), the checkbox accent, and reduced motion. */
 
 :host {
   display: block;
@@ -88,7 +89,11 @@
 }
 
 /* The price-change notice wears the shared warning look (StatusMessage
-   is-warning, MIM-240): yellow ground, yellow border, 4px bar, olive text. */
+   is-warning, MIM-240): the .alert-warning yellow #ffd500 with its #332b00
+   text (docs/design/yettel.md §9) over a 22% mix of that yellow on
+   --color-surface-light, plus the 4px left bar the primitive also draws.
+   yettel's .alert-warning has neither the mix nor the bar; both are the
+   treatment MIM-240 adds, written out in status-message.scss as well. */
 .price-change {
   border: 1px solid var(--color-status-warning);
   border-left-width: 4px;
