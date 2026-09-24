@@ -4,7 +4,7 @@ import type { AsyncStatus } from '../../types/async-status';
 import type { UiProblem } from '../../types/ui-problem';
 import { EmptyState } from '../empty-state/empty-state';
 import { ErrorState } from '../error-state/error-state';
-import { LoadingState } from '../loading-state/loading-state';
+import { ProductCardSkeleton } from '../product-card-skeleton/product-card-skeleton';
 import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
 
 /**
@@ -38,7 +38,7 @@ import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
  */
 @Component({
   selector: 'app-async-content',
-  imports: [LoadingState, EmptyState, ErrorState, SkeletonLeave],
+  imports: [ProductCardSkeleton, EmptyState, ErrorState, SkeletonLeave],
   templateUrl: './async-content.html',
   styleUrl: './async-content.scss',
 })

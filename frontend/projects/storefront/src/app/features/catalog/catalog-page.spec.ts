@@ -937,11 +937,11 @@ describe('T13-AC05 distinct visual states', () => {
     harness.cleanup();
   });
 
-  it('loading state renders the LoadingState primitive, not the empty placeholder', async () => {
+  it('loading state renders six product card skeletons, not the empty placeholder', async () => {
     const harness = await setupHarness();
     // No response yet: facade is in `loading`.
     const root = getRootElement(harness.fixture);
-    expect(root.querySelector('[data-testid="loading-state"]')).not.toBeNull();
+    expect(root.querySelectorAll('[data-testid="product-card-skeleton"]').length).toBe(6);
     expect(root.querySelector('[data-testid="catalog-empty"]')).toBeNull();
     expect(root.querySelector('[data-testid="catalog-error"]')).toBeNull();
     harness.respond(successPage([], 0));

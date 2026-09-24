@@ -13,14 +13,30 @@
   opacity: 0.85;
 }
 
+/* The catalogue's first load: six product card skeletons in the grid's
+   own columns (docs/design/yettel.md, "Skeleton loaders and their
+   fade-out", "Product card skeleton"). One wrapper spans the grid so a
+   single `appSkeletonLeave` element fades them all. It repeats `.grid`'s
+   columns rather than using `subgrid`: the leave handler pins it
+   `position: absolute`, and an absolutely positioned box is not a grid
+   item, so a subgrid would lose its columns during the fade. */
+.skeleton-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
 @media (min-width: 640px) {
-  .grid {
+  .grid,
+  .skeleton-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
-  .grid {
+  .grid,
+  .skeleton-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
