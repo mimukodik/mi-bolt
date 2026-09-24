@@ -276,6 +276,20 @@ describe('ColorsSection', () => {
     expect(host.model().colors.map((color) => color.code)).toEqual(['', 'fekete', 'ezust']);
   });
 
+  it('disables Feljebb on the first colour', async () => {
+    // Fails if the row menu's [disabled]="first" binding drops off, which is the
+    // only guard against move(index, -1) wrapping the first colour to the end.
+    await openMenu(0);
+    expect(overlayMenuItems().map((item) => item.disabled)).toEqual([true, false, false]);
+  });
+
+  it('disables Lejjebb on the last colour', async () => {
+    // Fails if the row menu's [disabled]="last" binding drops off, which is the
+    // only guard against move(index, 1) wrapping the last colour to the front.
+    await openMenu(1);
+    expect(overlayMenuItems().map((item) => item.disabled)).toEqual([false, true, false]);
+  });
+
   it('shows the list error only after a save attempt', async () => {
     // Fails if arrayError() ignores attempted(), or errorCount() drops its gate.
     host.model.set({ ...emptyProductForm(), colors: [] });
