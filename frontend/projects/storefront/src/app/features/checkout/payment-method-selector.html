@@ -12,7 +12,7 @@
   <ul class="options m-0 mt-(--space-3) p-0 list-none flex flex-col gap-(--space-3)" role="list">
     @for (option of options(); track option.id) {
       <li
-        class="option rounded-(--radius-card) border transition-colors"
+        class="option rounded-(--radius-control)"
         data-testid="payment-option"
         [class.is-active]="isSelected(option.id)"
         [class.is-unavailable]="!option.available"
@@ -36,11 +36,17 @@
             (change)="onSelected(option.id)"
           />
           <span class="option-body flex flex-col gap-(--space-1) min-w-0">
-            <span class="option-row inline-flex items-baseline gap-(--space-2) flex-wrap">
+            <span class="option-row flex items-baseline justify-between gap-(--space-3)">
               <span class="option-title [font-weight:var(--weight-medium)]">{{
                 option.label
               }}</span>
-              <app-price-block label="Fizetési díj" status="success" [money]="option.fee" />
+              <app-price-block
+                label="Fizetési díj"
+                size="md"
+                status="success"
+                [money]="option.fee"
+                [showLabel]="false"
+              />
             </span>
             <span
               class="option-helper leading-(--line-height-body) text-(length:--type-helper) text-(color:--color-text-secondary)"

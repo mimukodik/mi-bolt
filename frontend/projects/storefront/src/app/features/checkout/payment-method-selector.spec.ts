@@ -134,6 +134,30 @@ describe('PaymentMethodSelector', () => {
   });
 
   // -------------------------------------------------------------------------
+  // PM-01b
+  // -------------------------------------------------------------------------
+  it('each fee prints the amount alone at the md size, on the title row pushed to its end', () => {
+    const fixture = createFixture([
+      makeOption('card', { label: 'Bankkártya' }),
+      makeOption('cash_on_delivery', {
+        label: 'Utánvét',
+        fee: { amount: 490, currency: 'HUF' },
+      }),
+    ]);
+    const root = getRootElement(fixture);
+    const blocks = Array.from(
+      root.querySelectorAll('[data-testid="payment-option"] app-price-block'),
+    );
+    expect(blocks.length).toBe(2);
+    for (const block of blocks) {
+      expect(block.querySelector('.label')).toBeNull();
+      expect(getElement(block, '.root').getAttribute('data-size')).toBe('md');
+      expect(block.parentElement?.classList.contains('justify-between')).toBe(true);
+    }
+    expect(root.textContent).not.toContain('Fizetési díj');
+  });
+
+  // -------------------------------------------------------------------------
   // PM-02
   // -------------------------------------------------------------------------
   it('no payment method is preselected', () => {
