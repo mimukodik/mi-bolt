@@ -88,7 +88,7 @@ class CartApiTest {
 				.andExpect(jsonPath("$.items[0].variantId").value(NAVY_128))
 				.andExpect(jsonPath("$.items[0].variantSlug").isString())
 				.andExpect(jsonPath("$.items[0].productSlug").value("samsung-galaxy-s25"))
-				.andExpect(jsonPath("$.items[0].productName").value("Samsung Galaxy S25"))
+				.andExpect(jsonPath("$.items[0].productName").value("Galaxy S25"))
 				.andExpect(jsonPath("$.items[0].colorName").value("Sötétkék"))
 				.andExpect(jsonPath("$.items[0].storageGb").value(128))
 				.andExpect(jsonPath("$.items[0].image.src").value("/api/v1/media/" + NAVY_SHA))

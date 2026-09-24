@@ -475,7 +475,7 @@ class CartServiceTest {
 		assertThat(line.variantSlug()).isEqualTo(VARIANT_SLUG);
 		assertThat(line.productId()).isEqualTo("42");
 		assertThat(line.productSlug()).isEqualTo("samsung-galaxy-s25");
-		assertThat(line.productName()).isEqualTo("Samsung Galaxy S25");
+		assertThat(line.productName()).isEqualTo("Galaxy S25");
 		assertThat(line.colorName()).isEqualTo("Sötétkék");
 		assertThat(line.storageGb()).isEqualTo(128);
 		assertThat(line.quantity()).isEqualTo(2);

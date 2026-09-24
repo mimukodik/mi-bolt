@@ -255,7 +255,7 @@ public class CartService {
 					v.getSlug(),
 					String.valueOf(v.getProduct().getId()),
 					v.getProduct().getSlug(),
-					v.getProduct().getBrand() + " " + v.getProduct().getName(),
+					v.getProduct().getName(),
 					v.getColor().getName(),
 					v.getStorageGb(),
 					CatalogService.toImageData(v.getColor()),

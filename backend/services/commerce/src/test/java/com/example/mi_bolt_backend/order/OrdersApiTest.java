@@ -93,7 +93,7 @@ class OrdersApiTest {
 					.andExpect(jsonPath("$.status").value("confirmed"))
 					.andExpect(jsonPath("$.items.length()").value(1))
 					.andExpect(jsonPath("$.items[0].variantId").value(NAVY_128))
-					.andExpect(jsonPath("$.items[0].productName").value("Samsung Galaxy S25"))
+					.andExpect(jsonPath("$.items[0].productName").value("Galaxy S25"))
 					.andExpect(jsonPath("$.items[0].colorName").value("Sötétkék"))
 					.andExpect(jsonPath("$.items[0].storageGb").value(128))
 					.andExpect(jsonPath("$.items[0].quantity").value(1))
