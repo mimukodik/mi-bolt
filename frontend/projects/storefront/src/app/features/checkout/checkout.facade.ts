@@ -481,6 +481,16 @@ export class CheckoutFacade {
             await this.recordPriceChange(error);
             return { ok: false, error };
           }
+          // The server refuses an intent the facade thought paid, so the
+          // review asks for a new payment instead of redirecting to a used
+          // one.
+          if (
+            error.code === 'PAYMENT_REQUIRED' &&
+            this.paymentIntentWritable()?.status === 'succeeded'
+          ) {
+            this.paymentIntentWritable.set(null);
+            checkoutKeys.clearActiveIntentId();
+          }
           if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateOrderKey();
           }

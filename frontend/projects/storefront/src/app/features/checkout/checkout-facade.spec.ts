@@ -956,6 +956,39 @@ describe('payment intents', () => {
     expect(checkoutKeys.activeIntentId()).toBeNull();
   });
 
+  it('F-31e: a 422 PAYMENT_REQUIRED for an intent the facade holds as succeeded drops it', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:payment-required',
+            title: 'Payment required',
+            status: 422,
+            code: 'PAYMENT_REQUIRED',
+            detail: 'The referenced payment intent already backs an order.',
+            params: {},
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 422, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.code).toBe('PAYMENT_REQUIRED');
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
   it('F-31f: a section write after the cart changed drops the intent the new total no longer matches', async () => {
     const { checkout } = await setupPaidCardDraft();
     const cart = TestBed.inject(CartFacade);
