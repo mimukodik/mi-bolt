@@ -170,6 +170,9 @@ test.describe('Smoke: purchase on the real stack', () => {
       await expect(page.getByTestId('review-payment')).toContainText('Utánvét');
       await page.getByTestId('review-consent-terms-input').check();
       await expect(page.getByTestId('review-consent-terms-input')).toBeChecked();
+      // The CTA stays enabled while options load so a user can request an
+      // explanation. Wait for actual checkout readiness before submitting.
+      await expect(page.getByTestId('review-page')).toHaveAttribute('data-status', 'ready');
       await expect(page.getByTestId('review-submit').getByRole('button')).toBeEnabled();
       await page.getByTestId('review-submit').getByRole('button').click();
     });

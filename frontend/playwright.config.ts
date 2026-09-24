@@ -172,8 +172,17 @@ export default defineConfig({
     {
       name: 'smoke',
       testDir: './e2e/smoke',
+      // Hosted previews cross the public proxy; wait for asynchronous page/API
+      // updates without retrying the purchase. Local assertions keep 5 seconds.
+      expect: { timeout: suppliedBaseURL?.startsWith('https://') ? 15_000 : 5_000 },
       // Signed in to the demo access gate by the global setup (MIM-423).
-      use: { ...devices['Desktop Chrome'], ...fullHd, storageState: DEMO_STORAGE_STATE },
+      use: {
+        ...devices['Desktop Chrome'],
+        ...fullHd,
+        storageState: DEMO_STORAGE_STATE,
+        // Preserve the original failure, not only its retry, for network diagnosis.
+        trace: 'retain-on-failure',
+      },
     },
   ],
   // A supplied base URL is already serving: no local server is started for it.
