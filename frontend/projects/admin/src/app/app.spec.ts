@@ -1,10 +1,21 @@
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { HttpBackend, HttpXhrBackend } from '@angular/common/http';
+import {
+  FetchBackend,
+  HttpBackend,
+  HttpClient,
+  HttpContext,
+  HttpResponse,
+  HttpXhrBackend,
+} from '@angular/common/http';
+import type { HttpEvent, HttpRequest } from '@angular/common/http';
+import { of } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 
 import { App } from './app';
 import { appConfig } from './app.config';
+import { USE_XHR } from './core/api/transport.interceptor';
 
 /**
  * The root component is an empty shell: the admin's own screens arrive in
@@ -31,8 +42,26 @@ describe('App', () => {
     expect(TestBed.inject(LOCALE_ID)).toBe('hu-HU');
   });
 
-  it('backs HttpClient with the XHR backend', () => {
-    expect(TestBed.inject(HttpBackend)).toBeInstanceOf(HttpXhrBackend);
+  it('backs HttpClient with the default fetch backend', () => {
+    expect(TestBed.inject(HttpBackend)).toBeInstanceOf(FetchBackend);
+  });
+
+  it('hands a request marked USE_XHR to the XHR backend (transportInterceptor)', () => {
+    const urls: string[] = [];
+    TestBed.overrideProvider(HttpXhrBackend, {
+      useValue: {
+        handle: (request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> => {
+          urls.push(request.url);
+          return of(new HttpResponse({ status: 200 }));
+        },
+      } satisfies HttpBackend,
+    });
+
+    TestBed.inject(HttpClient)
+      .get('/api/v1/admin/media', { context: new HttpContext().set(USE_XHR, true) })
+      .subscribe();
+
+    expect(urls).toEqual(['/api/v1/admin/media']);
   });
 
   it('provides no mat-icon default options, so Angular Material stays out of the initial bundle (MIM-404)', () => {

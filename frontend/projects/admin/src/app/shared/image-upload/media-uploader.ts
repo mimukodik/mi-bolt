@@ -1,4 +1,4 @@
-import { HttpClient, HttpEventType } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpEventType } from '@angular/common/http';
 import type { HttpEvent } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
@@ -8,6 +8,8 @@ import { ApiConfiguration } from '../../api/generated/api-configuration';
 import { uploadAdminMedia } from '../../api/generated/fn/admin-media/upload-admin-media';
 import type { UploadedImage } from '../../api/generated/models/uploaded-image';
 import { RequestBuilder } from '../../api/generated/request-builder';
+
+import { USE_XHR } from '../../core/api/transport.interceptor';
 
 /** One event of an in-progress upload: a percent tick, or the finished image. */
 export type UploadProgress =
@@ -41,7 +43,9 @@ function toUploadProgress(event: HttpEvent<UploadedImage>): Observable<UploadPro
  * Uploads a file to `POST /admin/media`. Builds the request with the
  * generated `RequestBuilder` directly, rather than through the generated
  * `uploadAdminMedia` function, because that function's `HttpResponse` filter
- * drops the upload-progress events this control needs.
+ * drops the upload-progress events this control needs. The request carries
+ * `USE_XHR`, so `transportInterceptor` sends it through the XHR backend: the
+ * default fetch backend reports no upload progress.
  */
 @Service()
 export class MediaUploader {
@@ -62,6 +66,7 @@ export class MediaUploader {
           responseType: 'json',
           accept: 'application/json',
           reportProgress: true,
+          context: new HttpContext().set(USE_XHR, true),
         }),
       )
       .pipe(mergeMap((event) => toUploadProgress(event)));
