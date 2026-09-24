@@ -12,7 +12,7 @@ permissions:
   pull-requests: read
 
 # Serialize tag creation and chart publication. A later trigger rechecks the
-# live PR head before it publishes a receipt.
+# live PR or main head before it publishes a receipt.
 concurrency:
   group: publish-candidate-${{ github.repository }}
   cancel-in-progress: false
@@ -32,7 +32,7 @@ jobs:
       - uses: azure/setup-helm@v4
         with:
           version: v4.2.2
-      - name: Require matching successful CI and build runs on an open PR
+      - name: Require matching successful CI and build runs on the current PR or main head
         id: candidate
         working-directory: trusted
         env:
@@ -81,7 +81,7 @@ jobs:
         if: steps.candidate.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: candidate-receipt
+          name: ${{ steps.candidate.outputs.pr == '0' && 'stable-release-receipt' || 'candidate-receipt' }}
           path: published/candidate.json
           if-no-files-found: error
           retention-days: 30
