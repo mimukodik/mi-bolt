@@ -87,10 +87,19 @@
   cursor: pointer;
 }
 
+/* The price-change notice wears the shared warning look (StatusMessage
+   is-warning, MIM-240): yellow ground, yellow border, 4px bar, olive text. */
+.price-change {
+  border: 1px solid var(--color-status-warning);
+  border-left-width: 4px;
+  background: color-mix(in srgb, var(--color-status-warning) 22%, var(--color-surface-light));
+  color: var(--color-status-warning-text);
+}
+
 .consent[data-state='touched-invalid'],
 .consent[data-state='submitted-invalid'] {
   border-color: var(--color-status-error);
-  background: var(--color-brand-accent-soft);
+  background: color-mix(in srgb, var(--color-status-error) 8%, var(--color-surface-light));
 }
 
 .checkbox {

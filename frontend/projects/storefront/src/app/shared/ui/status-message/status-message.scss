@@ -9,23 +9,34 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-control);
   border: 1px solid var(--color-border-subtle);
+  border-left-width: 4px;
   background: var(--color-surface-light);
   color: var(--color-text-primary);
 }
 
+/* Severity looks: a tinted ground and a 4px bar on the left edge (MIM-240).
+   Info is yettel's .information-box: sky ground, navy bar. Warning is
+   yettel's .alert-warning: yellow with dark olive text. */
 .root.is-info {
   border-color: var(--color-status-info);
-  background: var(--color-surface-light);
+  border-left-color: var(--color-brand-ink);
+  background: var(--color-status-info);
 }
 
 .root.is-success {
   border-color: var(--color-status-success);
-  background: var(--color-surface-light);
+  background: color-mix(in srgb, var(--color-status-success) 12%, var(--color-surface-light));
+}
+
+.root.is-warning {
+  border-color: var(--color-status-warning);
+  background: color-mix(in srgb, var(--color-status-warning) 22%, var(--color-surface-light));
+  color: var(--color-status-warning-text);
 }
 
 .root.is-error {
   border-color: var(--color-status-error);
-  background: var(--color-surface-light);
+  background: color-mix(in srgb, var(--color-status-error) 8%, var(--color-surface-light));
 }
 
 .message {
