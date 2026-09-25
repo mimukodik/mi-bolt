@@ -50,10 +50,8 @@ import { LoadingState } from '../../shared/ui/loading-state/loading-state';
 import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { Button } from '../../shared/ui/button/button';
 import { StatusMessage, type StatusSeverity } from '../../shared/ui/status-message/status-message';
-import { isRecord } from '../../shared/utils/is-record';
 
 import type { Cart } from '@mi-bolt/api/models/cart';
-import type { CartItem } from '@mi-bolt/api/models/cart-item';
 import type { CartNotice } from '@mi-bolt/api/models/cart-notice';
 import type { Money } from '@mi-bolt/api/models/money';
 
@@ -72,19 +70,12 @@ function describeCartError(facade: CartFacade): string {
   return 'A kosár betöltése sikertelen.';
 }
 
-function describeNotice(
-  notice: CartNotice,
-  items: readonly CartItem[],
-  knownName: (variantId: string) => string | null,
-): string {
-  const lineName = items.find((item) => item.variantId === notice.variantId)?.productName;
-  const seenName =
-    lineName === undefined && notice.variantId !== undefined ? knownName(notice.variantId) : null;
-  const subject = lineName ?? seenName ?? 'Egy termék';
+function describeNotice(notice: CartNotice): string {
+  const subject = notice.productName ?? 'Egy termék';
   if (notice.code === 'QUANTITY_REDUCED') {
-    const from = readNumberParam(notice, 'from');
-    const to = readNumberParam(notice, 'to');
-    if (from !== null && to !== null) {
+    const from = notice.params?.from;
+    const to = notice.params?.to;
+    if (from !== undefined && to !== undefined) {
       return `${subject}: a mennyiséget ${String(from)} → ${String(to)} darabra csökkentettük a készlet miatt.`;
     }
     return `${subject}: a mennyiséget a készlethez igazítottuk.`;
@@ -93,15 +84,6 @@ function describeNotice(
     return `${subject} kikerült a kosárból, mert már nem kapható.`;
   }
   return `${subject}: az ár megváltozott.`;
-}
-
-function readNumberParam(notice: CartNotice, key: string): number | null {
-  const params = notice.params;
-  if (!isRecord(params)) {
-    return null;
-  }
-  const value = params[key];
-  return typeof value === 'number' ? value : null;
 }
 
 /** The same lines as on screen: every variant, quantity and unit price, in any order. */
@@ -185,9 +167,7 @@ export class CartPage {
   readonly noticeMessages = computed<readonly string[]>(() => {
     const cart = this.cart();
     if (cart === null) return [];
-    return cart.notices.map((notice) =>
-      describeNotice(notice, cart.items, (id) => this.facade.productNameOf(id)),
-    );
+    return cart.notices.map((notice) => describeNotice(notice));
   });
 
   /** Summary footnote copy shown under the total. The shipping fee

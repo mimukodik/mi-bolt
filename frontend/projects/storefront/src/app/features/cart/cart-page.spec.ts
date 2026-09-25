@@ -802,7 +802,12 @@ describe('S2-C notices: server reconcile notices render one status message each'
       totalQuantity: 3,
       subtotal: { amount: UNIT_PRICE_MOTO * 3, currency: 'HUF' },
       notices: [
-        { code: 'QUANTITY_REDUCED', variantId: VARIANT_MOTO_256, params: { from: 5, to: 3 } },
+        {
+          code: 'QUANTITY_REDUCED',
+          variantId: VARIANT_MOTO_256,
+          productName: 'Motorola Edge 50 Fusion',
+          params: { from: 5, to: 3 },
+        },
       ],
     });
     await fixture.whenStable();
@@ -851,8 +856,16 @@ describe('S2-C notices: server reconcile notices render one status message each'
     fixture.detectChanges();
 
     const notices: CartNotice[] = [
-      { code: 'PRICE_CHANGED', variantId: VARIANT_MOTO_256 },
-      { code: 'QUANTITY_REDUCED', variantId: VARIANT_MOTO_256 },
+      {
+        code: 'PRICE_CHANGED',
+        variantId: VARIANT_MOTO_256,
+        productName: 'Motorola Edge 50 Fusion',
+      },
+      {
+        code: 'QUANTITY_REDUCED',
+        variantId: VARIANT_MOTO_256,
+        productName: 'Motorola Edge 50 Fusion',
+      },
     ];
     cartFacade._seedCart({
       id: 'seeded-cart',
@@ -877,18 +890,9 @@ describe('S2-C notices: server reconcile notices render one status message each'
     expect(noticeHosts.length).toBe(2);
   });
 
-  it('names the product of an ITEM_REMOVED line the cart carried before', async () => {
+  it('names an ITEM_REMOVED product from the notice, for a variant the page never saw', async () => {
     const cartFacade = TestBed.inject(CartFacade);
-    await cartFacade.addItem(VARIANT_MOTO_256, 2);
-
-    const loaded = cartFacade.cart();
-    if (loaded === null) throw new Error('the cart was not loaded');
-    const name = loaded.items.find((item) => item.variantId === VARIANT_MOTO_256)?.productName;
-    expect(typeof name).toBe('string');
-    if (typeof name !== 'string' || name.length === 0) {
-      throw new Error('the cart line carries no product name');
-    }
-
+    await cartFacade.ensureCart();
     cartFacade._seedCart({
       id: 'seeded-cart',
       version: 3,
@@ -896,7 +900,14 @@ describe('S2-C notices: server reconcile notices render one status message each'
       lineCount: 0,
       totalQuantity: 0,
       subtotal: { amount: 0, currency: 'HUF' },
-      notices: [{ code: 'ITEM_REMOVED', variantId: VARIANT_MOTO_256, params: { quantity: 2 } }],
+      notices: [
+        {
+          code: 'ITEM_REMOVED',
+          variantId: 'never-seen-variant',
+          productName: 'Samsung Galaxy S25',
+          params: { quantity: 2 },
+        },
+      ],
     });
 
     const fixture = TestBed.createComponent(CartPage);
@@ -906,9 +917,68 @@ describe('S2-C notices: server reconcile notices render one status message each'
     const root = getRootElement(fixture);
     const notices = root.querySelectorAll('[data-testid="cart-notice"]');
     expect(notices.length).toBe(1);
-    const message = notices[0].querySelector('.message')?.textContent.trim();
-    expect(message).toBe(`${name} kikerült a kosárból, mert már nem kapható.`);
-    expect(message).not.toContain('Egy termék');
+    expect(notices[0].querySelector('.message')?.textContent.trim()).toBe(
+      'Samsung Galaxy S25 kikerült a kosárból, mert már nem kapható.',
+    );
+  });
+
+  it('takes the name from the notice, not from the cart line', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    cartFacade._seedCart({
+      id: 'seeded-cart',
+      version: 3,
+      items: [DEMO_CART_ITEM],
+      lineCount: 1,
+      totalQuantity: 2,
+      subtotal: { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' },
+      notices: [
+        { code: 'PRICE_CHANGED', variantId: VARIANT_MOTO_256, productName: 'Szerver neve' },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const notices = root.querySelectorAll('[data-testid="cart-notice"]');
+    expect(notices.length).toBe(1);
+    expect(notices[0].querySelector('.message')?.textContent.trim()).toBe(
+      'Szerver neve: az ár megváltozott.',
+    );
+  });
+
+  it('falls back to the plain quantity sentence when a QUANTITY_REDUCED carries only from', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await cartFacade.ensureCart();
+    cartFacade._seedCart({
+      id: 'seeded-cart',
+      version: 3,
+      items: [DEMO_CART_ITEM],
+      lineCount: 1,
+      totalQuantity: 2,
+      subtotal: { amount: UNIT_PRICE_MOTO * 2, currency: 'HUF' },
+      notices: [
+        {
+          code: 'QUANTITY_REDUCED',
+          variantId: VARIANT_MOTO_256,
+          productName: 'Motorola Edge 50 Fusion',
+          params: { from: 5 },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = getRootElement(fixture);
+    const notices = root.querySelectorAll('[data-testid="cart-notice"]');
+    expect(notices.length).toBe(1);
+    expect(notices[0].querySelector('.message')?.textContent.trim()).toBe(
+      'Motorola Edge 50 Fusion: a mennyiséget a készlethez igazítottuk.',
+    );
   });
 });
 
