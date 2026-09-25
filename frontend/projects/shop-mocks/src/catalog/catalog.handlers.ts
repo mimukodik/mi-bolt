@@ -15,7 +15,9 @@
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
+import type { Image } from '@mi-bolt/api/models/image';
 import type { Problem } from '@mi-bolt/api/models/problem';
+import type { Product } from '@mi-bolt/api/models/product';
 
 import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
 import { faultResponse, slowOnce } from '../faults';
@@ -157,6 +159,41 @@ function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
   });
 }
 
+/**
+ * E048 — `?mi-scenario=gallery-several-images` makes the product read
+ * give every variant the product's other colour photos after its own,
+ * so the gallery's several-photo state (previous/next, the counter,
+ * one thumbnail per photo) can be exercised; the catalogue store is
+ * not changed, so the catalogue card and the cart line still show the
+ * variant's own first photo.
+ */
+export const GALLERY_SEVERAL_IMAGES_SCENARIO = 'gallery-several-images';
+
+/**
+ * Returns a new product whose every variant carries its own photos
+ * first, then every other image of the product that variant does not
+ * already have — each image id once, in the order the product's
+ * variants first carry them. Never mutates its argument: the product,
+ * its variants and their image arrays are all new objects.
+ */
+export function withEveryColourImage(product: Product): Product {
+  const shared: Image[] = [];
+  const seen = new Set<string>();
+  for (const variant of product.variants) {
+    for (const image of variant.images) {
+      if (seen.has(image.id)) continue;
+      seen.add(image.id);
+      shared.push(image);
+    }
+  }
+  const variants = product.variants.map((variant) => {
+    const owned = new Set(variant.images.map((image) => image.id));
+    const extra = shared.filter((image) => !owned.has(image.id));
+    return { ...variant, images: [...variant.images, ...extra] };
+  });
+  return { ...product, variants };
+}
+
 /** Build the `getProduct` handler. */
 function getProductHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products/:slug', async ({ params }) => {
@@ -168,6 +205,9 @@ function getProductHandler(options: CreateHandlersOptions): RequestHandler {
     const product = store.getProduct(slug);
     if (product === undefined) {
       return notFoundProblem(options, 'product not found', { slug });
+    }
+    if (options.scenario.name === GALLERY_SEVERAL_IMAGES_SCENARIO) {
+      return HttpResponse.json(withEveryColourImage(product));
     }
     return HttpResponse.json(product);
   });
