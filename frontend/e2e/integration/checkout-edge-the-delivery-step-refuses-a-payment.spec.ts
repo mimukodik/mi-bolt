@@ -210,11 +210,10 @@ test.describe('Checkout: edge paths', () => {
         await expect(page).toHaveURL(/\/penztar\/szallitas$/);
         await expect(page.getByTestId('delivery-step')).toBeVisible();
 
-        // The container's banner carries the wire's own detail followed by the
-        // shared "nothing was lost" sentence, so its tail is asserted rather
-        // than the whole string.
+        // The banner shows only the fixed "nothing was lost" sentence: the
+        // server's own detail never reaches it.
         await expect(page.getByTestId('delivery-save-failure-detail')).toHaveText(
-          /A kosarad és az adataid megmaradtak\. Próbáld újra\.$/,
+          'A kosarad és az adataid megmaradtak. Próbáld újra.',
         );
         await expect(page.getByTestId('delivery-save-failure')).toContainText(
           'A mentés sikertelen. Próbáld újra.',
