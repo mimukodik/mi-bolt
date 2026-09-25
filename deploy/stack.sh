@@ -47,6 +47,21 @@ SLOTS_DIR="${MIBOLT_STACK_SLOTS_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/mi-bo
 # registered right after release_lock is defined.
 LOCK_DIR=""
 
+# Set by reclaim_lock/release_lock below, for the same traps: the reclaim
+# mutex a process holds, if any, while it inspects a lock dir for staleness
+# and removes it (see reclaim_lock).
+RECLAIM_MUTEX=""
+
+# How long acquire_lock waits for a contended lock before giving up, and
+# also the age a pid-less lock directory must reach before lock_is_stale
+# treats it as stale: a fresh mkdir can only lack its pid file for the
+# instant between the mkdir and the `echo > pid` right after it, far under
+# this, so a lock this young is never reclaimed out from under a holder
+# still in the middle of acquiring it.
+LOCK_RETRY_TRIES=50
+LOCK_RETRY_INTERVAL=0.1
+LOCK_STALE_SECONDS=5
+
 # Prints the whole leading comment block (from the line after the shebang up
 # to the first non-comment line), whatever its length, with the "# " prefix
 # stripped.
@@ -140,11 +155,19 @@ port_in_use() {
   wait "${pid}"
 }
 
-# Releases the per-worktree lock acquire_lock took, if any. Idempotent, and
-# armed as a trap right below so it fires on a normal exit, an error exit
-# under `set -e`, or an interrupt while the lock is held.
+# Releases the per-worktree lock acquire_lock took and the reclaim mutex
+# reclaim_lock took, if either is held. Idempotent, and armed as a trap right
+# below so it fires on a normal exit, an error exit under `set -e`, or an
+# interrupt while either is held. The lock directory holds a `pid` file (see
+# acquire_lock), so it has to come out before the `rmdir`, which only
+# succeeds on an empty directory.
 release_lock() {
+  if [ -n "${RECLAIM_MUTEX}" ]; then
+    rmdir "${RECLAIM_MUTEX}" 2>/dev/null || true
+    RECLAIM_MUTEX=""
+  fi
   if [ -n "${LOCK_DIR}" ]; then
+    rm -f "${LOCK_DIR}/pid" 2>/dev/null || true
     rmdir "${LOCK_DIR}" 2>/dev/null || true
     LOCK_DIR=""
   fi
@@ -153,25 +176,106 @@ trap release_lock EXIT
 trap 'release_lock; exit 130' INT
 trap 'release_lock; exit 143' TERM
 
+# Prints the lock directory path for a given worktree root, without taking
+# it. worktree defaults to this run's own REPO_ROOT, which is what every
+# caller except cmd_prune wants: cmd_prune locks a *different*, stale
+# worktree's slot while it deletes it, so it never contends with this run's
+# own lock.
+lock_dir_for() {
+  local worktree="$1" hash
+  hash="$(printf '%s' "${worktree}" | sha1_hex | cut -c1-12)"
+  printf '%s' "${SLOTS_DIR}/.lock-${hash}"
+}
+
+# True (status 0) when the lock dir at $1 is stale and safe to reclaim,
+# false (status 1) otherwise. A lock records its holder's PID in a `pid`
+# file the instant after it is created (see acquire_lock); a PID that is no
+# longer alive means the holder crashed, was SIGKILLed, or was OOM-killed
+# without ever reaching release_lock. A lock with no `pid` file is either
+# the same situation left by an older run of this script, or another
+# acquire_lock call caught in the tiny window between its `mkdir` and its
+# `echo > pid`; the second case is why a pid-less lock is only stale once it
+# has outlived LOCK_STALE_SECONDS, the same span acquire_lock itself spends
+# waiting before giving up.
+lock_is_stale() {
+  local dir="$1" pid mtime now
+  if [ -f "${dir}/pid" ]; then
+    pid="$(cat "${dir}/pid" 2>/dev/null)" || pid=""
+    if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
+      return 1
+    fi
+    return 0
+  fi
+  mtime="$(stat -f %m "${dir}" 2>/dev/null)" || mtime="$(stat -c %Y "${dir}" 2>/dev/null)" || return 1
+  now="$(date +%s)"
+  [ $((now - mtime)) -ge "${LOCK_STALE_SECONDS}" ]
+}
+
+# Reclaims lock_dir ($1) if and only if it is stale, and guarantees that a
+# live lock is never removed even when several processes race to reclaim the
+# same stale one. The guarantee comes from making the check and the removal
+# one critical section: only the process that holds the reclaim mutex
+# (`mkdir "${lock_dir}.reclaim"`, itself dot-prefixed like lock_dir so the
+# slot globs never see it either) is allowed to call lock_is_stale on
+# lock_dir and then remove it, and that mkdir is atomic, so at most one
+# process ever holds the mutex for a given lock_dir at a time. Every other
+# contender's `mkdir "${mutex}"` just fails and returns immediately (status
+# 1); acquire_lock's own retry loop is what makes them try again, not a
+# retry loop in here. Because nothing outside this critical section ever
+# removes lock_dir, and a dead holder never runs release_lock to recreate
+# it, no process can end up removing a directory that was freshly created
+# and is now live: by the time any process's lock_is_stale call runs, it is
+# the sole holder of the mutex, and the removal that may follow targets
+# exactly the directory that call just inspected, not whatever might be
+# sitting at that path a moment later. The mutex is released before
+# returning on every path, and by the EXIT/INT/TERM traps (via release_lock)
+# if this process dies first; a crash between the `mkdir` and the `rmdir`
+# below leaks the mutex, but the window is one stat call, at most one
+# `rm -rf`, and one `rmdir`, with no sleep anywhere in it.
+reclaim_lock() {
+  local lock_dir="$1" removed=1
+  local mutex="${lock_dir}.reclaim"
+  mkdir "${mutex}" 2>/dev/null || return 1
+  RECLAIM_MUTEX="${mutex}"
+  if [ -d "${lock_dir}" ] && lock_is_stale "${lock_dir}"; then
+    rm -rf "${lock_dir}"
+    removed=0
+  fi
+  rmdir "${mutex}" 2>/dev/null || true
+  RECLAIM_MUTEX=""
+  return "${removed}"
+}
+
 # Serializes ensure_state's check-claim-write sequence across two `stack.sh`
 # runs in the same worktree, so they cannot both miss find_existing_slot and
-# both claim a (different) slot, leaking one forever. The lock directory's
-# name starts with '.', so it is invisible to every `"${SLOTS_DIR}"/*/` glob
-# used to enumerate slots elsewhere in this script (bash's `*` does not match
+# both claim a (different) slot, leaking one forever; also used by cmd_reset
+# around its own worktree's delete sequence, and by cmd_prune around a stale
+# slot's delete, keyed to that slot's own (no-longer-existing) worktree so it
+# never contends with this run's own lock. The lock directory's name starts
+# with '.', so it is invisible to every `"${SLOTS_DIR}"/*/` glob used to
+# enumerate slots elsewhere in this script (bash's `*` does not match
 # dotfiles by default) and is never mistaken for a slot.
 acquire_lock() {
+  local worktree="${1:-${REPO_ROOT}}"
   mkdir -p "${SLOTS_DIR}"
-  local hash lock_dir tries=50 _try
-  hash="$(printf '%s' "${REPO_ROOT}" | sha1_hex | cut -c1-12)"
-  lock_dir="${SLOTS_DIR}/.lock-${hash}"
-  for _try in $(seq 1 "${tries}"); do
+  local lock_dir _try
+  lock_dir="$(lock_dir_for "${worktree}")"
+  for _try in $(seq 1 "${LOCK_RETRY_TRIES}"); do
     if mkdir "${lock_dir}" 2>/dev/null; then
+      echo "$$" > "${lock_dir}/pid" 2>/dev/null || true
       LOCK_DIR="${lock_dir}"
       return 0
     fi
-    sleep 0.1
+    # reclaim_lock alone decides staleness, under its own mutex (see its
+    # comment); it returns 0 only when it actually removed a stale lock, in
+    # which case retry mkdir at once instead of sleeping first.
+    if reclaim_lock "${lock_dir}"; then
+      continue
+    fi
+    sleep "${LOCK_RETRY_INTERVAL}"
   done
-  echo "stack.sh: timed out waiting for the per-worktree lock ${lock_dir} (held by another stack.sh run in this worktree?)" >&2
+  echo "stack.sh: timed out waiting for the per-worktree lock ${lock_dir} (held by another stack.sh run there?)" >&2
+  echo "stack.sh: if no stack.sh run is actually active there, clear it manually with: rm -rf ${lock_dir} ${lock_dir}.reclaim" >&2
   exit 1
 }
 
@@ -239,6 +343,29 @@ MIBOLT_SHOP_ORIGIN=http://localhost:${web}
 EOF
 }
 
+# Sets PROJECT_NAME for a slot this worktree already owns (find_existing_slot
+# matched it), from the owner file's own project= line rather than
+# recomputing it from the current branch: a branch change since the slot was
+# claimed would otherwise compute a different name than the one the running
+# containers, the volume, and the owner file itself already carry. Only
+# recomputes, and writes the result back into the owner file, when that line
+# is empty or the file is unreadable, so 'slots' and 'prune', which also read
+# only the owner file, go on seeing the same name this run just used.
+reuse_project_name() {
+  local slot="$1" owner_file project
+  owner_file="${SLOTS_DIR}/${slot}/owner"
+  project="$(sed -n 's/^project=//p' "${owner_file}" 2>/dev/null)" || project=""
+  if [ -n "${project}" ]; then
+    PROJECT_NAME="${project}"
+    return 0
+  fi
+  PROJECT_NAME="$(project_name_for_slot "${BRANCH}" "${slot}")"
+  if [ -f "${owner_file}" ]; then
+    { grep -v '^project=' "${owner_file}" 2>/dev/null || true; echo "project=${PROJECT_NAME}"; } \
+      > "${owner_file}.tmp" && mv "${owner_file}.tmp" "${owner_file}"
+  fi
+}
+
 ensure_state() {
   if [ -f "${STATE_FILE}" ]; then
     return 0
@@ -257,6 +384,7 @@ ensure_state() {
   slot="$(find_existing_slot)" || true
   if [ -n "${slot}" ]; then
     echo "stack.sh: reusing slot ${slot} already claimed by this worktree" >&2
+    reuse_project_name "${slot}"
   else
     if ! slot="$(claim_slot)"; then
       echo "stack.sh: no free slot among ${SLOT_COUNT} in ${SLOTS_DIR}" >&2
@@ -264,9 +392,9 @@ ensure_state() {
       release_lock
       exit 1
     fi
+    PROJECT_NAME="$(project_name_for_slot "${BRANCH}" "${slot}")"
   fi
 
-  PROJECT_NAME="$(project_name_for_slot "${BRANCH}" "${slot}")"
   guard_not_default_project "${PROJECT_NAME}"
   write_state "${slot}"
   release_lock
@@ -418,9 +546,15 @@ cmd_reset() {
     fi
   fi
 
+  # Takes the same per-worktree lock ensure_state uses, so this delete
+  # sequence cannot interleave with a concurrent ensure_state in this same
+  # worktree (for example one racing to reuse this very slot right as it is
+  # being released).
+  acquire_lock
   "${COMPOSE_SH}" down -v
   rm -f "${STATE_FILE}"
   rm -rf "${SLOTS_DIR}/${STACK_SLOT:?}"
+  release_lock
   echo "stack.sh: reset complete, slot ${STACK_SLOT} released"
 }
 
@@ -484,12 +618,25 @@ cmd_prune() {
       continue
     fi
 
+    # Locked with the slot's own (now nonexistent) worktree path: the same
+    # lock a live stack.sh in that worktree would have taken, so it never
+    # contends with this run's own per-worktree lock, and it stops two
+    # concurrent prunes from both running 'down -v' and 'rm -rf' on the same
+    # stale slot at once. The dir is re-checked once the lock is held, since
+    # a concurrent prune may have already removed it while this one waited.
+    acquire_lock "${owner_path}"
+    if [ ! -d "${dir}" ]; then
+      echo "stack.sh: slot ${n} was already pruned by a concurrent run" >&2
+      release_lock
+      continue
+    fi
     echo "stack.sh: pruning slot ${n}, project ${project}"
     if COMPOSE_PROJECT_NAME="${project}" MIBOLT_POSTGRES_VOLUME="${project}-pgdata" "${COMPOSE_SH}" down -v; then
       rm -rf "${dir}"
     else
       echo "stack.sh: down -v failed for project ${project}; slot ${n} kept" >&2
     fi
+    release_lock
   done
 }
 
