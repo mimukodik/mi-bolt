@@ -32,6 +32,7 @@ import type { Subscription } from 'rxjs';
 import {
   catchError,
   distinctUntilChanged,
+  EMPTY,
   finalize,
   map,
   of,
@@ -145,6 +146,11 @@ export class ProductFacade {
    *  change arrives, so the related call subscribes separately and is
    *  torn down on the next route change. */
   private relatedSub: Subscription | null = null;
+  /** In-flight silent refresh (`refreshProduct`). A second refresh, or a
+   *  route change, cancels it, so the same rule the product stream
+   *  follows holds here too: a slow older response never overwrites a
+   *  newer one. */
+  private refreshSub: Subscription | null = null;
   /** Monotonic counter so rapid retry clicks survive distinctUntilChanged. */
   private retryNonceCounter = 0;
 
@@ -179,6 +185,13 @@ export class ProductFacade {
             this.relatedSub.unsubscribe();
             this.relatedSub = null;
           }
+          // The same for a silent refresh: once the route has moved on,
+          // its response belongs to a screen that is no longer up, even
+          // where the route comes back to the same slug.
+          if (this.refreshSub !== null) {
+            this.refreshSub.unsubscribe();
+            this.refreshSub = null;
+          }
           this.relatedSignal.set([]);
           this.relatedLoadingSignal.set(false);
         }),
@@ -209,6 +222,10 @@ export class ProductFacade {
       if (this.relatedSub !== null) {
         this.relatedSub.unsubscribe();
         this.relatedSub = null;
+      }
+      if (this.refreshSub !== null) {
+        this.refreshSub.unsubscribe();
+        this.refreshSub = null;
       }
       this.routeChange$.complete();
     });
@@ -247,6 +264,42 @@ export class ProductFacade {
       variantQuery: this.variantQuerySignal(),
       retryNonce: ++this.retryNonceCounter,
     });
+  }
+
+  /**
+   * Re-reads the loaded product without a loading state, so a stock
+   * change the cart reported (an add refused with OUT_OF_STOCK, the
+   * standard's row E060) shows on the page. The selection and the
+   * gallery stay; a failed read, or one that lands after the route
+   * moved on or started loading again, changes nothing.
+   */
+  refreshProduct(): void {
+    const slug = this.slugSignal();
+    if (slug === null || this.statusSignal() !== 'success') return;
+    if (this.refreshSub !== null) {
+      this.refreshSub.unsubscribe();
+      this.refreshSub = null;
+    }
+    this.refreshSub = this.api
+      .invoke(getProduct, { slug })
+      .pipe(
+        take(1),
+        catchError(() => EMPTY),
+      )
+      .subscribe((product) => {
+        if (this.slugSignal() !== slug || this.statusSignal() !== 'success') return;
+        // The malformed-payload defence `onProductLoaded` carries, carried
+        // here too: a product the view model cannot resolve would throw
+        // inside `buildVm` (`defaultVariantOf`) and take the page down
+        // with it. A silent refresh treats it as a failed read and keeps
+        // the screen it already has.
+        try {
+          defaultVariantOf(product);
+        } catch {
+          return;
+        }
+        this.productSignal.set(product);
+      });
   }
 
   /**
