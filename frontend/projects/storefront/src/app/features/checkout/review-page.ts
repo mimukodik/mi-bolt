@@ -250,18 +250,16 @@ export class ReviewPage {
   }
 
   /**
-   * Creates a payment intent and sends the shopper to it. The stored
-   * intent key is rotated first: a successful create leaves its key
-   * under the same cart-version fingerprint
-   * (`checkout-keys.ts:108-110`), so without the rotation the server
-   * would idempotently replay the intent that was just declined
-   * instead of minting a new one. Design §5.3 requires the opposite:
-   * "Újrapróbálom (new intent, new key)".
+   * Creates a payment intent and sends the shopper to it. The key is
+   * not rotated here: the facade rotates on every definite outcome, a
+   * successful create included, so this press mints a new intent when
+   * the previous one was declined (design §5.3, "Újrapróbálom (new
+   * intent, new key)") and replays the intent it already created when
+   * the previous answer was lost (status 0) or a 5xx.
    * A shopper who left the page meanwhile is not sent to the payment page.
    */
   private async startPayment(): Promise<void> {
     this.submitFailure.set(null);
-    checkoutKeys.rotateIntentKey();
     const result = await this.checkoutFacade.createPaymentIntent();
     if (result.ok) {
       if (this.destroyRef.destroyed) return;

@@ -908,13 +908,40 @@ describe('payment intents', () => {
     expect(second?.headers['idempotency-key']).toMatch(KEY_PATTERN);
   });
 
-  it('F-21: the intent key survives a facade teardown', async () => {
+  it('F-21: a successful create rotates the intent key, so the next create sends a new one', async () => {
+    const checkout = await setupCompleteCardDraft();
+    captures.length = 0;
+
+    const first = await checkout.createPaymentIntent();
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const second = await checkout.createPaymentIntent();
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    await flushCaptures();
+    const creates = requestsTo('POST', '/payment-intents');
+    expect(creates).toHaveLength(2);
+    const firstKey = creates[0]?.headers['idempotency-key'] ?? '';
+    const secondKey = creates[1]?.headers['idempotency-key'] ?? '';
+    expect(firstKey).toMatch(KEY_PATTERN);
+    expect(secondKey).toMatch(KEY_PATTERN);
+    expect(secondKey).not.toBe(firstKey);
+  });
+
+  it('F-21: the active intent id survives a facade teardown', async () => {
     const checkout = await setupCompleteCardDraft();
     const first = await checkout.createPaymentIntent();
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
-    const storedKey = readStoredKey('mi-bolt.checkout.intent-key');
+    // A successful create rotates the intent key, so the key slot is
+    // empty by now; what the cold return leans on is the intent id,
+    // which is the lookup the return leg actually makes.
+    expect(sessionStorage.getItem('mi-bolt.checkout.intent-key')).toBeNull();
+    const storedId = checkoutKeys.activeIntentId();
+    expect(storedId).toBe(first.value.id);
 
     TestBed.resetTestingModule();
     configureTestBed();
@@ -922,14 +949,11 @@ describe('payment intents', () => {
     // The server-side cart is preserved by the demo session id, so
     // the new GET /cart returns the post-seedCompleteDraft state:
     // seedMoto bumped to v2 (one addItem) and the four patches
-    // bumped it through to v6. The intent key slot still carries the
-    // original fingerprint `["intent", 6]`, so the lookup below has
-    // to use that version — `intentKey(2)` would mint a fresh key.
+    // bumped it through to v6.
     const cart2 = await bootCart();
     expect(cart2.cart()?.version).toBe(6);
 
-    const retrieved = checkoutKeys.intentKey(6);
-    expect(retrieved).toBe(storedKey);
+    expect(checkoutKeys.activeIntentId()).toBe(storedId);
   });
 
   it('F-22: readPaymentIntent() stores the intent and a 404 does not set error()', async () => {

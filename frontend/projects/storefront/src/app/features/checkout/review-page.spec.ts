@@ -25,6 +25,7 @@ import {
   it,
   vi,
 } from 'vitest';
+import { HttpResponse, http } from 'msw';
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -35,7 +36,7 @@ import { provideRouter, Router } from '@angular/router';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
-import { createHandlers } from '@mi-bolt/mocks/create-handlers';
+import { createHandlers, type CreateHandlersOptions } from '@mi-bolt/mocks/create-handlers';
 import { IdempotencyStore } from '@mi-bolt/mocks/idempotency';
 import { Repository } from '@mi-bolt/mocks/repository';
 import {
@@ -76,6 +77,14 @@ useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
 const MOTO = 'motorola-edge-50-fusion--zold--256';
+const KEY_PATTERN = /^[A-Za-z0-9_-]{8,80}$/;
+
+/** The handler options of the running test, kept at module scope so a
+ *  case can put the default handlers back with
+ *  `server.resetHandlers(...createHandlers(options))` after shadowing
+ *  one of them with `server.use(...)`. The repository instance is the
+ *  live mock state, so a fresh one would not answer the same session. */
+let options: CreateHandlersOptions;
 
 const VALID_CONTACT: Contact = {
   fullName: 'Teszt Elek',
@@ -114,7 +123,7 @@ beforeEach((): void => {
   const clock = createFixedClock('2026-09-20T10:00:00.000Z');
   const ids = createDeterministicIds(1);
   const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-  const options = {
+  options = {
     repository,
     clock,
     ids,
@@ -137,6 +146,20 @@ function captureRequests(log: string[]): void {
   server.events.on('request:start', ({ request }) => {
     const url = new URL(request.url);
     log.push(`${request.method} ${url.pathname}${url.search}`);
+  });
+}
+
+/** Appends the `Idempotency-Key` of every `POST` to the payment-intents
+ *  endpoint, in wire order. Headers are readable synchronously inside
+ *  `request:start`, so the log is complete once the awaited facade call
+ *  resolves — no flush tick is needed. */
+function captureIntentKeys(log: string[]): void {
+  server.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    if (request.method !== 'POST' || !url.pathname.endsWith('/payment-intents')) {
+      return;
+    }
+    log.push(request.headers.get('idempotency-key') ?? '');
   });
 }
 
@@ -761,27 +784,22 @@ describe('ReviewPage drives the recovery controls', () => {
     expect(retrySpy).toHaveBeenCalledTimes(1);
   });
 
-  it('RP-19 retrying a declined payment rotates the stored intent key before creating a new intent', async () => {
+  it('RP-19 retrying a declined payment creates the new intent under a new key', async () => {
     const h = harness();
     const checkout = TestBed.inject(CheckoutFacade);
+    const keys: string[] = [];
+    captureIntentKeys(keys);
 
     const seeded = await checkout.createPaymentIntent();
     if (!seeded.ok) throw new Error(`createPaymentIntent failed: ${seeded.error.code}`);
-    const version = checkout.version() ?? 0;
-    const seededKey = checkoutKeys.intentKey(version);
-
-    let keyAtCreateCall: string | null = null;
-    vi.spyOn(checkout, 'createPaymentIntent').mockImplementation(async () => {
-      await Promise.resolve();
-      keyAtCreateCall = checkoutKeys.intentKey(version);
-      return seeded;
-    });
 
     await h.fixture.whenStable();
     await h.fixture.componentInstance.onPaymentRetry();
 
-    expect(keyAtCreateCall).not.toBeNull();
-    expect(keyAtCreateCall).not.toBe(seededKey);
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toMatch(KEY_PATTERN);
+    expect(keys[1]).toMatch(KEY_PATTERN);
+    expect(keys[1]).not.toBe(keys[0]);
   });
 
   it('RP-20 a failed intent create records the server code rather than redirecting', async () => {
@@ -805,6 +823,27 @@ describe('ReviewPage drives the recovery controls', () => {
     const host = hostOf(h.fixture);
     expect(countTestId(host, 'review-submit-failure')).toBe(1);
     expect(readDataErrorCode(host, 'review-submit-failure')).toBe('CART_VERSION_CONFLICT');
+  });
+
+  it('RP-21 a retry after a lost payment-intent answer repeats the intent key', async () => {
+    const h = harness();
+    const keys: string[] = [];
+    captureIntentKeys(keys);
+
+    await h.fixture.whenStable();
+
+    // The first press's answer never reaches the shopper: the transport
+    // fails with status 0, an uncertain outcome, so the key is retained.
+    server.use(http.post('*/api/v1/payment-intents', () => HttpResponse.error()));
+    await h.fixture.componentInstance.onNewPayment();
+    expect(keys).toHaveLength(1);
+
+    server.resetHandlers(...createHandlers(options));
+    await h.fixture.componentInstance.onNewPayment();
+
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).not.toBe('');
+    expect(keys[1]).toBe(keys[0]);
   });
 
   it('RP-21 checking a pending payment re-reads the stored intent exactly once and does nothing without an id', async () => {

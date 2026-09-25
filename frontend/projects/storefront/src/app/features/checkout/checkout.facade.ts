@@ -369,8 +369,12 @@ export class CheckoutFacade {
    * Creates a payment intent. Carries the Idempotency-Key derived
    * from the cart version (design §3.6 fingerprint) and no body.
    * On 201 the intent is stored, the id is persisted to
-   * sessionStorage, and the value returned to the caller, who then
-   * issues the full-page redirect.
+   * sessionStorage, the key is rotated, and the value returned to the
+   * caller, who then issues the full-page redirect. Rotating on
+   * success is what lets a retry after a declined payment mint a new
+   * intent (design §5.3, "Újrapróbálom (new intent, new key)") while
+   * a retry after a lost answer keeps the key and so replays the
+   * intent the first press already created.
    */
   createPaymentIntent(): Promise<CheckoutResult<PaymentIntent>> {
     const mutation: CheckoutMutation<PaymentIntent> = {
@@ -388,15 +392,17 @@ export class CheckoutFacade {
           checkoutKeys.setActiveIntentId(intent.id);
           this.paymentIntentWritable.set(intent);
           this.intentDroppedWritable.set(null);
+          checkoutKeys.rotateIntentKey();
           return { ok: true, value: intent };
         } catch (err) {
-          // Definite outcomes (412, 410, 422, 409) must rotate the key
-          // so the next attempt mints a fresh one; otherwise the
-          // server replays the same answer. Uncertain outcomes
-          // (status 0, a transport failure; any 5xx, an unknown
-          // outcome) retain — the next attempt carries the same
-          // fingerprint and replays the original request, which is
-          // the design's `uncertain retains, definite rotates` rule.
+          // Every definite outcome (success or refusal: 412, 410, 422,
+          // 409) rotates the key, so the next attempt mints a fresh
+          // one; otherwise the server replays the same answer.
+          // Uncertain outcomes (status 0, a transport failure; any
+          // 5xx, an unknown outcome) retain — the next attempt carries
+          // the same fingerprint and replays the original request,
+          // which is the design's `uncertain retains, definite
+          // rotates` rule.
           const error = mapError(err);
           if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateIntentKey();
