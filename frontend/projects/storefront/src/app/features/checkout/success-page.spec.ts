@@ -918,7 +918,7 @@ describe('successGuard', () => {
 // out of the presentational layer
 // ---------------------------------------------------------------------------
 
-describe('OrderReceiptComponent — billing and delivery address', () => {
+describe('OrderReceiptComponent — no name, address or e-mail', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection()],
