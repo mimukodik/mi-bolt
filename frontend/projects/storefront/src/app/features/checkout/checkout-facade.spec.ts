@@ -974,6 +974,51 @@ describe('payment intents', () => {
     expect(checkout.error()).toBeNull();
   });
 
+  it('F-22b: a 404 for the held intent drops it, a 404 for another id keeps it', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const id = created.value.id;
+    const held = await checkout.readPaymentIntent(id);
+    expect(held.ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    const storedBefore = checkoutKeys.activeIntentId();
+
+    const other = await checkout.readPaymentIntent('pi-missing');
+    expect(other.ok).toBe(false);
+    if (other.ok) return;
+    expect(other.error.status).toBe(404);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkoutKeys.activeIntentId()).toBe(storedBefore);
+
+    server.use(
+      http.get(`*/api/v1/payment-intents/${id}`, () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:not-found',
+            title: 'Not Found',
+            status: 404,
+            code: 'NOT_FOUND',
+            detail: 'Payment intent not found',
+            params: { paymentIntentId: id },
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 404 },
+        ),
+      ),
+    );
+    const drop = await checkout.readPaymentIntent(id);
+    expect(drop.ok).toBe(false);
+    if (drop.ok) return;
+    expect(drop.error.status).toBe(404);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkout.error()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBe(storedBefore);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
   /** A paid card draft with the intent read back as succeeded. */
   async function setupPaidCardDraft(): Promise<{ checkout: CheckoutFacade; id: string }> {
     const checkout = await setupCompleteCardDraft();
