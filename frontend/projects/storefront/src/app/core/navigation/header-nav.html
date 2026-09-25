@@ -75,18 +75,16 @@
         }
       </nav>
       <div class="header__actions flex items-center gap-2 ml-auto">
-        <label
-          class="header__search hidden items-center rounded-input h-12 px-4 lg:flex"
-          data-testid="header-search"
-        >
+        <label class="header__search hidden lg:block" data-testid="header-search">
           <span class="sr-only">Keresés a telefonok között</span>
           <input
             autocomplete="off"
-            class="bg-transparent border-0 min-w-50 h-12"
+            class="w-58 h-12 px-4 border-0 rounded-input"
             data-testid="header-search-input"
             inputmode="search"
             name="q"
             placeholder="Keresés…"
+            spellcheck="false"
             type="search"
             [value]="searchDraft()"
             (input)="onSearchDraftInput($event)"
@@ -141,6 +139,7 @@
           inputmode="search"
           name="q-mobile"
           placeholder="Keresés a telefonok között…"
+          spellcheck="false"
           type="search"
           [value]="searchDraft()"
           (input)="onSearchDraftInput($event)"

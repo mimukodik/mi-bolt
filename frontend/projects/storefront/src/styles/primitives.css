@@ -85,12 +85,13 @@ h6 {
 }
 
 /* The accessibility focus indicator referenced by every primitive.
-   Outer 2px ring + 2px offset, never clipped. Selection of text/icon
-   always sits beside the indicator, never replaces it. */
+   Outer 2px ring + 2px offset, never clipped. The ring follows the
+   element's own radius and never changes it: this sheet is unlayered, so
+   a radius set here would beat every Tailwind rounded-* utility. Selection
+   of text/icon always sits beside the indicator, never replaces it. */
 :focus-visible {
   outline: 2px solid var(--color-focus-light);
   outline-offset: 2px;
-  border-radius: inherit;
 }
 
 /* Text that takes focus only so assistive technology announces it (a

@@ -38,7 +38,7 @@
   background: currentColor;
 }
 
-.header__search,
+.header__search input,
 .mobile-search input {
   background: var(--color-surface);
 }
@@ -52,6 +52,15 @@
 .header__search input::placeholder,
 .mobile-search input::placeholder {
   color: var(--color-text-muted);
+}
+
+/* yettel's search box shows no browser controls: no native cancel
+   button and no search decoration inside the white pill. */
+.header__search input::-webkit-search-cancel-button,
+.header__search input::-webkit-search-decoration,
+.mobile-search input::-webkit-search-cancel-button,
+.mobile-search input::-webkit-search-decoration {
+  display: none;
 }
 
 .cart:hover,
