@@ -1,6 +1,6 @@
 /**
  * `DeliveryPage` is the owning container `checkout.routes.ts` routes `szallitas` to.
- * It fetches `CheckoutOptions` through `CheckoutFacade.ensureOptions()` / `.options()`,
+ * It fetches `CheckoutOptions` through `CheckoutFacade.ensureOptions(true)` / `.options()`,
  * owns the load and save state machines and the Signal Forms `CheckoutFieldTree`, and
  * on `onContinueRequested` runs the three section writes the delivery step's billing
  * block and options require, `updateDelivery`, `updatePayment`, `updateBilling`, in that
@@ -99,7 +99,12 @@ export class DeliveryPage {
   });
 
   constructor() {
-    void this.loadOptions(false);
+    // Every arrival reads the options fresh: which payment methods the
+    // cart allows changes with the cart (a cart grown above the
+    // cash-on-delivery ceiling after an earlier visit), and an unforced
+    // read would replay the snapshot that visit stored, offering a
+    // method the server then refuses.
+    void this.loadOptions(true);
   }
 
   async loadOptions(force: boolean): Promise<void> {
