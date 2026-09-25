@@ -199,12 +199,39 @@ test.describe('Checkout: edge paths', () => {
             .some((url) => url.includes(`/penztar?paymentIntentId=${paymentIntentId}`)),
         ).toBe(true);
 
+        // The return page read the intent once on its way here, and that read
+        // is already recorded; the poll this page starts has not read yet (its
+        // first read is a second away). Counting from here is what isolates the
+        // poll's own reads from that return-page read.
+        const readsBeforePoll = intentReads.length;
+
         await expect(page.getByTestId('review-payment-status')).toHaveText(
           'Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.',
         );
+
+        // The payment is still pending, so the page polls the intent on its own
+        // and says so; no manual check control is offered while a read is still
+        // coming.
+        await expect(page.getByTestId('review-payment-polling')).toHaveText(
+          'Az állapotot másodpercenként automatikusan ellenőrizzük.',
+        );
+        await expect(page.getByTestId('review-payment-check')).toHaveCount(0);
+
+        // The tenth read still pending is what ends the poll. It arrives about
+        // ten seconds after the return, so this one expectation waits longer
+        // than the default.
+        await expect(page.getByTestId('review-payment-poll-exhausted')).toHaveText(
+          'Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted.',
+          { timeout: 20000 },
+        );
+
+        // Exactly the poll's ten reads, one a second, and nothing more on top.
+        expect(intentReads.length).toBe(readsBeforePoll + 10);
+        await expect(page.getByTestId('review-payment-polling')).toHaveCount(0);
         await expect(page.getByTestId('review-payment-check').getByRole('button')).toHaveText(
           'Állapot ellenőrzése',
         );
+
         await expect(page.getByTestId('review-payment-back')).toHaveCount(0);
         await expect(page.getByTestId('review-cta-explanation')).toHaveText(
           'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.',
