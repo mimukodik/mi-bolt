@@ -365,7 +365,9 @@ test.describe('Shop: cart, context and receipt stories', () => {
         await expect(errorState.getByRole('heading', { level: 2 })).toHaveText(
           'A visszatöltés nem sikerült',
         );
-        await expect(errorState).toContainText('Simulated failure (fail-order-read scenario)');
+        // The box shows fixed Hungarian copy, never the server's own detail.
+        await expect(errorState).toContainText('A rendelés visszatöltése sikertelen.');
+        await expect(errorState).not.toContainText('Simulated failure');
         const retry = errorState.getByRole('button');
         await expect(retry).toHaveCount(1);
         await expect(retry).toHaveText('Visszatöltés újra');
