@@ -33,8 +33,14 @@
   --color-warning: #ffd500;
   --color-warning-text: #332b00;
 
-  --color-disabled-bg: #e5e9ec;
-  --color-disabled-text: #80919f;
+  /* Disabled: a dashed outline on a transparent fill (owner's ask; a
+     departure from yettel's .btn--primary[disabled], recorded in
+     docs/design/yettel.md). The on-dark pair serves the navy buy box. */
+  --color-disabled-bg: transparent;
+  --color-disabled-border: #80919f;
+  --color-disabled-text: #4e4e4e;
+  --color-disabled-on-dark-border: rgb(255 255 255 / 60%);
+  --color-disabled-on-dark-text: rgb(255 255 255 / 80%);
 
   /* Radii — docs/design/yettel.md §4. */
   --radius-input: 8px;
@@ -48,4 +54,20 @@
      The bold and light faces are plain custom properties in
      src/styles/tokens.css (--font-family-bold, --font-family-light). */
   --font-sans: 'portal-font-regular', sans-serif, arial;
+}
+
+/* Headings and paragraphs take the primary text colour here, in Tailwind's
+   base layer, not in src/styles/primitives.css: that sheet is unlayered, and
+   an unlayered rule beats every layered one, so a text colour utility on a
+   paragraph or a heading would never apply. */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p {
+    color: var(--color-text-primary);
+  }
 }

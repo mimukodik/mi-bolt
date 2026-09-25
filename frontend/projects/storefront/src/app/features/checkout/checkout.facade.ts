@@ -15,11 +15,12 @@
  *   - on 412 surfaces a `conflict` signal, refetches both the cart
  *     and the session in the background, and waits for an explicit
  *     `retry()`; the failed intent is NOT auto-replayed;
- *   - on 410 raises `cartExpired` and drops the session snapshot;
+ *   - on 410 raises `cartExpired` and drops the session snapshot and the held intent;
  *   - on 409 `PRICE_CHANGED` refetches, captures both totals and
  *     arms `priceChange`; the submit CTA stays dead until
  *     `confirmPriceChange()` runs (§8.2, "az új összeg néma elfogadása
- *     tilos");
+ *     tilos"); a failed refetch is retried once, and a second failure
+ *     is returned as the submit's own failure;
  *   - idempotency keys live in `checkoutKeys`; `uncertain retains,
  *     definite rotates` (design §3.6).
  */
@@ -96,6 +97,11 @@ export type CheckoutIntentKind =
 
 export type CheckoutResult<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: CheckoutError };
+
+/** Why the facade dropped the card intent it held: `'stale'` when the
+ *  draft stopped matching what the intent paid for, `'refused'` when the
+ *  server answered that the intent already backs an order. */
+export type IntentDropReason = 'stale' | 'refused';
 
 /**
  * Internal dispatch shape. Carries the intent kind so 412 routing
@@ -205,6 +211,12 @@ export class CheckoutFacade {
   /** Public readonly payment intent signal. Null until created or read. */
   readonly paymentIntent: Signal<PaymentIntent | null> = this.paymentIntentWritable.asReadonly();
 
+  private readonly intentDroppedWritable = signal<IntentDropReason | null>(null);
+
+  /** Why the last held intent was dropped; null until a drop, and again
+   *  once a new payment intent is created or the order is placed. */
+  readonly intentDropped: Signal<IntentDropReason | null> = this.intentDroppedWritable.asReadonly();
+
   /** Internal writable snapshot of the active order receipt. */
   private readonly orderWritable = signal<OrderReceipt | null>(null);
 
@@ -290,6 +302,7 @@ export class CheckoutFacade {
     try {
       const session = await firstValueFrom(this.api.invoke(getCheckout, {}));
       this.sessionWritable.set(session);
+      this.dropStaleIntent(session);
       this.cart.acceptServerVersion(session.version);
       return { ok: true, value: session };
     } catch (err) {
@@ -337,6 +350,7 @@ export class CheckoutFacade {
             this.api.invoke(updateCheckout, { body }, withIfMatch(expectedVersion)),
           );
           this.sessionWritable.set(session);
+          this.dropStaleIntent(session);
           this.cart.acceptServerVersion(session.version);
           return { ok: true, value: session };
         } catch (err) {
@@ -373,6 +387,7 @@ export class CheckoutFacade {
           );
           checkoutKeys.setActiveIntentId(intent.id);
           this.paymentIntentWritable.set(intent);
+          this.intentDroppedWritable.set(null);
           return { ok: true, value: intent };
         } catch (err) {
           // Definite outcomes (412, 410, 422, 409) must rotate the key
@@ -398,11 +413,25 @@ export class CheckoutFacade {
    * result on `paymentIntent`. A 404 is returned in the result as a
    * `CheckoutError` and is NOT recorded on `error`, so the return
    * page can render its own recovery.
+   *
+   * A read is the other place the held intent is set, so it runs the
+   * same `dropStaleIntent` check against the session already in hand:
+   * the cold return adopts the session before it reads the intent
+   * (`payment-return-page.ts`), so a session-side-only guard would
+   * never see the stale intent and the review step would reach the
+   * CTA on it, which `dropStaleIntent` exists to prevent. The check
+   * is skipped before any session is loaded, where there is nothing
+   * to compare against.
    */
   async readPaymentIntent(paymentIntentId: string): Promise<CheckoutResult<PaymentIntent>> {
     try {
       const intent = await firstValueFrom(this.api.invoke(getPaymentIntent, { paymentIntentId }));
       this.paymentIntentWritable.set(intent);
+      this.intentDroppedWritable.set(null);
+      const session = this.sessionWritable();
+      if (session !== null) {
+        this.dropStaleIntent(session);
+      }
       return { ok: true, value: intent };
     } catch (err) {
       const error = mapError(err);
@@ -463,8 +492,18 @@ export class CheckoutFacade {
         } catch (err) {
           const error = mapError(err);
           if (error.code === 'PRICE_CHANGED') {
-            await this.recordPriceChange(error);
-            return { ok: false, error };
+            return { ok: false, error: await this.recordPriceChange(error) };
+          }
+          // The refused intent is one the facade can no longer use, so
+          // it and its stored id go and the next submit asks for a new
+          // payment. The order submission builds its outcome from what
+          // the facade holds after this call, so no redirect leads back
+          // to the refused intent's payment page.
+          if (
+            error.code === 'PAYMENT_REQUIRED' &&
+            this.paymentIntentWritable()?.status === 'succeeded'
+          ) {
+            this.clearHeldIntent('refused');
           }
           if (isDefiniteOutcome(error.status)) {
             checkoutKeys.rotateOrderKey();
@@ -524,6 +563,42 @@ export class CheckoutFacade {
   }
 
   /**
+   * Drops the held intent and its stored id together: a held intent
+   * with no stored id, or a stored id with no intent, is a state the
+   * review and return legs cannot tell apart from "no payment was
+   * started". The reason is kept on `intentDropped` so the review
+   * step can say why a new payment is needed.
+   */
+  private clearHeldIntent(reason: IntentDropReason): void {
+    this.paymentIntentWritable.set(null);
+    checkoutKeys.clearActiveIntentId();
+    this.intentDroppedWritable.set(reason);
+  }
+
+  /**
+   * The held intent backs a card draft for exactly its amount. A session
+   * whose payment method is no longer card, or whose total differs from
+   * the amount the intent paid, drops it and its stored id, so the review
+   * step asks for a new payment instead of placing the order on a stale
+   * one or dead-ending on a 409 (owner: a card order is never closed
+   * without paying for it). A re-save that changes neither keeps it.
+   * Runs wherever the intent or the session is adopted — a section
+   * write, a session refetch, or a read of the intent — so the order the
+   * two arrive in cannot leave a stale intent in the signal.
+   */
+  private dropStaleIntent(session: CheckoutSession): void {
+    const intent = this.paymentIntentWritable();
+    if (intent === null) return;
+    if (
+      session.payment?.method === 'card' &&
+      intent.amount.amount === session.summary.total.amount
+    ) {
+      return;
+    }
+    this.clearHeldIntent('stale');
+  }
+
+  /**
    * Ends the checkout session a placed order closed: the draft, the
    * payment intent that paid for it and every stored key go; the
    * receipt stays for the success page to render. The cart's own
@@ -533,6 +608,7 @@ export class CheckoutFacade {
     checkoutKeys.clearAll();
     this.sessionWritable.set(null);
     this.paymentIntentWritable.set(null);
+    this.intentDroppedWritable.set(null);
     this.clearFailureOverlay();
   }
 
@@ -633,6 +709,10 @@ export class CheckoutFacade {
     }
     if (error.code === 'CART_EXPIRED') {
       this.sessionWritable.set(null);
+      // The intent paid for the draft this 410 ended, so it goes too.
+      if (this.paymentIntentWritable() !== null) {
+        this.clearHeldIntent('stale');
+      }
       this.cartExpiredWritable.set(true);
       this.conflictWritable.set(null);
       this.errorWritable.set(null);
@@ -654,31 +734,33 @@ export class CheckoutFacade {
    * The §8.2 sequence for a 409 PRICE_CHANGED on POST /orders: the
    * shopper must see the old and the new total and confirm before a
    * resubmit, so the caller's promise resolves only once `priceChange`
-   * is armed (design §3.7).
+   * is armed (design §3.7). Neither read throws: `cart.refetch()` keeps
+   * its failure to itself and `ensureSession` returns it, so a failed
+   * session read is retried once (the owner's decision). When the retry
+   * fails too the new total is unknown, and the read's failure is
+   * returned in place of the 409, so the submit surfaces as a failure
+   * instead of a live CTA over the old total.
    */
-  private async recordPriceChange(error: CheckoutError): Promise<void> {
+  private async recordPriceChange(error: CheckoutError): Promise<CheckoutError> {
     const shownTotal = this.summary()?.total;
     checkoutKeys.rotateOrderKey();
-    try {
+    await this.cart.refetch();
+    let read = await this.ensureSession(true);
+    if (!read.ok) {
       await this.cart.refetch();
-      await this.ensureSession(true);
-    } catch {
-      // A failed refetch must not strand the user on the review step
-      // without an error surface. Fall through with the totals the
-      // facade already had; the error is set below so the banner
-      // appears even when the refetch did not.
+      read = await this.ensureSession(true);
     }
-    const currentTotal = this.summary()?.total;
-    if (
-      shownTotal !== undefined &&
-      currentTotal !== undefined &&
-      shownTotal.amount !== currentTotal.amount
-    ) {
+    if (!read.ok) {
+      return read.error;
+    }
+    const currentTotal = read.value.summary.total;
+    if (shownTotal !== undefined && shownTotal.amount !== currentTotal.amount) {
       this.priceChangeWritable.set({ shownTotal, currentTotal, awaitingConfirmation: true });
     }
     this.errorWritable.set(error);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);
+    return error;
   }
 
   private clearFailureOverlay(): void {

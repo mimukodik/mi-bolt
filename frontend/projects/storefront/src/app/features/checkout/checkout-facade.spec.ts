@@ -267,6 +267,63 @@ async function resolveSucceeded(intentId: string): Promise<void> {
   expect(res.status).toBe(200);
 }
 
+/** The `Problem` body the order store answers a stale card intent with:
+ *  `params.intentAmount` is what the intent paid, `params.total` the
+ *  cart's recomputed total, so the two differ by exactly the HONOR line
+ *  `addHonorFromTheServer` adds. */
+const PRICE_CHANGED_PROBLEM = {
+  type: 'urn:mi-bolt:problem:price-changed',
+  title: 'Conflict',
+  status: 409,
+  code: 'PRICE_CHANGED',
+  detail: 'Cart prices were updated; the shopper must review the new total.',
+  params: { intentAmount: 89_990, total: 159_980 },
+  traceId: 'mock-trace-test',
+  fieldErrors: [],
+};
+
+/** The `Problem` body a downstream that could not answer produces. */
+const SERVICE_UNAVAILABLE_PROBLEM = {
+  type: 'urn:mi-bolt:problem:service-unavailable',
+  title: 'Service unavailable',
+  status: 503,
+  code: 'SERVICE_UNAVAILABLE',
+  detail: 'downstream',
+  params: {},
+  traceId: 'mock-trace-test',
+  fieldErrors: [],
+};
+
+/** Seeds MOTO, loads the options, completes a card draft and resolves a
+ *  card intent for the pre-change total (89 990), so the order store's
+ *  intent check passes and the order write is what the price change
+ *  trips. Returns the resolved intent's id. */
+async function seedCardDraftWithResolvedIntent(checkout: CheckoutFacade): Promise<string> {
+  await seedMoto();
+  await checkout.ensureOptions();
+  await seedCompleteDraft(checkout, 'card');
+  const created = await checkout.createPaymentIntent();
+  expect(created.ok).toBe(true);
+  if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+  await resolveSucceeded(created.value.id);
+  return created.value.id;
+}
+
+/** Adds HONOR through the raw cart route: the server's total moves to
+ *  159 980 while the facade's cached `session.summary` stays at 89 990. */
+async function addHonorFromTheServer(): Promise<void> {
+  const added = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'If-Match': '"6"',
+      'X-Demo-Session': capturedDemoSession ?? '',
+    },
+    body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
+  });
+  expect(added.status).toBe(200);
+}
+
 // ---------------------------------------------------------------------------
 // F-01..F-04: ensureOptions / ensureSession
 // ---------------------------------------------------------------------------
@@ -892,6 +949,299 @@ describe('payment intents', () => {
     expect(readMissing.error.status).toBe(404);
     expect(checkout.error()).toBeNull();
   });
+
+  /** A paid card draft with the intent read back as succeeded. */
+  async function setupPaidCardDraft(): Promise<{ checkout: CheckoutFacade; id: string }> {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error('createPaymentIntent failed');
+    await resolveSucceeded(created.value.id);
+    await checkout.readPaymentIntent(created.value.id);
+    expect(checkout.paymentIntent()?.status).toBe('succeeded');
+    expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+    return { checkout, id: created.value.id };
+  }
+
+  it('F-31: a payment write to cash on delivery drops the held intent and its stored id', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31b: re-saving the same delivery and card payment keeps the paid intent', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    expect(
+      (
+        await checkout.updateDelivery({
+          optionId: 'home_delivery',
+          address: VALID_DELIVERY_ADDRESS,
+        })
+      ).ok,
+    ).toBe(true);
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkoutKeys.activeIntentId()).toBe(id);
+  });
+
+  it('F-31c: a session read whose total differs from the paid amount drops the intent', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    expect((await checkout.ensureSession(true)).ok).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
+  it('F-31d: a card order refused with 409 PRICE_CHANGED drops the stale intent, so the review can ask for a new payment', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.code).toBe('PRICE_CHANGED');
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31e: a 422 PAYMENT_REQUIRED for an intent the facade holds as succeeded drops it', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:payment-required',
+            title: 'Payment required',
+            status: 422,
+            code: 'PAYMENT_REQUIRED',
+            detail:
+              'The referenced payment intent already backs an order; a new card order needs a new payment',
+            params: { paymentIntentId: id, status: 'succeeded' },
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 422, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.code).toBe('PAYMENT_REQUIRED');
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('refused');
+  });
+
+  it('F-31f: a section write after the cart changed drops the intent the new total no longer matches', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+    expect(
+      (
+        await checkout.updateDelivery({
+          optionId: 'home_delivery',
+          address: VALID_DELIVERY_ADDRESS,
+        })
+      ).ok,
+    ).toBe(true);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31g: the return leg does not adopt an intent the session it read first no longer matches', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const paidAmount = checkout.paymentIntent()?.amount.amount ?? 0;
+    const cart = TestBed.inject(CartFacade);
+    await cart.addItem(HONOR, 1);
+    await flushCaptures();
+
+    // The cold return starts a fresh app and hydrates the session before
+    // it reads the intent (`payment-return-page.ts`), so the read is the
+    // only place that can see the intent no longer matches the session.
+    TestBed.resetTestingModule();
+    configureTestBed();
+    const returning = TestBed.inject(CheckoutFacade);
+    await bootCart();
+    const session = await returning.ensureSession(true);
+    expect(session.ok).toBe(true);
+    if (!session.ok) return;
+    expect(session.value.summary.total.amount).not.toBe(paidAmount);
+
+    const read = await returning.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(returning.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+
+  it('F-31h: a session read that no longer pays by card drops the intent even when the total is unchanged', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    const current = checkout.session();
+    if (current === null) throw new Error('no session');
+    server.use(
+      http.get('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          { ...current, payment: { method: 'cash_on_delivery' } },
+          { headers: { ETag: `"${String(current.version)}"` } },
+        ),
+      ),
+    );
+    expect((await checkout.ensureSession(true)).ok).toBe(true);
+    expect(checkout.session()?.summary.total.amount).toBe(current.summary.total.amount);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
+  it('F-31i: a new payment intent clears the drop reason', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31j: a placed order clears the drop reason', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'cash_on_delivery',
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(true);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31k: reading back the intent after a drop clears the drop reason when it still matches', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    expect((await checkout.updatePayment({ method: 'cash_on_delivery' })).ok).toBe(true);
+    expect(checkout.intentDropped()).toBe('stale');
+    expect((await checkout.updatePayment({ method: 'card' })).ok).toBe(true);
+    const read = await checkout.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31l: a 410 drops the held intent and its stored id with the session', async () => {
+    const { checkout } = await setupPaidCardDraft();
+    server.use(
+      http.patch('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:cart-expired',
+            title: 'Gone',
+            status: 410,
+            code: 'CART_EXPIRED',
+            detail: 'The cart is no longer available',
+            params: {},
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 410, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const result = await checkout.updateContact(VALID_CONTACT);
+    expect(result.ok).toBe(false);
+    expect(checkout.cartExpired()).toBe(true);
+    expect(checkout.session()).toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(checkout.intentDropped()).toBe('stale');
+  });
+
+  it('F-31m: a 422 PAYMENT_REQUIRED for an intent that still requires action keeps it', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error('createPaymentIntent failed');
+    const id = created.value.id;
+    expect(checkout.paymentIntent()?.status).toBe('requires_action');
+
+    const placed = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(placed.ok).toBe(false);
+    if (placed.ok) return;
+    expect(placed.error.status).toBe(422);
+    expect(placed.error.code).toBe('PAYMENT_REQUIRED');
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkout.paymentIntent()?.status).toBe('requires_action');
+    expect(checkoutKeys.activeIntentId()).toBe(id);
+    expect(checkout.intentDropped()).toBeNull();
+  });
+
+  it('F-31n: the mock refuses an intent that already backs an order, and the facade drops it as refused', async () => {
+    const { checkout, id } = await setupPaidCardDraft();
+    const first = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(first.ok).toBe(true);
+
+    // A fresh app on the same mock and demo session, as F-31g: the
+    // shopper comes back holding the intent the placed order used.
+    TestBed.resetTestingModule();
+    configureTestBed();
+    const returning = await setupCompleteCardDraft();
+    const read = await returning.readPaymentIntent(id);
+    expect(read.ok).toBe(true);
+    expect(returning.paymentIntent()?.status).toBe('succeeded');
+
+    const again = await returning.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: id,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    expect(again.ok).toBe(false);
+    if (again.ok) return;
+    expect(again.error.status).toBe(422);
+    expect(again.error.code).toBe('PAYMENT_REQUIRED');
+    expect(returning.paymentIntent()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+    expect(returning.intentDropped()).toBe('refused');
+  });
+
+  it('F-32: a contact or billing write keeps the held intent', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    expect((await checkout.updateContact(VALID_CONTACT)).ok).toBe(true);
+    expect((await checkout.updateBilling(VALID_BILLING)).ok).toBe(true);
+
+    expect(checkout.paymentIntent()?.id).toBe(created.value.id);
+    expect(checkoutKeys.activeIntentId()).toBe(created.value.id);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1083,51 +1433,22 @@ describe('orders', () => {
 
   it('F-26: a 409 PRICE_CHANGED refetches, arms priceChange and does not resubmit', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
-    await seedMoto();
-    await checkout.ensureOptions();
-    await seedCompleteDraft(checkout, 'card');
-
-    // Create and resolve an intent so the order-store's intent check
-    // passes and PRICE_CHANGED is the failure code.
-    const created = await checkout.createPaymentIntent();
-    expect(created.ok).toBe(true);
-    if (!created.ok) return;
-    await resolveSucceeded(created.value.id);
-
-    // Add HONOR via raw fetch — facade's session.summary stays at 89990.
-    const addHonor = await fetch('http://localhost/api/v1/cart/items', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': '"6"',
-        'X-Demo-Session': capturedDemoSession ?? '',
-      },
-      body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
-    });
-    expect(addHonor.status).toBe(200);
+    const intentId = await seedCardDraftWithResolvedIntent(checkout);
+    await addHonorFromTheServer();
 
     server.use(
       http.post('*/api/v1/orders', () =>
-        HttpResponse.json(
-          {
-            type: 'urn:mi-bolt:problem:price-changed',
-            title: 'Conflict',
-            status: 409,
-            code: 'PRICE_CHANGED',
-            detail: 'Cart prices were updated; the shopper must review the new total.',
-            params: { intentAmount: 89_990, total: 159_980 },
-            traceId: 'mock-trace-test',
-            fieldErrors: [],
-          },
-          { status: 409, headers: { 'content-type': 'application/problem+json' } },
-        ),
+        HttpResponse.json(PRICE_CHANGED_PROBLEM, {
+          status: 409,
+          headers: { 'content-type': 'application/problem+json' },
+        }),
       ),
     );
 
     captures.length = 0;
     const result = await checkout.submitOrder({
       paymentMethod: 'card',
-      paymentIntentId: created.value.id,
+      paymentIntentId: intentId,
       termsVersion: TERMS_VERSION,
       acceptedTerms: true,
     });
@@ -1139,6 +1460,7 @@ describe('orders', () => {
     });
 
     expect(requestsTo('POST', '/orders')).toHaveLength(1);
+    expect(requestsTo('GET', '/checkout')).toHaveLength(1);
     const change = checkout.priceChange();
     expect(change).not.toBeNull();
     expect(change?.shownTotal).toEqual({ amount: 89_990, currency: 'HUF' });
@@ -1149,44 +1471,18 @@ describe('orders', () => {
 
   it('F-27: confirmPriceChange() clears the flag and the next submit uses a NEW key', async () => {
     const checkout = TestBed.inject(CheckoutFacade);
-    await seedMoto();
-    await checkout.ensureOptions();
-    await seedCompleteDraft(checkout, 'card');
-
-    const created = await checkout.createPaymentIntent();
-    expect(created.ok).toBe(true);
-    if (!created.ok) return;
-    await resolveSucceeded(created.value.id);
-
-    const addHonor = await fetch('http://localhost/api/v1/cart/items', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': '"6"',
-        'X-Demo-Session': capturedDemoSession ?? '',
-      },
-      body: JSON.stringify({ variantId: HONOR, quantity: 1 }),
-    });
-    expect(addHonor.status).toBe(200);
+    const intentId = await seedCardDraftWithResolvedIntent(checkout);
+    await addHonorFromTheServer();
 
     let attempt = 0;
     server.use(
       http.post('*/api/v1/orders', () => {
         attempt += 1;
         if (attempt === 1) {
-          return HttpResponse.json(
-            {
-              type: 'urn:mi-bolt:problem:price-changed',
-              title: 'Conflict',
-              status: 409,
-              code: 'PRICE_CHANGED',
-              detail: 'Cart prices were updated; the shopper must review the new total.',
-              params: { intentAmount: 89_990, total: 159_980 },
-              traceId: 'mock-trace-test',
-              fieldErrors: [],
-            },
-            { status: 409, headers: { 'content-type': 'application/problem+json' } },
-          );
+          return HttpResponse.json(PRICE_CHANGED_PROBLEM, {
+            status: 409,
+            headers: { 'content-type': 'application/problem+json' },
+          });
         }
         // After the one-shot is consumed, the second call falls through
         // to the default mock. The mock's order-store answers 422
@@ -1211,7 +1507,7 @@ describe('orders', () => {
     captures.length = 0;
     await checkout.submitOrder({
       paymentMethod: 'card',
-      paymentIntentId: created.value.id,
+      paymentIntentId: intentId,
       termsVersion: TERMS_VERSION,
       acceptedTerms: true,
     });
@@ -1226,7 +1522,7 @@ describe('orders', () => {
     captures.length = 0;
     await checkout.submitOrder({
       paymentMethod: 'card',
-      paymentIntentId: created.value.id,
+      paymentIntentId: intentId,
       termsVersion: TERMS_VERSION,
       acceptedTerms: true,
     });
@@ -1236,6 +1532,93 @@ describe('orders', () => {
     const newKey = posts[0]?.headers['idempotency-key'] ?? '';
     expect(newKey).toMatch(KEY_PATTERN);
     expect(newKey).not.toBe('');
+  });
+
+  it('F-26b: a failed read after a 409 PRICE_CHANGED is retried once, and the retry arms priceChange', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    const intentId = await seedCardDraftWithResolvedIntent(checkout);
+    await addHonorFromTheServer();
+
+    let checkoutReads = 0;
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(PRICE_CHANGED_PROBLEM, {
+          status: 409,
+          headers: { 'content-type': 'application/problem+json' },
+        }),
+      ),
+      http.get('*/api/v1/checkout', () => {
+        checkoutReads += 1;
+        if (checkoutReads === 1) {
+          return HttpResponse.json(SERVICE_UNAVAILABLE_PROBLEM, {
+            status: 503,
+            headers: { 'content-type': 'application/problem+json' },
+          });
+        }
+        // The retried read must reach the default mock.
+        return undefined;
+      }),
+    );
+
+    captures.length = 0;
+    const result = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: intentId,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    await flushCaptures();
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('PRICE_CHANGED');
+    expect(checkoutReads).toBe(2);
+    expect(requestsTo('POST', '/orders')).toHaveLength(1);
+    const change = checkout.priceChange();
+    expect(change?.shownTotal).toEqual({ amount: 89_990, currency: 'HUF' });
+    expect(change?.currentTotal).toEqual({ amount: 159_980, currency: 'HUF' });
+    expect(change?.awaitingConfirmation).toBe(true);
+  });
+
+  it('F-26c: when the read after a 409 PRICE_CHANGED fails twice, the submit returns the read failure and arms no priceChange', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    const intentId = await seedCardDraftWithResolvedIntent(checkout);
+    await addHonorFromTheServer();
+
+    let checkoutReads = 0;
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(PRICE_CHANGED_PROBLEM, {
+          status: 409,
+          headers: { 'content-type': 'application/problem+json' },
+        }),
+      ),
+      http.get('*/api/v1/checkout', () => {
+        checkoutReads += 1;
+        return HttpResponse.json(SERVICE_UNAVAILABLE_PROBLEM, {
+          status: 503,
+          headers: { 'content-type': 'application/problem+json' },
+        });
+      }),
+    );
+
+    captures.length = 0;
+    const result = await checkout.submitOrder({
+      paymentMethod: 'card',
+      paymentIntentId: intentId,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    });
+    await flushCaptures();
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(result.error.status).toBe(503);
+    expect(checkoutReads).toBe(2);
+    expect(requestsTo('POST', '/orders')).toHaveLength(1);
+    expect(checkout.priceChange()).toBeNull();
+    expect(checkout.error()?.code).toBe('SERVICE_UNAVAILABLE');
   });
 
   it('F-29: startNewPurchase() clears the receipt and the session so the guards see no order', async () => {

@@ -353,6 +353,10 @@ describe('MIM-228: a selected facet row with a zero count stays clickable (drawe
     expect(samsung.disabled).toBe(true);
     expect(black.disabled).toBe(false);
     expect(white.disabled).toBe(true);
+    expect(apple.classList.contains('is-unavailable')).toBe(false);
+    expect(samsung.classList.contains('is-unavailable')).toBe(true);
+    expect(black.classList.contains('is-unavailable')).toBe(false);
+    expect(white.classList.contains('is-unavailable')).toBe(true);
   });
 });
 

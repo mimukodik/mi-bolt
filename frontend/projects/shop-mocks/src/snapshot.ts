@@ -43,6 +43,7 @@ export function buildSnapshot(
     expiresAt,
     paymentIntents: persistedOrders.intents,
     receipts: persistedOrders.receipts,
+    usedPaymentIntentIds: persistedOrders.usedIntentIds,
     idempotency: stores.order.toPersistedIdempotency(),
   };
   if (persistedCart !== undefined) snapshot.cart = persistedCart;

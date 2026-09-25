@@ -31,6 +31,7 @@ import { SpecificationAccordion } from './specification-accordion';
 import { AddToCart } from './add-to-cart';
 import { MobileBuyRail } from './mobile-buy-rail';
 import { ProductCard } from '../catalog/product-card';
+import { ProductCardSkeleton } from '../../shared/ui/product-card-skeleton/product-card-skeleton';
 
 import { CartFacade, type CartError } from '../cart/cart.facade';
 
@@ -38,6 +39,7 @@ import { Button } from '../../shared/ui/button/button';
 import { PriceBlock, type Money } from '../../shared/ui/price-block/price-block';
 import { ErrorState } from '../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
 import type { UiProblem } from '../../shared/types/ui-problem';
@@ -106,10 +108,12 @@ function describeAddFailure(failure: CartError | null): string {
     PriceBlock,
     ErrorState,
     LoadingState,
+    SkeletonLeave,
     AddToCart,
     MobileBuyRail,
     StatusMessage,
     ProductCard,
+    ProductCardSkeleton,
     RouterLink,
   ],
   templateUrl: './product-page.html',
@@ -238,6 +242,8 @@ export class ProductPage {
   readonly invalidQuery = computed<string | null>(() => this.vm().invalidVariantQuery);
 
   readonly related = computed<readonly CatalogItem[]>(() => this.vm().related);
+
+  readonly relatedLoading = computed<boolean>(() => this.vm().relatedLoading);
 
   readonly errorMessage = computed<string>(() => this.vm().error ?? 'Ismeretlen hiba.');
 

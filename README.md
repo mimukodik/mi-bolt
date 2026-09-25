@@ -101,16 +101,10 @@ Pick this when you are working on the demo payment page alone.
 mise run payment
 ```
 
-Runs on port 4210. The demo payment app always boots its own in-page MSW
-mock in this mode (`frontend/projects/demo-payment/src/main.ts` gates it on
-`isDevMode()`; the project has no `local-backend` configuration), whatever
-mode the storefront and admin are running in. Stop with Ctrl+C.
-
-⚠️ Because of that mock, a payment the real backend created is unknown to
-the payment page in `dev` and `dev:docker` below, which answers "Ez a
-fizetési kérés nem található vagy lejárt." ("This payment request was not
-found or has expired."): a full purchase against the real backend needs
-`stack`. MIM-433 tracks the fix.
+Runs on port 4210 on the app's own in-page MSW mock: `npm run start:payment`
+serves the `development` configuration, and
+`frontend/projects/demo-payment/src/main.ts` starts the mock whenever
+`isDevMode()` is true. Stop with Ctrl+C.
 
 ### `frontend`
 
@@ -175,10 +169,10 @@ mise run dev
 Starts PostgreSQL and the native backend (port 8080), then the storefront
 and admin on their `local-backend` configuration (real backend, MSW off:
 `environment.local-backend.ts` replaces `environment.ts`) on ports 4200 and
-4220, plus the payment app on 4210 (still MSW, as above, so a card payment
-does not complete here; use `stack` for a full purchase). Stop the frontend
-and backend processes with Ctrl+C, then `mise run stop` for the database
-container.
+4220, plus the payment app on 4210 in its `local-backend` configuration (the
+`production` build, so its MSW mock never starts; `/api` goes to port 8080).
+Stop the frontend and backend processes with Ctrl+C, then `mise run stop` for
+the database container.
 
 ### `dev:docker`
 
@@ -243,16 +237,16 @@ flowchart LR
     browser --> admin["Admin (4220)"]
     storefront -->|"/api/v1"| backend["Spring backend (8080)"]
     admin -->|"/api/v1"| backend
+    payment -->|"/api/v1"| backend
     storefront -.->|"/api/v1 (mock)"| msw["MSW (in-page)"]
     admin -.->|"/api/v1 (mock)"| msw
-    payment -.->|"/api/v1 (mock, every ng serve mode)"| msw
+    payment -.->|"/api/v1 (mock)"| msw
     backend --> postgres[("PostgreSQL (55433)")]
 ```
 
 Solid arrows are the `local-backend` configuration (`dev`, `dev:docker`),
-dashed ones the MSW mock. The payment app's dev server always runs on the
-mock (see `payment` above); it reaches the backend only when it is built,
-as in `stack`.
+dashed ones the MSW mock. The payment app follows the same split: `dev` and
+`dev:docker` serve it on the backend, `payment` and `frontend` on its mock.
 
 The `stack` mode collapses the three apps into the one `web` container
 (`frontend/Dockerfile` copies the storefront to `/`, the admin to `/admin/`

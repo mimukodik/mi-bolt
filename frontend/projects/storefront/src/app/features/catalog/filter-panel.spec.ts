@@ -633,6 +633,20 @@ describe('MIM-228: a selected facet row with a zero count stays clickable', () =
     expect(queryButton(root, '[data-testid="filter-brand-samsung"]').disabled).toBe(true);
     expect(queryButton(root, '[data-testid="filter-color-black"]').disabled).toBe(false);
     expect(queryButton(root, '[data-testid="filter-color-white"]').disabled).toBe(true);
+    expect(
+      queryButton(root, '[data-testid="filter-brand-apple"]').classList.contains('is-unavailable'),
+    ).toBe(false);
+    expect(
+      queryButton(root, '[data-testid="filter-brand-samsung"]').classList.contains(
+        'is-unavailable',
+      ),
+    ).toBe(true);
+    expect(
+      queryButton(root, '[data-testid="filter-color-black"]').classList.contains('is-unavailable'),
+    ).toBe(false);
+    expect(
+      queryButton(root, '[data-testid="filter-color-white"]').classList.contains('is-unavailable'),
+    ).toBe(true);
   });
 });
 

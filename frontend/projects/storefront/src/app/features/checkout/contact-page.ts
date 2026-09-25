@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 
 import { buildContactForm, normalizeContact } from './contact.schema';
 import { CheckoutFacade } from './checkout.facade';
+import { CartFacade } from '../cart/cart.facade';
 import { CONTACT_DRAFT_SAVER, ContactStep } from './contact-step';
 import type { ContactServerErrors } from './contact-server-errors';
 
@@ -40,6 +41,7 @@ export class ContactPage {
   private readonly saver = inject(CONTACT_DRAFT_SAVER);
   private readonly router = inject(Router);
   private readonly checkout = inject(CheckoutFacade);
+  private readonly cart = inject(CartFacade);
   private readonly step = viewChild.required(ContactStep);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -57,6 +59,9 @@ export class ContactPage {
   readonly contactFields = buildContactForm(this.modelWritable);
 
   readonly saveState = signal<AsyncStatus>('idle');
+
+  /** The cart subtotal the step's order summary shows. */
+  readonly subtotal = this.cart.subtotal;
 
   /**
    * The per-field errors the saver's 422 last carried, paired with the

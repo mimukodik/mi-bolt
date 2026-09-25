@@ -32,4 +32,13 @@
       />
     </div>
   </div>
+  @if (visibleReason(); as text) {
+    <p
+      class="m-0 text-right text-(length:--type-helper) text-(--color-text-secondary)"
+      data-testid="purchase-rail-reason"
+      role="status"
+    >
+      {{ text }}
+    </p>
+  }
 </aside>

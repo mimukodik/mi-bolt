@@ -82,13 +82,6 @@ h6 {
   font-family: var(--font-family-bold);
   font-weight: var(--weight-bold);
   line-height: var(--line-height-heading);
-  margin: 0;
-  color: var(--color-text-primary);
-}
-
-p {
-  margin: 0;
-  color: var(--color-text-primary);
 }
 
 /* The accessibility focus indicator referenced by every primitive.
@@ -165,6 +158,18 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Skeleton fade-out (docs/design/yettel.md, "Skeleton loaders and their
+   fade-out"). The `appSkeletonLeave` directive pins a leaving skeleton in
+   place and adds this class; the element goes when the transition ends.
+   200ms ease is yettel's own content fade. The reduced-motion block below
+   collapses it. */
+.skeleton-leave {
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
 
 /* Default skelemin background does not animate when reduced motion is set. */
@@ -247,7 +252,6 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
    the brand and colour lists show placeholder rows at the real rows'
    heights: 40px for an `.option` row (`min-h-10`) and 44px for a
    `.color-chip`. */
-.facet-count-busy,
 .facet-skeleton-bar {
   border-radius: var(--radius-badge);
   background: linear-gradient(
@@ -257,6 +261,36 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
     var(--color-surface-section) 100%
   );
   background-size: 200% 100%;
+  animation: facet-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+/* A facet count carries its shimmer on an overlay that is always there, so
+   the shimmer fades in and out instead of switching (docs/design/yettel.md,
+   "Skeleton loaders and their fade-out"); it only runs while the count is
+   busy, and the component stylesheets fade the count's text the same way. */
+.facet-count {
+  position: relative;
+}
+
+.facet-count::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-badge);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-section) 0%,
+    var(--color-border-subtle) 50%,
+    var(--color-surface-section) 100%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+.facet-count-busy::after {
+  opacity: 1;
   animation: facet-skeleton-shimmer 1.4s ease-in-out infinite;
 }
 

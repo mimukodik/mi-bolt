@@ -22,6 +22,7 @@ import { Router } from '@angular/router';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { CartFacade } from '../cart/cart.facade';
 import { checkoutKeys } from './checkout-keys';
@@ -51,7 +52,7 @@ interface SubmitFailure {
 
 @Component({
   selector: 'app-review-page',
-  imports: [Button, LoadingState, ReviewStep, StatusMessage],
+  imports: [Button, LoadingState, ReviewStep, SkeletonLeave, StatusMessage],
   templateUrl: './review-page.html',
   styleUrl: './review-page.scss',
 })
@@ -167,12 +168,17 @@ export class ReviewPage {
           // reached submit with no intent at all, which `canSubmit()`
           // already refuses for a card draft: the step's
           // "Fizetés indítása" control is the way forward, so this
-          // arm only records that the submit did not land.
+          // arm only records that the submit did not land. After the
+          // facade dropped the intent (stale or refused), the step's
+          // branch is the whole answer.
           if (outcome.redirectUrl !== null) {
             if (this.destroyRef.destroyed) return;
             this.locationAssign(outcome.redirectUrl);
             return;
           }
+          // A dropped intent: the step's missing-payment branch says why
+          // and offers the new payment, so no failure banner joins it.
+          if (this.checkoutFacade.intentDropped() !== null) return;
           this.submitFailure.set({ kind: 'error', code: 'PAYMENT_REQUIRED' });
           return;
         case 'incomplete':

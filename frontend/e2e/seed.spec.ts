@@ -66,6 +66,16 @@
 //    first-letter fallback (data-testid image-fallback); on the real backend
 //    the admin's product image previews load from that same path, so they
 //    show only after the same browser has signed in at the shop's /belepes.
+// 12. Fault scenarios. `?mi-scenario=fail-<operation>` makes one API
+//    endpoint answer 503 SERVICE_UNAVAILABLE every time, and
+//    `?mi-scenario=offline-<operation>` makes it fail as a network error;
+//    every other endpoint works. FAULT_OPERATIONS in
+//    projects/shop-mocks/src/faults.ts lists the operations, and
+//    `?mi-scenario=cart-mutation-fails` does the same for removing a cart
+//    line and clearing the cart. The mock reads the scenario when the page
+//    loads and keeps it through in-app navigation; a page.goto without the
+//    query loads the default scenario with a cart of its own, so a fault
+//    spec opens its first page with the query and keeps it on every goto.
 
 import { test, expect } from './fixtures/coverage';
 

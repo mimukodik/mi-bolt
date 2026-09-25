@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve storefront",
     "start:payment": "ng serve demo-payment",
+    "start:payment:local-backend": "ng serve demo-payment --configuration local-backend",
     "start:admin": "ng serve admin",
     "start:admin:local-backend": "ng serve admin --configuration local-backend",
     "start:local-backend": "ng serve storefront --configuration local-backend",

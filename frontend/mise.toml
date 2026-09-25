@@ -40,3 +40,6 @@ run = "npm run start:admin:local-backend"
 
 [tasks."start:payment"]
 run = "npm run start:payment"
+
+[tasks."start:payment:local-backend"]
+run = "npm run start:payment:local-backend"

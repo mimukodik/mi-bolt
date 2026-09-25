@@ -208,7 +208,7 @@
           [subtotal]="totals.subtotal"
         />
       } @else {
-        <div class="summary-loading" data-testid="review-summary-loading">
+        <div appSkeletonLeave class="summary-loading" data-testid="review-summary-loading">
           <app-loading-state label="Összesítő betöltése" variant="lines" />
         </div>
       }
@@ -239,16 +239,14 @@
     >
       <div class="status-row flex flex-col gap-(--space-3)" data-testid="review-status">
         @if (paymentIntent(); as intent) {
-          <div
-            class="branch flex flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
-            role="status"
-          >
-            <p
-              class="branch-message m-0 text-(length:--type-body) leading-(--line-height-body)"
+          <div class="branch flex flex-col gap-(--space-3)" role="status">
+            <app-status-message
               data-testid="review-payment-status"
-            >
-              {{ paymentStatusMessage() }}
-            </p>
+              [live]="false"
+              [message]="paymentStatusMessage() ?? ''"
+              [persistent]="true"
+              [severity]="paymentSeverity()"
+            />
             @switch (intent.status) {
               @case ('declined') {
                 <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
@@ -289,16 +287,14 @@
             }
           </div>
         } @else if (paymentIntentMissing()) {
-          <div
-            class="branch flex flex-col gap-(--space-3) p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card)"
-            role="status"
-          >
-            <p
-              class="branch-message m-0 text-(length:--type-body) leading-(--line-height-body)"
+          <div class="branch flex flex-col gap-(--space-3)" role="status">
+            <app-status-message
               data-testid="review-payment-status"
-            >
-              {{ paymentStatusMessage() }}
-            </p>
+              [live]="false"
+              [message]="paymentStatusMessage() ?? ''"
+              [persistent]="true"
+              [severity]="paymentSeverity()"
+            />
             <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
               <app-button
                 data-testid="review-payment-new"
@@ -314,7 +310,7 @@
           @case ('price-changed') {
             @if (priceChange(); as change) {
               <div
-                class="price-change flex flex-col gap-(--space-3) p-(--space-4) rounded-(--radius-card)"
+                class="price-change flex flex-col gap-(--space-3) p-(--space-4) rounded-(--radius-control)"
                 data-testid="review-price-change"
                 role="alert"
               >
@@ -379,10 +375,14 @@
             </div>
           }
           @case ('submitting') {
-            <app-loading-state label="Feldolgozás…" variant="lines" />
+            <app-loading-state appSkeletonLeave label="Feldolgozás…" variant="lines" />
           }
           @case ('loading') {
-            <app-loading-state label="Rendelés adatainak betöltése" variant="lines" />
+            <app-loading-state
+              appSkeletonLeave
+              label="Rendelés adatainak betöltése"
+              variant="lines"
+            />
           }
         }
       </div>
@@ -460,7 +460,7 @@
           label="Demórendelés véglegesítése"
           loadingLabel="Feldolgozás…"
           variant="primary"
-          [disabled]="state() === 'submitting'"
+          [disabled]="state() === 'submitting' || cardPaymentMissing()"
           [loading]="state() === 'submitting'"
           (pressed)="onSubmit()"
         />

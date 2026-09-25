@@ -1237,3 +1237,76 @@ describe('MIM-228: facet universe', () => {
     expect(api.calls.length).toBe(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// A page past the last one opens the last page (the owner's decision).
+// ---------------------------------------------------------------------------
+
+describe('a page past the last one opens the last page', () => {
+  it('asks for the last page when the requested page is past it', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.loadFromParams(new URLSearchParams('page=99'));
+    await tick();
+    expect(api.calls.length).toBe(1);
+    expect(api.calls[0]?.page).toBe(99);
+
+    api.resolve(makePage([], 55, 99));
+    await tick();
+
+    expect(api.calls.length).toBe(2);
+    expect(api.calls[1]?.page).toBe(5);
+    expect(facade.query().page).toBe(5);
+    expect(facade.vm().status).toBe('loading');
+
+    const items = [makeItem('p1', 'Apple', 'Apple One', 100_000)];
+    api.resolve(makePage(items, 55, 5));
+    await tick();
+
+    expect(facade.vm().status).toBe('success');
+    expect(facade.vm().page).toBe(5);
+    expect(facade.vm().items).toEqual(items);
+  });
+
+  it('keeps the empty state when nothing matches at all', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.loadFromParams(new URLSearchParams('page=3'));
+    await tick();
+    api.resolve(makePage([], 0, 3));
+    await tick();
+
+    expect(api.calls.length).toBe(1);
+    expect(facade.query().page).toBe(3);
+    expect(facade.vm().status).toBe('empty');
+  });
+
+  it('does not move a page within range that comes back empty', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.loadFromParams(new URLSearchParams('page=2'));
+    await tick();
+    api.resolve(makePage([], 24, 2));
+    await tick();
+
+    expect(api.calls.length).toBe(1);
+    expect(facade.query().page).toBe(2);
+    expect(facade.vm().status).toBe('empty');
+  });
+
+  it('flags the clamp until the next query change', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.loadFromParams(new URLSearchParams('page=99'));
+    await tick();
+    expect(facade.pageClamped()).toBe(false);
+
+    api.resolve(makePage([], 55, 99));
+    await tick();
+    expect(facade.pageClamped()).toBe(true);
+
+    api.resolve(makePage([makeItem('p1', 'Apple', 'Apple One', 100_000)], 55, 5));
+    await tick();
+    facade.setPage(4);
+    await tick();
+
+    expect(facade.pageClamped()).toBe(false);
+    expect(api.calls[2]?.page).toBe(4);
+  });
+});

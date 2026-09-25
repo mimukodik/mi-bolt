@@ -841,6 +841,7 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
       variantQuery: null,
       slug: DEMO_PRODUCT.slug,
       related: [],
+      relatedLoading: false,
     });
     const facadeStub: Pick<ProductFacade, 'vm'> = { vm };
     const cartFacadeStub = {
@@ -1052,6 +1053,7 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     expect(facade.vm().status).toBe('success');
     expect(facade.vm().related).toEqual([]);
+    expect(facade.vm().relatedLoading).toBe(false);
     expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
   });
 
@@ -1059,8 +1061,9 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     // The first product's related response is delayed and resolves
     // to a non-empty list. The point is that the list cannot land
     // on the new product's screen: the route change must both
-    // reset the `relatedSignal` synchronously (product.facade.ts:182)
-    // and tear down the in-flight subscription (lines 178-181) so the
+    // reset the `relatedSignal` synchronously (the `tap` at the head of
+    // `ProductFacade`'s route pipeline) and tear down the in-flight
+    // subscription (that `tap`'s `relatedSub.unsubscribe()`) so the
     // dangling response's `next` callback never fires. With those two
     // guards removed, the very last assertion below would fail: the
     // delayed `next` would call `this.relatedSignal.set(items)` and
@@ -1149,9 +1152,11 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
     await tick();
 
     // The first request is still hanging, so the related signal has
-    // not been written to. assert it's [] and no section renders.
+    // not been written to. assert it's [] and the strip shows its four card skeletons.
     expect(facade.vm().related).toEqual([]);
-    expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
+    expect(facade.vm().relatedLoading).toBe(true);
+    const loadingStrip = queryElement(root, '[data-testid="related-products"]');
+    expect(loadingStrip.querySelectorAll('[data-testid="product-card-skeleton"]').length).toBe(4);
 
     // Navigate to a second product; the route change must reset the
     // related signal synchronously, before the in-flight first response
@@ -1162,11 +1167,13 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     expect(facade.vm().slug).toBe('demo-pro-5g');
     expect(facade.vm().related).toEqual([]);
+    expect(facade.vm().relatedLoading).toBe(false);
 
     // Now resolve the dangling first request — the facade must not let
     // it repopulate the list for the new product. The subscription was
-    // torn down (lines 178-181), so the `next` callback never fires
-    // and `relatedSignal` stays at the empty array the reset put there.
+    // torn down (the route-change `tap`'s `relatedSub.unsubscribe()`), so
+    // the `next` callback never fires and `relatedSignal` stays at the
+    // empty array the reset put there.
     resolvers.current?.();
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 30);
@@ -1175,6 +1182,7 @@ describe('T16-C2 product-page related-devices strip on the 2.0.0 contract', () =
 
     expect(facade.vm().slug).toBe('demo-pro-5g');
     expect(facade.vm().related).toEqual([]);
+    expect(facade.vm().relatedLoading).toBe(false);
     expect(root.querySelector('[data-testid="related-products"]')).toBeNull();
   });
 

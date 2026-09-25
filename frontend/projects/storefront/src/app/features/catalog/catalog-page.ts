@@ -7,6 +7,7 @@ import {
   ElementRef,
   viewChild,
   DestroyRef,
+  untracked,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -226,6 +227,8 @@ export class CatalogPage {
     // the scroll offset (`scroll: 'manual'`); only a pager step lets the
     // router scroll to the top, per `withInMemoryScrolling` in
     // app.config.ts (https://angular.dev/api/router/NavigationBehaviorOptions#scroll).
+    // A page past the last one, which the facade moves back to the last
+    // page, replaces the URL instead of pushing a history entry (`pageClamped`).
     let previous: CatalogQuery | null = null;
     effect(() => {
       const q = this.facade.query();
@@ -236,7 +239,7 @@ export class CatalogPage {
         relativeTo: this.route,
         queryParams: serializeForRouter(q),
         queryParamsHandling: 'merge',
-        replaceUrl: false,
+        replaceUrl: untracked(this.facade.pageClamped),
         scroll: isPageStepOnly(before, q) ? 'after-transition' : 'manual',
       });
     });

@@ -1205,7 +1205,7 @@ describe('POST /orders', () => {
     expect(body['complete']).toBe(false);
   });
 
-  it('O-05: after a successful card order the consumed intent is gone', async () => {
+  it('O-05: after a successful card order the intent still reads back as succeeded', async () => {
     const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
     await placeOrder(
       {
@@ -1221,7 +1221,10 @@ describe('POST /orders', () => {
     const res = await fetch(`http://localhost/api/v1/payment-intents/${paymentIntentId}`, {
       headers: session1Headers(),
     });
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    expect(readString(body, 'status')).toBe('succeeded');
   });
 
   it('O-06: a second order in the same session gets DEMO-000002', async () => {
@@ -1264,6 +1267,48 @@ describe('POST /orders', () => {
     expect(second.status).toBe(201);
     expectRecord(second.body);
     expect(readString(second.body, 'orderNumber')).toBe('DEMO-000002');
+  });
+
+  it("O-06b: a second order that reuses the first order's intent returns 422 PAYMENT_REQUIRED", async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-ord-0006c',
+    );
+
+    // Second order in the same session — seed again, then reuse the first intent.
+    await seedMotoOnce(session1Headers());
+    await patchCheckout({ contact: VALID_CONTACT }, '"2"');
+    await patchCheckout({ billing: VALID_BILLING }, '"3"');
+    await patchCheckout(
+      { delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS } },
+      '"4"',
+    );
+    await patchCheckout({ payment: { method: 'card' } }, '"5"');
+
+    const reused = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"6"',
+      'idem-ord-0006d',
+    );
+    expect(reused.status).toBe(422);
+    expectRecord(reused.body);
+    expect(reused.body['code']).toBe('PAYMENT_REQUIRED');
+    expect(reused.body['detail']).toBe(
+      'The referenced payment intent already backs an order; a new card order needs a new payment',
+    );
+    expect(reused.body['params']).toEqual({ paymentIntentId, status: 'succeeded' });
   });
 
   it('O-07: acceptedTerms:false returns 422 with TERMS_NOT_ACCEPTED and stores no order', async () => {

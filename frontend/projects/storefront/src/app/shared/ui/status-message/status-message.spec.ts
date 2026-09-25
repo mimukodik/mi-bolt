@@ -39,6 +39,22 @@ function setup(): { fixture: ComponentFixture<HostComponent>; host: HostComponen
   return { fixture, host: fixture.componentInstance };
 }
 
+function componentCss(): string {
+  const raw: unknown = StatusMessage;
+  const cmp: unknown =
+    typeof raw === 'function' && 'ɵcmp' in raw ? Reflect.get(raw, 'ɵcmp') : undefined;
+  const styles: unknown =
+    typeof cmp === 'object' && cmp !== null && 'styles' in cmp
+      ? Reflect.get(cmp, 'styles')
+      : undefined;
+  return (Array.isArray(styles) ? styles : [])
+    .filter((s): s is string => typeof s === 'string')
+    .join(' ')
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([{}:;,])\s*/g, '$1');
+}
+
 describe('StatusMessage primitive', () => {
   it('renders the supplied message as live text', () => {
     const { fixture } = setup();
@@ -165,19 +181,7 @@ describe('StatusMessage primitive', () => {
   });
 
   it('MIM-216: the row wraps so a narrow host drops the close button under the text', () => {
-    const raw: unknown = StatusMessage;
-    const cmp: unknown =
-      typeof raw === 'function' && 'ɵcmp' in raw ? Reflect.get(raw, 'ɵcmp') : undefined;
-    const styles: unknown =
-      typeof cmp === 'object' && cmp !== null && 'styles' in cmp
-        ? Reflect.get(cmp, 'styles')
-        : undefined;
-    const css = (Array.isArray(styles) ? styles : [])
-      .filter((s): s is string => typeof s === 'string')
-      .join(' ')
-      .replace(/\[[^\]]*\]/g, '')
-      .replace(/\s+/g, ' ')
-      .replace(/\s*([{}:;,])\s*/g, '$1');
+    const css = componentCss();
     const root = css.slice(css.indexOf('.root{'), css.indexOf('}', css.indexOf('.root{')));
     const message = css.slice(css.indexOf('.message{'), css.indexOf('}', css.indexOf('.message{')));
     const actions = css.slice(css.indexOf('.actions{'), css.indexOf('}', css.indexOf('.actions{')));
@@ -186,4 +190,28 @@ describe('StatusMessage primitive', () => {
     expect(message).toContain('min-width:0');
     expect(actions).toContain('margin-left:auto');
   });
+
+  it('the alert is a flat yettel information box: no border and no left bar (checkout facelift)', () => {
+    const css = componentCss();
+    const root = css.slice(css.indexOf('.root{'), css.indexOf('}', css.indexOf('.root{')));
+    expect(root).toContain('border:0');
+    expect(css).not.toContain('border-left');
+  });
+
+  it.each<[StatusSeverity]>([['info'], ['success'], ['error']])(
+    'severity %s renders one icon that names it (checkout facelift)',
+    (severity) => {
+      const { fixture, host } = setup();
+      host.severity.set(severity);
+      fixture.detectChanges();
+      const icons = getNativeElement(fixture).querySelectorAll('[data-testid="status-icon"]');
+      expect(icons.length).toBe(1);
+      const icon = icons[0];
+      if (!(icon instanceof Element)) {
+        throw new Error('Expected status icon element');
+      }
+      expect(icon.getAttribute('data-icon')).toBe(severity);
+      expect(icon.getAttribute('aria-hidden')).toBe('true');
+    },
+  );
 });

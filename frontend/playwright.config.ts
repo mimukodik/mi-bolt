@@ -37,34 +37,33 @@ const webServer =
       }
     : {
         command: 'node scripts/serve-static.mjs',
+        // The card payment scenarios leave the shop for /demo-fizetes/; the same static
+        // host serves the demo payment app's build there (ng serve proxies it to port 4210 instead).
         env: {
           PORT: String(port),
           MI_BOLT_E2E_STATIC_DIR: 'dist/storefront/browser',
+          MI_BOLT_PAYMENT_STATIC_DIR: 'dist/demo-payment/browser',
         },
         url: baseURL,
         reuseExistingServer: false,
         timeout: 120_000,
       };
 
-// The e2e gate uses the unit thresholds, read from angular.json so the two
-// never drift (owner, 2026-09-22: the threshold lives in configuration, not in a script).
-const angularJson = JSON.parse(readFileSync(join(configDir, 'angular.json'), 'utf8')) as {
-  projects: {
-    storefront: {
-      architect: { test: { options: { coverageThresholds: Record<string, number | boolean> } } };
-    };
-  };
-};
-const unitThresholds = angularJson.projects['storefront'].architect.test.options.coverageThresholds;
+// The e2e gate has its own thresholds in e2e/coverage-thresholds.json (owner, 2026-09-22:
+// the threshold lives in configuration, not in a script). They match the unit thresholds
+// except branches, lowered to the value the gated Chromium cells measure (owner, 2026-09-25).
+const e2eThresholds = JSON.parse(
+  readFileSync(join(configDir, 'e2e/coverage-thresholds.json'), 'utf8'),
+) as Record<string, number | boolean>;
 const thresholds: Record<'statements' | 'branches' | 'functions' | 'lines', number> = (
   ['statements', 'branches', 'functions', 'lines'] as const
 ).reduce(
   (acc, key) => {
-    const raw = unitThresholds[key];
+    const raw = e2eThresholds[key];
     const value = typeof raw === 'number' ? raw : Number(raw);
     if (!Number.isFinite(value)) {
       throw new Error(
-        `playwright.config.ts: angular.json coverageThresholds.${key} is ${String(raw)} (must be a finite number)`,
+        `playwright.config.ts: e2e/coverage-thresholds.json ${key} is ${String(raw)} (must be a finite number)`,
       );
     }
     acc[key] = value;
@@ -106,11 +105,14 @@ const integration = (name: string, use: Record<string, unknown>) => ({
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  // The four values below are Playwright's own recommended CI block:
+  // forbidOnly, retries and reporter below follow Playwright's recommended CI block:
   // https://playwright.dev/docs/test-configuration (read 2026-09-22).
   forbidOnly: Boolean(process.env['CI']),
   retries: process.env['CI'] ? 2 : 0,
-  workers: process.env['CI'] ? 1 : undefined,
+  // At most three workers on a developer machine (the owner's rule); CI takes
+  // Playwright's default, half of the logical CPU cores:
+  // https://playwright.dev/docs/api/class-testconfig#test-config-workers
+  workers: process.env['CI'] ? undefined : 3,
   reporter: [
     ...(process.env['CI'] ? [['blob'] as const] : []),
     ['list'],
@@ -123,7 +125,7 @@ export default defineConfig({
         coverage: {
           // Coverage is collected here and gated by the onEnd hook below (the e2e npm
           // script no longer chains a separate script). Thresholds are read from
-          // angular.json so the two coverage gates never drift.
+          // e2e/coverage-thresholds.json.
           entryFilter: (entry: V8CoverageEntry) =>
             entry.url.includes('/main') || entry.url.includes('/chunk-'),
           // The shop SDK is generated into `projects/shop-api/src/generated/`,

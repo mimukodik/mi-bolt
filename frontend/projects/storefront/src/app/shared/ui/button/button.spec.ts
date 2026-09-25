@@ -287,10 +287,22 @@ describe('Button primitive', () => {
     expect(declarations(css, '.root.is-navy:hover:not(:disabled)')).toContain(
       'background:var(--color-primary-hover)',
     );
-    // disabled: #80919f on #e5e9ec.
-    const disabled = declarations(css, '.root:disabled');
+    // disabled: a dashed outline on a transparent fill, readable grey
+    // text; a busy button (aria-busy) is excluded and keeps its variant.
+    // The selector is the post-normalisation form, because
+    // normaliseComponentCss strips [...] (button.spec.ts:53).
+    const disabled = declarations(css, '.root:disabled:not()');
+    expect(disabled).toContain('border:2px dashed var(--color-disabled-border)');
     expect(disabled).toContain('color:var(--color-disabled-text)');
     expect(disabled).toContain('background:var(--color-disabled-bg)');
+    for (const onDark of ['.root.is-primary-on-dark', '.root.is-secondary-on-dark']) {
+      const rule = declarations(css, `${onDark}:disabled:not()`);
+      expect(rule).toContain('border-color:var(--color-disabled-on-dark-border)');
+      expect(rule).toContain('color:var(--color-disabled-on-dark-text)');
+    }
+    // the old grey-pill rule is gone: ruleBody throws for a selector
+    // with no rule (button.spec.ts:66-72).
+    expect(() => declarations(css, '.root:disabled')).toThrow();
     // the retired orange palette is gone from this primitive.
     expect(css).not.toContain('color-brand-accent');
   });

@@ -514,6 +514,47 @@ describe('OrderSubmission', () => {
   });
 
   // -------------------------------------------------------------------------
+  // OS-09b — a succeeded intent the server refuses as already used
+  // -------------------------------------------------------------------------
+
+  it('OS-09b: a succeeded intent the server refuses as already used yields payment-required with no redirect url', async () => {
+    await seedCompleteCardDraft();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const created = await checkout.createPaymentIntent();
+    if (!created.ok) throw new Error(`createPaymentIntent failed: ${created.error.code}`);
+    const intentId = created.value.id;
+    await resolveIntentOutcome(intentId, 'succeeded');
+    server.use(
+      http.post('*/api/v1/orders', () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:payment-required',
+            title: 'Payment required',
+            status: 422,
+            code: 'PAYMENT_REQUIRED',
+            detail:
+              'The referenced payment intent already backs an order; a new card order needs a new payment',
+            params: { paymentIntentId: intentId, status: 'succeeded' },
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 422, headers: { 'content-type': 'application/problem+json' } },
+        ),
+      ),
+    );
+
+    const service = TestBed.inject(OrderSubmission);
+    const outcome = await service.submitOrder();
+
+    expect(outcome.kind).toBe('payment-required');
+    if (outcome.kind !== 'payment-required') throw new Error('expected payment-required');
+    expect(outcome.intentId).toBeNull();
+    expect(outcome.redirectUrl).toBeNull();
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkout.intentDropped()).toBe('refused');
+  });
+
+  // -------------------------------------------------------------------------
   // OS-10 — declined intent → declined + recovery controls armed
   // -------------------------------------------------------------------------
 
