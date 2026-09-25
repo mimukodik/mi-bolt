@@ -905,10 +905,10 @@ describe('S2-C notices: server reconcile notices render one status message each'
 
     const root = getRootElement(fixture);
     const notices = root.querySelectorAll('[data-testid="cart-notice"]');
+    expect(notices.length).toBe(1);
     const message = notices[0].querySelector('.message')?.textContent.trim();
     expect(message).toBe(`${name} kikerült a kosárból, mert már nem kapható.`);
     expect(message).not.toContain('Egy termék');
-    expect(notices.length).toBe(1);
   });
 });
 

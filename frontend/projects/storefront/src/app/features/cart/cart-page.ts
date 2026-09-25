@@ -78,7 +78,8 @@ function describeNotice(
   knownName: (variantId: string) => string | null,
 ): string {
   const lineName = items.find((item) => item.variantId === notice.variantId)?.productName;
-  const seenName = notice.variantId === undefined ? null : knownName(notice.variantId);
+  const seenName =
+    lineName === undefined && notice.variantId !== undefined ? knownName(notice.variantId) : null;
   const subject = lineName ?? seenName ?? 'Egy termék';
   if (notice.code === 'QUANTITY_REDUCED') {
     const from = readNumberParam(notice, 'from');
