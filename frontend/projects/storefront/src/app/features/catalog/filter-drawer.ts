@@ -39,6 +39,9 @@ interface StorageBucket {
  *   - Renders a copy of the parent-supplied filters while open. Edits
  *     are TRANSIENT: Apply emits one `filtersChanged` with the draft;
  *     Cancel and Escape discard the draft and leave the URL untouched.
+ *   - "Szűrők törlése" clears the draft's filters and applies nothing;
+ *     the search term, which the drawer has no field for, stays with
+ *     the applied query.
  *   - The dialog primitive (AccessibleDialog) owns the focus trap,
  *     the Escape-to-close path and the background exclusion, so this
  *     component never reinvents the accessibility machinery.
@@ -220,6 +223,22 @@ export class FilterDrawer {
 
   readonly maxDraft = computed<string>(() => this.draftMax());
 
+  /** True when the draft carries any filter the user could clear: a
+   *  selected brand, storage, or colour; one of the boolean flags; or
+   *  a non-blank price string. The search term is not in the drawer
+   *  and so does not contribute. Drives the "Szűrők törlése" button's
+   *  disabled state, mirroring `hasActiveFilters()` on the sidebar. */
+  readonly hasDraftFilters = computed<boolean>(
+    () =>
+      this.draftBrands().length > 0 ||
+      this.draftStorage().length > 0 ||
+      this.draftColors().length > 0 ||
+      this.draftInStock() ||
+      this.draftFiveG() ||
+      this.draftMin().trim().length > 0 ||
+      this.draftMax().trim().length > 0,
+  );
+
   /** Single source of truth for the price validation: the message that
    *  renders under the fieldset, and which input the error belongs to
    *  (used by `aria-invalid`/`aria-describedby` and by `focusPrice`).
@@ -363,8 +382,24 @@ export class FilterDrawer {
     this.closed.emit();
   }
 
+  /** "Szűrők törlése" — clear every filter field in the draft and
+   *  apply nothing. The applied query keeps the search term, because
+   *  the drawer has no field for one; `applyDraft()` rebuilds the next
+   *  query from `...this.applied()`, so a later press of Apply commits
+   *  the cleared draft with the term intact. The expand toggles for
+   *  the brand and colour lists stay as they are. */
+  resetDraft(): void {
+    this.draftBrands.set([]);
+    this.draftStorage.set([]);
+    this.draftColors.set([]);
+    this.draftInStock.set(false);
+    this.draftFiveG.set(false);
+    this.draftMin.set('');
+    this.draftMax.set('');
+  }
+
   onDialogClosed(): void {
-    // Triggered by Escape / backdrop / close button — same as Cancel.
+    // Triggered by Escape / backdrop / close button — same path as cancelDraft().
     this.closed.emit();
   }
 
