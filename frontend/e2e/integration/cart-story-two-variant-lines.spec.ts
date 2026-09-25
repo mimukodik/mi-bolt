@@ -58,10 +58,16 @@ test.describe('Shop: cart, context and receipt stories', () => {
       const priceOf = async (target: Locator): Promise<number> =>
         Number((await textOf(target)).replace(/\D/g, ''));
 
-      /** The text of the option pressed in a variant group. */
+      /** The text of the option pressed in a variant group. The pressed button
+       *  is resolved once, by its own test id: a locator filtered on
+       *  `aria-pressed="true"` re-resolves on every use, so a one-shot read off
+       *  it can hand back the option that was pressed before the last click
+       *  (the sibling edge-path spec carries the same rule). */
       const selectedOption = async (group: Locator): Promise<string> => {
-        const text = await textOf(group.locator('button[aria-pressed="true"]').first());
-        return text;
+        const pressed = group.locator('button[aria-pressed="true"]').first();
+        const testId = (await pressed.getAttribute('data-testid')) ?? '';
+        expect(testId).not.toBe('');
+        return textOf(group.getByTestId(testId));
       };
 
       /** A cart line's variant label, "<colour> · <storage> GB", rebuilt from
@@ -144,10 +150,24 @@ test.describe('Shop: cart, context and receipt stories', () => {
         // group), the storage axis after it, so a colour the scenario turns out
         // to be unable to keep in stock still leaves the storage axis to take
         // the second variant from.
-        const axes: { group: Locator; options: Locator }[] = [
-          { group: colourGroup, options: colourOptions },
-          { group: storageGroup, options: storageOptions },
-        ];
+        //
+        // Each axis carries the label of the option it is on: the one the
+        // selection sits on before the presses below, read off that button by
+        // its own test id, and then the label of the button a press lands on.
+        // A locator filtered on `aria-pressed="true"` re-resolves on every use,
+        // so a read off it after a press can hand back the option that was
+        // pressed before the press.
+        const colourAxis = {
+          group: colourGroup,
+          options: colourOptions,
+          selected: await selectedOption(colourGroup),
+        };
+        const storageAxis = {
+          group: storageGroup,
+          options: storageOptions,
+          selected: await selectedOption(storageGroup),
+        };
+        const axes = [colourAxis, storageAxis];
 
         let chosen = false;
         for (const axis of axes) {
@@ -160,13 +180,19 @@ test.describe('Shop: cart, context and receipt stories', () => {
             await option.click();
             await expect(option).toHaveAttribute('aria-pressed', 'true');
 
+            // The press landed, so this button carries the group's selection
+            // from here on, in stock or not, and the label is read off it — the
+            // button that was clicked, never off the re-resolving
+            // `aria-pressed="true"` locator.
+            const optionText = await textOf(option);
+            axis.selected = optionText;
+
             // An out-of-stock configuration leaves the price unreadable, so the
             // next candidate is tried until one is in stock.
             if ((await textOf(productStock)) !== IN_STOCK_TEXT) continue;
 
             // The chosen option's own group names the new choice: "Szín:
             // <name>" or "Tárhely: <n> GB" (variant-selector.html).
-            const optionText = await textOf(option);
             await expect(axis.group.locator('legend')).toContainText(optionText);
             chosen = true;
             break;
@@ -178,8 +204,10 @@ test.describe('Shop: cart, context and receipt stories', () => {
         await expect(productStock).toHaveText(IN_STOCK_TEXT);
         await expect(devicePrice).not.toBeEmpty();
 
-        secondColour = await selectedOption(colourGroup);
-        secondStorage = await selectedOption(storageGroup);
+        // Each label is the one its axis already holds — the button the press
+        // landed on, or the button the selection was on when the step began.
+        secondColour = colourAxis.selected;
+        secondStorage = storageAxis.selected;
         price2 = await priceOf(devicePrice);
         expect(price2).toBeGreaterThan(0);
       });
