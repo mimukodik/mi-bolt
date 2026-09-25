@@ -204,9 +204,21 @@ test.describe('Checkout: edge paths', () => {
         const cashOnDeliveryRadio = cashOnDelivery.getByTestId('payment-radio');
         await expect(cashOnDeliveryRadio).toBeChecked();
 
-        // The options on arrival are the snapshot the facade read when the
-        // checkout was first entered, so this step makes no claim about their
-        // availability; the retry in step 6 is what re-reads them.
+        // The step reads the payment options fresh on every arrival, so the
+        // options it opens on describe this cart: cash on delivery is disabled
+        // against the grown subtotal, stays the saved selection and explains
+        // itself with its badge still shown.
+        await expect(cashOnDeliveryRadio).toBeDisabled();
+        await expect(cashOnDelivery.getByTestId('payment-unavailable-reason')).toHaveText(
+          'A kosár értéke meghaladja az ennél az opciónál megengedett összeget.',
+        );
+        await expect(cashOnDelivery.getByTestId('payment-selected-badge')).toHaveText(
+          'Kiválasztva',
+        );
+
+        // Card payment is still selectable on arrival.
+        const cardPayment = page.getByTestId('payment-option').filter({ hasText: 'Bankkártya' });
+        await expect(cardPayment.getByTestId('payment-radio')).toBeEnabled();
       });
 
       // 5. Press the inner button of `delivery-confirm` while the selected
