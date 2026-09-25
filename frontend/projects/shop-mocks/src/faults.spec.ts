@@ -5,8 +5,10 @@
  * a 503 SERVICE_UNAVAILABLE Problem and the `offline-<operation>`
  * scenario with a network error, for every operation `FAULT_OPERATIONS`
  * lists, so an e2e run can drive each facade's error path from the URL.
- * Each fault is scoped to its own operation and no other scenario name
- * produces a fault.
+ * The `fail-once-<operation>` and `offline-once-<operation>` scenarios
+ * answer the first matching request of a handler list the same way and
+ * serve the rest, so a retry can recover. Each fault is scoped to its
+ * own operation and no other scenario name produces a fault.
  */
 
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -18,7 +20,12 @@ import './checkout/checkout.handlers';
 import './orders/order.handlers';
 import './payment/payment.handlers';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
-import { FAULT_OPERATIONS, faultResponse, type FaultOperation } from './faults';
+import {
+  FAULT_OPERATIONS,
+  LOST_RESPONSE_OPERATIONS,
+  faultResponse,
+  type FaultOperation,
+} from './faults';
 import { isRecord } from './is-record';
 import { PROBLEM_CONTENT_TYPE } from './problem-response';
 import { Repository } from './repository';
@@ -136,6 +143,49 @@ describe.each(FAULT_CASES)('offline-$operation scenario', (faultCase) => {
   });
 });
 
+describe.each(FAULT_CASES)('fail-once-$operation scenario', (faultCase) => {
+  beforeEach(() => {
+    useScenario(`fail-once-${faultCase.operation}`);
+  });
+
+  it(`answers the first ${faultCase.method} ${faultCase.url} with a 503 SERVICE_UNAVAILABLE Problem`, async () => {
+    const response = await fetch(faultCase.url, { method: faultCase.method });
+    expect(response.status).toBe(503);
+    expect(response.headers.get('content-type')).toBe(PROBLEM_CONTENT_TYPE);
+    const body: unknown = await response.json();
+    expectRecord(body);
+    expect(body['code']).toBe('SERVICE_UNAVAILABLE');
+    expect(body['detail']).toBe(`Simulated failure (fail-once-${faultCase.operation} scenario)`);
+  });
+
+  it(`serves the second ${faultCase.method} ${faultCase.url} normally`, async () => {
+    const first = await fetch(faultCase.url, { method: faultCase.method });
+    expect(first.status).toBe(503);
+    const second = await fetch(faultCase.url, { method: faultCase.method });
+    expect(second.status).not.toBe(503);
+  });
+});
+
+describe.each(FAULT_CASES)('offline-once-$operation scenario', (faultCase) => {
+  beforeEach(() => {
+    useScenario(`offline-once-${faultCase.operation}`);
+  });
+
+  it(`rejects the first ${faultCase.method} ${faultCase.url} with a network error`, async () => {
+    await expect(fetch(faultCase.url, { method: faultCase.method })).rejects.toBeInstanceOf(
+      TypeError,
+    );
+  });
+
+  it(`serves the second ${faultCase.method} ${faultCase.url} normally`, async () => {
+    await expect(fetch(faultCase.url, { method: faultCase.method })).rejects.toBeInstanceOf(
+      TypeError,
+    );
+    const second = await fetch(faultCase.url, { method: faultCase.method });
+    expect(second.status).not.toBe(503);
+  });
+});
+
 describe('fault scoping', () => {
   beforeEach(() => {
     useScenario('fail-cart');
@@ -144,6 +194,32 @@ describe('fault scoping', () => {
   it('leaves an endpoint outside the operation answering 200', async () => {
     const response = await fetch('http://localhost/api/v1/products');
     expect(response.status).toBe(200);
+  });
+});
+
+describe('once-only fault scoping', () => {
+  beforeEach(() => {
+    useScenario('fail-once-cart');
+  });
+
+  it('breaks the operation and leaves an endpoint outside it answering 200', async () => {
+    const scoped = await fetch('http://localhost/api/v1/cart');
+    expect(scoped.status).toBe(503);
+    const outside = await fetch('http://localhost/api/v1/products');
+    expect(outside.status).toBe(200);
+  });
+});
+
+describe('once-only fault lifetime', () => {
+  it('answers the first request of a fresh handler list with a 503 again', async () => {
+    useScenario('fail-once-products');
+    const first = await fetch('http://localhost/api/v1/products');
+    expect(first.status).toBe(503);
+
+    // A page load builds a new handler list, so the once-fault is armed again.
+    useScenario('fail-once-products');
+    const second = await fetch('http://localhost/api/v1/products');
+    expect(second.status).toBe(503);
   });
 });
 
@@ -157,6 +233,23 @@ describe('faultResponse outside a fault scenario', () => {
       expect(faultResponse(options, operation)).toBeNull();
     }
   });
+});
+
+describe('faultResponse under a lost-once scenario', () => {
+  // A lost-once scenario lets the store commit and drops the response
+  // afterwards, so it may never short-circuit a request: an
+  // implementation matching on the operation suffix alone would. The
+  // names come off `LOST_RESPONSE_OPERATIONS`, so an operation added to
+  // that table is covered here without a second list to keep in step.
+  it.each(LOST_RESPONSE_OPERATIONS.map((operation) => `lost-once-${operation}`))(
+    'returns null for every operation under %s',
+    (scenarioName) => {
+      const options = buildOptions(scenarioName);
+      for (const operation of FAULT_OPERATIONS) {
+        expect(faultResponse(options, operation)).toBeNull();
+      }
+    },
+  );
 });
 
 describe('FAULT_OPERATIONS', () => {

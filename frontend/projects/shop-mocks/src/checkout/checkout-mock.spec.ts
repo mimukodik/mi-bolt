@@ -2,8 +2,9 @@
  * MIM-212 — checkout, payment intent and order mock spec on the
  * 2.0.0 contract.
  *
- * 76 cases over `/checkout/options`, `/checkout`, `/payment-intents`
- * and `/orders` (31 + 17 + 28), measured against the configured backend values the
+ * 81 cases over `/checkout/options`, `/checkout`, `/payment-intents`,
+ * `/orders` and the once-only fault scenarios (31 + 17 + 29 + 4),
+ * measured against the configured backend values the
  * addendum of `/tmp/s3-a-design.md` (2026-09-20 ~21:25Z) locks in.
  * Every case asserts an exact wire value, never `.exists()`-style
  * coverage; the spec is the independent measurement of the mock
@@ -25,7 +26,7 @@ import {
 import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../cart/cart-store';
 import { CheckoutStore, TERMS_VERSION } from '../checkout/checkout-store';
 import { IDEMPOTENCY_WINDOW_MS } from '../idempotency';
-import '../checkout/checkout.handlers';
+import { orderStore } from '../checkout/checkout.handlers';
 import '../payment/payment.handlers';
 import '../orders/order.handlers';
 import { IdempotencyStore } from '../idempotency';
@@ -35,6 +36,7 @@ import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
+  resolveScenario,
   type Clock,
   type Ids,
 } from '../scenarios';
@@ -91,15 +93,26 @@ beforeAll(() => {
 beforeEach(() => {
   clock = createFixedClock('2026-09-20T10:00:00.000Z');
   ids = createDeterministicIds(1);
-  options = {
-    repository: new Repository(DEFAULT_SCENARIO, ids, clock),
-    clock,
-    ids,
-    scenario: DEFAULT_SCENARIO,
-    apiRoot: '/api/v1',
-  };
+  options = buildOptions(DEFAULT_SCENARIO.name);
   server.use(...createHandlers(options));
 });
+
+/**
+ * The handler-factory options for a scenario, on the test's own clock and
+ * id factory. The file's default list and a spec that needs another
+ * scenario both go through it, so `CreateHandlersOptions` is filled in
+ * once rather than per caller.
+ */
+function buildOptions(scenarioName: string): typeof options {
+  const scenario = resolveScenario(scenarioName);
+  return {
+    repository: new Repository(scenario, ids, clock),
+    clock,
+    ids,
+    scenario,
+    apiRoot: '/api/v1',
+  };
+}
 
 function session1Headers(): Record<string, string> {
   return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
@@ -1042,7 +1055,7 @@ describe('POST /payment-intents/:id/outcome', () => {
 });
 
 // ===========================================================================
-// E. Orders — 27 cases
+// E. Orders — 29 cases
 // ===========================================================================
 
 async function placeOrder(
@@ -1854,5 +1867,130 @@ describe('GET /orders/:id', () => {
       headers: session1Headers(),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+// ===========================================================================
+// F. Once-only fault scenarios — 4 cases
+// ===========================================================================
+
+/**
+ * Installs a handler list for the named scenario before the test's first
+ * request, the way `faults.spec.ts` `buildOptions` does. The once-only
+ * fault state is keyed on the options object, so the scenario and its
+ * `Repository` have to be built before anything is fetched.
+ */
+function useScenario(scenarioName: string): void {
+  options = buildOptions(scenarioName);
+  server.use(...createHandlers(options));
+}
+
+describe('lost-once-order scenario', () => {
+  beforeEach(() => {
+    useScenario('lost-once-order');
+  });
+
+  it('L-01: the first committed order drops its response and still commits', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+
+    await expect(
+      placeOrder(
+        {
+          paymentMethod: 'card',
+          paymentIntentId,
+          termsVersion: TERMS_VERSION,
+          acceptedTerms: true,
+        },
+        '"3"',
+        'idem-ord-lost-0001',
+      ),
+    ).rejects.toBeInstanceOf(TypeError);
+
+    // The store committed before the response was dropped: the receipt
+    // exists and the cart is the new v1 empty cart `O-03` describes.
+    const stored = orderStore.current?.toPersistedOrderState(SESSION_1);
+    expect(stored?.receipts).toHaveLength(1);
+
+    const cartAfter = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(cartAfter.headers.get('ETag')).toBe('"1"');
+    const cartBody: unknown = await cartAfter.json();
+    expectRecord(cartBody);
+    expect(cartBody['items']).toEqual([]);
+  });
+
+  it('L-02: the retry with the same Idempotency-Key reads the stored order back', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const order = {
+      paymentMethod: 'card',
+      paymentIntentId,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    };
+
+    await expect(placeOrder(order, '"3"', 'idem-ord-lost-0002')).rejects.toBeInstanceOf(TypeError);
+
+    const retry = await placeOrder(order, '"3"', 'idem-ord-lost-0002');
+    expect(retry.status).toBe(201);
+    expectRecord(retry.body);
+    expect(readString(retry.body, 'orderNumber')).toBe('DEMO-000001');
+
+    const orderId = readString(retry.body, 'id');
+    const read = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session1Headers(),
+    });
+    expect(read.status).toBe(200);
+  });
+
+  it('L-03: a validation refusal does not spend the lost once', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+
+    const refused = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: false,
+      },
+      '"3"',
+      'idem-ord-lost-0003a',
+    );
+    expect(refused.status).toBe(422);
+    expectRecord(refused.body);
+    expect(refused.body['code']).toBe('VALIDATION_FAILED');
+
+    await expect(
+      placeOrder(
+        {
+          paymentMethod: 'card',
+          paymentIntentId,
+          termsVersion: TERMS_VERSION,
+          acceptedTerms: true,
+        },
+        '"3"',
+        'idem-ord-lost-0003b',
+      ),
+    ).rejects.toBeInstanceOf(TypeError);
+  });
+});
+
+describe('lost-once-payment-intent scenario', () => {
+  beforeEach(() => {
+    useScenario('lost-once-payment-intent');
+  });
+
+  it('L-04: the first committed intent drops its response and the retry replays it', async () => {
+    await seedCompleteDraft();
+
+    await expect(createCardIntent('"3"', 'idem-int-lost-0004')).rejects.toBeInstanceOf(TypeError);
+
+    // The store committed before the response was dropped: the intent is
+    // already in it, so the retry replays rather than creating one.
+    const stored = orderStore.current?.toPersistedOrderState(SESSION_1);
+    expect(stored?.intents).toHaveLength(1);
+
+    const retry = await createCardIntent('"3"', 'idem-int-lost-0004');
+    expect(retry.status).toBe(201);
+    expectRecord(retry.body);
+    expect(readString(retry.body, 'id')).toBe(stored?.intents[0]?.id);
   });
 });
