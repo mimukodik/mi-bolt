@@ -147,6 +147,10 @@ export class ReviewPage {
   });
 
   constructor() {
+    // A stock error from an earlier visit would otherwise come back
+    // after the shopper corrected the cart, and in that state the
+    // submit control only focuses the banner.
+    this.orderSubmission.clearOutcome();
     let cancelled = false;
     this.destroyRef.onDestroy(() => {
       cancelled = true;
@@ -237,6 +241,16 @@ export class ReviewPage {
   onEditRequested(section: 'contact' | 'delivery'): void {
     const route = section === 'contact' ? '/penztar/adatok' : '/penztar/szallitas';
     void this.router.navigate([route]);
+  }
+
+  /** The stock-error banner's way back: the cart is read again first,
+   *  so the cart page shows what the refused order changed (a removed
+   *  line and its notice) instead of the cart it already holds. The
+   *  checkout draft stays in the facade, so nothing typed is lost. */
+  async onBackToCart(): Promise<void> {
+    await this.cartFacade.refetch();
+    if (this.destroyRef.destroyed) return;
+    await this.router.navigate(['/penztar/kosar']);
   }
 
   /** The eight `SubmitOutcome` kinds, each to its recovery. A shopper who

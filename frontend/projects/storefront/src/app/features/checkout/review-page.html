@@ -12,6 +12,7 @@
       [priceChange]="checkoutFacade.priceChange()"
       [state]="viewState()"
       [summary]="checkoutFacade.summary()"
+      (backToCartRequested)="onBackToCart()"
       (backToPaymentRequested)="onBackToPayment()"
       (editRequested)="onEditRequested($event)"
       (newPaymentRequested)="onNewPayment()"

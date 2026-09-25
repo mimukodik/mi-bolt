@@ -239,11 +239,15 @@ function harness(): PageHarness {
 function stubSubmitOutcome(outcome: SubmitOutcome): MockInstance {
   const submission = TestBed.inject(OrderSubmission);
   // Production's `OrderSubmission.runSubmit` / `commit` records the
-  // outcome on `lastOutcomeWritable` before resolving; the mock has to
-  // mirror that side effect, otherwise `viewState()` never sees the
-  // OUT_OF_STOCK branch (review-page.ts:96-98).
-  writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set(outcome);
-  return vi.spyOn(submission, 'submitOrder').mockResolvedValue(outcome);
+  // outcome on `lastOutcomeWritable` while the submit runs, not when
+  // the call is made, so the mock writes it inside the implementation:
+  // a case that reads `viewState()` after `onSubmitRequested()` sees
+  // the OUT_OF_STOCK branch, and one that reads it before the submit
+  // sees the state the page opened with.
+  return vi.spyOn(submission, 'submitOrder').mockImplementation(() => {
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set(outcome);
+    return Promise.resolve(outcome);
+  });
 }
 
 function hostOf(fixture: { nativeElement: unknown }): HTMLElement {
@@ -957,6 +961,54 @@ describe('ReviewPage drives the recovery controls', () => {
     const h3 = harness();
     await h3.fixture.whenStable();
     expect(h3.fixture.componentInstance.paymentIntentMissing()).toBe(false);
+  });
+
+  it('RP-41 the stock-error banner re-reads the cart before it opens the cart page', async () => {
+    const cart = TestBed.inject(CartFacade);
+    const calls: string[] = [];
+    vi.spyOn(cart, 'refetch').mockImplementation(() => {
+      calls.push('refetch');
+      return Promise.resolve();
+    });
+    const h = harness();
+    h.navigateSpy.mockImplementation(() => {
+      calls.push('navigate');
+      return Promise.resolve(true);
+    });
+
+    await h.fixture.whenStable();
+    await h.fixture.componentInstance.onBackToCart();
+
+    expect(calls).toEqual(['refetch', 'navigate']);
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/kosar']);
+  });
+
+  it('RP-42 a stock error from an earlier visit does not come back', async () => {
+    const submission = TestBed.inject(OrderSubmission);
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set({
+      kind: 'unknown',
+      code: 'OUT_OF_STOCK',
+    });
+
+    const h = harness();
+    await h.fixture.whenStable();
+
+    expect(h.fixture.componentInstance.viewState()).not.toBe('stock-error');
+    expect(TestBed.inject(OrderSubmission).lastOutcome()).toBeNull();
+  });
+
+  it('RP-43 going back to the cart keeps the typed checkout data', async () => {
+    const h = harness();
+    await h.fixture.whenStable();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const contact = checkout.session()?.contact;
+    expect(contact).toBeDefined();
+    vi.spyOn(TestBed.inject(CartFacade), 'refetch').mockResolvedValue();
+
+    await h.fixture.componentInstance.onBackToCart();
+
+    expect(checkout.session()?.contact).toEqual(contact);
   });
 });
 

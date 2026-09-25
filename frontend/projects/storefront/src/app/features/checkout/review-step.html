@@ -372,11 +372,22 @@
             </div>
           }
           @case ('stock-error') {
-            <div #stateBanner class="state-banner" data-testid="review-state-banner" tabindex="-1">
+            <div
+              #stateBanner
+              class="state-banner conflict flex flex-col gap-(--space-3)"
+              data-testid="review-state-banner"
+              tabindex="-1"
+            >
               <app-status-message
                 severity="error"
                 [message]="outOfStockMessage"
                 [persistent]="true"
+              />
+              <app-button
+                data-testid="review-stock-back-to-cart"
+                label="Vissza a kosárhoz"
+                variant="secondary"
+                (pressed)="backToCartRequested.emit()"
               />
             </div>
           }
