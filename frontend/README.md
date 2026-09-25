@@ -27,6 +27,8 @@ The root `mise run dev` and `mise run dev:docker` start the storefront and the a
 
 Run a script as `npm --prefix frontend run <script>` from the repository root, or `npm run <script>` from inside `frontend/`.
 
+The six `start*` scripts, and the Playwright web server in `playwright.config.ts`, run `ng serve` as `node --no-turbo-fast-api-calls node_modules/@angular/cli/bin/ng.js serve …`: on Node 26.10.0 the dev server aborted under e2e load with the V8 error "Lazy deopt after a fast API call with return value is unsupported", and `NODE_OPTIONS` refuses that flag. Start a dev server through these scripts rather than `npx ng serve`.
+
 | Script                        | Runs                                                                                                                                                                                                            | Use it when                                                                                 |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `ng`                          | The Angular CLI directly                                                                                                                                                                                        | Running an arbitrary `ng` command against the workspace                                     |
