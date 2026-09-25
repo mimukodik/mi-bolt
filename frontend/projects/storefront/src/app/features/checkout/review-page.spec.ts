@@ -1095,6 +1095,43 @@ describe('ReviewPage drives the recovery controls', () => {
     expect(h.navigateSpy).toHaveBeenCalledTimes(1);
     expect(page.backToCartPending()).toBe(false);
   });
+
+  it('RP-47 the page disables its stock-error control while the cart is re-read', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const refetchSpy = vi.spyOn(TestBed.inject(CartFacade), 'refetch');
+    refetchSpy.mockImplementation(() => held);
+    const h = harness();
+    await h.fixture.whenStable();
+    const submission = TestBed.inject(OrderSubmission);
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set({
+      kind: 'unknown',
+      code: 'OUT_OF_STOCK',
+    });
+    h.fixture.detectChanges();
+
+    const control = hostOf(h.fixture).querySelector('[data-testid="review-stock-back-to-cart"]');
+    if (!(control instanceof HTMLElement)) {
+      throw new Error('[review-page.spec] missing review-stock-back-to-cart');
+    }
+    const button = control.querySelector('button');
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('[review-page.spec] no <button> inside review-stock-back-to-cart');
+    }
+    button.click();
+    h.fixture.detectChanges();
+
+    expect(button.disabled).toBe(true);
+    expect(h.navigateSpy).not.toHaveBeenCalled();
+
+    release();
+    await h.fixture.whenStable();
+
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/kosar']);
+  });
 });
 
 // ---------------------------------------------------------------------------
