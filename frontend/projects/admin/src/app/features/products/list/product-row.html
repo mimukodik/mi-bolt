@@ -47,7 +47,7 @@
     </div>
     <div role="cell">{{ row.brand }}</div>
     <div class="flex items-center gap-1" role="cell">
-      @for (colour of row.colors; track colour.name) {
+      @for (colour of row.colors; track $index) {
         <span class="adm-swatch" [style.background-color]="colour.swatchHex"></span>
         <span class="sr-only">{{ colour.name }}</span>
       }

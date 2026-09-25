@@ -177,4 +177,44 @@ describe('ProductRow', () => {
     const summary = host.querySelector('.adm-slug');
     expect(summary?.textContent.trim()).toBe(`Apple · ${expectedPrice} · 44 db`);
   });
+
+  it('renders two colours that share a name without NG0955', () => {
+    // Fails if the colour swatches track a key the contract does not
+    // declare unique (`AdminProductListColor.name`): two same-named
+    // colours then warn NG0955 and may swap their swatch background.
+    const fixture = createFixture();
+    fixture.componentRef.setInput(
+      'item',
+      baseItem({
+        colors: [
+          { name: 'Fekete', swatchHex: '#000000' },
+          { name: 'Fekete', swatchHex: '#111111' },
+        ],
+      }),
+    );
+    fixture.componentRef.setInput('rowIndex', 2);
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      fixture.detectChanges();
+
+      // NG0955 is recorded only when a rendered list is reconciled against
+      // the next one, so the same colours arrive again in a new item.
+      fixture.componentRef.setInput(
+        'item',
+        baseItem({
+          colors: [
+            { name: 'Fekete', swatchHex: '#000000' },
+            { name: 'Fekete', swatchHex: '#111111' },
+          ],
+        }),
+      );
+      fixture.detectChanges();
+      const host = hostOf(fixture);
+      expect(host.querySelectorAll('.adm-swatch').length).toBe(2);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });

@@ -24,7 +24,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
 import type { ColorOption } from '@mi-bolt/api/models/color-option';
@@ -362,6 +362,31 @@ describe('T13-AC04 ProductCard', () => {
     expect(list.length).toBe(2);
     const first = list[0];
     expect(first.textContent).toContain('6,7″ kijelző');
+  });
+
+  it('renders two equal highlights without NG0955', () => {
+    const { fixture, host } = setup();
+    host.product.set(
+      makeItem({
+        id: 'p-04',
+        slug: 'demo-dup-5g',
+        name: 'Demo Dup 5G',
+        highlights: ['5G', '5G'],
+      }),
+    );
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      fixture.detectChanges();
+      const list = getRootElement(fixture).querySelectorAll(
+        '[data-testid="product-card-highlights"] .highlights__item',
+      );
+      expect(list.length).toBe(2);
+      expect(Array.from(list).map((item) => item.textContent.trim())).toEqual(['5G', '5G']);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('FIX-35: carries no DEMÓTERMÉK tag and never renders the brand name', () => {
