@@ -4,7 +4,9 @@
  * `startMocks()` is the single public hook the rest of the
  * application calls before `bootstrapApplication`. It:
  *
- *   1. Resolves the active scenario from `?mi-scenario=`.
+ *   1. Resolves the active scenario: `?mi-scenario=` when the URL
+ *      carries it, otherwise the one this tab ran last
+ *      (`resolveActiveScenario`).
  *   2. Hydrates the sessionStorage snapshot via the persistence
  *      adapter so the handler factory can read cart/receipt state
  *      from a cold reload.
@@ -20,7 +22,11 @@ import { environment } from '../environments/environment';
 import { startMockWorker } from '@mi-bolt/mocks/browser';
 import { createBrowserPersistence } from '@mi-bolt/mocks/persistence';
 import type { SnapshotDiscard } from '@mi-bolt/mocks/persistence';
-import { createRealClock, parseScenarioFromLocation } from '@mi-bolt/mocks/scenarios';
+import {
+  browserSessionStorage,
+  createRealClock,
+  resolveActiveScenario,
+} from '@mi-bolt/mocks/scenarios';
 
 /** Tracks the last prepared scenario for diagnostics. */
 let preparedScenario: string | null = null;
@@ -64,7 +70,7 @@ export async function startMocks(): Promise<void> {
     preparedScenario = 'production';
     return;
   }
-  const scenario = parseScenarioFromLocation();
+  const scenario = resolveActiveScenario(browserSessionStorage());
   const clock = createRealClock(scenario.clockOffsetMs);
   const persistence = createBrowserPersistence({
     nowMs: () => Date.parse(clock.now()),
@@ -78,7 +84,7 @@ export async function startMocks(): Promise<void> {
   const snapshot = persistence.hydrate(scenario.name);
   preparedSnapshotDiscard = persistence.lastDiscard();
   preparedPersistenceMode = persistence.isDenied() ? 'memory' : 'durable';
-  await startMockWorker(snapshot);
+  await startMockWorker(snapshot, scenario.name, scenario);
   preparedScenario = scenario.name;
 }
 

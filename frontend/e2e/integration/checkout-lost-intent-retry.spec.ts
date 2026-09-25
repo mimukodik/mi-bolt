@@ -14,11 +14,11 @@ const DESKTOP_MIN_WIDTH = 1024;
 
 // The fault query this scenario opens with: `lost-once-payment-intent` lets the
 // first payment-intent request commit and then loses its answer. The mock reads
-// `?mi-scenario=` when the document loads, so a `page.goto` without it would
-// load the default scenario and a cart of its own (rule 12 of
-// `e2e/seed.spec.ts`). The whole scenario after that first load runs through
-// in-app navigation and the demo payment round trip, so no further goto is made
-// and the "once" fault is never re-armed.
+// `?mi-scenario=` when the document loads, and a `page.goto` without it resumes
+// the scenario the tab loaded last (rule 12 of `e2e/seed.spec.ts`). The whole
+// scenario after that first load runs through in-app navigation and the demo
+// payment round trip, so no further goto is made and the "once" fault is never
+// re-armed.
 const SCENARIO_QUERY = 'mi-scenario=lost-once-payment-intent';
 
 // The mock's sessionStorage snapshot for this scenario: the persistence layer

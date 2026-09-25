@@ -85,13 +85,16 @@
 //    an assertion waits with.
 //    FAULT_OPERATIONS in projects/shop-mocks/src/faults.ts lists the
 //    operations, and `?mi-scenario=cart-mutation-fails` does the same for
-//    removing a cart line and clearing the cart. The mock reads the
-//    scenario when the page loads and keeps it through in-app navigation;
-//    a page.goto without the query loads the default scenario with a cart
-//    of its own, so a fault spec opens its first page with the query and
-//    keeps it on every goto. A "once" fault and a lost response arm again
-//    on every page.goto that keeps the query, because each page load
-//    builds a new handler list; a retry inside the page does not.
+//    removing a cart line and clearing the cart. The mock reads the scenario
+//    when the page loads, remembers it for the tab (`mi-bolt.scenario` in
+//    sessionStorage) and keeps it through in-app navigation; a page.goto
+//    without the query resumes the scenario the tab loaded last, and
+//    `?mi-scenario=default` switches back to the default scenario with a
+//    cart of its own. A fault spec still opens its first page with the query
+//    and keeps it on every goto. A "once" fault and a lost response arm
+//    again on every page load of the scenario, a page.goto without the
+//    query included, because each page load builds a new handler list; a
+//    retry inside the page does not.
 
 import { test, expect } from './fixtures/coverage';
 

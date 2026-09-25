@@ -1,4 +1,5 @@
 import type { MockSnapshot } from './persistence';
+import type { ScenarioDescriptor } from './scenarios';
 
 /**
  * Stands in for `./browser` in the storefront and demo-payment production
@@ -10,6 +11,7 @@ import type { MockSnapshot } from './persistence';
 export function startMockWorker(
   _snapshot: MockSnapshot | null = null,
   _snapshotScenarioName?: string,
+  _scenario?: ScenarioDescriptor,
 ): Promise<void> {
   return Promise.reject(new Error('The mock backend is not part of the production build.'));
 }

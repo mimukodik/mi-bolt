@@ -33,7 +33,13 @@ import catalogFixture from '../../../docs/api/fixtures/catalog.json';
 import { createHandlers, type CreateHandlersOptions } from './create-handlers';
 import { createDemoGateHandler } from './demo/demo-access';
 import { Repository } from './repository';
-import { createRealClock, createRealIds, parseScenarioFromLocation } from './scenarios';
+import {
+  browserSessionStorage,
+  createRealClock,
+  createRealIds,
+  parseScenarioFromLocation,
+  type ScenarioDescriptor,
+} from './scenarios';
 import { createBrowserPersistence, type MockSnapshot } from './persistence';
 import { buildSnapshot } from './snapshot';
 import { isSameOriginNonBusiness } from './business-route-predicates';
@@ -67,27 +73,24 @@ export const worker: ReturnType<typeof setupWorker> | undefined = isBrowserProce
   ? setupWorker()
   : undefined;
 
-/** The page's sessionStorage, or undefined where it is missing or denied (the demo gate then keeps its flag in memory). */
-function browserSessionStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefined {
-  try {
-    return typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * Build the handler factory options the browser worker uses. T05
  * owns only the dispatcher shell; T06–T09 will add their own slices
  * by calling `registerBusinessHandlers(...)` from their files.
  *
  * The optional name is the snapshot key the page hydrated from when that
- * differs from the page URL's scenario: the demo payment page reads the
- * shop's snapshot by its key and writes the outcome back to the same key,
- * while its handlers keep the scenario its own URL names.
+ * differs from the scenario its handlers run: the demo payment page reads
+ * the shop's snapshot under the name the shop's tab remembered and writes
+ * the outcome back to the same key, while its handlers keep the scenario
+ * its own URL names. The optional scenario is the one the handlers run;
+ * the shop passes the one `resolveActiveScenario` resolved, so a
+ * query-less reload runs under the scenario the tab remembered, and
+ * without it the page URL's scenario runs.
  */
-export function resolveBrowserHandlerOptions(snapshotScenarioName?: string): CreateHandlersOptions {
-  const scenario = parseScenarioFromLocation();
+export function resolveBrowserHandlerOptions(
+  snapshotScenarioName?: string,
+  scenario: ScenarioDescriptor = parseScenarioFromLocation(),
+): CreateHandlersOptions {
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
   const repository = new Repository(scenario, ids, clock);
@@ -211,8 +214,9 @@ export function installUnclaimedApiRouteNetworkError(): void {
 export function buildBrowserHandlers(
   snapshot: MockSnapshot | null = null,
   snapshotScenarioName?: string,
+  scenario?: ScenarioDescriptor,
 ): ReturnType<typeof createHandlers> {
-  const options = resolveBrowserHandlerOptions(snapshotScenarioName);
+  const options = resolveBrowserHandlerOptions(snapshotScenarioName, scenario);
   options.snapshot = snapshot;
   // The demo configuration adds the dispatcher shell so a misrouted
   // curl does not produce a stack trace inside the page.
@@ -256,6 +260,7 @@ export function resolveMockWorkerUrl(baseUri: string): string {
 export async function startMockWorker(
   snapshot: MockSnapshot | null = null,
   snapshotScenarioName?: string,
+  scenario?: ScenarioDescriptor,
 ): Promise<void> {
   if (worker === undefined) {
     throw new Error(
@@ -270,7 +275,7 @@ export async function startMockWorker(
   installUnclaimedApiRouteNetworkError();
   installCrossOriginBlock();
   installBusinessRouteBypass();
-  for (const handler of buildBrowserHandlers(snapshot, snapshotScenarioName)) {
+  for (const handler of buildBrowserHandlers(snapshot, snapshotScenarioName, scenario)) {
     worker.use(handler);
   }
   await worker.start({
