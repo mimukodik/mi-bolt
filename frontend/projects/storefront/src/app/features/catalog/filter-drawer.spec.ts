@@ -74,13 +74,14 @@ class HostComponent {
   readonly disabled = signal(false);
   readonly busy = signal(false);
   readonly emitted: CatalogQuery[] = [];
+  closedCount = 0;
 
   onFiltersChanged(next: CatalogQuery): void {
     this.emitted.push(next);
   }
 
   onClosed(): void {
-    // No-op: the host hides the dialog in response.
+    this.closedCount += 1;
   }
 }
 
@@ -459,6 +460,115 @@ describe('owner 2026-09-22: Szűrők alkalmazása is always active', () => {
     expect(submit.defaultPrevented).toBe(true);
     expect(host.emitted.length).toBe(0);
     expect(document.activeElement).toBe(queryInput('[data-testid="drawer-min-price"]'));
+  });
+});
+
+describe('drawer reset: Szűrők törlése clears the draft', () => {
+  function resetButton(): HTMLButtonElement {
+    const el = document.body.querySelector('[data-testid="drawer-reset"] button');
+    if (!(el instanceof HTMLButtonElement)) throw new Error('Expected the reset button');
+    return el;
+  }
+
+  function applyButton(): HTMLButtonElement {
+    const el = document.body.querySelector('[data-testid="drawer-apply"] button');
+    if (!(el instanceof HTMLButtonElement)) throw new Error('Expected the apply button');
+    return el;
+  }
+
+  function typePrice(testId: string, value: string): void {
+    const input = queryInput(`[data-testid="${testId}"]`);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  function setupWithApplied(initial: CatalogQuery): {
+    fixture: ReturnType<typeof TestBed.createComponent<HostComponent>>;
+    host: HostComponent;
+  } {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.applied.set(initial);
+    fixture.detectChanges();
+    return { fixture, host: fixture.componentInstance };
+  }
+
+  it('the reset is disabled while the draft holds no filter, and enabled once one is set', () => {
+    const { fixture, host } = setup();
+
+    expect(resetButton().disabled).toBe(true);
+
+    queryElement('[data-testid="drawer-inStock"]').click();
+    fixture.detectChanges();
+    expect(resetButton().disabled).toBe(false);
+
+    host.disabled.set(true);
+    fixture.detectChanges();
+    expect(resetButton().disabled).toBe(true);
+  });
+
+  it('the reset clears every draft field, keeps the search term, and applies nothing until Apply', () => {
+    const { fixture, host } = setupWithApplied({
+      ...DEFAULT_CATALOG_QUERY,
+      q: 'honor',
+      brands: ['apple'],
+      storageGb: [256],
+      colors: ['fekete'],
+      inStock: true,
+      is5g: true,
+      minPrice: 1000,
+      maxPrice: 5000,
+    });
+
+    expect(queryElement('[data-testid="drawer-storage-256"]').getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(queryElement('[data-testid="drawer-inStock"]').getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(queryElement('[data-testid="drawer-is5g"]').getAttribute('aria-pressed')).toBe('true');
+    expect(queryInput('[data-testid="drawer-min-price"]').value).toBe('1000');
+    expect(queryInput('[data-testid="drawer-max-price"]').value).toBe('5000');
+
+    resetButton().click();
+    fixture.detectChanges();
+
+    expect(queryElement('[data-testid="drawer-storage-256"]').getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+    expect(queryElement('[data-testid="drawer-inStock"]').getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+    expect(queryElement('[data-testid="drawer-is5g"]').getAttribute('aria-pressed')).toBe('false');
+    expect(queryInput('[data-testid="drawer-min-price"]').value).toBe('');
+    expect(queryInput('[data-testid="drawer-max-price"]').value).toBe('');
+    expect(resetButton().disabled).toBe(true);
+    expect(host.emitted.length).toBe(0);
+    expect(host.closedCount).toBe(0);
+
+    applyButton().click();
+    fixture.detectChanges();
+
+    expect(host.emitted.length).toBe(1);
+    expect(host.emitted[0]).toEqual({ ...DEFAULT_CATALOG_QUERY, q: 'honor' });
+  });
+
+  it('the reset clears a refused price range', () => {
+    const { fixture, host } = setup();
+
+    typePrice('drawer-min-price', '-5');
+    fixture.detectChanges();
+    expect(document.body.querySelector('[data-testid="drawer-price-error"]')).not.toBeNull();
+
+    resetButton().click();
+    fixture.detectChanges();
+    expect(document.body.querySelector('[data-testid="drawer-price-error"]')).toBeNull();
+    expect(queryInput('[data-testid="drawer-min-price"]').value).toBe('');
+
+    applyButton().click();
+    fixture.detectChanges();
+    expect(host.emitted.length).toBe(1);
+    expect(host.emitted[0]?.minPrice).toBeUndefined();
   });
 });
 
