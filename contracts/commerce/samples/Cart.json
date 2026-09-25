@@ -37,5 +37,23 @@
     "currency": "HUF"
   },
   "expiresAt": "2026-09-23T18:30:00Z",
-  "notices": []
+  "notices": [
+    {
+      "code": "QUANTITY_REDUCED",
+      "variantId": "demo-variant-001",
+      "productName": "Példa Telefon 128 GB",
+      "params": {
+        "from": 2,
+        "to": 1
+      }
+    },
+    {
+      "code": "ITEM_REMOVED",
+      "variantId": "demo-variant-002",
+      "productName": "Példa Telefon 256 GB",
+      "params": {
+        "quantity": 1
+      }
+    }
+  ]
 }
