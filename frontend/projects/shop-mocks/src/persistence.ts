@@ -103,11 +103,16 @@ export interface StorageLike {
 
 /** Single-warn flag carried per-instance so test setup stays isolated. */
 class SessionStorageAdapter {
-  private denied = false;
+  private denied: boolean;
   private warned = false;
   private readonly memory = new Map<string, string>();
 
-  constructor(private readonly storage: StorageLike | null) {}
+  constructor(
+    private readonly storage: StorageLike | null,
+    denied = false,
+  ) {
+    this.denied = denied;
+  }
 
   read(key: string): string | null {
     if (this.storage !== null && !this.denied) {
@@ -179,22 +184,43 @@ function isStorageLike(value: unknown): value is StorageLike {
   );
 }
 
+/** Outcome of looking for a usable `sessionStorage` on a global object. */
+interface StorageProbe {
+  /** The storage to use, `null` when there is none or it is blocked. */
+  readonly storage: StorageLike | null;
+  /** True when the read itself was refused, so access is denied outright. */
+  readonly denied: boolean;
+}
+
 /**
- * True when `value` carries a storage-like `sessionStorage`. `globalThis`
- * is read as `unknown` first because a Node/SSR runtime has no
- * `sessionStorage` at all, whatever the DOM lib types assume.
+ * Looks for a storage-like `sessionStorage` on `value`. `value` is read
+ * as `unknown` first because a Node/SSR runtime has no `sessionStorage`
+ * at all, whatever the DOM lib types assume.
+ *
+ * The property read is guarded because the `sessionStorage` getter throws
+ * a `SecurityError` DOMException when the browser blocks site data or
+ * cookies, and `'sessionStorage' in value` stays `true` there — the `in`
+ * operator never calls the getter, so a shape check alone is not enough
+ * (https://html.spec.whatwg.org/multipage/webstorage.html). A throw is a
+ * denial rather than an absent value: the adapter starts in its
+ * in-memory mode and `DemoNotice` announces the reload limitation.
  */
-function hasSessionStorage(value: unknown): value is { sessionStorage: StorageLike } {
-  if (!isRecord(value)) return false;
-  if (!('sessionStorage' in value)) return false;
-  return isStorageLike(value['sessionStorage']);
+function probeSessionStorage(value: unknown): StorageProbe {
+  if (!isRecord(value)) return { storage: null, denied: false };
+  if (!('sessionStorage' in value)) return { storage: null, denied: false };
+  let candidate: unknown;
+  try {
+    candidate = value['sessionStorage'];
+  } catch {
+    return { storage: null, denied: true };
+  }
+  return { storage: isStorageLike(candidate) ? candidate : null, denied: false };
 }
 
 /** Detects Node and other non-DOM environments where sessionStorage is missing. */
-function resolveDefaultStorage(): StorageLike | null {
+function resolveDefaultStorage(): StorageProbe {
   const globalScope: unknown = globalThis;
-  if (!hasSessionStorage(globalScope)) return null;
-  return globalScope.sessionStorage;
+  return probeSessionStorage(globalScope);
 }
 
 /**
@@ -204,8 +230,11 @@ function resolveDefaultStorage(): StorageLike | null {
  * available and fall back to in-memory otherwise.
  */
 export function createBrowserPersistence(options: PersistenceOptions): Persistence {
-  const storage = options.storage === undefined ? resolveDefaultStorage() : options.storage;
-  const adapter = new SessionStorageAdapter(storage);
+  const resolved: StorageProbe =
+    options.storage === undefined
+      ? resolveDefaultStorage()
+      : { storage: options.storage, denied: false };
+  const adapter = new SessionStorageAdapter(resolved.storage, resolved.denied);
   return new Persistence(adapter, options.nowMs);
 }
 

@@ -348,6 +348,52 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
       (globalThis as { sessionStorage?: Storage | null }).sessionStorage = original;
     }
   });
+
+  it('falls back to denied in-memory storage when reading globalThis.sessionStorage throws SecurityError', () => {
+    // A browser whose user blocked site data or cookies throws a
+    // `SecurityError` DOMException from the `sessionStorage` getter
+    // itself, so `'sessionStorage' in globalThis` stays `true` while the
+    // read blows up (HTML standard, sessionStorage getter:
+    // https://html.spec.whatwg.org/multipage/webstorage.html).
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* suppress expected warning */
+    });
+    const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      },
+    });
+    try {
+      const persistence = createBrowserPersistence({
+        nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+      });
+      // The denial is known at construction: `startMocks` hydrates and
+      // reads `isDenied()` before anything is written, and that value
+      // drives `DemoNotice`'s memory text.
+      expect(persistence.isDenied()).toBe(true);
+      expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+      const snapshot = makeSnapshot();
+      persistence.save(SCENARIO_KEY, snapshot);
+      // The first save announces the limitation exactly once.
+      expect(warn).toHaveBeenCalledTimes(1);
+      // The snapshot round-trips through the in-memory cache.
+      expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
+      persistence.save(SCENARIO_KEY, snapshot);
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      if (originalDescriptor === undefined) {
+        // jsdom defines `sessionStorage` as an own property; if it ever
+        // stops doing so, the override is removed again instead of being
+        // restored to a descriptor that never existed.
+        Reflect.deleteProperty(globalThis, 'sessionStorage');
+      } else {
+        Object.defineProperty(globalThis, 'sessionStorage', originalDescriptor);
+      }
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('T05-AC06 scenario isolation', () => {
