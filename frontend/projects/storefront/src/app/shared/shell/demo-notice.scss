@@ -36,14 +36,16 @@
 }
 
 /* yettel's warning is a dark-on-yellow pair, .alert-warning{background-color:
-   #ffd500;color:#332b00} (docs/design/yettel.md §9), so the memory bar is the
-   yellow ground with #332b00 text and an inverted badge. */
-.demo-notice--memory {
+   #ffd500;color:#332b00} (docs/design/yettel.md §9), so the memory and reset
+   strips share the yellow ground with #332b00 text and an inverted badge. */
+.demo-notice--memory,
+.demo-notice--reset {
   background: var(--color-status-warning);
   color: var(--color-status-warning-text);
 }
 
-.demo-notice--memory .demo-notice__badge {
+.demo-notice--memory .demo-notice__badge,
+.demo-notice--reset .demo-notice__badge {
   background: var(--color-status-warning-text);
   color: var(--color-status-warning);
 }

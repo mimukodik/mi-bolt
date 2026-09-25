@@ -256,6 +256,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     persistence.save(SCENARIO_KEY, snapshot);
     expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
+    expect(persistence.lastDiscard()).toBeNull();
     expect(persistence.isDenied()).toBe(false);
   });
 
@@ -266,6 +267,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
   });
 
   it('rejects an expired snapshot (>7 days old) and clears it', () => {
@@ -279,6 +281,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('stale');
   });
 
   it('rejects a version-mismatched snapshot and clears it', () => {
@@ -288,6 +291,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('version');
   });
 
   it('storage-denied mode keeps state in memory and warns once', () => {
@@ -709,6 +713,7 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
       });
       expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
       expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+      expect(persistence.lastDiscard()).toBe('corrupt');
     });
   }
 
@@ -719,6 +724,42 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
+  });
+
+  it('a version 3 entry without usedPaymentIntentIds is a version discard, not a corrupt one', () => {
+    // A real older browser holds a version 3 entry: it has no
+    // `usedPaymentIntentIds` at all, so the allowlist would call it
+    // corrupt. The version check runs first and names the real cause.
+    const { usedPaymentIntentIds: _removed, ...version3 } = makeSnapshot({ schemaVersion: 3 });
+    writeRaw(JSON.stringify(version3));
+    const persistence = createBrowserPersistence({
+      nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+    });
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('version');
+  });
+
+  it('an entry with an unparsable savedAt is a corrupt discard', () => {
+    writeRaw(JSON.stringify(makeSnapshot({ savedAt: 'not-a-date' })));
+    const persistence = createBrowserPersistence({
+      nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+    });
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
+  });
+
+  it('lastDiscard() resets on the next hydrate', () => {
+    writeRaw('not-valid-json{{');
+    const persistence = createBrowserPersistence({
+      nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+    });
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBeNull();
   });
 });
 

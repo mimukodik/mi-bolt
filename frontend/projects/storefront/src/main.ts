@@ -3,7 +3,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { environment } from './environments/environment';
-import { PERSISTENCE_MODE } from './app/core/persistence-mode';
+import { PERSISTENCE_MODE, SNAPSHOT_DISCARD } from './app/core/persistence-mode';
 import { SPLASH_ID } from '@mi-bolt/core-api/splash';
 
 /**
@@ -42,7 +42,8 @@ const start = async (): Promise<void> => {
     bootstrapApplication(App, appConfig).catch(showFatal);
     return;
   }
-  const { startMocks, getPreparedPersistenceMode } = await import('./core/bootstrap-demo');
+  const { startMocks, getPreparedPersistenceMode, getPreparedSnapshotDiscard } =
+    await import('./core/bootstrap-demo');
   try {
     await startMocks();
   } catch (err: unknown) {
@@ -58,6 +59,7 @@ const start = async (): Promise<void> => {
     providers: [
       ...appConfig.providers,
       { provide: PERSISTENCE_MODE, useValue: getPreparedPersistenceMode() },
+      { provide: SNAPSHOT_DISCARD, useValue: getPreparedSnapshotDiscard() },
     ],
   }).catch(showFatal);
 };

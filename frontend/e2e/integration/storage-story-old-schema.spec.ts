@@ -8,11 +8,12 @@ import { test, expect } from '../fixtures/coverage';
 // `mi-bolt.snapshot.default` (`Persistence` / `SNAPSHOT_SCHEMA_VERSION` in
 // projects/shop-mocks/src/persistence.ts). On boot `Persistence.hydrate` reads
 // that entry and, when it carries another `schemaVersion`, removes it and
-// returns nothing, so the shop starts from an empty cart with no message. The
-// older entry below is planted by the first page load of the second phase only:
-// the init script guards itself with its own `mi-bolt.story-seeded` marker,
-// which it sets in the same run, so every later load boots from what the app
-// itself saved.
+// returns nothing, so the shop starts from an empty cart; the demo strip then
+// says the saved cart is from another version (`demo-notice--reset` with
+// `demo-notice-reset-text`). The older entry below is planted by the first page
+// load of the second phase only: the init script guards itself with its own
+// `mi-bolt.story-seeded` marker, which it sets in the same run, so every later
+// load boots from what the app itself saved.
 const SNAPSHOT_KEY = 'mi-bolt.snapshot.default';
 const SEEDED_MARKER_KEY = 'mi-bolt.story-seeded';
 
@@ -159,7 +160,7 @@ function toOlderEntry(raw: string, variantId: string): string {
 
 test.describe('Shop: storage, startup and expired-cart stories', () => {
   test(
-    '[E014] an older snapshot version is discarded and its line stays hidden',
+    '[E014] an older snapshot version is discarded, the shop says so and its line stays hidden',
     { tag: '@integration' },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= DESKTOP_MIN_WIDTH;
@@ -310,7 +311,18 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         // The incompatible entry was removed at boot.
         expect(await readSnapshotRaw()).toBeNull();
 
-        // Nothing says a saved state of an older version was discarded.
+        // The strip says the saved cart is from another version: the reset
+        // class and `demo-notice-reset-text` with the version sentence, while
+        // the ordinary sentence is not rendered.
+        await expect(page.getByTestId('demo-notice')).toHaveClass(/demo-notice--reset/);
+        await expect(page.getByTestId('demo-notice-reset-text')).toHaveText(
+          'A mentett kosarad a bolt egy másik verziójából való, ezért a bolt üres kosárral indult.',
+        );
+        await expect(page.getByTestId('demo-notice')).not.toContainText(
+          'Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés.',
+        );
+
+        // The strip is the only surface: no separate status message is rendered.
         await expect(page.locator('app-status-message')).toHaveCount(0);
 
         // No uncaught JavaScript exception fired while the shop booted. A
@@ -331,6 +343,14 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         await page.goto('/telefonok', { timeout: 10000 });
         await expect(page.getByTestId('catalog-grid')).toBeVisible();
         await expect(cards).toHaveCount(PAGE_SIZE);
+
+        // This full load boots from the empty state the shop saved itself:
+        // the reset strip is gone and the ordinary sentence is back.
+        await expect(page.getByTestId('demo-notice')).not.toHaveClass(/demo-notice--reset/);
+        await expect(page.getByTestId('demo-notice-reset-text')).toHaveCount(0);
+        await expect(page.getByTestId('demo-notice')).toContainText(
+          'Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés.',
+        );
 
         const indexes = await inStockCardIndexes(1);
         expect(indexes).toHaveLength(1);
@@ -366,6 +386,10 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         await page.goto(page.url(), { timeout: 10000 });
         await expect(page.getByTestId('cart-page')).toBeVisible();
 
+        // The reload after the shop saved its own cart keeps the ordinary strip.
+        await expect(page.getByTestId('demo-notice')).not.toHaveClass(/demo-notice--reset/);
+        await expect(page.getByTestId('demo-notice-reset-text')).toHaveCount(0);
+
         // The older entry was not replayed and no false order line appeared.
         await expect(cartLines).toHaveCount(1);
         await expect(cartLines.nth(0).getByTestId('cart-line-name')).toHaveText(phoneName);
@@ -388,18 +412,6 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         );
         expect(applicationPageErrors).toEqual([]);
       });
-    },
-  );
-
-  test.fixme(
-    '[E014] discard incompatible data under explicit version policy',
-    { tag: '@integration' },
-    async () => {
-      // Missing expectation: "Discard incompatible data under explicit version
-      // policy" — the version policy is silent, so no screen states that a saved
-      // state of an older version was discarded (issue MIM-448). The shop starts
-      // with an empty cart and its ordinary demo strip instead, exactly as the
-      // first test asserts.
     },
   );
 });

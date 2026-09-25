@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { HeaderNav, type HeaderVariant } from '../../core/navigation/header-nav';
 import { FooterNav } from '../../core/navigation/footer-nav';
 import { CartCountFacade } from '../../core/navigation/cart-count-facade';
-import { PERSISTENCE_MODE } from '../../core/persistence-mode';
+import { PERSISTENCE_MODE, SNAPSHOT_DISCARD } from '../../core/persistence-mode';
 import { DemoNotice } from './demo-notice';
 
 /**
@@ -40,6 +40,9 @@ export class AppShell {
 
   /** Drives `DemoNotice`'s `'memory'` state (FIX-70-AC05) — see `PERSISTENCE_MODE`. */
   readonly persistenceMode = inject(PERSISTENCE_MODE);
+
+  /** Drives `DemoNotice`'s reset strip (MIM-448) — see `SNAPSHOT_DISCARD`. */
+  readonly snapshotDiscard = inject(SNAPSHOT_DISCARD);
 
   /** Whether the footer renders in its compact form. The checkout layout is
    *  the only caller that sets this; every other shell uses the default. */
