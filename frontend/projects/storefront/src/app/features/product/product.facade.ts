@@ -32,6 +32,7 @@ import type { Subscription } from 'rxjs';
 import {
   catchError,
   distinctUntilChanged,
+  EMPTY,
   finalize,
   map,
   of,
@@ -247,6 +248,28 @@ export class ProductFacade {
       variantQuery: this.variantQuerySignal(),
       retryNonce: ++this.retryNonceCounter,
     });
+  }
+
+  /**
+   * Re-reads the loaded product without a loading state, so a stock
+   * change the cart reported (an add refused with OUT_OF_STOCK, the
+   * standard's row E060) shows on the page. The selection and the
+   * gallery stay; a failed read, or one that lands after the route
+   * moved on or started loading again, changes nothing.
+   */
+  refreshProduct(): void {
+    const slug = this.slugSignal();
+    if (slug === null || this.statusSignal() !== 'success') return;
+    this.api
+      .invoke(getProduct, { slug })
+      .pipe(
+        take(1),
+        catchError(() => EMPTY),
+      )
+      .subscribe((product) => {
+        if (this.slugSignal() !== slug || this.statusSignal() !== 'success') return;
+        this.productSignal.set(product);
+      });
   }
 
   /**
