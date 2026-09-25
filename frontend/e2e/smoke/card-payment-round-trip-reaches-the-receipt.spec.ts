@@ -155,6 +155,9 @@ test.describe('Smoke: purchase on the real stack', () => {
         'A fizetés jóváhagyva.',
       );
       await expect(page.getByTestId('review-consent-terms-input')).toBeChecked();
+      // The CTA stays enabled while options load so a user can request an
+      // explanation. Wait for actual checkout readiness before submitting.
+      await expect(page.getByTestId('review-page')).toHaveAttribute('data-status', 'ready');
       await expect(page.getByTestId('review-submit').getByRole('button')).toBeEnabled();
       await page.getByTestId('review-submit').getByRole('button').click();
       await expect(page).toHaveURL(/\/penztar\/siker\/[^/]+$/);

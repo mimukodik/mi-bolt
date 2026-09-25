@@ -4,7 +4,8 @@ on:
     workflows: [Publish Candidate]
     types: [completed]
   schedule:
-    - cron: '*/10 * * * *'
+    # @eggp asked for a daily schedule so it does not eat up the CI minutes.
+    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       publisher_run_id:
@@ -98,7 +99,7 @@ jobs:
   report:
     needs: smoke
     if: needs.smoke.outputs.ready == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     concurrency:
       group: bolt-preview-${{ needs.smoke.outputs.pr }}
       queue: max

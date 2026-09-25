@@ -203,3 +203,30 @@ Further reading:
 - [`../frontend/README.md`](../frontend/README.md) — the Angular
   workspace.
 - [`../docs/monorepo.md`](../docs/monorepo.md) — the folder map.
+
+## Hosted database lifecycle
+
+Each PR preview runs its own commerce process and PostgreSQL database. Every
+new commit starts from a fresh clone of the approved schema/catalog template;
+retries of that same commit retain the clone. Runtime credentials are scoped
+to that database and supplied by Kubernetes, never by a checked-in `.env`.
+
+Normal releases of `https://bolt.mimukodik.hu` preserve its database and apply
+Liquibase migrations. The catalog loader and initial admin bootstrap skip
+already-populated data; rotating the initial password does not reset an
+existing admin account. A rehearsal reset is an explicit platform operation.
+The bootstrap username is `admin`. Stable receives its initial password from
+1Password. All previews share a separate preview-only admin password and a
+separate preview-only database password, both stored in the `berek` 1Password
+vault (`MIBOLT_PREVIEW_ADMIN_PASSWORD` and `MIBOLT_PREVIEW_DB_PASSWORD`).
+To rotate, update the item, wait for External Secrets to sync, then let existing
+previews expire or recreate them by removing and re-adding `bolt-preview` after
+teardown. Existing accounts and database roles keep their copied password until
+that preview is destroyed.
+
+Changes under the Liquibase migrations or `data/catalog/` require a new approved
+template fingerprint before preview admission. See the
+[candidate guide](../deploy/candidate/README.md) for deployment receipts and the
+[Berek operator runbook](https://github.com/mimukodik/berek/blob/main/docs/mibolt-preview-release.md)
+for template bootstrap, isolation and recovery. Reverting an image alone does
+not roll back an applied migration.

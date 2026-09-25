@@ -106,15 +106,16 @@ def resolve():
                 or type(receipt['pr']) is not int or not 0 < receipt['pr'] < 100000000):
             raise ValueError('candidate receipt identity mismatch')
         pr = api(f"pulls/{receipt['pr']}")
-        if pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']:
+        if (pr['state'] != 'open' or pr['head']['sha'] != receipt['headSha']
+                or not any(label['name'] == 'bolt-preview' for label in pr['labels'])):
             output.write('ready=false\n')
             return
         Path('candidate.json').write_text(json.dumps(receipt))
         output.write(f"ready=true\nhead={receipt['headSha']}\npr={receipt['pr']}\n")
 
 
-def fence(receipt):
-    origin = f"https://bolt-pr-{receipt['pr']}.mimukodik.hu"
+def fence(receipt, origin=None):
+    origin = origin or f"https://bolt-pr-{receipt['pr']}.mimukodik.hu"
     # Cache busting plus no-cache response prevents an edge cache from accepting
     # a receipt from a previous generation sharing the PR hostname.
     headers = {'User-Agent': 'Mozilla/5.0 (compatible; MiBoltPreviewSmoke/1.0)',
