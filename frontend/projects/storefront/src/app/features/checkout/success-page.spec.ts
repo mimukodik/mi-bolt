@@ -918,7 +918,7 @@ describe('successGuard', () => {
 // out of the presentational layer
 // ---------------------------------------------------------------------------
 
-describe('OrderReceiptComponent — billing and delivery address', () => {
+describe('OrderReceiptComponent — no name, address or e-mail', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection()],
@@ -926,52 +926,23 @@ describe('OrderReceiptComponent — billing and delivery address', () => {
     });
   });
 
-  it('SP-18 the receipt renders the billing address block from the wire billing', () => {
+  it('SP-18 the receipt shows no name, address or e-mail', () => {
     const fixture: ComponentFixture<OrderReceiptComponent> =
       TestBed.createComponent(OrderReceiptComponent);
-    const billing: BillingDetails = {
-      name: 'Teszt Elek',
-      address: {
-        countryCode: 'HU',
-        postalCode: '1011',
-        city: 'Budapest',
-        line1: 'Fő utca 1.',
-      },
-    };
-
-    fixture.componentRef.setInput('receipt', makeReceipt({ billing }));
-    fixture.detectChanges();
-    const billingRow = queryHTMLElement(document, '[data-testid="receipt-row-billing"]');
-    if (billingRow === null) throw new Error('billing row not in the DOM');
-    const dt = billingRow.querySelector('dt');
-    const dd = billingRow.querySelector('dd');
-    const dtText = (dt?.textContent ?? '').trim();
-    expect(dtText).toBe('Számlázási cím');
-    expect(collapsedText(dd)).toBe('Teszt Elek Fő utca 1. 1011 Budapest');
-
-    const billingWithLine2: BillingDetails = {
-      name: 'Teszt Elek',
-      address: {
-        countryCode: 'HU',
-        postalCode: '1011',
-        city: 'Budapest',
-        line1: 'Fő utca 1.',
-        line2: '2. emelet',
-      },
-    };
-    fixture.componentRef.setInput('receipt', makeReceipt({ billing: billingWithLine2 }));
-    fixture.detectChanges();
-    const dd2 = queryHTMLElement(document, '[data-testid="receipt-row-billing"] dd');
-    expect(collapsedText(dd2)).toBe('Teszt Elek Fő utca 1. 2. emelet 1011 Budapest');
-  });
-
-  it('SP-19 the receipt renders the delivery address row for home delivery only', () => {
-    const fixture: ComponentFixture<OrderReceiptComponent> =
-      TestBed.createComponent(OrderReceiptComponent);
-
     fixture.componentRef.setInput(
       'receipt',
       makeReceipt({
+        contactEmail: 'teszt.elek@pelda.hu',
+        billing: {
+          name: 'Teszt Elek',
+          address: {
+            countryCode: 'HU',
+            postalCode: '1011',
+            city: 'Budapest',
+            line1: 'Fő utca 1.',
+            line2: '2. emelet',
+          },
+        },
         delivery: {
           optionId: 'home_delivery',
           address: {
@@ -985,26 +956,38 @@ describe('OrderReceiptComponent — billing and delivery address', () => {
     );
     fixture.detectChanges();
 
-    const homeRow = queryHTMLElement(document, '[data-testid="receipt-row-delivery-address"]');
-    if (homeRow === null) throw new Error('delivery-address row not in the DOM');
-    const homeDt = homeRow.querySelector('dt');
-    const homeDd = homeRow.querySelector('dd');
-    const homeDtText = (homeDt?.textContent ?? '').trim();
-    expect(homeDtText).toBe('Szállítási cím');
-    expect(collapsedText(homeDd)).toBe('Kossuth tér 2. 1055 Budapest');
+    const receiptRoot = queryHTMLElement(document, '[data-testid="order-receipt"]');
+    if (receiptRoot === null) throw new Error('receipt not in the DOM');
+    const text = collapsedText(receiptRoot);
+    expect(text).not.toContain('Teszt Elek');
+    expect(text).not.toContain('Fő utca 1.');
+    expect(text).not.toContain('2. emelet');
+    expect(text).not.toContain('Kossuth tér 2.');
+    expect(text).not.toContain('teszt.elek@pelda.hu');
+
+    expect(queryHTMLElement(document, '[data-testid="receipt-row-billing"]')).toBeNull();
+    expect(queryHTMLElement(document, '[data-testid="receipt-row-delivery-address"]')).toBeNull();
+  });
+
+  it('SP-19 the delivery row names the method for home delivery and for pickup', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+
+    fixture.componentRef.setInput('receipt', makeReceipt({ delivery: HOME_DELIVERY }));
+    fixture.detectChanges();
+    const homeDd = queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd');
+    expect(collapsedText(homeDd)).toBe('Házhoz szállítás');
 
     fixture.componentRef.setInput(
       'receipt',
       makeReceipt({ delivery: { optionId: 'pickup_point' } }),
     );
     fixture.detectChanges();
-
-    expect(queryHTMLElement(document, '[data-testid="receipt-row-delivery-address"]')).toBeNull();
-    // Billing row is still present for pickup.
-    expect(queryHTMLElement(document, '[data-testid="receipt-row-billing"]')).not.toBeNull();
+    const pickupDd = queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd');
+    expect(collapsedText(pickupDd)).toBe('Átvételi pont');
   });
 
-  it('SP-20 the receipt meta rows keep the order payment, delivery, billing, delivery address, status', () => {
+  it('SP-20 the receipt meta rows are payment, delivery and status', () => {
     const fixture: ComponentFixture<OrderReceiptComponent> =
       TestBed.createComponent(OrderReceiptComponent);
     fixture.componentRef.setInput('receipt', makeReceipt());
@@ -1017,12 +1000,6 @@ describe('OrderReceiptComponent — billing and delivery address', () => {
     for (const row of Array.from(rows)) {
       ids.push(row.getAttribute('data-testid') ?? '');
     }
-    expect(ids).toEqual([
-      'receipt-row-payment',
-      'receipt-row-delivery',
-      'receipt-row-billing',
-      'receipt-row-delivery-address',
-      'receipt-row-status',
-    ]);
+    expect(ids).toEqual(['receipt-row-payment', 'receipt-row-delivery', 'receipt-row-status']);
   });
 });

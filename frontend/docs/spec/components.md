@@ -391,7 +391,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `none`.
 
-**Functions:** Compose breadcrumbs (switched off for now behind `BREADCRUMB_VISIBLE`, MIM-234), gallery, configuration, price, add controls, spec groups and narrow sticky buy rail; CartFacade injection only at container/add orchestrator.
+**Functions:** Compose breadcrumbs (switched off for now behind `BREADCRUMB_VISIBLE`, MIM-234), gallery, configuration, price, add controls, spec groups and narrow sticky buy rail; CartFacade injection only at container/add orchestrator. An add refused with OUT_OF_STOCK says the variant sold out meanwhile and re-reads the product through `ProductFacade.refreshProduct()` without a loading state, so the stock line and the disabled add control show the change while the selection and the refusal stay (E060).
 
 **Required states:** loading,ready,error,not-found.
 

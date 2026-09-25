@@ -487,6 +487,48 @@ describe('clear()', () => {
 });
 
 // ---------------------------------------------------------------------------
+// productNameOf
+// ---------------------------------------------------------------------------
+describe('productNameOf', () => {
+  beforeEach(() => {
+    configureTestBed();
+  });
+
+  it('names a line after a later cart dropped it, and null for a variant it never saw', async () => {
+    const facade = TestBed.inject(CartFacade);
+    await facade.addItem(VARIANT_MOTO_256, 1);
+
+    const loaded = facade.cart();
+    if (loaded === null) throw new Error('the cart was not loaded');
+    const name = loaded.items.find((item) => item.variantId === VARIANT_MOTO_256)?.productName;
+    expect(typeof name).toBe('string');
+    if (typeof name !== 'string' || name.length === 0) {
+      throw new Error('the cart line carries no product name');
+    }
+
+    // The next read answers with the line dropped for lost stock, exactly
+    // as the mock reports it: the line is gone and the notice names it.
+    server.use(
+      http.get('*/api/v1/cart', () =>
+        HttpResponse.json({
+          ...loaded,
+          version: loaded.version + 1,
+          items: [],
+          lineCount: 0,
+          totalQuantity: 0,
+          notices: [{ code: 'ITEM_REMOVED', variantId: VARIANT_MOTO_256, params: { quantity: 1 } }],
+        }),
+      ),
+    );
+    await facade.refetch();
+
+    expect(facade.cart()?.items).toEqual([]);
+    expect(facade.productNameOf(VARIANT_MOTO_256)).toBe(name);
+    expect(facade.productNameOf('no-such-variant')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // FIX-10: CartFacade acquires its cart on construction
 // ---------------------------------------------------------------------------
 describe('FIX-10: CartFacade acquires its cart on construction', () => {
