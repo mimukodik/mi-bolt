@@ -2,11 +2,20 @@
   class="demo-notice"
   data-testid="demo-notice"
   [class.demo-notice--memory]="persistenceMode() === 'memory'"
+  [class.demo-notice--reset]="persistenceMode() !== 'memory' && snapshotDiscard() !== null"
 >
   <span aria-hidden="true" class="demo-notice__badge">DEMÓ</span>
   @if (persistenceMode() === 'memory') {
     <span class="demo-notice__text" data-testid="demo-notice-memory-text">
       A böngésződ nem engedi a mentést, ezért az oldal frissítésekor a kosarad tartalma elveszik.
+    </span>
+  } @else if (snapshotDiscard() !== null) {
+    <span class="demo-notice__text" data-testid="demo-notice-reset-text">
+      @if (snapshotDiscard() === 'version') {
+        A mentett kosarad a bolt egy másik verziójából való, ezért a bolt üres kosárral indult.
+      } @else {
+        A mentett kosarad nem volt visszaállítható, ezért a bolt üres kosárral indult.
+      }
     </span>
   } @else {
     <span class="demo-notice__text">

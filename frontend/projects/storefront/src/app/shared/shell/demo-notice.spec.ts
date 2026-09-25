@@ -1,14 +1,19 @@
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { Component, signal } from '@angular/core';
+import type { SnapshotDiscard } from '@mi-bolt/mocks/persistence';
 import { DemoNotice } from './demo-notice';
 
 @Component({
   imports: [DemoNotice],
-  template: `<app-demo-notice [persistenceMode]="persistenceMode()" />`,
+  template: `<app-demo-notice
+    [persistenceMode]="persistenceMode()"
+    [snapshotDiscard]="snapshotDiscard()"
+  />`,
 })
 class HostComponent {
   readonly persistenceMode = signal<'durable' | 'memory'>('durable');
+  readonly snapshotDiscard = signal<SnapshotDiscard | null>(null);
 }
 
 function getNativeElement(fixture: ComponentFixture<unknown>): HTMLElement {
@@ -66,6 +71,57 @@ describe('DemoNotice', () => {
     const fixture = TestBed.createComponent(DemoNotice);
     fixture.detectChanges();
     expect(fixture.componentInstance.persistenceMode()).toBe('durable');
+    expect(fixture.componentInstance.snapshotDiscard()).toBeNull();
+  });
+
+  it('a corrupt or stale discard shows the reset sentence on the warning strip (MIM-448)', () => {
+    const { fixture, host } = setup();
+    const root = getNativeElement(fixture);
+
+    for (const discard of ['corrupt', 'stale'] as const) {
+      host.snapshotDiscard.set(discard);
+      fixture.detectChanges();
+
+      const notice = root.querySelector('[data-testid="demo-notice"]');
+      expect(notice?.classList.contains('demo-notice--reset')).toBe(true);
+      expect(notice?.classList.contains('demo-notice--memory')).toBe(false);
+      expect(root.querySelector('[data-testid="demo-notice-reset-text"]')?.textContent.trim()).toBe(
+        'A mentett kosarad nem volt visszaállítható, ezért a bolt üres kosárral indult.',
+      );
+      expect(root.textContent ?? '').not.toContain('Fiktív termékek és árak');
+    }
+  });
+
+  it('a version discard names the other version (MIM-448)', () => {
+    const { fixture, host } = setup();
+    const root = getNativeElement(fixture);
+
+    host.snapshotDiscard.set('version');
+    fixture.detectChanges();
+
+    expect(
+      root.querySelector('[data-testid="demo-notice"]')?.classList.contains('demo-notice--reset'),
+    ).toBe(true);
+    expect(root.querySelector('[data-testid="demo-notice-reset-text"]')?.textContent.trim()).toBe(
+      'A mentett kosarad a bolt egy másik verziójából való, ezért a bolt üres kosárral indult.',
+    );
+  });
+
+  it('memory mode wins over a discard (MIM-448)', () => {
+    const { fixture, host } = setup();
+    const root = getNativeElement(fixture);
+
+    host.persistenceMode.set('memory');
+    host.snapshotDiscard.set('corrupt');
+    fixture.detectChanges();
+
+    const notice = root.querySelector('[data-testid="demo-notice"]');
+    expect(notice?.classList.contains('demo-notice--memory')).toBe(true);
+    expect(notice?.classList.contains('demo-notice--reset')).toBe(false);
+    expect(root.querySelector('[data-testid="demo-notice-reset-text"]')).toBeNull();
+    expect(root.querySelector('[data-testid="demo-notice-memory-text"]')?.textContent).toContain(
+      'A böngésződ nem engedi a mentést',
+    );
   });
 
   it('MIM-216: the strip is the slim navy bar with the lime badge', () => {
