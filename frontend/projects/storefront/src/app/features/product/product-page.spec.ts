@@ -633,6 +633,42 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     expect(item0.textContent).toContain('6,7″ kijelző');
     expect(item1.textContent).toContain('50 MP kamera');
   });
+
+  it('renders two equal highlights without NG0955', async () => {
+    server.use(
+      http.get(`${BASE_URL}/products/:slug`, ({ params }) => {
+        const slug = params['slug'];
+        if (slug === 'demo-one-5g') {
+          return HttpResponse.json({ ...DEMO_PRODUCT, highlights: ['5G', '5G'] }, { status: 200 });
+        }
+        return HttpResponse.json(
+          {
+            type: 'https://example.com/not-found',
+            title: 'Not found',
+            status: 404,
+            detail: `Product not found`,
+          },
+          { status: 404 },
+        );
+      }),
+    );
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { root, facade, tick } = await createHarness();
+      // NG0955 is recorded only when a rendered list is reconciled against
+      // the next one: a silent re-read delivers the same highlights anew.
+      facade.refreshProduct();
+      await tick();
+
+      const items = Array.from(queryElement(root, '.key-facts').querySelectorAll('li'));
+      expect(items.length).toBe(2);
+      expect(items.map((item) => item.textContent.trim())).toEqual(['5G', '5G']);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
