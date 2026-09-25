@@ -48,7 +48,7 @@ No component imports mocks, fixtures, repository, API `HttpClient` directly or a
 |---|---|---|---|---|
 | AppConfigFacade | root | getConfig response | config/status | load, retry |
 | CatalogFacade | catalogue route | canonical Router query + listProducts response | query, vm, resultCount | setSearch, setFilters, setSort, setPage, retry |
-| ProductFacade | product route | getProduct + exact variant query | selectedVariant, gallery, vm | selectVariant, selectImage, retry |
+| ProductFacade | product route | getProduct + exact variant query | selectedVariant, gallery, vm | selectVariant, selectImage, retry, refreshProduct |
 | CartFacade | root | current mock Cart DTO | cart, itemCount, subtotal, pending, error | ensureCart, addItem, removeItem, refresh |
 | CheckoutFacade | /penztar parent | volatile Signal Form model + CheckoutSession (its server-computed CheckoutSummary) | session, options, summary, complete, version, cartExpired, pending, error, conflict, priceChange, paymentIntent, order | ensureOptions, ensureSession, updateContact, updateBilling, updateDelivery, updatePayment, createPaymentIntent, readPaymentIntent, submitOrder, fetchOrder, retry, confirmPriceChange, resetAfterOrder, startNewPurchase |
 | Dialog/Menu | local component/service | opened flag/trigger reference | opened | open, close |

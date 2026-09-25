@@ -62,7 +62,7 @@ Status: specified, not implemented or executed in this planning package. Each gr
 |E057|cart|cart-seeded|Remove last line|Empty-state CTA to catalogue; checkout blocked.|
 |E058|cart|cart-503-once|Attempt mutation then Retry|Prior cart retained; error recovery does not duplicate item.|
 |E059|cart|cart-expired|Restore expired cart|Explicit expiry and new-cart path; no silent order on expired state.|
-|E060|cart|stock-lost-before-add|Add chosen variant after stock changed|409 OUT_OF_STOCK; selection shown, no misleading success.|
+|E060|cart|stock-lost-once-cart-add|Add chosen variant after stock changed|409 OUT_OF_STOCK; selection shown, no misleading success.|
 |E061|idempotency|idempotency-repeat|Repeat same logical write and key|Same response, one domain mutation and one version increment.|
 |E062|idempotency|idempotency-conflict|Reuse key with different normalized body|409 IDEMPOTENCY_CONFLICT; prior result unchanged.|
 |E063|idempotency|checkout-ready|Double-click final confirmation|Exactly one order request in flight and one receipt.|
@@ -87,7 +87,7 @@ Status: specified, not implemented or executed in this planning package. Each gr
 |E082|review|checkout-ready|Open review for one phone with home delivery and card|Summary = subtotal + shipping fee + payment fee, recomputed on every read; a phone above 30000 Ft gets 0 shipping and 0 card fee, so total = subtotal.|
 |E083|review|—|Retired: the 2.0.0 contract has no quote, no expiry and no QUOTE_EXPIRED; the summary is recomputed on every read.|—|
 |E084|review|price-changed|Change fixture price before order|409 PRICE_CHANGED with new cart version; user explicitly re-reviews.|
-|E085|order|stock-lost-before-order|Confirm after stock changes|No order committed; return to cart correction without wiping contact.|
+|E085|order|stock-lost-once-order|Confirm after stock changes|No order committed; return to cart correction without wiping contact.|
 |E086|review|cart-changed|Change the cart after opening review, then confirm|412 CART_VERSION_CONFLICT, no order; the conflict banner offers Újrapróbálom.|
 |E087|review|checkout-ready|Open review|Correct product variant, contact, method, shipping, subtotal and total.|
 |E088|review|checkout-ready|Try final action without the terms tick|The button stays active; the click marks the terms, moves focus to them and sends no order request.|
