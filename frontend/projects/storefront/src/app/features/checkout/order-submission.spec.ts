@@ -1,7 +1,7 @@
 /**
  * MIM-212 — order submission spec on the 2.0.0 contract.
  *
- * Thirteen cases over the eight `SubmitOutcome` kinds, the in-flight
+ * Cases over the eight `SubmitOutcome` kinds, the in-flight
  * mutex, the no-session and incomplete guards, the four intent-status
  * branches, the price-change refusal and the safe-logger whitelist.
  * The harness mirrors the 2.0.0 mock spec (catalog fixture in

@@ -1,15 +1,14 @@
 /**
  * MIM-212 — success page and receipt cases on the 2.0.0 contract.
  *
- * Twenty cases over the receipt the wire now sends and the page that
- * hydrates it. The first four cases are the presentational
- * `OrderReceiptComponent`; cases five through fifteen drive the
+ * Cases over the receipt the wire now sends and the page that
+ * hydrates it: the presentational `OrderReceiptComponent`, the
  * `SuccessStep` page through its full hydration pipeline
  * (loading → fetch → render, missing, error, malformed-id,
  * 500-then-200 retry, no-second-fetch on a forward navigation,
  * cart reset on receipt, heading copy, new-shopping
- * navigate); cases sixteen and seventeen cover the two arms of
- * `successGuard`. The harness mirrors the 2.0.0 mock spec
+ * navigate), and the two arms of `successGuard`. The harness
+ * mirrors the 2.0.0 mock spec
  * (catalog fixture in `beforeAll`, fixed clock, deterministic ids,
  * per-test `options` and `server.use(...)`).
  *

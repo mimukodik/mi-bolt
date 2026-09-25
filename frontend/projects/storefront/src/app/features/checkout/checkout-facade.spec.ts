@@ -1,7 +1,7 @@
 /**
  * MIM-212 — checkout facade on the 2.0.0 contract (unit S3-F1a).
  *
- * 28 cases over the checkout facade's public surface — options and
+ * Cases over the checkout facade's public surface — options and
  * session hydration, the four section writes, conflict and error
  * recovery, payment-intent idempotency, and order submit — measured
  * against the configured backend values that
