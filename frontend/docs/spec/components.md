@@ -102,13 +102,13 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `persistenceMode: durable|memory`.
+**Signal inputs:** `persistenceMode: durable|memory`; `snapshotDiscard: corrupt|version|stale|null`.
 
 **Outputs:** `none`.
 
-**Functions:** Persistent Hungarian simulation disclosure; explain memory-only/reload behavior without suggesting real order fulfillment.
+**Functions:** Persistent Hungarian simulation disclosure; explain memory-only/reload behavior without suggesting real order fulfillment. When the mock bootstrap dropped a saved snapshot it could not restore (`SNAPSHOT_DISCARD`, MIM-448), the strip takes the warning look (`demo-notice--reset`) and `demo-notice-reset-text` says the saved cart is gone: one sentence for `version`, one for `corrupt` and `stale`. The memory-warning state wins over a discard.
 
-**Required states:** default,memory-warning.
+**Required states:** default,memory-warning,reset-warning.
 
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
