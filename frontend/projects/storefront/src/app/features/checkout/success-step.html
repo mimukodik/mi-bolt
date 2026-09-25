@@ -53,7 +53,7 @@
 
   @switch (loadState().kind) {
     @case ('loading') {
-      <div class="loading" data-testid="success-loading">
+      <div appSkeletonLeave class="loading" data-testid="success-loading">
         <app-loading-state label="A rendelés visszatöltése" variant="block" />
       </div>
     }

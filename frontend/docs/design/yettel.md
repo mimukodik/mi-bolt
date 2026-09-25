@@ -271,6 +271,25 @@ Read from the captured `yettel/css/portal.css` on 2026-09-22.
 - Invalid and focused: `.form-control.is-invalid:focus{border-color:#d9534f;box-shadow:0 0 0 .2rem rgba(217,83,79,0.25)}`. MiBolt: `--color-error-halo`.
 - Recorded, not corrected: a border colour change is a weaker focus indicator than the outline ring it replaces. Yettel fidelity decides for this demo (owner, 2026-09-22).
 
+### Alert (`.information-box`)
+
+Read from the captured `yettel/css/portal.css`.
+
+- Box: `.information-box{font-family:"portal-font-light",sans-serif,arial;font-size:14px;line-height:20px;position:relative;margin-top:0;padding:16px 16px 16px 45px;border-radius:8px;background-color:#c4dfe9;color:#002340}`.
+- Icon: `.information-box__icon{display:inline-block;position:absolute;top:16px;left:16px;width:27px;height:24px;background:url(".../exclamation-mark.svg") no-repeat}`.
+- MiBolt: the shared `StatusMessage` and the contact form's error summary take this box: no border and no left bar, `--radius-control` (8px), `--space-4` (16px) padding, and a 20px severity icon in front of the text (an `i`, a `!` or a check, drawn in the ring of the success page's check-circle). The icon is a flex item on the 12px gap, pinned to the top like yettel's (`align-self: flex-start`, 16px from the top edge on a wrapped message), so the text starts at 48px where yettel's starts at 45px. The info ground is the sky `#c4dfe9`; success and error keep this project's `--color-status-*-soft` tints (§9), because yettel's solid `.alert-danger` (`#d9534f`) is too loud for an inline message. The icon carries the severity colour: navy on info, `--color-status-success` on success, `--color-status-error` on error. This replaced the 4px left bar and the 1px border every alert carried before, on the owner's ask for a checkout facelift (in English: "the order flow needs a minimal facelift too, I don't like the layout or the elements, for example alerts").
+
+### Skeleton loaders and their fade-out
+
+yettel.hu ships no skeleton: `portal.css` carries no `skeleton`, `shimmer` or `placeholder-glow` selector, so the grey shimmer bars (`LoadingState`, `ProductImage`, `PriceBlock`, the filter facet rows, the product card skeleton) are MiBolt's own.
+
+- Leaving: a skeleton never just disappears. When the data arrives, the skeleton fades out over the content that replaced it, on the owner's rule (in English: "wherever we use skeleton loaders, let us animate them out with a fade and not just remove them"; and "in Angular the CSS animation has to be used, ask the Angular MCP").
+- Timing: `opacity` over 200ms `ease`, yettel's own content fade: `.home .sidebar-top+.main-content--sidebar{transition:visibility ease 0.2s, opacity 0.2s ease}`. Under `prefers-reduced-motion: reduce` the global rule in `src/styles/primitives.css` collapses it to nothing.
+- MiBolt: the `appSkeletonLeave` directive sits on the root element of every skeleton a control-flow block (`@if`, `@switch`, `@for`) removes. Angular calls its `animate.leave` handler before it takes the element out (https://angular.dev/guide/animations#animateleave); the handler pins the element where it stands (`position: absolute` at its own offset and size), so the content lays out beneath it at once and nothing jumps, then adds the global `.skeleton-leave` class, a CSS opacity transition. The element goes when that fade finishes: the handler reads the element's own opacity transition with `getAnimations()`, which applies the pending class change first (CSS Transitions Level 2, "Requirements on pending style changes"), and waits for its `finished` promise, the pattern MDN shows for removing an element after its animations. An element that is not rendered starts no transition (a skeleton inside the filter drawer when the drawer closes, measured in the mobile browser pass), so the list is empty and it goes at once instead of sitting, invisible, until Angular's own four-second fallback; a shimmer animation running on the same element is not the fade and is not waited for.
+- Filter facet counts: a count being re-fetched keeps its box and swaps its text for the shimmer in place, so nothing leaves the DOM; the shimmer sits on an overlay every count carries (`.facet-count::after`) and both it and the count's text cross-fade over the same 200ms `ease`, the shimmer running only while the count is busy.
+- Product card skeleton: wherever a grid of product cards waits for the catalogue API (the home featured grid, the catalogue grid on its first load, the related devices strip on the product page), every card slot shows a `ProductCardSkeleton` in the card's own frame ("Product card on the list page" below: `2px solid #f3f3f3`, 8px radius, a white ground, 16px padding, a 12px gap), so the grid keeps its shape when the cards arrive. Inside it, in the card's order: a 4:3 image block, a 16px bar at 70% width for the name (the name's 16px type), a 14px bar at 50% for the colour and storage line (its 14px type), a 20px bar at 40% for the price (the md price's 20px type) and a 40px pill across the full width where the "Megnézem" button sits; every block carries `LoadingState`'s shimmer. The home grid and the related strip show four, the four cards each of them holds; the catalogue shows six, two rows of its three-column desktop grid. `appSkeletonLeave` goes on the element the control-flow block removes: each home and related `<li>`, and the catalogue's one skeleton grid. The related strip reads its own loading flag, so its section shows the skeleton while the related request runs instead of appearing only when the cards land.
+- Not faded: the payment return page's skeleton, which is the whole route template and leaves with the route rather than through a control-flow block, and the static samples on the primitives showcase, which never leave.
+
 ### Product card on the list page
 
 The card content block is a flat bordered surface, not a shadowed card:
@@ -703,6 +722,61 @@ reference for the cart page's surfaces (line items, the sticky order button,
 the summary). On the mobile cart capture yettel's own chat bubble overlaps the
 sticky order button, which the MiBolt cart avoids.
 
+### Delivery step: option rows, pickup note and summary
+
+The owner asked for a minimal facelift of the order flow (in English: "the
+order flow needs a minimal facelift too, I don't like the layout or the
+elements"). With no captured yettel checkout, the delivery step borrows the
+nearest yettel choice control, the §5 variant chip, and scales it to a row:
+
+- **Option rows** (delivery options and payment methods alike): a white
+  ground (`--color-surface-light`), no border, the chip's
+  `box-shadow: 0 0 0 1px #e5e9ec inset` (`--color-line-thumb`) and an 8px
+  radius (`--radius-control`); the 16px padding stays. An available row
+  that is not selected takes the chip's 1px navy ring on hover. The
+  selected row takes the chip's `0 0 0 2px #002340 inset` ring
+  (`--color-brand-ink`) and a bold title, on the same white ground: the
+  sky fill and the navy border it replaces are gone. The lime
+  "Kiválasztva" badge stays, because the specs and the screen reader's
+  polite announcement both hang on it.
+- **Unavailable rows** wear the shared disabled look (§9, "Button variants
+  after the remap"): a 2px dashed `--color-disabled-border` edge drawn as an
+  inset outline like the product page's unavailable chips,
+  `--color-disabled-text` on the title and the description, full opacity
+  instead of the old 0.6, and `cursor: not-allowed`; the reason sentence
+  keeps its error red.
+- **The fee** sits right-aligned on the title line as the 20px `md` amount
+  with no label (`PriceBlock` `showLabel` false): a price beside an option
+  reads as that option's price, the way the receipt rows print theirs, so
+  the small "Szállítási díj" / "Fizetési díj" above a 28px figure goes.
+- **The pickup note** is an info `StatusMessage` (§5 Alert), persistent and
+  not live, because it is part of the page rather than news about it; the
+  host keeps `role="note"`.
+- **The summary sidebar** names the chosen delivery option in a row of its
+  own ("Szállítási mód"), so the "Szállítási díj" row prints the amount
+  alone at the `md` size, where the option's name used to sit as the
+  amount's label above a 28px figure.
+
+### Review step: price change, payment status and the order button
+
+The same facelift reaches the review step, where three surfaces still wore
+the look the §5 Alert left behind:
+
+- **The price-change notice** keeps its warning colours (the
+  `--color-status-warning-soft` ground and the `--color-status-warning-text`
+  text, §9) and drops the 1px warning border and the 4px left bar, as the
+  Alert did; its radius becomes the Alert's 8px (`--radius-control`) and the
+  16px padding stays. It stays a block of its own rather than a
+  `StatusMessage`, because it carries the two totals and the confirm button.
+- **The card payment status** (paid, declined, pending, unfinished, missing)
+  leaves the grey bordered box and becomes a `StatusMessage`: success for a
+  confirmed payment, error for a declined one, info for every other state;
+  persistent and not live, the wrapper around it keeping its own
+  `role="status"`. The state's buttons sit under it, with no box around them.
+- **The order button's explanation** (why "Demórendelés véglegesítése" is
+  disabled) starts at the button's left edge instead of being centred under a
+  button that sits on the left.
+
 ## 9. Token mapping
 
 The Angular build keeps the legacy token names the ~1000 existing `var(--…)`
@@ -750,7 +824,7 @@ tokens to navy.
 | `--color-status-warning` | `--color-warning` | `#ffd500` | `.alert-warning{background-color:#ffd500;color:#332b00}` (§2) — yettel's own warning ground. The first version of this row resolved to navy `#002340` because both consumers wrote white on the token and yellow would have swallowed it; the pair is dark-on-yellow, so the row below supplies the text colour and the two consumers were switched to it on 2026-09-20 |
 | `--color-status-warning-text` | `--color-warning-text` | `#332b00` | `.alert-warning{…;color:#332b00}` (§2) — the dark olive yettel writes on that yellow. It carries the DEMÓ memory bar's text, its hairline and its badge (`demo-notice.scss` `.demo-notice--memory`). Both theme variables are named `--color-warning*` rather than `--color-status-warning*`: a legacy name pointing at a theme variable of the same name is a self-referencing custom property that resolves to nothing, the failure `src/styles/tokens.css` already records for `--radius-card` |
 | `--color-status-info` | `--color-surface-sky` | `#c4dfe9` | `.alert{display:flex;background-color:#c4dfe9;border-radius:0 0 16px 16px}` (§2) |
-| `--color-status-success-soft` | — (a `color-mix` in `tokens.css`) | 12 % `--color-status-success` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of a success alert (StatusMessage `is-success`). yettel's alerts use solid grounds and no left bar; the tinted grounds and the 4px left bar every alert carries are this project's own treatment |
+| `--color-status-success-soft` | — (a `color-mix` in `tokens.css`) | 12 % `--color-status-success` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of a success alert (StatusMessage `is-success`). yettel's alerts use solid grounds, so the tinted grounds are this project's own; the alert's shape is yettel's `.information-box` (§5, "Alert") |
 | `--color-status-warning-soft` | — (a `color-mix` in `tokens.css`) | 22 % `--color-status-warning` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of the checkout's price-change notice (`review-step.scss` `.price-change`); yettel's `.alert-warning` is the solid `#ffd500` |
 | `--color-status-error-soft` | — (a `color-mix` in `tokens.css`) | 8 % `--color-status-error` on `--color-surface-light` | Not a yettel value (MIM-240): the ground of an error alert (StatusMessage `is-error`), of the invalid terms-consent card and of the contact form's error summary |
 | `--color-focus-light` | `--color-primary` | `#002340` | yettel sets `outline:none !important` on `.btn` and carries no focus recipe; navy is the brand ink and is 16.3:1 on white, where lime would be 1.35:1 |
@@ -858,7 +932,23 @@ hairline and take that pixel back out of each padding edge
 | navy | `is-navy` | white on navy `#002340`, hover `#01385e` | `.btn--primary` (§5); the "Belépés" pill on the lime bar in `home-1920.png` |
 | secondary | `is-secondary` | navy text and border on white, hover tint `#c4dfe9` | `.btn-outline-navy` (§5) |
 | secondary on dark | `is-secondary-on-dark` | lime text and 1px lime border on a transparent fill, hover lime fill with navy text | `.btn-outline-lime` (§5), for the navy grounds in `home-1920.png`'s footer and `device-1920.png`'s configurator card |
-| disabled (all) | `:disabled` | `#80919f` on `#e5e9ec` | `.btn--primary[disabled]` (§5) |
+| disabled (all) | `:disabled:not([aria-busy])` | 2px dashed `#80919f` border, `#4e4e4e` text, transparent fill; on a navy ground (`is-primary-on-dark`, `is-secondary-on-dark`) the border is white at 60% and the text white at 80% | departs from `.btn--primary[disabled]` (§5), see below |
+
+**Disabled is this project's own look, not yettel's.** yettel's
+`.btn--primary[disabled]` (`#80919f` on `#e5e9ec`) reads as a paler twin of
+an enabled button, and on the lime primary the owner could hardly tell the
+two apart (in English: "the yettel-coloured disabled button is not well
+visible, you can hardly notice that it is disabled"). Every disabled control
+therefore wears one recipe: a 2px dashed `--color-disabled-border` edge,
+`--color-disabled-text`, a transparent `--color-disabled-bg`, full opacity and
+`cursor: not-allowed`, the owner's pick of a dashed outline over a paler fill.
+The button takes the 2px edge back out of its padding (`10px 22px`), so the
+pill stays 48px; a button busy with its own request (`aria-busy`) keeps its
+variant look and its spinner. The same edge marks the catalogue pager's
+boundary arrows, the brand and colour facets with no matching phone
+(`is-unavailable`), the product page's unavailable variant chips and the
+gallery's end arrows; a control dimmed only while a refetch runs keeps its
+plain opacity dim, because it is busy rather than unavailable.
 
 `is-secondary-on-dark` is the outlined lime button rather than a second copy
 of the lime pill: the first version of this table gave it the same fill as

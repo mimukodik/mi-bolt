@@ -8,6 +8,7 @@
     class="page page--boundary"
     data-testid="pagination-prev"
     type="button"
+    [class.is-unavailable]="page() <= 1"
     [disabled]="page() <= 1 || disabled()"
     (click)="onBoundary(page() - 1); onPageClick(page() - 1)"
   >
@@ -33,6 +34,7 @@
     class="page page--boundary"
     data-testid="pagination-next"
     type="button"
+    [class.is-unavailable]="page() >= totalPages()"
     [disabled]="page() >= totalPages() || disabled()"
     (click)="onBoundary(page() + 1); onPageClick(page() + 1)"
   >

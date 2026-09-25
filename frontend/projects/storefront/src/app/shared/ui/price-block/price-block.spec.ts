@@ -13,6 +13,7 @@ import type { Money } from './price-block';
       [label]="label()"
       [layout]="layout()"
       [money]="money()"
+      [showLabel]="showLabel()"
       [size]="size()"
       [status]="status()"
     />
@@ -20,6 +21,7 @@ import type { Money } from './price-block';
 })
 class HostComponent {
   readonly money = signal<Money | null>({ amount: 339990, currency: 'HUF' });
+  readonly showLabel = signal(true);
   readonly label = signal('Készülékár, egyszeri díj');
   readonly status = signal<AsyncStatus>('success');
   readonly size = signal<'md' | 'lg'>('lg');
@@ -69,6 +71,15 @@ describe('PriceBlock primitive', () => {
       throw new Error('Expected label element');
     }
     expect(label.textContent.trim()).toBe('Készülékár, egyszeri díj');
+  });
+
+  it('renders no label when showLabel is false (the row names the amount itself)', () => {
+    const { fixture, host } = setup();
+    host.showLabel.set(false);
+    fixture.detectChanges();
+    const root = getNativeElement(fixture);
+    expect(root.querySelector('.label')).toBeNull();
+    expect(root.querySelector('[data-testid="price-amount"]')?.textContent.trim()).toBe('339 990');
   });
 
   it('formats the example 339 990 / 9 990 amounts from the skill', () => {

@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, linkedSignal, output } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { AssetUrlError, resolveAssetUrl } from '../../media/resolve-asset-url';
+import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
 
 /**
  * Wire-shaped Image object used by the OpenAPI-generated SDK.
@@ -30,7 +31,7 @@ export interface ImageLike {
  */
 @Component({
   selector: 'app-product-image',
-  imports: [],
+  imports: [SkeletonLeave],
   templateUrl: './product-image.html',
   styleUrl: './product-image.scss',
 })

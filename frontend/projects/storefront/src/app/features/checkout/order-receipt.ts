@@ -37,16 +37,16 @@ import type { OrderLine } from '@mi-bolt/api/models/order-line';
 import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 
 const PAYMENT_LABELS: Readonly<Record<OrderReceipt['paymentMethod'], string>> = {
-  card: 'Bankkártya (szimulált)',
-  cash_on_delivery: 'Utánvét (demó)',
+  card: 'Bankkártya',
+  cash_on_delivery: 'Utánvét',
 };
 
 /** Labels keyed on `DeliverySelection` discriminator (`optionId`), since the
  *  wire carries a `DeliverySelection`, not a top-level delivery id. */
 const DELIVERY_LABELS: Readonly<Record<NonNullable<OrderReceipt['delivery']>['optionId'], string>> =
   {
-    home_delivery: 'Házhozszállítás',
-    pickup_point: 'Bemutatótermi átvétel (demó)',
+    home_delivery: 'Házhoz szállítás',
+    pickup_point: 'Átvételi pont',
   };
 
 /**

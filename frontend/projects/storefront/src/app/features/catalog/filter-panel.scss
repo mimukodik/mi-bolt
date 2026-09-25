@@ -67,6 +67,16 @@
   cursor: not-allowed;
 }
 
+/* A facet with no matching phone wears the shared disabled look (dashed
+   outline, grey text, full opacity); the 0.5 dim above stays for the
+   brief refetch. */
+.option.is-unavailable:disabled {
+  opacity: 1;
+  outline: 2px dashed var(--color-disabled-border);
+  outline-offset: -2px;
+  color: var(--color-disabled-text);
+}
+
 .option.is-selected {
   background: var(--color-surface-light);
 }
@@ -103,6 +113,7 @@
   font-size: 14px;
   color: var(--color-text-light);
   font-weight: var(--weight-regular);
+  transition: color 200ms ease;
 }
 
 .more {
@@ -157,6 +168,17 @@
   cursor: not-allowed;
 }
 
+.color-chip.is-unavailable:disabled {
+  opacity: 1;
+  border-style: dashed;
+  border-color: var(--color-disabled-border);
+  color: var(--color-disabled-text);
+}
+
+.color-chip.is-unavailable:disabled .color-chip__swatch {
+  opacity: 0.5;
+}
+
 .color-chip__swatch {
   display: inline-block;
   width: 20px;
@@ -177,6 +199,7 @@
   font-size: 14px;
   color: var(--color-text-light);
   font-weight: var(--weight-regular);
+  transition: color 200ms ease;
 }
 
 // A count being re-fetched keeps its text for its width; the text is

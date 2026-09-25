@@ -190,6 +190,12 @@ export const checkoutKeys = {
     }
   },
 
+  /** Drops the stored active intent id, so a later review or return
+   *  page does not pick up an intent the draft no longer matches. */
+  clearActiveIntentId(): void {
+    rotate(INTENT_ID_STORAGE);
+  },
+
   /** Whether the shopper ticked the demo terms for these cart lines
    *  (`cartLinesKey`); false when nothing is stored, when the lines
    *  differ (a tick stored for other lines is removed), or when storage

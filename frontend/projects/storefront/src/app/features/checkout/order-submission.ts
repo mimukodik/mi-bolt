@@ -264,7 +264,15 @@ export class OrderSubmission {
       this.logger([{ orderId: result.value.id, step: 'commit', outcome: 'committed' }]);
       return outcome;
     }
-    const outcome = this.mapFailure(result.error.code, result.error.fieldErrors, intent);
+    // The facade may have dropped the intent this call was refused for (a
+    // 422 PAYMENT_REQUIRED on an intent that already backs an order), so
+    // the outcome is built from the intent it holds now: a dropped intent
+    // yields no redirect back to its payment page.
+    const outcome = this.mapFailure(
+      result.error.code,
+      result.error.fieldErrors,
+      this.checkout.paymentIntent(),
+    );
     this.lastOutcomeWritable.set(outcome);
     this.logger([
       {

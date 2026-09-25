@@ -35,7 +35,11 @@
 
   @switch (state()) {
     @case ('loading') {
-      <div class="loading flex items-center justify-center min-h-72" data-testid="cart-loading">
+      <div
+        appSkeletonLeave
+        class="loading flex items-center justify-center min-h-72"
+        data-testid="cart-loading"
+      >
         <app-loading-state label="Kosár betöltése" variant="card" />
       </div>
     }

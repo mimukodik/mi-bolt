@@ -11,7 +11,7 @@
   <article class="card">
     @switch (state()) {
       @case ('loading') {
-        <div class="loading" data-testid="product-loading">
+        <div appSkeletonLeave class="loading" data-testid="product-loading">
           <app-loading-state label="Termék betöltése" variant="card" />
         </div>
       }
@@ -111,7 +111,9 @@
                   />
                 }
                 @if (addToCartReason() !== null && !addToCartEnabled()) {
-                  <p class="hint m-0" role="status">{{ addToCartReason() }}</p>
+                  <p class="hint m-0" data-testid="add-to-cart-reason" role="status">
+                    {{ addToCartReason() }}
+                  </p>
                 }
                 @if (addSuccessMessage(); as message) {
                   <app-status-message
@@ -145,15 +147,23 @@
           <app-specification-accordion [groups]="specGroups()" />
         </section>
 
-        @if (related().length > 0) {
+        @if (relatedLoading() || related().length > 0) {
           <section aria-labelledby="related-heading" data-testid="related-products">
             <h2 class="section-title m-0 mb-6" id="related-heading">Hasonló készülékek</h2>
             <ul
               class="m-0 p-0 list-none grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
               role="list"
             >
-              @for (item of related(); track item.variantId) {
-                <li><app-product-card [product]="item" /></li>
+              @if (relatedLoading()) {
+                @for (placeholder of [0, 1, 2, 3]; track placeholder) {
+                  <li appSkeletonLeave [attr.data-testid]="`related-card-skeleton-${placeholder}`">
+                    <app-product-card-skeleton />
+                  </li>
+                }
+              } @else {
+                @for (item of related(); track item.variantId) {
+                  <li><app-product-card [product]="item" /></li>
+                }
               }
             </ul>
           </section>
@@ -175,6 +185,7 @@
       [error]="addError()"
       [money]="devicePrice()"
       [pending]="addPending()"
+      [reason]="addToCartReason()"
       [success]="addSuccessMessage()"
       (addRequested)="onRailAddRequested()"
       (errorDismissed)="addError.set(null)"

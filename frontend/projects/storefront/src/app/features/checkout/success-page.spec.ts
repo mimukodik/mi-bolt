@@ -349,6 +349,27 @@ describe('OrderReceiptComponent', () => {
     ).toContain(PriceBlock.formatHuf(90_480));
   });
 
+  it('SP-01b the receipt prints each total label once and no heading of its own', () => {
+    const fixture: ComponentFixture<OrderReceiptComponent> =
+      TestBed.createComponent(OrderReceiptComponent);
+    fixture.componentRef.setInput('receipt', makeReceipt());
+    fixture.detectChanges();
+
+    expect(queryHTMLElement(document, '[data-testid="receipt-heading"]')).toBeNull();
+    expect(queryHTMLElement(document, '[data-testid="order-receipt"] h2')).toBeNull();
+    const rows: readonly (readonly [string, string])[] = [
+      ['receipt-row-subtotal', 'Részösszeg'],
+      ['receipt-row-shipping', 'Szállítási díj'],
+      ['receipt-row-payment-fee', 'Fizetési díj'],
+      ['receipt-row-total', 'Végösszeg'],
+    ];
+    for (const [testId, label] of rows) {
+      const row = queryHTMLElement(document, `[data-testid="${testId}"]`);
+      expect(row?.textContent.split(label)).toHaveLength(2);
+      expect(queryHTMLElement(document, `[data-testid="${testId}"] dd .label`)).toBeNull();
+    }
+  });
+
   it('SP-02 the receipt renders the Hungarian payment and delivery labels the component maps', () => {
     const fixture: ComponentFixture<OrderReceiptComponent> =
       TestBed.createComponent(OrderReceiptComponent);
@@ -360,10 +381,10 @@ describe('OrderReceiptComponent', () => {
     fixture.detectChanges();
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-payment"] dd')?.textContent.trim(),
-    ).toBe('Utánvét (demó)');
+    ).toBe('Utánvét');
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd')?.textContent.trim(),
-    ).toBe('Házhozszállítás');
+    ).toBe('Házhoz szállítás');
 
     fixture.componentRef.setInput(
       'receipt',
@@ -372,10 +393,10 @@ describe('OrderReceiptComponent', () => {
     fixture.detectChanges();
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-payment"] dd')?.textContent.trim(),
-    ).toBe('Bankkártya (szimulált)');
+    ).toBe('Bankkártya');
     expect(
       queryHTMLElement(document, '[data-testid="receipt-row-delivery"] dd')?.textContent.trim(),
-    ).toBe('Bemutatótermi átvétel (demó)');
+    ).toBe('Átvételi pont');
   });
 
   it('SP-03 the receipt renders the wire notice, and its own sentence only when the wire sends none', () => {
@@ -540,6 +561,17 @@ describe('SuccessStep', () => {
 
     expect(queryHTMLElement(document, '[data-testid="success-error"]')).not.toBeNull();
     expect(queryHTMLElement(document, '[data-testid="success-missing"]')).toBeNull();
+  });
+
+  it("SP-10b a failure's wire detail never reaches the error box", async () => {
+    server.use(http.get('*/api/v1/orders/:orderId', () => fiveHundred()));
+
+    const _fixture = await mountSuccessPage('ord-500');
+
+    const errorBox = queryHTMLElement(document, '[data-testid="success-error"]');
+    expect(errorBox).not.toBeNull();
+    expect(errorBox?.textContent).toContain('A rendelés visszatöltése sikertelen.');
+    expect(errorBox?.textContent).not.toContain('Mocked 500');
   });
 
   it('SP-11 a malformed order id is treated as missing without any request', async () => {

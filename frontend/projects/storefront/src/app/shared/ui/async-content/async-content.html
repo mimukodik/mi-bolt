@@ -17,8 +17,10 @@
       />
     </div>
   } @else if (status() === 'loading' && !hasPrevious()) {
-    <div class="state state--loading" data-testid="catalog-loading">
-      <app-loading-state label="Katalógus betöltése" variant="card" />
+    <div appSkeletonLeave class="skeleton-grid" data-testid="catalog-loading">
+      @for (placeholder of [0, 1, 2, 3, 4, 5]; track placeholder) {
+        <app-product-card-skeleton />
+      }
     </div>
   } @else {
     <!-- success, or loading with hasPrevious (refreshing): the caller's

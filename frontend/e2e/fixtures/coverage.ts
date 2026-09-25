@@ -4,7 +4,7 @@
 // the body without coverage, because `page.coverage` is a Chromium-only API
 // (https://playwright.dev/docs/api/class-coverage, read 2026-09-22). The
 // `addCoverageReport` signature is from
-// node_modules/monocart-reporter/lib/index.d.ts:228:
+// the declaration in monocart-reporter's lib/index.d.ts:
 //
 //   export function addCoverageReport(
 //       coverageData: any[] | any,

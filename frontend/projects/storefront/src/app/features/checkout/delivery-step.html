@@ -33,7 +33,7 @@
         >
           @for (option of options().deliveryOptions; track option.id) {
             <li
-              class="option rounded-(--radius-card) border transition-colors"
+              class="option rounded-(--radius-control)"
               data-testid="delivery-option"
               [class.is-active]="option.id === selectedOptionId()"
               [class.is-unavailable]="!option.available"
@@ -56,13 +56,19 @@
                   [value]="option.id"
                   (change)="onOptionSelected(option)"
                 />
-                <span class="option-body flex flex-col gap-(--space-2) min-w-0">
-                  <span class="option-row flex items-center justify-between gap-(--space-3)">
+                <span class="option-body flex flex-1 flex-col gap-(--space-2) min-w-0">
+                  <span class="option-row flex items-baseline justify-between gap-(--space-3)">
                     <span
                       class="option-title text-(length:--type-body) [font-weight:var(--weight-medium)]"
                       >{{ option.label }}</span
                     >
-                    <app-price-block label="Szállítási díj" status="success" [money]="option.fee" />
+                    <app-price-block
+                      label="Szállítási díj"
+                      size="md"
+                      status="success"
+                      [money]="option.fee"
+                      [showLabel]="false"
+                    />
                   </span>
                   <span
                     class="option-description text-(length:--type-helper) text-(color:--color-text-secondary) leading-(--line-height-body)"
@@ -111,15 +117,15 @@
           (line2Change)="setLine2($event)"
           (postalCodeChange)="setPostalCode($event)"
         />
-      } @else {
-        <p
-          class="pickup-notice m-0 p-(--space-4) bg-(--color-surface-section) border border-(--color-border-subtle) rounded-(--radius-card) text-(length:--type-helper) text-(color:--color-text-secondary) leading-(--line-height-body)"
+      } @else if (selectedOptionId() === 'pickup_point') {
+        <app-status-message
           data-testid="pickup-notice"
           role="note"
-        >
-          A virtuális átvétel egy demó szállítási opció: nincs valós üzletcím, a rendelés a pénztár
-          demófolyamatán belül készül, valós átvételi pont nélkül.
-        </p>
+          severity="info"
+          [live]="false"
+          [message]="pickupNoticeMessage"
+          [persistent]="true"
+        />
       }
 
       <app-payment-method-selector
@@ -216,6 +222,19 @@
       <dl class="summary-rows flex flex-col gap-(--space-3) m-0">
         <div
           class="summary-row grid grid-cols-[1fr_auto] gap-(--space-3) items-baseline"
+          data-testid="summary-row-delivery"
+        >
+          <dt class="m-0 text-(length:--type-helper) text-(color:--color-text-secondary)">
+            Szállítási mód
+          </dt>
+          <dd
+            class="delivery-value m-0 text-(length:--type-body) [font-weight:var(--weight-medium)]"
+          >
+            {{ deliveryLabel() }}
+          </dd>
+        </div>
+        <div
+          class="summary-row grid grid-cols-[1fr_auto] gap-(--space-3) items-baseline"
           data-testid="summary-row-fee"
         >
           <dt class="m-0 text-(length:--type-helper) text-(color:--color-text-secondary)">
@@ -223,9 +242,11 @@
           </dt>
           <dd class="m-0 text-(length:--type-body)">
             <app-price-block
+              label="Szállítási díj"
+              size="md"
               status="success"
-              [label]="deliveryLabel()"
               [money]="currentShippingFee()"
+              [showLabel]="false"
             />
           </dd>
         </div>

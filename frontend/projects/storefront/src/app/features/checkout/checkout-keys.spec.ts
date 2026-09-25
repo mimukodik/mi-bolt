@@ -45,3 +45,12 @@ describe('checkoutKeys: the accepted demo terms survive the cold return from the
     expect(checkoutKeys.termsAccepted('v1:1')).toBe(false);
   });
 });
+
+describe('checkoutKeys: the active payment intent id', () => {
+  it('clearActiveIntentId() removes the stored id, so activeIntentId() reads null', () => {
+    checkoutKeys.setActiveIntentId('pi-1');
+    expect(checkoutKeys.activeIntentId()).toBe('pi-1');
+    checkoutKeys.clearActiveIntentId();
+    expect(checkoutKeys.activeIntentId()).toBeNull();
+  });
+});

@@ -1,5 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import type { AsyncStatus } from '../../types/async-status';
+import { SkeletonLeave } from '../skeleton-leave/skeleton-leave';
 
 /**
  * Wire-shaped Money object used by the OpenAPI-generated SDK.
@@ -34,6 +35,7 @@ export interface Money {
  */
 @Component({
   selector: 'app-price-block',
+  imports: [SkeletonLeave],
   templateUrl: './price-block.html',
   styleUrl: './price-block.scss',
 })
@@ -47,6 +49,9 @@ export class PriceBlock {
   readonly layout = input<'stack' | 'row'>('stack');
   /** Inverse colours for a navy card: white label, lime amount. */
   readonly inverse = input(false);
+  /** False where the row already names the amount (a `<dt>` or an option
+   *  title beside it), so the label is not printed twice. */
+  readonly showLabel = input(true);
 
   readonly amountText = computed<string | null>(() => {
     const m = this.money();

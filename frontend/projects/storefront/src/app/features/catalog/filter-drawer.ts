@@ -21,6 +21,7 @@ import type { Facets } from '@mi-bolt/api/models/facets';
 import { AccessibleDialog } from '../../shared/ui/accessible-dialog/accessible-dialog';
 import { Button } from '../../shared/ui/button/button';
 import { FormFieldMessage } from '../../shared/ui/form-field-message/form-field-message';
+import { SkeletonLeave } from '../../shared/ui/skeleton-leave/skeleton-leave';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 /** What one storage chip needs to render: the size, its label and
@@ -55,7 +56,7 @@ interface StorageBucket {
  */
 @Component({
   selector: 'app-filter-drawer',
-  imports: [AccessibleDialog, Button, FormFieldMessage],
+  imports: [AccessibleDialog, Button, FormFieldMessage, SkeletonLeave],
   templateUrl: './filter-drawer.html',
   styleUrl: './filter-drawer.scss',
 })

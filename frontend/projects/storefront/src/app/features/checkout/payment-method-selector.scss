@@ -1,27 +1,49 @@
 /* Tailwind utility classes in payment-method-selector.html carry layout
    and spacing; this sheet only holds the stateful/conditional rules
-   utilities cannot express (radio-group selection, disabled dimming,
-   focus ring, reduced motion). */
+   utilities cannot express (the option rows' selected, hover and
+   unavailable looks, reduced motion). */
 
 :host {
   display: block;
 }
 
+/* The same option rows as the delivery options above them
+   (docs/design/yettel.md §8, "Delivery step: option rows, pickup note and
+   summary"): white, a 1px inset ring, a 2px navy inset ring and a bold
+   title when selected. */
 .option {
-  border-color: var(--color-border-subtle);
-  background: var(--color-surface-section);
-  transition:
-    border-color var(--motion-fast) ease,
-    background-color var(--motion-fast) ease;
+  background: var(--color-surface-light);
+  box-shadow: 0 0 0 1px var(--color-line-thumb) inset;
+  transition: box-shadow var(--motion-fast) ease;
+}
+
+.option:hover:not(.is-active):not(.is-unavailable) {
+  box-shadow: 0 0 0 1px var(--color-brand-ink) inset;
 }
 
 .option.is-active {
-  border-color: var(--color-brand-ink);
-  background: var(--color-brand-accent-soft);
+  box-shadow: 0 0 0 2px var(--color-brand-ink) inset;
 }
 
+.option.is-active .option-title {
+  font-weight: var(--weight-bold);
+}
+
+/* The shared disabled look: a dashed edge drawn inside the box like the
+   ring, grey text, full opacity; the reason sentence keeps its red. */
 .option.is-unavailable {
-  opacity: 0.6;
+  box-shadow: none;
+  outline: 2px dashed var(--color-disabled-border);
+  outline-offset: -2px;
+}
+
+.option.is-unavailable .option-title,
+.option.is-unavailable .option-helper {
+  color: var(--color-disabled-text);
+}
+
+.option.is-unavailable .option-label {
+  cursor: not-allowed;
 }
 
 .option-badge {

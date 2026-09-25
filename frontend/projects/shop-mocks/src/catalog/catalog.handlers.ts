@@ -18,6 +18,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 import type { Problem } from '@mi-bolt/api/models/problem';
 
 import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
+import { faultResponse } from '../faults';
 import { isRecord as isPlainRecord } from '../is-record';
 import { PROBLEM_CONTENT_TYPE } from '../problem-response';
 import {
@@ -135,6 +136,8 @@ function buildProductPage(
 /** Build the `listProducts` handler. */
 function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products', ({ request }) => {
+    const fault = faultResponse(options, 'products');
+    if (fault !== null) return fault;
     const url = new URL(request.url);
     const parsed = parseListProductsParams(url.searchParams);
     if (!parsed.ok) return invalidRequest(options, parsed.error);
@@ -156,6 +159,8 @@ function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
 /** Build the `getProduct` handler. */
 function getProductHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products/:slug', ({ params }) => {
+    const fault = faultResponse(options, 'product');
+    if (fault !== null) return fault;
     const slug = String(params['slug']);
     const store = requireStore();
     const product = store.getProduct(slug);
@@ -169,6 +174,8 @@ function getProductHandler(options: CreateHandlersOptions): RequestHandler {
 /** Build the `listRelatedProducts` handler. */
 function listRelatedProductsHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products/:slug/related', ({ params }) => {
+    const fault = faultResponse(options, 'related-products');
+    if (fault !== null) return fault;
     const slug = String(params['slug']);
     const store = requireStore();
     const subject = store.getProduct(slug);

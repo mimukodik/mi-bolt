@@ -12,13 +12,6 @@
   display: block;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  max-width: 640px;
-}
-
 .form-hint {
   margin: 0;
   font-size: var(--type-helper);
@@ -58,12 +51,28 @@ input {
 
 /* The invalid look (red border, icon, focus halo) lives in src/styles/primitives.css. */
 
+/* The error summary is yettel's flat information box (docs/design/yettel.md
+   §5, "Alert"): no border and no left bar, an 8px radius, 16px padding
+   and a 20px icon in front of the text. */
 .form-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-control);
   background: var(--color-status-error-soft);
-  border: 1px solid var(--color-status-error);
-  border-left-width: 4px;
-  border-radius: var(--radius-card);
+}
+
+.form-summary__icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--color-status-error);
+}
+
+.form-summary__body {
+  min-width: 0;
 }
 
 .form-summary__title {
@@ -95,12 +104,6 @@ input {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-  }
-}
-
-@media (min-width: 1024px) {
-  .form {
-    max-width: 720px;
   }
 }
 

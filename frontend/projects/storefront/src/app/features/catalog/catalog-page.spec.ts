@@ -937,11 +937,11 @@ describe('T13-AC05 distinct visual states', () => {
     harness.cleanup();
   });
 
-  it('loading state renders the LoadingState primitive, not the empty placeholder', async () => {
+  it('loading state renders six product card skeletons, not the empty placeholder', async () => {
     const harness = await setupHarness();
     // No response yet: facade is in `loading`.
     const root = getRootElement(harness.fixture);
-    expect(root.querySelector('[data-testid="loading-state"]')).not.toBeNull();
+    expect(root.querySelectorAll('[data-testid="product-card-skeleton"]').length).toBe(6);
     expect(root.querySelector('[data-testid="catalog-empty"]')).toBeNull();
     expect(root.querySelector('[data-testid="catalog-error"]')).toBeNull();
     harness.respond(successPage([], 0));
@@ -1850,6 +1850,55 @@ describe('MIM-228 facet skeleton — busy flag follows the facade status', () =>
     expect(panelInstance.busy()).toBe(false);
     expect(drawerInstance.busy()).toBe(false);
 
+    harness.cleanup();
+  });
+});
+
+// ===========================================================================
+// A page past the last one opens the last page, and the URL follows
+// without a new history entry (the owner's decision).
+// ===========================================================================
+
+describe('a page past the last one opens the last page', () => {
+  function lastExtras(spy: { mock: { calls: unknown[][] } }): unknown {
+    return spy.mock.calls.at(-1)?.[1];
+  }
+
+  it('replaces the URL with the last page', async () => {
+    const harness = await setupHarness({ page: '99' });
+    const spy = vi.spyOn(harness.router, 'navigate');
+
+    harness.respond(successPage([], 55, 99));
+    await harness.tick();
+    await harness.tick();
+
+    expect(harness.facade.query().page).toBe(5);
+    expect(harness.captured.at(-1)?.params.get('page')).toBe('5');
+    expect(lastExtras(spy)).toMatchObject({ replaceUrl: true, queryParams: { page: '5' } });
+
+    harness.respond(
+      successPage([buildItem('p-49', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 55, 5),
+    );
+    await harness.waitForStatus('success');
+    harness.cleanup();
+  });
+
+  it('the pager still pushes a history entry', async () => {
+    const harness = await setupHarness();
+    harness.respond(
+      successPage([buildItem('p-01', 'MiBolt Demo', 'Demo One', 339990, true, 256)], 16),
+    );
+    await harness.waitForStatus('success');
+    const spy = vi.spyOn(harness.router, 'navigate');
+
+    queryButton(getRootElement(harness.fixture), '[data-testid="pagination-next"]').click();
+    await harness.tick();
+
+    expect(lastExtras(spy)).toMatchObject({ replaceUrl: false });
+    harness.respond(
+      successPage([buildItem('p-02', 'MiBolt Demo', 'Demo Air', 219990, true, 128)], 16, 2),
+    );
+    await harness.waitForStatus('success');
     harness.cleanup();
   });
 });

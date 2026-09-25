@@ -554,11 +554,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
 
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
-    for (let i = 0; i < 20; i += 1) {
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0);
-      });
-    }
+    await fixture.whenStable();
 
     // The orchestrator must have called listProducts exactly once with { featured: true }.
     const productCalls = api.listProductsCalls();
@@ -701,9 +697,8 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     } satisfies FeaturedState);
     fixture.detectChanges();
     const root = getRootElement(fixture);
-    const skeletons = root.querySelectorAll('[data-testid="featured-loading"]');
-    expect(skeletons.length).toBeGreaterThan(0);
-    expect(root.querySelector('[data-testid="price-skeleton"]')).not.toBeNull();
+    const skeletons = root.querySelectorAll('[data-testid="product-card-skeleton"]');
+    expect(skeletons.length).toBe(4);
     expect(root.querySelector('[data-testid="price-amount"]')).toBeNull();
     expect(root.querySelector('[data-testid="error-state"]')).toBeNull();
   });
@@ -728,11 +723,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
-    for (let i = 0; i < 20; i += 1) {
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0);
-      });
-    }
+    await fixture.whenStable();
     fixture.detectChanges();
     const root = getRootElement(fixture);
 
@@ -757,11 +748,7 @@ describe('T14-AC03 four featured products with real prices, no made-up prices', 
     const retryButton = retryHost?.querySelector<HTMLButtonElement>('button');
     expect(retryButton).not.toBeNull();
     retryButton?.click();
-    for (let i = 0; i < 20; i += 1) {
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0);
-      });
-    }
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(api.listProductsCalls().length).toBe(2);
@@ -862,6 +849,10 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
     await TestBed.compileComponents();
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
+    // StubApi's response arrives in a microtask the constructor queued; wait
+    // for it and render it, so the test never ends with a render scheduled.
+    await fixture.whenStable();
+    fixture.detectChanges();
     const root = getRootElement(fixture);
     const hero = root.querySelector('app-hero');
     const featured = root.querySelector('app-featured-products');
@@ -877,6 +868,9 @@ describe('T14-AC05 mobile content order and 320 px clip safety', () => {
         Boolean(featured.compareDocumentPosition(how) & Node.DOCUMENT_POSITION_FOLLOWING),
       ).toBe(true);
     }
+    expect(root.querySelectorAll('[data-testid="product-card"]').length).toBe(
+      catalogItemFixtures().length,
+    );
   });
 
   it('hero CSS prevents clipping at narrow widths (word-break + max-width)', async () => {
