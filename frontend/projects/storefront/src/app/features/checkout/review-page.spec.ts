@@ -352,7 +352,7 @@ describe('ReviewPage hydrates', () => {
     expect(host.querySelectorAll('app-review-step').length).toBe(1);
   });
 
-  it('RP-03 hydrates the cart, the options and the session, and skips whatever is already loaded', async () => {
+  it('RP-03 hydrates the cart, the options and the session, skips the cart and the options when already loaded, and reads the session on every arrival', async () => {
     const requests: string[] = [];
     captureRequests(requests);
 
@@ -393,7 +393,7 @@ describe('ReviewPage hydrates', () => {
     const checkouts2 = requests2.filter((r) => r === 'GET /api/v1/checkout').length;
     const options2 = requests2.filter((r) => r === 'GET /api/v1/checkout/options').length;
     expect(carts2).toBe(0);
-    expect(checkouts2).toBe(0);
+    expect(checkouts2).toBe(1);
     expect(options2).toBeLessThanOrEqual(1);
   });
 });
@@ -1009,6 +1009,15 @@ describe('ReviewPage drives the recovery controls', () => {
     await h.fixture.componentInstance.onBackToCart();
 
     expect(checkout.session()?.contact).toEqual(contact);
+  });
+
+  it('RP-44 an arrival reads the session again even when one is in memory', async () => {
+    await TestBed.inject(CheckoutFacade).ensureSession();
+    const spy = vi.spyOn(TestBed.inject(CheckoutFacade), 'ensureSession');
+    const h = harness();
+    await h.fixture.whenStable();
+
+    expect(spy).toHaveBeenCalledWith(true);
   });
 });
 

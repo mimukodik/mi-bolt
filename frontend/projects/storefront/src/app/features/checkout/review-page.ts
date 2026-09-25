@@ -210,9 +210,11 @@ export class ReviewPage {
 
   /**
    * Hydrates whatever the shopper's route into this page did not.
-   * Each call is skipped when its signal is already populated, so a
-   * hand-off from `payment-return-page.ts`, which has just loaded the
-   * cart and the session, costs one `GET /checkout/options` at most.
+   * The cart and the options are read only when their signal is empty,
+   * the session on every arrival, so a hand-off from
+   * `payment-return-page.ts`, which has just loaded the cart and the
+   * session, costs one `GET /checkout` and at most one
+   * `GET /checkout/options`.
    *
    * The cold return from the payment page does not survive the SPA
    * (`LOCATION_ASSIGN`), so a reload of `/penztar/ellenorzes` while an
@@ -228,9 +230,13 @@ export class ReviewPage {
     }
     await this.checkoutFacade.ensureOptions();
     if (cancelled()) return;
-    if (this.checkoutFacade.session() === null) {
-      await this.checkoutFacade.ensureSession();
-    }
+    // The summary this step shows is computed by the server from the
+    // cart, so the session is read fresh on every arrival: a cart
+    // corrected after an earlier visit (a stock error sends the shopper
+    // back there) would otherwise show the summary the server computed
+    // for the old one. The delivery step reads its options fresh for the
+    // same reason.
+    await this.checkoutFacade.ensureSession(true);
     const id = checkoutKeys.activeIntentId();
     if (id !== null && id.length > 0 && this.checkoutFacade.paymentIntent() === null) {
       if (cancelled()) return;
