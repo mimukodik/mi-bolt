@@ -24,6 +24,9 @@ describe('resolveBrowserHandlerOptions persists under the snapshot name it is gi
   it("BP-01: with no name the snapshot goes under the page URL's scenario", () => {
     const options = resolveBrowserHandlerOptions();
     createHandlers(options);
+    // The handlers answer for the scenario the page's own URL names: the
+    // fault rules, the demo gate and the dispatcher shell all read it.
+    expect(options.scenario.name).toBe('default');
     options.persist?.('spec-session-bp01');
     expect(sessionStorage.getItem(snapshotKey('default'))).not.toBeNull();
   });
@@ -31,6 +34,10 @@ describe('resolveBrowserHandlerOptions persists under the snapshot name it is gi
   it('BP-02: a given name is the key the snapshot goes under', () => {
     const options = resolveBrowserHandlerOptions('payment-pending-resolves');
     createHandlers(options);
+    // The given name moves the snapshot key only: the handlers stay on the
+    // page URL's scenario, which is what keeps the shop's fault scenarios
+    // out of the demo payment page's own document.
+    expect(options.scenario.name).toBe('default');
     options.persist?.('spec-session-bp02');
     expect(sessionStorage.getItem(snapshotKey('payment-pending-resolves'))).not.toBeNull();
     expect(sessionStorage.getItem(snapshotKey('default'))).toBeNull();

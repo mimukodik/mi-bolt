@@ -257,6 +257,13 @@ export class OrderStore {
     const id = this.options.ids.uuid();
     const createdAt = this.options.clock.now();
     const expiresAt = new Date(Date.parse(createdAt) + PAYMENT_INTENT_TTL_MS).toISOString();
+    // The shop's own scenario travels back on the return URL, so the return
+    // leg loads the scenario the shopper left from; the default scenario
+    // needs no parameter, an absent one resolving to it.
+    const scenarioQuery =
+      this.options.scenario.name === DEFAULT_SCENARIO.name
+        ? ''
+        : `&mi-scenario=${encodeURIComponent(this.options.scenario.name)}`;
     const stored: StoredIntent = {
       id,
       sessionId,
@@ -265,10 +272,7 @@ export class OrderStore {
       createdAt,
       expiresAt,
       redirectUrl: `/demo-fizetes/${id}`,
-      returnUrl:
-        this.options.scenario.name === DEFAULT_SCENARIO.name
-          ? `/penztar?paymentIntentId=${id}`
-          : `/penztar?paymentIntentId=${id}&mi-scenario=${encodeURIComponent(this.options.scenario.name)}`,
+      returnUrl: `/penztar?paymentIntentId=${id}${scenarioQuery}`,
     };
     this.intents.set(id, stored);
     const wire = this.toWireIntent(stored);
