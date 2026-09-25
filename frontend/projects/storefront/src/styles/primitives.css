@@ -164,13 +164,14 @@ textarea[aria-invalid='true']:not(.border-0):focus-visible:focus-visible {
 /* Skeleton fade-out (docs/design/yettel.md, "Skeleton loaders and their
    fade-out"). The `appSkeletonLeave` directive pins a leaving skeleton in
    place and adds this class; the element goes when the transition ends.
-   200ms ease is yettel's own content fade. The reduced-motion block below
-   collapses it. */
+   600ms ease, slower than yettel's own 200ms content fade, so a skeleton that
+   leaves right after it appeared does not flicker. The reduced-motion block
+   below collapses it. */
 .skeleton-leave {
   z-index: 1;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 200ms ease;
+  transition: opacity 600ms ease;
 }
 
 /* Default skelemin background does not animate when reduced motion is set. */
