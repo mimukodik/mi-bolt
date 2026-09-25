@@ -232,6 +232,53 @@ class StackScriptTests(unittest.TestCase):
         self.assertEqual(slots, ["1"], f"expected exactly one claimed slot, got {slots}")
         self.assertEqual({out.strip() for out, _err in outs}, {"1"})
 
+    # (g) a leaked reclaim mutex (the `.reclaim` dir reclaim_lock takes as
+    # its own mkdir-mutex) whose pid file names a dead process, sitting
+    # beside a stale lock (also a dead pid), must not wedge acquire_lock
+    # forever: reclaim_lock reclaims the leaked mutex itself on its own
+    # `mkdir "${mutex}"` failure, and the run goes on to claim slot 1. Proves
+    # reclaim_lock's `lock_is_stale "${mutex}"` check reclaims a leaked
+    # mutex with a dead pid instead of leaving it to wedge every retry.
+    def test_leaked_reclaim_mutex_with_dead_pid_is_reclaimed(self) -> None:
+        worktree, _compose_log, slots_dir, env = self._sandbox()
+        lock_dir = _lock_dir_for(worktree, slots_dir)
+        lock_dir.mkdir(parents=True)
+        (lock_dir / "pid").write_text("2147483647\n")  # a pid that cannot exist
+        mutex_dir = Path(f"{lock_dir}.reclaim")
+        mutex_dir.mkdir()
+        (mutex_dir / "pid").write_text("2147483646\n")  # a different dead pid
+
+        result = _run(worktree, env, "claim")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "1")
+        self.assertTrue((slots_dir / "1").is_dir())
+        self.assertFalse(lock_dir.exists())
+        self.assertFalse(mutex_dir.exists())
+
+    # (h) a reclaim mutex held by a live process must never be removed, even
+    # while the lock dir it guards looks stale (dead pid): the run waits out
+    # the full retry budget and exits 1 with the timeout message, and the
+    # mutex dir is still there afterwards. Proves reclaim_lock's
+    # `lock_is_stale "${mutex}"` check runs, and is honoured, before
+    # `rm -rf "${mutex}"` is ever reached.
+    def test_live_reclaim_mutex_is_not_removed_and_times_out(self) -> None:
+        worktree, _compose_log, slots_dir, env = self._sandbox()
+        lock_dir = _lock_dir_for(worktree, slots_dir)
+        lock_dir.mkdir(parents=True)
+        (lock_dir / "pid").write_text("2147483647\n")  # stale-looking: dead pid
+        mutex_dir = Path(f"{lock_dir}.reclaim")
+        mutex_dir.mkdir()
+        holder = subprocess.Popen(["sleep", "30"])
+        self.addCleanup(_kill, holder)
+        (mutex_dir / "pid").write_text(f"{holder.pid}\n")
+
+        result = _run(worktree, env, "claim", timeout=LOCK_WAIT_SECONDS + 10)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("timed out waiting for the per-worktree lock", result.stderr)
+        self.assertTrue(mutex_dir.is_dir())
+
 
 if __name__ == "__main__":
     unittest.main()

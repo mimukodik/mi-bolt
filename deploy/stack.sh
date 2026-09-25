@@ -158,11 +158,12 @@ port_in_use() {
 # Releases the per-worktree lock acquire_lock took and the reclaim mutex
 # reclaim_lock took, if either is held. Idempotent, and armed as a trap right
 # below so it fires on a normal exit, an error exit under `set -e`, or an
-# interrupt while either is held. The lock directory holds a `pid` file (see
-# acquire_lock), so it has to come out before the `rmdir`, which only
-# succeeds on an empty directory.
+# interrupt while either is held. The lock directory and the reclaim mutex
+# each hold a `pid` file (see acquire_lock and reclaim_lock), so it has to
+# come out before the `rmdir`, which only succeeds on an empty directory.
 release_lock() {
   if [ -n "${RECLAIM_MUTEX}" ]; then
+    rm -f "${RECLAIM_MUTEX}/pid" 2>/dev/null || true
     rmdir "${RECLAIM_MUTEX}" 2>/dev/null || true
     RECLAIM_MUTEX=""
   fi
@@ -187,15 +188,17 @@ lock_dir_for() {
   printf '%s' "${SLOTS_DIR}/.lock-${hash}"
 }
 
-# True (status 0) when the lock dir at $1 is stale and safe to reclaim,
-# false (status 1) otherwise. A lock records its holder's PID in a `pid`
-# file the instant after it is created (see acquire_lock); a PID that is no
-# longer alive means the holder crashed, was SIGKILLed, or was OOM-killed
-# without ever reaching release_lock. A lock with no `pid` file is either
-# the same situation left by an older run of this script, or another
-# acquire_lock call caught in the tiny window between its `mkdir` and its
-# `echo > pid`; the second case is why a pid-less lock is only stale once it
-# has outlived LOCK_STALE_SECONDS, the same span acquire_lock itself spends
+# True (status 0) when the directory at $1 is stale and safe to reclaim,
+# false (status 1) otherwise. Used both on a lock dir and on a reclaim mutex
+# (see reclaim_lock below), since both record their holder's PID in a `pid`
+# file the instant after they are created (see acquire_lock and reclaim_lock)
+# in exactly the same shape. A PID that is no longer alive means the holder
+# crashed, was SIGKILLed, or was OOM-killed without ever reaching
+# release_lock. A directory with no `pid` file is either the same situation
+# left by an older run of this script, or another acquire_lock/reclaim_lock
+# call caught in the tiny window between its `mkdir` and its `echo > pid`;
+# the second case is why a pid-less directory is only stale once it has
+# outlived LOCK_STALE_SECONDS, the same span acquire_lock itself spends
 # waiting before giving up.
 lock_is_stale() {
   local dir="$1" pid mtime now
@@ -211,36 +214,53 @@ lock_is_stale() {
   [ $((now - mtime)) -ge "${LOCK_STALE_SECONDS}" ]
 }
 
-# Reclaims lock_dir ($1) if and only if it is stale, and guarantees that a
-# live lock is never removed even when several processes race to reclaim the
-# same stale one. The guarantee comes from making the check and the removal
-# one critical section: only the process that holds the reclaim mutex
-# (`mkdir "${lock_dir}.reclaim"`, itself dot-prefixed like lock_dir so the
-# slot globs never see it either) is allowed to call lock_is_stale on
-# lock_dir and then remove it, and that mkdir is atomic, so at most one
-# process ever holds the mutex for a given lock_dir at a time. Every other
-# contender's `mkdir "${mutex}"` just fails and returns immediately (status
-# 1); acquire_lock's own retry loop is what makes them try again, not a
-# retry loop in here. Because nothing outside this critical section ever
-# removes lock_dir, and a dead holder never runs release_lock to recreate
-# it, no process can end up removing a directory that was freshly created
-# and is now live: by the time any process's lock_is_stale call runs, it is
-# the sole holder of the mutex, and the removal that may follow targets
-# exactly the directory that call just inspected, not whatever might be
-# sitting at that path a moment later. The mutex is released before
-# returning on every path, and by the EXIT/INT/TERM traps (via release_lock)
-# if this process dies first; a crash between the `mkdir` and the `rmdir`
-# below leaks the mutex, but the window is one stat call, at most one
-# `rm -rf`, and one `rmdir`, with no sleep anywhere in it.
+# Reclaims lock_dir ($1) if and only if it is stale. When it succeeds in
+# taking the reclaim mutex (`mkdir "${lock_dir}.reclaim"`, itself
+# dot-prefixed like lock_dir so the slot globs never see it either), a
+# process is meant to be the only one calling lock_is_stale on lock_dir and
+# then removing it, since that mkdir is atomic and every other contender's
+# `mkdir "${mutex}"` just fails and returns immediately (status 1);
+# acquire_lock's own retry loop is what makes them try again, not a retry
+# loop in here. The mutex is released before returning on every path, and by
+# the EXIT/INT/TERM traps (via release_lock) if this process dies first.
+#
+# The mutex records its own holder's PID the instant after the `mkdir`, the
+# same way a lock dir does (see acquire_lock), so a process killed between
+# that `mkdir` and its `rmdir` leaves a mutex that is itself just a stale
+# lock: when this process's own `mkdir "${mutex}"` fails, it calls
+# lock_is_stale on the mutex under the same rule lock_is_stale already
+# applies to lock_dir (dead pid, or pid-less and older than
+# LOCK_STALE_SECONDS) and removes it if so, so a later attempt can take it;
+# a mutex whose lock_is_stale read finds it alive is left alone. This
+# process does not then retry the mutex `mkdir` itself; it returns 1 for
+# this call, and acquire_lock's retry loop is what makes the next attempt,
+# on this or another process, find the mutex gone.
+#
+# That read-then-rm is not itself atomic, so the one-holder claim above has
+# a gap: a process can read the mutex's pid as dead and, before its `rm -rf`
+# runs, a second process can mkdir that same path as a fresh, live mutex,
+# which the first process's `rm -rf` then deletes out from under it, opening
+# the path for a third process to mkdir and believe itself the sole holder
+# too. Reaching it needs a holder killed inside the instant between its own
+# `mkdir` and its `echo > pid`, or reclaimed on stale pid-less age, plus two
+# further processes' calls landing inside that same narrow window, so it is
+# rare but not eliminated by this function.
 reclaim_lock() {
   local lock_dir="$1" removed=1
   local mutex="${lock_dir}.reclaim"
-  mkdir "${mutex}" 2>/dev/null || return 1
+  if ! mkdir "${mutex}" 2>/dev/null; then
+    if [ -d "${mutex}" ] && lock_is_stale "${mutex}"; then
+      rm -rf "${mutex}"
+    fi
+    return 1
+  fi
+  echo "$$" > "${mutex}/pid" 2>/dev/null || true
   RECLAIM_MUTEX="${mutex}"
   if [ -d "${lock_dir}" ] && lock_is_stale "${lock_dir}"; then
     rm -rf "${lock_dir}"
     removed=0
   fi
+  rm -f "${mutex}/pid" 2>/dev/null || true
   rmdir "${mutex}" 2>/dev/null || true
   RECLAIM_MUTEX=""
   return "${removed}"
