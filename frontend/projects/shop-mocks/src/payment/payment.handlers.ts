@@ -26,7 +26,7 @@ import {
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
-import { faultResponse, loseResponseOnce } from '../faults';
+import { faultResponse, loseResponseOnce, slowOnce } from '../faults';
 import { invalidRequest, problemResponse } from '../problem-response';
 
 import { orderStore } from '../checkout/checkout.handlers';
@@ -49,33 +49,38 @@ async function readJsonBody(request: Request): Promise<unknown> {
 export const paymentHandlersEntry: BusinessHandlerEntry = (
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] => {
-  const createIntent: RequestHandler = http.post('*/api/v1/payment-intents', ({ request }) => {
-    const fault = faultResponse(options, 'payment-intent');
-    if (fault !== null) return fault;
-    const sessionId = request.headers.get('X-Demo-Session');
-    if (sessionId === null) {
-      return invalidRequest(options, 'Missing X-Demo-Session header', {});
-    }
-    const idempotencyKey = request.headers.get('Idempotency-Key');
-    if (idempotencyKey === null) {
-      return invalidRequest(options, 'Missing Idempotency-Key header', { received: null });
-    }
-    const ifMatch = request.headers.get('If-Match');
-    const outcome = requireOrderStore().createPaymentIntent(sessionId, idempotencyKey, ifMatch);
-    if (!outcome.ok) return problemResponse(outcome);
-    options.persist?.(sessionId);
-    if (loseResponseOnce(options, 'payment-intent')) return HttpResponse.error();
-    return HttpResponse.json(outcome.intent, {
-      status: 201,
-      headers: { Location: `${options.apiRoot}/payment-intents/${outcome.intent.id}` },
-    });
-  });
+  const createIntent: RequestHandler = http.post(
+    '*/api/v1/payment-intents',
+    async ({ request }) => {
+      const fault = faultResponse(options, 'payment-intent');
+      if (fault !== null) return fault;
+      await slowOnce(options, 'payment-intent');
+      const sessionId = request.headers.get('X-Demo-Session');
+      if (sessionId === null) {
+        return invalidRequest(options, 'Missing X-Demo-Session header', {});
+      }
+      const idempotencyKey = request.headers.get('Idempotency-Key');
+      if (idempotencyKey === null) {
+        return invalidRequest(options, 'Missing Idempotency-Key header', { received: null });
+      }
+      const ifMatch = request.headers.get('If-Match');
+      const outcome = requireOrderStore().createPaymentIntent(sessionId, idempotencyKey, ifMatch);
+      if (!outcome.ok) return problemResponse(outcome);
+      options.persist?.(sessionId);
+      if (loseResponseOnce(options, 'payment-intent')) return HttpResponse.error();
+      return HttpResponse.json(outcome.intent, {
+        status: 201,
+        headers: { Location: `${options.apiRoot}/payment-intents/${outcome.intent.id}` },
+      });
+    },
+  );
 
   const getIntent: RequestHandler = http.get(
     '*/api/v1/payment-intents/:paymentIntentId',
-    ({ request, params }) => {
+    async ({ request, params }) => {
       const fault = faultResponse(options, 'payment-intent-read');
       if (fault !== null) return fault;
+      await slowOnce(options, 'payment-intent-read');
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) {
         return invalidRequest(options, 'Missing X-Demo-Session header', {});

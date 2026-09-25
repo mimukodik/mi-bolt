@@ -76,6 +76,11 @@
 //    `?mi-scenario=lost-once-payment-intent` let the first order or
 //    payment intent commit and then lose its response, so the retry with
 //    the same Idempotency-Key reads the stored result back.
+//    `?mi-scenario=slow-once-<operation>` answers the first matching
+//    request of each page load 2000 ms late with the response it would
+//    have got without the scenario, and every later one at once, so a
+//    spec can let a newer request overtake an older one; 2000 ms fits
+//    inside the five-second expect timeout an assertion waits with.
 //    FAULT_OPERATIONS in projects/shop-mocks/src/faults.ts lists the
 //    operations, and `?mi-scenario=cart-mutation-fails` does the same for
 //    removing a cart line and clearing the cart. The mock reads the

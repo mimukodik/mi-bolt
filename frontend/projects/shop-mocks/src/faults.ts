@@ -8,13 +8,18 @@
  * `resolveScenario` keeps an unregistered scenario's name, so a fault
  * scenario needs no registry entry.
  *
- * Three once-only families sit beside them, for the rows that retry
- * after exactly one failure:
+ * Four once-only families sit beside them, for the rows that retry
+ * after exactly one failure or race a later request against an earlier
+ * one:
  *
  *   - `fail-once-<operation>` and `offline-once-<operation>` answer the
  *     first matching request of a handler list like their sticky
  *     counterparts and serve every later one normally, so the retry
  *     succeeds.
+ *   - `slow-once-<operation>` answers the first matching request of a
+ *     handler list `SLOW_ONCE_DELAY_MS` late with the response it would
+ *     have got without the scenario, and every later one at once, so a
+ *     caller can let a newer request overtake an older one.
  *   - `lost-once-order` and `lost-once-payment-intent` let the handler
  *     run in full — the store commits and `persist` runs — and then
  *     replace that first committed success with a network error, as a
@@ -37,7 +42,7 @@
  * has run.
  */
 
-import { HttpResponse, type DefaultBodyType } from 'msw';
+import { delay, HttpResponse, type DefaultBodyType } from 'msw';
 
 import type { Problem } from '@mi-bolt/api/models/problem';
 import type { CreateHandlersOptions } from './create-handlers';
@@ -77,6 +82,26 @@ export const LOST_RESPONSE_OPERATIONS = ['order', 'payment-intent'] as const;
 export type LostResponseOperation = (typeof LOST_RESPONSE_OPERATIONS)[number];
 
 /**
+ * How long a `slow-once-<operation>` scenario holds its first request
+ * back, in milliseconds. The two bounds are measured on the code that
+ * sets them, not chosen here:
+ *
+ *   - longer than the catalogue search debounce,
+ *     `SEARCH_DEBOUNCE_MS` (300 ms,
+ *     `frontend/projects/storefront/src/app/features/catalog/catalog-query.ts`),
+ *     so a second query is dispatched while the first is still held and
+ *     the two responses can be raced;
+ *   - shorter than the local Playwright expect timeout of 5000 ms
+ *     (`frontend/playwright.config.ts`; the `integration-*` projects
+ *     override it nowhere), so a spec can wait for the late answer with
+ *     an ordinary web-first assertion instead of a raw timeout.
+ *
+ * `delay` resolves after at least this long, and takes the same path in
+ * the browser worker a Playwright run uses.
+ */
+export const SLOW_ONCE_DELAY_MS = 2000;
+
+/**
  * The scenario names whose once-only fault already fired, per handler
  * list. Keyed on the options object rather than on a module-level flag
  * or counter, so one page load's fault cannot leak into the next list.
@@ -102,7 +127,10 @@ function fireOnce(options: CreateHandlersOptions, scenarioName: string): boolean
  * Builds the fault response for the scenario the options carry, or
  * `null` when the scenario names no fault for this operation. The
  * `lost-once-*` names always answer `null`: their handler runs in full
- * and consults `loseResponseOnce` once the store has committed.
+ * and consults `loseResponseOnce` once the store has committed. So does
+ * every `slow-once-*` name: its handler runs in full and consults
+ * `slowOnce` before it builds the response, which is the response the
+ * request would have got without the scenario.
  */
 export function faultResponse(
   options: CreateHandlersOptions,
@@ -118,6 +146,25 @@ export function faultResponse(
     return HttpResponse.error();
   }
   return null;
+}
+
+/**
+ * Holds the first matching request of a `slow-once-<operation>` handler
+ * list back for `SLOW_ONCE_DELAY_MS`, and returns at once for every
+ * other scenario and for every later request of the operation. Each
+ * handler awaits this directly after its `faultResponse` check, before
+ * it builds its response, so the delayed answer is the one the request
+ * would have got without the scenario and a caller can let a newer
+ * request overtake it.
+ */
+export async function slowOnce(
+  options: CreateHandlersOptions,
+  operation: FaultOperation,
+): Promise<void> {
+  const scenarioName = options.scenario.name;
+  if (scenarioName !== `slow-once-${operation}`) return;
+  if (!fireOnce(options, scenarioName)) return;
+  await delay(SLOW_ONCE_DELAY_MS);
 }
 
 /**
