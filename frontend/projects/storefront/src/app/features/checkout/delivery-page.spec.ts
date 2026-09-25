@@ -173,7 +173,7 @@ function configureTestBed(): void {
 /**
  * Stubs the options fetch with the given result. Must run BEFORE
  * `TestBed.createComponent`, because the constructor kicks the fetch
- * (delivery-page.ts:108-110).
+ * (the constructor's `void this.loadOptions(true)`).
  */
 function pinEnsureOptions(result: CheckoutResult<CheckoutOptions>): void {
   const facade = TestBed.inject(CheckoutFacade);
@@ -195,7 +195,7 @@ function pinEnsureOptionsNever(): void {
  * Replaces the public `session` signal with one carrying the given
  * session. Must run BEFORE `TestBed.createComponent`, because the
  * page's `buildInitialModel()` reads it synchronously in its field
- * initialiser (delivery-page.ts:66, 200-232).
+ * initialiser (`formModel`, filled by `buildInitialModel()`).
  */
 function pinSession(session: CheckoutSession | null): void {
   const facade = TestBed.inject(CheckoutFacade);
@@ -367,7 +367,7 @@ describe('DP-03..DP-04 options load failure', () => {
     const errorState = queryOne(root, 'app-error-state');
     expect(errorState).not.toBeNull();
     // The exact, hard-coded message the page renders for any
-    // options-load failure (delivery-page.ts:99-126). Generic by
+    // options-load failure (`loadOptions`' failure branch). Generic by
     // design (R15): the wire's own detail never reaches the DOM.
     expect(errorState?.textContent).toContain(
       'A szállítási és fizetési opciók betöltése sikertelen.',
