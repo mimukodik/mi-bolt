@@ -72,9 +72,14 @@ function describeCartError(facade: CartFacade): string {
   return 'A kosár betöltése sikertelen.';
 }
 
-function describeNotice(notice: CartNotice, items: readonly CartItem[]): string {
-  const name = items.find((item) => item.variantId === notice.variantId)?.productName;
-  const subject = name ?? 'Egy termék';
+function describeNotice(
+  notice: CartNotice,
+  items: readonly CartItem[],
+  knownName: (variantId: string) => string | null,
+): string {
+  const lineName = items.find((item) => item.variantId === notice.variantId)?.productName;
+  const seenName = notice.variantId === undefined ? null : knownName(notice.variantId);
+  const subject = lineName ?? seenName ?? 'Egy termék';
   if (notice.code === 'QUANTITY_REDUCED') {
     const from = readNumberParam(notice, 'from');
     const to = readNumberParam(notice, 'to');
@@ -179,7 +184,9 @@ export class CartPage {
   readonly noticeMessages = computed<readonly string[]>(() => {
     const cart = this.cart();
     if (cart === null) return [];
-    return cart.notices.map((notice) => describeNotice(notice, cart.items));
+    return cart.notices.map((notice) =>
+      describeNotice(notice, cart.items, (id) => this.facade.productNameOf(id)),
+    );
   });
 
   /** Summary footnote copy shown under the total. The shipping fee
