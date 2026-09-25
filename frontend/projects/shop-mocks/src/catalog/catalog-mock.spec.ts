@@ -17,8 +17,10 @@ import catalogFixture from '../../../../docs/api/fixtures/catalog.json';
 import {
   buildCatalogHandlers,
   catalogStore,
+  GALLERY_SEVERAL_IMAGES_SCENARIO,
   isCatalogFixtureShape,
   loadCatalogFixture,
+  withEveryColourImage,
 } from './catalog.handlers';
 import { sortEntries } from './catalog-filter';
 import type { CatalogEntry, CatalogFixture, ProductRanking } from './catalog-store';
@@ -30,6 +32,7 @@ import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
+  resolveScenario,
   type Clock,
   type Ids,
 } from '../scenarios';
@@ -1314,6 +1317,150 @@ describe('GET /products/:slug', () => {
     const body = await expectProblem('/api/v1/products/does-not-exist', 404, 'NOT_FOUND');
     expect(body['detail']).toBe('product not found');
     expect(body['params']).toEqual({ slug: 'does-not-exist' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// gallery-several-images scenario (E048)
+// ---------------------------------------------------------------------------
+
+/**
+ * The four distinct photo ids of `apple-iphone-18-pro-max`, in the order
+ * its variants first carry them: Burgundi, Ezüst, Fekete, Gleccserszín.
+ */
+const BURGUNDI_IMAGE_ID = '849997cd17e3cc9da04148666d7af6f0417bf43f584380ebbf29ad40f2bcbec0';
+const EZUST_IMAGE_ID = '352ae7532e45d186ef80ccacaf464a4f14a3235e4bc0baf764407854438086db';
+const FEKETE_IMAGE_ID = 'e1c61b0a0669452c02be43f700ef4f6619cf0b7e7ba9bd3300c037562e5c7312';
+const GLECCSERSZIN_IMAGE_ID = 'd7606f6961c61affee0b47ced13f7e910f8ed04ea1f641a231407087335bd41c';
+
+const BURGUNDI_IMAGE_ALT = 'Apple iPhone 18 Pro Max Burgundi';
+const EZUST_IMAGE_ALT = 'Apple iPhone 18 Pro Max Ezüst';
+const FEKETE_IMAGE_ALT = 'Apple iPhone 18 Pro Max Fekete';
+const GLECCSERSZIN_IMAGE_ALT = 'Apple iPhone 18 Pro Max Gleccserszín';
+
+describe('gallery-several-images scenario (E048)', () => {
+  /** Assert `record.images` is an array and return its records. */
+  function imagesOf(record: Record<string, unknown>): Record<string, unknown>[] {
+    const images = record['images'];
+    expectArray(images);
+    return images.map((image) => {
+      expectRecord(image);
+      return image;
+    });
+  }
+
+  /** Assert `body.variants` is an array and return its records. */
+  function variantsOf(body: Record<string, unknown>): Record<string, unknown>[] {
+    const variants = body['variants'];
+    expectArray(variants);
+    return variants.map((variant) => {
+      expectRecord(variant);
+      return variant;
+    });
+  }
+
+  /** Return the variant whose `id` matches, asserting it exists. */
+  function variantById(body: Record<string, unknown>, id: string): Record<string, unknown> {
+    const match = variantsOf(body).find((variant) => variant['id'] === id);
+    if (match === undefined) throw new Error(`expected a variant with id ${id}`);
+    return match;
+  }
+
+  /** The image ids of a variant or product record, in order. */
+  function imageIdsOf(record: Record<string, unknown>): string[] {
+    return imagesOf(record).map((image) => readString(image, 'id'));
+  }
+
+  /** The image alts of a variant or product record, in order. */
+  function imageAltsOf(record: Record<string, unknown>): string[] {
+    return imagesOf(record).map((image) => readString(image, 'alt'));
+  }
+
+  /** Install the catalogue handlers on the gallery scenario. */
+  function installGalleryScenarioHandlers(): void {
+    server.use(
+      ...buildCatalogHandlers({
+        ...options,
+        scenario: resolveScenario(GALLERY_SEVERAL_IMAGES_SCENARIO),
+      }),
+    );
+  }
+
+  it('every variant carries its own photo first and then the product other colour photos', async () => {
+    installGalleryScenarioHandlers();
+
+    const body = await loadJson('/api/v1/products/apple-iphone-18-pro-max');
+
+    const burgundi = variantById(body, 'apple-iphone-18-pro-max--burgundi--256');
+    expect(imageIdsOf(burgundi)).toEqual([
+      BURGUNDI_IMAGE_ID,
+      EZUST_IMAGE_ID,
+      FEKETE_IMAGE_ID,
+      GLECCSERSZIN_IMAGE_ID,
+    ]);
+    expect(imageAltsOf(burgundi)).toEqual([
+      BURGUNDI_IMAGE_ALT,
+      EZUST_IMAGE_ALT,
+      FEKETE_IMAGE_ALT,
+      GLECCSERSZIN_IMAGE_ALT,
+    ]);
+
+    const gleccserszin = variantById(body, 'apple-iphone-18-pro-max--gleccserszin--256');
+    expect(imageIdsOf(gleccserszin)).toEqual([
+      GLECCSERSZIN_IMAGE_ID,
+      BURGUNDI_IMAGE_ID,
+      EZUST_IMAGE_ID,
+      FEKETE_IMAGE_ID,
+    ]);
+  });
+
+  it('a product with one photo keeps one photo per variant', async () => {
+    installGalleryScenarioHandlers();
+
+    const body = await loadJson('/api/v1/products/motorola-edge-50-fusion');
+    const variants = variantsOf(body);
+    expect(variants.length).toBeGreaterThan(0);
+    for (const variant of variants) {
+      expect(imagesOf(variant).length, readString(variant, 'id')).toBe(1);
+    }
+  });
+
+  it('the scenario leaves the catalogue store and the default read unchanged', async () => {
+    installGalleryScenarioHandlers();
+
+    const scenarioRead = await loadJson('/api/v1/products/apple-iphone-18-pro-max');
+    expect(imageIdsOf(variantById(scenarioRead, 'apple-iphone-18-pro-max--burgundi--256'))).toEqual(
+      [BURGUNDI_IMAGE_ID, EZUST_IMAGE_ID, FEKETE_IMAGE_ID, GLECCSERSZIN_IMAGE_ID],
+    );
+
+    const stored = catalogStore.current?.getProduct('apple-iphone-18-pro-max');
+    if (stored === undefined) throw new Error('the store has no apple-iphone-18-pro-max');
+    for (const variant of stored.variants) {
+      expect(variant.images.length, variant.id).toBe(1);
+    }
+
+    const expanded = withEveryColourImage(stored);
+    expect(expanded).not.toBe(stored);
+    expect(expanded.variants.length).toBe(stored.variants.length);
+    for (let i = 0; i < stored.variants.length; i += 1) {
+      expect(expanded.variants[i]).not.toBe(stored.variants[i]);
+    }
+    const storedBurgundi = stored.variants.find(
+      (variant) => variant.id === 'apple-iphone-18-pro-max--burgundi--256',
+    );
+    if (storedBurgundi === undefined) throw new Error('the store has no Burgundi 256 variant');
+    expect(storedBurgundi.images.length).toBe(1);
+  });
+
+  it('the default scenario still serves one photo per variant', async () => {
+    installHandlers();
+
+    const body = await loadJson('/api/v1/products/apple-iphone-18-pro-max');
+    const variants = variantsOf(body);
+    expect(variants.length).toBeGreaterThan(0);
+    for (const variant of variants) {
+      expect(imagesOf(variant).length, readString(variant, 'id')).toBe(1);
+    }
   });
 });
 
