@@ -139,7 +139,11 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
     }
-    const outcome = requireCheckoutStore().get(sessionId);
+    const checkoutStore = requireCheckoutStore();
+    const outcome = checkoutStore.get(sessionId);
+    if (outcome.ok && checkoutStore.releaseSnapshotDraft(sessionId)) {
+      options.persist?.(sessionId);
+    }
     const etag = outcome.ok ? `"${String(outcome.session.version)}"` : null;
     return outcomeResponse(outcome, etag);
   });
