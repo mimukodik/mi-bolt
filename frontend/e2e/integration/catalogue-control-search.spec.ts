@@ -7,10 +7,20 @@ import { test, expect } from '../fixtures/coverage';
 // toolbar's `filter-trigger` is `display: none` (`.trigger` in the catalogue
 // toolbar stylesheet) and the facets live in the shown `filter-sidebar` panel
 // (`FilterPanel`), which applies every edit immediately; below it the sidebar
-// is `display: none` and the trigger opens the `filter-drawer`
-// (`FilterDrawer`). The panel's search field `filter-search-input` exists only
-// in the sidebar — the drawer carries no search field — so this scenario is
-// taken where the sidebar is shown.
+// is `display: none` and the trigger opens the `filter-drawer` (`FilterDrawer`).
+//
+// The search control follows the same split. At 1024px and wider it is the
+// panel's `filter-search-input`, whose edit is debounced and reaches the
+// catalogue on the pause. Below 1024px the sidebar, and with it
+// `filter-search-input`, is `display: none`, and the drawer carries no search
+// field: the field the narrow mount shows is the header's `mobile-search-input`
+// (`HeaderNav`, placeholder "Keresés a telefonok között…"), which commits the
+// typed term on Enter as a navigation to `/telefonok?q=<term>` and ignores an
+// empty term. Both mounts carry the applied term in the shared
+// `applied-chip-remove-q` remove button, and the narrow mount clears the search
+// through it. The panel's own reset `filter-reset` sits in the hidden sidebar
+// below 1024px, so its native button is matched by tag there and by role where
+// the panel is shown.
 const SIDEBAR_MIN_WIDTH = 1024;
 
 // The catalogue's own default page size: it lists one card per
@@ -27,14 +37,23 @@ test.describe('Catalogue: filter controls', () => {
       const catalogHost = page.locator('app-catalog-page');
       const resultCount = page.getByTestId('result-count');
       const cards = page.getByTestId('product-card');
-      const searchInput = page.getByTestId('filter-search-input');
+      // The search field the viewport shows: the panel's own at 1024px and
+      // wider, the header's mobile bar below it.
+      const searchInput = sidebarViewport
+        ? page.getByTestId('filter-search-input')
+        : page.getByTestId('mobile-search-input');
       const appliedFilters = page.getByTestId('applied-filters');
       const appliedChips = page.getByTestId('applied-chip');
       const filterTrigger = page.getByTestId('filter-trigger');
       // Controls built on the `app-button` primitive are host elements carrying
       // the test id, so the disabled state lives on the native button inside
-      // them (`app-button`).
-      const filterResetButton = page.getByTestId('filter-reset').getByRole('button');
+      // them (`app-button`). At 1024px and wider that button is matched by its
+      // role; below it the hidden sidebar takes it out of the accessibility
+      // tree, so the narrow path matches the same button by tag and reads the
+      // same state.
+      const filterResetButton = sidebarViewport
+        ? page.getByTestId('filter-reset').getByRole('button')
+        : page.getByTestId('filter-reset').locator('button');
 
       // The unfiltered counter, and the state the cleared search returns to.
       const unfilteredCount = '55 találat a szűrt feltételek szerint';
@@ -59,21 +78,22 @@ test.describe('Catalogue: filter controls', () => {
         await expect(cards).toHaveCount(DEFAULT_PAGE_SIZE);
       });
 
-      // Below the 1024px breakpoint the search field is not mounted at all: the
-      // sidebar panel holding `filter-search-input` is the wide layout's mount,
-      // and the drawer the trigger opens carries no search field, so the
-      // scenario's remaining steps belong to the wide layout alone.
-      test.skip(
-        !sidebarViewport,
-        'the search field `filter-search-input` is mounted only in the 1024px-and-wider sidebar',
-      );
+      // 2. Type "honor" into the search field the viewport shows: `filter-search-input` at 1024 px and wider, `mobile-search-input` committed with Enter below 1024 px.
+      await test.step('2. Type "honor" into the search field the viewport shows: `filter-search-input` at 1024 px and wider, `mobile-search-input` committed with Enter below 1024 px.', async () => {
+        if (sidebarViewport) {
+          await searchInput.fill('honor');
+        } else {
+          // The narrow field is the header's own bar and carries no debounce:
+          // it commits the term on Enter as a navigation, so the list follows
+          // that commit rather than a keystroke pause.
+          await expect(searchInput).toHaveAttribute('placeholder', 'Keresés a telefonok között…');
+          await searchInput.fill('honor');
+          await searchInput.press('Enter');
+        }
 
-      // 2. Type "honor" into `filter-search-input`.
-      await test.step('2. Type "honor" into `filter-search-input`.', async () => {
-        await searchInput.fill('honor');
-
-        // The search is debounced (300 ms), so the term reaches the catalogue on
-        // the pause rather than on the keystroke: the narrowed counter and the
+        // The wide search is debounced (300 ms), so the term reaches the
+        // catalogue on the pause rather than on the keystroke; the narrow
+        // field reaches it on its Enter commit. The narrowed counter and the
         // eight cards are what prove the query fired.
         await expect(resultCount).toHaveText('8 találat a szűrt feltételek szerint');
         await expect(cards).toHaveCount(8);
@@ -89,15 +109,21 @@ test.describe('Catalogue: filter controls', () => {
         await expect(searchInput).toHaveValue('honor');
 
         // The toolbar counts the applied filter and the panel's reset is live
-        // again. The trigger is `display: none` at this width but stays in the
-        // DOM, so its own label is what is read.
+        // again. The trigger is `display: none` at 1024px and wider but stays
+        // in the DOM, so its own label is what is read there; below 1024px it
+        // is the shown control.
         await expect(filterTrigger).toHaveText('Szűrők (1)');
         await expect(filterResetButton).toBeEnabled();
       });
 
-      // 3. Replace the term with "motorola" (type it over the current value, or clear the field and type it).
-      await test.step('3. Replace the term with "motorola" (type it over the current value, or clear the field and type it).', async () => {
-        await searchInput.fill('motorola');
+      // 3. Replace the term with "motorola" the same way (type it over the current value, or clear the field and type it).
+      await test.step('3. Replace the term with "motorola" the same way (type it over the current value, or clear the field and type it).', async () => {
+        if (sidebarViewport) {
+          await searchInput.fill('motorola');
+        } else {
+          await searchInput.fill('motorola');
+          await searchInput.press('Enter');
+        }
 
         // The list narrows to the single matching card, and the term is
         // replaced rather than added to: the chip and the address bar carry
@@ -110,9 +136,16 @@ test.describe('Catalogue: filter controls', () => {
         await expect(searchInput).toHaveValue('motorola');
       });
 
-      // 4. Clear `filter-search-input`.
-      await test.step('4. Clear `filter-search-input`.', async () => {
-        await searchInput.fill('');
+      // 4. Clear the search through the control the viewport shows: `filter-search-input` at 1024 px and wider, the `applied-chip-remove-q` button of the narrow mount below it.
+      await test.step('4. Clear the search through the control the viewport shows: `filter-search-input` at 1024 px and wider, the `applied-chip-remove-q` button of the narrow mount below it.', async () => {
+        if (sidebarViewport) {
+          await searchInput.fill('');
+        } else {
+          // The narrow mount has no search field of its own to empty and the
+          // drawer it opens with `filter-trigger` carries no search either, so
+          // the term leaves through the chip row's own remove button.
+          await page.getByTestId('applied-chip-remove-q').click();
+        }
 
         // The full catalogue is back and the address bar dropped the term
         // altogether.
