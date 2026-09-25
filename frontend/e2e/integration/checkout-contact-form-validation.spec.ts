@@ -143,7 +143,13 @@ test.describe('Checkout: from the cart to the receipt', () => {
         // review step itself is not reachable here: its guard sends an
         // incomplete draft back to `/penztar/szallitas`, so the draft the
         // contact step prefills from is what proves the values were saved.
-        await page.goto('/penztar/adatok');
+        // The mock no longer keeps the draft in `sessionStorage` (owner,
+        // 2026-09-25, standard row E016), so a full page load drops the
+        // contact section and the guard sends the shopper to
+        // `/penztar/adatok?navigationReason=incomplete`. The draft stays in
+        // the page's memory when navigation stays in-app, so the browser
+        // history's `Back` step is what returns to the contact step here.
+        await page.goBack();
         await expect(contactPage).toBeVisible();
         await expect(fullNameInput).toHaveValue('Teszt Elek');
         await expect(emailInput).toHaveValue('teszt@example.test');

@@ -165,83 +165,36 @@ test.describe('Checkout: edge paths', () => {
       });
 
       // 4. Open the delivery step through the URL, so the step re-reads the
-      // options: open `/penztar/szallitas`.
-      await test.step('Open the delivery step through the URL, so the step re-reads the options: open `/penztar/szallitas`.', async () => {
+      // options: open `/penztar/szallitas`. The mock no longer keeps the
+      // draft in `sessionStorage` outside the card round trip (mock
+      // standard E016, owner, 2026-09-25), so the full page load drops
+      // every section of the saved draft and the guard sends the shopper
+      // to `/penztar/adatok?navigationReason=incomplete` with the cart
+      // kept.
+      await test.step('Open the delivery step through the URL, so the step re-reads the options: open `/penztar/szallitas`. The mock no longer keeps the draft in `sessionStorage` outside the card round trip (mock standard E016, owner, 2026-09-25), so the full page load drops every section of the saved draft and the guard sends the shopper to `/penztar/adatok?navigationReason=incomplete` with the cart kept.', async () => {
         await page.goto('/penztar/szallitas');
-        await expect(page.getByTestId('delivery-step')).toBeVisible();
 
-        // The saved draft is restored: the home-delivery radio is checked, the
-        // address is filled and the billing tick is kept.
-        const homeDelivery = page
-          .getByTestId('delivery-option')
-          .filter({ hasText: 'Házhoz szállítás' });
-        await expect(homeDelivery.getByTestId('delivery-radio')).toBeChecked();
-        await expect(page.getByTestId('address-input-postalCode')).toHaveValue('1052');
-        await expect(page.getByTestId('address-input-city')).toHaveValue('Budapest');
-        await expect(page.getByTestId('address-input-line1')).toHaveValue('Fő utca 1.');
-        await expect(page.getByTestId('billing-same-as-delivery')).toBeChecked();
-
-        // The re-read options mark cash on delivery unavailable for this cart:
-        // its radio is disabled, it stays the saved selection, and it explains
-        // itself with the "Kiválasztva" badge still shown.
-        const cashOnDelivery = page.getByTestId('payment-option').filter({ hasText: 'Utánvét' });
-        const cashOnDeliveryRadio = cashOnDelivery.getByTestId('payment-radio');
-        await expect(cashOnDeliveryRadio).toBeDisabled();
-        await expect(cashOnDeliveryRadio).toBeChecked();
-        await expect(cashOnDelivery.getByTestId('payment-unavailable-reason')).toHaveText(
-          'A kosár értéke meghaladja az ennél az opciónál megengedett összeget.',
-        );
-        await expect(cashOnDelivery.getByTestId('payment-selected-badge')).toHaveText(
-          'Kiválasztva',
+        // The contact step is what the guard lands on, and the cart line
+        // is kept: the saved draft is not restored across a page load.
+        await expect(page).toHaveURL(/\/penztar\/adatok\?navigationReason=incomplete$/);
+        await expect(page.getByTestId('contact-page')).toBeVisible();
+        await expect(page.getByTestId('delivery-step')).toHaveCount(0);
+        await expect(page.getByTestId('navigation-reason')).toContainText(
+          'Előbb ezt a lépést kell kitöltened, utána léphetsz tovább.',
         );
 
-        // Card payment is unaffected by the cart's value and stays selectable.
-        const cardPayment = page.getByTestId('payment-option').filter({ hasText: 'Bankkártya' });
-        await expect(cardPayment.getByTestId('payment-radio')).toBeEnabled();
-      });
+        // The contact form starts empty: the saved draft is not restored.
+        await expect(page.getByTestId('contact-fullname-input')).toHaveValue('');
+        await expect(page.getByTestId('contact-email-input')).toHaveValue('');
+        await expect(page.getByTestId('contact-phone-input')).toHaveValue('');
 
-      // 5. Press the inner button of `delivery-confirm` while the selected
-      // payment method is unavailable.
-      await test.step('Press the inner button of `delivery-confirm` while the selected payment method is unavailable.', async () => {
-        await page.getByTestId('delivery-confirm').getByRole('button').click();
-
-        // The save is refused server-side, so no part of the step is saved and
-        // the wizard does not advance.
-        await expect(page).toHaveURL(/\/penztar\/szallitas$/);
-        await expect(page.getByTestId('delivery-step')).toBeVisible();
-
-        // The banner shows only the fixed "nothing was lost" sentence: the
-        // server's own detail never reaches it.
-        await expect(page.getByTestId('delivery-save-failure-detail')).toHaveText(
-          'A kosarad és az adataid megmaradtak. Próbáld újra.',
-        );
-        await expect(page.getByTestId('delivery-save-failure')).toContainText(
-          'A mentés sikertelen. Próbáld újra.',
-        );
-        await expect(page.getByTestId('delivery-retry').getByRole('button')).toHaveText(
-          'Újrapróbálom',
-        );
-      });
-
-      // 6. Press the inner button of `delivery-retry`.
-      await test.step('Press the inner button of `delivery-retry`.', async () => {
-        await page.getByTestId('delivery-retry').getByRole('button').click();
-
-        // The retry clears the failure and re-reads the options, so all three
-        // failure controls are gone.
-        await expect(page.getByTestId('delivery-save-failure-detail')).toHaveCount(0);
-        await expect(page.getByTestId('delivery-save-failure')).toHaveCount(0);
-        await expect(page.getByTestId('delivery-retry')).toHaveCount(0);
-
-        // The cart has not changed, so cash on delivery is still unavailable and
-        // still the marked selection.
-        await expect(page.getByTestId('delivery-step')).toBeVisible();
-        const cashOnDelivery = page.getByTestId('payment-option').filter({ hasText: 'Utánvét' });
-        const cashOnDeliveryRadio = cashOnDelivery.getByTestId('payment-radio');
-        await expect(cashOnDeliveryRadio).toBeDisabled();
-        await expect(cashOnDeliveryRadio).toBeChecked();
-        await expect(cashOnDelivery.getByTestId('payment-selected-badge')).toHaveText(
-          'Kiválasztva',
+        // The cart is kept: a deep link that drops the draft still carries
+        // the cart the shopper had built. The checkout layout has no
+        // `cart-link` (its header carries "Vissza a shopba"), so the
+        // subtotal is read off the contact page's own order summary.
+        await expect(cartSubtotal).toBeVisible();
+        expect(Number(digitsOf(await cartSubtotal.textContent()))).toBeGreaterThan(
+          CASH_ON_DELIVERY_CEILING_HUF,
         );
       });
     },
