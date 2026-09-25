@@ -31,6 +31,42 @@ import { invalidRequest, problemResponse } from '../problem-response';
 
 import { orderStore } from '../checkout/checkout.handlers';
 
+/**
+ * E094 — under `?mi-scenario=payment-pending-resolves` a `pending`
+ * intent answers its reads as `pending` until the third read of it in
+ * this handler list, which resolves it as `succeeded` through
+ * `OrderStore.resolvePaymentIntentOutcome`, persists the session, and
+ * answers the succeeded intent. Reads are counted per intent per
+ * handler list, so a fresh page load counts from zero, and a read of
+ * an intent that is not `pending` does not count.
+ */
+export const PAYMENT_PENDING_RESOLVES_SCENARIO = 'payment-pending-resolves';
+
+/** The read of a `pending` intent that resolves it under that scenario. */
+export const PENDING_READS_BEFORE_SUCCESS = 3;
+
+/**
+ * The reads of each `pending` intent so far, per handler list. Keyed on
+ * the options object rather than on a module-level counter, so one page
+ * load's reads cannot leak into the next list.
+ */
+const pendingReads = new WeakMap<CreateHandlersOptions, Map<string, number>>();
+
+/**
+ * Records one more read of `paymentIntentId` in this handler list and
+ * returns the count it now stands at.
+ */
+function countPendingRead(options: CreateHandlersOptions, paymentIntentId: string): number {
+  let perIntent = pendingReads.get(options);
+  if (perIntent === undefined) {
+    perIntent = new Map<string, number>();
+    pendingReads.set(options, perIntent);
+  }
+  const count = (perIntent.get(paymentIntentId) ?? 0) + 1;
+  perIntent.set(paymentIntentId, count);
+  return count;
+}
+
 function requireOrderStore(): NonNullable<typeof orderStore.current> {
   if (orderStore.current === null) {
     throw new Error('[payment.handlers] order store has not been loaded');
@@ -88,6 +124,23 @@ export const paymentHandlersEntry: BusinessHandlerEntry = (
       const paymentIntentId = String(params['paymentIntentId']);
       const outcome = requireOrderStore().getPaymentIntent(sessionId, paymentIntentId);
       if (!outcome.ok) return problemResponse(outcome);
+      if (
+        options.scenario.name === PAYMENT_PENDING_RESOLVES_SCENARIO &&
+        outcome.intent.status === 'pending'
+      ) {
+        const read = countPendingRead(options, paymentIntentId);
+        if (read >= PENDING_READS_BEFORE_SUCCESS) {
+          const resolved = requireOrderStore().resolvePaymentIntentOutcome(
+            sessionId,
+            paymentIntentId,
+            { outcome: 'succeeded' },
+          );
+          if (resolved.ok) {
+            options.persist?.(sessionId);
+            return HttpResponse.json(resolved.intent, { status: 200 });
+          }
+        }
+      }
       return HttpResponse.json(outcome.intent, { status: 200 });
     },
   );
