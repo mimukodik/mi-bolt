@@ -10,7 +10,9 @@
  * `hydrate()` rejects malformed JSON, expired snapshots (older than
  * the documented `MAX_AGE_MS`), version mismatches and any field that
  * fails the allowlist shape. A rejection clears the corrupted entry
- * so the next save starts from a clean slate.
+ * so the next save starts from a clean slate, and the reason is kept
+ * in `Persistence.lastDiscard()` so the shop can say why the saved
+ * cart it expected is gone.
  *
  * Storage-denied mode (private browsing, security errors) keeps
  * state in an in-memory cache scoped to the adapter instance and
@@ -239,12 +241,22 @@ export function createBrowserPersistence(options: PersistenceOptions): Persisten
 }
 
 /**
+ * Why the last `hydrate()` dropped the stored entry: `'corrupt'` for
+ * unparsable JSON, an unparsable timestamp or a shape the allowlist
+ * rejects, `'version'` for an entry another `SNAPSHOT_SCHEMA_VERSION`
+ * wrote, `'stale'` for one that is too old or already expired.
+ */
+export type SnapshotDiscard = 'corrupt' | 'version' | 'stale';
+
+/**
  * Pure persistence façade. The class does not touch the DOM or
  * `globalThis` directly; tests construct it with their own storage
  * stub to exercise success and failure paths without a browser.
  */
 export class Persistence {
   private lastSnapshot: MockSnapshot | null = null;
+
+  private lastDiscardReason: SnapshotDiscard | null = null;
 
   constructor(
     private readonly adapter: SessionStorageAdapter,
@@ -264,40 +276,64 @@ export class Persistence {
    * when no entry exists, the entry is malformed, expired, or fails
    * the version/allowlist checks. The corrupted entry is cleared
    * before returning so subsequent saves do not replay the same
-   * broken state.
+   * broken state, and `lastDiscard()` holds the reason so the shop
+   * can say so.
    */
   hydrate(scenarioName: ScenarioName): MockSnapshot | null {
     const key = snapshotKey(scenarioName);
+    this.lastDiscardReason = null;
     const raw = this.adapter.read(key);
     if (raw === null) return null;
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch {
+      this.lastDiscardReason = 'corrupt';
+      this.adapter.remove(key);
+      return null;
+    }
+    // The version is checked before the allowlist: a real entry from an
+    // older schema fails `isValidSnapshot` on the field that version
+    // added, and would otherwise be reported as corrupt rather than as
+    // a version mismatch.
+    if (
+      isRecord(parsed) &&
+      typeof parsed['schemaVersion'] === 'number' &&
+      parsed['schemaVersion'] !== SNAPSHOT_SCHEMA_VERSION
+    ) {
+      this.lastDiscardReason = 'version';
       this.adapter.remove(key);
       return null;
     }
     if (!isValidSnapshot(parsed)) {
-      this.adapter.remove(key);
-      return null;
-    }
-    if (parsed.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) {
+      this.lastDiscardReason = 'corrupt';
       this.adapter.remove(key);
       return null;
     }
     const savedAt = Date.parse(parsed.savedAt);
     const expiresAt = Date.parse(parsed.expiresAt);
     if (Number.isNaN(savedAt) || Number.isNaN(expiresAt)) {
+      this.lastDiscardReason = 'corrupt';
       this.adapter.remove(key);
       return null;
     }
     const ageMs = this.nowMs() - savedAt;
     if (ageMs < 0 || ageMs > MAX_AGE_MS || expiresAt < this.nowMs()) {
+      this.lastDiscardReason = 'stale';
       this.adapter.remove(key);
       return null;
     }
     this.lastSnapshot = parsed;
     return parsed;
+  }
+
+  /**
+   * Why the last `hydrate()` dropped the stored entry, or `null` when
+   * it restored one or found none. The shop reads this to explain why
+   * a cart it expected to find is gone.
+   */
+  lastDiscard(): SnapshotDiscard | null {
+    return this.lastDiscardReason;
   }
 
   /** Clears the snapshot for the given scenario (used by tests and `reset`). */
