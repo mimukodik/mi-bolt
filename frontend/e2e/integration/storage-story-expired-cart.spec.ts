@@ -287,8 +287,10 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         }, seed);
 
         // The mock's responses come from inside the service worker, so the
-        // expired read is observed through this record rather than through page
-        // response events.
+        // expired read is observed through this record: the mock's own line for
+        // the read, which every engine writes. The read's 410 also reaches page
+        // response events in all three engines, so this record is chosen for its
+        // identical content across engines, not because response events miss it.
         page.on('console', (message) => {
           consoleMessages.push(message.text());
         });
@@ -326,10 +328,10 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         ).toBeVisible();
         await expect(emptyState.getByRole('button', { name: 'Telefonokat nézek' })).toBeVisible();
 
-        // The first read of the cart answered 410 Gone. The response is
-        // produced inside the service worker, so the page's console record is
-        // the observable; the poll waits for the mock's line for that read to
-        // reach the test.
+        // The first read of the cart answered 410 Gone. The mock produces it
+        // inside the service worker and writes its own line for it, which the
+        // poll waits to reach the test; the 410 also reaches page response
+        // events in all three engines.
         await expect.poll(() => consoleMessages.join('\n')).toMatch(EXPIRED_CART_READ);
 
         // Nothing of the expired cart and nothing of an error is rendered.
