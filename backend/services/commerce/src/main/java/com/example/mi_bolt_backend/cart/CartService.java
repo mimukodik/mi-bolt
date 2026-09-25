@@ -216,19 +216,19 @@ public class CartService {
 			long oldPrice = item.getUnitPriceHuf();
 			if (max == 0) {
 				iterator.remove();
-				result.add(new CartData.Notice(N_ITEM_REMOVED, variant.getId(),
-						Map.of("quantity", oldQty)));
+				result.add(new CartData.Notice(N_ITEM_REMOVED, variant.getId(), variant.getProduct().getName(),
+						new CartData.NoticeParams(oldQty, null, null)));
 			}
 			else {
 				if (oldQty > max) {
 					item.setQuantity(max, now());
-					result.add(new CartData.Notice(N_QUANTITY_REDUCED, variant.getId(),
-							Map.of("from", oldQty, "to", max)));
+					result.add(new CartData.Notice(N_QUANTITY_REDUCED, variant.getId(), variant.getProduct().getName(),
+							new CartData.NoticeParams(null, oldQty, max)));
 				}
 				if (oldPrice != variant.getPriceHuf()) {
 					item.setUnitPriceHuf(variant.getPriceHuf(), now());
-					result.add(new CartData.Notice(N_PRICE_CHANGED, variant.getId(),
-							Map.of("from", oldPrice, "to", variant.getPriceHuf())));
+					result.add(new CartData.Notice(N_PRICE_CHANGED, variant.getId(), variant.getProduct().getName(),
+							new CartData.NoticeParams(null, Math.toIntExact(oldPrice), Math.toIntExact(variant.getPriceHuf()))));
 				}
 			}
 		}

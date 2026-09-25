@@ -75,7 +75,7 @@ class PaymentIntentServiceTest {
 	@Test
 	void aCartNoticeIsReportedAsPriceChanged() {
 		CartData.CartView cart = cartView(300000L, 1,
-				List.of(new CartData.Notice("PRICE_CHANGED", "v-1", Map.of("from", 1, "to", 2))));
+				List.of(new CartData.Notice("PRICE_CHANGED", "v-1", "Galaxy S25", new CartData.NoticeParams(null, 1, 2))));
 		when(cartService.getCart(session)).thenReturn(cart);
 
 		assertThatThrownBy(() -> service.create(session, "\"4\""))

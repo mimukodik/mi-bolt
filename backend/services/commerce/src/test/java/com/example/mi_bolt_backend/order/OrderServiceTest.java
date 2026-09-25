@@ -126,7 +126,8 @@ class OrderServiceTest {
 	void priceChangeNoticeIs409PriceChanged() {
 		CartData.CartView cartWithNotice = new CartData.CartView(
 				10L, 4L, List.of(), 1, 1, 299990L, now.plusDays(30),
-				List.of(new CartData.Notice("PRICE_CHANGED", "samsung-galaxy-s25--navy--128", Map.of("from", 1, "to", 2))));
+				List.of(new CartData.Notice("PRICE_CHANGED", "samsung-galaxy-s25--navy--128", "Galaxy S25",
+						new CartData.NoticeParams(null, 1, 2))));
 		when(cartService.getCart(session)).thenReturn(cartWithNotice);
 
 		assertThatThrownBy(() -> service.place(session, "\"4\"", "card", "pi-1", TERMS_VERSION, true))
@@ -148,10 +149,10 @@ class OrderServiceTest {
 	void stockNoticeIs409OutOfStock() {
 		CartData.CartView cartWithNotice = new CartData.CartView(
 				10L, 4L, List.of(), 1, 1, 299990L, now.plusDays(30),
-				List.of(new CartData.Notice("QUANTITY_REDUCED", "samsung-galaxy-s25--navy--128",
-						Map.of("from", 2, "to", 1)),
-						new CartData.Notice("ITEM_REMOVED", "samsung-galaxy-s25--navy--256",
-								Map.of("quantity", 1))));
+				List.of(new CartData.Notice("QUANTITY_REDUCED", "samsung-galaxy-s25--navy--128", "Galaxy S25",
+						new CartData.NoticeParams(null, 2, 1)),
+						new CartData.Notice("ITEM_REMOVED", "samsung-galaxy-s25--navy--256", "Galaxy S25",
+								new CartData.NoticeParams(1, null, null))));
 		when(cartService.getCart(session)).thenReturn(cartWithNotice);
 
 		assertThatThrownBy(() -> service.place(session, "\"4\"", "card", "pi-1", TERMS_VERSION, true))

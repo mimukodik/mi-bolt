@@ -8,6 +8,7 @@ import com.example.mi_bolt_backend.api.model.Cart;
 import com.example.mi_bolt_backend.api.model.CartItem;
 import com.example.mi_bolt_backend.api.model.CartNotice;
 import com.example.mi_bolt_backend.api.model.CartNoticeCode;
+import com.example.mi_bolt_backend.api.model.CartNoticeParams;
 import com.example.mi_bolt_backend.api.model.Money;
 import com.example.mi_bolt_backend.api.model.StorageGb;
 import com.example.mi_bolt_backend.catalog.CatalogModels;
@@ -42,7 +43,12 @@ public final class CartModels {
 	public static CartNotice toCartNotice(CartData.Notice notice) {
 		CartNotice mapped = new CartNotice(CartNoticeCode.fromValue(notice.code()));
 		mapped.setVariantId(notice.variantId());
-		mapped.setParams(notice.params());
+		mapped.setProductName(notice.productName());
+		CartNoticeParams params = new CartNoticeParams();
+		params.setQuantity(notice.params().quantity());
+		params.setFrom(notice.params().from());
+		params.setTo(notice.params().to());
+		mapped.setParams(params);
 		return mapped;
 	}
 
