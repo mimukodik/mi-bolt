@@ -29,7 +29,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { concatMap, from, take, takeWhile, timer } from 'rxjs';
+import { concatMap, from, repeat, takeWhile, timer } from 'rxjs';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -169,21 +169,24 @@ export class ReviewPage {
   }
 
   /**
-   * Reads `id` once a second, at most `PENDING_POLL_MAX_READS` times,
-   * and stops at the first answer whose status is no longer pending.
-   * `concatMap` waits for each read, so a slow answer is never
-   * overlapped by the next tick; `takeUntilDestroyed` ends the poll
-   * with the page. Ten reads still pending leave the outcome unknown
-   * and the step says so, with the manual check as the way to look
-   * once more.
+   * Reads `id` one second after the previous answer, at most
+   * `PENDING_POLL_MAX_READS` answers. The budget counts answers, not
+   * timer ticks: `repeat(count)` re-subscribes to the source
+   * (`timer(...).pipe(concatMap(...))`) when it completes, so a slow
+   * answer is never overlapped by the next tick (`concatMap` waits for
+   * the inner promise), and a read that rejects or answers no longer
+   * pending ends the poll through `takeWhile` / the `error` arm.
+   * `takeUntilDestroyed` ends it with the page. Ten answers still
+   * pending leave the outcome unknown and the step says so, with the
+   * manual check as the way to look once more.
    */
   private startPendingPoll(id: string): void {
     this.polledIntentId = id;
     this.paymentPoll.set('polling');
-    timer(PENDING_POLL_INTERVAL_MS, PENDING_POLL_INTERVAL_MS)
+    timer(PENDING_POLL_INTERVAL_MS)
       .pipe(
-        take(PENDING_POLL_MAX_READS),
         concatMap(() => from(this.checkoutFacade.readPaymentIntent(id))),
+        repeat(PENDING_POLL_MAX_READS),
         takeWhile(() => this.checkoutFacade.paymentIntent()?.status === 'pending', true),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -194,6 +197,10 @@ export class ReviewPage {
             this.checkoutFacade.paymentIntent()?.status === 'pending' ? 'exhausted' : 'idle',
           );
         },
+        error: () => {
+          if (this.destroyRef.destroyed) return;
+          this.paymentPoll.set('exhausted');
+        },
       });
   }
 
@@ -202,6 +209,13 @@ export class ReviewPage {
    * Each call is skipped when its signal is already populated, so a
    * hand-off from `payment-return-page.ts`, which has just loaded the
    * cart and the session, costs one `GET /checkout/options` at most.
+   *
+   * The cold return from the payment page does not survive the SPA
+   * (`LOCATION_ASSIGN`), so a reload of `/penztar/ellenorzes` while an
+   * unpaid card intent is stored (`checkoutKeys.activeIntentId()`)
+   * shows the missing-intent branch until the held intent is read
+   * here. A pending answer starts the poll through the effect that
+   * watches `paymentIntent` for `status === 'pending'`.
    */
   private async load(cancelled: () => boolean): Promise<void> {
     if (this.cartFacade.cart() === null) {
@@ -212,6 +226,11 @@ export class ReviewPage {
     if (cancelled()) return;
     if (this.checkoutFacade.session() === null) {
       await this.checkoutFacade.ensureSession();
+    }
+    const id = checkoutKeys.activeIntentId();
+    if (id !== null && id.length > 0 && this.checkoutFacade.paymentIntent() === null) {
+      if (cancelled()) return;
+      await this.checkoutFacade.readPaymentIntent(id);
     }
   }
 

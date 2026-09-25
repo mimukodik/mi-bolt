@@ -348,8 +348,8 @@ describe('PS-06 the pending check control emits paymentCheckRequested once per p
 // ---------------------------------------------------------------------------
 // PS-14, PS-15 — the two states of the bounded poll (E094, E095)
 // ---------------------------------------------------------------------------
-describe('PS-14 while the page polls, the step says so and offers no check control', () => {
-  it('the polling line reads exactly "Az állapotot másodpercenként automatikusan ellenőrizzük." and the check control is absent', () => {
+describe('PS-14 while the page polls, the step says so and still offers the check control', () => {
+  it('the polling line reads exactly "Az állapotot másodpercenként automatikusan ellenőrizzük." and one check control is present', () => {
     const fixture = createFixture({
       paymentIntent: makeIntent('pending'),
       paymentPoll: 'polling',
@@ -361,7 +361,8 @@ describe('PS-14 while the page polls, the step says so and offers no check contr
       'Az állapotot másodpercenként automatikusan ellenőrizzük.',
     );
 
-    expect(queryElement(root, '[data-testid="review-payment-check"]')).toBeNull();
+    expect(getButton(root, 'review-payment-check').textContent.trim()).toBe('Állapot ellenőrzése');
+    expect(queryElement(root, '[data-testid="review-payment-poll-exhausted"]')).toBeNull();
   });
 });
 

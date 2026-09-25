@@ -269,22 +269,21 @@
                   <p class="m-0" data-testid="review-payment-polling">
                     Az állapotot másodpercenként automatikusan ellenőrizzük.
                   </p>
-                } @else {
-                  @if (paymentPoll() === 'exhausted') {
-                    <p class="m-0" data-testid="review-payment-poll-exhausted">
-                      Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk;
-                      az „Állapot ellenőrzése” gombbal később újra megnézheted.
-                    </p>
-                  }
-                  <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
-                    <app-button
-                      data-testid="review-payment-check"
-                      label="Állapot ellenőrzése"
-                      variant="secondary"
-                      (pressed)="paymentCheckRequested.emit()"
-                    />
-                  </div>
                 }
+                @if (paymentPoll() === 'exhausted') {
+                  <p class="m-0" data-testid="review-payment-poll-exhausted">
+                    Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az
+                    „Állapot ellenőrzése” gombbal később újra megnézheted.
+                  </p>
+                }
+                <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
+                  <app-button
+                    data-testid="review-payment-check"
+                    label="Állapot ellenőrzése"
+                    variant="secondary"
+                    (pressed)="paymentCheckRequested.emit()"
+                  />
+                </div>
               }
               @case ('requires_action') {
                 <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">

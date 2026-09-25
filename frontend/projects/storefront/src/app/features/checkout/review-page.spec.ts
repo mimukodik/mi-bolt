@@ -1117,4 +1117,119 @@ describe('pending payment poll (E094, E095)', () => {
     await vi.advanceTimersByTimeAsync(5_000);
     expect(readSpy).toHaveBeenCalledTimes(11);
   });
+
+  it('RP-36 a slow answer delays the next read', async () => {
+    const { h, checkout } = await mounted();
+    let resolveFirst: ((value: CheckoutResult<PaymentIntent>) => void) | null = null;
+    const firstResolver = (value: CheckoutResult<PaymentIntent>): void => {
+      resolveFirst?.(value);
+    };
+    let firstRead = true;
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockImplementation((id) => {
+      if (firstRead) {
+        firstRead = false;
+        return new Promise<CheckoutResult<PaymentIntent>>((resolve) => {
+          resolveFirst = resolve;
+        });
+      }
+      return Promise.resolve({ ok: true, value: pendingIntent(id) });
+    });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(readSpy.mock.calls[0]?.[0]).toBe('pi-1');
+
+    await vi.advanceTimersByTimeAsync(2499);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+
+    // The first read answers at fake time 3500 (it started at 1000 and
+    // took 2500 ms): the resolution lands on the microtask scheduled
+    // by the next yield, so the new timer is scheduled one second
+    // after that — the second read fires after the next yield, which
+    // is when the test sees it.
+    firstResolver({ ok: true, value: pendingIntent('pi-1') });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+  });
+
+  it('RP-37 a read that finds no intent ends the poll', async () => {
+    const { h, checkout } = await mounted();
+    let calls = 0;
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockImplementation((id) => {
+      calls += 1;
+      if (calls === 2) {
+        writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(null);
+        return Promise.resolve({
+          ok: false,
+          error: {
+            status: 404,
+            code: 'NOT_FOUND',
+            detail: 'Payment intent not found',
+            params: {},
+            fieldErrors: [],
+          },
+        });
+      }
+      return Promise.resolve({ ok: true, value: pendingIntent(id) });
+    });
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('idle');
+  });
+
+  it('RP-38 a read that rejects ends the poll with the check control', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockRejectedValue(new Error('boom'));
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
+    expect(countTestId(host, 'review-payment-check')).toBe(1);
+  });
+
+  it('RP-39 a reload with a stored intent reads it once', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    checkoutKeys.setActiveIntentId('pi-9');
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-9') });
+    const h = harness();
+    await h.fixture.whenStable();
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(readSpy.mock.calls[0]?.[0]).toBe('pi-9');
+  });
+
+  it('RP-40a the load reads no intent when the facade holds one', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(pendingIntent('pi-1'));
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+    const h = harness();
+    await h.fixture.whenStable();
+    expect(readSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('RP-40b the load reads no intent when none is stored', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(null);
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+    const h = harness();
+    await h.fixture.whenStable();
+    expect(readSpy).toHaveBeenCalledTimes(0);
+  });
 });

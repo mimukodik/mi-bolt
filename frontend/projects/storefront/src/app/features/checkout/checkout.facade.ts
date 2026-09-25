@@ -442,6 +442,15 @@ export class CheckoutFacade {
     } catch (err) {
       const error = mapError(err);
       if (error.status === 404) {
+        // A 404 for the intent this page is holding means the
+        // payment is gone (cancelled, expired, deleted); the step's
+        // missing-intent branch ("A fizetési szándék nem
+        // található.") is what the shopper sees next, and the stored
+        // id stays put so a reload reads the same gap. A 404 for any
+        // other id is a probe that changes nothing.
+        if (this.paymentIntentWritable()?.id === paymentIntentId) {
+          this.paymentIntentWritable.set(null);
+        }
         return { ok: false, error };
       }
       this.errorWritable.set(error);
