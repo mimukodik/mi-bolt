@@ -36,6 +36,11 @@ test.describe('Shop: edge paths', () => {
       const resultCount = page.getByTestId('result-count');
       const paginationCurrent = page.getByTestId('pagination-current');
 
+      // Step 4 opens this address and step 5's Back lands on it again, because
+      // loading a stored link issues no navigation that rewrites it.
+      const malformedUrl =
+        '/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=';
+
       // 1. Open `/telefonok?inStock=true&is5g=true&sort=price_desc&page=2&pageSize=12` and wait for the grid.
       await test.step('Open `/telefonok?inStock=true&is5g=true&sort=price_desc&page=2&pageSize=12` and wait for the grid.', async () => {
         await page.goto('/telefonok?inStock=true&is5g=true&sort=price_desc&page=2&pageSize=12');
@@ -118,8 +123,6 @@ test.describe('Shop: edge paths', () => {
 
       // 4. Open a URL that mixes one value the page understands with values it does not: `/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=`.
       await test.step('Open a URL that mixes one value the page understands with values it does not: `/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=`.', async () => {
-        const malformedUrl =
-          '/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=';
         await page.goto(malformedUrl);
 
         // The page degrades rather than failing: the one value the codec
@@ -169,6 +172,12 @@ test.describe('Shop: edge paths', () => {
         // page after it the next control is disabled.
         await expect(paginationCurrent).toHaveText('5');
         await expect(page.getByTestId('pagination-next')).toBeDisabled();
+
+        // The clamp replaced the out-of-range address instead of pushing it, so
+        // Back lands on step 4's URL rather than on `/telefonok?page=99`.
+        await page.goBack();
+        await expect(page).toHaveURL(malformedUrl);
+        await expect(paginationCurrent).toHaveText('1');
       });
     },
   );
