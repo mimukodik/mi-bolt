@@ -88,7 +88,7 @@ describe('DemoNotice', () => {
       expect(root.querySelector('[data-testid="demo-notice-reset-text"]')?.textContent.trim()).toBe(
         'A mentett kosarad nem volt visszaállítható, ezért a bolt üres kosárral indult.',
       );
-      expect(root.textContent ?? '').not.toContain('Fiktív termékek és árak');
+      expect(root.textContent).not.toContain('Fiktív termékek és árak');
     }
   });
 
