@@ -223,11 +223,26 @@ export class CatalogFacade {
   /** Error from the most recent failed request, if any. */
   private readonly errorSignal = signal<string | null>(null);
 
+  /**
+   * True when the latest query change moved a page past the last one
+   * back to the last page. A URL such as `/telefonok?page=99` opens the
+   * last page and the URL follows (the owner's decision); the page reads
+   * this flag to replace that URL instead of pushing a history entry, so
+   * Back does not return to the out-of-range page.
+   */
+  private readonly pageClampedSignal = signal<boolean>(false);
+
+  /** Set right before a clamped query is emitted; the pipeline's `tap` turns it into `pageClamped`. */
+  private clampPending = false;
+
   /** Read-only view of the canonical query — UI binds to this. */
   readonly query = this.querySignal.asReadonly();
 
   /** Read-only view of the current `vm` — UI binds to this. */
   readonly vm = computed<CatalogVm>(() => this.buildVm());
+
+  /** Read-only view of the clamp flag — the page's URL writer reads it. */
+  readonly pageClamped = this.pageClampedSignal.asReadonly();
 
   constructor() {
     // Debounced search pipeline: every keystroke resets the 300 ms
@@ -259,6 +274,8 @@ export class CatalogFacade {
     )
       .pipe(
         tap((q) => {
+          this.pageClampedSignal.set(this.clampPending);
+          this.clampPending = false;
           this.querySignal.set(q);
           this.errorSignal.set(null);
           this.inFlightSignal.set(true);
@@ -275,6 +292,14 @@ export class CatalogFacade {
       .subscribe((event) => {
         this.inFlightSignal.set(false);
         if (event.kind === 'ok') {
+          // The contract echoes a requested page past the last one with no
+          // items and the real total, so the facade asks for the last page.
+          const lastPage = event.page.totalPages;
+          if (event.page.items.length === 0 && lastPage >= 1 && event.query.page > lastPage) {
+            this.clampPending = true;
+            this.queryChange$.next({ ...event.query, page: lastPage });
+            return;
+          }
           const facets = mergeFacetsIntoUniverse(this.facetUniverseSignal(), event.page.facets);
           this.facetUniverseSignal.set({ brands: facets.brands, colors: facets.colors });
           this.resultSignal.set({

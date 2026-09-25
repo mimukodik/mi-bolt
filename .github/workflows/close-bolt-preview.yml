@@ -14,7 +14,7 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       (github.event.action == 'closed' || github.event.label.name == 'bolt-preview')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     concurrency:
       group: bolt-preview-${{ github.event.pull_request.number }}
       queue: max
