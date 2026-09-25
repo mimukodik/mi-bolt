@@ -5,8 +5,8 @@
 #
 # A JAR nincs verziókezelve (~98 MB), ezért friss klónozás után egyszer le kell futtatni:
 #
-#   scripts/install-spring-tools-mcp.sh          # csak ha hiányzik vagy sérült
-#   scripts/install-spring-tools-mcp.sh --force  # újratöltés mindenképp
+#   tools/install-spring-tools-mcp.sh          # csak ha hiányzik vagy sérült
+#   tools/install-spring-tools-mcp.sh --force  # újratöltés mindenképp
 #
 # Forrás: https://cdn.spring.io/spring-tools/release/  (spring-projects/spring-tools)
 # Követelmény: Java 21+ a PATH-on.
