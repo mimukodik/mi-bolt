@@ -21,9 +21,15 @@ const DESKTOP_MIN_WIDTH = 1024;
 // and the "once" fault is never re-armed.
 const SCENARIO_QUERY = 'mi-scenario=lost-once-payment-intent';
 
+// The mock's sessionStorage snapshot for this scenario: the persistence layer
+// namespaces one entry per scenario name (`mi-bolt.snapshot.<scenario>`), and
+// its `paymentIntents` array is the session's intent list, read from the same
+// origin the demo payment application is served on.
+const SNAPSHOT_KEY = 'mi-bolt.snapshot.lost-once-payment-intent';
+
 test.describe('Checkout: an answer lost after the commit', () => {
   test(
-    '[E096] a retried payment start opens the payment page for a newly created intent',
+    '[E096] a retried payment start opens the payment page for the intent the first press created',
     { tag: '@integration' },
     async ({ page }) => {
       const narrowViewport = (page.viewportSize()?.width ?? 0) < DESKTOP_MIN_WIDTH;
@@ -36,6 +42,22 @@ test.describe('Checkout: an answer lost after the commit', () => {
       const navigations: string[] = [];
       page.on('framenavigated', (frame) => {
         if (frame === page.mainFrame()) navigations.push(frame.url());
+      });
+
+      // Every `POST` to the payment-intent create endpoint and the
+      // `Idempotency-Key` it carries. The recording starts before the first
+      // navigation, so both presses are seen: the retry repeats the first
+      // press's key, and the mock replays the intent that press created
+      // instead of committing a second one.
+      const intentRequests: { url: string; idempotencyKey: string }[] = [];
+      page.on('request', (request) => {
+        if (request.method() !== 'POST') return;
+        if (!request.url().endsWith('/api/v1/payment-intents')) return;
+        const headers = request.headers();
+        intentRequests.push({
+          url: request.url(),
+          idempotencyKey: headers['idempotency-key'] ?? '',
+        });
       });
 
       /** The add control in the mount the viewport shows. */
@@ -234,14 +256,34 @@ test.describe('Checkout: an answer lost after the commit', () => {
         await expect(page.getByTestId('pay-pending')).toHaveText('Függőben marad');
 
         // The row's "Intent not duplicated" has no screen surface: neither the
-        // shop nor the demo payment application shows how many intents exist,
-        // and the first press never reached a payment page, so there is no
-        // earlier address and no earlier `pay-ref` to compare this id with.
-        // Measured in the browser beyond the screen, the second press carries a
-        // fresh `Idempotency-Key` and the session then holds two intents — the
-        // one the first press created and the one this page names, both still
-        // requiring action — so the retry does not replay the original payment
-        // key. Only what the screen shows is asserted here.
+        // shop nor the demo payment application shows how many intents exist.
+        // Measured beyond the screen, the retry carries the same
+        // `Idempotency-Key` as the first press, so the mock replays the intent
+        // that press created rather than committing a second one.
+        expect(intentRequests).toHaveLength(2);
+        const intentKeys = intentRequests.map((request) => request.idempotencyKey);
+        expect(intentKeys[0]).not.toBe('');
+        expect(intentKeys[1]).toBe(intentKeys[0]);
+
+        // The mock's own sessionStorage snapshot is the session's intent list:
+        // exactly one entry, and it is the intent this payment page names.
+        const persistedIntentIds = await page.evaluate((snapshotKey) => {
+          const raw = sessionStorage.getItem(snapshotKey);
+          if (raw === null) return [];
+          const parsed: unknown = JSON.parse(raw);
+          if (typeof parsed !== 'object' || parsed === null) return [];
+          if (!('paymentIntents' in parsed)) return [];
+          const intents: unknown = parsed['paymentIntents'];
+          if (!Array.isArray(intents)) return [];
+          const list: unknown[] = intents;
+          return list.map((intent) => {
+            if (typeof intent !== 'object' || intent === null) return '';
+            if (!('id' in intent)) return '';
+            const id = intent['id'];
+            return typeof id === 'string' ? id : '';
+          });
+        }, SNAPSHOT_KEY);
+        expect(persistedIntentIds).toEqual([paymentIntentId]);
       });
 
       // 4. Press `pay-succeeded` ("Sikeres fizetés") and read the return to the
