@@ -355,7 +355,12 @@ export class CartStore {
     for (const line of cart.lines) {
       const hit = this.lookup(line.variantId);
       if (hit === undefined || hit.variant.maxQuantity === 0) {
-        notices.push({ code: 'ITEM_REMOVED', variantId: line.variantId });
+        // The backend's cart service reports the removed quantity the same way.
+        notices.push({
+          code: 'ITEM_REMOVED',
+          variantId: line.variantId,
+          params: { quantity: line.quantity },
+        });
         changed = true;
         continue;
       }
