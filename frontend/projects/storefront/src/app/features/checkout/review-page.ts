@@ -326,6 +326,10 @@ export class ReviewPage {
           await this.router.navigateByUrl(outcome.route);
           return;
         case 'unknown':
+          // A stock refusal: the step's stock-error branch says what was
+          // lost and offers the way back to the cart, so no failure
+          // banner joins it.
+          if (outcome.code === 'OUT_OF_STOCK') return;
           this.submitFailure.set({ kind: 'error', code: outcome.code });
           return;
         case 'declined':
