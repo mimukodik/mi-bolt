@@ -36,6 +36,11 @@ test.describe('Shop: edge paths', () => {
       const resultCount = page.getByTestId('result-count');
       const paginationCurrent = page.getByTestId('pagination-current');
 
+      // Step 4 opens this address and step 5's Back lands on it again, because
+      // loading a stored link issues no navigation that rewrites it.
+      const malformedUrl =
+        '/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=';
+
       // 1. Open `/telefonok?inStock=true&is5g=true&sort=price_desc&page=2&pageSize=12` and wait for the grid.
       await test.step('Open `/telefonok?inStock=true&is5g=true&sort=price_desc&page=2&pageSize=12` and wait for the grid.', async () => {
         await page.goto('/telefonok?inStock=true&is5g=true&sort=price_desc&page=2&pageSize=12');
@@ -118,8 +123,6 @@ test.describe('Shop: edge paths', () => {
 
       // 4. Open a URL that mixes one value the page understands with values it does not: `/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=`.
       await test.step('Open a URL that mixes one value the page understands with values it does not: `/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=`.', async () => {
-        const malformedUrl =
-          '/telefonok?page=abc&pageSize=99&sort=newest&storageGb=999&inStock=maybe&minPrice=-5&featured=yes&color=&q=';
         await page.goto(malformedUrl);
 
         // The page degrades rather than failing: the one value the codec
@@ -152,18 +155,29 @@ test.describe('Shop: edge paths', () => {
       await test.step('Open a page past the last one: `/telefonok?page=99`.', async () => {
         await page.goto('/telefonok?page=99');
 
+        // A page past the last one is clamped to the last page rather than shown
+        // empty: the response echoes the out-of-range request with no items and
+        // the real total, and `CatalogFacade` answers it by asking for the last
+        // page. `CatalogPage` writes that query with `replaceUrl`, so the
+        // address bar follows the clamp.
+        await expect(page).toHaveURL('/telefonok?page=5');
         await expect(resultCount).toHaveText('55 találat a szűrt feltételek szerint');
 
-        // No filter is applied, so a page past the end has nothing to show: the
-        // grid renders the empty state instead of any card.
-        await expect(cards).toHaveCount(0);
-        const emptyState = page.getByTestId('catalog-empty');
-        await expect(emptyState).toBeVisible();
-        await expect(emptyState).toContainText('Nincs a szűrőknek megfelelő készülék.');
-        await expect(emptyState).toContainText(
-          'Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket.',
-        );
-        await expect(emptyState.getByRole('button', { name: 'Szűrők törlése' })).toBeVisible();
+        // The last page holds the catalogue's remainder — 55 entries at 12 per
+        // page leave 7 — and the empty state is never reached.
+        await expect(cards).toHaveCount(7);
+        await expect(page.getByTestId('catalog-empty')).toHaveCount(0);
+
+        // The pager follows the clamp: it sits on the fifth page, and with no
+        // page after it the next control is disabled.
+        await expect(paginationCurrent).toHaveText('5');
+        await expect(page.getByTestId('pagination-next')).toBeDisabled();
+
+        // The clamp replaced the out-of-range address instead of pushing it, so
+        // Back lands on step 4's URL rather than on `/telefonok?page=99`.
+        await page.goBack();
+        await expect(page).toHaveURL(malformedUrl);
+        await expect(paginationCurrent).toHaveText('1');
       });
     },
   );

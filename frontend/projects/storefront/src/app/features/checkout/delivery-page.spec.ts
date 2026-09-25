@@ -759,9 +759,9 @@ describe('DP-12 failure banner wording and retry', () => {
     configureTestBed();
   });
 
-  it("DP-12 the failure banner carries the wire detail plus the fixed reassurance sentence, and the step's retry clears it", async () => {
-    // Subcase A: detail present — wire detail is followed by the
-    // single-space-padded reassurance sentence.
+  it("DP-12 the failure banner is the fixed sentence whatever the wire detail, and the step's retry clears it", async () => {
+    // Subcase A: a detail is present — the banner is still the fixed
+    // sentence, and the wire detail never reaches the screen.
     const fixtureA = await createReadySettled();
     const facadeA = TestBed.inject(CheckoutFacade);
     vi.spyOn(facadeA, 'updateDelivery').mockResolvedValue({
@@ -787,9 +787,8 @@ describe('DP-12 failure banner wording and retry', () => {
     if (bannerA === null) {
       throw new Error('DP-12 expected the failure banner in subcase A');
     }
-    expect(bannerA.textContent.trim()).toBe(
-      'Version mismatch. A kosarad és az adataid megmaradtak. Próbáld újra.',
-    );
+    expect(bannerA.textContent.trim()).toBe('A kosarad és az adataid megmaradtak. Próbáld újra.');
+    expect(bannerA.textContent).not.toContain('Version mismatch');
 
     // Subcase B: empty detail → just the reassurance sentence.
     const fixtureB = await createReadySettled();

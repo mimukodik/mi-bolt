@@ -160,11 +160,6 @@ jobs:
 
   e2e:
     name: E2E ${{ matrix.project }}
-    # Skipped deliberately: the suite has no tests yet, so the coverage gate
-    # would fail on an empty denominator. The user asked on 2026-09-22 for the
-    # job to exist and be skipped. Remove the `if: false` lines on both jobs
-    # when the first spec under e2e/integration/ lands.
-    if: false
     runs-on: blacksmith-2vcpu-ubuntu-2404
     defaults:
       run:
@@ -205,6 +200,9 @@ jobs:
       - name: Build (development configuration, mock worker on)
         timeout-minutes: 5
         run: npx ng build storefront --configuration development
+      - name: Build the demo payment app (development configuration)
+        timeout-minutes: 5
+        run: npx ng build demo-payment --configuration development
       - name: Playwright ${{ matrix.project }}
         timeout-minutes: 12
         run: npx playwright test ${{ matrix.seed }} --project=${{ matrix.project }}
@@ -238,7 +236,6 @@ jobs:
 
   e2e-report:
     name: E2E merged report
-    if: false
     needs: [e2e]
     runs-on: blacksmith-2vcpu-ubuntu-2404
     defaults:

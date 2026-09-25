@@ -4,7 +4,7 @@
  * owns the load and save state machines and the Signal Forms `CheckoutFieldTree`, and
  * on `onContinueRequested` runs the three section writes the delivery step's billing
  * block and options require, `updateDelivery`, `updatePayment`, `updateBilling`, in that
- * order, each gated on the previous one succeeding. The failure detail of a rejected
+ * order, each gated on the previous one succeeding. The failure message of a rejected
  * save is rendered here rather than in `DeliveryStep`, because the contract's
  * `saveState` is a plain `AsyncStatus` with no room for a message.
  */
@@ -91,17 +91,11 @@ export class DeliveryPage {
     return s.kind === 'ready' ? s.options : null;
   });
 
-  /** Rendered when the confirm action's save fails. Takes the
-   *  wire's own detail and adds the same "nothing was lost" sentence
-   *  the other checkout screens use for the identical situation, so
-   *  they do not speak differently. */
+  /** Fixed copy: the server's English `detail` never reaches the
+   *  screen, and the sentence that matters is that nothing was lost. */
   readonly saveFailureMessage = computed<string>(() => {
-    const failure = this.saveFailure();
-    if (failure === null) return '';
-    if (failure.detail === '') {
-      return 'A kosarad és az adataid megmaradtak. Próbáld újra.';
-    }
-    return `${failure.detail} A kosarad és az adataid megmaradtak. Próbáld újra.`;
+    if (this.saveFailure() === null) return '';
+    return 'A kosarad és az adataid megmaradtak. Próbáld újra.';
   });
 
   constructor() {

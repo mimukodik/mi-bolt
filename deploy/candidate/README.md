@@ -62,7 +62,9 @@ the full trusted chart template. The chart's candidate head commit is the
 tested PR SHA; its per-image commit annotations preserve each image's original
 build commit when a content-hash tag is reused.
 The artifact is evidence only when fetched from a successful trusted publisher
-run whose revision is allowlisted by the preview platform.
+run on `main`. The preview platform does not pin publisher revisions; it trusts
+any successful `main` run of this workflow, as the stable channel already does
+(Berek #153).
 
 ## Automatic stable releases
 
@@ -93,12 +95,12 @@ actionlint -ignore 'label "blacksmith-2vcpu-ubuntu-2404" is unknown' \
   .github/workflows/candidate.yml .github/workflows/publish-candidate.yml
 ```
 
-External acceptance runs the existing MIM-271 smoke suite from the separately
-approved smoke workflow revision. PR-controlled npm lifecycle hooks and modified tests never
-execute in the receipt-producing workflow. PR test changes still run in ordinary
-read-only CI; changing the deployed acceptance suite requires approving a new
-publisher revision. The platform separately approves wrapper revisions; a newer approved wrapper
-can retry an older candidate using its own approved baseline suite.
+External acceptance runs the existing MIM-271 smoke suite from the `main` smoke
+workflow. PR-controlled npm lifecycle hooks and modified tests never execute in
+the receipt-producing workflow. PR test changes still run in ordinary read-only
+CI; a change to the deployed acceptance suite takes effect once it merges to
+`main`. The platform pins neither publisher nor smoke wrapper revisions; a newer
+`main` wrapper can retry an older candidate using its own baseline suite.
 
 ## First deployment and troubleshooting
 
