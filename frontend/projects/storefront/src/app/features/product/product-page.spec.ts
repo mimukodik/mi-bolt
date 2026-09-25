@@ -1551,3 +1551,85 @@ describe('an add that settles after another variant was picked shows no message'
     expect(host.page()?.addPending()).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// MIM-449 / E059: pressing "Kosárba teszem" is the shopper asking for a cart
+// ---------------------------------------------------------------------------
+describe('MIM-449 adding to an expired cart starts a new cart', () => {
+  it('adding to an expired cart starts a new cart that holds the added line', async () => {
+    const variantId = 'demo-one-5g-graphite-256';
+    const refreshedCart: Cart = {
+      id: 'cart-test-page-1',
+      version: 2,
+      items: [
+        {
+          variantId,
+          variantSlug: 'demo-one-5g-graphite-256-variant',
+          productId: 'demo-one-5g',
+          productName: 'Demo One 5G',
+          productSlug: 'demo-one-5g',
+          colorName: 'Grafit',
+          storageGb: 256,
+          quantity: 1,
+          unitPrice: { amount: 339_990, currency: 'HUF' },
+          lineTotal: { amount: 339_990, currency: 'HUF' },
+          maxQuantity: 5,
+          availability: 'in_stock',
+          image: {
+            id: 'demo-one-5g-graphite-256-front',
+            src: '/assets/products/graphite-front.webp',
+            alt: 'Demo One 5G',
+            width: 800,
+            height: 800,
+          },
+        },
+      ],
+      lineCount: 1,
+      totalQuantity: 1,
+      subtotal: { amount: 339_990, currency: 'HUF' },
+      expiresAt: '2026-12-31T23:59:59.000Z',
+      notices: [],
+    };
+    // The session's cart has expired: the first write answers 410 and the
+    // store forgets it, so the read that follows starts a fresh cart.
+    let serverCartExpired = true;
+    server.use(
+      http.get(`${BASE_URL}/cart`, () =>
+        HttpResponse.json(makeMockCart('cart-test-page-1'), {
+          status: 200,
+          headers: { ETag: '"1"' },
+        }),
+      ),
+      http.post(`${BASE_URL}/cart/items`, () => {
+        if (serverCartExpired) {
+          serverCartExpired = false;
+          return HttpResponse.json(
+            {
+              type: 'urn:mi-bolt:problem:cart-expired',
+              title: 'Gone',
+              status: 410,
+              code: 'CART_EXPIRED',
+              detail: 'The cart has expired',
+              traceId: 'spec-trace-410',
+              fieldErrors: [],
+              params: {},
+            },
+            { status: 410, headers: { 'content-type': 'application/problem+json' } },
+          );
+        }
+        return HttpResponse.json(refreshedCart, { status: 200, headers: { ETag: '"2"' } });
+      }),
+    );
+
+    const { host, cartFacade } = await createHarness();
+
+    // The write that finds the expired cart is what surfaces the expiry.
+    await cartFacade.addItem(variantId, 1);
+    expect(cartFacade.cartExpired()).toBe(true);
+
+    await host.page()?.onAddRequested({ variantId, quantity: 1 });
+
+    expect(cartFacade.cartExpired()).toBe(false);
+    expect(cartFacade.cart()?.items.map((item) => item.variantId)).toEqual([variantId]);
+  });
+});

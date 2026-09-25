@@ -353,6 +353,22 @@ describe('T17-AC05: 410 / 404 / 409 recovery; no 401 path', () => {
     expect(facade.cartExpired()).toBe(false);
   });
 
+  it('ensureCart() keeps an expired cart expired and fetches nothing', async () => {
+    const facade = TestBed.inject(CartFacade);
+    await facade.addItem(VARIANT_MOTO_256, 1);
+    clock.advanceMs(CART_TTL_MS);
+    await facade.addItem(VARIANT_HONOR_128, 1);
+
+    expect(facade.cartExpired()).toBe(true);
+
+    captures.length = 0;
+    await facade.ensureCart();
+
+    expect(facade.cartExpired()).toBe(true);
+    expect(facade.cart()).toBeNull();
+    expect(requestsTo('GET', '/cart')).toHaveLength(0);
+  });
+
   it('404 NOT_FOUND on an unknown variant lands on error and keeps the cart', async () => {
     configureTestBed();
     const facade = TestBed.inject(CartFacade);

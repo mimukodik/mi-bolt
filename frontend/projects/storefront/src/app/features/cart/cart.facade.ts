@@ -174,9 +174,15 @@ export class CartFacade {
    * loaded snapshot makes it a no-op, and the snapshot is re-checked
    * inside the queue callback so two near-simultaneous calls collapse
    * into a single `GET /cart`.
+   *
+   * Never replaces an expired cart: while `cartExpired()` is true it
+   * returns without dispatching anything, so the expiry notice stays
+   * on screen until the shopper asks for a new cart through
+   * `refetch()` (E059: explicit expiry and new-cart path, no silent
+   * new cart on an expired state).
    */
   async ensureCart(): Promise<void> {
-    if (this.cartWritable() !== null) {
+    if (this.cartWritable() !== null || this.cartExpired()) {
       return;
     }
     const token = ++this.dispatchToken;
@@ -262,8 +268,12 @@ export class CartFacade {
   /**
    * Refetches the active cart without an `If-Match`. Called
    * internally after a 412 to bring the local snapshot into sync
-   * with the server. Exposed for tests that need to simulate a
-   * remote version bump.
+   * with the server. It is also the shopper's explicit new-cart path
+   * after an expiry: unlike `ensureCart()` it is not blocked by
+   * `cartExpired()`, and its `applySuccess` clears the flag, so the
+   * cart page's retry button or the first add to cart starts a fresh
+   * cart (E059). Exposed for tests that need to simulate a remote
+   * version bump.
    */
   async refetch(): Promise<void> {
     const token = ++this.dispatchToken;
