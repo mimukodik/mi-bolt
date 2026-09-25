@@ -387,6 +387,8 @@
                 data-testid="review-stock-back-to-cart"
                 label="Vissza a kosárhoz"
                 variant="secondary"
+                [disabled]="backToCartPending()"
+                [loading]="backToCartPending()"
                 (pressed)="backToCartRequested.emit()"
               />
             </div>

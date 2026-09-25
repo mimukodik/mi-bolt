@@ -101,6 +101,10 @@ export class ReviewPage {
    *  `startPendingPoll`. */
   readonly paymentPoll = signal<PaymentPollState>('idle');
 
+  /** True while the way back to the cart re-reads the cart; the step's
+   *  control is disabled meanwhile, so a second press does nothing. */
+  readonly backToCartPending = signal(false);
+
   /** The intent the poll has already run for. A poll runs at most once
    *  per intent id on this page, so a read that changes nothing about
    *  the intent does not start a second one. */
@@ -254,7 +258,13 @@ export class ReviewPage {
    *  line and its notice) instead of the cart it already holds. The
    *  checkout draft stays in the facade, so nothing typed is lost. */
   async onBackToCart(): Promise<void> {
-    await this.cartFacade.refetch();
+    if (this.backToCartPending()) return;
+    this.backToCartPending.set(true);
+    try {
+      await this.cartFacade.refetch();
+    } finally {
+      if (!this.destroyRef.destroyed) this.backToCartPending.set(false);
+    }
     if (this.destroyRef.destroyed) return;
     await this.router.navigate(['/penztar/kosar']);
   }

@@ -666,9 +666,17 @@ describe('ST-02 the stock-error state offers the way back to the cart, and the e
 
     const backToCart = getButton(stockRow, 'review-stock-back-to-cart');
     expect(backToCart.textContent.trim()).toBe('Vissza a kosárhoz');
+    expect(backToCart.disabled).toBe(false);
     backToCart.click();
     stockFixture.detectChanges();
     expect(backToCartCount).toBe(1);
+
+    TestBed.resetTestingModule();
+    const pendingFixture = createFixture({ state: 'stock-error' });
+    pendingFixture.componentRef.setInput('backToCartPending', true);
+    pendingFixture.detectChanges();
+    const pendingRow = getElement(getRootElement(pendingFixture), '[data-testid="review-status"]');
+    expect(getButton(pendingRow, 'review-stock-back-to-cart').disabled).toBe(true);
 
     TestBed.resetTestingModule();
     const errorFixture = createFixture({ state: 'error' });

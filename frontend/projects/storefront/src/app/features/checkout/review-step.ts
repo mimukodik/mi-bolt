@@ -130,6 +130,8 @@ export class ReviewStep {
   /** Why the facade dropped the card intent this draft held, when it
    *  did; the missing-payment sentence names it. */
   readonly intentDropped = input<IntentDropReason | null>(null);
+  /** True while the page re-reads the cart for the way back; the control is disabled meanwhile. */
+  readonly backToCartPending = input<boolean>(false);
 
   readonly editRequested = output<'contact' | 'delivery'>();
   readonly submitRequested = output();

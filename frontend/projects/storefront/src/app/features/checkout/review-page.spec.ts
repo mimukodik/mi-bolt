@@ -1004,11 +1004,13 @@ describe('ReviewPage drives the recovery controls', () => {
     const checkout = TestBed.inject(CheckoutFacade);
     const contact = checkout.session()?.contact;
     expect(contact).toBeDefined();
-    vi.spyOn(TestBed.inject(CartFacade), 'refetch').mockResolvedValue();
+    const refetchSpy = vi.spyOn(TestBed.inject(CartFacade), 'refetch');
 
     await h.fixture.componentInstance.onBackToCart();
 
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
     expect(checkout.session()?.contact).toEqual(contact);
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/kosar']);
   });
 
   it('RP-44 an arrival reads the session again even when one is in memory', async () => {
@@ -1018,6 +1020,57 @@ describe('ReviewPage drives the recovery controls', () => {
     await h.fixture.whenStable();
 
     expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('RP-45 the stock-error control on the page re-reads the cart and opens it', async () => {
+    const h = harness();
+    await h.fixture.whenStable();
+    const submission = TestBed.inject(OrderSubmission);
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set({
+      kind: 'unknown',
+      code: 'OUT_OF_STOCK',
+    });
+    h.fixture.detectChanges();
+
+    const control = hostOf(h.fixture).querySelector('[data-testid="review-stock-back-to-cart"]');
+    if (!(control instanceof HTMLElement)) {
+      throw new Error('[review-page.spec] missing review-stock-back-to-cart');
+    }
+    const button = control.querySelector('button');
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('[review-page.spec] no <button> inside review-stock-back-to-cart');
+    }
+    button.click();
+    await h.fixture.whenStable();
+
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/kosar']);
+  });
+
+  it('RP-46 a second press while the cart is re-read does nothing', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const refetchSpy = vi.spyOn(TestBed.inject(CartFacade), 'refetch');
+    refetchSpy.mockImplementation(() => held);
+    const h = harness();
+    await h.fixture.whenStable();
+    const page = h.fixture.componentInstance;
+
+    const first = page.onBackToCart();
+    const second = page.onBackToCart();
+
+    expect(page.backToCartPending()).toBe(true);
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+
+    release();
+    await first;
+    await second;
+
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(page.backToCartPending()).toBe(false);
   });
 });
 
