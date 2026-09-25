@@ -857,6 +857,19 @@ describe('POST /payment-intents', () => {
     expect(location).toBe(`/api/v1/payment-intents/${id}`);
   });
 
+  it('I-01b: under a named scenario the return URL carries the scenario and the redirect does not', async () => {
+    useScenario('payment-pending-resolves');
+    await seedCompleteDraft();
+    const { status, body } = await createCardIntent('"3"', 'idem-int-0001b');
+    expect(status).toBe(201);
+    expectRecord(body);
+    const id = readString(body, 'id');
+    expect(readString(body, 'redirectUrl')).toBe(`/demo-fizetes/${id}`);
+    expect(readString(body, 'returnUrl')).toBe(
+      `/penztar?paymentIntentId=${id}&mi-scenario=payment-pending-resolves`,
+    );
+  });
+
   it('I-02: the same call with the same Idempotency-Key returns a byte-identical body', async () => {
     await seedCompleteDraft();
     const first = await createCardIntent('"3"', 'idem-int-0002');
