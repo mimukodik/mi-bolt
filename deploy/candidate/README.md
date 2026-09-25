@@ -110,8 +110,8 @@ has landed on `main`. A successful build of `main`, or of a PR that has already
 closed, does not publish a preview candidate. Keep the verification PR open,
 preferably as a draft, until its deployed browser checks finish. Add the
 `bolt-preview` label on the PR to enable its preview. The coordinator admits
-only labeled PRs. Remove the label to clean up the release and cloned database;
-adding it again creates a fresh clone. Closing the PR also requests cleanup.
+only labeled PRs. Remove the label to clean up the release and its database;
+adding it again creates a fresh empty database. Closing the PR also requests cleanup.
 Build and publication still run for unlabeled PRs so the candidate receipt is
 ready when deployment is enabled. After browser acceptance, GitHub reports a
 deployment linked to the exact PR commit. Removing the label or closing the PR
