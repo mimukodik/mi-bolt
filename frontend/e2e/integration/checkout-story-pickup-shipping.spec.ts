@@ -221,27 +221,44 @@ test.describe('Checkout: standard stories', () => {
         await expect(orderReceipt).toBeVisible();
       });
 
-      // 7. Read the receipt.
-      await test.step('7. Read the receipt.', async () => {
+      // 7. Read the receipt: it carries the delivery and payment methods, the
+      // order number, the line and the totals, and no billing row — the
+      // receipt is privacy-minimized (the standard's row E102), so the name
+      // and the billing address this scenario typed appear nowhere in it.
+      await test.step('7. Read the receipt: it names the delivery and payment methods, the order number, its line and its totals, and holds none of the name and address this scenario typed.', async () => {
         // The order carries the free pickup shipping.
         await expect(page.getByTestId('receipt-row-delivery')).toContainText('Átvételi pont');
         await expect(
           page.getByTestId('receipt-row-shipping').getByTestId('price-amount'),
         ).toHaveText('0');
+        await expect(page.getByTestId('receipt-row-payment')).toContainText('Utánvét');
 
-        // The order's own record holds no shipping address.
-        await expect(page.getByTestId('receipt-row-delivery-address')).toHaveCount(0);
-
-        const receiptBilling = page.getByTestId('receipt-row-billing');
-        await expect(receiptBilling).toContainText('Teszt Elek');
-        await expect(receiptBilling).toContainText('Piac utca 10.');
-        await expect(receiptBilling).toContainText('4024 Debrecen');
+        // The single line the order holds, and the totals the mock computed for
+        // it: the 89 990 Ft device, the free pickup shipping, the 490 Ft
+        // cash-on-delivery fee and their 90 480 Ft total.
+        const receiptLine = page.getByTestId('receipt-line');
+        await expect(receiptLine).toHaveCount(1);
+        await expect(receiptLine).toContainText('1 db');
+        await expect(receiptLine.getByTestId('price-amount')).toHaveText('89 990');
+        await expect(
+          page.getByTestId('receipt-row-subtotal').getByTestId('price-amount'),
+        ).toHaveText('89 990');
+        await expect(
+          page.getByTestId('receipt-row-payment-fee').getByTestId('price-amount'),
+        ).toHaveText('490');
+        await expect(page.getByTestId('receipt-row-total').getByTestId('price-amount')).toHaveText(
+          '90 480',
+        );
 
         await expect(page.getByTestId('receipt-order-number')).not.toBeEmpty();
         await expect(page.getByTestId('receipt-demo-badge')).toHaveText('DEMO');
         await expect(page.getByTestId('receipt-row-status')).toContainText(
           'Demó rendelés visszaigazolva',
         );
+
+        // The rendered receipt shows no name, address or e-mail anywhere, so it
+        // holds neither the name nor the street this scenario typed.
+        await expect(orderReceipt).not.toContainText(/Teszt Elek|Piac utca 10\./);
       });
     },
   );
