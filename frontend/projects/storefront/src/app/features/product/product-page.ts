@@ -274,6 +274,10 @@ export class ProductPage {
   readonly showStickyRail = computed(() => this.state() === 'success');
 
   constructor() {
+    // A new page visit: the root facade must read the product again
+    // even when an earlier visit loaded the same slug and query.
+    this.facade.beginVisit();
+
     // Re-load the product whenever the slug input or the route's
     // slug param changes. The facade's `distinctUntilChanged` filter
     // prevents a no-op re-fire when the same slug + variant query is

@@ -206,6 +206,10 @@ export class CatalogPage {
   readonly appliedChipCount = computed<number>(() => this.appliedChips().length);
 
   constructor() {
+    // A new page visit: the root facade must read the list again even
+    // when an earlier visit loaded the same query.
+    this.facade.beginVisit();
+
     // Mirror the URL query into the facade on every navigation. The
     // facade's own debounce + switchMap pipeline guarantees that a
     // back / forward jump never re-fires the SDK twice for the same

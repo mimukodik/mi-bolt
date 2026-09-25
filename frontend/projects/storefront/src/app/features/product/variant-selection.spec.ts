@@ -653,6 +653,37 @@ describe('T15 ProductFacade — retry re-fires the most recent load (AC04)', () 
   });
 });
 
+describe('T15 ProductFacade — a new page visit reads the product again', () => {
+  it('PF-V1 the same slug and query twice inside one visit fire the SDK once', async () => {
+    const { facade, flushMicrotasks } = buildFacade();
+    facade.beginVisit();
+    facade.load('demo-one-5g', new URLSearchParams());
+    await flushMicrotasks();
+    const before = captures.length;
+
+    facade.load('demo-one-5g', new URLSearchParams());
+    await flushMicrotasks();
+
+    expect(captures.length).toBe(before);
+  });
+
+  it('PF-V2 the same slug and query in a new visit fire the SDK again', async () => {
+    const { facade, flushMicrotasks } = buildFacade();
+    facade.beginVisit();
+    facade.load('demo-one-5g', new URLSearchParams());
+    await flushMicrotasks();
+    const before = captures.length;
+
+    facade.beginVisit();
+    facade.load('demo-one-5g', new URLSearchParams());
+    await flushMicrotasks();
+
+    expect(captures.length).toBeGreaterThan(before);
+    expect(captures[captures.length - 1]?.slug).toBe('demo-one-5g');
+    expect(facade.vm().status).toBe('success');
+  });
+});
+
 describe('T15 ProductFacade — switchMap cancels obsolete loads on route change (AC04)', () => {
   it('drops the response of the first slug when a second slug is loaded before the first resolves', async () => {
     delayedHandlers.push({
