@@ -1333,6 +1333,13 @@ const EZUST_IMAGE_ID = '352ae7532e45d186ef80ccacaf464a4f14a3235e4bc0baf764407854
 const FEKETE_IMAGE_ID = 'e1c61b0a0669452c02be43f700ef4f6619cf0b7e7ba9bd3300c037562e5c7312';
 const GLECCSERSZIN_IMAGE_ID = 'd7606f6961c61affee0b47ced13f7e910f8ed04ea1f641a231407087335bd41c';
 
+/**
+ * The single photo id both variants of `samsung-galaxy-s26-ultra` carry:
+ * Fekete 256 GB and Fekete 512 GB share it.
+ */
+const SHARED_S26_ULTRA_IMAGE_ID =
+  'd78a3c45cbe8c6392b157b32873bf022e146e692c52aa6c4c46181070c58f299';
+
 const BURGUNDI_IMAGE_ALT = 'Apple iPhone 18 Pro Max Burgundi';
 const EZUST_IMAGE_ALT = 'Apple iPhone 18 Pro Max Ezüst';
 const FEKETE_IMAGE_ALT = 'Apple iPhone 18 Pro Max Fekete';
@@ -1414,14 +1421,14 @@ describe('gallery-several-images scenario (E048)', () => {
     ]);
   });
 
-  it('a product with one photo keeps one photo per variant', async () => {
+  it('a product whose variants share one photo keeps that one photo per variant', async () => {
     installGalleryScenarioHandlers();
 
-    const body = await loadJson('/api/v1/products/motorola-edge-50-fusion');
+    const body = await loadJson('/api/v1/products/samsung-galaxy-s26-ultra');
     const variants = variantsOf(body);
-    expect(variants.length).toBeGreaterThan(0);
+    expect(variants.length).toBe(2);
     for (const variant of variants) {
-      expect(imagesOf(variant).length, readString(variant, 'id')).toBe(1);
+      expect(imageIdsOf(variant), readString(variant, 'id')).toEqual([SHARED_S26_ULTRA_IMAGE_ID]);
     }
   });
 
