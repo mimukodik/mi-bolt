@@ -171,8 +171,8 @@ class CartServiceTest {
 		assertThat(view.notices()).hasSize(1);
 		assertThat(view.notices().get(0).code()).isEqualTo("QUANTITY_REDUCED");
 		assertThat(view.notices().get(0).variantId()).isEqualTo(VARIANT_ID);
-		assertThat(((Number) view.notices().get(0).params().get("from")).intValue()).isEqualTo(4);
-		assertThat(((Number) view.notices().get(0).params().get("to")).intValue()).isEqualTo(2);
+		assertThat(view.notices().get(0).params()).isEqualTo(new CartData.NoticeParams(null, 4, 2));
+		assertThat(view.notices().get(0).productName()).isEqualTo("Galaxy S25");
 		assertThat(view.version()).isEqualTo(2L);
 	}
 
@@ -190,7 +190,8 @@ class CartServiceTest {
 		assertThat(view.notices()).hasSize(1);
 		assertThat(view.notices().get(0).code()).isEqualTo("ITEM_REMOVED");
 		assertThat(view.notices().get(0).variantId()).isEqualTo(VARIANT_ID);
-		assertThat(((Number) view.notices().get(0).params().get("quantity")).intValue()).isEqualTo(4);
+		assertThat(view.notices().get(0).params()).isEqualTo(new CartData.NoticeParams(4, null, null));
+		assertThat(view.notices().get(0).productName()).isEqualTo("Galaxy S25");
 	}
 
 	@Test
@@ -209,8 +210,8 @@ class CartServiceTest {
 		assertThat(view.notices()).hasSize(1);
 		assertThat(view.notices().get(0).code()).isEqualTo("PRICE_CHANGED");
 		assertThat(view.notices().get(0).variantId()).isEqualTo(VARIANT_ID);
-		assertThat(((Number) view.notices().get(0).params().get("from")).longValue()).isEqualTo(100000L);
-		assertThat(((Number) view.notices().get(0).params().get("to")).longValue()).isEqualTo(120000L);
+		assertThat(view.notices().get(0).params()).isEqualTo(new CartData.NoticeParams(null, 100000, 120000));
+		assertThat(view.notices().get(0).productName()).isEqualTo("Galaxy S25");
 	}
 
 	@Test
