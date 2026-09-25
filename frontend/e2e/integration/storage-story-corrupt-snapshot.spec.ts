@@ -7,8 +7,9 @@ import { test, expect } from '../fixtures/coverage';
 // `mi-bolt.snapshot.default` (`Persistence` / `SNAPSHOT_SCHEMA_VERSION` in
 // projects/shop-mocks/src/persistence.ts). On boot `Persistence.hydrate` reads
 // that entry and, when it is not JSON, removes it and returns nothing, so the
-// shop starts from an empty cart with no message. The corrupt entry below is
-// planted by the first page load only: the init script guards itself with its
+// shop starts from an empty cart; the demo strip then says so
+// (`demo-notice--reset` with `demo-notice-reset-text`). The corrupt entry below
+// is planted by the first page load only: the init script guards itself with its
 // own `mi-bolt.story-seeded` marker, which it sets in the same run, so every
 // later load boots from what the app itself saved.
 const SNAPSHOT_KEY = 'mi-bolt.snapshot.default';
@@ -33,7 +34,7 @@ interface SeedValues {
 
 test.describe('Shop: storage, startup and expired-cart stories', () => {
   test(
-    '[E013] a corrupt saved state is dropped and the shop still works',
+    '[E013] a corrupt saved state is dropped, the shop says so and still works',
     { tag: '@integration' },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= DESKTOP_MIN_WIDTH;
@@ -93,19 +94,26 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         // The shop started with an empty cart.
         await expect(cartBadge).toHaveText('0');
 
-        // The ordinary demo strip, not the memory variant.
+        // The strip names the dropped saved state: the badge, the reset class,
+        // `demo-notice-reset-text` with the corrupt sentence, while the ordinary
+        // sentence and the memory variant are not rendered.
         await expect(page.getByTestId('demo-notice')).toContainText('DEMÓ');
-        await expect(page.getByTestId('demo-notice')).toContainText(
+        await expect(page.getByTestId('demo-notice')).toHaveClass(/demo-notice--reset/);
+        await expect(page.getByTestId('demo-notice-reset-text')).toHaveText(
+          'A mentett kosarad nem volt visszaállítható, ezért a bolt üres kosárral indult.',
+        );
+        await expect(page.getByTestId('demo-notice')).not.toContainText(
           'Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés.',
         );
         await expect(page.getByTestId('demo-notice-memory-text')).toHaveCount(0);
 
-        // Nothing on screen mentions the saved state that was thrown away.
+        // The strip is the only surface that explains the reset: no separate
+        // status message and no cart notice is rendered.
         await expect(page.locator('app-status-message')).toHaveCount(0);
         await expect(page.getByTestId('cart-notice')).toHaveCount(0);
 
-        // The corrupt entry was removed at boot, starting with an empty cart and
-        // no message.
+        // The corrupt entry was removed at boot, leaving an empty cart the strip
+        // then accounts for.
         const stored = await page.evaluate(
           (key: string) => window.sessionStorage.getItem(key),
           SNAPSHOT_KEY,
@@ -126,6 +134,14 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         // Browsing works on the dropped state: 12 cards, the default "12 / oldal".
         await expect(cards).toHaveCount(12);
         await expect(cartBadge).toHaveText('0');
+
+        // This full load boots from what the shop saved itself, so the reset
+        // strip is gone and the ordinary sentence is back.
+        await expect(page.getByTestId('demo-notice')).not.toHaveClass(/demo-notice--reset/);
+        await expect(page.getByTestId('demo-notice-reset-text')).toHaveCount(0);
+        await expect(page.getByTestId('demo-notice')).toContainText(
+          'Fiktív termékek és árak. A vásárlás szimulált; nem történik valódi fizetés.',
+        );
       });
 
       // 3. Open the first `product-card` that carries no `product-card-stock`
@@ -217,11 +233,4 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
       });
     },
   );
-
-  test.fixme('[E013] explain reset', { tag: '@integration' }, async () => {
-    // Missing expectation: "Explain reset" — the corrupted entry is dropped
-    // without a word, so no screen carries any message about the discarded saved
-    // state (issue MIM-448). The shop shows its ordinary demo strip and an empty
-    // cart instead, exactly as the first test asserts.
-  });
 });
