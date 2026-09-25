@@ -222,6 +222,33 @@ function queryElement(parent: ParentNode, selector: string): HTMLElement {
   return el;
 }
 
+/** Refuses the next `POST /cart/items` with a problem body carrying `code`
+ *  (and `params`, when given). The contract derives the `type` URI from
+ *  the code the same way `contracts/commerce/openapi.yaml:341-360` and
+ *  `cart-store.ts:88` (`problemType`) do. Hardcoding it to
+ *  `quantity-limit` once made a case send a body whose `type` and `code`
+ *  disagreed with the contract. */
+function refuseAdd(code: string, params?: Record<string, unknown>): void {
+  const type = `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`;
+  server.use(
+    http.post(`${BASE_URL}/cart/items`, () =>
+      HttpResponse.json(
+        {
+          type,
+          title: 'Conflict',
+          status: 409,
+          code,
+          detail: 'Merged quantity would exceed the line maximum',
+          traceId: 't',
+          fieldErrors: [],
+          ...(params === undefined ? {} : { params }),
+        },
+        { status: 409 },
+      ),
+    ),
+  );
+}
+
 async function createHarness(): Promise<{
   fixture: ComponentFixture<ProductPageHost>;
   host: ProductPageHost;
@@ -1333,32 +1360,6 @@ describe('MIM-233: the stock line on the navy buy box is white, as on yettel.hu'
 });
 
 describe('owner 2026-09-22: a refused add names the per-product limit', () => {
-  function refuseAdd(code: string, params?: Record<string, unknown>): void {
-    // The contract derives the `type` URI from the code the same way
-    // `contracts/commerce/openapi.yaml:341-360` and `cart-store.ts:88`
-    // (`problemType`) do. Hardcoding it to `quantity-limit` here made
-    // the OUT_OF_STOCK case below send a body whose `type` and `code`
-    // disagreed with the contract.
-    const type = `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`;
-    server.use(
-      http.post(`${BASE_URL}/cart/items`, () =>
-        HttpResponse.json(
-          {
-            type,
-            title: 'Conflict',
-            status: 409,
-            code,
-            detail: 'Merged quantity would exceed the line maximum',
-            traceId: 't',
-            fieldErrors: [],
-            ...(params === undefined ? {} : { params }),
-          },
-          { status: 409 },
-        ),
-      ),
-    );
-  }
-
   async function pressAddAndReadMessage(): Promise<string> {
     const { root, fixture, tick } = await createHarness();
     queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button').click();
@@ -1441,27 +1442,6 @@ describe('E060 a sold-out add re-reads the product', () => {
       v.id === 'demo-one-5g-graphite-256' ? { ...v, availability: 'out_of_stock' } : v,
     ),
   } satisfies Product;
-
-  function refuseAdd(code: string, params?: Record<string, unknown>): void {
-    const type = `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`;
-    server.use(
-      http.post(`${BASE_URL}/cart/items`, () =>
-        HttpResponse.json(
-          {
-            type,
-            title: 'Conflict',
-            status: 409,
-            code,
-            detail: 'Merged quantity would exceed the line maximum',
-            traceId: 't',
-            fieldErrors: [],
-            ...(params === undefined ? {} : { params }),
-          },
-          { status: 409 },
-        ),
-      ),
-    );
-  }
 
   /** Holds the exact product read until the returned `release()` runs,
    *  so a case can look at the page while the re-read is in flight. */
@@ -1597,6 +1577,20 @@ describe('E060 a sold-out add re-reads the product', () => {
 
     expect(facade.vm().status).toBe('notfound');
     expect(facade.vm().product).toBeNull();
+  });
+
+  it('E060-6 an out-of-stock refusal wins over a numeric max', async () => {
+    const { root, fixture, tick } = await createHarness();
+    // Both messages could claim this refusal: the sold-out one (E060) and
+    // the per-product limit one. The sold-out copy is the true cause, so
+    // it is what the shopper reads.
+    refuseAdd('OUT_OF_STOCK', { max: 5, variantId: 'demo-one-5g-graphite-256' });
+
+    desktopAddButton(root).click();
+    await tick();
+    fixture.detectChanges();
+
+    expect(desktopMessage(root)).toBe(SOLD_OUT_SENTENCE);
   });
 });
 
