@@ -158,11 +158,12 @@ port_in_use() {
 # Releases the per-worktree lock acquire_lock took and the reclaim mutex
 # reclaim_lock took, if either is held. Idempotent, and armed as a trap right
 # below so it fires on a normal exit, an error exit under `set -e`, or an
-# interrupt while either is held. The lock directory holds a `pid` file (see
-# acquire_lock), so it has to come out before the `rmdir`, which only
-# succeeds on an empty directory.
+# interrupt while either is held. The lock directory and the reclaim mutex
+# each hold a `pid` file (see acquire_lock and reclaim_lock), so it has to
+# come out before the `rmdir`, which only succeeds on an empty directory.
 release_lock() {
   if [ -n "${RECLAIM_MUTEX}" ]; then
+    rm -f "${RECLAIM_MUTEX}/pid" 2>/dev/null || true
     rmdir "${RECLAIM_MUTEX}" 2>/dev/null || true
     RECLAIM_MUTEX=""
   fi
@@ -187,15 +188,17 @@ lock_dir_for() {
   printf '%s' "${SLOTS_DIR}/.lock-${hash}"
 }
 
-# True (status 0) when the lock dir at $1 is stale and safe to reclaim,
-# false (status 1) otherwise. A lock records its holder's PID in a `pid`
-# file the instant after it is created (see acquire_lock); a PID that is no
-# longer alive means the holder crashed, was SIGKILLed, or was OOM-killed
-# without ever reaching release_lock. A lock with no `pid` file is either
-# the same situation left by an older run of this script, or another
-# acquire_lock call caught in the tiny window between its `mkdir` and its
-# `echo > pid`; the second case is why a pid-less lock is only stale once it
-# has outlived LOCK_STALE_SECONDS, the same span acquire_lock itself spends
+# True (status 0) when the directory at $1 is stale and safe to reclaim,
+# false (status 1) otherwise. Used both on a lock dir and on a reclaim mutex
+# (see reclaim_lock below), since both record their holder's PID in a `pid`
+# file the instant after they are created (see acquire_lock and reclaim_lock)
+# in exactly the same shape. A PID that is no longer alive means the holder
+# crashed, was SIGKILLed, or was OOM-killed without ever reaching
+# release_lock. A directory with no `pid` file is either the same situation
+# left by an older run of this script, or another acquire_lock/reclaim_lock
+# call caught in the tiny window between its `mkdir` and its `echo > pid`;
+# the second case is why a pid-less directory is only stale once it has
+# outlived LOCK_STALE_SECONDS, the same span acquire_lock itself spends
 # waiting before giving up.
 lock_is_stale() {
   local dir="$1" pid mtime now
@@ -211,51 +214,69 @@ lock_is_stale() {
   [ $((now - mtime)) -ge "${LOCK_STALE_SECONDS}" ]
 }
 
-# Reclaims lock_dir ($1) if and only if it is stale, and guarantees that a
-# live lock is never removed even when several processes race to reclaim the
-# same stale one. The guarantee comes from making the check and the removal
-# one critical section: only the process that holds the reclaim mutex
-# (`mkdir "${lock_dir}.reclaim"`, itself dot-prefixed like lock_dir so the
-# slot globs never see it either) is allowed to call lock_is_stale on
-# lock_dir and then remove it, and that mkdir is atomic, so at most one
-# process ever holds the mutex for a given lock_dir at a time. Every other
-# contender's `mkdir "${mutex}"` just fails and returns immediately (status
-# 1); acquire_lock's own retry loop is what makes them try again, not a
-# retry loop in here. Because nothing outside this critical section ever
-# removes lock_dir, and a dead holder never runs release_lock to recreate
-# it, no process can end up removing a directory that was freshly created
-# and is now live: by the time any process's lock_is_stale call runs, it is
-# the sole holder of the mutex, and the removal that may follow targets
-# exactly the directory that call just inspected, not whatever might be
-# sitting at that path a moment later. The mutex is released before
-# returning on every path, and by the EXIT/INT/TERM traps (via release_lock)
-# if this process dies first; a crash between the `mkdir` and the `rmdir`
-# below leaks the mutex, but the window is one stat call, at most one
-# `rm -rf`, and one `rmdir`, with no sleep anywhere in it.
+# Reclaims lock_dir ($1) if and only if it is stale. When it succeeds in
+# taking the reclaim mutex (`mkdir "${lock_dir}.reclaim"`, itself
+# dot-prefixed like lock_dir so the slot globs never see it either), a
+# process is meant to be the only one calling lock_is_stale on lock_dir and
+# then removing it, since that mkdir is atomic and every other contender's
+# `mkdir "${mutex}"` just fails and returns immediately (status 1);
+# acquire_lock's own retry loop is what makes them try again, not a retry
+# loop in here. The mutex is released before returning on every path, and by
+# the EXIT/INT/TERM traps (via release_lock) if this process dies first.
+#
+# The mutex records its own holder's PID the instant after the `mkdir`, the
+# same way a lock dir does (see acquire_lock), so a process killed between
+# that `mkdir` and its `rmdir` leaves a mutex that is itself just a stale
+# lock: when this process's own `mkdir "${mutex}"` fails, it calls
+# lock_is_stale on the mutex under the same rule lock_is_stale already
+# applies to lock_dir (dead pid, or pid-less and older than
+# LOCK_STALE_SECONDS) and removes it if so, so a later attempt can take it;
+# a mutex whose lock_is_stale read finds it alive is left alone. This
+# process does not then retry the mutex `mkdir` itself; it returns 1 for
+# this call, and acquire_lock's retry loop is what makes the next attempt,
+# on this or another process, find the mutex gone.
+#
+# That read-then-rm is not itself atomic, so the one-holder claim above has
+# a gap: a process can read the mutex's pid as dead and, before its `rm -rf`
+# runs, a second process can mkdir that same path as a fresh, live mutex,
+# which the first process's `rm -rf` then deletes out from under it, opening
+# the path for a third process to mkdir and believe itself the sole holder
+# too. Reaching it needs a holder killed inside the instant between its own
+# `mkdir` and its `echo > pid`, or reclaimed on stale pid-less age, plus two
+# further processes' calls landing inside that same narrow window, so it is
+# rare but not eliminated by this function.
 reclaim_lock() {
   local lock_dir="$1" removed=1
   local mutex="${lock_dir}.reclaim"
-  mkdir "${mutex}" 2>/dev/null || return 1
+  if ! mkdir "${mutex}" 2>/dev/null; then
+    if [ -d "${mutex}" ] && lock_is_stale "${mutex}"; then
+      rm -rf "${mutex}"
+    fi
+    return 1
+  fi
+  echo "$$" > "${mutex}/pid" 2>/dev/null || true
   RECLAIM_MUTEX="${mutex}"
   if [ -d "${lock_dir}" ] && lock_is_stale "${lock_dir}"; then
     rm -rf "${lock_dir}"
     removed=0
   fi
+  rm -f "${mutex}/pid" 2>/dev/null || true
   rmdir "${mutex}" 2>/dev/null || true
   RECLAIM_MUTEX=""
   return "${removed}"
 }
 
-# Serializes ensure_state's check-claim-write sequence across two `stack.sh`
-# runs in the same worktree, so they cannot both miss find_existing_slot and
-# both claim a (different) slot, leaking one forever; also used by cmd_reset
-# around its own worktree's delete sequence, and by cmd_prune around a stale
-# slot's delete, keyed to that slot's own (no-longer-existing) worktree so it
-# never contends with this run's own lock. The lock directory's name starts
-# with '.', so it is invisible to every `"${SLOTS_DIR}"/*/` glob used to
-# enumerate slots elsewhere in this script (bash's `*` does not match
-# dotfiles by default) and is never mistaken for a slot.
-acquire_lock() {
+# Shared retry loop behind acquire_lock below and cmd_prune's own call: tries
+# to claim the per-worktree lock for $1 (REPO_ROOT if omitted) up to
+# LOCK_RETRY_TRIES times, reclaiming a stale lock when the mkdir is
+# contested. Sets LOCK_DIR and returns 0 the moment the mkdir succeeds; once
+# the retry budget is spent without acquiring it, returns 1 and leaves
+# LOCK_DIR untouched, for the caller to decide what a failure means. The
+# lock directory's name starts with '.', so it is invisible to every
+# `"${SLOTS_DIR}"/*/` glob used to enumerate slots elsewhere in this script
+# (bash's `*` does not match dotfiles by default) and is never mistaken for
+# a slot.
+attempt_lock() {
   local worktree="${1:-${REPO_ROOT}}"
   mkdir -p "${SLOTS_DIR}"
   local lock_dir _try
@@ -274,6 +295,24 @@ acquire_lock() {
     fi
     sleep "${LOCK_RETRY_INTERVAL}"
   done
+  return 1
+}
+
+# Serializes ensure_state's check-claim-write sequence across two `stack.sh`
+# runs in the same worktree, so they cannot both miss find_existing_slot and
+# both claim a (different) slot, leaking one forever; also used by cmd_reset
+# around its own worktree's delete sequence. Exits the whole script when the
+# retry budget in attempt_lock runs out, which is what ensure_state and
+# cmd_reset both want; cmd_prune calls attempt_lock directly instead, so a
+# lock contended by another run costs it one slot rather than every slot
+# after it.
+acquire_lock() {
+  local worktree="${1:-${REPO_ROOT}}"
+  if attempt_lock "${worktree}"; then
+    return 0
+  fi
+  local lock_dir
+  lock_dir="$(lock_dir_for "${worktree}")"
   echo "stack.sh: timed out waiting for the per-worktree lock ${lock_dir} (held by another stack.sh run there?)" >&2
   echo "stack.sh: if no stack.sh run is actually active there, clear it manually with: rm -rf ${lock_dir} ${lock_dir}.reclaim" >&2
   exit 1
@@ -622,9 +661,15 @@ cmd_prune() {
     # lock a live stack.sh in that worktree would have taken, so it never
     # contends with this run's own per-worktree lock, and it stops two
     # concurrent prunes from both running 'down -v' and 'rm -rf' on the same
-    # stale slot at once. The dir is re-checked once the lock is held, since
-    # a concurrent prune may have already removed it while this one waited.
-    acquire_lock "${owner_path}"
+    # stale slot at once. attempt_lock directly, not acquire_lock: a slot
+    # another run already holds the lock for must be skipped, not made to
+    # abort every slot still left in this loop. The dir is re-checked once
+    # the lock is held, since a concurrent prune may have already removed it
+    # while this one waited.
+    if ! attempt_lock "${owner_path}"; then
+      echo "stack.sh: slot ${n} is locked by another run; skipping" >&2
+      continue
+    fi
     if [ ! -d "${dir}" ]; then
       echo "stack.sh: slot ${n} was already pruned by a concurrent run" >&2
       release_lock
