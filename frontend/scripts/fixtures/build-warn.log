@@ -43,5 +43,5 @@ Application bundle generation complete. [4.458 seconds] - 2026-09-20T16:19:55.71
 [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1msrc/app/features/home/hero.scss exceeded maximum budget. Budget 4.00 kB was not met by 947 bytes with a total of 4.95 kB.[0m
 
 
-Output location: /Users/eggp/projects/puffancs/worktrees-mi-bolt-frontend/eggprojec/mim-209-build-warnings/dist/mi-bolt
+Output location: /workspace/dist/mi-bolt
 
