@@ -319,6 +319,7 @@ blob-report/
 /frontend/e2e/.auth/
 /.spring-tools/
 /deploy/.env
+/deploy/.worktree-stack.env
 
 # tools/: the yettel.hu catalogue import
 /tools/catalog-import/dist/
