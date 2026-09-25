@@ -152,18 +152,23 @@ test.describe('Shop: edge paths', () => {
       await test.step('Open a page past the last one: `/telefonok?page=99`.', async () => {
         await page.goto('/telefonok?page=99');
 
+        // A page past the last one is clamped to the last page rather than shown
+        // empty: the response echoes the out-of-range request with no items and
+        // the real total, and `CatalogFacade` answers it by asking for the last
+        // page. `CatalogPage` writes that query with `replaceUrl`, so the
+        // address bar follows the clamp.
+        await expect(page).toHaveURL('/telefonok?page=5');
         await expect(resultCount).toHaveText('55 találat a szűrt feltételek szerint');
 
-        // No filter is applied, so a page past the end has nothing to show: the
-        // grid renders the empty state instead of any card.
-        await expect(cards).toHaveCount(0);
-        const emptyState = page.getByTestId('catalog-empty');
-        await expect(emptyState).toBeVisible();
-        await expect(emptyState).toContainText('Nincs a szűrőknek megfelelő készülék.');
-        await expect(emptyState).toContainText(
-          'Próbáld meg kevesebb szűrővel, vagy töröld az aktív szűrőket.',
-        );
-        await expect(emptyState.getByRole('button', { name: 'Szűrők törlése' })).toBeVisible();
+        // The last page holds the catalogue's remainder — 55 entries at 12 per
+        // page leave 7 — and the empty state is never reached.
+        await expect(cards).toHaveCount(7);
+        await expect(page.getByTestId('catalog-empty')).toHaveCount(0);
+
+        // The pager follows the clamp: it sits on the fifth page, and with no
+        // page after it the next control is disabled.
+        await expect(paginationCurrent).toHaveText('5');
+        await expect(page.getByTestId('pagination-next')).toBeDisabled();
       });
     },
   );
