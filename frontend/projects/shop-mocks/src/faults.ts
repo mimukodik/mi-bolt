@@ -16,10 +16,12 @@
  *     first matching request of a handler list like their sticky
  *     counterparts and serve every later one normally, so the retry
  *     succeeds.
- *   - `slow-once-<operation>` answers the first matching request of a
- *     handler list `SLOW_ONCE_DELAY_MS` late with the response it would
- *     have got without the scenario, and every later one at once, so a
- *     caller can let a newer request overtake an older one.
+ *   - `slow-once-<operation>` holds the first matching request of a
+ *     handler list back for `SLOW_ONCE_DELAY_MS` before its handler
+ *     reads or writes the store, and runs every later one at once, so a
+ *     caller can let a newer request overtake an older one. The held
+ *     request is answered from the store as it stands when the hold
+ *     ends, a newer request's write included.
  *   - `lost-once-order` and `lost-once-payment-intent` let the handler
  *     run in full — the store commits and `persist` runs — and then
  *     replace that first committed success with a network error, as a
@@ -129,8 +131,8 @@ function fireOnce(options: CreateHandlersOptions, scenarioName: string): boolean
  * `lost-once-*` names always answer `null`: their handler runs in full
  * and consults `loseResponseOnce` once the store has committed. So does
  * every `slow-once-*` name: its handler runs in full and consults
- * `slowOnce` before it builds the response, which is the response the
- * request would have got without the scenario.
+ * `slowOnce` before it reads or writes the store, so the held request
+ * is answered from the store as it stands when the hold ends.
  */
 export function faultResponse(
   options: CreateHandlersOptions,
@@ -153,9 +155,9 @@ export function faultResponse(
  * list back for `SLOW_ONCE_DELAY_MS`, and returns at once for every
  * other scenario and for every later request of the operation. Each
  * handler awaits this directly after its `faultResponse` check, before
- * it builds its response, so the delayed answer is the one the request
- * would have got without the scenario and a caller can let a newer
- * request overtake it.
+ * it reads or writes the store, so the held request is answered from
+ * the store as it stands when the hold ends, a newer request's write
+ * included, and a caller can let a newer request overtake it.
  */
 export async function slowOnce(
   options: CreateHandlersOptions,
