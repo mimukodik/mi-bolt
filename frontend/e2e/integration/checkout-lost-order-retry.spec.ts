@@ -17,9 +17,9 @@ const DESKTOP_MIN_WIDTH = 1024;
 // (CASH_ON_DELIVERY_MAX_CART_HUF), so the ordered card is picked below it.
 const CASH_ON_DELIVERY_CEILING = 300_000;
 
-// The fault query every `page.goto` of this scenario keeps: the mock reads
-// `?mi-scenario=` when the document loads, so a goto without it would load the
-// default scenario and a cart of its own (rule 12 of `e2e/seed.spec.ts`).
+// The fault query every `page.goto` of this scenario keeps, so each load names
+// its scenario rather than resuming the one the tab remembered (rule 12 of
+// `e2e/seed.spec.ts`).
 const SCENARIO_QUERY = 'mi-scenario=lost-once-order';
 
 test.describe('Checkout: an answer lost after the commit', () => {

@@ -8,8 +8,8 @@ import { test, expect } from '../fixtures/coverage';
 // navigation: the first add-to-cart request of that page load takes the
 // requested variant's whole demo stock and refuses the add with a 409
 // `OUT_OF_STOCK`, and every later catalogue, product and cart read sees that
-// variant as sold out. A `page.goto` without the query would load the default
-// scenario with a cart of its own (rule 12 of `e2e/seed.spec.ts`), so this
+// variant as sold out. A `page.goto` without the query would resume this
+// scenario and arm the refusal again (rule 12 of `e2e/seed.spec.ts`), so this
 // scenario opens its first page with the query and moves on by clicking.
 const SCENARIO_QUERY = 'mi-scenario=stock-lost-once-cart-add';
 

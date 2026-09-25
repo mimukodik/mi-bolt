@@ -47,9 +47,10 @@ test.describe('Card payment: a pending result is polled', () => {
       let requestsBeforeReturn = 0;
 
       // 1. Open `/telefonok?mi-scenario=payment-pending-resolves` at the
-      // integration viewport (1920x1080 on the desktop pass, 390x844 on the
-      // mobile pass). Wait for the first `product-card` to render.
-      await test.step('Open `/telefonok?mi-scenario=payment-pending-resolves` at the integration viewport (1920x1080 on the desktop pass, 390x844 on the mobile pass). Wait for the first `product-card` to render.', async () => {
+      // integration project's viewport (below 1024 px wide the mobile layout,
+      // from 1024 px the desktop layout). Wait for the first `product-card` to
+      // render.
+      await test.step("Open `/telefonok?mi-scenario=payment-pending-resolves` at the integration project's viewport (below 1024 px wide the mobile layout, from 1024 px the desktop layout). Wait for the first `product-card` to render.", async () => {
         await page.goto('/telefonok?mi-scenario=payment-pending-resolves');
 
         await expect(page.getByRole('heading', { level: 1, name: 'Mobiltelefonok' })).toBeVisible();

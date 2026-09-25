@@ -162,10 +162,9 @@ test.describe('Product page: gallery', () => {
 
       // 1. Open the catalogue on the gallery scenario and wait for the grid.
       await test.step("1. Open the catalogue on the gallery scenario: `page.goto('/telefonok?mi-scenario=gallery-several-images')` and wait for the grid.", async () => {
-        // The mock reads the scenario once, when the document loads, and keeps it
-        // for the page's whole life, so every later step reaches its screen by
-        // clicking: a `page.goto` without the query would load the default,
-        // single-photo gallery.
+        // The mock reads the scenario when the document loads and keeps it
+        // through in-app navigation, so every later step reaches its screen by
+        // clicking.
         page.on('console', (message) => {
           const type = message.type();
           if (type === 'error' || type === 'warning') {
