@@ -4,10 +4,14 @@ set -u
 STATE_DIR="${DEV_SERVER_STATE_DIR:-${TMPDIR:-/tmp}/mi-bolt-dev-server}"
 START_TIMEOUT="${DEV_SERVER_START_TIMEOUT:-180}"
 
+# An Angular dev server started through this script should go through the
+# `start*` npm scripts, which carry --no-turbo-fast-api-calls (the Node 26.10.0
+# V8 abort under load).
 usage() {
   echo "usage: dev-server.sh start <port> -- <command> [args...]" >&2
   echo "       dev-server.sh stop <port>" >&2
   echo "       dev-server.sh status <port>" >&2
+  echo "       storefront: dev-server.sh start 4400 -- npm --prefix frontend run start -- --port 4400" >&2
   exit 64
 }
 

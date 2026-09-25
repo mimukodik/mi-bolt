@@ -23,9 +23,12 @@ const serveConfiguration = smoke ? 'local-backend' : 'development';
 // webServer, leaving the two halves of the config disagreeing.
 const suppliedBaseURL = process.env['E2E_BASE_URL'] || undefined;
 const baseURL = suppliedBaseURL ?? `http://localhost:${port}`;
-const ngServeCommand = `npx ng serve storefront --configuration ${serveConfiguration} --port ${port}`;
+const ngServeCommand = `node --no-turbo-fast-api-calls node_modules/@angular/cli/bin/ng.js serve storefront --configuration ${serveConfiguration} --port ${port}`;
 // In CI, Playwright runs against the built app served by scripts/serve-static.mjs (user, 2026-09-22).
 // The smoke config keeps `ng serve` in CI because its /api proxy lives in the dev server.
+// The command runs ng through node --no-turbo-fast-api-calls because Node 26.10.0 aborted the dev
+// server under e2e load with a V8 lazy-deopt error on the fast API call path, and NODE_OPTIONS
+// refuses that flag.
 // env: { [key: string]: string; }  (playwright/types/test.d.ts:10993)
 const webServer =
   smoke || !process.env['CI']
