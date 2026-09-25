@@ -2414,4 +2414,124 @@ describe('stock ledger (AC13, E060, E085, E099)', () => {
     );
     expect(placed.status).toBe(201);
   });
+
+  it('S-07 a second order of the same variant sells the last unit, and a third add is refused', async () => {
+    // First sale: cart v1 empty, add at v1 → v2, patch at v2 → v3,
+    // intent at v3 → v4, order at v4.
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await patchCardDraft('"2"');
+    const firstIntentRes = await createCardIntent('"3"', 'idem-int-stock-0007a');
+    expect(firstIntentRes.status).toBe(201);
+    expectRecord(firstIntentRes.body);
+    const firstPaymentIntentId = readString(firstIntentRes.body, 'id');
+    const firstResolved = await resolveIntent(firstPaymentIntentId, 'succeeded');
+    expect(firstResolved.status).toBe(200);
+
+    const firstPlaced = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: firstPaymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-stock-0007a',
+    );
+    expect(firstPlaced.status).toBe(201);
+    expectRecord(firstPlaced.body);
+    const firstOrderId = readString(firstPlaced.body, 'id');
+
+    // After the first sale, one unit is left.
+    const firstProductRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(firstProductRes.status).toBe(200);
+    const firstProductBody: unknown = await firstProductRes.json();
+    expectRecord(firstProductBody);
+    const firstVariant = findVariant(firstProductBody, MAGIC_V6_BLACK_512);
+    expect(firstVariant?.['maxQuantity']).toBe(1);
+    expect(firstVariant?.['availability']).toBe('in_stock');
+
+    // Second sale in the same session: every If-Match comes from the
+    // preceding response, never a guessed literal.
+    const cartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartRes.status).toBe(200);
+    const cartEtag = cartRes.headers.get('ETag');
+    expect(typeof cartEtag).toBe('string');
+    expectString(cartEtag, 'ETag');
+    const cartEtagString = cartEtag;
+
+    const secondAdd = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': cartEtagString },
+      body: JSON.stringify({ variantId: MAGIC_V6_BLACK_512, quantity: 1 }),
+    });
+    expect(secondAdd.status).toBe(200);
+    const cartAfterAddEtag = secondAdd.headers.get('ETag');
+    expect(typeof cartAfterAddEtag).toBe('string');
+    expectString(cartAfterAddEtag, 'ETag');
+    const cartAfterAddEtagString = cartAfterAddEtag;
+
+    await patchCardDraft(cartAfterAddEtagString);
+    const cartAfterPatchRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartAfterPatchRes.status).toBe(200);
+    const cartAfterPatchEtag = cartAfterPatchRes.headers.get('ETag');
+    expect(typeof cartAfterPatchEtag).toBe('string');
+    expectString(cartAfterPatchEtag, 'ETag');
+    const cartAfterPatchEtagString = cartAfterPatchEtag;
+
+    const secondIntentRes = await createCardIntent(
+      cartAfterPatchEtagString,
+      'idem-int-stock-0007b',
+    );
+    expect(secondIntentRes.status).toBe(201);
+    expectRecord(secondIntentRes.body);
+    const secondPaymentIntentId = readString(secondIntentRes.body, 'id');
+    const secondResolved = await resolveIntent(secondPaymentIntentId, 'succeeded');
+    expect(secondResolved.status).toBe(200);
+
+    const secondPlaced = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: secondPaymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      cartAfterPatchEtagString,
+      'idem-stock-0007b',
+    );
+    expect(secondPlaced.status).toBe(201);
+    expectRecord(secondPlaced.body);
+    const secondOrderId = readString(secondPlaced.body, 'id');
+    expect(secondOrderId).not.toBe(firstOrderId);
+
+    // After the second sale, the variant is out of stock.
+    const secondProductRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(secondProductRes.status).toBe(200);
+    const secondProductBody: unknown = await secondProductRes.json();
+    expectRecord(secondProductBody);
+    const secondVariant = findVariant(secondProductBody, MAGIC_V6_BLACK_512);
+    expect(secondVariant?.['maxQuantity']).toBe(0);
+    expect(secondVariant?.['availability']).toBe('out_of_stock');
+
+    // A third add of the same variant is refused as OUT_OF_STOCK.
+    const thirdCartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(thirdCartRes.status).toBe(200);
+    const thirdCartEtag = thirdCartRes.headers.get('ETag');
+    expect(typeof thirdCartEtag).toBe('string');
+    expectString(thirdCartEtag, 'ETag');
+    const thirdCartEtagString = thirdCartEtag;
+
+    const thirdAdd = await addLineExpectStatus(MAGIC_V6_BLACK_512, thirdCartEtagString, 409);
+    expectRecord(thirdAdd.body);
+    expect(thirdAdd.body['code']).toBe('OUT_OF_STOCK');
+  });
 });
