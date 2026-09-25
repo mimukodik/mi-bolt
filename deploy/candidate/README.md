@@ -55,9 +55,10 @@ The `candidate-receipt` artifact is `candidate.json`, schema version 1:
 }
 ```
 
-The template fingerprint is SHA-256 over sorted tracked relative paths and
+`templateFingerprint` is SHA-256 over sorted tracked relative paths and
 contents under `backend/services/commerce/src/main/resources/db/` (Liquibase
-schema and migrations) and `data/catalog/`. Chart revision and digest identify
+schema and migrations) and `data/catalog/`. It is recorded as provenance only;
+the preview platform does not gate on it. Chart revision and digest identify
 the full trusted chart template. The chart's candidate head commit is the
 tested PR SHA; its per-image commit annotations preserve each image's original
 build commit when a content-hash tag is reused.
@@ -133,9 +134,10 @@ gh workflow run preview-smoke.yml --repo mimukodik/mi-bolt \
   -f publisher_run_id=<successful-publisher-run-id>
 ```
 
-Each new PR head receives a fresh template database. Retrying the same head
-preserves its current clone. Schema or catalogue changes need a newly approved
-template fingerprint in Berek before preview admission. Stable releases to
+Each new PR head receives a fresh, empty database; the commerce image applies
+its migrations, loads the catalogue from the image and bootstraps the admin
+account at boot, so the PR's own schema and catalogue are what its preview
+runs. Retrying the same head keeps its database. Stable releases to
 `https://bolt.mimukodik.hu` deploy automatically after main CI and preserve
 the stable database. Database bootstrap, coordinator configuration,
 capacity/expiry, and explicit stable resets belong to Berek's
