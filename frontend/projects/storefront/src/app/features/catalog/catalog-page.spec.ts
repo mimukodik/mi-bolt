@@ -1902,3 +1902,13 @@ describe('a page past the last one opens the last page', () => {
     harness.cleanup();
   });
 });
+
+describe('CatalogPage opens a facade visit', () => {
+  it('CP-V1 every CatalogPage instance opens one new CatalogFacade visit', async () => {
+    const spy = vi.spyOn(CatalogFacade.prototype, 'beginVisit');
+    const harness = await setupHarness();
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+    harness.cleanup();
+  });
+});

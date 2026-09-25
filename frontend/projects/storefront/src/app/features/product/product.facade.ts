@@ -123,6 +123,7 @@ export class ProductFacade {
     kind: 'load' | 'retry';
     slug: string;
     variantQuery: string | null;
+    visit: number;
     retryNonce?: number;
   }>();
 
@@ -153,6 +154,10 @@ export class ProductFacade {
   private refreshSub: Subscription | null = null;
   /** Monotonic counter so rapid retry clicks survive distinctUntilChanged. */
   private retryNonceCounter = 0;
+  /** Counts product page visits (`beginVisit`). The visit is part of
+   *  the load key, so a new visit to the same slug and query reads the
+   *  product again instead of keeping what an earlier visit read. */
+  private visit = 0;
 
   /** Read-only view of the current view model — UI binds to this. */
   readonly vm = computed<ProductVm>(() => this.buildVm());
@@ -165,6 +170,7 @@ export class ProductFacade {
             a.kind === b.kind &&
             a.slug === b.slug &&
             a.variantQuery === b.variantQuery &&
+            a.visit === b.visit &&
             a.retryNonce === b.retryNonce,
         ),
         tap(({ slug, variantQuery }) => {
@@ -245,7 +251,18 @@ export class ProductFacade {
       kind: 'load',
       slug,
       variantQuery: parseVariantQuery(params),
+      visit: this.visit,
     });
+  }
+
+  /**
+   * Opens a new page visit. The product page calls it once per
+   * instance, before its first `load()`: this root facade outlives the
+   * page, so without it a revisit to the same product would collapse
+   * onto the earlier visit's read and show that visit's stock.
+   */
+  beginVisit(): void {
+    this.visit += 1;
   }
 
   /**
@@ -262,6 +279,7 @@ export class ProductFacade {
       kind: 'retry',
       slug,
       variantQuery: this.variantQuerySignal(),
+      visit: this.visit,
       retryNonce: ++this.retryNonceCounter,
     });
   }

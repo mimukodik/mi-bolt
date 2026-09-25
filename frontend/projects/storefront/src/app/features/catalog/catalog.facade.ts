@@ -207,6 +207,11 @@ export class CatalogFacade {
    */
   private readonly retry$ = new Subject<void>();
 
+  /** Counts catalogue page visits (`beginVisit`). The visit is part of
+   *  the query key, so a new visit with the same query reads the list
+   *  again instead of keeping what an earlier visit read. */
+  private visit = 0;
+
   /** Live URL-derived query state — single source of truth. */
   private readonly querySignal = signal<CatalogQuery>(DEFAULT_CATALOG_QUERY);
 
@@ -247,11 +252,10 @@ export class CatalogFacade {
   constructor() {
     // Debounced search pipeline: every keystroke resets the 300 ms
     // timer; only the trailing value reaches the canonical stream,
-    // and an identical trailing value is collapsed by distinct.
+    // and the subscriber below drops a value that changes nothing.
     const debouncedSearch = this.searchInput$.pipe(
       debounceTime(SEARCH_DEBOUNCE_MS),
       map((raw) => raw.trim()),
-      distinctUntilChanged(),
     );
 
     const searchSub = debouncedSearch.subscribe((q) => {
@@ -269,7 +273,11 @@ export class CatalogFacade {
     // `distinctUntilChanged` skips no-op updates so a duplicate
     // setter call never re-fires the SDK.
     const querySub = merge(
-      this.queryChange$.pipe(distinctUntilChanged(queryEquals)),
+      this.queryChange$.pipe(
+        map((query) => ({ query, visit: this.visit })),
+        distinctUntilChanged((a, b) => a.visit === b.visit && queryEquals(a.query, b.query)),
+        map(({ query }) => query),
+      ),
       this.retry$.pipe(map(() => this.querySignal())),
     )
       .pipe(
@@ -446,6 +454,16 @@ export class CatalogFacade {
   loadFromParams(params: URLSearchParams): void {
     const next = parseCatalogQuery(params);
     this.queryChange$.next(next);
+  }
+
+  /**
+   * Opens a new page visit. The catalogue page calls it once per
+   * instance, before its first `loadFromParams()`: this root facade
+   * outlives the page, so without it a revisit with the same query
+   * would collapse onto the earlier visit's read.
+   */
+  beginVisit(): void {
+    this.visit += 1;
   }
 
   /** Canonical query string for the current state — push to the router. */

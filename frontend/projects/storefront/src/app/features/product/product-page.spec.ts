@@ -908,7 +908,10 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
       related: [],
       relatedLoading: false,
     });
-    const facadeStub: Pick<ProductFacade, 'vm'> = { vm };
+    const facadeStub: Pick<ProductFacade, 'vm' | 'beginVisit'> = {
+      vm,
+      beginVisit: () => undefined,
+    };
     const cartFacadeStub = {
       ensureCart: async (): Promise<void> => {
         // no-op
@@ -1844,5 +1847,14 @@ describe('MIM-449 adding to an expired cart starts a new cart', () => {
 
     expect(cartFacade.cartExpired()).toBe(false);
     expect(cartFacade.cart()?.items.map((item) => item.variantId)).toEqual([variantId]);
+  });
+});
+
+describe('ProductPage opens a facade visit', () => {
+  it('PP-V1 every ProductPage instance opens one new ProductFacade visit', async () => {
+    const spy = vi.spyOn(ProductFacade.prototype, 'beginVisit');
+    await createHarness();
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 });
