@@ -4,11 +4,21 @@
 import { test, expect } from '../fixtures/coverage';
 
 // The featured grid is `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
-// (`featured-products.html`), so below its `lg` breakpoint the four cards stack
-// in one column and from it up they sit in four. The catalogue's sidebar uses
-// the same 1024px breakpoint (`shop-edge-mobile-filter-drawer.spec.ts`); this
-// constant is read off the featured grid's own class list.
-const FEATURED_COLUMNS_MIN_WIDTH = 1024;
+// (`featured-products.html`): one column until Tailwind's `sm` breakpoint, two
+// from it, four from `lg`. Both breakpoints are Tailwind's defaults, `sm` at
+// 40rem (640px) and `lg` at 64rem (1024px) (`tailwindcss/theme.css`), so the
+// four cards stand in one column (four rows) below 640px, in two columns (two
+// rows) from 640px, and in four columns (one row) from 1024px. Both widths are
+// read off those two sources rather than measured.
+const FEATURED_TWO_COLUMN_MIN_WIDTH = 640;
+const FEATURED_FOUR_COLUMN_MIN_WIDTH = 1024;
+
+/** The featured grid's column count at a viewport width, from the two breakpoints above. */
+const featuredColumnsAt = (width: number): number => {
+  if (width >= FEATURED_FOUR_COLUMN_MIN_WIDTH) return 4;
+  if (width >= FEATURED_TWO_COLUMN_MIN_WIDTH) return 2;
+  return 1;
+};
 
 // A featured card as the screen shows it: the "<colour> · <gb> GB" variant line
 // (`p.variant` in `product-card.html`). The whitespace the template's line
@@ -39,7 +49,6 @@ test.describe('Shop: home, navigation and catalogue stories', () => {
     "[E020] opening each featured card lands on that card's product and variant",
     { tag: '@integration' },
     async ({ page }) => {
-      const fullHd = (page.viewportSize()?.width ?? 0) >= FEATURED_COLUMNS_MIN_WIDTH;
       const featuredSection = page.getByTestId('featured-section');
       const featuredGrid = page.getByTestId('featured-grid');
       // Each card is addressed by its position in `featured-grid`, never by its
@@ -66,8 +75,11 @@ test.describe('Shop: home, navigation and catalogue stories', () => {
         await expect(featuredCards).toHaveCount(4);
       };
 
-      // The plan's step 1 layout, read from the cards' own boxes: four columns
-      // share one row at full HD, one column stacks them below 1024px.
+      // The plan's step 1 layout, read from the cards' own boxes: the four cards
+      // stand in one column (four rows) below 640px, in two columns (two rows)
+      // from 640px, and in four columns (one row) from 1024px, which is what the
+      // grid's `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` classes lay out at
+      // this viewport's width.
       const expectFeaturedLayout = async (): Promise<void> => {
         const positions: { x: number; y: number }[] = [];
         for (let index = 0; index < 4; index += 1) {
@@ -75,10 +87,12 @@ test.describe('Shop: home, navigation and catalogue stories', () => {
           if (box === null) throw new Error(`featured card ${String(index)} has no bounding box`);
           positions.push({ x: Math.round(box.x), y: Math.round(box.y) });
         }
-        const columns = new Set(positions.map((position) => position.x)).size;
-        const rows = new Set(positions.map((position) => position.y)).size;
-        expect(columns).toBe(fullHd ? 4 : 1);
-        expect(rows).toBe(fullHd ? 1 : 4);
+        const columnCount = new Set(positions.map((position) => position.x)).size;
+        const rowCount = new Set(positions.map((position) => position.y)).size;
+        const expectedColumns = featuredColumnsAt(page.viewportSize()?.width ?? 0);
+        expect(columnCount).toBe(expectedColumns);
+        // Four cards fill `4 / columns` rows: one row at four columns, two at two.
+        expect(rowCount).toBe(4 / expectedColumns);
       };
 
       // The plan's step 2 read: a card names a product and a variant, and its
@@ -135,7 +149,7 @@ test.describe('Shop: home, navigation and catalogue stories', () => {
         );
       };
 
-      await test.step('1. Open `/` and wait for `featured-grid` to hold real cards, that is until no `featured-card-skeleton-*` placeholder remains. - expect: `featured-grid` holds four `product-card` elements. - expect: The `featured` region reads "Készülékek" with "Válassz kiemelt készülékeink közül", and `featured-all-link` reads "Összes telefon". - expect: Below 1024 px the four cards stack in one column, at full HD they sit in four columns.', async () => {
+      await test.step('1. Open `/` and wait for `featured-grid` to hold real cards, that is until no `featured-card-skeleton-*` placeholder remains. - expect: `featured-grid` holds four `product-card` elements. - expect: The `featured` region reads "Készülékek" with "Válassz kiemelt készülékeink közül", and `featured-all-link` reads "Összes telefon". - expect: Below 640 px the four cards stack in one column, from 640 px they stand in two, and from 1024 px in four.', async () => {
         await page.goto('/');
         await waitForFeaturedCards();
 
