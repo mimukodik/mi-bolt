@@ -597,11 +597,11 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** page container.
 
-**Signal inputs:** `summary:CheckoutSummary|null; cart:Cart; draft:CheckoutSession; options:CheckoutOptions|null; state:CheckoutViewState; paymentIntent:PaymentIntent|null; priceChange:PriceChange|null; paymentIntentMissing:boolean; paymentStarted:boolean`.
+**Signal inputs:** `summary:CheckoutSummary|null; cart:Cart; draft:CheckoutSession; options:CheckoutOptions|null; state:CheckoutViewState; paymentIntent:PaymentIntent|null; priceChange:PriceChange|null; paymentIntentMissing:boolean; paymentStarted:boolean; paymentPoll:PaymentPollState`, where `PaymentPollState = 'idle'|'polling'|'exhausted'`.
 
 **Outputs:** `editRequested:contact|delivery; submitRequested:void; retryRequested:void; priceChangeConfirmed:void; paymentRetryRequested:void; paymentChangeMethodRequested:void; paymentCheckRequested:void; backToPaymentRequested:void; newPaymentRequested:void`.
 
-**Functions:** Full order review from the server-computed summary, one unchecked terms confirmation with the terms dialog and a plain demo note; distinct price-changed/conflict/stock feedback.
+**Functions:** Full order review from the server-computed summary, one unchecked terms confirmation with the terms dialog and a plain demo note; distinct price-changed/conflict/stock feedback. A pending card payment shows the page container's bounded poll (`paymentPoll`: one read a second after the previous answer, at most ten answers, E094/E095): a polling note while it runs, a "no result after ten checks, no new payment is started" note when ten answers are still pending, and the manual status check control in every poll state.
 
 **Required states:** loading,ready,price-changed,conflict,stock-error,submitting,error.
 
