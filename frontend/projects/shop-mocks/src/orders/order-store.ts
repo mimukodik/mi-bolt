@@ -484,11 +484,15 @@ export class OrderStore {
       if (last !== undefined) this.stock.take(last.variantId);
     }
 
+    // `isTaken` is the only stock check the order commit needs: the cart's
+    // view() (run by `checkout.read` above) already clamps every line's
+    // quantity to the ledger's remaining, so `item.quantity` can never
+    // exceed what `recordSale` is about to deduct. `remaining(...)` was
+    // the wrong shape here — it expected the catalog's original maxQuantity
+    // and double-subtracted `ledger.sold` when the cart item was added
+    // after another order had already sold units of the same variant.
     for (const item of cart.items) {
-      if (
-        this.stock.isTaken(item.variantId) ||
-        item.quantity > this.stock.remaining({ id: item.variantId, maxQuantity: item.maxQuantity })
-      ) {
+      if (this.stock.isTaken(item.variantId)) {
         return {
           ok: false,
           problem: this.problem(
