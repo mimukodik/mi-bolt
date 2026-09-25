@@ -35,7 +35,7 @@ import { OrderStore } from './orders/order-store';
 import { IdempotencyStore } from './idempotency';
 import { cartStore } from './cart/cart.handlers';
 import { checkoutStore, orderStore } from './checkout/checkout.handlers';
-import './payment/payment.handlers';
+import { PAYMENT_PENDING_RESOLVES_SCENARIO } from './payment/payment.handlers';
 import './orders/order.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
 import { isRecord } from './is-record';
@@ -1546,6 +1546,191 @@ describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
     const replayBody: unknown = await replay.json();
     expectRecord(replayBody);
     expect(JSON.stringify(replayBody)).toBe(JSON.stringify(firstBody));
+  });
+});
+
+describe('payment-pending-resolves scenario (E094)', () => {
+  beforeAll(() => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[mocks-handlers.spec] committed fixture does not match expected shape');
+    }
+    loadCatalogFixture(catalogFixture);
+  });
+
+  const SESSION_1 = 'spec-session-e094';
+  const MOTO = 'motorola-edge-50-fusion--zold--256';
+
+  const VALID_CONTACT = {
+    fullName: 'Teszt Elek',
+    email: 'Teszt.Elek@Pelda.hu',
+    phone: '+36301234567',
+  };
+  const VALID_BILLING = {
+    name: 'Teszt Elek',
+    address: {
+      countryCode: 'HU',
+      postalCode: '1052',
+      city: 'Budapest',
+      line1: 'Petőfi utca 1.',
+    },
+  };
+  const VALID_DELIVERY_ADDRESS = {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  };
+
+  let clock: Clock;
+  let ids: Ids;
+  let options: {
+    repository: Repository;
+    clock: Clock;
+    ids: Ids;
+    scenario: ReturnType<Repository['getScenario']>;
+    apiRoot: string;
+  };
+
+  beforeEach(() => {
+    clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    ids = createDeterministicIds(1);
+    options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+  });
+
+  function session1Headers(): Record<string, string> {
+    return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
+  }
+
+  function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+    if (!isRecord(value)) {
+      throw new Error('expected an object');
+    }
+  }
+
+  /** Installs one handler list for the named scenario and the persist spy. */
+  function installHandlers(scenarioName: string, persist: (sessionId: string) => void): void {
+    server.use(...createHandlers({ ...options, scenario: resolveScenario(scenarioName), persist }));
+  }
+
+  /** Seeds one cart line, patches a complete card draft and creates an intent. */
+  async function createCardIntent(): Promise<string> {
+    const cartRes = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(cartRes.status).toBe(200);
+
+    const patchRes = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'card' },
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const intentRes = await fetch('http://localhost/api/v1/payment-intents', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"3"', 'Idempotency-Key': 'idem-int-e094-1' },
+      body: '',
+    });
+    expect(intentRes.status).toBe(201);
+    const body: unknown = await intentRes.json();
+    expectRecord(body);
+    const id = body['id'];
+    if (typeof id !== 'string') throw new Error('id not a string');
+    return id;
+  }
+
+  /** Resolves the intent as pending through the outcome endpoint. */
+  async function resolvePending(intentId: string): Promise<void> {
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+      method: 'POST',
+      headers: session1Headers(),
+      body: JSON.stringify({ outcome: 'pending' }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  /** Reads the intent and returns the wire status. */
+  async function readStatus(intentId: string): Promise<unknown> {
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}`, {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    return body['status'];
+  }
+
+  it('a pending intent answers pending twice and succeeded on the third read', async () => {
+    const persist = vi.fn();
+    installHandlers(PAYMENT_PENDING_RESOLVES_SCENARIO, persist);
+    const intentId = await createCardIntent();
+    await resolvePending(intentId);
+
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('succeeded');
+    expect(await readStatus(intentId)).toBe('succeeded');
+  });
+
+  it('the resolving read persists the session once', async () => {
+    const persist = vi.fn();
+    installHandlers(PAYMENT_PENDING_RESOLVES_SCENARIO, persist);
+    const intentId = await createCardIntent();
+    await resolvePending(intentId);
+    persist.mockClear();
+
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(0);
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(0);
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(persist).toHaveBeenCalledWith(SESSION_1);
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(1);
+  });
+
+  it('an intent that is not pending does not count its reads', async () => {
+    const persist = vi.fn();
+    installHandlers(PAYMENT_PENDING_RESOLVES_SCENARIO, persist);
+    const intentId = await createCardIntent();
+
+    expect(await readStatus(intentId)).toBe('requires_action');
+    expect(await readStatus(intentId)).toBe('requires_action');
+    expect(await readStatus(intentId)).toBe('requires_action');
+
+    await resolvePending(intentId);
+
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('succeeded');
+  });
+
+  it('the default scenario keeps a pending intent pending', async () => {
+    const persist = vi.fn();
+    installHandlers(DEFAULT_SCENARIO.name, persist);
+    const intentId = await createCardIntent();
+    await resolvePending(intentId);
+    persist.mockClear();
+
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(persist).toHaveBeenCalledTimes(0);
   });
 });
 
