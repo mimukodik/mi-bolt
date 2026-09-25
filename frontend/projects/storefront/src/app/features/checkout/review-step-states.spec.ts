@@ -19,7 +19,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ReviewStep, type CheckoutViewState } from './review-step';
+import { ReviewStep, type CheckoutViewState, type PaymentPollState } from './review-step';
 import type { IntentDropReason, PriceChange } from './checkout.facade';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
@@ -172,7 +172,7 @@ function makeIntent(status: PaymentIntentStatus): PaymentIntent {
 interface FixtureOverrides {
   readonly state?: CheckoutViewState;
   readonly paymentIntent?: PaymentIntent | null;
-  readonly paymentPoll?: string;
+  readonly paymentPoll?: PaymentPollState;
   readonly priceChange?: PriceChange | null;
   readonly paymentIntentMissing?: boolean;
   readonly paymentStarted?: boolean;
