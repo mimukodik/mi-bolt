@@ -17,8 +17,19 @@
  * page would have sent the shopper to without leaving the harness.
  */
 
-import { Component, DestroyRef, InjectionToken, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  InjectionToken,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { concatMap, from, take, takeWhile, timer } from 'rxjs';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -28,7 +39,17 @@ import { CartFacade } from '../cart/cart.facade';
 import { checkoutKeys } from './checkout-keys';
 import { CheckoutFacade } from './checkout.facade';
 import { OrderSubmission } from './order-submission';
-import { ReviewStep, type CheckoutViewState } from './review-step';
+import { ReviewStep, type CheckoutViewState, type PaymentPollState } from './review-step';
+
+/**
+ * The cadence of the pending-payment poll. `docs/spec/architecture.md`:
+ * "Pending GET polling: 1s interval, maximum 10 attempts; surface
+ * unknown outcome on timeout."
+ */
+const PENDING_POLL_INTERVAL_MS = 1000;
+
+/** The read budget of the same poll, from that same line. */
+const PENDING_POLL_MAX_READS = 10;
 
 /**
  * Seam for the full-page navigation to the payment application.
@@ -74,6 +95,16 @@ export class ReviewPage {
    * started yet".
    */
   readonly paymentStarted: boolean = checkoutKeys.activeIntentId() !== null;
+
+  /** How far the bounded poll of a pending intent has got. Read by the
+   *  step, which shows the poll's progress; the poll itself is
+   *  `startPendingPoll`. */
+  readonly paymentPoll = signal<PaymentPollState>('idle');
+
+  /** The intent the poll has already run for. A poll runs at most once
+   *  per intent id on this page, so a read that changes nothing about
+   *  the intent does not start a second one. */
+  private polledIntentId: string | null = null;
 
   /** True between the CTA press and the outcome. `inFlight` covers
    *  the wire call; this one also covers the navigation after it. */
@@ -121,6 +152,49 @@ export class ReviewPage {
       cancelled = true;
     });
     void this.load(() => cancelled);
+
+    // A pending intent is the one the page keeps asking about on its
+    // own: the outcome is unknown until the payment application
+    // answers. The start goes through `untracked` so the signals it
+    // reads are not this effect's dependencies, and a read that lands
+    // does not start another poll.
+    effect(() => {
+      const intent = this.checkoutFacade.paymentIntent();
+      if (intent?.status !== 'pending') return;
+      if (this.polledIntentId === intent.id) return;
+      untracked(() => {
+        this.startPendingPoll(intent.id);
+      });
+    });
+  }
+
+  /**
+   * Reads `id` once a second, at most `PENDING_POLL_MAX_READS` times,
+   * and stops at the first answer whose status is no longer pending.
+   * `concatMap` waits for each read, so a slow answer is never
+   * overlapped by the next tick; `takeUntilDestroyed` ends the poll
+   * with the page. Ten reads still pending leave the outcome unknown
+   * and the step says so, with the manual check as the way to look
+   * once more.
+   */
+  private startPendingPoll(id: string): void {
+    this.polledIntentId = id;
+    this.paymentPoll.set('polling');
+    timer(PENDING_POLL_INTERVAL_MS, PENDING_POLL_INTERVAL_MS)
+      .pipe(
+        take(PENDING_POLL_MAX_READS),
+        concatMap(() => from(this.checkoutFacade.readPaymentIntent(id))),
+        takeWhile(() => this.checkoutFacade.paymentIntent()?.status === 'pending', true),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        complete: () => {
+          if (this.destroyRef.destroyed) return;
+          this.paymentPoll.set(
+            this.checkoutFacade.paymentIntent()?.status === 'pending' ? 'exhausted' : 'idle',
+          );
+        },
+      });
   }
 
   /**
@@ -228,8 +302,9 @@ export class ReviewPage {
     void this.router.navigate(['/penztar/szallitas']);
   }
 
-  /** Exactly one re-read of the pending intent. Never a loop: the
-   *  shopper presses the control again if they want another. */
+  /** One re-read of the pending intent per press. The automatic poll
+   *  above reads it every second at most ten times; after that this
+   *  control is the shopper's way to look again. */
   async onPaymentCheck(): Promise<void> {
     const id = this.checkoutFacade.paymentIntent()?.id ?? checkoutKeys.activeIntentId();
     if (id === null || id.length === 0) return;

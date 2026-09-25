@@ -63,6 +63,7 @@ import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { checkoutKeys } from '../../../app/features/checkout/checkout-keys';
 import {
   type CheckoutConflict,
+  type CheckoutResult,
   CheckoutFacade,
   type IntentDropReason,
   type PriceChange,
@@ -296,6 +297,30 @@ function writableOf<T>(obj: object, slot: string): Writable<T> {
     throw new Error(`[review-page.spec] private slot "${slot}" has no set() method`);
   }
   return candidate;
+}
+
+/** The page's poll-state signal, read through a shape guard rather
+ *  than off the class directly: the signal being there at all is part
+ *  of what the poll cases test, so a `ReviewPage` without it has to
+ *  fail them as tests rather than as a compile error that runs none
+ *  of them. `writableOf` reads its slots the same way. */
+interface PollingPage {
+  paymentPoll(): unknown;
+}
+
+function isPollingPage(value: unknown): value is PollingPage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof Reflect.get(value, 'paymentPoll') === 'function'
+  );
+}
+
+function paymentPollOf(page: ReviewPage): unknown {
+  if (!isPollingPage(page)) {
+    throw new Error('[review-page.spec] ReviewPage exposes no paymentPoll signal');
+  }
+  return page.paymentPoll();
 }
 
 // ---------------------------------------------------------------------------
@@ -932,5 +957,164 @@ describe('ReviewPage drives the recovery controls', () => {
     const h3 = harness();
     await h3.fixture.whenStable();
     expect(h3.fixture.componentInstance.paymentIntentMissing()).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RP-30..RP-35 — the bounded pending payment poll (E094, E095)
+// ---------------------------------------------------------------------------
+
+describe('pending payment poll (E094, E095)', () => {
+  beforeEach(async () => {
+    await seedCompleteCardDraft();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The intent every case in this block polls: pending, so the poll
+   *  keeps going until a case makes it stop answering that way. */
+  function pendingIntent(id: string): PaymentIntent {
+    return {
+      id,
+      status: 'pending',
+      amount: { amount: 89990, currency: 'HUF' },
+      createdAt: '2026-09-20T10:00:00.000Z',
+      expiresAt: '2026-09-20T10:15:00.000Z',
+      redirectUrl: `/demo-fizetes/${id}`,
+      returnUrl: '/penztar/ellenorzes',
+    };
+  }
+
+  /** The page with the card draft seeded and its own load settled, so a
+   *  case starts from a rendered step. Fake timers go in after that
+   *  load: `docs/spec/architecture.md` bounds the poll, not the load. */
+  async function mounted(): Promise<{ h: PageHarness; checkout: CheckoutFacade }> {
+    const h = harness();
+    const checkout = TestBed.inject(CheckoutFacade);
+    await h.fixture.whenStable();
+    vi.useFakeTimers();
+    return { h, checkout };
+  }
+
+  /** Hands the facade a pending intent, which is what the page's poll
+   *  effect watches for. `TestBed.tick()` flushes the effect. */
+  function startPendingPoll(checkout: CheckoutFacade, id: string): void {
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(pendingIntent(id));
+    TestBed.tick();
+  }
+
+  it('RP-30 a pending intent is read once a second', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(readSpy).toHaveBeenCalledTimes(0);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(readSpy.mock.calls[0]?.[0]).toBe('pi-1');
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(readSpy).toHaveBeenCalledTimes(3);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('polling');
+  });
+
+  it('RP-31 ten pending reads exhaust the poll', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
+    expect(countTestId(host, 'review-payment-poll-exhausted')).toBe(1);
+    expect(countTestId(host, 'review-payment-check')).toBe(1);
+  });
+
+  it('RP-32 a read that answers succeeded stops the poll', async () => {
+    const { h, checkout } = await mounted();
+    let calls = 0;
+    const answer = (value: PaymentIntent): Promise<CheckoutResult<PaymentIntent>> =>
+      Promise.resolve({ ok: true, value });
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockImplementation((id) => {
+      calls += 1;
+      if (calls === 3) {
+        const succeeded: PaymentIntent = { ...pendingIntent(id), status: 'succeeded' };
+        writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(succeeded);
+        return answer(succeeded);
+      }
+      return answer(pendingIntent(id));
+    });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(3);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('idle');
+  });
+
+  it('RP-33 an intent that is not pending starts no poll', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set({
+      ...pendingIntent('pi-1'),
+      status: 'requires_action',
+    });
+    TestBed.tick();
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(0);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('idle');
+  });
+
+  it('RP-34 a destroyed page stops polling', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+
+    h.fixture.destroy();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('RP-35 the poll runs once per intent, and the manual check reads once more', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+
+    await h.fixture.componentInstance.onPaymentCheck();
+    expect(readSpy).toHaveBeenCalledTimes(11);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(readSpy).toHaveBeenCalledTimes(11);
   });
 });
