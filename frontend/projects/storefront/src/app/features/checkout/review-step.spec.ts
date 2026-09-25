@@ -1,7 +1,7 @@
 /**
  * S3-F2-5 — the review step on the 2.0.0 contract.
  *
- * Twenty-six cases over the rendered review surface. The component is
+ * Cases over the rendered review surface. The component is
  * purely presentational: it injects nothing and calls no network.
  * `review-page.ts` (S3-F2) owns the facades and the navigation, and
  * drives this component through its nine declared inputs. The seven

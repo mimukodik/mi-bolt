@@ -1,7 +1,7 @@
 /**
  * MIM-212 — the review page container on the 2.0.0 contract.
  *
- * Twenty-three cases over the container: the three-call hydration and
+ * Cases over the container: the three-call hydration and
  * its skips, each of the eight submit outcomes routed to its own
  * recovery, the view-state priority order, the intent-key rotation a
  * retried payment depends on, and the location seam the payment

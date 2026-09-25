@@ -1,7 +1,7 @@
 /**
  * MIM-212 — `DeliveryPage` spec on the 2.0.0 contract (S3-F2-3).
  *
- * Twelve cases that cover what the container `S3-C4` added: the
+ * Cases that cover what the container `S3-C4` added: the
  * options load and its retry, the form seeded from the saved session,
  * the three gated section saves in order with their exact wire
  * payloads, and the failure banner that stops the sequence before the
