@@ -44,6 +44,8 @@ import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';
 import type { CheckoutStore } from '../checkout/checkout-store';
+import { stockLostOnce } from '../faults';
+import { StockLedger } from '../stock/stock-ledger';
 import { TERMS_VERSION, checkoutProblem } from '../checkout/checkout-store';
 import { deriveIdempotencyKey, hashPayload } from '../idempotency';
 import type { PersistedIdempotencyRecord, IdempotencyStore } from '../idempotency';
@@ -141,6 +143,7 @@ export class OrderStore {
     private readonly checkout: CheckoutStore,
     private readonly idempotency: IdempotencyStore,
     private readonly cart: () => CartStore,
+    private readonly stock: StockLedger = new StockLedger(),
   ) {}
 
   createPaymentIntent(
@@ -476,6 +479,33 @@ export class OrderStore {
       }
     }
 
+    if (stockLostOnce(this.options, 'order')) {
+      const last = cart.items.at(-1);
+      if (last !== undefined) this.stock.take(last.variantId);
+    }
+
+    // `isTaken` is the only stock check the order commit needs: the cart's
+    // view() (run by `checkout.read` above) already clamps every line's
+    // quantity to the ledger's remaining, so `item.quantity` can never
+    // exceed what `recordSale` is about to deduct. `remaining(...)` was
+    // the wrong shape here — it expected the catalog's original maxQuantity
+    // and double-subtracted `ledger.sold` when the cart item was added
+    // after another order had already sold units of the same variant.
+    for (const item of cart.items) {
+      if (this.stock.isTaken(item.variantId)) {
+        return {
+          ok: false,
+          problem: this.problem(
+            409,
+            'OUT_OF_STOCK',
+            'Stock ran out while the shopper was in checkout.',
+            { variantId: item.variantId },
+            [],
+          ),
+        };
+      }
+    }
+
     const orderId = this.options.ids.uuid();
     const orderNumber = this.nextOrderNumber();
     const createdAt = this.options.clock.now();
@@ -500,6 +530,7 @@ export class OrderStore {
       notice: SIMULATION_NOTICE,
     };
     this.orders.set(orderId, { receipt, sessionId });
+    this.stock.recordSale(items);
 
     this.checkout.clearDraft(sessionId);
     // The intent stays readable, as on the backend; it only cannot back

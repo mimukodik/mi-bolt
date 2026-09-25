@@ -1734,6 +1734,170 @@ describe('payment-pending-resolves scenario (E094)', () => {
   });
 });
 
+const HONOR_BLACK_512_MOCK = 'honor-magic-v6--fekete--512';
+const MOCK_TERMS_VERSION = '2026-09';
+
+async function mockAddLine(variantId: string, ifMatch: string): Promise<void> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...S1_HEADERS(), 'If-Match': ifMatch },
+    body: JSON.stringify({ variantId, quantity: 1 }),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function mockPatchCardDraft(ifMatch: string): Promise<void> {
+  const res = await fetch('http://localhost/api/v1/checkout', {
+    method: 'PATCH',
+    headers: { ...S1_HEADERS(), 'If-Match': ifMatch },
+    body: JSON.stringify({
+      contact: VALID_CONTACT_LOCAL,
+      billing: VALID_BILLING_LOCAL,
+      delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS_LOCAL },
+      payment: { method: 'card' },
+    }),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function mockCreateCardIntent(
+  ifMatch: string,
+  idempotencyKey: string,
+): Promise<{ status: number; body: unknown; headers: Headers }> {
+  const res = await fetch('http://localhost/api/v1/payment-intents', {
+    method: 'POST',
+    headers: {
+      ...S1_HEADERS(),
+      'If-Match': ifMatch,
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: '',
+  });
+  const body: unknown = await res.json();
+  return { status: res.status, body, headers: res.headers };
+}
+
+async function mockResolveIntent(
+  intentId: string,
+  outcome: string,
+): Promise<{ status: number; body: unknown }> {
+  const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+    method: 'POST',
+    headers: S1_HEADERS(),
+    body: JSON.stringify({ outcome }),
+  });
+  const body: unknown = await res.json();
+  return { status: res.status, body };
+}
+
+const S1_HEADERS = (): Record<string, string> => ({
+  'X-Demo-Session': 'spec-session-0001',
+  'Content-Type': 'application/json',
+});
+const VALID_CONTACT_LOCAL = {
+  fullName: 'Teszt Elek',
+  email: 'Teszt.Elek@Pelda.hu',
+  phone: '+36301234567',
+};
+const VALID_BILLING_LOCAL = {
+  name: 'Teszt Elek',
+  address: {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  },
+};
+const VALID_DELIVERY_ADDRESS_LOCAL = {
+  countryCode: 'HU',
+  postalCode: '1052',
+  city: 'Budapest',
+  line1: 'Petőfi utca 1.',
+};
+
+function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+  expect(isRecord(value)).toBe(true);
+}
+
+describe('stock ledger reload (AC13)', () => {
+  const localClock = createFixedClock('2026-09-14T11:00:00.000Z');
+  const localIds = createDeterministicIds(1);
+  const localOptions = {
+    repository: new Repository(DEFAULT_SCENARIO, localIds, localClock),
+    clock: localClock,
+    ids: localIds,
+    scenario: DEFAULT_SCENARIO,
+    apiRoot: '/api/v1',
+  };
+  beforeEach(() => {
+    server.use(...createHandlers(localOptions));
+  });
+  it('S-05 a reload rebuilds the sales from the persisted receipts', async () => {
+    let captured: MockSnapshot | null = null;
+    const persistCalls: string[] = [];
+    const persist = (sessionId: string): void => {
+      persistCalls.push(sessionId);
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(localClock.now()));
+    };
+    server.use(...createHandlers({ ...localOptions, persist }));
+
+    await mockAddLine(HONOR_BLACK_512_MOCK, '"1"');
+    await mockPatchCardDraft('"2"');
+    const intentRes = await mockCreateCardIntent('"3"', 'idem-int-stock-reload-0005');
+    expect(intentRes.status).toBe(201);
+    const intentBody = intentRes.body as Record<string, unknown>;
+    const paymentIntentId = intentBody['id'];
+    expect(typeof paymentIntentId === 'string').toBe(true);
+    const resolved = await mockResolveIntent(paymentIntentId as string, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const orderRes = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...S1_HEADERS(),
+        'If-Match': '"3"',
+        'Idempotency-Key': 'idem-stock-reload-0005',
+      },
+      body: JSON.stringify({
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: MOCK_TERMS_VERSION,
+        acceptedTerms: true,
+      }),
+    });
+    expect(orderRes.status).toBe(201);
+
+    expect(captured).not.toBeNull();
+    server.resetHandlers();
+    server.use(...createHandlers({ ...localOptions, snapshot: captured }));
+
+    const productRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: S1_HEADERS(),
+    });
+    expect(productRes.status).toBe(200);
+    const productBody: unknown = await productRes.json();
+    expectRecord(productBody);
+    const variants = productBody['variants'];
+    expect(Array.isArray(variants)).toBe(true);
+    let match: Record<string, unknown> | undefined;
+    for (const candidate of variants as readonly unknown[]) {
+      expectRecord(candidate);
+      if (candidate['id'] === HONOR_BLACK_512_MOCK) {
+        match = candidate;
+        break;
+      }
+    }
+    expect(match).toBeDefined();
+    expect(match?.['maxQuantity']).toBe(1);
+    expect(match?.['availability']).toBe('in_stock');
+  });
+});
+
 describe('dispatcher shell', () => {
   it('answers an unregistered /api/v1 route with the English NOT_FOUND Problem', async () => {
     const clock = createFixedClock('2026-09-14T10:00:00.000Z');

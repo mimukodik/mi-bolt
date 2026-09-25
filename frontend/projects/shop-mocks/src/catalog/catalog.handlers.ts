@@ -23,6 +23,7 @@ import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-
 import { faultResponse, slowOnce } from '../faults';
 import { isRecord as isPlainRecord } from '../is-record';
 import { PROBLEM_CONTENT_TYPE } from '../problem-response';
+import { stockLedger } from '../stock/stock-ledger';
 import {
   type CatalogEntry,
   type CatalogFixture,
@@ -121,7 +122,7 @@ function buildProductPage(
   page: number;
   pageSize: 12 | 24;
 } {
-  const entries = store.listEntries();
+  const entries = stockEntries(store);
   const filtered = applyFilters(entries, filter);
   const sorted = sortEntries(filtered, filter.sort, filter.q);
   const capped = filter.featured === true ? sorted.slice(0, 4) : sorted;
@@ -135,6 +136,18 @@ function buildProductPage(
   };
 }
 
+/**
+ * Every list entry, with `stockLedger.current` mapped over each one
+ * when the ledger exists and otherwise untouched. The list page, the
+ * facets and the related products all read through this so a unit's
+ * sold-out state reaches every catalogue answer.
+ */
+function stockEntries(store: CatalogStore): readonly CatalogEntry[] {
+  const ledger = stockLedger.current;
+  if (ledger === null) return store.listEntries();
+  return store.listEntries().map((entry) => ledger.applyToEntry(entry));
+}
+
 /** Build the `listProducts` handler. */
 function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
   return http.get('*/api/v1/products', async ({ request }) => {
@@ -146,7 +159,7 @@ function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
     if (!parsed.ok) return invalidRequest(options, parsed.error);
     const store = requireStore();
     const page = buildProductPage(store, parsed.filter);
-    const facets = buildFacets(store.listEntries(), parsed.filter);
+    const facets = buildFacets(stockEntries(store), parsed.filter);
     const body = {
       items: page.items,
       total: page.total,
@@ -206,10 +219,11 @@ function getProductHandler(options: CreateHandlersOptions): RequestHandler {
     if (product === undefined) {
       return notFoundProblem(options, 'product not found', { slug });
     }
+    const withStock = stockLedger.current?.applyToProduct(product) ?? product;
     if (options.scenario.name === GALLERY_SEVERAL_IMAGES_SCENARIO) {
-      return HttpResponse.json(withEveryColourImage(product));
+      return HttpResponse.json(withEveryColourImage(withStock));
     }
-    return HttpResponse.json(product);
+    return HttpResponse.json(withStock);
   });
 }
 
@@ -282,8 +296,7 @@ function pickMinimumEntry(
   store: CatalogStore,
   slug: string,
 ): ReturnType<typeof toCatalogItem> | null {
-  const entries = store
-    .listEntries()
+  const entries = stockEntries(store)
     .filter((e) => e.product.slug === slug)
     .sort((a, b) => a.storageGb - b.storageGb);
   const entry = entries.at(0);
