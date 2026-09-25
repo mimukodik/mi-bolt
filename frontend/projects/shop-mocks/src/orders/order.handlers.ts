@@ -24,7 +24,7 @@ import {
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
-import { faultResponse } from '../faults';
+import { faultResponse, loseResponseOnce } from '../faults';
 import { invalidRequest, problemResponse } from '../problem-response';
 
 import { orderStore } from '../checkout/checkout.handlers';
@@ -63,6 +63,7 @@ export const orderHandlersEntry: BusinessHandlerEntry = (
     const outcome = requireOrderStore().createOrder(sessionId, idempotencyKey, ifMatch, body);
     if (!outcome.ok) return problemResponse(outcome);
     options.persist?.(sessionId);
+    if (loseResponseOnce(options, 'order')) return HttpResponse.error();
     return HttpResponse.json(outcome.receipt, {
       status: 201,
       headers: { Location: `${options.apiRoot}/orders/${outcome.receipt.id}` },

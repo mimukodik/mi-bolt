@@ -8,10 +8,33 @@
  * `resolveScenario` keeps an unregistered scenario's name, so a fault
  * scenario needs no registry entry.
  *
+ * Three once-only families sit beside them, for the rows that retry
+ * after exactly one failure:
+ *
+ *   - `fail-once-<operation>` and `offline-once-<operation>` answer the
+ *     first matching request of a handler list like their sticky
+ *     counterparts and serve every later one normally, so the retry
+ *     succeeds.
+ *   - `lost-once-order` and `lost-once-payment-intent` let the handler
+ *     run in full — the store commits and `persist` runs — and then
+ *     replace that first committed success with a network error, as a
+ *     timeout after commit looks. A later request with the same
+ *     `Idempotency-Key` replays the stored result through the existing
+ *     idempotency path.
+ *
+ * "Once" is once per handler list: the browser builds one list per page
+ * load, so a `page.goto` that keeps the query arms the fault again while
+ * in-app navigation and a retry button do not. The fired state is keyed
+ * on the `CreateHandlersOptions` object, so it dies with the list that
+ * owns it.
+ *
  * This generalises the `cart-mutation-fails` precedent in
  * `cart/cart.handlers.ts` to every endpoint the storefront calls. Each
  * handler consults `faultResponse` before its header checks, so the
- * fault fires whatever the request carries.
+ * fault fires whatever the request carries; `faultResponse` answers the
+ * two short-circuiting once families and returns `null` for every
+ * lost-once name, which the mutating handlers consult after the store
+ * has run.
  */
 
 import { HttpResponse, type DefaultBodyType } from 'msw';
@@ -42,30 +65,94 @@ export const FAULT_OPERATIONS = [
 export type FaultOperation = (typeof FAULT_OPERATIONS)[number];
 
 /**
+ * The operations a `lost-once-<operation>` scenario can drop the
+ * response of. The set is hand-picked rather than derived from a
+ * criterion: an operation belongs here once its handler calls
+ * `loseResponseOnce` after the store committed and `persist` ran, so a
+ * new committing endpoint joins it when that call site lands.
+ */
+export const LOST_RESPONSE_OPERATIONS = ['order', 'payment-intent'] as const;
+
+/** One operation key of `LOST_RESPONSE_OPERATIONS`. */
+export type LostResponseOperation = (typeof LOST_RESPONSE_OPERATIONS)[number];
+
+/**
+ * The scenario names whose once-only fault already fired, per handler
+ * list. Keyed on the options object rather than on a module-level flag
+ * or counter, so one page load's fault cannot leak into the next list.
+ */
+const firedOnce = new WeakMap<CreateHandlersOptions, Set<string>>();
+
+/**
+ * Records that `scenarioName` fires in this handler list, answering
+ * `true` for the first call and `false` for every later one.
+ */
+function fireOnce(options: CreateHandlersOptions, scenarioName: string): boolean {
+  let fired = firedOnce.get(options);
+  if (fired === undefined) {
+    fired = new Set<string>();
+    firedOnce.set(options, fired);
+  }
+  if (fired.has(scenarioName)) return false;
+  fired.add(scenarioName);
+  return true;
+}
+
+/**
  * Builds the fault response for the scenario the options carry, or
- * `null` when the scenario names no fault for this operation.
+ * `null` when the scenario names no fault for this operation. The
+ * `lost-once-*` names always answer `null`: their handler runs in full
+ * and consults `loseResponseOnce` once the store has committed.
  */
 export function faultResponse(
   options: CreateHandlersOptions,
   operation: FaultOperation,
 ): HttpResponse<DefaultBodyType> | null {
   const scenarioName = options.scenario.name;
-  if (scenarioName === `fail-${operation}`) return simulatedFailure(options, operation);
+  if (scenarioName === `fail-${operation}`) return simulatedFailure(options, operation, 'fail');
   if (scenarioName === `offline-${operation}`) return HttpResponse.error();
+  if (scenarioName === `fail-once-${operation}` && fireOnce(options, scenarioName)) {
+    return simulatedFailure(options, operation, 'fail-once');
+  }
+  if (scenarioName === `offline-once-${operation}` && fireOnce(options, scenarioName)) {
+    return HttpResponse.error();
+  }
   return null;
 }
 
-/** The 503 Problem a `fail-<operation>` scenario serves. */
+/**
+ * Answers `true` when this handler list has to drop the response of the
+ * first committed `operation` under a `lost-once-<operation>` scenario,
+ * and `false` for every other scenario and every later request. The
+ * mutating handlers call it after the store committed and `persist` ran,
+ * and replace their success response with `HttpResponse.error()`.
+ */
+export function loseResponseOnce(
+  options: CreateHandlersOptions,
+  operation: LostResponseOperation,
+): boolean {
+  const scenarioName = options.scenario.name;
+  if (scenarioName !== `lost-once-${operation}`) return false;
+  return fireOnce(options, scenarioName);
+}
+
+/**
+ * The 503 Problem a `fail-<operation>` / `fail-once-<operation>`
+ * scenario serves; `kind` and `operation` build the scenario name the
+ * `detail` names, so a caller cannot hand in a name outside the two
+ * families.
+ */
 function simulatedFailure(
   options: CreateHandlersOptions,
   operation: FaultOperation,
+  kind: 'fail' | 'fail-once',
 ): HttpResponse<DefaultBodyType> {
   const problem: Problem = {
     type: problemType('SERVICE_UNAVAILABLE'),
     title: 'Service unavailable',
     status: 503,
     code: 'SERVICE_UNAVAILABLE',
-    detail: `Simulated failure (fail-${operation} scenario)`,
+    detail: `Simulated failure (${kind}-${operation} scenario)`,
     traceId: buildTraceId(options),
     fieldErrors: [],
     params: {},
