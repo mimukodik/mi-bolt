@@ -10,7 +10,7 @@
 
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, type Type } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -604,6 +604,29 @@ describe('T11-AC04 mobile menu drawer and shop mobile search', () => {
     await f.whenStable();
 
     expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
+  it('HeaderNav shows the menu load error when the deferred drawer fails (NG0750)', async () => {
+    // Manual mode is what lets the block be driven into its error state; the
+    // Playthrough default the rest of this file runs under never does.
+    // configureTestingModule merges, so the set-up above still stands.
+    TestBed.configureTestingModule({ deferBlockBehavior: DeferBlockBehavior.Manual });
+    const f = TestBed.createComponent(HeaderNav);
+    f.componentRef.setInput('variant', 'shop');
+    f.detectChanges();
+
+    const blocks = await f.getDeferBlocks();
+    expect(blocks.length).toBe(1);
+    await blocks[0].render(DeferBlockState.Error);
+
+    const raw: unknown = f.nativeElement;
+    if (!(raw instanceof HTMLElement)) throw new Error('Expected HTMLElement');
+    const box = raw.querySelector('[data-testid="mobile-menu-error"]');
+    expect(box).not.toBeNull();
+    const message = box?.querySelector('[data-testid="status-message"]');
+    expect(message?.textContent.trim()).toBe(
+      'A menü nem töltődött be. Frissítsd az oldalt, és próbáld újra.',
+    );
   });
 });
 

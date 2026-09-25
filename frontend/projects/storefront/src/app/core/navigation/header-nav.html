@@ -150,6 +150,7 @@
     </div>
   </header>
   <!-- Deferred so @angular/cdk (the dialog under the drawer) stays out of the initial bundle (MIM-443). -->
+  <!-- The @error block answers a failed chunk load with a message instead of a silent menu (NG0750). -->
   @defer (when drawerOpen(); prefetch on idle) {
     <app-mobile-drawer
       id="mobile-drawer"
@@ -169,5 +170,13 @@
         >
       }
     </app-mobile-drawer>
+  } @error {
+    <div class="px-4 pt-2 lg:hidden" data-testid="mobile-menu-error">
+      <app-status-message
+        message="A menü nem töltődött be. Frissítsd az oldalt, és próbáld újra."
+        severity="error"
+        [persistent]="true"
+      />
+    </div>
   }
 }
