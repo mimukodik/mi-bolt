@@ -587,6 +587,24 @@ export class OrderStore {
   }
 
   /**
+   * `true` when the session has a stored intent whose status is
+   * `'requires_action'` and whose id is not yet used by an order.
+   * `CheckoutStore.toPersistedDraft` answers with this so the
+   * snapshot keeps the draft only while a card intent waits for
+   * the payment page. The intent map is iterated directly because
+   * the map's keys are intent ids, not session ids, and the per-
+   * session read already happens on every intent check.
+   */
+  hasCardPaymentInFlight(sessionId: string): boolean {
+    for (const [intentId, stored] of this.intents) {
+      if (stored.sessionId === sessionId && stored.status === 'requires_action') {
+        if (!this.usedIntentIds.has(intentId)) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Returns the intents and receipts owned by the given session in
    * the shape `MockSnapshot` carries. Wire-shaped, with no
    * `sessionId` stamp (the snapshot is read back only in the same

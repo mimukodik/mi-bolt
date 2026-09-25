@@ -95,16 +95,34 @@ test.describe('Checkout: edge paths', () => {
         await expect(navigationReason).toHaveCount(0);
       });
 
-      // 4. Deep-link the review step with the delivery section still unsaved:
-      // open `/penztar/ellenorzes`.
-      await test.step('Deep-link the review step with the delivery section still unsaved: open `/penztar/ellenorzes`.', async () => {
+      // 4. Deep-link the review step while the contact draft is in memory:
+      // open `/penztar/ellenorzes`. The mock no longer keeps the draft in
+      // `sessionStorage` outside the card round trip (mock standard E016,
+      // owner, 2026-09-25), so the full page load drops the saved contact
+      // and the guard sends the shopper back to the contact step with the
+      // cart kept, not to the delivery step with the contact restored.
+      await test.step('Deep-link the review step while the contact draft is in memory: open `/penztar/ellenorzes`. The mock no longer keeps the draft in `sessionStorage` outside the card round trip (mock standard E016, owner, 2026-09-25), so the full page load drops the saved contact and the guard sends the shopper back to the contact step with the cart kept, not to the delivery step with the contact restored.', async () => {
         await page.goto('/penztar/ellenorzes');
 
-        await expect(page).toHaveURL(/\/penztar\/szallitas\?navigationReason=incomplete$/);
+        // The guard lands on the contact step, not on the delivery step:
+        // the saved contact was not restored across the page load.
+        await expect(page).toHaveURL(/\/penztar\/adatok\?navigationReason=incomplete$/);
         await expect(navigationReason).toBeVisible();
         await expect(navigationReason).toContainText(incompleteReason);
-        await expect(deliveryStep).toBeVisible();
+        await expect(contactPage).toBeVisible();
+        await expect(deliveryStep).toHaveCount(0);
         await expect(reviewPage).toHaveCount(0);
+
+        // The contact form starts empty: the saved draft is not restored.
+        await expect(page.getByTestId('contact-fullname-input')).toHaveValue('');
+        await expect(page.getByTestId('contact-email-input')).toHaveValue('');
+        await expect(page.getByTestId('contact-phone-input')).toHaveValue('');
+
+        // The cart is kept: the contact page's own order summary still
+        // shows the line that was added before the page load.
+        await expect(
+          page.getByTestId('order-summary-subtotal').getByTestId('price-amount'),
+        ).toBeVisible();
       });
     },
   );
