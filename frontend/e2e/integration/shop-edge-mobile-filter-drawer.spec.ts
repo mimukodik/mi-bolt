@@ -189,12 +189,27 @@ test.describe('Shop: edge paths', () => {
         await expect(priceError).toHaveText('A minimum nem lehet nagyobb a maximum árnál.');
         await expect(page).toHaveURL(onPlainCatalogue);
         await expect(resultCount).toHaveText(unfilteredCount);
+
+        // The drawer answers a refused apply by focusing the offending input:
+        // `FilterDrawer.applyDraft()` calls `FilterDrawer.focusPrice('min')`,
+        // which schedules the focus through `afterNextRender`, so it lands one
+        // render after the press. Waiting for it here is what keeps it out of
+        // step 7: until it has landed the callback is still pending, and it can
+        // fire between a fill's select-all and the Delete key that fill ends
+        // with, so the Delete clears `drawer-min-price` instead of
+        // `drawer-max-price` and the range the step clears comes back.
+        await expect(minPrice).toBeFocused();
       });
 
       // 7. Clear `drawer-min-price` and `drawer-max-price`, select `drawer-storage-256` and `drawer-inStock` again, then press `drawer-apply`.
       await test.step('7. Clear `drawer-min-price` and `drawer-max-price`, select `drawer-storage-256` and `drawer-inStock` again, then press `drawer-apply`.', async () => {
         await minPrice.fill('');
+        // Each fill must have emptied the input it was aimed at, read straight
+        // after the fill so a lost edit is a failure here rather than a stray
+        // chip two steps later.
+        await expect(minPrice).toHaveValue('');
         await maxPrice.fill('');
+        await expect(maxPrice).toHaveValue('');
         await storageFacet.click();
         await inStockFacet.click();
         await expect(storageFacet).toHaveAttribute('aria-pressed', 'true');
