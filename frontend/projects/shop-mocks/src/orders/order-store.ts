@@ -19,8 +19,11 @@
  * backend (`PaymentIntentService.java:87`,
  * `application.properties:40-42`): the redirect points at the demo
  * payment page (`/demo-fizetes/<id>`) and the return URL carries the
- * intent id in a query parameter. The 30-minute lifetime mirrors
- * `mibolt.payment.intent-lifetime=30m`.
+ * intent id in a query parameter. Under a named scenario the return URL
+ * also carries `mi-scenario=<name>`, so the shop's return leg loads the
+ * scenario it left from, while the redirect carries none, because the
+ * payment page is a separate document the shop's faults must not reach.
+ * The 30-minute lifetime mirrors `mibolt.payment.intent-lifetime=30m`.
  */
 
 import type { Problem } from '@mi-bolt/api/models/problem';
@@ -51,6 +54,7 @@ import { TERMS_VERSION, checkoutProblem } from '../checkout/checkout-store';
 import { deriveIdempotencyKey, hashPayload } from '../idempotency';
 import type { PersistedIdempotencyRecord, IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
+import { DEFAULT_SCENARIO } from '../scenarios';
 
 export const PAYMENT_INTENT_TTL_MS = 30 * 60 * 1000;
 
@@ -261,7 +265,10 @@ export class OrderStore {
       createdAt,
       expiresAt,
       redirectUrl: `/demo-fizetes/${id}`,
-      returnUrl: `/penztar?paymentIntentId=${id}`,
+      returnUrl:
+        this.options.scenario.name === DEFAULT_SCENARIO.name
+          ? `/penztar?paymentIntentId=${id}`
+          : `/penztar?paymentIntentId=${id}&mi-scenario=${encodeURIComponent(this.options.scenario.name)}`,
     };
     this.intents.set(id, stored);
     const wire = this.toWireIntent(stored);
