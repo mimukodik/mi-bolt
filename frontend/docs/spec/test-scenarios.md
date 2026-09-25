@@ -50,7 +50,7 @@ Status: specified, not implemented or executed in this planning package. Each gr
 |E045|product|variant-unavailable|Select unavailable pair|Disabled reason; no silent substitution; Add unavailable.|
 |E046|product|default|Open ?variant=missing|Explain invalid variant; require valid selection before Add.|
 |E047|product|low-stock|Try decrement below1/increment beyond available|Controls/validation prevent invalid request; no hidden clamp.|
-|E048|gallery|default|Use prev/next/thumbnails|Correct image/count/alt; stable frame and complete device.|
+|E048|gallery|gallery-several-images|Use prev/next/thumbnails|Correct image/count/alt; stable frame and complete device.|
 |E049|gallery|default|Open zoom, tab, Escape|Focus trapped, background excluded and trigger restored.|
 |E050|gallery|image-missing|Fail selected product image|Neutral fallback and product name; other functions still work.|
 |E051|gallery|default|Open/close each spec group by keyboard|Correct expanded state and associated content; no fake specification data.|
