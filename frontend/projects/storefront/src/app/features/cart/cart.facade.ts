@@ -142,6 +142,12 @@ export class CartFacade {
    */
   private postOrderToken = -1;
 
+  /**
+   * The `ensureCart()` load that is still running, shared with every
+   * caller that asks while it runs. `null` when no load is in flight.
+   */
+  private ensureInFlight: Promise<void> | null = null;
+
   constructor() {
     // The generated `Api` class relies on Angular decorator metadata
     // for constructor injection. Vitest's esbuild pipeline does not
@@ -174,11 +180,41 @@ export class CartFacade {
    * loaded snapshot makes it a no-op, and the snapshot is re-checked
    * inside the queue callback so two near-simultaneous calls collapse
    * into a single `GET /cart`.
+   *
+   * Never replaces an expired cart: while `cartExpired()` is true it
+   * returns without dispatching anything, so the expiry notice stays
+   * on screen until the shopper asks for a new cart through
+   * `refetch()` (E059: explicit expiry and new-cart path, no silent
+   * new cart on an expired state).
+   *
+   * A load already in flight is shared instead of started again: on a
+   * cold load the facade's constructor and the screen mounting beside
+   * it ask in the same task, so without the shared promise both would
+   * dispatch, and the fresh cart of the second would overtake the 410
+   * of the first.
    */
   async ensureCart(): Promise<void> {
-    if (this.cartWritable() !== null) {
+    if (this.cartWritable() !== null || this.cartExpired()) {
       return;
     }
+    const inFlight = this.ensureInFlight;
+    if (inFlight !== null) {
+      return inFlight;
+    }
+    const load = this.loadCartOnce();
+    this.ensureInFlight = load;
+    try {
+      await load;
+    } finally {
+      this.ensureInFlight = null;
+    }
+  }
+
+  /**
+   * One `GET /cart` with its result applied. Its promise is what
+   * `ensureCart()` hands to every caller that asks while it runs.
+   */
+  private async loadCartOnce(): Promise<void> {
     const token = ++this.dispatchToken;
     const intent: MutationIntent = { kind: 'refetch', retry: false };
     const result = await this.queue.enqueue(intent, (inputs) => {
@@ -262,8 +298,12 @@ export class CartFacade {
   /**
    * Refetches the active cart without an `If-Match`. Called
    * internally after a 412 to bring the local snapshot into sync
-   * with the server. Exposed for tests that need to simulate a
-   * remote version bump.
+   * with the server. It is also the shopper's explicit new-cart path
+   * after an expiry: unlike `ensureCart()` it is not blocked by
+   * `cartExpired()`, and its `applySuccess` clears the flag, so the
+   * cart page's retry button or the first add to cart starts a fresh
+   * cart (E059). Exposed for tests that need to simulate a remote
+   * version bump.
    */
   async refetch(): Promise<void> {
     const token = ++this.dispatchToken;

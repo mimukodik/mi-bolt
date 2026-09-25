@@ -345,7 +345,14 @@ export class ProductPage {
     this.addError.set(null);
     this.addSuccessMessage.set(null);
     try {
-      await this.cartFacade.ensureCart();
+      // Pressing "Kosárba teszem" is the shopper asking for a cart, so an
+      // expired one is replaced here; `ensureCart()` deliberately keeps
+      // the expiry on screen until asked (E059).
+      if (this.cartFacade.cartExpired()) {
+        await this.cartFacade.refetch();
+      } else {
+        await this.cartFacade.ensureCart();
+      }
       await this.cartFacade.addItem(intent.variantId, intent.quantity);
       // The shopper picked another colour or storage while this add was
       // in flight. Its outcome — success or failure — belongs to the

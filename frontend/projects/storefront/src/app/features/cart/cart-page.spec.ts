@@ -45,6 +45,7 @@ import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import catalogFixture from '../../../../../../docs/api/fixtures/catalog.json';
 import { type CreateHandlersOptions, createHandlers } from '@mi-bolt/mocks/create-handlers';
 import '@mi-bolt/mocks/cart/cart.handlers';
+import { CART_TTL_MS } from '@mi-bolt/mocks/cart/cart-store';
 import { isCatalogFixtureShape, loadCatalogFixture } from '@mi-bolt/mocks/catalog/catalog.handlers';
 import { Repository } from '@mi-bolt/mocks/repository';
 import {
@@ -268,6 +269,9 @@ async function resolveWorkspaceFile(url: string): Promise<string> {
   return content;
 }
 
+/** The scenario clock of the current test, so a case can age the cart past `CART_TTL_MS`. */
+let cartClock: ReturnType<typeof createFixedClock>;
+
 function makeEnv(): CreateHandlersOptions {
   const clock = createFixedClock('2026-09-20T10:00:00.000Z');
   const ids = createDeterministicIds(1);
@@ -286,6 +290,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   const env = makeEnv();
+  cartClock = env.clock;
   server.use(...createHandlers(env));
   TestBed.configureTestingModule({
     imports: [CartPage, CartLine, OrderSummary],
@@ -1716,5 +1721,112 @@ describe('focus after a cart line is removed ("következő sorra/címre")', () =
     } finally {
       process.off('unhandledRejection', onRejection);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MIM-449 / E059: an expired cart says it expired, and a new cart starts only
+// when the shopper asks for one
+// ---------------------------------------------------------------------------
+
+/**
+ * Drives the session's cart into the expired state the way the browser
+ * does: a live cart is left to age past `CART_TTL_MS`, and the next
+ * write gets the 410 the mock answers with. The facade keeps the
+ * expired flag and drops its snapshot.
+ */
+async function expireCart(cartFacade: CartFacade): Promise<void> {
+  await cartFacade.addItem(VARIANT_MOTO_256, 1);
+  cartClock.advanceMs(CART_TTL_MS);
+  await cartFacade.addItem(VARIANT_HONOR_128, 1);
+}
+
+describe('MIM-449 an expired cart shows its expiry until the shopper asks', () => {
+  it('the page shows the expiry notice after its own mount', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await expireCart(cartFacade);
+    expect(cartFacade.cartExpired()).toBe(true);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await settleMutation(fixture);
+
+    const root = getRootElement(fixture);
+    expect(root.textContent).toContain(
+      'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.',
+    );
+    expect(root.textContent).not.toContain('A kosarad még üres.');
+  });
+
+  it('the retry button starts a new empty cart', async () => {
+    const cartFacade = TestBed.inject(CartFacade);
+    await expireCart(cartFacade);
+
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await settleMutation(fixture);
+
+    const root = getRootElement(fixture);
+    getButtonElement(root, '[data-testid="error-state"] button').click();
+    await settleMutation(fixture);
+
+    expect(cartFacade.cartExpired()).toBe(false);
+    expect(cartFacade.cart()?.items).toEqual([]);
+    expect(getElement(root, 'app-empty-state').textContent).toContain('A kosarad még üres.');
+  });
+
+  it('a cold load of the cart page shows the expiry', async () => {
+    // The session's cart is expired on the mock before the facade exists: the
+    // first read answers 410 and forgets it, and only the read after that
+    // starts a fresh empty one, exactly as `ensureFreshCart` does.
+    let expiredReadServed = false;
+    server.use(
+      http.get('*/api/v1/cart', () => {
+        if (expiredReadServed) {
+          return HttpResponse.json(
+            {
+              id: 'cart-fresh-after-expiry',
+              version: 1,
+              items: [],
+              lineCount: 0,
+              totalQuantity: 0,
+              subtotal: { amount: 0, currency: 'HUF' },
+              expiresAt: '2026-12-31T23:59:59.000Z',
+              notices: [],
+            },
+            { status: 200, headers: { ETag: '"1"' } },
+          );
+        }
+        expiredReadServed = true;
+        return HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:cart-expired',
+            title: 'Gone',
+            status: 410,
+            code: 'CART_EXPIRED',
+            detail: 'The cart has expired',
+            traceId: 'spec-trace-410',
+            fieldErrors: [],
+            params: {},
+          },
+          { status: 410, headers: { 'content-type': 'application/problem+json' } },
+        );
+      }),
+    );
+
+    // A cold load: the facade and the page both ask in the same task, so
+    // neither has seen the 410 yet.
+    const fixture = TestBed.createComponent(CartPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await settleMutation(fixture);
+
+    const root = getRootElement(fixture);
+    expect(root.textContent).toContain(
+      'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.',
+    );
+    expect(root.textContent).not.toContain('A kosarad még üres.');
   });
 });

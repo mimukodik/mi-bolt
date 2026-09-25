@@ -347,7 +347,11 @@ export class CartPage {
 
   onRetry(): void {
     this.revalidating.set(true);
-    void this.facade.ensureCart().finally(() => {
+    // An expired cart is only replaced when the shopper asks for a new
+    // one; this button is that ask (E059). Every other retry reloads
+    // the session cart through the idempotent ensureCart().
+    const reload = this.facade.cartExpired() ? this.facade.refetch() : this.facade.ensureCart();
+    void reload.finally(() => {
       this.revalidating.set(false);
     });
   }

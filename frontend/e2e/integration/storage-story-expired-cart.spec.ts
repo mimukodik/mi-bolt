@@ -177,7 +177,7 @@ function toExpiredEntry(raw: string, nowMs: number): string {
 
 test.describe('Shop: storage, startup and expired-cart stories', () => {
   test(
-    '[E059] an expired cart becomes a fresh empty one and cannot be ordered from',
+    '[E059] an expired cart says it expired and starts a new one only when the shopper asks',
     { tag: '@integration' },
     async ({ page }) => {
       const desktopViewport = (page.viewportSize()?.width ?? 0) >= DESKTOP_MIN_WIDTH;
@@ -185,6 +185,8 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
       const cartBadge = page.getByTestId('cart-badge');
       const productName = page.getByTestId('product-name');
       const emptyState = page.getByTestId('empty-state');
+      const errorState = page.getByTestId('error-state');
+      const retryButton = errorState.getByRole('button', { name: 'Újrapróbálom' });
       const reasonBanner = page.getByTestId('navigation-reason');
       const addControl = desktopViewport
         ? page.getByTestId('add-to-cart-button').getByRole('button')
@@ -311,14 +313,51 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         expect(expiresAtMs).toBeGreaterThan(createdAtMs);
       });
 
-      // 3. Open `/penztar/kosar` with an explicit timeout and wait until
-      // `cart-page` has left its loading state, then read the page.
-      await test.step('3. Open `/penztar/kosar` with an explicit timeout and wait until `cart-page` has left its loading state, then read the page.', async () => {
+      // 3. Cold-load the cart page with the expired cart installed, wait for the
+      // expired read, and read it.
+      await test.step('3. Open `/penztar/kosar` (explicit timeout) with the expired cart installed, a cold load, wait for the expired read, and read the page.', async () => {
         await page.goto('/penztar/kosar', { timeout: 10000 });
-
-        // The page settles on the empty state rather than on an error: the
-        // first read answered 410 and the read after it got a fresh empty cart.
         await expect(page.getByTestId('cart-page')).toBeVisible();
+
+        // The facade reads the session's cart on boot; the seeded cart has
+        // passed its own `expiresAt`, so that read is the load's only
+        // `/api/v1/cart` and answers 410 Gone. The mock produces it inside the
+        // service worker and writes its own line for it, which the poll waits
+        // to reach the test.
+        await expect.poll(() => consoleMessages.join('\n')).toMatch(EXPIRED_CART_READ);
+
+        // The cold load shows the expiry instead of silently starting a fresh
+        // cart: the error state carries the expiry message, the "we kept your
+        // values" hint and the one retry control whose label asks for a new cart.
+        await expect(errorState).toBeVisible();
+        await expect(
+          errorState.getByRole('heading', { name: 'A kosár nem érhető el' }),
+        ).toBeVisible();
+        await expect(
+          errorState.getByText(
+            'A kosár lejárt. Indíts egy új pénztárat a frissítés gombra kattintva.',
+          ),
+        ).toBeVisible();
+        await expect(errorState.getByTestId('error-hint')).toHaveText(
+          'A korábban megadott értékeket megőrizzük.',
+        );
+        await expect(retryButton).toHaveText('Újrapróbálom');
+
+        // Nothing of the expired cart is rendered and nothing can be ordered
+        // from it: no line, no count, no summary and no continue control.
+        await expect(emptyState).toHaveCount(0);
+        await expect(page.getByTestId('cart-line')).toHaveCount(0);
+        await expect(page.getByTestId('cart-count')).toHaveCount(0);
+        await expect(page.getByTestId('order-summary')).toHaveCount(0);
+        await expect(page.getByTestId('cart-continue')).toHaveCount(0);
+      });
+
+      // 4. Press the error state's "Újrapróbálom" action and read the page.
+      await test.step('4. Press the error state\'s "Újrapróbálom" action and read the page.', async () => {
+        await retryButton.click();
+
+        // A new cart starts only because the shopper asked for one: the expiry
+        // is gone and the ordinary empty state takes its place.
         await expect(emptyState).toBeVisible();
         await expect(
           emptyState.getByRole('heading', { name: 'A kosarad még üres.' }),
@@ -328,62 +367,31 @@ test.describe('Shop: storage, startup and expired-cart stories', () => {
         ).toBeVisible();
         await expect(emptyState.getByRole('button', { name: 'Telefonokat nézek' })).toBeVisible();
 
-        // The first read of the cart answered 410 Gone. The mock produces it
-        // inside the service worker and writes its own line for it, which the
-        // poll waits to reach the test; the 410 also reaches page response
-        // events in all three engines.
-        await expect.poll(() => consoleMessages.join('\n')).toMatch(EXPIRED_CART_READ);
-
-        // Nothing of the expired cart and nothing of an error is rendered.
+        await expect(errorState).toHaveCount(0);
         await expect(page.getByTestId('cart-line')).toHaveCount(0);
-        await expect(page.getByTestId('error-state')).toHaveCount(0);
-        await expect(page.getByTestId('cart-count')).toHaveCount(0);
-        await expect(page.getByTestId('cart-continue')).toHaveCount(0);
         await expect(page.getByTestId('order-summary')).toHaveCount(0);
-
-        // The screen says nothing at all about the expiry.
-        await expect(page.locator('app-status-message')).toHaveCount(0);
-        await expect(page.getByTestId('cart-notice')).toHaveCount(0);
+        await expect(page.getByTestId('cart-continue')).toHaveCount(0);
       });
 
-      // 4. Deep-link the last step of the wizard and wait until the address
+      // 5. Deep-link the last step of the wizard and wait until the address
       // changes or `review-page` appears.
-      await test.step("4. Deep-link the last step of the wizard: `page.goto('/penztar/ellenorzes', { timeout: 10000 })` and wait until the address changes or `review-page` appears.", async () => {
+      await test.step("5. Deep-link the last step of the wizard: `page.goto('/penztar/ellenorzes', { timeout: 10000 })` and wait until the address changes or `review-page` appears.", async () => {
         await page.goto('/penztar/ellenorzes', { timeout: 10000 });
 
-        // The expired cart cannot reach the order step, so the deep link is sent
-        // back to the cart with its reason in the address bar.
-        await expect(page).toHaveURL(/\/penztar\/kosar\?navigationReason=empty-cart$/);
+        // The reload re-installs the expired snapshot (the init script of step 2
+        // runs on every navigation), so the boot read answers 410 Gone again and
+        // the guard finds no cart: the deep link is sent back to the cart with
+        // its reason in the address bar.
+        await expect(page).toHaveURL(/\/penztar\/kosar\?navigationReason=cart-unavailable$/);
         await expect(page.getByTestId('cart-page')).toBeVisible();
         await expect(page.getByTestId('review-page')).toHaveCount(0);
 
         await expect(reasonBanner).toBeVisible();
-        await expect(reasonBanner).toContainText('A kosarad üres, ezért ide irányítottunk.');
+        await expect(reasonBanner).toContainText('A kosár most nem érhető el, próbáld újra.');
         await expect(reasonBanner.getByRole('button', { name: 'Bezárás' })).toBeVisible();
 
         await expect(page.getByTestId('review-submit')).toHaveCount(0);
       });
-
-      // 5. Press the empty state's "Telefonokat nézek" action.
-      await test.step('5. Press the empty state\'s "Telefonokat nézek" action.', async () => {
-        await emptyState.getByRole('button', { name: 'Telefonokat nézek' }).click();
-
-        // The catalogue is shown, and the badge reads 0: the shopper continues
-        // on the fresh empty cart the expired one was replaced by.
-        await expect(page.getByRole('heading', { level: 1, name: 'Mobiltelefonok' })).toBeVisible();
-        await expect(cards.first()).toBeVisible();
-        await expect(cartBadge).toHaveText('0');
-      });
     },
   );
-
-  test.fixme('[E059] explicit expiry', { tag: '@integration' }, async () => {
-    // Missing expectation: "Explicit expiry" — the expired cart is replaced
-    // without a word: the cart page and the review step's banner say only that
-    // the cart is empty, and nothing tells the shopper their cart expired
-    // rather than that it was emptied (issue MIM-449). The screen shows the
-    // empty state "A kosarad még üres." and, after the review deep link, the
-    // "A kosarad üres, ezért ide irányítottunk." banner, exactly as the first
-    // test asserts.
-  });
 });
