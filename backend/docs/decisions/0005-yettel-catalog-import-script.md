@@ -205,8 +205,8 @@ changes stored URLs, not the contract (docs/02 §6.2).
 ## Consequences
 
 - The script adds about 50 MiB to a fresh worktree (Node modules + Chromium
-  download). The download is one-off and the browser binary is cached under
-  `~/.cache/ms-playwright/`.
+  download). The download is one-off and the browser binary is cached in
+  Playwright's own browser cache.
 - A yettel.hu redesign that changes one of the selectors listed above will
   break the script and require a new probe round; nothing in the contract
   protects against that.
