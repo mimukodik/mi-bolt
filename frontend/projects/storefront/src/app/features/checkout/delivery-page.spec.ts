@@ -31,6 +31,7 @@ import { CheckoutFacade, type CheckoutError, type CheckoutResult } from './check
 import { DeliveryPage } from './delivery-page';
 
 import type { CheckoutOptions } from '@mi-bolt/api/models/checkout-options';
+import type { PaymentMethodOption } from '@mi-bolt/api/models/payment-method-option';
 import type { CheckoutSession } from '@mi-bolt/api/models/checkout-session';
 import type { CheckoutSummary } from '@mi-bolt/api/models/checkout-summary';
 import type { Contact } from '@mi-bolt/api/models/contact';
@@ -172,7 +173,7 @@ function configureTestBed(): void {
 /**
  * Stubs the options fetch with the given result. Must run BEFORE
  * `TestBed.createComponent`, because the constructor kicks the fetch
- * (delivery-page.ts:108-110).
+ * (the constructor's `void this.loadOptions(true)`).
  */
 function pinEnsureOptions(result: CheckoutResult<CheckoutOptions>): void {
   const facade = TestBed.inject(CheckoutFacade);
@@ -194,7 +195,7 @@ function pinEnsureOptionsNever(): void {
  * Replaces the public `session` signal with one carrying the given
  * session. Must run BEFORE `TestBed.createComponent`, because the
  * page's `buildInitialModel()` reads it synchronously in its field
- * initialiser (delivery-page.ts:66, 200-232).
+ * initialiser (`formModel`, filled by `buildInitialModel()`).
  */
 function pinSession(session: CheckoutSession | null): void {
   const facade = TestBed.inject(CheckoutFacade);
@@ -235,7 +236,7 @@ function createReady(options: CheckoutOptions = OPTIONS): ComponentFixture<Deliv
   pinEnsureOptions({ ok: true, value: options });
   const fixture = TestBed.createComponent(DeliveryPage);
   fixture.detectChanges();
-  // The constructor's `loadOptions(false)` returns synchronously here
+  // The constructor's `loadOptions(true)` returns synchronously here
   // through the spy's resolved value; the next microtask drains inside
   // `whenStable()`.
   void fixture.whenStable();
@@ -308,6 +309,41 @@ describe('DP-01..DP-02 initial load', () => {
     // input is the same object reference the spy returned.
     expect(fixture.componentInstance.readyOptions()).toEqual(OPTIONS);
   });
+
+  it('DP-16 an arrival shows the options read now, not the snapshot an earlier visit read', async () => {
+    // What an earlier visit read, when the cart was still below the
+    // cash-on-delivery ceiling: an unforced arrival would show this.
+    const STALE = OPTIONS;
+    // What the wire answers now, after the cart grew above the ceiling.
+    const FRESH: CheckoutOptions = {
+      ...OPTIONS,
+      paymentMethods: OPTIONS.paymentMethods.map((method): PaymentMethodOption => {
+        if (method.id !== 'cash_on_delivery') return method;
+        return { ...method, available: false, unavailableReason: 'CART_VALUE_TOO_HIGH' };
+      }),
+    };
+    // Mimics `CheckoutFacade.ensureOptions`: an unforced read hands back
+    // the snapshot already held, a forced one goes to the wire
+    // (checkout.facade.ts, `ensureOptions`).
+    const facade = TestBed.inject(CheckoutFacade);
+    vi.spyOn(facade, 'ensureOptions').mockImplementation((force?: boolean) =>
+      Promise.resolve({ ok: true, value: force === true ? FRESH : STALE }),
+    );
+
+    const fixture = TestBed.createComponent(DeliveryPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // The arrival shows the options the cart allows now, so the grown
+    // cart's "Utánvét" is already unavailable when the step opens.
+    expect(fixture.componentInstance.readyOptions()).toEqual(FRESH);
+    expect(
+      fixture.componentInstance
+        .readyOptions()
+        ?.paymentMethods.find((method) => method.id === 'cash_on_delivery')?.available,
+    ).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -331,7 +367,7 @@ describe('DP-03..DP-04 options load failure', () => {
     const errorState = queryOne(root, 'app-error-state');
     expect(errorState).not.toBeNull();
     // The exact, hard-coded message the page renders for any
-    // options-load failure (delivery-page.ts:99-126). Generic by
+    // options-load failure (`loadOptions`' failure branch). Generic by
     // design (R15): the wire's own detail never reaches the DOM.
     expect(errorState?.textContent).toContain(
       'A szállítási és fizetési opciók betöltése sikertelen.',
@@ -342,16 +378,17 @@ describe('DP-03..DP-04 options load failure', () => {
   });
 
   it('DP-04 the error retry re-requests the options with force and reaches the ready state', async () => {
-    let calls = 0;
-    let lastForce: boolean | undefined;
+    // Every `force` the page passes, in order. The first read fails and
+    // every later one succeeds whatever the flag says, so the retry is
+    // what the test drives.
+    const forces: boolean[] = [];
     const facade = TestBed.inject(CheckoutFacade);
     vi.spyOn(facade, 'ensureOptions').mockImplementation((force?: boolean) => {
-      calls += 1;
-      lastForce = force;
-      if (force === true) {
-        return Promise.resolve({ ok: true, value: OPTIONS });
+      forces.push(force === true);
+      if (forces.length === 1) {
+        return Promise.resolve({ ok: false, error: UNKNOWN_ERROR });
       }
-      return Promise.resolve({ ok: false, error: UNKNOWN_ERROR });
+      return Promise.resolve({ ok: true, value: OPTIONS });
     });
 
     const fixture = TestBed.createComponent(DeliveryPage);
@@ -359,15 +396,13 @@ describe('DP-03..DP-04 options load failure', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.componentInstance.state().kind).toBe('error');
-    expect(calls).toBe(1);
-    expect(lastForce).toBe(false);
+    expect(forces).toEqual([true]);
 
     fixture.componentInstance.onRetry();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(calls).toBe(2);
-    expect(lastForce).toBe(true);
+    expect(forces).toEqual([true, true]);
     expect(fixture.componentInstance.state().kind).toBe('ready');
     const root = getRootElement(fixture);
     expect(queryOne(root, 'app-delivery-step')).not.toBeNull();

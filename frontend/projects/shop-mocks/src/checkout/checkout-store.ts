@@ -149,9 +149,24 @@ export function checkoutProblem(
  * `CartStore.touch` (no version of its own). Empty draft is "no entry
  * in the map", so `get`/`options` allocate nothing on a fresh
  * session.
+ *
+ * The draft holds contact and address data, which
+ * `docs/spec/architecture.md` line 107 keeps out of storage; the
+ * owner's one exception is the card round trip
+ * (`contracts/commerce/kommunikacio.md` §8.3), so the draft is
+ * written only while a card intent waits for the payment page, and a
+ * draft that arrived in the snapshot rides along until the shop's
+ * first `GET /checkout` of that page load.
  */
 export class CheckoutStore {
   private readonly drafts = new Map<string, CheckoutDraft>();
+  /** Sessions whose draft arrived through a hydrated snapshot and has
+   *  not been confirmed by a fresh `GET /checkout` yet. While a
+   *  session is here, `toPersistedDraft` keeps emitting the draft
+   *  even though no card intent is in flight, so the round trip
+   *  survives the page load. `releaseSnapshotDraft` drops the entry
+   *  on the shop's first checkout read after the return. */
+  private readonly draftsFromSnapshot = new Set<string>();
 
   constructor(
     private readonly storeOptions: CreateHandlersOptions,
@@ -340,6 +355,7 @@ export class CheckoutStore {
   /** Clear the draft for `OrderStore` after a successful order. */
   clearDraft(sessionId: string): void {
     this.drafts.delete(sessionId);
+    this.draftsFromSnapshot.delete(sessionId);
   }
 
   /**
@@ -348,21 +364,50 @@ export class CheckoutStore {
    * is set, so a reload restores every section the shopper had filled
    * in. `CheckoutStore.read()` already tolerates a draft pointing at
    * an option since made unavailable, so no extra guard is needed.
+   * The session is marked as snapshot-sourced so `toPersistedDraft`
+   * keeps emitting the draft until the shop's first `GET /checkout`
+   * confirms the page is live (`releaseSnapshotDraft`).
    */
   seedFromSnapshot(sessionId: string, persisted: PersistedCheckoutDraft): void {
     this.drafts.set(sessionId, { ...persisted });
+    this.draftsFromSnapshot.add(sessionId);
+  }
+
+  /**
+   * Drops the snapshot-sourced marker for `sessionId`. Called by the
+   * `GET /checkout` handler after a successful read; the answer
+   * tells the caller whether the snapshot was the only reason the
+   * draft was being persisted, so it can fire `options.persist` and
+   * overwrite the on-disk copy with one that has no draft at all.
+   * Returns `true` when the session was marked, `false` when the
+   * read came from a fresh page or the marker was already cleared.
+   */
+  releaseSnapshotDraft(sessionId: string): boolean {
+    return this.draftsFromSnapshot.delete(sessionId);
   }
 
   /**
    * Returns the draft in the shape `MockSnapshot` carries, or
-   * `undefined` when the session has no draft or the draft is empty.
-   * An empty draft is omitted from the snapshot: `hydrate()` parses
-   * an absent `checkoutDraft` the same way as one whose sections are
-   * all undefined, so the snapshot stays minimal.
+   * `undefined` when the session has no draft, the draft is empty,
+   * or the draft should not ride into storage. A draft the shopper
+   * just typed is omitted unless the payment is the card path and
+   * either a card intent is waiting for the payment page
+   * (`cardPaymentInFlight`) or the draft itself arrived through a
+   * hydrated snapshot (the card round trip's "ride along until the
+   * first GET"). `hydrate()` parses an absent `checkoutDraft` the
+   * same way as one whose sections are all undefined, so the
+   * snapshot stays minimal.
    */
-  toPersistedDraft(sessionId: string): PersistedCheckoutDraft | undefined {
+  toPersistedDraft(
+    sessionId: string,
+    cardPaymentInFlight = false,
+  ): PersistedCheckoutDraft | undefined {
     const draft = this.drafts.get(sessionId);
     if (draft === undefined || Object.keys(draft).length === 0) return undefined;
+    if (draft.payment?.method !== 'card') return undefined;
+    if (!cardPaymentInFlight && !this.draftsFromSnapshot.has(sessionId)) {
+      return undefined;
+    }
     return { ...draft };
   }
 

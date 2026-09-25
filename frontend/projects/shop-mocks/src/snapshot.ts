@@ -7,6 +7,13 @@
  * `Persistence.save()` writes. Adding an unknown top-level key would
  * make the next `hydrate()` discard the entry, so this builder is
  * the only place the snapshot is composed.
+ *
+ * The draft is included only on the card path: `CheckoutStore` keeps
+ * it out of storage for cash on delivery and for any card flow
+ * without a waiting intent, and `OrderStore.hasCardPaymentInFlight`
+ * flips the flag while a card intent waits for the payment page
+ * (the card round trip's only place personal data is allowed in
+ * storage).
  */
 import { MAX_AGE_MS, SNAPSHOT_SCHEMA_VERSION, type MockSnapshot } from './persistence';
 import type { CartStore } from './cart/cart-store';
@@ -33,7 +40,10 @@ export function buildSnapshot(
   const savedAt = new Date(nowMs).toISOString();
   const expiresAt = new Date(nowMs + MAX_AGE_MS).toISOString();
   const persistedCart = stores.cart.toPersistedCart(sessionId);
-  const persistedDraft = stores.checkout.toPersistedDraft(sessionId);
+  const persistedDraft = stores.checkout.toPersistedDraft(
+    sessionId,
+    stores.order.hasCardPaymentInFlight(sessionId),
+  );
   const persistedOrders = stores.order.toPersistedOrderState(sessionId);
   const snapshot: MockSnapshot = {
     schemaVersion: SNAPSHOT_SCHEMA_VERSION,

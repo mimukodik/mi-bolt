@@ -543,7 +543,7 @@ describe('reconcile', () => {
     expect(result.cart.version).toBe(3);
     expect(result.cart.items).toEqual([]);
     expect(result.cart.notices).toEqual([
-      { code: 'ITEM_REMOVED', variantId: VARIANT_IPHONE_BURGUNDI },
+      { code: 'ITEM_REMOVED', variantId: VARIANT_IPHONE_BURGUNDI, params: { quantity: 4 } },
     ]);
   });
 });

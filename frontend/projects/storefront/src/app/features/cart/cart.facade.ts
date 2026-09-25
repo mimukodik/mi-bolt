@@ -89,6 +89,23 @@ export class CartFacade {
   /** Public readonly cart signal. Null until `ensureCart()` lands. */
   readonly cart: Signal<Cart | null> = this.cartWritable.asReadonly();
 
+  /**
+   * Product names of the lines every cart this facade applied carried,
+   * by variant id. A line the server removed (`ITEM_REMOVED`) is no
+   * longer in the cart that reports it, so the cart page names it
+   * from here. A signal so a `computed` reading `productNameOf` tracks
+   * it the same way it tracks `cart`.
+   */
+  private readonly productNames = signal<ReadonlyMap<string, string>>(new Map<string, string>());
+
+  /**
+   * The product name of a line some cart this facade applied carried,
+   * or null when no applied cart ever carried that variant id.
+   */
+  productNameOf(variantId: string): string | null {
+    return this.productNames().get(variantId) ?? null;
+  }
+
   /** Sum of all line quantities (`Cart.totalQuantity`, the header badge number). 0 when no cart is loaded. */
   readonly itemCount: Signal<number> = computed(() => {
     const cart = this.cartWritable();
@@ -551,6 +568,13 @@ export class CartFacade {
    * a no-op as soon as the refetch settles.
    */
   private applySuccess(cart: Cart, options: { fromRefetch?: boolean } = {}): void {
+    if (cart.items.length > 0) {
+      const names = new Map(this.productNames());
+      for (const item of cart.items) {
+        names.set(item.variantId, item.productName);
+      }
+      this.productNames.set(names);
+    }
     this.cartWritable.set(cart);
     this.conflictWritable.set(null);
     this.cartExpiredWritable.set(false);

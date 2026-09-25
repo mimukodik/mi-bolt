@@ -30,7 +30,7 @@ import {
 } from './scenarios';
 import { buildSnapshot } from './snapshot';
 import { CartStore, type VariantLookupFn } from './cart/cart-store';
-import { CheckoutStore } from './checkout/checkout-store';
+import { CheckoutStore, TERMS_VERSION } from './checkout/checkout-store';
 import { OrderStore } from './orders/order-store';
 import { IdempotencyStore } from './idempotency';
 import { cartStore } from './cart/cart.handlers';
@@ -99,6 +99,19 @@ function clearStorage(): void {
 function writeRaw(value: string): void {
   rawStorage()?.setItem(STORAGE_KEY, value);
 }
+
+/** The neutral address a saved receipt carries in place of a real one
+ *  (`order-store.ts`, `REDACTED_ADDRESS`). Spelled out here rather than
+ *  imported, so the assertions do not rest on the constant they pin. */
+const REDACTED_ADDRESS = {
+  countryCode: 'HU' as const,
+  postalCode: '0000',
+  city: 'redacted',
+  line1: 'redacted',
+};
+
+/** The neutral e-mail a saved receipt carries in place of the typed one. */
+const REDACTED_CONTACT_EMAIL = 'redacted@example.invalid';
 
 function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
   return {
@@ -1221,11 +1234,25 @@ describe('OrderStore.toPersistedOrderState isolates per-session data (MIM-212 Un
 
     const a = order.toPersistedOrderState('sess-a');
     expect(a.intents).toEqual([intentA]);
-    expect(a.receipts).toEqual([receiptA]);
+    // The persisted receipt carries the neutral placeholders in place of the
+    // typed e-mail and billing name; its pickup delivery is kept as it is.
+    expect(a.receipts).toEqual([
+      {
+        ...receiptA,
+        contactEmail: REDACTED_CONTACT_EMAIL,
+        billing: { name: 'redacted', address: REDACTED_ADDRESS },
+      },
+    ]);
 
     const b = order.toPersistedOrderState('sess-b');
     expect(b.intents).toEqual([intentB]);
-    expect(b.receipts).toEqual([receiptB]);
+    expect(b.receipts).toEqual([
+      {
+        ...receiptB,
+        contactEmail: REDACTED_CONTACT_EMAIL,
+        billing: { name: 'redacted', address: REDACTED_ADDRESS },
+      },
+    ]);
   });
 });
 
@@ -1545,7 +1572,16 @@ describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
     expect(replay.status).toBe(201);
     const replayBody: unknown = await replay.json();
     expectRecord(replayBody);
-    expect(JSON.stringify(replayBody)).toBe(JSON.stringify(firstBody));
+    // The rebuilt store answers from the snapshot's idempotency cache, whose
+    // body is the redacted receipt: same order, neutral placeholders.
+    expect(JSON.stringify(replayBody)).toBe(
+      JSON.stringify({
+        ...firstBody,
+        contactEmail: REDACTED_CONTACT_EMAIL,
+        billing: { name: 'redacted', address: REDACTED_ADDRESS },
+        delivery: { optionId: 'home_delivery', address: REDACTED_ADDRESS },
+      }),
+    );
   });
 });
 
@@ -1895,6 +1931,571 @@ describe('stock ledger reload (AC13)', () => {
     expect(match).toBeDefined();
     expect(match?.['maxQuantity']).toBe(1);
     expect(match?.['availability']).toBe('in_stock');
+  });
+});
+
+describe('checkout draft storage: card path only (E016)', () => {
+  beforeAll(() => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[mocks-handlers.spec] committed fixture does not match expected shape');
+    }
+    loadCatalogFixture(catalogFixture);
+  });
+
+  const SESSION_1 = 'spec-session-e016';
+  const MOTO = 'motorola-edge-50-fusion--zold--256';
+
+  const VALID_CONTACT = {
+    fullName: 'Teszt Elek',
+    email: 'teszt.elek@pelda.hu',
+    phone: '+36301234567',
+  };
+  const VALID_BILLING = {
+    name: 'Teszt Elek',
+    address: {
+      countryCode: 'HU',
+      postalCode: '1052',
+      city: 'Budapest',
+      line1: 'Petőfi utca 1.',
+    },
+  };
+  const VALID_DELIVERY_ADDRESS = {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  };
+
+  let clock: Clock;
+  let ids: Ids;
+  let options: {
+    repository: Repository;
+    clock: Clock;
+    ids: Ids;
+    scenario: ReturnType<Repository['getScenario']>;
+    apiRoot: string;
+  };
+
+  beforeEach(() => {
+    clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    ids = createDeterministicIds(1);
+    options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+  });
+
+  function session1Headers(): Record<string, string> {
+    return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
+  }
+
+  function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+    if (!isRecord(value)) {
+      throw new Error('expected an object');
+    }
+  }
+
+  function installCapture(
+    state: { captured: MockSnapshot | null },
+    counter: { n: number },
+    snapshot: MockSnapshot | null = null,
+  ): void {
+    server.resetHandlers();
+    const persist = (sessionId: string): void => {
+      counter.n += 1;
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      state.captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now()));
+    };
+    server.use(...createHandlers({ ...options, persist, snapshot }));
+  }
+
+  async function addCartLine(): Promise<void> {
+    const res = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  async function patchFullCardDraft(ifMatch = '"2"'): Promise<void> {
+    const res = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': ifMatch },
+      body: JSON.stringify({
+        contact: {
+          fullName: 'Teszt Elek',
+          email: 'Teszt.Elek@Pelda.hu',
+          phone: '+36301234567',
+        },
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'card' },
+      }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  async function patchPaymentOnly(
+    ifMatch: string,
+    method: 'card' | 'cash_on_delivery',
+  ): Promise<void> {
+    const res = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': ifMatch },
+      body: JSON.stringify({ payment: { method } }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  async function createIntent(idempotencyKey: string, ifMatch = '"3"'): Promise<string> {
+    const res = await fetch('http://localhost/api/v1/payment-intents', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': ifMatch, 'Idempotency-Key': idempotencyKey },
+      body: '',
+    });
+    expect(res.status).toBe(201);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const id = body['id'];
+    if (typeof id !== 'string') throw new Error('id not a string');
+    return id;
+  }
+
+  async function resolveIntent(intentId: string, outcome: 'succeeded' | 'pending'): Promise<void> {
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+      method: 'POST',
+      headers: session1Headers(),
+      body: JSON.stringify({ outcome }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  it('D-01 a draft with no card payment in flight stays out of storage', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const counter = { n: 0 };
+    installCapture(state, counter);
+
+    await addCartLine();
+    await patchFullCardDraft();
+
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeUndefined();
+
+    await patchPaymentOnly('"3"', 'cash_on_delivery');
+
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeUndefined();
+  });
+
+  it('D-02 creating a card intent writes the draft', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const counter = { n: 0 };
+    installCapture(state, counter);
+
+    await addCartLine();
+    await patchFullCardDraft();
+    await createIntent('idem-e016-d02', '"3"');
+
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeDefined();
+    expect(state.captured?.checkoutDraft?.contact).toEqual(VALID_CONTACT);
+  });
+
+  it('D-03 the draft rides through the payment page', async () => {
+    const d02 = { captured: null as MockSnapshot | null };
+    const c02 = { n: 0 };
+    installCapture(d02, c02);
+    await addCartLine();
+    await patchFullCardDraft();
+    const intentId = await createIntent('idem-e016-d03', '"3"');
+    const d02Snap = d02.captured;
+    expect(d02Snap).not.toBeNull();
+
+    const d03 = { captured: null as MockSnapshot | null };
+    const c03 = { n: 0 };
+    installCapture(d03, c03, d02Snap);
+    await resolveIntent(intentId, 'succeeded');
+
+    expect(d03.captured).not.toBeNull();
+    expect(d03.captured?.checkoutDraft).toBeDefined();
+    expect(d03.captured?.checkoutDraft?.contact).toEqual(VALID_CONTACT);
+  });
+
+  it('D-04 the first checkout read after the return drops the stored draft and keeps it on the page', async () => {
+    const d02 = { captured: null as MockSnapshot | null };
+    const c02 = { n: 0 };
+    installCapture(d02, c02);
+    await addCartLine();
+    await patchFullCardDraft();
+    const intentId = await createIntent('idem-e016-d04', '"3"');
+    const d02Snap = d02.captured;
+    expect(d02Snap).not.toBeNull();
+
+    const d03 = { captured: null as MockSnapshot | null };
+    const c03 = { n: 0 };
+    installCapture(d03, c03, d02Snap);
+    await resolveIntent(intentId, 'succeeded');
+    const d03Snap = d03.captured;
+    expect(d03Snap).not.toBeNull();
+
+    const d04 = { captured: null as MockSnapshot | null };
+    const c04 = { n: 0 };
+    installCapture(d04, c04, d03Snap);
+
+    const get1 = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(get1.status).toBe(200);
+    const get1Body: unknown = await get1.json();
+    expectRecord(get1Body);
+    expectRecord(get1Body['contact']);
+    const contact = get1Body['contact'];
+    expectRecord(contact);
+    expect(contact['email']).toBe(VALID_CONTACT.email);
+    expect(c04.n).toBe(1);
+    expect(d04.captured).not.toBeNull();
+    expect(d04.captured?.checkoutDraft).toBeUndefined();
+
+    const get2 = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(get2.status).toBe(200);
+    expect(c04.n).toBe(1);
+
+    const version = get1Body['version'];
+    if (typeof version !== 'number') throw new Error('version not a number');
+    const orderRes = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...session1Headers(),
+        'If-Match': `"${String(version)}"`,
+        'Idempotency-Key': 'idem-e016-d04-order',
+      },
+      body: JSON.stringify({
+        paymentMethod: 'card',
+        paymentIntentId: intentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      }),
+    });
+    expect(orderRes.status).toBe(201);
+  });
+
+  it('D-05 a reload after the return finds no draft and keeps the cart', async () => {
+    const d02 = { captured: null as MockSnapshot | null };
+    const c02 = { n: 0 };
+    installCapture(d02, c02);
+    await addCartLine();
+    await patchFullCardDraft();
+    const intentId = await createIntent('idem-e016-d05', '"3"');
+    const d02Snap = d02.captured;
+    expect(d02Snap).not.toBeNull();
+
+    const d03 = { captured: null as MockSnapshot | null };
+    const c03 = { n: 0 };
+    installCapture(d03, c03, d02Snap);
+    await resolveIntent(intentId, 'succeeded');
+    const d03Snap = d03.captured;
+    expect(d03Snap).not.toBeNull();
+
+    const d04 = { captured: null as MockSnapshot | null };
+    const c04 = { n: 0 };
+    installCapture(d04, c04, d03Snap);
+    const get1 = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(get1.status).toBe(200);
+    const d04Snap = d04.captured;
+    expect(c04.n).toBe(1);
+
+    const d05 = { captured: null as MockSnapshot | null };
+    const c05 = { n: 0 };
+    installCapture(d05, c05, d04Snap);
+
+    const getC = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(getC.status).toBe(200);
+    const getCBody: unknown = await getC.json();
+    expectRecord(getCBody);
+    expect(getCBody['contact']).toBeUndefined();
+
+    const getCart = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(getCart.status).toBe(200);
+    const cartBody: unknown = await getCart.json();
+    expectRecord(cartBody);
+    const items = cartBody['items'];
+    if (!Array.isArray(items)) throw new Error('items not an array');
+    expect(items.length).toBe(1);
+  });
+
+  it('D-06 an unpaid intent keeps the draft only while the draft pays by card', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const counter = { n: 0 };
+    installCapture(state, counter);
+
+    await addCartLine();
+    await patchFullCardDraft();
+    await createIntent('idem-e016-d06', '"3"');
+
+    await patchPaymentOnly('"3"', 'card');
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeDefined();
+    expect(state.captured?.checkoutDraft?.payment).toEqual({ method: 'card' });
+
+    await patchPaymentOnly('"4"', 'cash_on_delivery');
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeUndefined();
+  });
+});
+
+describe('receipts in storage keep no personal data (E102)', () => {
+  beforeAll(() => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[mocks-handlers.spec] committed fixture does not match expected shape');
+    }
+    loadCatalogFixture(catalogFixture);
+  });
+
+  const SESSION_1 = 'spec-session-e102';
+  const MOTO = 'motorola-edge-50-fusion--zold--256';
+  const IDEMPOTENCY_KEY = 'idem-e102-order';
+
+  const VALID_CONTACT = {
+    fullName: 'Teszt Elek',
+    email: 'Teszt.Elek@Pelda.hu',
+    phone: '+36301234567',
+  };
+  const VALID_BILLING = {
+    name: 'Teszt Elek',
+    address: {
+      countryCode: 'HU',
+      postalCode: '1052',
+      city: 'Budapest',
+      line1: 'Petőfi utca 1.',
+    },
+  };
+  const VALID_DELIVERY_ADDRESS = {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  };
+
+  /** Everything the shopper typed that must not reach the snapshot. */
+  const PII: readonly string[] = [
+    VALID_CONTACT.email,
+    VALID_CONTACT.email.toLowerCase(),
+    VALID_CONTACT.fullName,
+    VALID_CONTACT.phone,
+    VALID_BILLING.address.line1,
+  ];
+
+  let clock: Clock;
+  let ids: Ids;
+  let options: {
+    repository: Repository;
+    clock: Clock;
+    ids: Ids;
+    scenario: ReturnType<Repository['getScenario']>;
+    apiRoot: string;
+  };
+
+  beforeEach(() => {
+    clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    ids = createDeterministicIds(1);
+    options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+  });
+
+  function session1Headers(): Record<string, string> {
+    return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
+  }
+
+  function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+    if (!isRecord(value)) {
+      throw new Error('expected an object');
+    }
+  }
+
+  function findRecord(arr: readonly unknown[]): Record<string, unknown> | undefined {
+    for (const candidate of arr) {
+      if (isRecord(candidate)) return candidate;
+    }
+    return undefined;
+  }
+
+  /**
+   * Seeds the cart, patches a complete home-delivery cash-on-delivery draft
+   * and places the order through the real handlers, with a `persist` hook
+   * that captures the snapshot `buildSnapshot` produced. Returns the 201 body.
+   */
+  async function placeCashOnDeliveryOrder(state: {
+    captured: MockSnapshot | null;
+  }): Promise<Record<string, unknown>> {
+    const persist = (sessionId: string): void => {
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      state.captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now()));
+    };
+    server.use(...createHandlers({ ...options, persist }));
+
+    const motoRes = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(motoRes.status).toBe(200);
+
+    const patchRes = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'cash_on_delivery' },
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const first = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...session1Headers(),
+        'If-Match': '"3"',
+        'Idempotency-Key': IDEMPOTENCY_KEY,
+      },
+      body: JSON.stringify({
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: '2026-09',
+        acceptedTerms: true,
+      }),
+    });
+    expect(first.status).toBe(201);
+    const firstBody: unknown = await first.json();
+    expectRecord(firstBody);
+    return firstBody;
+  }
+
+  it('R-01 the saved receipt holds none of the typed personal data', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    await placeCashOnDeliveryOrder(state);
+    if (state.captured === null) throw new Error('snapshot not captured');
+
+    expect(state.captured.receipts).toHaveLength(1);
+    const serialized = JSON.stringify(state.captured.receipts);
+    for (const needle of PII) {
+      expect(serialized).not.toContain(needle);
+    }
+
+    const receipt = findRecord(state.captured.receipts);
+    if (receipt === undefined) throw new Error('no receipt in the snapshot');
+    expect(receipt['contactEmail']).toBe(REDACTED_CONTACT_EMAIL);
+    const billing = receipt['billing'];
+    expectRecord(billing);
+    expect(billing['name']).toBe('redacted');
+  });
+
+  it('R-02 the saved replay body holds none of it either', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    await placeCashOnDeliveryOrder(state);
+    if (state.captured === null) throw new Error('snapshot not captured');
+
+    // The cash-on-delivery order is the only idempotent mutation here, so
+    // the one cached record is the `POST /orders` replay body.
+    expect(state.captured.idempotency).toHaveLength(1);
+    const serialized = JSON.stringify(state.captured.idempotency);
+    for (const needle of PII) {
+      expect(serialized).not.toContain(needle);
+    }
+  });
+
+  it('R-03 a reload answers the same order without the personal data', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const firstBody = await placeCashOnDeliveryOrder(state);
+    if (state.captured === null) throw new Error('snapshot not captured');
+    const orderId = firstBody['id'];
+    if (typeof orderId !== 'string') throw new Error('order id is not a string');
+
+    server.resetHandlers();
+    server.use(...createHandlers({ ...options, snapshot: state.captured }));
+
+    const reload = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session1Headers(),
+    });
+    expect(reload.status).toBe(200);
+    const reloadBody: unknown = await reload.json();
+    expectRecord(reloadBody);
+    expect(reloadBody['id']).toBe(firstBody['id']);
+    expect(reloadBody['orderNumber']).toBe(firstBody['orderNumber']);
+    expect(reloadBody['items']).toEqual(firstBody['items']);
+    expect(reloadBody['total']).toEqual(firstBody['total']);
+    const billing = reloadBody['billing'];
+    expectRecord(billing);
+    expect(billing['name']).toBe('redacted');
+    const delivery = reloadBody['delivery'];
+    expectRecord(delivery);
+    const address = delivery['address'];
+    expectRecord(address);
+    expect(address['line1']).toBe('redacted');
+
+    const replay = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...session1Headers(),
+        'If-Match': '"1"',
+        'Idempotency-Key': IDEMPOTENCY_KEY,
+      },
+      body: JSON.stringify({
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: '2026-09',
+        acceptedTerms: true,
+      }),
+    });
+    expect(replay.status).toBe(201);
+    const replayBody: unknown = await replay.json();
+    expectRecord(replayBody);
+    expect(replayBody['id']).toBe(firstBody['id']);
+    const serialized = JSON.stringify(replayBody);
+    for (const needle of PII) {
+      expect(serialized).not.toContain(needle);
+    }
+  });
+
+  it('R-04 the page that placed the order still reads it whole', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const firstBody = await placeCashOnDeliveryOrder(state);
+    const orderId = firstBody['id'];
+    if (typeof orderId !== 'string') throw new Error('order id is not a string');
+
+    const live = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session1Headers(),
+    });
+    expect(live.status).toBe(200);
+    const liveBody: unknown = await live.json();
+    expectRecord(liveBody);
+    expect(liveBody['contactEmail']).toBe(firstBody['contactEmail']);
+    expect(liveBody['contactEmail']).not.toBe(REDACTED_CONTACT_EMAIL);
+    expect(liveBody['billing']).toEqual(VALID_BILLING);
   });
 });
 
