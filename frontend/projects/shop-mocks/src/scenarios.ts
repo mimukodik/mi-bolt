@@ -2,8 +2,9 @@
  * T05 — scenario descriptors, deterministic clocks and ids.
  *
  * The mock layer is split by scenario: each scenario owns its own
- * Repository, its own clock origin and its own id counter. The page
- * reads `?mi-scenario=<name>` from `location.search` and passes the
+ * Repository, its own clock origin and its own id counter. The shop
+ * resolves its scenario from `?mi-scenario=<name>` or, without it, from
+ * the name its tab remembered (`resolveActiveScenario`), and passes the
  * resulting descriptor to the handler factory so two scenario
  * instances cannot leak state into each other.
  *
@@ -131,15 +132,77 @@ function hasLocationSearch(value: unknown): value is { location: { search: strin
 }
 
 /**
+ * The non-empty `?mi-scenario=<name>` of `globalThis.location`, or `null`
+ * when the document lacks `location` (Node, SSR) or the parameter is
+ * absent or empty.
+ */
+function readScenarioParam(): string | null {
+  const globalScope: unknown = globalThis;
+  if (!hasLocationSearch(globalScope)) return null;
+  const name = new URLSearchParams(globalScope.location.search).get('mi-scenario');
+  return name === null || name.length === 0 ? null : name;
+}
+
+/**
  * Reads `?mi-scenario=<name>` from `globalThis.location` when present.
  * Returns the default scenario descriptor when the document lacks
  * `location` (Node, SSR) or the query param is absent.
  */
 export function parseScenarioFromLocation(): ScenarioDescriptor {
-  const globalScope: unknown = globalThis;
-  if (!hasLocationSearch(globalScope)) return DEFAULT_SCENARIO;
-  const params = new URLSearchParams(globalScope.location.search);
-  return resolveScenario(params.get('mi-scenario'));
+  return resolveScenario(readScenarioParam());
+}
+
+/**
+ * The `sessionStorage` key under which the shop remembers the scenario
+ * its tab is running, so a page load without `?mi-scenario=` resumes it
+ * and the demo payment page, whose URL never names one, reads the shop's
+ * snapshot by it.
+ */
+export const ACTIVE_SCENARIO_KEY = 'mi-bolt.scenario';
+
+/** The storage the active-scenario helpers read and write; `undefined` where there is none. */
+export type ScenarioStorage = Pick<Storage, 'getItem' | 'setItem'> | undefined;
+
+/** The page's sessionStorage, or undefined where it is missing or denied. */
+export function browserSessionStorage(): ScenarioStorage {
+  try {
+    return typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The shop's scenario for this page load. A `?mi-scenario=<name>` in the
+ * URL wins and is remembered for the tab, so `?mi-scenario=default`
+ * switches back to the default; without it the name the tab remembered is
+ * resumed, and with neither the default runs. Storage that is missing or
+ * throws leaves the URL as the only source.
+ */
+export function resolveActiveScenario(storage: ScenarioStorage): ScenarioDescriptor {
+  const fromUrl = readScenarioParam();
+  if (fromUrl === null) return resolveScenario(readActiveScenarioName(storage));
+  const scenario = resolveScenario(fromUrl);
+  try {
+    storage?.setItem(ACTIVE_SCENARIO_KEY, scenario.name);
+  } catch {
+    // A denied or full storage keeps the URL-only behaviour.
+  }
+  return scenario;
+}
+
+/**
+ * The scenario name the shop's tab remembered, or `null` when none is
+ * stored or the storage is missing or throws. The demo payment page reads
+ * it and never writes it.
+ */
+export function readActiveScenarioName(storage: ScenarioStorage): string | null {
+  try {
+    const name = storage?.getItem(ACTIVE_SCENARIO_KEY) ?? null;
+    return name === null || name.length === 0 ? null : name;
+  } catch {
+    return null;
+  }
 }
 
 /**

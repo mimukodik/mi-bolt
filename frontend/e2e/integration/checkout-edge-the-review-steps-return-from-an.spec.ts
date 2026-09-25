@@ -199,12 +199,78 @@ test.describe('Checkout: edge paths', () => {
             .some((url) => url.includes(`/penztar?paymentIntentId=${paymentIntentId}`)),
         ).toBe(true);
 
+        // The return page read the intent once on its way here, and that read
+        // is already recorded; the poll this page starts has not read yet (its
+        // first read is a second away). Counting from here is what isolates the
+        // poll's own reads from that return-page read.
+        const readsBeforePoll = intentReads.length;
+
         await expect(page.getByTestId('review-payment-status')).toHaveText(
           'Az eredmény még nem ismert, ezért nem tekintjük elutasítottnak.',
         );
-        await expect(page.getByTestId('review-payment-check').getByRole('button')).toHaveText(
-          'Állapot ellenőrzése',
+
+        // The payment is still pending, so the page polls the intent on its
+        // own and says so; the manual check control stays on screen under the
+        // polling line while the poll runs, so the shopper can read the status
+        // on demand without waiting out the read budget.
+        const polling = page.getByTestId('review-payment-polling');
+        const checkDuringPoll = page.getByTestId('review-payment-check');
+        await expect(polling).toHaveText(
+          'Az állapotot másodpercenként automatikusan ellenőrizzük.',
         );
+        await expect(checkDuringPoll.getByRole('button')).toHaveText('Állapot ellenőrzése');
+        // The polling line sits above the check control in the pending
+        // branch: the line is rendered first, the control second.
+        expect(
+          await page.evaluate(
+            ({ pollingId, checkId }) => {
+              const line = document.querySelector(`[data-testid="${pollingId}"]`);
+              const button = document.querySelector(`[data-testid="${checkId}"]`);
+              if (!(line instanceof Node) || !(button instanceof Node)) return false;
+              // DOCUMENT_POSITION_FOLLOWING (4) means the button follows the
+              // line in document order; combined with DOCUMENT_POSITION_CONTAINED_BY
+              // (16) on the same check, the line is its ancestor-relative
+              // predecessor.
+              return (
+                (line.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+              );
+            },
+            { pollingId: 'review-payment-polling', checkId: 'review-payment-check' },
+          ),
+        ).toBe(true);
+
+        // The tenth read still pending is what ends the poll. It arrives about
+        // ten seconds after the return, so this one expectation waits longer
+        // than the default.
+        await expect(page.getByTestId('review-payment-poll-exhausted')).toHaveText(
+          'Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted.',
+          { timeout: 20000 },
+        );
+
+        // Exactly the poll's ten reads, one a second, and nothing more on top.
+        expect(intentReads.length).toBe(readsBeforePoll + 10);
+        await expect(page.getByTestId('review-payment-polling')).toHaveCount(0);
+        const checkAfterExhausted = page.getByTestId('review-payment-check');
+        await expect(checkAfterExhausted.getByRole('button')).toHaveText('Állapot ellenőrzése');
+        // The exhausted sentence sits above the check control, so the shopper
+        // reads the reason first and the recovery control second.
+        expect(
+          await page.evaluate(
+            ({ exhaustedId, checkId }) => {
+              const line = document.querySelector(`[data-testid="${exhaustedId}"]`);
+              const button = document.querySelector(`[data-testid="${checkId}"]`);
+              if (!(line instanceof Node) || !(button instanceof Node)) return false;
+              return (
+                (line.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+              );
+            },
+            {
+              exhaustedId: 'review-payment-poll-exhausted',
+              checkId: 'review-payment-check',
+            },
+          ),
+        ).toBe(true);
+
         await expect(page.getByTestId('review-payment-back')).toHaveCount(0);
         await expect(page.getByTestId('review-cta-explanation')).toHaveText(
           'A kártyás fizetés jóváhagyása szükséges a rendelés leadásához.',

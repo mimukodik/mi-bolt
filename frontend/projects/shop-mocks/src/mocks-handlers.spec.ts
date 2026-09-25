@@ -30,12 +30,12 @@ import {
 } from './scenarios';
 import { buildSnapshot } from './snapshot';
 import { CartStore, type VariantLookupFn } from './cart/cart-store';
-import { CheckoutStore } from './checkout/checkout-store';
+import { CheckoutStore, TERMS_VERSION } from './checkout/checkout-store';
 import { OrderStore } from './orders/order-store';
 import { IdempotencyStore } from './idempotency';
 import { cartStore } from './cart/cart.handlers';
 import { checkoutStore, orderStore } from './checkout/checkout.handlers';
-import './payment/payment.handlers';
+import { PAYMENT_PENDING_RESOLVES_SCENARIO } from './payment/payment.handlers';
 import './orders/order.handlers';
 import { isCatalogFixtureShape, loadCatalogFixture } from './catalog/catalog.handlers';
 import { isRecord } from './is-record';
@@ -99,6 +99,19 @@ function clearStorage(): void {
 function writeRaw(value: string): void {
   rawStorage()?.setItem(STORAGE_KEY, value);
 }
+
+/** The neutral address a saved receipt carries in place of a real one
+ *  (`order-store.ts`, `REDACTED_ADDRESS`). Spelled out here rather than
+ *  imported, so the assertions do not rest on the constant they pin. */
+const REDACTED_ADDRESS = {
+  countryCode: 'HU' as const,
+  postalCode: '0000',
+  city: 'redacted',
+  line1: 'redacted',
+};
+
+/** The neutral e-mail a saved receipt carries in place of the typed one. */
+const REDACTED_CONTACT_EMAIL = 'redacted@example.invalid';
 
 function makeSnapshot(overrides: Partial<MockSnapshot> = {}): MockSnapshot {
   return {
@@ -256,6 +269,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     persistence.save(SCENARIO_KEY, snapshot);
     expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
+    expect(persistence.lastDiscard()).toBeNull();
     expect(persistence.isDenied()).toBe(false);
   });
 
@@ -266,6 +280,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
   });
 
   it('rejects an expired snapshot (>7 days old) and clears it', () => {
@@ -279,6 +294,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('stale');
   });
 
   it('rejects a version-mismatched snapshot and clears it', () => {
@@ -288,6 +304,7 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('version');
   });
 
   it('storage-denied mode keeps state in memory and warns once', () => {
@@ -346,6 +363,52 @@ describe('T05-AC03 / T05-AC04 persistence', () => {
       expect(persistence.isDenied()).toBe(false);
     } finally {
       (globalThis as { sessionStorage?: Storage | null }).sessionStorage = original;
+    }
+  });
+
+  it('falls back to denied in-memory storage when reading globalThis.sessionStorage throws SecurityError', () => {
+    // A browser whose user blocked site data or cookies throws a
+    // `SecurityError` DOMException from the `sessionStorage` getter
+    // itself, so `'sessionStorage' in globalThis` stays `true` while the
+    // read blows up (HTML standard, sessionStorage getter:
+    // https://html.spec.whatwg.org/multipage/webstorage.html).
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* suppress expected warning */
+    });
+    const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      },
+    });
+    try {
+      const persistence = createBrowserPersistence({
+        nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+      });
+      // The denial is known at construction: `startMocks` hydrates and
+      // reads `isDenied()` before anything is written, and that value
+      // drives `DemoNotice`'s memory text.
+      expect(persistence.isDenied()).toBe(true);
+      expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+      const snapshot = makeSnapshot();
+      persistence.save(SCENARIO_KEY, snapshot);
+      // The first save announces the limitation exactly once.
+      expect(warn).toHaveBeenCalledTimes(1);
+      // The snapshot round-trips through the in-memory cache.
+      expect(persistence.hydrate(SCENARIO_KEY)).toEqual(snapshot);
+      persistence.save(SCENARIO_KEY, snapshot);
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      if (originalDescriptor === undefined) {
+        // jsdom defines `sessionStorage` as an own property; if it ever
+        // stops doing so, the override is removed again instead of being
+        // restored to a descriptor that never existed.
+        Reflect.deleteProperty(globalThis, 'sessionStorage');
+      } else {
+        Object.defineProperty(globalThis, 'sessionStorage', originalDescriptor);
+      }
+      warn.mockRestore();
     }
   });
 });
@@ -663,6 +726,7 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
       });
       expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
       expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+      expect(persistence.lastDiscard()).toBe('corrupt');
     });
   }
 
@@ -673,6 +737,42 @@ describe('snapshot v2 — allowlist rejects unknown keys at every level', () => 
     });
     expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
     expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
+  });
+
+  it('a version 3 entry without usedPaymentIntentIds is a version discard, not a corrupt one', () => {
+    // A real older browser holds a version 3 entry: it has no
+    // `usedPaymentIntentIds` at all, so the allowlist would call it
+    // corrupt. The version check runs first and names the real cause.
+    const { usedPaymentIntentIds: _removed, ...version3 } = makeSnapshot({ schemaVersion: 3 });
+    writeRaw(JSON.stringify(version3));
+    const persistence = createBrowserPersistence({
+      nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+    });
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('version');
+  });
+
+  it('an entry with an unparsable savedAt is a corrupt discard', () => {
+    writeRaw(JSON.stringify(makeSnapshot({ savedAt: 'not-a-date' })));
+    const persistence = createBrowserPersistence({
+      nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+    });
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(rawStorage()?.getItem(STORAGE_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
+  });
+
+  it('lastDiscard() resets on the next hydrate', () => {
+    writeRaw('not-valid-json{{');
+    const persistence = createBrowserPersistence({
+      nowMs: () => Date.parse('2026-09-14T12:00:00.000Z'),
+    });
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBe('corrupt');
+    expect(persistence.hydrate(SCENARIO_KEY)).toBeNull();
+    expect(persistence.lastDiscard()).toBeNull();
   });
 });
 
@@ -1134,11 +1234,25 @@ describe('OrderStore.toPersistedOrderState isolates per-session data (MIM-212 Un
 
     const a = order.toPersistedOrderState('sess-a');
     expect(a.intents).toEqual([intentA]);
-    expect(a.receipts).toEqual([receiptA]);
+    // The persisted receipt carries the neutral placeholders in place of the
+    // typed e-mail and billing name; its pickup delivery is kept as it is.
+    expect(a.receipts).toEqual([
+      {
+        ...receiptA,
+        contactEmail: REDACTED_CONTACT_EMAIL,
+        billing: { name: 'redacted', address: REDACTED_ADDRESS },
+      },
+    ]);
 
     const b = order.toPersistedOrderState('sess-b');
     expect(b.intents).toEqual([intentB]);
-    expect(b.receipts).toEqual([receiptB]);
+    expect(b.receipts).toEqual([
+      {
+        ...receiptB,
+        contactEmail: REDACTED_CONTACT_EMAIL,
+        billing: { name: 'redacted', address: REDACTED_ADDRESS },
+      },
+    ]);
   });
 });
 
@@ -1458,7 +1572,930 @@ describe('snapshot v2 — persist and seed round trip (MIM-212 Unit 2)', () => {
     expect(replay.status).toBe(201);
     const replayBody: unknown = await replay.json();
     expectRecord(replayBody);
-    expect(JSON.stringify(replayBody)).toBe(JSON.stringify(firstBody));
+    // The rebuilt store answers from the snapshot's idempotency cache, whose
+    // body is the redacted receipt: same order, neutral placeholders.
+    expect(JSON.stringify(replayBody)).toBe(
+      JSON.stringify({
+        ...firstBody,
+        contactEmail: REDACTED_CONTACT_EMAIL,
+        billing: { name: 'redacted', address: REDACTED_ADDRESS },
+        delivery: { optionId: 'home_delivery', address: REDACTED_ADDRESS },
+      }),
+    );
+  });
+});
+
+describe('payment-pending-resolves scenario (E094)', () => {
+  beforeAll(() => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[mocks-handlers.spec] committed fixture does not match expected shape');
+    }
+    loadCatalogFixture(catalogFixture);
+  });
+
+  const SESSION_1 = 'spec-session-e094';
+  const MOTO = 'motorola-edge-50-fusion--zold--256';
+
+  const VALID_CONTACT = {
+    fullName: 'Teszt Elek',
+    email: 'Teszt.Elek@Pelda.hu',
+    phone: '+36301234567',
+  };
+  const VALID_BILLING = {
+    name: 'Teszt Elek',
+    address: {
+      countryCode: 'HU',
+      postalCode: '1052',
+      city: 'Budapest',
+      line1: 'Petőfi utca 1.',
+    },
+  };
+  const VALID_DELIVERY_ADDRESS = {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  };
+
+  let clock: Clock;
+  let ids: Ids;
+  let options: {
+    repository: Repository;
+    clock: Clock;
+    ids: Ids;
+    scenario: ReturnType<Repository['getScenario']>;
+    apiRoot: string;
+  };
+
+  beforeEach(() => {
+    clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    ids = createDeterministicIds(1);
+    options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+  });
+
+  function session1Headers(): Record<string, string> {
+    return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
+  }
+
+  function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+    if (!isRecord(value)) {
+      throw new Error('expected an object');
+    }
+  }
+
+  /** Installs one handler list for the named scenario and the persist spy. */
+  function installHandlers(scenarioName: string, persist: (sessionId: string) => void): void {
+    server.use(...createHandlers({ ...options, scenario: resolveScenario(scenarioName), persist }));
+  }
+
+  /** Seeds one cart line, patches a complete card draft and creates an intent. */
+  async function createCardIntent(): Promise<string> {
+    const cartRes = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(cartRes.status).toBe(200);
+
+    const patchRes = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'card' },
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const intentRes = await fetch('http://localhost/api/v1/payment-intents', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"3"', 'Idempotency-Key': 'idem-int-e094-1' },
+      body: '',
+    });
+    expect(intentRes.status).toBe(201);
+    const body: unknown = await intentRes.json();
+    expectRecord(body);
+    const id = body['id'];
+    if (typeof id !== 'string') throw new Error('id not a string');
+    return id;
+  }
+
+  /** Resolves the intent as pending through the outcome endpoint. */
+  async function resolvePending(intentId: string): Promise<void> {
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+      method: 'POST',
+      headers: session1Headers(),
+      body: JSON.stringify({ outcome: 'pending' }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  /** Reads the intent and returns the wire status. */
+  async function readStatus(intentId: string): Promise<unknown> {
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}`, {
+      headers: session1Headers(),
+    });
+    expect(res.status).toBe(200);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    return body['status'];
+  }
+
+  it('a pending intent answers pending twice and succeeded on the third read', async () => {
+    const persist = vi.fn();
+    installHandlers(PAYMENT_PENDING_RESOLVES_SCENARIO, persist);
+    const intentId = await createCardIntent();
+    await resolvePending(intentId);
+
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('succeeded');
+    expect(await readStatus(intentId)).toBe('succeeded');
+  });
+
+  it('the resolving read persists the session once', async () => {
+    const persist = vi.fn();
+    installHandlers(PAYMENT_PENDING_RESOLVES_SCENARIO, persist);
+    const intentId = await createCardIntent();
+    await resolvePending(intentId);
+    persist.mockClear();
+
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(0);
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(0);
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(persist).toHaveBeenCalledWith(SESSION_1);
+    await readStatus(intentId);
+    expect(persist).toHaveBeenCalledTimes(1);
+  });
+
+  it('an intent that is not pending does not count its reads', async () => {
+    const persist = vi.fn();
+    installHandlers(PAYMENT_PENDING_RESOLVES_SCENARIO, persist);
+    const intentId = await createCardIntent();
+
+    expect(await readStatus(intentId)).toBe('requires_action');
+    expect(await readStatus(intentId)).toBe('requires_action');
+    expect(await readStatus(intentId)).toBe('requires_action');
+
+    await resolvePending(intentId);
+
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('succeeded');
+  });
+
+  it('the default scenario keeps a pending intent pending', async () => {
+    const persist = vi.fn();
+    installHandlers(DEFAULT_SCENARIO.name, persist);
+    const intentId = await createCardIntent();
+    await resolvePending(intentId);
+    persist.mockClear();
+
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(await readStatus(intentId)).toBe('pending');
+    expect(persist).toHaveBeenCalledTimes(0);
+  });
+});
+
+const HONOR_BLACK_512_MOCK = 'honor-magic-v6--fekete--512';
+const MOCK_TERMS_VERSION = '2026-09';
+
+async function mockAddLine(variantId: string, ifMatch: string): Promise<void> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...S1_HEADERS(), 'If-Match': ifMatch },
+    body: JSON.stringify({ variantId, quantity: 1 }),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function mockPatchCardDraft(ifMatch: string): Promise<void> {
+  const res = await fetch('http://localhost/api/v1/checkout', {
+    method: 'PATCH',
+    headers: { ...S1_HEADERS(), 'If-Match': ifMatch },
+    body: JSON.stringify({
+      contact: VALID_CONTACT_LOCAL,
+      billing: VALID_BILLING_LOCAL,
+      delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS_LOCAL },
+      payment: { method: 'card' },
+    }),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function mockCreateCardIntent(
+  ifMatch: string,
+  idempotencyKey: string,
+): Promise<{ status: number; body: unknown; headers: Headers }> {
+  const res = await fetch('http://localhost/api/v1/payment-intents', {
+    method: 'POST',
+    headers: {
+      ...S1_HEADERS(),
+      'If-Match': ifMatch,
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: '',
+  });
+  const body: unknown = await res.json();
+  return { status: res.status, body, headers: res.headers };
+}
+
+async function mockResolveIntent(
+  intentId: string,
+  outcome: string,
+): Promise<{ status: number; body: unknown }> {
+  const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+    method: 'POST',
+    headers: S1_HEADERS(),
+    body: JSON.stringify({ outcome }),
+  });
+  const body: unknown = await res.json();
+  return { status: res.status, body };
+}
+
+const S1_HEADERS = (): Record<string, string> => ({
+  'X-Demo-Session': 'spec-session-0001',
+  'Content-Type': 'application/json',
+});
+const VALID_CONTACT_LOCAL = {
+  fullName: 'Teszt Elek',
+  email: 'Teszt.Elek@Pelda.hu',
+  phone: '+36301234567',
+};
+const VALID_BILLING_LOCAL = {
+  name: 'Teszt Elek',
+  address: {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  },
+};
+const VALID_DELIVERY_ADDRESS_LOCAL = {
+  countryCode: 'HU',
+  postalCode: '1052',
+  city: 'Budapest',
+  line1: 'Petőfi utca 1.',
+};
+
+function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+  expect(isRecord(value)).toBe(true);
+}
+
+describe('stock ledger reload (AC13)', () => {
+  const localClock = createFixedClock('2026-09-14T11:00:00.000Z');
+  const localIds = createDeterministicIds(1);
+  const localOptions = {
+    repository: new Repository(DEFAULT_SCENARIO, localIds, localClock),
+    clock: localClock,
+    ids: localIds,
+    scenario: DEFAULT_SCENARIO,
+    apiRoot: '/api/v1',
+  };
+  beforeEach(() => {
+    server.use(...createHandlers(localOptions));
+  });
+  it('S-05 a reload rebuilds the sales from the persisted receipts', async () => {
+    let captured: MockSnapshot | null = null;
+    const persistCalls: string[] = [];
+    const persist = (sessionId: string): void => {
+      persistCalls.push(sessionId);
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(localClock.now()));
+    };
+    server.use(...createHandlers({ ...localOptions, persist }));
+
+    await mockAddLine(HONOR_BLACK_512_MOCK, '"1"');
+    await mockPatchCardDraft('"2"');
+    const intentRes = await mockCreateCardIntent('"3"', 'idem-int-stock-reload-0005');
+    expect(intentRes.status).toBe(201);
+    const intentBody = intentRes.body as Record<string, unknown>;
+    const paymentIntentId = intentBody['id'];
+    expect(typeof paymentIntentId === 'string').toBe(true);
+    const resolved = await mockResolveIntent(paymentIntentId as string, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const orderRes = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...S1_HEADERS(),
+        'If-Match': '"3"',
+        'Idempotency-Key': 'idem-stock-reload-0005',
+      },
+      body: JSON.stringify({
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: MOCK_TERMS_VERSION,
+        acceptedTerms: true,
+      }),
+    });
+    expect(orderRes.status).toBe(201);
+
+    expect(captured).not.toBeNull();
+    server.resetHandlers();
+    server.use(...createHandlers({ ...localOptions, snapshot: captured }));
+
+    const productRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: S1_HEADERS(),
+    });
+    expect(productRes.status).toBe(200);
+    const productBody: unknown = await productRes.json();
+    expectRecord(productBody);
+    const variants = productBody['variants'];
+    expect(Array.isArray(variants)).toBe(true);
+    let match: Record<string, unknown> | undefined;
+    for (const candidate of variants as readonly unknown[]) {
+      expectRecord(candidate);
+      if (candidate['id'] === HONOR_BLACK_512_MOCK) {
+        match = candidate;
+        break;
+      }
+    }
+    expect(match).toBeDefined();
+    expect(match?.['maxQuantity']).toBe(1);
+    expect(match?.['availability']).toBe('in_stock');
+  });
+});
+
+describe('checkout draft storage: card path only (E016)', () => {
+  beforeAll(() => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[mocks-handlers.spec] committed fixture does not match expected shape');
+    }
+    loadCatalogFixture(catalogFixture);
+  });
+
+  const SESSION_1 = 'spec-session-e016';
+  const MOTO = 'motorola-edge-50-fusion--zold--256';
+
+  const VALID_CONTACT = {
+    fullName: 'Teszt Elek',
+    email: 'teszt.elek@pelda.hu',
+    phone: '+36301234567',
+  };
+  const VALID_BILLING = {
+    name: 'Teszt Elek',
+    address: {
+      countryCode: 'HU',
+      postalCode: '1052',
+      city: 'Budapest',
+      line1: 'Petőfi utca 1.',
+    },
+  };
+  const VALID_DELIVERY_ADDRESS = {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  };
+
+  let clock: Clock;
+  let ids: Ids;
+  let options: {
+    repository: Repository;
+    clock: Clock;
+    ids: Ids;
+    scenario: ReturnType<Repository['getScenario']>;
+    apiRoot: string;
+  };
+
+  beforeEach(() => {
+    clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    ids = createDeterministicIds(1);
+    options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+  });
+
+  function session1Headers(): Record<string, string> {
+    return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
+  }
+
+  function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+    if (!isRecord(value)) {
+      throw new Error('expected an object');
+    }
+  }
+
+  function installCapture(
+    state: { captured: MockSnapshot | null },
+    counter: { n: number },
+    snapshot: MockSnapshot | null = null,
+  ): void {
+    server.resetHandlers();
+    const persist = (sessionId: string): void => {
+      counter.n += 1;
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      state.captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now()));
+    };
+    server.use(...createHandlers({ ...options, persist, snapshot }));
+  }
+
+  async function addCartLine(): Promise<void> {
+    const res = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  async function patchFullCardDraft(ifMatch = '"2"'): Promise<void> {
+    const res = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': ifMatch },
+      body: JSON.stringify({
+        contact: {
+          fullName: 'Teszt Elek',
+          email: 'Teszt.Elek@Pelda.hu',
+          phone: '+36301234567',
+        },
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'card' },
+      }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  async function patchPaymentOnly(
+    ifMatch: string,
+    method: 'card' | 'cash_on_delivery',
+  ): Promise<void> {
+    const res = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': ifMatch },
+      body: JSON.stringify({ payment: { method } }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  async function createIntent(idempotencyKey: string, ifMatch = '"3"'): Promise<string> {
+    const res = await fetch('http://localhost/api/v1/payment-intents', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': ifMatch, 'Idempotency-Key': idempotencyKey },
+      body: '',
+    });
+    expect(res.status).toBe(201);
+    const body: unknown = await res.json();
+    expectRecord(body);
+    const id = body['id'];
+    if (typeof id !== 'string') throw new Error('id not a string');
+    return id;
+  }
+
+  async function resolveIntent(intentId: string, outcome: 'succeeded' | 'pending'): Promise<void> {
+    const res = await fetch(`http://localhost/api/v1/payment-intents/${intentId}/outcome`, {
+      method: 'POST',
+      headers: session1Headers(),
+      body: JSON.stringify({ outcome }),
+    });
+    expect(res.status).toBe(200);
+  }
+
+  it('D-01 a draft with no card payment in flight stays out of storage', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const counter = { n: 0 };
+    installCapture(state, counter);
+
+    await addCartLine();
+    await patchFullCardDraft();
+
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeUndefined();
+
+    await patchPaymentOnly('"3"', 'cash_on_delivery');
+
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeUndefined();
+  });
+
+  it('D-02 creating a card intent writes the draft', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const counter = { n: 0 };
+    installCapture(state, counter);
+
+    await addCartLine();
+    await patchFullCardDraft();
+    await createIntent('idem-e016-d02', '"3"');
+
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeDefined();
+    expect(state.captured?.checkoutDraft?.contact).toEqual(VALID_CONTACT);
+  });
+
+  it('D-03 the draft rides through the payment page', async () => {
+    const d02 = { captured: null as MockSnapshot | null };
+    const c02 = { n: 0 };
+    installCapture(d02, c02);
+    await addCartLine();
+    await patchFullCardDraft();
+    const intentId = await createIntent('idem-e016-d03', '"3"');
+    const d02Snap = d02.captured;
+    expect(d02Snap).not.toBeNull();
+
+    const d03 = { captured: null as MockSnapshot | null };
+    const c03 = { n: 0 };
+    installCapture(d03, c03, d02Snap);
+    await resolveIntent(intentId, 'succeeded');
+
+    expect(d03.captured).not.toBeNull();
+    expect(d03.captured?.checkoutDraft).toBeDefined();
+    expect(d03.captured?.checkoutDraft?.contact).toEqual(VALID_CONTACT);
+  });
+
+  it('D-04 the first checkout read after the return drops the stored draft and keeps it on the page', async () => {
+    const d02 = { captured: null as MockSnapshot | null };
+    const c02 = { n: 0 };
+    installCapture(d02, c02);
+    await addCartLine();
+    await patchFullCardDraft();
+    const intentId = await createIntent('idem-e016-d04', '"3"');
+    const d02Snap = d02.captured;
+    expect(d02Snap).not.toBeNull();
+
+    const d03 = { captured: null as MockSnapshot | null };
+    const c03 = { n: 0 };
+    installCapture(d03, c03, d02Snap);
+    await resolveIntent(intentId, 'succeeded');
+    const d03Snap = d03.captured;
+    expect(d03Snap).not.toBeNull();
+
+    const d04 = { captured: null as MockSnapshot | null };
+    const c04 = { n: 0 };
+    installCapture(d04, c04, d03Snap);
+
+    const get1 = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(get1.status).toBe(200);
+    const get1Body: unknown = await get1.json();
+    expectRecord(get1Body);
+    expectRecord(get1Body['contact']);
+    const contact = get1Body['contact'];
+    expectRecord(contact);
+    expect(contact['email']).toBe(VALID_CONTACT.email);
+    expect(c04.n).toBe(1);
+    expect(d04.captured).not.toBeNull();
+    expect(d04.captured?.checkoutDraft).toBeUndefined();
+
+    const get2 = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(get2.status).toBe(200);
+    expect(c04.n).toBe(1);
+
+    const version = get1Body['version'];
+    if (typeof version !== 'number') throw new Error('version not a number');
+    const orderRes = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...session1Headers(),
+        'If-Match': `"${String(version)}"`,
+        'Idempotency-Key': 'idem-e016-d04-order',
+      },
+      body: JSON.stringify({
+        paymentMethod: 'card',
+        paymentIntentId: intentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      }),
+    });
+    expect(orderRes.status).toBe(201);
+  });
+
+  it('D-05 a reload after the return finds no draft and keeps the cart', async () => {
+    const d02 = { captured: null as MockSnapshot | null };
+    const c02 = { n: 0 };
+    installCapture(d02, c02);
+    await addCartLine();
+    await patchFullCardDraft();
+    const intentId = await createIntent('idem-e016-d05', '"3"');
+    const d02Snap = d02.captured;
+    expect(d02Snap).not.toBeNull();
+
+    const d03 = { captured: null as MockSnapshot | null };
+    const c03 = { n: 0 };
+    installCapture(d03, c03, d02Snap);
+    await resolveIntent(intentId, 'succeeded');
+    const d03Snap = d03.captured;
+    expect(d03Snap).not.toBeNull();
+
+    const d04 = { captured: null as MockSnapshot | null };
+    const c04 = { n: 0 };
+    installCapture(d04, c04, d03Snap);
+    const get1 = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(get1.status).toBe(200);
+    const d04Snap = d04.captured;
+    expect(c04.n).toBe(1);
+
+    const d05 = { captured: null as MockSnapshot | null };
+    const c05 = { n: 0 };
+    installCapture(d05, c05, d04Snap);
+
+    const getC = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(getC.status).toBe(200);
+    const getCBody: unknown = await getC.json();
+    expectRecord(getCBody);
+    expect(getCBody['contact']).toBeUndefined();
+
+    const getCart = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(getCart.status).toBe(200);
+    const cartBody: unknown = await getCart.json();
+    expectRecord(cartBody);
+    const items = cartBody['items'];
+    if (!Array.isArray(items)) throw new Error('items not an array');
+    expect(items.length).toBe(1);
+  });
+
+  it('D-06 an unpaid intent keeps the draft only while the draft pays by card', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const counter = { n: 0 };
+    installCapture(state, counter);
+
+    await addCartLine();
+    await patchFullCardDraft();
+    await createIntent('idem-e016-d06', '"3"');
+
+    await patchPaymentOnly('"3"', 'card');
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeDefined();
+    expect(state.captured?.checkoutDraft?.payment).toEqual({ method: 'card' });
+
+    await patchPaymentOnly('"4"', 'cash_on_delivery');
+    expect(state.captured).not.toBeNull();
+    expect(state.captured?.checkoutDraft).toBeUndefined();
+  });
+});
+
+describe('receipts in storage keep no personal data (E102)', () => {
+  beforeAll(() => {
+    if (!isCatalogFixtureShape(catalogFixture)) {
+      throw new Error('[mocks-handlers.spec] committed fixture does not match expected shape');
+    }
+    loadCatalogFixture(catalogFixture);
+  });
+
+  const SESSION_1 = 'spec-session-e102';
+  const MOTO = 'motorola-edge-50-fusion--zold--256';
+  const IDEMPOTENCY_KEY = 'idem-e102-order';
+
+  const VALID_CONTACT = {
+    fullName: 'Teszt Elek',
+    email: 'Teszt.Elek@Pelda.hu',
+    phone: '+36301234567',
+  };
+  const VALID_BILLING = {
+    name: 'Teszt Elek',
+    address: {
+      countryCode: 'HU',
+      postalCode: '1052',
+      city: 'Budapest',
+      line1: 'Petőfi utca 1.',
+    },
+  };
+  const VALID_DELIVERY_ADDRESS = {
+    countryCode: 'HU',
+    postalCode: '1052',
+    city: 'Budapest',
+    line1: 'Petőfi utca 1.',
+  };
+
+  /** Everything the shopper typed that must not reach the snapshot. */
+  const PII: readonly string[] = [
+    VALID_CONTACT.email,
+    VALID_CONTACT.email.toLowerCase(),
+    VALID_CONTACT.fullName,
+    VALID_CONTACT.phone,
+    VALID_BILLING.address.line1,
+  ];
+
+  let clock: Clock;
+  let ids: Ids;
+  let options: {
+    repository: Repository;
+    clock: Clock;
+    ids: Ids;
+    scenario: ReturnType<Repository['getScenario']>;
+    apiRoot: string;
+  };
+
+  beforeEach(() => {
+    clock = createFixedClock('2026-09-20T10:00:00.000Z');
+    ids = createDeterministicIds(1);
+    options = {
+      repository: new Repository(DEFAULT_SCENARIO, ids, clock),
+      clock,
+      ids,
+      scenario: DEFAULT_SCENARIO,
+      apiRoot: '/api/v1',
+    };
+  });
+
+  function session1Headers(): Record<string, string> {
+    return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
+  }
+
+  function expectRecord(value: unknown): asserts value is Record<string, unknown> {
+    if (!isRecord(value)) {
+      throw new Error('expected an object');
+    }
+  }
+
+  function findRecord(arr: readonly unknown[]): Record<string, unknown> | undefined {
+    for (const candidate of arr) {
+      if (isRecord(candidate)) return candidate;
+    }
+    return undefined;
+  }
+
+  /**
+   * Seeds the cart, patches a complete home-delivery cash-on-delivery draft
+   * and places the order through the real handlers, with a `persist` hook
+   * that captures the snapshot `buildSnapshot` produced. Returns the 201 body.
+   */
+  async function placeCashOnDeliveryOrder(state: {
+    captured: MockSnapshot | null;
+  }): Promise<Record<string, unknown>> {
+    const persist = (sessionId: string): void => {
+      const cart = cartStore.current;
+      const checkout = checkoutStore.current;
+      const order = orderStore.current;
+      if (cart === null || checkout === null || order === null)
+        throw new Error('stores not initialised');
+      state.captured = buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now()));
+    };
+    server.use(...createHandlers({ ...options, persist }));
+
+    const motoRes = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': '"1"' },
+      body: JSON.stringify({ variantId: MOTO, quantity: 1 }),
+    });
+    expect(motoRes.status).toBe(200);
+
+    const patchRes = await fetch('http://localhost/api/v1/checkout', {
+      method: 'PATCH',
+      headers: { ...session1Headers(), 'If-Match': '"2"' },
+      body: JSON.stringify({
+        contact: VALID_CONTACT,
+        billing: VALID_BILLING,
+        delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+        payment: { method: 'cash_on_delivery' },
+      }),
+    });
+    expect(patchRes.status).toBe(200);
+
+    const first = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...session1Headers(),
+        'If-Match': '"3"',
+        'Idempotency-Key': IDEMPOTENCY_KEY,
+      },
+      body: JSON.stringify({
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: '2026-09',
+        acceptedTerms: true,
+      }),
+    });
+    expect(first.status).toBe(201);
+    const firstBody: unknown = await first.json();
+    expectRecord(firstBody);
+    return firstBody;
+  }
+
+  it('R-01 the saved receipt holds none of the typed personal data', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    await placeCashOnDeliveryOrder(state);
+    if (state.captured === null) throw new Error('snapshot not captured');
+
+    expect(state.captured.receipts).toHaveLength(1);
+    const serialized = JSON.stringify(state.captured.receipts);
+    for (const needle of PII) {
+      expect(serialized).not.toContain(needle);
+    }
+
+    const receipt = findRecord(state.captured.receipts);
+    if (receipt === undefined) throw new Error('no receipt in the snapshot');
+    expect(receipt['contactEmail']).toBe(REDACTED_CONTACT_EMAIL);
+    const billing = receipt['billing'];
+    expectRecord(billing);
+    expect(billing['name']).toBe('redacted');
+  });
+
+  it('R-02 the saved replay body holds none of it either', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    await placeCashOnDeliveryOrder(state);
+    if (state.captured === null) throw new Error('snapshot not captured');
+
+    // The cash-on-delivery order is the only idempotent mutation here, so
+    // the one cached record is the `POST /orders` replay body.
+    expect(state.captured.idempotency).toHaveLength(1);
+    const serialized = JSON.stringify(state.captured.idempotency);
+    for (const needle of PII) {
+      expect(serialized).not.toContain(needle);
+    }
+  });
+
+  it('R-03 a reload answers the same order without the personal data', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const firstBody = await placeCashOnDeliveryOrder(state);
+    if (state.captured === null) throw new Error('snapshot not captured');
+    const orderId = firstBody['id'];
+    if (typeof orderId !== 'string') throw new Error('order id is not a string');
+
+    server.resetHandlers();
+    server.use(...createHandlers({ ...options, snapshot: state.captured }));
+
+    const reload = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session1Headers(),
+    });
+    expect(reload.status).toBe(200);
+    const reloadBody: unknown = await reload.json();
+    expectRecord(reloadBody);
+    expect(reloadBody['id']).toBe(firstBody['id']);
+    expect(reloadBody['orderNumber']).toBe(firstBody['orderNumber']);
+    expect(reloadBody['items']).toEqual(firstBody['items']);
+    expect(reloadBody['total']).toEqual(firstBody['total']);
+    const billing = reloadBody['billing'];
+    expectRecord(billing);
+    expect(billing['name']).toBe('redacted');
+    const delivery = reloadBody['delivery'];
+    expectRecord(delivery);
+    const address = delivery['address'];
+    expectRecord(address);
+    expect(address['line1']).toBe('redacted');
+
+    const replay = await fetch('http://localhost/api/v1/orders', {
+      method: 'POST',
+      headers: {
+        ...session1Headers(),
+        'If-Match': '"1"',
+        'Idempotency-Key': IDEMPOTENCY_KEY,
+      },
+      body: JSON.stringify({
+        paymentMethod: 'cash_on_delivery',
+        termsVersion: '2026-09',
+        acceptedTerms: true,
+      }),
+    });
+    expect(replay.status).toBe(201);
+    const replayBody: unknown = await replay.json();
+    expectRecord(replayBody);
+    expect(replayBody['id']).toBe(firstBody['id']);
+    const serialized = JSON.stringify(replayBody);
+    for (const needle of PII) {
+      expect(serialized).not.toContain(needle);
+    }
+  });
+
+  it('R-04 the page that placed the order still reads it whole', async () => {
+    const state = { captured: null as MockSnapshot | null };
+    const firstBody = await placeCashOnDeliveryOrder(state);
+    const orderId = firstBody['id'];
+    if (typeof orderId !== 'string') throw new Error('order id is not a string');
+
+    const live = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session1Headers(),
+    });
+    expect(live.status).toBe(200);
+    const liveBody: unknown = await live.json();
+    expectRecord(liveBody);
+    expect(liveBody['contactEmail']).toBe(firstBody['contactEmail']);
+    expect(liveBody['contactEmail']).not.toBe(REDACTED_CONTACT_EMAIL);
+    expect(liveBody['billing']).toEqual(VALID_BILLING);
   });
 });
 

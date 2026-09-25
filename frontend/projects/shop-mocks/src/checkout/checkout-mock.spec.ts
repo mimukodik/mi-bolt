@@ -2,8 +2,9 @@
  * MIM-212 — checkout, payment intent and order mock spec on the
  * 2.0.0 contract.
  *
- * 76 cases over `/checkout/options`, `/checkout`, `/payment-intents`
- * and `/orders` (31 + 17 + 28), measured against the configured backend values the
+ * 81 cases over `/checkout/options`, `/checkout`, `/payment-intents`,
+ * `/orders` and the once-only fault scenarios (31 + 17 + 29 + 4),
+ * measured against the configured backend values the
  * addendum of `/tmp/s3-a-design.md` (2026-09-20 ~21:25Z) locks in.
  * Every case asserts an exact wire value, never `.exists()`-style
  * coverage; the spec is the independent measurement of the mock
@@ -25,7 +26,7 @@ import {
 import { CART_TTL_MS, CartStore, type VariantLookupFn } from '../cart/cart-store';
 import { CheckoutStore, TERMS_VERSION } from '../checkout/checkout-store';
 import { IDEMPOTENCY_WINDOW_MS } from '../idempotency';
-import '../checkout/checkout.handlers';
+import { orderStore } from '../checkout/checkout.handlers';
 import '../payment/payment.handlers';
 import '../orders/order.handlers';
 import { IdempotencyStore } from '../idempotency';
@@ -35,6 +36,7 @@ import {
   createDeterministicIds,
   createFixedClock,
   DEFAULT_SCENARIO,
+  resolveScenario,
   type Clock,
   type Ids,
 } from '../scenarios';
@@ -91,15 +93,26 @@ beforeAll(() => {
 beforeEach(() => {
   clock = createFixedClock('2026-09-20T10:00:00.000Z');
   ids = createDeterministicIds(1);
-  options = {
-    repository: new Repository(DEFAULT_SCENARIO, ids, clock),
-    clock,
-    ids,
-    scenario: DEFAULT_SCENARIO,
-    apiRoot: '/api/v1',
-  };
+  options = buildOptions(DEFAULT_SCENARIO.name);
   server.use(...createHandlers(options));
 });
+
+/**
+ * The handler-factory options for a scenario, on the test's own clock and
+ * id factory. The file's default list and a spec that needs another
+ * scenario both go through it, so `CreateHandlersOptions` is filled in
+ * once rather than per caller.
+ */
+function buildOptions(scenarioName: string): typeof options {
+  const scenario = resolveScenario(scenarioName);
+  return {
+    repository: new Repository(scenario, ids, clock),
+    clock,
+    ids,
+    scenario,
+    apiRoot: '/api/v1',
+  };
+}
 
 function session1Headers(): Record<string, string> {
   return { 'X-Demo-Session': SESSION_1, 'Content-Type': 'application/json' };
@@ -111,6 +124,14 @@ function session2Headers(): Record<string, string> {
 
 function expectRecord(value: unknown): asserts value is Record<string, unknown> {
   expect(isRecord(value)).toBe(true);
+}
+
+function expectDefined<T>(value: T | undefined): asserts value is T {
+  expect(value).toBeDefined();
+}
+
+function expectString(value: unknown, label = 'value'): asserts value is string {
+  expect(typeof value === 'string', `${label} is not a string`).toBe(true);
 }
 
 function readString(body: Record<string, unknown>, key: string): string {
@@ -836,6 +857,19 @@ describe('POST /payment-intents', () => {
     expect(location).toBe(`/api/v1/payment-intents/${id}`);
   });
 
+  it('I-01b: under a named scenario the return URL carries the scenario and the redirect does not', async () => {
+    useScenario('payment-pending-resolves');
+    await seedCompleteDraft();
+    const { status, body } = await createCardIntent('"3"', 'idem-int-0001b');
+    expect(status).toBe(201);
+    expectRecord(body);
+    const id = readString(body, 'id');
+    expect(readString(body, 'redirectUrl')).toBe(`/demo-fizetes/${id}`);
+    expect(readString(body, 'returnUrl')).toBe(
+      `/penztar?paymentIntentId=${id}&mi-scenario=payment-pending-resolves`,
+    );
+  });
+
   it('I-02: the same call with the same Idempotency-Key returns a byte-identical body', async () => {
     await seedCompleteDraft();
     const first = await createCardIntent('"3"', 'idem-int-0002');
@@ -1042,7 +1076,7 @@ describe('POST /payment-intents/:id/outcome', () => {
 });
 
 // ===========================================================================
-// E. Orders — 27 cases
+// E. Orders — 29 cases
 // ===========================================================================
 
 async function placeOrder(
@@ -1854,5 +1888,664 @@ describe('GET /orders/:id', () => {
       headers: session1Headers(),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+// ===========================================================================
+// F. Once-only fault scenarios — 4 cases
+// ===========================================================================
+
+/**
+ * Installs a handler list for the named scenario before the test's first
+ * request, the way `faults.spec.ts` `buildOptions` does. The once-only
+ * fault state is keyed on the options object, so the scenario and its
+ * `Repository` have to be built before anything is fetched.
+ */
+function useScenario(scenarioName: string): void {
+  options = buildOptions(scenarioName);
+  server.use(...createHandlers(options));
+}
+
+describe('lost-once-order scenario', () => {
+  beforeEach(() => {
+    useScenario('lost-once-order');
+  });
+
+  it('L-01: the first committed order drops its response and still commits', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+
+    await expect(
+      placeOrder(
+        {
+          paymentMethod: 'card',
+          paymentIntentId,
+          termsVersion: TERMS_VERSION,
+          acceptedTerms: true,
+        },
+        '"3"',
+        'idem-ord-lost-0001',
+      ),
+    ).rejects.toBeInstanceOf(TypeError);
+
+    // The store committed before the response was dropped: the receipt
+    // exists and the cart is the new v1 empty cart `O-03` describes.
+    const stored = orderStore.current?.toPersistedOrderState(SESSION_1);
+    expect(stored?.receipts).toHaveLength(1);
+
+    const cartAfter = await fetch('http://localhost/api/v1/cart', { headers: session1Headers() });
+    expect(cartAfter.headers.get('ETag')).toBe('"1"');
+    const cartBody: unknown = await cartAfter.json();
+    expectRecord(cartBody);
+    expect(cartBody['items']).toEqual([]);
+  });
+
+  it('L-02: the retry with the same Idempotency-Key reads the stored order back', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+    const order = {
+      paymentMethod: 'card',
+      paymentIntentId,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    };
+
+    await expect(placeOrder(order, '"3"', 'idem-ord-lost-0002')).rejects.toBeInstanceOf(TypeError);
+
+    const retry = await placeOrder(order, '"3"', 'idem-ord-lost-0002');
+    expect(retry.status).toBe(201);
+    expectRecord(retry.body);
+    expect(readString(retry.body, 'orderNumber')).toBe('DEMO-000001');
+
+    const orderId = readString(retry.body, 'id');
+    const read = await fetch(`http://localhost/api/v1/orders/${orderId}`, {
+      headers: session1Headers(),
+    });
+    expect(read.status).toBe(200);
+  });
+
+  it('L-03: a validation refusal does not spend the lost once', async () => {
+    const { paymentIntentId } = await seedCompleteCardDraftWithSucceededIntent();
+
+    const refused = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: false,
+      },
+      '"3"',
+      'idem-ord-lost-0003a',
+    );
+    expect(refused.status).toBe(422);
+    expectRecord(refused.body);
+    expect(refused.body['code']).toBe('VALIDATION_FAILED');
+
+    await expect(
+      placeOrder(
+        {
+          paymentMethod: 'card',
+          paymentIntentId,
+          termsVersion: TERMS_VERSION,
+          acceptedTerms: true,
+        },
+        '"3"',
+        'idem-ord-lost-0003b',
+      ),
+    ).rejects.toBeInstanceOf(TypeError);
+  });
+});
+
+describe('lost-once-payment-intent scenario', () => {
+  beforeEach(() => {
+    useScenario('lost-once-payment-intent');
+  });
+
+  it('L-04: the first committed intent drops its response and the retry replays it', async () => {
+    await seedCompleteDraft();
+
+    await expect(createCardIntent('"3"', 'idem-int-lost-0004')).rejects.toBeInstanceOf(TypeError);
+
+    // The store committed before the response was dropped: the intent is
+    // already in it, so the retry replays rather than creating one.
+    const stored = orderStore.current?.toPersistedOrderState(SESSION_1);
+    expect(stored?.intents).toHaveLength(1);
+
+    const retry = await createCardIntent('"3"', 'idem-int-lost-0004');
+    expect(retry.status).toBe(201);
+    expectRecord(retry.body);
+    expect(readString(retry.body, 'id')).toBe(stored?.intents[0]?.id);
+  });
+});
+
+/**
+ * Stock ledger: a committed order decrements the demo stock exactly
+ * once, and two once-only faults take a variant's whole stock at the
+ * first matching request of the handler list so the standard's rows
+ * E060 (`OUT_OF_STOCK` at add), E085 (`OUT_OF_STOCK` at confirm) and
+ * E099 (`OUT_OF_STOCK` at order) can be tested. The committed fixture
+ * keeps `apple-iphone-18-pro-max--fekete--256` at `maxQuantity: 1` and
+ * `honor-magic-v6--fekete--512` at `maxQuantity: 2`.
+ */
+const PRO_MAX_BLACK_256 = 'apple-iphone-18-pro-max--fekete--256';
+const PRO_MAX_GLECCSER_256 = 'apple-iphone-18-pro-max--gleccserszin--256';
+const MAGIC_V6_BLACK_512 = 'honor-magic-v6--fekete--512';
+
+async function addLine(
+  variantId: string,
+  ifMatch: string,
+  headers: Record<string, string> = session1Headers(),
+): Promise<void> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...headers, 'If-Match': ifMatch },
+    body: JSON.stringify({ variantId, quantity: 1 }),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function addLineExpectStatus(
+  variantId: string,
+  ifMatch: string,
+  expectedStatus: number,
+  headers: Record<string, string> = session1Headers(),
+): Promise<{ status: number; body: unknown }> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...headers, 'If-Match': ifMatch },
+    body: JSON.stringify({ variantId, quantity: 1 }),
+  });
+  expect(res.status).toBe(expectedStatus);
+  const body: unknown = await res.json();
+  return { status: res.status, body };
+}
+
+/** Read the product body and find a variant by id. */
+function findVariant(
+  body: Record<string, unknown>,
+  variantId: string,
+): Record<string, unknown> | undefined {
+  const variants = body['variants'];
+  expect(Array.isArray(variants)).toBe(true);
+  for (const candidate of variants as readonly unknown[]) {
+    expectRecord(candidate);
+    if (candidate['id'] === variantId) return candidate;
+  }
+  return undefined;
+}
+
+/** Read a list item and find a colour option by `variantId`. */
+function findColorOption(
+  item: Record<string, unknown>,
+  variantId: string,
+): Record<string, unknown> | undefined {
+  const colors = item['colors'];
+  expect(Array.isArray(colors)).toBe(true);
+  for (const candidate of colors as readonly unknown[]) {
+    expectRecord(candidate);
+    if (candidate['variantId'] === variantId) return candidate;
+  }
+  return undefined;
+}
+
+/** Read the `fekete` count of `facets.colors` on a `/products` list body. */
+function readFeketeFacetCount(body: Record<string, unknown>): number {
+  expectRecord(body);
+  const facets = body['facets'];
+  expectRecord(facets);
+  const colors = facets['colors'];
+  expect(Array.isArray(colors)).toBe(true);
+  for (const candidate of colors as readonly unknown[]) {
+    expectRecord(candidate);
+    if (candidate['value'] === 'fekete') {
+      expect(typeof candidate['count']).toBe('number');
+      return candidate['count'] as number;
+    }
+  }
+  throw new Error('fekete facet missing');
+}
+
+/** Patch the complete card draft (contact + billing + delivery + payment:card). */
+async function patchCardDraft(ifMatch: string): Promise<void> {
+  const patch = await patchCheckout(
+    {
+      contact: VALID_CONTACT,
+      billing: VALID_BILLING,
+      delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+      payment: { method: 'card' },
+    },
+    ifMatch,
+  );
+  expect(patch.status).toBe(200);
+}
+
+describe('stock ledger (AC13, E060, E085, E099)', () => {
+  it('S-01 a committed order sells its units once', async () => {
+    const listBefore = await fetch(
+      'http://localhost/api/v1/products?q=iphone%2018%20pro%20max&inStock=true&pageSize=24',
+      { headers: session1Headers() },
+    );
+    expect(listBefore.status).toBe(200);
+    const listBeforeBody: unknown = await listBefore.json();
+    expectRecord(listBeforeBody);
+    const feketeBefore = readFeketeFacetCount(listBeforeBody);
+
+    // One `apple-iphone-18-pro-max--fekete--256` card order
+    // → cart v1 empty, add at v1 → v2, patch at v2 → v3,
+    // intent at v3 → v4, order at v4 (using the actual TERMS_VERSION).
+    await addLine(PRO_MAX_BLACK_256, '"1"');
+    await patchCardDraft('"2"');
+    const intentRes = await createCardIntent('"3"', 'idem-int-stock-0001');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const placed = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-stock-0001',
+    );
+    expect(placed.status).toBe(201);
+
+    const listAfter = await fetch(
+      'http://localhost/api/v1/products?q=iphone%2018%20pro%20max&inStock=true&pageSize=24',
+      { headers: session1Headers() },
+    );
+    expect(listAfter.status).toBe(200);
+    const listAfterBody: unknown = await listAfter.json();
+    expectRecord(listAfterBody);
+    const feketeAfter = readFeketeFacetCount(listAfterBody);
+    expect(feketeAfter).toBe(feketeBefore - 1);
+
+    // The product read shows the sold variant out of stock and the
+    // sibling colour still in stock.
+    const productRes = await fetch('http://localhost/api/v1/products/apple-iphone-18-pro-max', {
+      headers: session1Headers(),
+    });
+    expect(productRes.status).toBe(200);
+    const productBody: unknown = await productRes.json();
+    expectRecord(productBody);
+    const proMaxVariant = findVariant(productBody, PRO_MAX_BLACK_256);
+    expect(proMaxVariant).toBeDefined();
+    expect(proMaxVariant?.['maxQuantity']).toBe(0);
+    expect(proMaxVariant?.['availability']).toBe('out_of_stock');
+    const sibling = findVariant(productBody, PRO_MAX_GLECCSER_256);
+    expect(sibling?.['maxQuantity']).toBe(1);
+    expect(sibling?.['availability']).toBe('in_stock');
+
+    // The list item carries the sold-out colour option, and the
+    // related-products item does too.
+    const listNoStockFilter = await fetch(
+      'http://localhost/api/v1/products?q=iphone%2018%20pro%20max&pageSize=24',
+      { headers: session1Headers() },
+    );
+    const listNoStockFilterBody: unknown = await listNoStockFilter.json();
+    expectRecord(listNoStockFilterBody);
+    const items = listNoStockFilterBody['items'];
+    expect(Array.isArray(items)).toBe(true);
+    let proMaxAt256: Record<string, unknown> | undefined;
+    for (const candidate of items as readonly unknown[]) {
+      expectRecord(candidate);
+      if (candidate['slug'] === 'apple-iphone-18-pro-max' && candidate['storageGb'] === 256) {
+        proMaxAt256 = candidate;
+        break;
+      }
+    }
+    expect(proMaxAt256).toBeDefined();
+    expectDefined(proMaxAt256);
+    const soldColor = findColorOption(proMaxAt256, PRO_MAX_BLACK_256);
+    expect(soldColor?.['availability']).toBe('out_of_stock');
+
+    const relatedRes = await fetch('http://localhost/api/v1/products/apple-iphone-18-pro/related', {
+      headers: session1Headers(),
+    });
+    expect(relatedRes.status).toBe(200);
+    const relatedBody: unknown = await relatedRes.json();
+    expect(Array.isArray(relatedBody)).toBe(true);
+    let relatedProMax: Record<string, unknown> | undefined;
+    for (const candidate of relatedBody as readonly unknown[]) {
+      expectRecord(candidate);
+      if (candidate['slug'] === 'apple-iphone-18-pro-max') {
+        relatedProMax = candidate;
+        break;
+      }
+    }
+    expect(relatedProMax).toBeDefined();
+    expectDefined(relatedProMax);
+    const relatedColor = findColorOption(relatedProMax, PRO_MAX_BLACK_256);
+    expect(relatedColor?.['availability']).toBe('out_of_stock');
+
+    // Adding the same variant to a different session now refuses as
+    // `OUT_OF_STOCK` with the variant id in the params.
+    const second = await addLineExpectStatus(PRO_MAX_BLACK_256, '"1"', 409, session2Headers());
+    expectRecord(second.body);
+    expect(second.body['code']).toBe('OUT_OF_STOCK');
+    const params = second.body['params'];
+    expectRecord(params);
+    expect(params['variantId']).toBe(PRO_MAX_BLACK_256);
+  });
+
+  it('S-02 a replayed order does not sell twice', async () => {
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await patchCardDraft('"2"');
+    const intentRes = await createCardIntent('"3"', 'idem-int-stock-0002');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const orderBody = {
+      paymentMethod: 'card',
+      paymentIntentId,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    } as const;
+
+    const first = await placeOrder(orderBody, '"3"', 'idem-stock-0002');
+    expect(first.status).toBe(201);
+    expectRecord(first.body);
+    const firstId = readString(first.body, 'id');
+
+    const second = await placeOrder(orderBody, '"3"', 'idem-stock-0002');
+    expect(second.status).toBe(201);
+    expectRecord(second.body);
+    expect(readString(second.body, 'id')).toBe(firstId);
+
+    const productRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(productRes.status).toBe(200);
+    const productBody: unknown = await productRes.json();
+    expectRecord(productBody);
+    const v = findVariant(productBody, MAGIC_V6_BLACK_512);
+    expect(v?.['maxQuantity']).toBe(1);
+    expect(v?.['availability']).toBe('in_stock');
+  });
+
+  it('S-03 stock-lost-once-order refuses the order and changes nothing', async () => {
+    useScenario('stock-lost-once-order');
+
+    // Two adds, patch card draft, intent, resolve, order.
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await addLine(PRO_MAX_BLACK_256, '"2"');
+    await patchCardDraft('"3"');
+    const intentRes = await createCardIntent('"4"', 'idem-int-stock-0003');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const refused = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"4"',
+      'idem-stock-0003',
+    );
+    expect(refused.status).toBe(409);
+    expectRecord(refused.body);
+    expect(refused.body['code']).toBe('OUT_OF_STOCK');
+    const refusedParams = refused.body['params'];
+    expectRecord(refusedParams);
+    expect(refusedParams['variantId']).toBe(PRO_MAX_BLACK_256);
+
+    const honorRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(honorRes.status).toBe(200);
+    const honorBody: unknown = await honorRes.json();
+    expectRecord(honorBody);
+    expect(findVariant(honorBody, MAGIC_V6_BLACK_512)?.['maxQuantity']).toBe(2);
+
+    const cartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartRes.status).toBe(200);
+    const cartBody: unknown = await cartRes.json();
+    expectRecord(cartBody);
+    const cartEtag = cartRes.headers.get('ETag');
+    expect(typeof cartEtag).toBe('string');
+    const cartItems = cartBody['items'];
+    expect(Array.isArray(cartItems)).toBe(true);
+    expect((cartItems as readonly unknown[]).length).toBe(1);
+    const notices = cartBody['notices'];
+    expect(Array.isArray(notices)).toBe(true);
+    const noticeList = notices as readonly unknown[];
+    let foundNotice: Record<string, unknown> | undefined;
+    for (const entry of noticeList) {
+      expectRecord(entry);
+      if (entry['code'] === 'ITEM_REMOVED' && entry['variantId'] === PRO_MAX_BLACK_256) {
+        foundNotice = entry;
+        break;
+      }
+    }
+    expect(foundNotice).toBeDefined();
+    expect(foundNotice?.['productName']).toBe('Apple iPhone 18 Pro Max');
+
+    const draftRes = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(draftRes.status).toBe(200);
+    const draftBody: unknown = await draftRes.json();
+    expectRecord(draftBody);
+    const draftContact = draftBody['contact'];
+    expectRecord(draftContact);
+    expect(draftContact['email']).toBe(VALID_CONTACT.email.toLowerCase());
+
+    expectString(cartEtag, 'ETag');
+    const cartEtagString = cartEtag;
+
+    const retryIntent = await createCardIntent(cartEtagString, 'idem-int-stock-0003b');
+    expect(retryIntent.status).toBe(201);
+    expectRecord(retryIntent.body);
+    const retryPaymentIntentId = readString(retryIntent.body, 'id');
+    const retryResolved = await resolveIntent(retryPaymentIntentId, 'succeeded');
+    expect(retryResolved.status).toBe(200);
+
+    const retry = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: retryPaymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      cartEtagString,
+      'idem-stock-0003b',
+    );
+    expect(retry.status).toBe(201);
+    expectRecord(retry.body);
+    const retryItems = retry.body['items'];
+    expect(Array.isArray(retryItems)).toBe(true);
+    expect((retryItems as readonly unknown[]).length).toBe(1);
+
+    const honorResAfter = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    const honorBodyAfter: unknown = await honorResAfter.json();
+    expectRecord(honorBodyAfter);
+    expect(findVariant(honorBodyAfter, MAGIC_V6_BLACK_512)?.['maxQuantity']).toBe(1);
+  });
+
+  it('S-04 stock-lost-once-cart-add refuses the first add and leaves the cart unchanged', async () => {
+    useScenario('stock-lost-once-cart-add');
+
+    const first = await addLineExpectStatus(MAGIC_V6_BLACK_512, '"1"', 409);
+    expectRecord(first.body);
+    expect(first.body['code']).toBe('OUT_OF_STOCK');
+    expectRecord(first.body['params']);
+    expect(first.body['params']['variantId']).toBe(MAGIC_V6_BLACK_512);
+
+    const cartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartRes.status).toBe(200);
+    const cartBody: unknown = await cartRes.json();
+    expectRecord(cartBody);
+    expect(cartRes.headers.get('ETag')).toBe('"1"');
+    const items = cartBody['items'];
+    expect(Array.isArray(items)).toBe(true);
+    expect(items).toEqual([]);
+
+    const honorRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    const honorBody: unknown = await honorRes.json();
+    expectRecord(honorBody);
+    expect(findVariant(honorBody, MAGIC_V6_BLACK_512)?.['availability']).toBe('out_of_stock');
+
+    const _second = await addLineExpectStatus(PRO_MAX_BLACK_256, '"1"', 200);
+  });
+
+  it('S-06 the default scenario takes nothing', async () => {
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await patchCardDraft('"2"');
+    const intentRes = await createCardIntent('"3"', 'idem-int-stock-0006');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const placed = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-stock-0006',
+    );
+    expect(placed.status).toBe(201);
+  });
+
+  it('S-07 a second order of the same variant sells the last unit, and a third add is refused', async () => {
+    // First sale: cart v1 empty, add at v1 → v2, patch at v2 → v3,
+    // intent at v3 → v4, order at v4.
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await patchCardDraft('"2"');
+    const firstIntentRes = await createCardIntent('"3"', 'idem-int-stock-0007a');
+    expect(firstIntentRes.status).toBe(201);
+    expectRecord(firstIntentRes.body);
+    const firstPaymentIntentId = readString(firstIntentRes.body, 'id');
+    const firstResolved = await resolveIntent(firstPaymentIntentId, 'succeeded');
+    expect(firstResolved.status).toBe(200);
+
+    const firstPlaced = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: firstPaymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-stock-0007a',
+    );
+    expect(firstPlaced.status).toBe(201);
+    expectRecord(firstPlaced.body);
+    const firstOrderId = readString(firstPlaced.body, 'id');
+
+    // After the first sale, one unit is left.
+    const firstProductRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(firstProductRes.status).toBe(200);
+    const firstProductBody: unknown = await firstProductRes.json();
+    expectRecord(firstProductBody);
+    const firstVariant = findVariant(firstProductBody, MAGIC_V6_BLACK_512);
+    expect(firstVariant?.['maxQuantity']).toBe(1);
+    expect(firstVariant?.['availability']).toBe('in_stock');
+
+    // Second sale in the same session: every If-Match comes from the
+    // preceding response, never a guessed literal.
+    const cartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartRes.status).toBe(200);
+    const cartEtag = cartRes.headers.get('ETag');
+    expect(typeof cartEtag).toBe('string');
+    expectString(cartEtag, 'ETag');
+    const cartEtagString = cartEtag;
+
+    const secondAdd = await fetch('http://localhost/api/v1/cart/items', {
+      method: 'POST',
+      headers: { ...session1Headers(), 'If-Match': cartEtagString },
+      body: JSON.stringify({ variantId: MAGIC_V6_BLACK_512, quantity: 1 }),
+    });
+    expect(secondAdd.status).toBe(200);
+    const cartAfterAddEtag = secondAdd.headers.get('ETag');
+    expect(typeof cartAfterAddEtag).toBe('string');
+    expectString(cartAfterAddEtag, 'ETag');
+    const cartAfterAddEtagString = cartAfterAddEtag;
+
+    await patchCardDraft(cartAfterAddEtagString);
+    const cartAfterPatchRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartAfterPatchRes.status).toBe(200);
+    const cartAfterPatchEtag = cartAfterPatchRes.headers.get('ETag');
+    expect(typeof cartAfterPatchEtag).toBe('string');
+    expectString(cartAfterPatchEtag, 'ETag');
+    const cartAfterPatchEtagString = cartAfterPatchEtag;
+
+    const secondIntentRes = await createCardIntent(
+      cartAfterPatchEtagString,
+      'idem-int-stock-0007b',
+    );
+    expect(secondIntentRes.status).toBe(201);
+    expectRecord(secondIntentRes.body);
+    const secondPaymentIntentId = readString(secondIntentRes.body, 'id');
+    const secondResolved = await resolveIntent(secondPaymentIntentId, 'succeeded');
+    expect(secondResolved.status).toBe(200);
+
+    const secondPlaced = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: secondPaymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      cartAfterPatchEtagString,
+      'idem-stock-0007b',
+    );
+    expect(secondPlaced.status).toBe(201);
+    expectRecord(secondPlaced.body);
+    const secondOrderId = readString(secondPlaced.body, 'id');
+    expect(secondOrderId).not.toBe(firstOrderId);
+
+    // After the second sale, the variant is out of stock.
+    const secondProductRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(secondProductRes.status).toBe(200);
+    const secondProductBody: unknown = await secondProductRes.json();
+    expectRecord(secondProductBody);
+    const secondVariant = findVariant(secondProductBody, MAGIC_V6_BLACK_512);
+    expect(secondVariant?.['maxQuantity']).toBe(0);
+    expect(secondVariant?.['availability']).toBe('out_of_stock');
+
+    // A third add of the same variant is refused as OUT_OF_STOCK.
+    const thirdCartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(thirdCartRes.status).toBe(200);
+    const thirdCartEtag = thirdCartRes.headers.get('ETag');
+    expect(typeof thirdCartEtag).toBe('string');
+    expectString(thirdCartEtag, 'ETag');
+    const thirdCartEtagString = thirdCartEtag;
+
+    const thirdAdd = await addLineExpectStatus(MAGIC_V6_BLACK_512, thirdCartEtagString, 409);
+    expectRecord(thirdAdd.body);
+    expect(thirdAdd.body['code']).toBe('OUT_OF_STOCK');
   });
 });

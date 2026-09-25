@@ -24,7 +24,7 @@ import {
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
-import { faultResponse } from '../faults';
+import { faultResponse, loseResponseOnce, slowOnce } from '../faults';
 import { invalidRequest, problemResponse } from '../problem-response';
 
 import { orderStore } from '../checkout/checkout.handlers';
@@ -50,6 +50,7 @@ export const orderHandlersEntry: BusinessHandlerEntry = (
   const createOrder: RequestHandler = http.post('*/api/v1/orders', async ({ request }) => {
     const fault = faultResponse(options, 'order');
     if (fault !== null) return fault;
+    await slowOnce(options, 'order');
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -63,24 +64,29 @@ export const orderHandlersEntry: BusinessHandlerEntry = (
     const outcome = requireOrderStore().createOrder(sessionId, idempotencyKey, ifMatch, body);
     if (!outcome.ok) return problemResponse(outcome);
     options.persist?.(sessionId);
+    if (loseResponseOnce(options, 'order')) return HttpResponse.error();
     return HttpResponse.json(outcome.receipt, {
       status: 201,
       headers: { Location: `${options.apiRoot}/orders/${outcome.receipt.id}` },
     });
   });
 
-  const getOrder: RequestHandler = http.get('*/api/v1/orders/:orderId', ({ request, params }) => {
-    const fault = faultResponse(options, 'order-read');
-    if (fault !== null) return fault;
-    const sessionId = request.headers.get('X-Demo-Session');
-    if (sessionId === null) {
-      return invalidRequest(options, 'Missing X-Demo-Session header', {});
-    }
-    const orderId = String(params['orderId']);
-    const outcome = requireOrderStore().getOrder(sessionId, orderId);
-    if (!outcome.ok) return problemResponse(outcome);
-    return HttpResponse.json(outcome.receipt, { status: 200 });
-  });
+  const getOrder: RequestHandler = http.get(
+    '*/api/v1/orders/:orderId',
+    async ({ request, params }) => {
+      const fault = faultResponse(options, 'order-read');
+      if (fault !== null) return fault;
+      await slowOnce(options, 'order-read');
+      const sessionId = request.headers.get('X-Demo-Session');
+      if (sessionId === null) {
+        return invalidRequest(options, 'Missing X-Demo-Session header', {});
+      }
+      const orderId = String(params['orderId']);
+      const outcome = requireOrderStore().getOrder(sessionId, orderId);
+      if (!outcome.ok) return problemResponse(outcome);
+      return HttpResponse.json(outcome.receipt, { status: 200 });
+    },
+  );
 
   return [createOrder, getOrder];
 };

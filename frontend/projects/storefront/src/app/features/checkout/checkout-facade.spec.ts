@@ -1,7 +1,7 @@
 /**
  * MIM-212 — checkout facade on the 2.0.0 contract (unit S3-F1a).
  *
- * 28 cases over the checkout facade's public surface — options and
+ * Cases over the checkout facade's public surface — options and
  * session hydration, the four section writes, conflict and error
  * recovery, payment-intent idempotency, and order submit — measured
  * against the configured backend values that
@@ -908,13 +908,40 @@ describe('payment intents', () => {
     expect(second?.headers['idempotency-key']).toMatch(KEY_PATTERN);
   });
 
-  it('F-21: the intent key survives a facade teardown', async () => {
+  it('F-21b: a successful create rotates the intent key, so the next create sends a new one', async () => {
+    const checkout = await setupCompleteCardDraft();
+    captures.length = 0;
+
+    const first = await checkout.createPaymentIntent();
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const second = await checkout.createPaymentIntent();
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    await flushCaptures();
+    const creates = requestsTo('POST', '/payment-intents');
+    expect(creates).toHaveLength(2);
+    const firstKey = creates[0]?.headers['idempotency-key'] ?? '';
+    const secondKey = creates[1]?.headers['idempotency-key'] ?? '';
+    expect(firstKey).toMatch(KEY_PATTERN);
+    expect(secondKey).toMatch(KEY_PATTERN);
+    expect(secondKey).not.toBe(firstKey);
+  });
+
+  it('F-21: the active intent id survives a facade teardown', async () => {
     const checkout = await setupCompleteCardDraft();
     const first = await checkout.createPaymentIntent();
     expect(first.ok).toBe(true);
     if (!first.ok) return;
 
-    const storedKey = readStoredKey('mi-bolt.checkout.intent-key');
+    // A successful create rotates the intent key, so the key slot is
+    // empty by now; what the cold return leans on is the intent id,
+    // which is the lookup the return leg actually makes.
+    expect(sessionStorage.getItem('mi-bolt.checkout.intent-key')).toBeNull();
+    const storedId = checkoutKeys.activeIntentId();
+    expect(storedId).toBe(first.value.id);
 
     TestBed.resetTestingModule();
     configureTestBed();
@@ -922,14 +949,11 @@ describe('payment intents', () => {
     // The server-side cart is preserved by the demo session id, so
     // the new GET /cart returns the post-seedCompleteDraft state:
     // seedMoto bumped to v2 (one addItem) and the four patches
-    // bumped it through to v6. The intent key slot still carries the
-    // original fingerprint `["intent", 6]`, so the lookup below has
-    // to use that version — `intentKey(2)` would mint a fresh key.
+    // bumped it through to v6.
     const cart2 = await bootCart();
     expect(cart2.cart()?.version).toBe(6);
 
-    const retrieved = checkoutKeys.intentKey(6);
-    expect(retrieved).toBe(storedKey);
+    expect(checkoutKeys.activeIntentId()).toBe(storedId);
   });
 
   it('F-22: readPaymentIntent() stores the intent and a 404 does not set error()', async () => {
@@ -948,6 +972,51 @@ describe('payment intents', () => {
     if (readMissing.ok) return;
     expect(readMissing.error.status).toBe(404);
     expect(checkout.error()).toBeNull();
+  });
+
+  it('F-22b: a 404 for the held intent drops it, a 404 for another id keeps it', async () => {
+    const checkout = await setupCompleteCardDraft();
+    const created = await checkout.createPaymentIntent();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const id = created.value.id;
+    const held = await checkout.readPaymentIntent(id);
+    expect(held.ok).toBe(true);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    const storedBefore = checkoutKeys.activeIntentId();
+
+    const other = await checkout.readPaymentIntent('pi-missing');
+    expect(other.ok).toBe(false);
+    if (other.ok) return;
+    expect(other.error.status).toBe(404);
+    expect(checkout.paymentIntent()?.id).toBe(id);
+    expect(checkoutKeys.activeIntentId()).toBe(storedBefore);
+
+    server.use(
+      http.get(`*/api/v1/payment-intents/${id}`, () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:not-found',
+            title: 'Not Found',
+            status: 404,
+            code: 'NOT_FOUND',
+            detail: 'Payment intent not found',
+            params: { paymentIntentId: id },
+            traceId: 'mock-trace-test',
+            fieldErrors: [],
+          },
+          { status: 404 },
+        ),
+      ),
+    );
+    const drop = await checkout.readPaymentIntent(id);
+    expect(drop.ok).toBe(false);
+    if (drop.ok) return;
+    expect(drop.error.status).toBe(404);
+    expect(checkout.paymentIntent()).toBeNull();
+    expect(checkout.error()).toBeNull();
+    expect(checkoutKeys.activeIntentId()).toBe(storedBefore);
+    expect(checkout.intentDropped()).toBeNull();
   });
 
   /** A paid card draft with the intent read back as succeeded. */

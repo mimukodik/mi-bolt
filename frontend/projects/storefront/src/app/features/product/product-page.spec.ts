@@ -14,6 +14,8 @@ import { server, useMswServer } from '../../../../../../tests/msw-server';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import type { Cart } from '@mi-bolt/api/models/cart';
 import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
+import type { Product } from '@mi-bolt/api/models/product';
+import type { Variant } from '@mi-bolt/api/models/variant';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 import { CartFacade } from '../cart/cart.facade';
 import type { UiProblem } from '../../shared/types/ui-problem';
@@ -218,6 +220,33 @@ function queryElement(parent: ParentNode, selector: string): HTMLElement {
     throw new Error(`Expected HTMLElement: ${selector}`);
   }
   return el;
+}
+
+/** Refuses the next `POST /cart/items` with a problem body carrying `code`
+ *  (and `params`, when given). The contract derives the `type` URI from
+ *  the code the same way `contracts/commerce/openapi.yaml:341-360` and
+ *  `cart-store.ts:88` (`problemType`) do. Hardcoding it to
+ *  `quantity-limit` once made a case send a body whose `type` and `code`
+ *  disagreed with the contract. */
+function refuseAdd(code: string, params?: Record<string, unknown>): void {
+  const type = `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`;
+  server.use(
+    http.post(`${BASE_URL}/cart/items`, () =>
+      HttpResponse.json(
+        {
+          type,
+          title: 'Conflict',
+          status: 409,
+          code,
+          detail: 'Merged quantity would exceed the line maximum',
+          traceId: 't',
+          fieldErrors: [],
+          ...(params === undefined ? {} : { params }),
+        },
+        { status: 409 },
+      ),
+    ),
+  );
 }
 
 async function createHarness(): Promise<{
@@ -604,6 +633,42 @@ describe('T16-AC03 product-page variant selection is semantically labelled', () 
     expect(item0.textContent).toContain('6,7″ kijelző');
     expect(item1.textContent).toContain('50 MP kamera');
   });
+
+  it('renders two equal highlights without NG0955', async () => {
+    server.use(
+      http.get(`${BASE_URL}/products/:slug`, ({ params }) => {
+        const slug = params['slug'];
+        if (slug === 'demo-one-5g') {
+          return HttpResponse.json({ ...DEMO_PRODUCT, highlights: ['5G', '5G'] }, { status: 200 });
+        }
+        return HttpResponse.json(
+          {
+            type: 'https://example.com/not-found',
+            title: 'Not found',
+            status: 404,
+            detail: `Product not found`,
+          },
+          { status: 404 },
+        );
+      }),
+    );
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { root, facade, tick } = await createHarness();
+      // NG0955 is recorded only when a rendered list is reconciled against
+      // the next one: a silent re-read delivers the same highlights anew.
+      facade.refreshProduct();
+      await tick();
+
+      const items = Array.from(queryElement(root, '.key-facts').querySelectorAll('li'));
+      expect(items.length).toBe(2);
+      expect(items.map((item) => item.textContent.trim())).toEqual(['5G', '5G']);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes('NG0955'))).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('T16-AC04 product-page mobile purchase rail and CTA', () => {
@@ -843,7 +908,10 @@ describe('FIX-45 product page breadcrumb, description, stock and demo notes', ()
       related: [],
       relatedLoading: false,
     });
-    const facadeStub: Pick<ProductFacade, 'vm'> = { vm };
+    const facadeStub: Pick<ProductFacade, 'vm' | 'beginVisit'> = {
+      vm,
+      beginVisit: () => undefined,
+    };
     const cartFacadeStub = {
       ensureCart: async (): Promise<void> => {
         // no-op
@@ -1331,32 +1399,6 @@ describe('MIM-233: the stock line on the navy buy box is white, as on yettel.hu'
 });
 
 describe('owner 2026-09-22: a refused add names the per-product limit', () => {
-  function refuseAdd(code: string, params?: Record<string, unknown>): void {
-    // The contract derives the `type` URI from the code the same way
-    // `contracts/commerce/openapi.yaml:341-360` and `cart-store.ts:88`
-    // (`problemType`) do. Hardcoding it to `quantity-limit` here made
-    // the OUT_OF_STOCK case below send a body whose `type` and `code`
-    // disagreed with the contract.
-    const type = `urn:mi-bolt:problem:${code.toLowerCase().replace(/_/g, '-')}`;
-    server.use(
-      http.post(`${BASE_URL}/cart/items`, () =>
-        HttpResponse.json(
-          {
-            type,
-            title: 'Conflict',
-            status: 409,
-            code,
-            detail: 'Merged quantity would exceed the line maximum',
-            traceId: 't',
-            fieldErrors: [],
-            ...(params === undefined ? {} : { params }),
-          },
-          { status: 409 },
-        ),
-      ),
-    );
-  }
-
   async function pressAddAndReadMessage(): Promise<string> {
     const { root, fixture, tick } = await createHarness();
     queryElement(root, '.cta-desktop [data-testid="add-to-cart-button"] button').click();
@@ -1388,14 +1430,21 @@ describe('owner 2026-09-22: a refused add names the per-product limit', () => {
   });
 
   it('any other refusal keeps the generic text', async () => {
-    refuseAdd('OUT_OF_STOCK', { variantId: 'demo-one-5g-graphite-256' });
+    refuseAdd('PRICE_CHANGED');
     expect(await pressAddAndReadMessage()).toBe(
       'A termék hozzáadása nem sikerült; a kosár változatlan.',
     );
   });
 
+  it('E060 OUT_OF_STOCK says the variant sold out meanwhile', async () => {
+    refuseAdd('OUT_OF_STOCK', { variantId: 'demo-one-5g-graphite-256' });
+    expect(await pressAddAndReadMessage()).toBe(
+      'Ez a változat közben elfogyott, ezért nem került a kosárba.',
+    );
+  });
+
   it('a numeric max on another code keeps the generic text (pin for the QUANTITY_LIMIT check)', async () => {
-    refuseAdd('OUT_OF_STOCK', { max: 5, variantId: 'demo-one-5g-graphite-256' });
+    refuseAdd('PRICE_CHANGED', { max: 5 });
     expect(await pressAddAndReadMessage()).toBe(
       'A termék hozzáadása nem sikerült; a kosár változatlan.',
     );
@@ -1414,6 +1463,173 @@ describe('owner 2026-09-22: a refused add names the per-product limit', () => {
     await tick();
     fixture.detectChanges();
     expect(queryElement(root, '.cta-desktop').textContent).not.toContain('legfeljebb');
+  });
+});
+
+describe('E060 a sold-out add re-reads the product', () => {
+  const IN_STOCK_SENTENCE = 'Raktáron a demó készletben';
+  const OUT_OF_STOCK_SENTENCE = 'Ez a konfiguráció elfogyott a demó készletből.';
+  const SOLD_OUT_SENTENCE = 'Ez a változat közben elfogyott, ezért nem került a kosárba.';
+  const UNAVAILABLE_REASON = 'Ez a változat jelenleg nem elérhető.';
+  const PRODUCT_PATH = `${BASE_URL}/products/demo-one-5g`;
+
+  /** The same product with the default selection sold out — what the
+   *  mock's `stock-lost-once-cart-add` fault leaves behind. */
+  const SOLD_OUT = {
+    ...DEMO_PRODUCT,
+    variants: DEMO_PRODUCT.variants.map((v): Variant =>
+      v.id === 'demo-one-5g-graphite-256' ? { ...v, availability: 'out_of_stock' } : v,
+    ),
+  } satisfies Product;
+
+  /** Holds the exact product read until the returned `release()` runs,
+   *  so a case can look at the page while the re-read is in flight. */
+  function holdProductRead(response: () => Response): () => void {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(PRODUCT_PATH, async () => {
+        await gate;
+        return response();
+      }),
+    );
+    return (): void => {
+      release();
+    };
+  }
+
+  /** The desktop CTA. Scoped to `.cta-desktop` because the mobile rail
+   *  carries a CTA of its own. */
+  function desktopAddButton(root: HTMLElement): HTMLButtonElement {
+    return queryButton(root, '.cta-desktop [data-testid="add-to-cart-button"] button');
+  }
+
+  function desktopMessage(root: HTMLElement): string {
+    const cta = queryElement(root, '.cta-desktop');
+    return queryElement(cta, '[data-testid="status-message"] .message').textContent.trim();
+  }
+
+  it('E060-1 the page shows the variant sold out and keeps the selection', async () => {
+    const { root, fixture, host, facade, tick } = await createHarness();
+    refuseAdd('OUT_OF_STOCK', { variantId: 'demo-one-5g-graphite-256' });
+    server.use(http.get(PRODUCT_PATH, () => HttpResponse.json(SOLD_OUT, { status: 200 })));
+
+    desktopAddButton(root).click();
+    await tick();
+    fixture.detectChanges();
+
+    expect(queryElement(root, '[data-testid="product-stock"]').textContent.trim()).toBe(
+      OUT_OF_STOCK_SENTENCE,
+    );
+    expect(desktopAddButton(root).disabled).toBe(true);
+    expect(queryElement(root, '[data-testid="add-to-cart-reason"]').textContent.trim()).toBe(
+      UNAVAILABLE_REASON,
+    );
+    expect(desktopMessage(root)).toBe(SOLD_OUT_SENTENCE);
+    expect(facade.vm().selectedVariant?.id).toBe('demo-one-5g-graphite-256');
+    expect(host.page()?.addSuccessMessage()).toBeNull();
+  });
+
+  it('E060-2 the re-read shows no loading state while it runs', async () => {
+    const { root, fixture, facade, tick } = await createHarness();
+    refuseAdd('OUT_OF_STOCK', { variantId: 'demo-one-5g-graphite-256' });
+    const release = holdProductRead(() => HttpResponse.json(SOLD_OUT, { status: 200 }));
+
+    desktopAddButton(root).click();
+    await tick();
+    fixture.detectChanges();
+
+    expect(facade.vm().status).toBe('success');
+    expect(root.querySelector('app-loading-state')).toBeNull();
+    expect(queryElement(root, '[data-testid="product-stock"]').textContent.trim()).toBe(
+      IN_STOCK_SENTENCE,
+    );
+
+    release();
+    await tick();
+    fixture.detectChanges();
+
+    expect(queryElement(root, '[data-testid="product-stock"]').textContent.trim()).toBe(
+      OUT_OF_STOCK_SENTENCE,
+    );
+  });
+
+  it('E060-3 a failed re-read keeps the product and the refusal', async () => {
+    const { root, fixture, facade, tick } = await createHarness();
+    refuseAdd('OUT_OF_STOCK', { variantId: 'demo-one-5g-graphite-256' });
+    server.use(
+      http.get(PRODUCT_PATH, () =>
+        HttpResponse.json(
+          {
+            type: 'urn:mi-bolt:problem:internal',
+            title: 'Service unavailable',
+            status: 503,
+            detail: 'The catalogue is temporarily unavailable',
+            traceId: 't',
+            fieldErrors: [],
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+
+    desktopAddButton(root).click();
+    await tick();
+    fixture.detectChanges();
+
+    expect(facade.vm().status).toBe('success');
+    expect(queryElement(root, '[data-testid="product-stock"]').textContent.trim()).toBe(
+      IN_STOCK_SENTENCE,
+    );
+    expect(desktopMessage(root)).toBe(SOLD_OUT_SENTENCE);
+  });
+
+  it('E060-4 another refusal does not re-read the product', async () => {
+    const { root, fixture, tick } = await createHarness();
+    refuseAdd('PRICE_CHANGED');
+    let reads = 0;
+    server.use(
+      http.get(PRODUCT_PATH, () => {
+        reads += 1;
+        return HttpResponse.json(DEMO_PRODUCT, { status: 200 });
+      }),
+    );
+
+    desktopAddButton(root).click();
+    await tick();
+    fixture.detectChanges();
+
+    expect(reads).toBe(0);
+  });
+
+  it('E060-5 a re-read that lands after the route moved on changes nothing', async () => {
+    const { facade, tick } = await createHarness();
+    const release = holdProductRead(() => HttpResponse.json(SOLD_OUT, { status: 200 }));
+
+    facade.refreshProduct();
+    facade.load('unknown-slug', new URLSearchParams());
+    await tick();
+    release();
+    await tick();
+
+    expect(facade.vm().status).toBe('notfound');
+    expect(facade.vm().product).toBeNull();
+  });
+
+  it('E060-6 an out-of-stock refusal wins over a numeric max', async () => {
+    const { root, fixture, tick } = await createHarness();
+    // Both messages could claim this refusal: the sold-out one (E060) and
+    // the per-product limit one. The sold-out copy is the true cause, so
+    // it is what the shopper reads.
+    refuseAdd('OUT_OF_STOCK', { max: 5, variantId: 'demo-one-5g-graphite-256' });
+
+    desktopAddButton(root).click();
+    await tick();
+    fixture.detectChanges();
+
+    expect(desktopMessage(root)).toBe(SOLD_OUT_SENTENCE);
   });
 });
 
@@ -1549,5 +1765,96 @@ describe('an add that settles after another variant was picked shows no message'
       queryElement(root, '.cta-desktop').querySelector('[data-testid="status-message"]'),
     ).toBeNull();
     expect(host.page()?.addPending()).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MIM-449 / E059: pressing "Kosárba teszem" is the shopper asking for a cart
+// ---------------------------------------------------------------------------
+describe('MIM-449 adding to an expired cart starts a new cart', () => {
+  it('adding to an expired cart starts a new cart that holds the added line', async () => {
+    const variantId = 'demo-one-5g-graphite-256';
+    const refreshedCart: Cart = {
+      id: 'cart-test-page-1',
+      version: 2,
+      items: [
+        {
+          variantId,
+          variantSlug: 'demo-one-5g-graphite-256-variant',
+          productId: 'demo-one-5g',
+          productName: 'Demo One 5G',
+          productSlug: 'demo-one-5g',
+          colorName: 'Grafit',
+          storageGb: 256,
+          quantity: 1,
+          unitPrice: { amount: 339_990, currency: 'HUF' },
+          lineTotal: { amount: 339_990, currency: 'HUF' },
+          maxQuantity: 5,
+          availability: 'in_stock',
+          image: {
+            id: 'demo-one-5g-graphite-256-front',
+            src: '/assets/products/graphite-front.webp',
+            alt: 'Demo One 5G',
+            width: 800,
+            height: 800,
+          },
+        },
+      ],
+      lineCount: 1,
+      totalQuantity: 1,
+      subtotal: { amount: 339_990, currency: 'HUF' },
+      expiresAt: '2026-12-31T23:59:59.000Z',
+      notices: [],
+    };
+    // The session's cart has expired: the first write answers 410 and the
+    // store forgets it, so the read that follows starts a fresh cart.
+    let serverCartExpired = true;
+    server.use(
+      http.get(`${BASE_URL}/cart`, () =>
+        HttpResponse.json(makeMockCart('cart-test-page-1'), {
+          status: 200,
+          headers: { ETag: '"1"' },
+        }),
+      ),
+      http.post(`${BASE_URL}/cart/items`, () => {
+        if (serverCartExpired) {
+          serverCartExpired = false;
+          return HttpResponse.json(
+            {
+              type: 'urn:mi-bolt:problem:cart-expired',
+              title: 'Gone',
+              status: 410,
+              code: 'CART_EXPIRED',
+              detail: 'The cart has expired',
+              traceId: 'spec-trace-410',
+              fieldErrors: [],
+              params: {},
+            },
+            { status: 410, headers: { 'content-type': 'application/problem+json' } },
+          );
+        }
+        return HttpResponse.json(refreshedCart, { status: 200, headers: { ETag: '"2"' } });
+      }),
+    );
+
+    const { host, cartFacade } = await createHarness();
+
+    // The write that finds the expired cart is what surfaces the expiry.
+    await cartFacade.addItem(variantId, 1);
+    expect(cartFacade.cartExpired()).toBe(true);
+
+    await host.page()?.onAddRequested({ variantId, quantity: 1 });
+
+    expect(cartFacade.cartExpired()).toBe(false);
+    expect(cartFacade.cart()?.items.map((item) => item.variantId)).toEqual([variantId]);
+  });
+});
+
+describe('ProductPage opens a facade visit', () => {
+  it('PP-V1 every ProductPage instance opens one new ProductFacade visit', async () => {
+    const spy = vi.spyOn(ProductFacade.prototype, 'beginVisit');
+    await createHarness();
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 });

@@ -57,7 +57,7 @@
                 aria-label="A termék fő jellemzői"
                 class="key-facts flex flex-wrap gap-6 m-0 p-0 list-none"
               >
-                @for (item of highlights(); track item) {
+                @for (item of highlights(); track $index) {
                   <li>{{ item }}</li>
                 }
               </ul>

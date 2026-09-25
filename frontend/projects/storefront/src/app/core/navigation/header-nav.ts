@@ -13,6 +13,7 @@ import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/r
 
 import { CartCountFacade } from './cart-count-facade';
 import { MobileDrawer } from './mobile-drawer';
+import { StatusMessage } from '../../shared/ui/status-message/status-message';
 import { isHTMLInputElement } from '../../shared/utils/event-target';
 
 /**
@@ -37,7 +38,7 @@ const STANDARD_LINKS: readonly NavLink[] = [{ label: 'Mobiltelefonok', routerLin
 
 @Component({
   selector: 'app-header-nav',
-  imports: [RouterLink, RouterLinkActive, MobileDrawer],
+  imports: [RouterLink, RouterLinkActive, MobileDrawer, StatusMessage],
   templateUrl: './header-nav.html',
   styleUrl: './header-nav.scss',
 })

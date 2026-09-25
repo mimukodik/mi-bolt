@@ -17,8 +17,19 @@
  * page would have sent the shopper to without leaving the harness.
  */
 
-import { Component, DestroyRef, InjectionToken, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  InjectionToken,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { concatMap, from, repeat, takeWhile, timer } from 'rxjs';
 
 import { Button } from '../../shared/ui/button/button';
 import { LoadingState } from '../../shared/ui/loading-state/loading-state';
@@ -28,7 +39,17 @@ import { CartFacade } from '../cart/cart.facade';
 import { checkoutKeys } from './checkout-keys';
 import { CheckoutFacade } from './checkout.facade';
 import { OrderSubmission } from './order-submission';
-import { ReviewStep, type CheckoutViewState } from './review-step';
+import { ReviewStep, type CheckoutViewState, type PaymentPollState } from './review-step';
+
+/**
+ * The cadence of the pending-payment poll. `docs/spec/architecture.md`:
+ * "Pending GET polling: 1s interval, maximum 10 attempts; surface
+ * unknown outcome on timeout."
+ */
+const PENDING_POLL_INTERVAL_MS = 1000;
+
+/** The read budget of the same poll, from that same line. */
+const PENDING_POLL_MAX_READS = 10;
 
 /**
  * Seam for the full-page navigation to the payment application.
@@ -75,6 +96,20 @@ export class ReviewPage {
    */
   readonly paymentStarted: boolean = checkoutKeys.activeIntentId() !== null;
 
+  /** How far the bounded poll of a pending intent has got. Read by the
+   *  step, which shows the poll's progress; the poll itself is
+   *  `startPendingPoll`. */
+  readonly paymentPoll = signal<PaymentPollState>('idle');
+
+  /** True while the way back to the cart re-reads the cart; the step's
+   *  control is disabled meanwhile, so a second press does nothing. */
+  readonly backToCartPending = signal(false);
+
+  /** The intent the poll has already run for. A poll runs at most once
+   *  per intent id on this page, so a read that changes nothing about
+   *  the intent does not start a second one. */
+  private polledIntentId: string | null = null;
+
   /** True between the CTA press and the outcome. `inFlight` covers
    *  the wire call; this one also covers the navigation after it. */
   private readonly submitting = signal<boolean>(false);
@@ -116,18 +151,81 @@ export class ReviewPage {
   });
 
   constructor() {
+    // A stock error from an earlier visit would otherwise come back
+    // after the shopper corrected the cart, and in that state the
+    // submit control only focuses the banner.
+    this.orderSubmission.clearOutcome();
     let cancelled = false;
     this.destroyRef.onDestroy(() => {
       cancelled = true;
     });
     void this.load(() => cancelled);
+
+    // A pending intent is the one the page keeps asking about on its
+    // own: the outcome is unknown until the payment application
+    // answers. The start goes through `untracked` so the signals it
+    // reads are not this effect's dependencies, and a read that lands
+    // does not start another poll.
+    effect(() => {
+      const intent = this.checkoutFacade.paymentIntent();
+      if (intent?.status !== 'pending') return;
+      if (this.polledIntentId === intent.id) return;
+      untracked(() => {
+        this.startPendingPoll(intent.id);
+      });
+    });
+  }
+
+  /**
+   * Reads `id` one second after the previous answer, at most
+   * `PENDING_POLL_MAX_READS` answers. The budget counts answers, not
+   * timer ticks: `repeat(count)` re-subscribes to the source
+   * (`timer(...).pipe(concatMap(...))`) when it completes, so a slow
+   * answer is never overlapped by the next tick (`concatMap` waits for
+   * the inner promise), and a read that rejects or answers no longer
+   * pending ends the poll through `takeWhile` / the `error` arm.
+   * `takeUntilDestroyed` ends it with the page. Ten answers still
+   * pending leave the outcome unknown and the step says so, with the
+   * manual check as the way to look once more.
+   */
+  private startPendingPoll(id: string): void {
+    this.polledIntentId = id;
+    this.paymentPoll.set('polling');
+    timer(PENDING_POLL_INTERVAL_MS)
+      .pipe(
+        concatMap(() => from(this.checkoutFacade.readPaymentIntent(id))),
+        repeat(PENDING_POLL_MAX_READS),
+        takeWhile(() => this.checkoutFacade.paymentIntent()?.status === 'pending', true),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        complete: () => {
+          if (this.destroyRef.destroyed) return;
+          this.paymentPoll.set(
+            this.checkoutFacade.paymentIntent()?.status === 'pending' ? 'exhausted' : 'idle',
+          );
+        },
+        error: () => {
+          if (this.destroyRef.destroyed) return;
+          this.paymentPoll.set('exhausted');
+        },
+      });
   }
 
   /**
    * Hydrates whatever the shopper's route into this page did not.
-   * Each call is skipped when its signal is already populated, so a
-   * hand-off from `payment-return-page.ts`, which has just loaded the
-   * cart and the session, costs one `GET /checkout/options` at most.
+   * The cart and the options are read only when their signal is empty,
+   * the session on every arrival, so a hand-off from
+   * `payment-return-page.ts`, which has just loaded the cart and the
+   * session, costs one `GET /checkout` and at most one
+   * `GET /checkout/options`.
+   *
+   * The cold return from the payment page does not survive the SPA
+   * (`LOCATION_ASSIGN`), so a reload of `/penztar/ellenorzes` while an
+   * unpaid card intent is stored (`checkoutKeys.activeIntentId()`)
+   * shows the missing-intent branch until the held intent is read
+   * here. A pending answer starts the poll through the effect that
+   * watches `paymentIntent` for `status === 'pending'`.
    */
   private async load(cancelled: () => boolean): Promise<void> {
     if (this.cartFacade.cart() === null) {
@@ -136,14 +234,53 @@ export class ReviewPage {
     }
     await this.checkoutFacade.ensureOptions();
     if (cancelled()) return;
-    if (this.checkoutFacade.session() === null) {
-      await this.checkoutFacade.ensureSession();
+    // The summary this step shows is computed by the server from the
+    // cart, so the session is read fresh on every arrival: a cart
+    // corrected after an earlier visit (a stock error sends the shopper
+    // back there) would otherwise show the summary the server computed
+    // for the old one. The delivery step reads its options fresh for the
+    // same reason.
+    const session = await this.checkoutFacade.ensureSession(true);
+    // A failed read must not strand this page. A 410 CART_EXPIRED drops
+    // the session snapshot (`CheckoutFacade.recordFailure`), and the
+    // arrival would then sit on the loading skeleton for good: the
+    // template renders the step only while `session()` is set, and
+    // nothing on this page reads it again. An arrival whose session is
+    // gone has no draft to review either, so the shopper restarts where
+    // `reviewGuard` sends a session that is not there — the contact step.
+    if (!session.ok && this.checkoutFacade.session() === null) {
+      if (cancelled()) return;
+      await this.router.navigate(['/penztar/adatok'], {
+        queryParams: { navigationReason: 'incomplete' },
+      });
+      return;
+    }
+    const id = checkoutKeys.activeIntentId();
+    if (id !== null && id.length > 0 && this.checkoutFacade.paymentIntent() === null) {
+      if (cancelled()) return;
+      await this.checkoutFacade.readPaymentIntent(id);
     }
   }
 
   onEditRequested(section: 'contact' | 'delivery'): void {
     const route = section === 'contact' ? '/penztar/adatok' : '/penztar/szallitas';
     void this.router.navigate([route]);
+  }
+
+  /** The stock-error banner's way back: the cart is read again first,
+   *  so the cart page shows what the refused order changed (a removed
+   *  line and its notice) instead of the cart it already holds. The
+   *  checkout draft stays in the facade, so nothing typed is lost. */
+  async onBackToCart(): Promise<void> {
+    if (this.backToCartPending()) return;
+    this.backToCartPending.set(true);
+    try {
+      await this.cartFacade.refetch();
+    } finally {
+      if (!this.destroyRef.destroyed) this.backToCartPending.set(false);
+    }
+    if (this.destroyRef.destroyed) return;
+    await this.router.navigate(['/penztar/kosar']);
   }
 
   /** The eight `SubmitOutcome` kinds, each to its recovery. A shopper who
@@ -189,6 +326,10 @@ export class ReviewPage {
           await this.router.navigateByUrl(outcome.route);
           return;
         case 'unknown':
+          // A stock refusal: the step's stock-error branch says what was
+          // lost and offers the way back to the cart, so no failure
+          // banner joins it.
+          if (outcome.code === 'OUT_OF_STOCK') return;
           this.submitFailure.set({ kind: 'error', code: outcome.code });
           return;
         case 'declined':
@@ -228,8 +369,9 @@ export class ReviewPage {
     void this.router.navigate(['/penztar/szallitas']);
   }
 
-  /** Exactly one re-read of the pending intent. Never a loop: the
-   *  shopper presses the control again if they want another. */
+  /** One re-read of the pending intent per press. The automatic poll
+   *  above reads it every second at most ten times; after that this
+   *  control is the shopper's way to look again. */
   async onPaymentCheck(): Promise<void> {
     const id = this.checkoutFacade.paymentIntent()?.id ?? checkoutKeys.activeIntentId();
     if (id === null || id.length === 0) return;
@@ -250,18 +392,16 @@ export class ReviewPage {
   }
 
   /**
-   * Creates a payment intent and sends the shopper to it. The stored
-   * intent key is rotated first: a successful create leaves its key
-   * under the same cart-version fingerprint
-   * (`checkout-keys.ts:108-110`), so without the rotation the server
-   * would idempotently replay the intent that was just declined
-   * instead of minting a new one. Design §5.3 requires the opposite:
-   * "Újrapróbálom (new intent, new key)".
+   * Creates a payment intent and sends the shopper to it. The key is
+   * not rotated here: the facade rotates on every definite outcome, a
+   * successful create included, so this press mints a new intent when
+   * the previous one was declined (design §5.3, "Újrapróbálom (new
+   * intent, new key)") and replays the intent it already created when
+   * the previous answer was lost (status 0) or a 5xx.
    * A shopper who left the page meanwhile is not sent to the payment page.
    */
   private async startPayment(): Promise<void> {
     this.submitFailure.set(null);
-    checkoutKeys.rotateIntentKey();
     const result = await this.checkoutFacade.createPaymentIntent();
     if (result.ok) {
       if (this.destroyRef.destroyed) return;

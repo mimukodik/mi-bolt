@@ -773,6 +773,53 @@ describe('T12-AC03 race + duplicate request suppression', () => {
   });
 });
 
+describe('T12 a new catalogue visit and a repeated search removal read again', () => {
+  it('CF-V1 the same URL query fires the SDK once inside a visit and again in a new visit', async () => {
+    const { facade, api, tick } = setupFacade();
+    facade.beginVisit();
+    facade.loadFromParams(new URLSearchParams('brand=Apple'));
+    await tick();
+    api.resolve(emptyPage());
+    await tick();
+    expect(api.calls.length).toBe(1);
+
+    facade.loadFromParams(new URLSearchParams('brand=Apple'));
+    await tick();
+    expect(api.calls.length).toBe(1);
+
+    facade.beginVisit();
+    facade.loadFromParams(new URLSearchParams('brand=Apple'));
+    await tick();
+    expect(api.calls.length).toBe(2);
+    expect(api.calls[1]?.brand).toEqual(['Apple']);
+  });
+
+  it('CF-V2 removing the search a second time clears it again', async () => {
+    const { facade, api, waitDebounce, tick } = setupFacade();
+    facade.loadFromParams(new URLSearchParams('q=apple'));
+    await tick();
+    api.resolve(emptyPage());
+    await tick();
+    facade.setSearch('');
+    await waitDebounce();
+    await tick();
+    api.resolve(emptyPage());
+    await tick();
+    expect(api.calls.length).toBe(2);
+
+    facade.loadFromParams(new URLSearchParams('q=apple'));
+    await tick();
+    api.resolve(emptyPage());
+    await tick();
+    facade.setSearch('');
+    await waitDebounce();
+    await tick();
+
+    expect(api.calls.length).toBe(4);
+    expect(api.calls[3]?.q).toBeUndefined();
+  });
+});
+
 // ---------------------------------------------------------------------------
 // AC04: distinct vm states preserve useful content; errors never zero out
 // ---------------------------------------------------------------------------

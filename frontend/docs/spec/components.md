@@ -102,13 +102,13 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** local presentation.
 
-**Signal inputs:** `persistenceMode: durable|memory`.
+**Signal inputs:** `persistenceMode: durable|memory`; `snapshotDiscard: corrupt|version|stale|null`.
 
 **Outputs:** `none`.
 
-**Functions:** Persistent Hungarian simulation disclosure; explain memory-only/reload behavior without suggesting real order fulfillment.
+**Functions:** Persistent Hungarian simulation disclosure; explain memory-only/reload behavior without suggesting real order fulfillment. When the mock bootstrap dropped a saved snapshot it could not restore (`SNAPSHOT_DISCARD`, MIM-448), the strip takes the warning look (`demo-notice--reset`) and `demo-notice-reset-text` says the saved cart is gone: one sentence for `version`, one for `corrupt` and `stale`. The memory-warning state wins over a discard.
 
-**Required states:** default,memory-warning.
+**Required states:** default,memory-warning,reset-warning.
 
 All interactive states additionally require visible hover/focus and native disabled semantics where relevant. Read-only display components do not invent selection/loading/success states when no operation exists; the explicit required-state field governs applicability. Each rendered state maps to the owning task's unit criteria.
 
@@ -391,7 +391,7 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Outputs:** `none`.
 
-**Functions:** Compose breadcrumbs (switched off for now behind `BREADCRUMB_VISIBLE`, MIM-234), gallery, configuration, price, add controls, spec groups and narrow sticky buy rail; CartFacade injection only at container/add orchestrator.
+**Functions:** Compose breadcrumbs (switched off for now behind `BREADCRUMB_VISIBLE`, MIM-234), gallery, configuration, price, add controls, spec groups and narrow sticky buy rail; CartFacade injection only at container/add orchestrator. An add refused with OUT_OF_STOCK says the variant sold out meanwhile and re-reads the product through `ProductFacade.refreshProduct()` without a loading state, so the stock line and the disabled add control show the change while the selection and the refusal stay (E060).
 
 **Required states:** loading,ready,error,not-found.
 
@@ -597,11 +597,11 @@ All interactive states additionally require visible hover/focus and native disab
 
 **Owner:** page container.
 
-**Signal inputs:** `summary:CheckoutSummary|null; cart:Cart; draft:CheckoutSession; options:CheckoutOptions|null; state:CheckoutViewState; paymentIntent:PaymentIntent|null; priceChange:PriceChange|null; paymentIntentMissing:boolean; paymentStarted:boolean`.
+**Signal inputs:** `summary:CheckoutSummary|null; cart:Cart; draft:CheckoutSession; options:CheckoutOptions|null; state:CheckoutViewState; paymentIntent:PaymentIntent|null; priceChange:PriceChange|null; paymentIntentMissing:boolean; paymentStarted:boolean; paymentPoll:PaymentPollState`, where `PaymentPollState = 'idle'|'polling'|'exhausted'`.
 
 **Outputs:** `editRequested:contact|delivery; submitRequested:void; retryRequested:void; priceChangeConfirmed:void; paymentRetryRequested:void; paymentChangeMethodRequested:void; paymentCheckRequested:void; backToPaymentRequested:void; newPaymentRequested:void`.
 
-**Functions:** Full order review from the server-computed summary, one unchecked terms confirmation with the terms dialog and a plain demo note; distinct price-changed/conflict/stock feedback.
+**Functions:** Full order review from the server-computed summary, one unchecked terms confirmation with the terms dialog and a plain demo note; distinct price-changed/conflict/stock feedback. A pending card payment shows the page container's bounded poll (`paymentPoll`: one read a second after the previous answer, at most ten answers, E094/E095): a polling note while it runs, a "no result after ten checks, no new payment is started" note when ten answers are still pending, and the manual status check control in every poll state.
 
 **Required states:** loading,ready,price-changed,conflict,stock-error,submitting,error.
 

@@ -12,7 +12,8 @@
  *     (`contracts/commerce/kommunikacio.md` §6);
  *   - the payment-return branches: a succeeded, declined, pending,
  *     unfinished or missing intent, each with the control that
- *     recovers it and no polling loop of any kind (design §5.3);
+ *     recovers it; a pending intent is re-read by ReviewPage's
+ *     bounded poll, whose progress this step shows (paymentPoll);
  *   - the 409 PRICE_CHANGED confirmation: both totals side by side
  *     and one control whose visible label names the new amount, so
  *     the new total can never be accepted silently (design §3.7);
@@ -66,6 +67,16 @@ import type { IntentDropReason, PriceChange } from './checkout.facade';
 export type CheckoutViewState =
   'loading' | 'ready' | 'price-changed' | 'stock-error' | 'conflict' | 'submitting' | 'error';
 
+/**
+ * How far `ReviewPage`'s bounded poll of a pending payment has got
+ * (`docs/spec/architecture.md`: "Pending GET polling: 1s interval,
+ * maximum 10 attempts"). `idle` is "no poll running", which covers
+ * both a page that never polled and one whose poll ended on an
+ * answer; `polling` is a read a second; `exhausted` is the ten reads
+ * used up with the outcome still unknown.
+ */
+export type PaymentPollState = 'idle' | 'polling' | 'exhausted';
+
 /** One cart line as this template renders it. Keyed by `variantId`:
  *  the 2.0.0 `CartItem` has no `id` member. */
 interface ReviewLineDisplay {
@@ -105,6 +116,9 @@ export class ReviewStep {
   readonly state = input.required<CheckoutViewState>();
   /** The active payment intent, or null when none has been read. */
   readonly paymentIntent = input<PaymentIntent | null>(null);
+  /** How far the page's poll of a pending intent has got; the step
+   *  renders the poll's progress and never runs one itself. */
+  readonly paymentPoll = input<PaymentPollState>('idle');
   /** Non-null while a 409 PRICE_CHANGED awaits confirmation. */
   readonly priceChange = input<PriceChange | null>(null);
   /** True when the draft pays by card and no intent is on the facade. */
@@ -116,6 +130,8 @@ export class ReviewStep {
   /** Why the facade dropped the card intent this draft held, when it
    *  did; the missing-payment sentence names it. */
   readonly intentDropped = input<IntentDropReason | null>(null);
+  /** True while the page re-reads the cart for the way back; the control is disabled meanwhile. */
+  readonly backToCartPending = input<boolean>(false);
 
   readonly editRequested = output<'contact' | 'delivery'>();
   readonly submitRequested = output();
@@ -125,8 +141,10 @@ export class ReviewStep {
   readonly priceChangeConfirmed = output();
   readonly paymentRetryRequested = output();
   readonly paymentChangeMethodRequested = output();
-  /** pending: exactly one re-read, never a loop. */
+  /** pending: one manual re-read per press; the automatic poll is ReviewPage's. */
   readonly paymentCheckRequested = output();
+  /** stock-error: back to the cart to correct it; the page re-reads the cart first. */
+  readonly backToCartRequested = output();
   /** requires_action: back to the payment page's redirect URL. */
   readonly backToPaymentRequested = output();
   /** No intent: start one. */
@@ -307,7 +325,7 @@ export class ReviewStep {
   readonly priceChangedMessage = 'A végösszeg időközben megváltozott.';
   readonly conflictMessage = 'Az adatok időközben megváltoztak. Ellenőrizd és próbáld újra.';
   readonly outOfStockMessage =
-    'Egy vagy több változat elfogyott. Visszavonulhatsz a kosárhoz a cikk korrigálásához.';
+    'Egy vagy több termék közben elfogyott, ezért a rendelés nem jött létre. A kosárban javíthatod; a megadott adataid megmaradnak.';
   readonly errorMessage = 'A rendelés leadása nem sikerült.';
 
   /** Standing "this is a demo" notice rendered as `app-status-message` on

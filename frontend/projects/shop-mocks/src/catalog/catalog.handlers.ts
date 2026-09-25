@@ -15,12 +15,15 @@
 
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
+import type { Image } from '@mi-bolt/api/models/image';
 import type { Problem } from '@mi-bolt/api/models/problem';
+import type { Product } from '@mi-bolt/api/models/product';
 
 import { registerBusinessHandlers, type CreateHandlersOptions } from '../create-handlers';
-import { faultResponse } from '../faults';
+import { faultResponse, slowOnce } from '../faults';
 import { isRecord as isPlainRecord } from '../is-record';
 import { PROBLEM_CONTENT_TYPE } from '../problem-response';
+import { stockLedger } from '../stock/stock-ledger';
 import {
   type CatalogEntry,
   type CatalogFixture,
@@ -119,7 +122,7 @@ function buildProductPage(
   page: number;
   pageSize: 12 | 24;
 } {
-  const entries = store.listEntries();
+  const entries = stockEntries(store);
   const filtered = applyFilters(entries, filter);
   const sorted = sortEntries(filtered, filter.sort, filter.q);
   const capped = filter.featured === true ? sorted.slice(0, 4) : sorted;
@@ -133,17 +136,30 @@ function buildProductPage(
   };
 }
 
+/**
+ * Every list entry, with `stockLedger.current` mapped over each one
+ * when the ledger exists and otherwise untouched. The list page, the
+ * facets and the related products all read through this so a unit's
+ * sold-out state reaches every catalogue answer.
+ */
+function stockEntries(store: CatalogStore): readonly CatalogEntry[] {
+  const ledger = stockLedger.current;
+  if (ledger === null) return store.listEntries();
+  return store.listEntries().map((entry) => ledger.applyToEntry(entry));
+}
+
 /** Build the `listProducts` handler. */
 function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
-  return http.get('*/api/v1/products', ({ request }) => {
+  return http.get('*/api/v1/products', async ({ request }) => {
     const fault = faultResponse(options, 'products');
     if (fault !== null) return fault;
+    await slowOnce(options, 'products');
     const url = new URL(request.url);
     const parsed = parseListProductsParams(url.searchParams);
     if (!parsed.ok) return invalidRequest(options, parsed.error);
     const store = requireStore();
     const page = buildProductPage(store, parsed.filter);
-    const facets = buildFacets(store.listEntries(), parsed.filter);
+    const facets = buildFacets(stockEntries(store), parsed.filter);
     const body = {
       items: page.items,
       total: page.total,
@@ -156,26 +172,67 @@ function listProductsHandler(options: CreateHandlersOptions): RequestHandler {
   });
 }
 
+/**
+ * E048 — `?mi-scenario=gallery-several-images` makes the product read
+ * give every variant the product's other colour photos after its own,
+ * so the gallery's several-photo state (previous/next, the counter,
+ * one thumbnail per photo) can be exercised; the catalogue store is
+ * not changed, so the catalogue card and the cart line still show the
+ * variant's own first photo.
+ */
+export const GALLERY_SEVERAL_IMAGES_SCENARIO = 'gallery-several-images';
+
+/**
+ * Returns a new product whose every variant carries its own photos
+ * first, then every other image of the product that variant does not
+ * already have — each image id once, in the order the product's
+ * variants first carry them. Never mutates its argument: the product,
+ * its variants and their image arrays are all new objects.
+ */
+export function withEveryColourImage(product: Product): Product {
+  const shared: Image[] = [];
+  const seen = new Set<string>();
+  for (const variant of product.variants) {
+    for (const image of variant.images) {
+      if (seen.has(image.id)) continue;
+      seen.add(image.id);
+      shared.push(image);
+    }
+  }
+  const variants = product.variants.map((variant) => {
+    const owned = new Set(variant.images.map((image) => image.id));
+    const extra = shared.filter((image) => !owned.has(image.id));
+    return { ...variant, images: [...variant.images, ...extra] };
+  });
+  return { ...product, variants };
+}
+
 /** Build the `getProduct` handler. */
 function getProductHandler(options: CreateHandlersOptions): RequestHandler {
-  return http.get('*/api/v1/products/:slug', ({ params }) => {
+  return http.get('*/api/v1/products/:slug', async ({ params }) => {
     const fault = faultResponse(options, 'product');
     if (fault !== null) return fault;
+    await slowOnce(options, 'product');
     const slug = String(params['slug']);
     const store = requireStore();
     const product = store.getProduct(slug);
     if (product === undefined) {
       return notFoundProblem(options, 'product not found', { slug });
     }
-    return HttpResponse.json(product);
+    const withStock = stockLedger.current?.applyToProduct(product) ?? product;
+    if (options.scenario.name === GALLERY_SEVERAL_IMAGES_SCENARIO) {
+      return HttpResponse.json(withEveryColourImage(withStock));
+    }
+    return HttpResponse.json(withStock);
   });
 }
 
 /** Build the `listRelatedProducts` handler. */
 function listRelatedProductsHandler(options: CreateHandlersOptions): RequestHandler {
-  return http.get('*/api/v1/products/:slug/related', ({ params }) => {
+  return http.get('*/api/v1/products/:slug/related', async ({ params }) => {
     const fault = faultResponse(options, 'related-products');
     if (fault !== null) return fault;
+    await slowOnce(options, 'related-products');
     const slug = String(params['slug']);
     const store = requireStore();
     const subject = store.getProduct(slug);
@@ -239,8 +296,7 @@ function pickMinimumEntry(
   store: CatalogStore,
   slug: string,
 ): ReturnType<typeof toCatalogItem> | null {
-  const entries = store
-    .listEntries()
+  const entries = stockEntries(store)
     .filter((e) => e.product.slug === slug)
     .sort((a, b) => a.storageGb - b.storageGb);
   const entry = entries.at(0);

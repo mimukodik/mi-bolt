@@ -10,7 +10,9 @@
  * `hydrate()` rejects malformed JSON, expired snapshots (older than
  * the documented `MAX_AGE_MS`), version mismatches and any field that
  * fails the allowlist shape. A rejection clears the corrupted entry
- * so the next save starts from a clean slate.
+ * so the next save starts from a clean slate, and the reason is kept
+ * in `Persistence.lastDiscard()` so the shop can say why the saved
+ * cart it expected is gone.
  *
  * Storage-denied mode (private browsing, security errors) keeps
  * state in an in-memory cache scoped to the adapter instance and
@@ -103,11 +105,16 @@ export interface StorageLike {
 
 /** Single-warn flag carried per-instance so test setup stays isolated. */
 class SessionStorageAdapter {
-  private denied = false;
+  private denied: boolean;
   private warned = false;
   private readonly memory = new Map<string, string>();
 
-  constructor(private readonly storage: StorageLike | null) {}
+  constructor(
+    private readonly storage: StorageLike | null,
+    denied = false,
+  ) {
+    this.denied = denied;
+  }
 
   read(key: string): string | null {
     if (this.storage !== null && !this.denied) {
@@ -179,22 +186,43 @@ function isStorageLike(value: unknown): value is StorageLike {
   );
 }
 
+/** Outcome of looking for a usable `sessionStorage` on a global object. */
+interface StorageProbe {
+  /** The storage to use, `null` when there is none or it is blocked. */
+  readonly storage: StorageLike | null;
+  /** True when the read itself was refused, so access is denied outright. */
+  readonly denied: boolean;
+}
+
 /**
- * True when `value` carries a storage-like `sessionStorage`. `globalThis`
- * is read as `unknown` first because a Node/SSR runtime has no
- * `sessionStorage` at all, whatever the DOM lib types assume.
+ * Looks for a storage-like `sessionStorage` on `value`. `value` is read
+ * as `unknown` first because a Node/SSR runtime has no `sessionStorage`
+ * at all, whatever the DOM lib types assume.
+ *
+ * The property read is guarded because the `sessionStorage` getter throws
+ * a `SecurityError` DOMException when the browser blocks site data or
+ * cookies, and `'sessionStorage' in value` stays `true` there — the `in`
+ * operator never calls the getter, so a shape check alone is not enough
+ * (https://html.spec.whatwg.org/multipage/webstorage.html). A throw is a
+ * denial rather than an absent value: the adapter starts in its
+ * in-memory mode and `DemoNotice` announces the reload limitation.
  */
-function hasSessionStorage(value: unknown): value is { sessionStorage: StorageLike } {
-  if (!isRecord(value)) return false;
-  if (!('sessionStorage' in value)) return false;
-  return isStorageLike(value['sessionStorage']);
+function probeSessionStorage(value: unknown): StorageProbe {
+  if (!isRecord(value)) return { storage: null, denied: false };
+  if (!('sessionStorage' in value)) return { storage: null, denied: false };
+  let candidate: unknown;
+  try {
+    candidate = value['sessionStorage'];
+  } catch {
+    return { storage: null, denied: true };
+  }
+  return { storage: isStorageLike(candidate) ? candidate : null, denied: false };
 }
 
 /** Detects Node and other non-DOM environments where sessionStorage is missing. */
-function resolveDefaultStorage(): StorageLike | null {
+function resolveDefaultStorage(): StorageProbe {
   const globalScope: unknown = globalThis;
-  if (!hasSessionStorage(globalScope)) return null;
-  return globalScope.sessionStorage;
+  return probeSessionStorage(globalScope);
 }
 
 /**
@@ -204,10 +232,21 @@ function resolveDefaultStorage(): StorageLike | null {
  * available and fall back to in-memory otherwise.
  */
 export function createBrowserPersistence(options: PersistenceOptions): Persistence {
-  const storage = options.storage === undefined ? resolveDefaultStorage() : options.storage;
-  const adapter = new SessionStorageAdapter(storage);
+  const resolved: StorageProbe =
+    options.storage === undefined
+      ? resolveDefaultStorage()
+      : { storage: options.storage, denied: false };
+  const adapter = new SessionStorageAdapter(resolved.storage, resolved.denied);
   return new Persistence(adapter, options.nowMs);
 }
+
+/**
+ * Why the last `hydrate()` dropped the stored entry: `'corrupt'` for
+ * unparsable JSON, an unparsable timestamp or a shape the allowlist
+ * rejects, `'version'` for an entry another `SNAPSHOT_SCHEMA_VERSION`
+ * wrote, `'stale'` for one that is too old or already expired.
+ */
+export type SnapshotDiscard = 'corrupt' | 'version' | 'stale';
 
 /**
  * Pure persistence façade. The class does not touch the DOM or
@@ -216,6 +255,8 @@ export function createBrowserPersistence(options: PersistenceOptions): Persisten
  */
 export class Persistence {
   private lastSnapshot: MockSnapshot | null = null;
+
+  private lastDiscardReason: SnapshotDiscard | null = null;
 
   constructor(
     private readonly adapter: SessionStorageAdapter,
@@ -235,40 +276,64 @@ export class Persistence {
    * when no entry exists, the entry is malformed, expired, or fails
    * the version/allowlist checks. The corrupted entry is cleared
    * before returning so subsequent saves do not replay the same
-   * broken state.
+   * broken state, and `lastDiscard()` holds the reason so the shop
+   * can say so.
    */
   hydrate(scenarioName: ScenarioName): MockSnapshot | null {
     const key = snapshotKey(scenarioName);
+    this.lastDiscardReason = null;
     const raw = this.adapter.read(key);
     if (raw === null) return null;
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch {
+      this.lastDiscardReason = 'corrupt';
+      this.adapter.remove(key);
+      return null;
+    }
+    // The version is checked before the allowlist: a real entry from an
+    // older schema fails `isValidSnapshot` on the field that version
+    // added, and would otherwise be reported as corrupt rather than as
+    // a version mismatch.
+    if (
+      isRecord(parsed) &&
+      typeof parsed['schemaVersion'] === 'number' &&
+      parsed['schemaVersion'] !== SNAPSHOT_SCHEMA_VERSION
+    ) {
+      this.lastDiscardReason = 'version';
       this.adapter.remove(key);
       return null;
     }
     if (!isValidSnapshot(parsed)) {
-      this.adapter.remove(key);
-      return null;
-    }
-    if (parsed.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) {
+      this.lastDiscardReason = 'corrupt';
       this.adapter.remove(key);
       return null;
     }
     const savedAt = Date.parse(parsed.savedAt);
     const expiresAt = Date.parse(parsed.expiresAt);
     if (Number.isNaN(savedAt) || Number.isNaN(expiresAt)) {
+      this.lastDiscardReason = 'corrupt';
       this.adapter.remove(key);
       return null;
     }
     const ageMs = this.nowMs() - savedAt;
     if (ageMs < 0 || ageMs > MAX_AGE_MS || expiresAt < this.nowMs()) {
+      this.lastDiscardReason = 'stale';
       this.adapter.remove(key);
       return null;
     }
     this.lastSnapshot = parsed;
     return parsed;
+  }
+
+  /**
+   * Why the last `hydrate()` dropped the stored entry, or `null` when
+   * it restored one or found none. The shop reads this to explain why
+   * a cart it expected to find is gone.
+   */
+  lastDiscard(): SnapshotDiscard | null {
+    return this.lastDiscardReason;
   }
 
   /** Clears the snapshot for the given scenario (used by tests and `reset`). */

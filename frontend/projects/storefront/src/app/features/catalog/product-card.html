@@ -47,7 +47,7 @@
     </p>
     @if (visibleHighlights().length > 0) {
       <p class="highlights" data-testid="product-card-highlights">
-        @for (highlight of visibleHighlights(); track highlight; let last = $last) {
+        @for (highlight of visibleHighlights(); track $index; let last = $last) {
           <span class="highlights__item">{{ highlight }}</span>
           @if (!last) {
             <span aria-hidden="true" class="highlights__sep"> · </span>

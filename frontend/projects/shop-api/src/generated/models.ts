@@ -10,6 +10,7 @@ export type { Cart } from './models/cart';
 export type { CartItem } from './models/cart-item';
 export type { CartNotice } from './models/cart-notice';
 export type { CartNoticeCode } from './models/cart-notice-code';
+export type { CartNoticeParams } from './models/cart-notice-params';
 export type { CashOnDeliveryOrderRequest } from './models/cash-on-delivery-order-request';
 export type { CatalogItem } from './models/catalog-item';
 export type { CheckoutOptions } from './models/checkout-options';

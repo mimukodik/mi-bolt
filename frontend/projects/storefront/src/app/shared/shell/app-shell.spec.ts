@@ -4,7 +4,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { AppShell } from './app-shell';
-import { PERSISTENCE_MODE } from '../../core/persistence-mode';
+import { PERSISTENCE_MODE, SNAPSHOT_DISCARD } from '../../core/persistence-mode';
 
 function getNativeElement(fixture: ComponentFixture<AppShell>): HTMLElement {
   const raw: unknown = fixture.nativeElement;
@@ -78,6 +78,34 @@ describe('AppShell wires PERSISTENCE_MODE into DemoNotice (FIX-70-AC05)', () => 
     expect(notice?.classList.contains('demo-notice--memory')).toBe(true);
     expect(root.querySelector('[data-testid="demo-notice-memory-text"]')?.textContent).toContain(
       'A böngésződ nem engedi a mentést',
+    );
+  });
+});
+
+// MIM-448: the mock records why it dropped a saved state; this asserts the
+// token carrying that reason actually reaches the rendered strip, the same
+// way the FIX-70 describe above does for `PERSISTENCE_MODE`.
+describe('AppShell wires SNAPSHOT_DISCARD into DemoNotice (MIM-448)', () => {
+  function setup(): ComponentFixture<AppShell> {
+    TestBed.configureTestingModule({
+      imports: [AppShell],
+      providers: [
+        provideRouter([]),
+        provideZonelessChangeDetection(),
+        { provide: PERSISTENCE_MODE, useValue: 'durable' },
+        { provide: SNAPSHOT_DISCARD, useValue: 'corrupt' },
+      ],
+    });
+    const fixture = TestBed.createComponent(AppShell);
+    fixture.componentRef.setInput('variant', 'marketing');
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('renders the reset sentence when the mock dropped the saved state', () => {
+    const root = getNativeElement(setup());
+    expect(root.querySelector('[data-testid="demo-notice-reset-text"]')?.textContent).toContain(
+      'A mentett kosarad nem volt visszaállítható',
     );
   });
 });

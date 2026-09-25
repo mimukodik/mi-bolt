@@ -75,18 +75,16 @@
         }
       </nav>
       <div class="header__actions flex items-center gap-2 ml-auto">
-        <label
-          class="header__search hidden items-center rounded-input h-12 px-4 lg:flex"
-          data-testid="header-search"
-        >
+        <label class="header__search hidden lg:block" data-testid="header-search">
           <span class="sr-only">Keresés a telefonok között</span>
           <input
             autocomplete="off"
-            class="bg-transparent border-0 min-w-50 h-12"
+            class="w-58 h-12 px-4 border-0 rounded-input"
             data-testid="header-search-input"
             inputmode="search"
             name="q"
             placeholder="Keresés…"
+            spellcheck="false"
             type="search"
             [value]="searchDraft()"
             (input)="onSearchDraftInput($event)"
@@ -141,6 +139,7 @@
           inputmode="search"
           name="q-mobile"
           placeholder="Keresés a telefonok között…"
+          spellcheck="false"
           type="search"
           [value]="searchDraft()"
           (input)="onSearchDraftInput($event)"
@@ -150,6 +149,7 @@
     </div>
   </header>
   <!-- Deferred so @angular/cdk (the dialog under the drawer) stays out of the initial bundle (MIM-443). -->
+  <!-- The @error block answers a failed chunk load with a message instead of a silent menu (NG0750). -->
   @defer (when drawerOpen(); prefetch on idle) {
     <app-mobile-drawer
       id="mobile-drawer"
@@ -169,5 +169,13 @@
         >
       }
     </app-mobile-drawer>
+  } @error {
+    <div class="px-4 pt-2 lg:hidden" data-testid="mobile-menu-error">
+      <app-status-message
+        message="A menü nem töltődött be. Frissítsd az oldalt, és próbáld újra."
+        severity="error"
+        [persistent]="true"
+      />
+    </div>
   }
 }

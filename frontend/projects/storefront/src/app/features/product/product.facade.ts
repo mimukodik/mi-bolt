@@ -32,6 +32,7 @@ import type { Subscription } from 'rxjs';
 import {
   catchError,
   distinctUntilChanged,
+  EMPTY,
   finalize,
   map,
   of,
@@ -122,6 +123,7 @@ export class ProductFacade {
     kind: 'load' | 'retry';
     slug: string;
     variantQuery: string | null;
+    visit: number;
     retryNonce?: number;
   }>();
 
@@ -145,8 +147,17 @@ export class ProductFacade {
    *  change arrives, so the related call subscribes separately and is
    *  torn down on the next route change. */
   private relatedSub: Subscription | null = null;
+  /** In-flight silent refresh (`refreshProduct`). A second refresh, or a
+   *  route change, cancels it, so the same rule the product stream
+   *  follows holds here too: a slow older response never overwrites a
+   *  newer one. */
+  private refreshSub: Subscription | null = null;
   /** Monotonic counter so rapid retry clicks survive distinctUntilChanged. */
   private retryNonceCounter = 0;
+  /** Counts product page visits (`beginVisit`). The visit is part of
+   *  the load key, so a new visit to the same slug and query reads the
+   *  product again instead of keeping what an earlier visit read. */
+  private visit = 0;
 
   /** Read-only view of the current view model — UI binds to this. */
   readonly vm = computed<ProductVm>(() => this.buildVm());
@@ -159,6 +170,7 @@ export class ProductFacade {
             a.kind === b.kind &&
             a.slug === b.slug &&
             a.variantQuery === b.variantQuery &&
+            a.visit === b.visit &&
             a.retryNonce === b.retryNonce,
         ),
         tap(({ slug, variantQuery }) => {
@@ -178,6 +190,13 @@ export class ProductFacade {
           if (this.relatedSub !== null) {
             this.relatedSub.unsubscribe();
             this.relatedSub = null;
+          }
+          // The same for a silent refresh: once the route has moved on,
+          // its response belongs to a screen that is no longer up, even
+          // where the route comes back to the same slug.
+          if (this.refreshSub !== null) {
+            this.refreshSub.unsubscribe();
+            this.refreshSub = null;
           }
           this.relatedSignal.set([]);
           this.relatedLoadingSignal.set(false);
@@ -210,6 +229,10 @@ export class ProductFacade {
         this.relatedSub.unsubscribe();
         this.relatedSub = null;
       }
+      if (this.refreshSub !== null) {
+        this.refreshSub.unsubscribe();
+        this.refreshSub = null;
+      }
       this.routeChange$.complete();
     });
   }
@@ -228,7 +251,18 @@ export class ProductFacade {
       kind: 'load',
       slug,
       variantQuery: parseVariantQuery(params),
+      visit: this.visit,
     });
+  }
+
+  /**
+   * Opens a new page visit. The product page calls it once per
+   * instance, before its first `load()`: this root facade outlives the
+   * page, so without it a revisit to the same product would collapse
+   * onto the earlier visit's read and show that visit's stock.
+   */
+  beginVisit(): void {
+    this.visit += 1;
   }
 
   /**
@@ -245,8 +279,45 @@ export class ProductFacade {
       kind: 'retry',
       slug,
       variantQuery: this.variantQuerySignal(),
+      visit: this.visit,
       retryNonce: ++this.retryNonceCounter,
     });
+  }
+
+  /**
+   * Re-reads the loaded product without a loading state, so a stock
+   * change the cart reported (an add refused with OUT_OF_STOCK, the
+   * standard's row E060) shows on the page. The selection and the
+   * gallery stay; a failed read, or one that lands after the route
+   * moved on or started loading again, changes nothing.
+   */
+  refreshProduct(): void {
+    const slug = this.slugSignal();
+    if (slug === null || this.statusSignal() !== 'success') return;
+    if (this.refreshSub !== null) {
+      this.refreshSub.unsubscribe();
+      this.refreshSub = null;
+    }
+    this.refreshSub = this.api
+      .invoke(getProduct, { slug })
+      .pipe(
+        take(1),
+        catchError(() => EMPTY),
+      )
+      .subscribe((product) => {
+        if (this.slugSignal() !== slug || this.statusSignal() !== 'success') return;
+        // The malformed-payload defence `onProductLoaded` carries, carried
+        // here too: a product the view model cannot resolve would throw
+        // inside `buildVm` (`defaultVariantOf`) and take the page down
+        // with it. A silent refresh treats it as a failed read and keeps
+        // the screen it already has.
+        try {
+          defaultVariantOf(product);
+        } catch {
+          return;
+        }
+        this.productSignal.set(product);
+      });
   }
 
   /**

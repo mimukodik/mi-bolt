@@ -1,16 +1,19 @@
 @if (cartFacade.cart(); as cart) {
   @if (checkoutFacade.session(); as session) {
     <app-review-step
+      [backToCartPending]="backToCartPending()"
       [cart]="cart"
       [draft]="session"
       [intentDropped]="checkoutFacade.intentDropped()"
       [options]="checkoutFacade.options()"
       [paymentIntent]="checkoutFacade.paymentIntent()"
       [paymentIntentMissing]="paymentIntentMissing()"
+      [paymentPoll]="paymentPoll()"
       [paymentStarted]="paymentStarted"
       [priceChange]="checkoutFacade.priceChange()"
       [state]="viewState()"
       [summary]="checkoutFacade.summary()"
+      (backToCartRequested)="onBackToCart()"
       (backToPaymentRequested)="onBackToPayment()"
       (editRequested)="onEditRequested($event)"
       (newPaymentRequested)="onNewPayment()"

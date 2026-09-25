@@ -103,6 +103,9 @@ class CartArchivedProductTest {
 				.andExpect(jsonPath("$.notices[0].code").value("ITEM_REMOVED"))
 				.andExpect(jsonPath("$.notices[0].variantId").value(APPLE_128))
 				.andExpect(jsonPath("$.notices[0].params.quantity").value(1))
+				.andExpect(jsonPath("$.notices[0].productName").value("iPhone 16"))
+				.andExpect(jsonPath("$.notices[0].params.from").doesNotExist())
+				.andExpect(jsonPath("$.notices[0].params.to").doesNotExist())
 				.andExpect(validAgainstContract());
 	}
 

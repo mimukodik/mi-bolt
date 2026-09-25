@@ -1,5 +1,7 @@
 import { Component, input } from '@angular/core';
 
+import type { SnapshotDiscard } from '@mi-bolt/mocks/persistence';
+
 /**
  * `DemoNotice` is a slim navy strip immediately below the global header,
  * stating the simulation. It is intentionally non-dismissable on the
@@ -22,6 +24,13 @@ import { Component, input } from '@angular/core';
  * this component unbound; `AppShell` binds the real value from the
  * `PERSISTENCE_MODE` token, set from whether the mock bootstrap's
  * session-storage hydrate found browser storage denied.
+ *
+ * `snapshotDiscard` drives the third state (MIM-448): the mock
+ * bootstrap dropped a stored snapshot it could not restore
+ * (`'corrupt'`, `'version'` or `'stale'`), so the strip takes the same
+ * warning look and says the saved cart is gone instead of leaving the
+ * shop silently empty. The `'memory'` state wins when storage itself
+ * is denied, because that is the fact the user can act on.
  */
 @Component({
   selector: 'app-demo-notice',
@@ -32,4 +41,6 @@ export class DemoNotice {
   protected readonly tag = 'app-demo-notice';
 
   readonly persistenceMode = input<'durable' | 'memory'>('durable');
+
+  readonly snapshotDiscard = input<SnapshotDiscard | null>(null);
 }

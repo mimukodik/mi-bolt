@@ -27,6 +27,8 @@ The root `mise run dev` and `mise run dev:docker` start the storefront and the a
 
 Run a script as `npm --prefix frontend run <script>` from the repository root, or `npm run <script>` from inside `frontend/`.
 
+The six `start*` scripts, and the Playwright web server in `playwright.config.ts`, run `ng serve` as `node --no-turbo-fast-api-calls node_modules/@angular/cli/bin/ng.js serve …`: on Node 26.10.0 the dev server aborted under e2e load with the V8 error "Lazy deopt after a fast API call with return value is unsupported", and `NODE_OPTIONS` refuses that flag. Start a dev server through these scripts rather than `npx ng serve`.
+
 | Script                        | Runs                                                                                                                                                                                                            | Use it when                                                                                 |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `ng`                          | The Angular CLI directly                                                                                                                                                                                        | Running an arbitrary `ng` command against the workspace                                     |
@@ -69,7 +71,7 @@ The contract suite (`test:contract`) runs `vitest run --config vitest.contract.c
 The Playwright projects, defined in `playwright.config.ts`, all serve `storefront`:
 
 - `e2e` runs `seed` plus the two Chromium integration projects (`integration-chromium-fullhd`, `integration-chromium-mobile`), with `E2E_COVERAGE_GATE=1`.
-- `e2e:all` runs `seed` plus all six `integration-{chromium,firefox,webkit}-{fullhd,mobile}` projects.
+- `e2e:all` runs `seed` plus all ten integration projects: `integration-{chromium,firefox,webkit}-{fullhd,mobile}` and the Chromium-only `integration-chromium-{320,768,1024,1440}`.
 - `e2e:smoke` sets `E2E_TARGET=local-backend` and runs the `smoke` project alone, against the `local-backend` configuration.
 
 Both `e2e` and `e2e:all` serve the `development` configuration on port 4400 by default (`E2E_PORT` overrides it); `e2e:smoke` serves the `local-backend` configuration on port 4410. `e2e:install` (`playwright install --with-deps chromium firefox webkit`) installs the browsers once before any of the three are run.
@@ -82,7 +84,7 @@ Both `e2e` and `e2e:all` serve the `development` configuration on port 4400 by d
 
 ## 🧪 CI
 
-`.github/workflows/frontend.yml` (`workflow_call`) runs four jobs in parallel on every call: `lint` (`npm run lint`, `npm run format:check`), `unit-tests` (`npm run test`, `npm run test:contract`, then a coverage summary per project and one `coverage-unit` artifact upload), `build` (`build:check`, `build:payment`, `build:admin`, the three `check:*-dist` gates, then `check:payment-boot` and `check:admin-boot`), and `api-drift` (`npm run api:drift`). Two further jobs run on every call as well: `e2e` (a six-cell matrix, one job per browser and viewport, the Chromium cells coverage-gated against `e2e/coverage-thresholds.json`; each cell builds the storefront and the demo payment app in their `development` configuration and serves both through `scripts/serve-static.mjs`) and `e2e-report` (merging the six blob reports into one HTML report).
+`.github/workflows/frontend.yml` (`workflow_call`) runs four jobs in parallel on every call: `lint` (`npm run lint`, `npm run format:check`), `unit-tests` (`npm run test`, `npm run test:contract`, then a coverage summary per project and one `coverage-unit` artifact upload), `build` (`build:check`, `build:payment`, `build:admin`, the three `check:*-dist` gates, then `check:payment-boot` and `check:admin-boot`), and `api-drift` (`npm run api:drift`). Two further jobs run on every call as well: `e2e` (a ten-cell matrix, one job per browser and viewport: Chromium, Firefox and WebKit at 1920×1080 and 390×844, and Chromium alone at 320, 768, 1024 and 1440 wide; the full HD and mobile Chromium cells coverage-gated against `e2e/coverage-thresholds.json`; each cell builds the storefront and the demo payment app in their `development` configuration and serves both through `scripts/serve-static.mjs`) and `e2e-report` (merging the cells' blob reports into one HTML report).
 
 `.github/workflows/ci.yml` calls `frontend.yml` on a pull request or a push to `main`, but only when its `changes` job (`dorny/paths-filter` against `.github/components.yml`) finds a changed path under `frontend/**`, `contracts/**`, `data/catalog/**`, `mise.toml`, `.github/**` or `tools/ci/**`.
 

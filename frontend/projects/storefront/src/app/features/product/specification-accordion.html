@@ -4,7 +4,7 @@
       <div class="group" [attr.data-testid]="`spec-group-${group.id}`">
         <h3 class="title">{{ group.title }}</h3>
         <dl class="rows">
-          @for (row of group.rows; track row.label) {
+          @for (row of group.rows; track $index) {
             <div class="row">
               <dt class="label">{{ row.label }}</dt>
               <dd class="value">{{ row.value }}</dd>

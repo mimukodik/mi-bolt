@@ -449,12 +449,16 @@ describe('T28: the default build compiles the mock-only demo environment', () =>
       readAngularJson(['projects', 'demo-payment', 'architect', 'serve', 'defaultConfiguration']),
     ).toBe('development');
 
+    // The start scripts run ng through `node --no-turbo-fast-api-calls`: Node
+    // 26.10.0 aborted the dev server under e2e load.
     const manifest: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8'));
     const scripts = isRecord(manifest) ? manifest['scripts'] : undefined;
     expect(isRecord(scripts) ? scripts['start:payment:local-backend'] : undefined).toBe(
-      'ng serve demo-payment --configuration local-backend',
+      'node --no-turbo-fast-api-calls node_modules/@angular/cli/bin/ng.js serve demo-payment --configuration local-backend',
     );
-    expect(isRecord(scripts) ? scripts['start:payment'] : undefined).toBe('ng serve demo-payment');
+    expect(isRecord(scripts) ? scripts['start:payment'] : undefined).toBe(
+      'node --no-turbo-fast-api-calls node_modules/@angular/cli/bin/ng.js serve demo-payment',
+    );
 
     const frontendMise = readFileSync(join(REPO_ROOT, 'mise.toml'), 'utf8');
     expect(frontendMise).toContain(

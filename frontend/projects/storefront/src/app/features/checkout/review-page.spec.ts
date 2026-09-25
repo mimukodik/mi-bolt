@@ -1,7 +1,7 @@
 /**
  * MIM-212 — the review page container on the 2.0.0 contract.
  *
- * Twenty-three cases over the container: the three-call hydration and
+ * Cases over the container: the three-call hydration and
  * its skips, each of the eight submit outcomes routed to its own
  * recovery, the view-state priority order, the intent-key rotation a
  * retried payment depends on, and the location seam the payment
@@ -25,6 +25,7 @@ import {
   it,
   vi,
 } from 'vitest';
+import { HttpResponse, http } from 'msw';
 import { server, useMswServer } from '../../../../../../tests/msw-server';
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -35,7 +36,7 @@ import { provideRouter, Router } from '@angular/router';
 import { provideApiConfiguration } from '@mi-bolt/api/api-configuration';
 import { demoSessionInterceptor } from '@mi-bolt/core-api/demo-session.interceptor';
 
-import { createHandlers } from '@mi-bolt/mocks/create-handlers';
+import { createHandlers, type CreateHandlersOptions } from '@mi-bolt/mocks/create-handlers';
 import { IdempotencyStore } from '@mi-bolt/mocks/idempotency';
 import { Repository } from '@mi-bolt/mocks/repository';
 import {
@@ -62,6 +63,7 @@ import { CartFacade } from '../../../app/features/cart/cart.facade';
 import { checkoutKeys } from '../../../app/features/checkout/checkout-keys';
 import {
   type CheckoutConflict,
+  type CheckoutResult,
   CheckoutFacade,
   type IntentDropReason,
   type PriceChange,
@@ -76,6 +78,14 @@ useMswServer();
 
 const BASE_URL = 'http://localhost/api/v1';
 const MOTO = 'motorola-edge-50-fusion--zold--256';
+const KEY_PATTERN = /^[A-Za-z0-9_-]{8,80}$/;
+
+/** The handler options of the running test, kept at module scope so a
+ *  case can put the default handlers back with
+ *  `server.resetHandlers(...createHandlers(options))` after shadowing
+ *  one of them with `server.use(...)`. The repository instance is the
+ *  live mock state, so a fresh one would not answer the same session. */
+let options: CreateHandlersOptions;
 
 const VALID_CONTACT: Contact = {
   fullName: 'Teszt Elek',
@@ -114,7 +124,7 @@ beforeEach((): void => {
   const clock = createFixedClock('2026-09-20T10:00:00.000Z');
   const ids = createDeterministicIds(1);
   const repository = new Repository(DEFAULT_SCENARIO, ids, clock);
-  const options = {
+  options = {
     repository,
     clock,
     ids,
@@ -137,6 +147,20 @@ function captureRequests(log: string[]): void {
   server.events.on('request:start', ({ request }) => {
     const url = new URL(request.url);
     log.push(`${request.method} ${url.pathname}${url.search}`);
+  });
+}
+
+/** Appends the `Idempotency-Key` of every `POST` to the payment-intents
+ *  endpoint, in wire order. Headers are readable synchronously inside
+ *  `request:start`, so the log is complete once the awaited facade call
+ *  resolves — no flush tick is needed. */
+function captureIntentKeys(log: string[]): void {
+  server.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    if (request.method !== 'POST' || !url.pathname.endsWith('/payment-intents')) {
+      return;
+    }
+    log.push(request.headers.get('idempotency-key') ?? '');
   });
 }
 
@@ -215,11 +239,15 @@ function harness(): PageHarness {
 function stubSubmitOutcome(outcome: SubmitOutcome): MockInstance {
   const submission = TestBed.inject(OrderSubmission);
   // Production's `OrderSubmission.runSubmit` / `commit` records the
-  // outcome on `lastOutcomeWritable` before resolving; the mock has to
-  // mirror that side effect, otherwise `viewState()` never sees the
-  // OUT_OF_STOCK branch (review-page.ts:96-98).
-  writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set(outcome);
-  return vi.spyOn(submission, 'submitOrder').mockResolvedValue(outcome);
+  // outcome on `lastOutcomeWritable` while the submit runs, not when
+  // the call is made, so the mock writes it inside the implementation:
+  // a case that reads `viewState()` after `onSubmitRequested()` sees
+  // the OUT_OF_STOCK branch, and one that reads it before the submit
+  // sees the state the page opened with.
+  return vi.spyOn(submission, 'submitOrder').mockImplementation(() => {
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set(outcome);
+    return Promise.resolve(outcome);
+  });
 }
 
 function hostOf(fixture: { nativeElement: unknown }): HTMLElement {
@@ -275,6 +303,30 @@ function writableOf<T>(obj: object, slot: string): Writable<T> {
   return candidate;
 }
 
+/** The page's poll-state signal, read through a shape guard rather
+ *  than off the class directly: the signal being there at all is part
+ *  of what the poll cases test, so a `ReviewPage` without it has to
+ *  fail them as tests rather than as a compile error that runs none
+ *  of them. `writableOf` reads its slots the same way. */
+interface PollingPage {
+  paymentPoll(): unknown;
+}
+
+function isPollingPage(value: unknown): value is PollingPage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof Reflect.get(value, 'paymentPoll') === 'function'
+  );
+}
+
+function paymentPollOf(page: ReviewPage): unknown {
+  if (!isPollingPage(page)) {
+    throw new Error('[review-page.spec] ReviewPage exposes no paymentPoll signal');
+  }
+  return page.paymentPoll();
+}
+
 // ---------------------------------------------------------------------------
 // RP-01..RP-03 — hydration and its skips
 // ---------------------------------------------------------------------------
@@ -300,7 +352,7 @@ describe('ReviewPage hydrates', () => {
     expect(host.querySelectorAll('app-review-step').length).toBe(1);
   });
 
-  it('RP-03 hydrates the cart, the options and the session, and skips whatever is already loaded', async () => {
+  it('RP-03 hydrates the cart, the options and the session, skips the cart and the options when already loaded, and reads the session on every arrival', async () => {
     const requests: string[] = [];
     captureRequests(requests);
 
@@ -341,7 +393,7 @@ describe('ReviewPage hydrates', () => {
     const checkouts2 = requests2.filter((r) => r === 'GET /api/v1/checkout').length;
     const options2 = requests2.filter((r) => r === 'GET /api/v1/checkout/options').length;
     expect(carts2).toBe(0);
-    expect(checkouts2).toBe(0);
+    expect(checkouts2).toBe(1);
     expect(options2).toBeLessThanOrEqual(1);
   });
 });
@@ -761,27 +813,22 @@ describe('ReviewPage drives the recovery controls', () => {
     expect(retrySpy).toHaveBeenCalledTimes(1);
   });
 
-  it('RP-19 retrying a declined payment rotates the stored intent key before creating a new intent', async () => {
+  it('RP-19 retrying a declined payment creates the new intent under a new key', async () => {
     const h = harness();
     const checkout = TestBed.inject(CheckoutFacade);
+    const keys: string[] = [];
+    captureIntentKeys(keys);
 
     const seeded = await checkout.createPaymentIntent();
     if (!seeded.ok) throw new Error(`createPaymentIntent failed: ${seeded.error.code}`);
-    const version = checkout.version() ?? 0;
-    const seededKey = checkoutKeys.intentKey(version);
-
-    let keyAtCreateCall: string | null = null;
-    vi.spyOn(checkout, 'createPaymentIntent').mockImplementation(async () => {
-      await Promise.resolve();
-      keyAtCreateCall = checkoutKeys.intentKey(version);
-      return seeded;
-    });
 
     await h.fixture.whenStable();
     await h.fixture.componentInstance.onPaymentRetry();
 
-    expect(keyAtCreateCall).not.toBeNull();
-    expect(keyAtCreateCall).not.toBe(seededKey);
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toMatch(KEY_PATTERN);
+    expect(keys[1]).toMatch(KEY_PATTERN);
+    expect(keys[1]).not.toBe(keys[0]);
   });
 
   it('RP-20 a failed intent create records the server code rather than redirecting', async () => {
@@ -805,6 +852,27 @@ describe('ReviewPage drives the recovery controls', () => {
     const host = hostOf(h.fixture);
     expect(countTestId(host, 'review-submit-failure')).toBe(1);
     expect(readDataErrorCode(host, 'review-submit-failure')).toBe('CART_VERSION_CONFLICT');
+  });
+
+  it('RP-21b a retry after a lost payment-intent answer repeats the intent key', async () => {
+    const h = harness();
+    const keys: string[] = [];
+    captureIntentKeys(keys);
+
+    await h.fixture.whenStable();
+
+    // The first press's answer never reaches the shopper: the transport
+    // fails with status 0, an uncertain outcome, so the key is retained.
+    server.use(http.post('*/api/v1/payment-intents', () => HttpResponse.error()));
+    await h.fixture.componentInstance.onNewPayment();
+    expect(keys).toHaveLength(1);
+
+    server.resetHandlers(...createHandlers(options));
+    await h.fixture.componentInstance.onNewPayment();
+
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).not.toBe('');
+    expect(keys[1]).toBe(keys[0]);
   });
 
   it('RP-21 checking a pending payment re-reads the stored intent exactly once and does nothing without an id', async () => {
@@ -893,5 +961,465 @@ describe('ReviewPage drives the recovery controls', () => {
     const h3 = harness();
     await h3.fixture.whenStable();
     expect(h3.fixture.componentInstance.paymentIntentMissing()).toBe(false);
+  });
+
+  it('RP-41 the stock-error banner re-reads the cart before it opens the cart page', async () => {
+    const cart = TestBed.inject(CartFacade);
+    const calls: string[] = [];
+    vi.spyOn(cart, 'refetch').mockImplementation(() => {
+      calls.push('refetch');
+      return Promise.resolve();
+    });
+    const h = harness();
+    h.navigateSpy.mockImplementation(() => {
+      calls.push('navigate');
+      return Promise.resolve(true);
+    });
+
+    await h.fixture.whenStable();
+    await h.fixture.componentInstance.onBackToCart();
+
+    expect(calls).toEqual(['refetch', 'navigate']);
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy.mock.calls[0]?.[0]).toEqual(['/penztar/kosar']);
+  });
+
+  it('RP-42 a stock error from an earlier visit does not come back', async () => {
+    const submission = TestBed.inject(OrderSubmission);
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set({
+      kind: 'unknown',
+      code: 'OUT_OF_STOCK',
+    });
+
+    const h = harness();
+    await h.fixture.whenStable();
+
+    expect(h.fixture.componentInstance.viewState()).not.toBe('stock-error');
+    expect(TestBed.inject(OrderSubmission).lastOutcome()).toBeNull();
+  });
+
+  it('RP-43 going back to the cart keeps the typed checkout data', async () => {
+    const h = harness();
+    await h.fixture.whenStable();
+    const checkout = TestBed.inject(CheckoutFacade);
+    const contact = checkout.session()?.contact;
+    expect(contact).toBeDefined();
+    const refetchSpy = vi.spyOn(TestBed.inject(CartFacade), 'refetch');
+
+    await h.fixture.componentInstance.onBackToCart();
+
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+    expect(checkout.session()?.contact).toEqual(contact);
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/kosar']);
+  });
+
+  it('RP-44 an arrival reads the session again even when one is in memory', async () => {
+    await TestBed.inject(CheckoutFacade).ensureSession();
+    const spy = vi.spyOn(TestBed.inject(CheckoutFacade), 'ensureSession');
+    const h = harness();
+    await h.fixture.whenStable();
+
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('RP-44b an arrival read that fails and leaves no session lands on the contact step instead of a skeleton', async () => {
+    await TestBed.inject(CheckoutFacade).ensureSession();
+    // The draft read answers 410, so the facade drops the session snapshot
+    // and nothing on this page can fill it again; the arrival must not sit
+    // on the loading skeleton for good.
+    server.use(
+      http.get('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          { code: 'CART_EXPIRED', detail: 'The cart has expired', status: 410 },
+          { status: 410 },
+        ),
+      ),
+    );
+
+    const h = harness();
+    await h.fixture.whenStable();
+
+    expect(TestBed.inject(CheckoutFacade).session()).toBeNull();
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/adatok'], {
+      queryParams: { navigationReason: 'incomplete' },
+    });
+  });
+
+  it('RP-45 the stock-error control on the page re-reads the cart and opens it', async () => {
+    const h = harness();
+    await h.fixture.whenStable();
+    const submission = TestBed.inject(OrderSubmission);
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set({
+      kind: 'unknown',
+      code: 'OUT_OF_STOCK',
+    });
+    h.fixture.detectChanges();
+
+    const control = hostOf(h.fixture).querySelector('[data-testid="review-stock-back-to-cart"]');
+    if (!(control instanceof HTMLElement)) {
+      throw new Error('[review-page.spec] missing review-stock-back-to-cart');
+    }
+    const button = control.querySelector('button');
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('[review-page.spec] no <button> inside review-stock-back-to-cart');
+    }
+    button.click();
+    await h.fixture.whenStable();
+
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/kosar']);
+  });
+
+  it('RP-46 a second press while the cart is re-read does nothing', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const refetchSpy = vi.spyOn(TestBed.inject(CartFacade), 'refetch');
+    refetchSpy.mockImplementation(() => held);
+    const h = harness();
+    await h.fixture.whenStable();
+    const page = h.fixture.componentInstance;
+
+    const first = page.onBackToCart();
+    const second = page.onBackToCart();
+
+    expect(page.backToCartPending()).toBe(true);
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+
+    release();
+    await first;
+    await second;
+
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(page.backToCartPending()).toBe(false);
+  });
+
+  it('RP-47 the page disables its stock-error control while the cart is re-read', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const refetchSpy = vi.spyOn(TestBed.inject(CartFacade), 'refetch');
+    refetchSpy.mockImplementation(() => held);
+    const h = harness();
+    await h.fixture.whenStable();
+    const submission = TestBed.inject(OrderSubmission);
+    writableOf<SubmitOutcome | null>(submission, 'lastOutcomeWritable').set({
+      kind: 'unknown',
+      code: 'OUT_OF_STOCK',
+    });
+    h.fixture.detectChanges();
+
+    const control = hostOf(h.fixture).querySelector('[data-testid="review-stock-back-to-cart"]');
+    if (!(control instanceof HTMLElement)) {
+      throw new Error('[review-page.spec] missing review-stock-back-to-cart');
+    }
+    const button = control.querySelector('button');
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('[review-page.spec] no <button> inside review-stock-back-to-cart');
+    }
+    button.click();
+    h.fixture.detectChanges();
+
+    expect(button.disabled).toBe(true);
+    expect(h.navigateSpy).not.toHaveBeenCalled();
+
+    release();
+    await h.fixture.whenStable();
+
+    expect(h.navigateSpy).toHaveBeenCalledTimes(1);
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/kosar']);
+  });
+
+  it('RP-48 an OUT_OF_STOCK refusal renders the stock-error banner alone, without the submit failure block', async () => {
+    const h = harness();
+    stubSubmitOutcome({ kind: 'unknown', code: 'OUT_OF_STOCK' });
+
+    await h.fixture.whenStable();
+    await h.fixture.componentInstance.onSubmitRequested();
+
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
+    expect(h.fixture.componentInstance.viewState()).toBe('stock-error');
+    expect(h.fixture.componentInstance.submitFailure()).toBeNull();
+    expect(countTestId(host, 'review-stock-back-to-cart')).toBe(1);
+    expect(countTestId(host, 'review-submit-failure')).toBe(0);
+    expect(countTestId(host, 'review-change-payment')).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RP-30..RP-35 — the bounded pending payment poll (E094, E095)
+// ---------------------------------------------------------------------------
+
+describe('pending payment poll (E094, E095)', () => {
+  beforeEach(async () => {
+    await seedCompleteCardDraft();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The intent every case in this block polls: pending, so the poll
+   *  keeps going until a case makes it stop answering that way. */
+  function pendingIntent(id: string): PaymentIntent {
+    return {
+      id,
+      status: 'pending',
+      amount: { amount: 89990, currency: 'HUF' },
+      createdAt: '2026-09-20T10:00:00.000Z',
+      expiresAt: '2026-09-20T10:15:00.000Z',
+      redirectUrl: `/demo-fizetes/${id}`,
+      returnUrl: '/penztar/ellenorzes',
+    };
+  }
+
+  /** The page with the card draft seeded and its own load settled, so a
+   *  case starts from a rendered step. Fake timers go in after that
+   *  load: `docs/spec/architecture.md` bounds the poll, not the load. */
+  async function mounted(): Promise<{ h: PageHarness; checkout: CheckoutFacade }> {
+    const h = harness();
+    const checkout = TestBed.inject(CheckoutFacade);
+    await h.fixture.whenStable();
+    vi.useFakeTimers();
+    return { h, checkout };
+  }
+
+  /** Hands the facade a pending intent, which is what the page's poll
+   *  effect watches for. `TestBed.tick()` flushes the effect. */
+  function startPendingPoll(checkout: CheckoutFacade, id: string): void {
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(pendingIntent(id));
+    TestBed.tick();
+  }
+
+  it('RP-30 a pending intent is read once a second', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(readSpy).toHaveBeenCalledTimes(0);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(readSpy.mock.calls[0]?.[0]).toBe('pi-1');
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(readSpy).toHaveBeenCalledTimes(3);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('polling');
+  });
+
+  it('RP-31 ten pending reads exhaust the poll', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
+    expect(countTestId(host, 'review-payment-poll-exhausted')).toBe(1);
+    expect(countTestId(host, 'review-payment-check')).toBe(1);
+  });
+
+  it('RP-32 a read that answers succeeded stops the poll', async () => {
+    const { h, checkout } = await mounted();
+    let calls = 0;
+    const answer = (value: PaymentIntent): Promise<CheckoutResult<PaymentIntent>> =>
+      Promise.resolve({ ok: true, value });
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockImplementation((id) => {
+      calls += 1;
+      if (calls === 3) {
+        const succeeded: PaymentIntent = { ...pendingIntent(id), status: 'succeeded' };
+        writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(succeeded);
+        return answer(succeeded);
+      }
+      return answer(pendingIntent(id));
+    });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(3);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('idle');
+  });
+
+  it('RP-33 an intent that is not pending starts no poll', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set({
+      ...pendingIntent('pi-1'),
+      status: 'requires_action',
+    });
+    TestBed.tick();
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(0);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('idle');
+  });
+
+  it('RP-34 a destroyed page stops polling', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+
+    h.fixture.destroy();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('RP-35 the poll runs once per intent, and the manual check reads once more', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+
+    await h.fixture.componentInstance.onPaymentCheck();
+    expect(readSpy).toHaveBeenCalledTimes(11);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(readSpy).toHaveBeenCalledTimes(11);
+  });
+
+  it('RP-36 a slow answer delays the next read', async () => {
+    const { h, checkout } = await mounted();
+    let resolveFirst: ((value: CheckoutResult<PaymentIntent>) => void) | null = null;
+    const firstResolver = (value: CheckoutResult<PaymentIntent>): void => {
+      resolveFirst?.(value);
+    };
+    let firstRead = true;
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockImplementation((id) => {
+      if (firstRead) {
+        firstRead = false;
+        return new Promise<CheckoutResult<PaymentIntent>>((resolve) => {
+          resolveFirst = resolve;
+        });
+      }
+      return Promise.resolve({ ok: true, value: pendingIntent(id) });
+    });
+
+    startPendingPoll(checkout, 'pi-1');
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(readSpy.mock.calls[0]?.[0]).toBe('pi-1');
+
+    await vi.advanceTimersByTimeAsync(2499);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+
+    // The first read answers at fake time 3500 (it started at 1000 and
+    // took 2500 ms): the resolution lands on the microtask scheduled
+    // by the next yield, so the new timer is scheduled one second
+    // after that — the second read fires after the next yield, which
+    // is when the test sees it.
+    firstResolver({ ok: true, value: pendingIntent('pi-1') });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(readSpy).toHaveBeenCalledTimes(10);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+  });
+
+  it('RP-37 a read that finds no intent ends the poll', async () => {
+    const { h, checkout } = await mounted();
+    let calls = 0;
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockImplementation((id) => {
+      calls += 1;
+      if (calls === 2) {
+        writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(null);
+        return Promise.resolve({
+          ok: false,
+          error: {
+            status: 404,
+            code: 'NOT_FOUND',
+            detail: 'Payment intent not found',
+            params: {},
+            fieldErrors: [],
+          },
+        });
+      }
+      return Promise.resolve({ ok: true, value: pendingIntent(id) });
+    });
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(2);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('idle');
+  });
+
+  it('RP-38 a read that rejects ends the poll with the check control', async () => {
+    const { h, checkout } = await mounted();
+    const readSpy = vi.spyOn(checkout, 'readPaymentIntent').mockRejectedValue(new Error('boom'));
+
+    startPendingPoll(checkout, 'pi-1');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(paymentPollOf(h.fixture.componentInstance)).toBe('exhausted');
+
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
+    expect(countTestId(host, 'review-payment-check')).toBe(1);
+  });
+
+  it('RP-39 a reload with a stored intent reads it once', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    checkoutKeys.setActiveIntentId('pi-9');
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-9') });
+    const h = harness();
+    await h.fixture.whenStable();
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(readSpy.mock.calls[0]?.[0]).toBe('pi-9');
+  });
+
+  it('RP-40a the load reads no intent when the facade holds one', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(pendingIntent('pi-1'));
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+    const h = harness();
+    await h.fixture.whenStable();
+    expect(readSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('RP-40b the load reads no intent when none is stored', async () => {
+    const checkout = TestBed.inject(CheckoutFacade);
+    writableOf<PaymentIntent | null>(checkout, 'paymentIntentWritable').set(null);
+    const readSpy = vi
+      .spyOn(checkout, 'readPaymentIntent')
+      .mockResolvedValue({ ok: true, value: pendingIntent('pi-1') });
+    const h = harness();
+    await h.fixture.whenStable();
+    expect(readSpy).toHaveBeenCalledTimes(0);
   });
 });

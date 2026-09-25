@@ -50,11 +50,16 @@ import type { CatalogItem } from '@mi-bolt/api/models/catalog-item';
 import type { Variant } from '@mi-bolt/api/models/variant';
 
 /** The add-to-cart refusal copy. A per-product limit is named with its
- *  number (owner, 2026-09-22: "Igen, nevezze meg"); every other refusal
- *  keeps the generic text. `max` is treated as a positive integer: a
- *  0, NaN or fractional value from a misbehaving backend would render
- *  a nonsensical sentence, so the generic text falls through. */
+ *  number (owner, 2026-09-22: "Igen, nevezze meg"); a variant the cart
+ *  refused because it is sold out is named as such (the standard's row
+ *  E060); every other refusal keeps the generic text. `max` is treated
+ *  as a positive integer: a 0, NaN or fractional value from a
+ *  misbehaving backend would render a nonsensical sentence, so the
+ *  generic text falls through. */
 function describeAddFailure(failure: CartError | null): string {
+  if (failure?.code === 'OUT_OF_STOCK') {
+    return 'Ez a változat közben elfogyott, ezért nem került a kosárba.';
+  }
   const max = failure?.code === 'QUANTITY_LIMIT' ? failure.params?.['max'] : undefined;
   if (typeof max === 'number' && Number.isInteger(max) && max > 0) {
     return `Ebből a termékből legfeljebb ${String(max)} db lehet a kosárban.`;
@@ -222,10 +227,15 @@ export class ProductPage {
   /** Last cart-mutation failure, or null. Same single owner. It resets
    *  whenever the selected variant changes, so a refusal never stays on
    *  screen for another colour or storage (owner, 2026-09-23;
-   *  https://angular.dev/guide/signals/linked-signal). */
+   *  https://angular.dev/guide/signals/linked-signal). The comparison
+   *  keeps the refusal through a re-read of the same selection: a
+   *  `linkedSignal` re-runs its computation whenever the source's
+   *  dependencies change, and the silent refresh after a sold-out add
+   *  (row E060) changes the loaded product without changing the
+   *  selection. */
   readonly addError = linkedSignal<string | null, UiProblem | null>({
     source: () => this.selectedVariant()?.id ?? null,
-    computation: () => null,
+    computation: (source, previous) => (previous?.source === source ? previous.value : null),
   });
 
   /** Confirmation text after a successful add. `AddToCartControl`
@@ -264,6 +274,10 @@ export class ProductPage {
   readonly showStickyRail = computed(() => this.state() === 'success');
 
   constructor() {
+    // A new page visit: the root facade must read the product again
+    // even when an earlier visit loaded the same slug and query.
+    this.facade.beginVisit();
+
     // Re-load the product whenever the slug input or the route's
     // slug param changes. The facade's `distinctUntilChanged` filter
     // prevents a no-op re-fire when the same slug + variant query is
@@ -345,7 +359,14 @@ export class ProductPage {
     this.addError.set(null);
     this.addSuccessMessage.set(null);
     try {
-      await this.cartFacade.ensureCart();
+      // Pressing "Kosárba teszem" is the shopper asking for a cart, so an
+      // expired one is replaced here; `ensureCart()` deliberately keeps
+      // the expiry on screen until asked (E059).
+      if (this.cartFacade.cartExpired()) {
+        await this.cartFacade.refetch();
+      } else {
+        await this.cartFacade.ensureCart();
+      }
       await this.cartFacade.addItem(intent.variantId, intent.quantity);
       // The shopper picked another colour or storage while this add was
       // in flight. Its outcome — success or failure — belongs to the
@@ -366,6 +387,12 @@ export class ProductPage {
           fieldErrors: [],
           retryable: true,
         });
+        // A sold-out variant is a stock change the cart has just
+        // observed, so the page re-reads the product to show it (the
+        // standard's row E060).
+        if (failure?.code === 'OUT_OF_STOCK') {
+          this.facade.refreshProduct();
+        }
         return;
       }
       const added = this.findAddedLine(intent.variantId);

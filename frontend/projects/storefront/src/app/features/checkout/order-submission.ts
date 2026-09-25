@@ -3,10 +3,11 @@
  *
  * A thin mapper over `CheckoutFacade.submitOrder`: pick the arm of
  * `OrderRequest` (the discriminated union on `paymentMethod`), call
- * `submitOrder(body)` and map the result. There is no polling loop
- * and no progress stream: the SPA is destroyed by the payment
- * redirect and the outcome is read once on return (fact (d) of the
- * S3 design). `SafeLogger` whitelists the context a log line may carry.
+ * `submitOrder(body)` and map the result. The submission itself never
+ * polls: the SPA is destroyed by the payment redirect, the outcome is
+ * read on return, and a pending outcome is re-read by `ReviewPage`'s
+ * bounded poll, not here. `SafeLogger` whitelists the context a log
+ * line may carry.
  */
 
 import { Service, computed, inject, signal, type Signal } from '@angular/core';
@@ -159,6 +160,14 @@ export class OrderSubmission {
     const o = this.lastOutcomeWritable();
     return o !== null && (o.kind === 'declined' || o.kind === 'payment-required');
   });
+
+  /** Drops the stored outcome. An outcome belongs to the review visit
+   *  that produced it, so `ReviewPage` clears it when it opens: a stock
+   *  error from an earlier visit would otherwise be the state the
+   *  corrected cart comes back to. */
+  clearOutcome(): void {
+    this.lastOutcomeWritable.set(null);
+  }
 
   /** Replaces the safe-logger sink; entries are already redacted. */
   bindSafeLogger(logger: SafeLogger): void {

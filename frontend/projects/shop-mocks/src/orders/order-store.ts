@@ -19,8 +19,11 @@
  * backend (`PaymentIntentService.java:87`,
  * `application.properties:40-42`): the redirect points at the demo
  * payment page (`/demo-fizetes/<id>`) and the return URL carries the
- * intent id in a query parameter. The 30-minute lifetime mirrors
- * `mibolt.payment.intent-lifetime=30m`.
+ * intent id in a query parameter. Under a named scenario the return URL
+ * also carries `mi-scenario=<name>`, so the shop's return leg loads the
+ * scenario it left from, while the redirect carries none, because the
+ * payment page is a separate document the shop's faults must not reach.
+ * The 30-minute lifetime mirrors `mibolt.payment.intent-lifetime=30m`.
  */
 
 import type { Problem } from '@mi-bolt/api/models/problem';
@@ -36,6 +39,7 @@ import type { OrderLine } from '@mi-bolt/api/models/order-line';
 import type { Cart } from '@mi-bolt/api/models/cart';
 import type { Money } from '@mi-bolt/api/models/money';
 import type { StorageGb } from '@mi-bolt/api/models/storage-gb';
+import type { Address } from '@mi-bolt/api/models/address';
 import type { Contact } from '@mi-bolt/api/models/contact';
 import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
 import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
@@ -44,10 +48,13 @@ import type { PaymentSelection } from '@mi-bolt/api/models/payment-selection';
 import type { CreateHandlersOptions } from '../create-handlers';
 import type { CartStore } from '../cart/cart-store';
 import type { CheckoutStore } from '../checkout/checkout-store';
+import { stockLostOnce } from '../faults';
+import { StockLedger } from '../stock/stock-ledger';
 import { TERMS_VERSION, checkoutProblem } from '../checkout/checkout-store';
 import { deriveIdempotencyKey, hashPayload } from '../idempotency';
 import type { PersistedIdempotencyRecord, IdempotencyStore } from '../idempotency';
 import { isRecord } from '../is-record';
+import { DEFAULT_SCENARIO } from '../scenarios';
 
 export const PAYMENT_INTENT_TTL_MS = 30 * 60 * 1000;
 
@@ -128,6 +135,41 @@ function isOrderReceipt(value: unknown): value is OrderReceipt {
   );
 }
 
+/** Neutral address the demo snapshot carries in place of a real one. */
+const REDACTED_ADDRESS: Address = {
+  countryCode: 'HU',
+  postalCode: '0000',
+  city: 'redacted',
+  line1: 'redacted',
+};
+
+/** Neutral e-mail the demo snapshot carries in place of the typed one. */
+const REDACTED_CONTACT_EMAIL = 'redacted@example.invalid';
+
+/**
+ * Returns the receipt as the demo snapshot may keep it. The demo snapshot
+ * allows only privacy-minimised receipts (`docs/spec/architecture.md:107`)
+ * and the standard's row E102 asks a reloaded receipt to carry no personal
+ * data, so the saved copy holds no e-mail, billing name or address. The
+ * contract still requires `contactEmail`, `billing` and a home-delivery
+ * `address` on every `OrderReceipt`, and the receipt page renders none of
+ * them, so a receipt read back after a reload carries these neutral
+ * placeholders. The owner chose that the receipt never shows the name, the
+ * address or the e-mail.
+ */
+function withoutPersonalData(receipt: OrderReceipt): OrderReceipt {
+  const delivery: DeliverySelection =
+    receipt.delivery.optionId === 'home_delivery'
+      ? { optionId: 'home_delivery', address: REDACTED_ADDRESS }
+      : receipt.delivery;
+  return {
+    ...receipt,
+    contactEmail: REDACTED_CONTACT_EMAIL,
+    billing: { name: 'redacted', address: REDACTED_ADDRESS },
+    delivery,
+  };
+}
+
 export class OrderStore {
   private readonly intents = new Map<string, StoredIntent>();
   private readonly orders = new Map<string, StoredOrder>();
@@ -141,6 +183,7 @@ export class OrderStore {
     private readonly checkout: CheckoutStore,
     private readonly idempotency: IdempotencyStore,
     private readonly cart: () => CartStore,
+    private readonly stock: StockLedger = new StockLedger(),
   ) {}
 
   createPaymentIntent(
@@ -214,6 +257,13 @@ export class OrderStore {
     const id = this.options.ids.uuid();
     const createdAt = this.options.clock.now();
     const expiresAt = new Date(Date.parse(createdAt) + PAYMENT_INTENT_TTL_MS).toISOString();
+    // The shop's own scenario travels back on the return URL, so the return
+    // leg loads the scenario the shopper left from; the default scenario
+    // needs no parameter, an absent one resolving to it.
+    const scenarioQuery =
+      this.options.scenario.name === DEFAULT_SCENARIO.name
+        ? ''
+        : `&mi-scenario=${encodeURIComponent(this.options.scenario.name)}`;
     const stored: StoredIntent = {
       id,
       sessionId,
@@ -222,7 +272,7 @@ export class OrderStore {
       createdAt,
       expiresAt,
       redirectUrl: `/demo-fizetes/${id}`,
-      returnUrl: `/penztar?paymentIntentId=${id}`,
+      returnUrl: `/penztar?paymentIntentId=${id}${scenarioQuery}`,
     };
     this.intents.set(id, stored);
     const wire = this.toWireIntent(stored);
@@ -476,6 +526,33 @@ export class OrderStore {
       }
     }
 
+    if (stockLostOnce(this.options, 'order')) {
+      const last = cart.items.at(-1);
+      if (last !== undefined) this.stock.take(last.variantId);
+    }
+
+    // `isTaken` is the only stock check the order commit needs: the cart's
+    // view() (run by `checkout.read` above) already clamps every line's
+    // quantity to the ledger's remaining, so `item.quantity` can never
+    // exceed what `recordSale` is about to deduct. `remaining(...)` was
+    // the wrong shape here — it expected the catalog's original maxQuantity
+    // and double-subtracted `ledger.sold` when the cart item was added
+    // after another order had already sold units of the same variant.
+    for (const item of cart.items) {
+      if (this.stock.isTaken(item.variantId)) {
+        return {
+          ok: false,
+          problem: this.problem(
+            409,
+            'OUT_OF_STOCK',
+            'Stock ran out while the shopper was in checkout.',
+            { variantId: item.variantId },
+            [],
+          ),
+        };
+      }
+    }
+
     const orderId = this.options.ids.uuid();
     const orderNumber = this.nextOrderNumber();
     const createdAt = this.options.clock.now();
@@ -500,6 +577,7 @@ export class OrderStore {
       notice: SIMULATION_NOTICE,
     };
     this.orders.set(orderId, { receipt, sessionId });
+    this.stock.recordSale(items);
 
     this.checkout.clearDraft(sessionId);
     // The intent stays readable, as on the backend; it only cannot back
@@ -556,11 +634,30 @@ export class OrderStore {
   }
 
   /**
+   * `true` when the session has a stored intent whose status is
+   * `'requires_action'` and whose id is not yet used by an order.
+   * `CheckoutStore.toPersistedDraft` answers with this so the
+   * snapshot keeps the draft only while a card intent waits for
+   * the payment page. The intent map is iterated directly because
+   * the map's keys are intent ids, not session ids, and the per-
+   * session read already happens on every intent check.
+   */
+  hasCardPaymentInFlight(sessionId: string): boolean {
+    for (const [intentId, stored] of this.intents) {
+      if (stored.sessionId === sessionId && stored.status === 'requires_action') {
+        if (!this.usedIntentIds.has(intentId)) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Returns the intents and receipts owned by the given session in
    * the shape `MockSnapshot` carries. Wire-shaped, with no
    * `sessionId` stamp (the snapshot is read back only in the same
    * tab, and the stamped `StoredIntent.sessionId` round-trips
-   * through `seedFromSnapshot`).
+   * through `seedFromSnapshot`). A receipt goes out through
+   * `withoutPersonalData`, so the snapshot holds no personal data.
    */
   toPersistedOrderState(sessionId: string): {
     intents: readonly PaymentIntent[];
@@ -573,7 +670,7 @@ export class OrderStore {
     }
     const receipts: OrderReceipt[] = [];
     for (const s of this.orders.values()) {
-      if (s.sessionId === sessionId) receipts.push(s.receipt);
+      if (s.sessionId === sessionId) receipts.push(withoutPersonalData(s.receipt));
     }
     const usedIntentIds: string[] = [];
     for (const id of this.usedIntentIds) {
@@ -582,9 +679,22 @@ export class OrderStore {
     return { intents, receipts, usedIntentIds };
   }
 
-  /** The idempotency cache for the snapshot; see `IdempotencyStore.toPersisted`. */
+  /**
+   * The idempotency cache for the snapshot; see
+   * `IdempotencyStore.toPersisted`. A `POST /orders` replay body is an
+   * order receipt, so it goes out through `withoutPersonalData`; every
+   * other record is carried as it is.
+   */
   toPersistedIdempotency(): readonly PersistedIdempotencyRecord[] {
-    return this.idempotency.toPersisted();
+    const records: PersistedIdempotencyRecord[] = [];
+    for (const record of this.idempotency.toPersisted()) {
+      records.push(
+        isOrderReceipt(record.body)
+          ? { ...record, body: withoutPersonalData(record.body) }
+          : record,
+      );
+    }
+    return records;
   }
 
   /** Restores the idempotency cache a snapshot carried. */

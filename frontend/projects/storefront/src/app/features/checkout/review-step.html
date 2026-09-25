@@ -265,6 +265,17 @@
                 </div>
               }
               @case ('pending') {
+                @if (paymentPoll() === 'polling') {
+                  <p class="m-0" data-testid="review-payment-polling">
+                    Az állapotot másodpercenként automatikusan ellenőrizzük.
+                  </p>
+                }
+                @if (paymentPoll() === 'exhausted') {
+                  <p class="m-0" data-testid="review-payment-poll-exhausted">
+                    Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az
+                    „Állapot ellenőrzése” gombbal később újra megnézheted.
+                  </p>
+                }
                 <div class="branch-actions flex flex-col gap-(--space-3) sm:flex-row">
                   <app-button
                     data-testid="review-payment-check"
@@ -361,11 +372,24 @@
             </div>
           }
           @case ('stock-error') {
-            <div #stateBanner class="state-banner" data-testid="review-state-banner" tabindex="-1">
+            <div
+              #stateBanner
+              class="state-banner flex flex-col gap-(--space-3)"
+              data-testid="review-state-banner"
+              tabindex="-1"
+            >
               <app-status-message
                 severity="error"
                 [message]="outOfStockMessage"
                 [persistent]="true"
+              />
+              <app-button
+                data-testid="review-stock-back-to-cart"
+                label="Vissza a kosárhoz"
+                variant="secondary"
+                [disabled]="backToCartPending()"
+                [loading]="backToCartPending()"
+                (pressed)="backToCartRequested.emit()"
               />
             </div>
           }

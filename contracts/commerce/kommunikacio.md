@@ -210,8 +210,14 @@ The boundary is simple: what is a **message** belongs to the client; what is
 What the user requested and cannot get is an **error**. What the server
 changed on its own is a **notice**.
 
-The `Cart.notices` array carries this: `code`, optional `variantId` and
-`params`. Its codes: `QUANTITY_REDUCED`, `PRICE_CHANGED`, `ITEM_REMOVED`.
+The `Cart.notices` array carries this: `code`, optional `variantId`,
+`productName` and `params`. `productName` is the name of the product the
+notice is about, so a banner can name it even after an `ITEM_REMOVED` notice
+has taken its line out of the cart. `params` carries what changed, by code:
+`quantity` on `ITEM_REMOVED` (the quantity the removed line held), and `from`
+and `to` on `QUANTITY_REDUCED` (the old and the new quantity) and on
+`PRICE_CHANGED` (the old and the new unit price). Its codes:
+`QUANTITY_REDUCED`, `PRICE_CHANGED`, `ITEM_REMOVED`.
 
 **Backend expectation.** When stock drops below the quantity in the cart, the
 server reduces the line's quantity and gives a notice; it leaves no

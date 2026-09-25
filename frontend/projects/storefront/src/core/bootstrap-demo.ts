@@ -4,7 +4,9 @@
  * `startMocks()` is the single public hook the rest of the
  * application calls before `bootstrapApplication`. It:
  *
- *   1. Resolves the active scenario from `?mi-scenario=`.
+ *   1. Resolves the active scenario: `?mi-scenario=` when the URL
+ *      carries it, otherwise the one this tab ran last
+ *      (`resolveActiveScenario`).
  *   2. Hydrates the sessionStorage snapshot via the persistence
  *      adapter so the handler factory can read cart/receipt state
  *      from a cold reload.
@@ -19,7 +21,12 @@
 import { environment } from '../environments/environment';
 import { startMockWorker } from '@mi-bolt/mocks/browser';
 import { createBrowserPersistence } from '@mi-bolt/mocks/persistence';
-import { createRealClock, parseScenarioFromLocation } from '@mi-bolt/mocks/scenarios';
+import type { SnapshotDiscard } from '@mi-bolt/mocks/persistence';
+import {
+  browserSessionStorage,
+  createRealClock,
+  resolveActiveScenario,
+} from '@mi-bolt/mocks/scenarios';
 
 /** Tracks the last prepared scenario for diagnostics. */
 let preparedScenario: string | null = null;
@@ -32,6 +39,14 @@ let preparedScenario: string | null = null;
  * `'memory'` state (FIX-70-AC05).
  */
 let preparedPersistenceMode: 'durable' | 'memory' = 'durable';
+
+/**
+ * Tracks why the most recent `startMocks()` hydrate dropped the stored
+ * snapshot, if it did. `main.ts` reads this once, after `startMocks()`
+ * resolves, and supplies it to Angular's DI as the `SNAPSHOT_DISCARD`
+ * token so `AppShell` can drive `DemoNotice`'s reset strip (MIM-448).
+ */
+let preparedSnapshotDiscard: SnapshotDiscard | null = null;
 
 /**
  * Prepares the demo: hydrates the persistence snapshot and starts the
@@ -55,7 +70,7 @@ export async function startMocks(): Promise<void> {
     preparedScenario = 'production';
     return;
   }
-  const scenario = parseScenarioFromLocation();
+  const scenario = resolveActiveScenario(browserSessionStorage());
   const clock = createRealClock(scenario.clockOffsetMs);
   const persistence = createBrowserPersistence({
     nowMs: () => Date.parse(clock.now()),
@@ -67,8 +82,9 @@ export async function startMocks(): Promise<void> {
   // cart is silently lost across reloads even though the snapshot
   // survived.
   const snapshot = persistence.hydrate(scenario.name);
+  preparedSnapshotDiscard = persistence.lastDiscard();
   preparedPersistenceMode = persistence.isDenied() ? 'memory' : 'durable';
-  await startMockWorker(snapshot);
+  await startMockWorker(snapshot, scenario.name, scenario);
   preparedScenario = scenario.name;
 }
 
@@ -80,6 +96,11 @@ export function getPreparedScenario(): string | null {
 /** Returns the persistence mode determined by the most recent `startMocks` call. */
 export function getPreparedPersistenceMode(): 'durable' | 'memory' {
   return preparedPersistenceMode;
+}
+
+/** Returns why the most recent `startMocks` hydrate dropped its snapshot, or `null`. */
+export function getPreparedSnapshotDiscard(): SnapshotDiscard | null {
+  return preparedSnapshotDiscard;
 }
 
 /** Test-only escape hatch that clears the cached scenario name. */

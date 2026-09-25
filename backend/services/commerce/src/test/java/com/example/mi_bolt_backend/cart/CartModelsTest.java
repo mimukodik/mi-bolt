@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +31,8 @@ class CartModelsTest {
 		CatalogData.ImageData image = new CatalogData.ImageData(sha, "/api/v1/media/" + sha, "alt", 800, 800);
 		CartData.Line line = new CartData.Line("v1", "slug-v1", "42", "p-slug", "Samsung Galaxy S25", "Sötétkék", 128,
 				image, 2, 299990L, 599980L, true, 5);
-		CartData.Notice notice = new CartData.Notice("QUANTITY_REDUCED", "v1", Map.of("from", 4, "to", 2));
+		CartData.Notice notice = new CartData.Notice("QUANTITY_REDUCED", "v1", "Samsung Galaxy S25",
+				new CartData.NoticeParams(null, 4, 2));
 		CartData.CartView view = new CartData.CartView(10L, 3L, List.of(line), 1, 2, 599980L, expires, List.of(notice));
 
 		Cart cart = CartModels.toCart(view);
@@ -54,7 +54,10 @@ class CartModelsTest {
 		CartNotice mapped = cart.getNotices().get(0);
 		assertThat(mapped.getCode()).isEqualTo(CartNoticeCode.QUANTITY_REDUCED);
 		assertThat(mapped.getVariantId()).isEqualTo("v1");
-		assertThat(mapped.getParams()).containsEntry("from", 4).containsEntry("to", 2);
+		assertThat(mapped.getParams().getFrom()).isEqualTo(4);
+		assertThat(mapped.getParams().getTo()).isEqualTo(2);
+		assertThat(mapped.getParams().getQuantity()).isNull();
+		assertThat(mapped.getProductName()).isEqualTo("Samsung Galaxy S25");
 	}
 
 	@Test
@@ -68,5 +71,18 @@ class CartModelsTest {
 
 		assertThat(item.getAvailability()).isEqualTo(Availability.OUT_OF_STOCK);
 		assertThat(item.getMaxQuantity()).isEqualTo(0);
+	}
+
+	@Test
+	void mapsAnItemRemovedNoticeWithItsNameAndQuantity() {
+		CartNotice mapped = CartModels.toCartNotice(
+				new CartData.Notice("ITEM_REMOVED", "v2", "Nokia 105", new CartData.NoticeParams(3, null, null)));
+
+		assertThat(mapped.getCode()).isEqualTo(CartNoticeCode.ITEM_REMOVED);
+		assertThat(mapped.getVariantId()).isEqualTo("v2");
+		assertThat(mapped.getProductName()).isEqualTo("Nokia 105");
+		assertThat(mapped.getParams().getQuantity()).isEqualTo(3);
+		assertThat(mapped.getParams().getFrom()).isNull();
+		assertThat(mapped.getParams().getTo()).isNull();
 	}
 }

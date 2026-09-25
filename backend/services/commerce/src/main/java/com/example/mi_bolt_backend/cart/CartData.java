@@ -2,7 +2,6 @@ package com.example.mi_bolt_backend.cart;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 
 import com.example.mi_bolt_backend.catalog.CatalogData;
 
@@ -36,6 +35,10 @@ public interface CartData {
 			int maxQuantity) {
 	}
 
-	record Notice(String code, String variantId, Map<String, Object> params) {
+	record Notice(String code, String variantId, String productName, NoticeParams params) {
+	}
+
+	/** What a notice changed: {@code quantity} on ITEM_REMOVED, {@code from} and {@code to} on the other codes. */
+	record NoticeParams(Integer quantity, Integer from, Integer to) {
 	}
 }

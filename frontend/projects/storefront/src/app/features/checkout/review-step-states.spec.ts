@@ -8,9 +8,9 @@
  * the payment-intent branch (succeeded, declined, pending,
  * requires_action, missing-intent). No other spec file is touched.
  *
- * `review-step.ts:15` ("no polling loop of any kind") rules a polling
- * intent branch out: PS-06 presses the check control twice and proves no
- * timer or repeated emission follows the second press.
+ * The step never loops on its own: PS-06 presses the check control twice
+ * and proves no timer or repeated emission follows the second press; the
+ * bounded poll is `ReviewPage`'s (review-page.spec.ts).
  */
 
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -19,7 +19,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ReviewStep, type CheckoutViewState } from './review-step';
+import { ReviewStep, type CheckoutViewState, type PaymentPollState } from './review-step';
 import type { IntentDropReason, PriceChange } from './checkout.facade';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 
@@ -172,6 +172,7 @@ function makeIntent(status: PaymentIntentStatus): PaymentIntent {
 interface FixtureOverrides {
   readonly state?: CheckoutViewState;
   readonly paymentIntent?: PaymentIntent | null;
+  readonly paymentPoll?: PaymentPollState;
   readonly priceChange?: PriceChange | null;
   readonly paymentIntentMissing?: boolean;
   readonly paymentStarted?: boolean;
@@ -189,6 +190,9 @@ function createFixture(overrides: FixtureOverrides = {}): ComponentFixture<Revie
   fixture.componentRef.setInput('options', OPTIONS);
   fixture.componentRef.setInput('state', overrides.state ?? 'ready');
   fixture.componentRef.setInput('paymentIntent', overrides.paymentIntent ?? null);
+  if (overrides.paymentPoll !== undefined) {
+    fixture.componentRef.setInput('paymentPoll', overrides.paymentPoll);
+  }
   fixture.componentRef.setInput('priceChange', overrides.priceChange ?? null);
   fixture.componentRef.setInput('paymentIntentMissing', overrides.paymentIntentMissing ?? false);
   fixture.componentRef.setInput('paymentStarted', overrides.paymentStarted ?? false);
@@ -333,11 +337,50 @@ describe('PS-06 the pending check control emits paymentCheckRequested once per p
     expect(count).toBe(2);
 
     // Advance time well past any conceivable polling interval. No
-    // timer fires from the component itself (review-step.ts:15:
-    // "no polling loop of any kind").
+    // timer fires from the component itself: it renders the poll's
+    // progress, the page runs the poll.
     vi.advanceTimersByTime(10_000);
     fixture.detectChanges();
     expect(count).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PS-14, PS-15 — the two states of the bounded poll (E094, E095)
+// ---------------------------------------------------------------------------
+describe('PS-14 while the page polls, the step says so and still offers the check control', () => {
+  it('the polling line reads exactly "Az állapotot másodpercenként automatikusan ellenőrizzük." and one check control is present', () => {
+    const fixture = createFixture({
+      paymentIntent: makeIntent('pending'),
+      paymentPoll: 'polling',
+    });
+    const root = getRootElement(fixture);
+
+    const polling = getElement(root, '[data-testid="review-payment-polling"]');
+    expect(polling.textContent.trim()).toBe(
+      'Az állapotot másodpercenként automatikusan ellenőrizzük.',
+    );
+
+    expect(getButton(root, 'review-payment-check').textContent.trim()).toBe('Állapot ellenőrzése');
+    expect(queryElement(root, '[data-testid="review-payment-poll-exhausted"]')).toBeNull();
+  });
+});
+
+describe('PS-15 after ten reads the step explains the unknown outcome and offers the check control', () => {
+  it('the exhausted sentence reads exactly "Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted." and the check control is present', () => {
+    const fixture = createFixture({
+      paymentIntent: makeIntent('pending'),
+      paymentPoll: 'exhausted',
+    });
+    const root = getRootElement(fixture);
+
+    const exhausted = getElement(root, '[data-testid="review-payment-poll-exhausted"]');
+    expect(exhausted.textContent.trim()).toBe(
+      'Tíz ellenőrzés után sem ismert a fizetés eredménye. Új fizetést nem indítunk; az „Állapot ellenőrzése” gombbal később újra megnézheted.',
+    );
+
+    expect(getButton(root, 'review-payment-check').textContent.trim()).toBe('Állapot ellenőrzése');
+    expect(queryElement(root, '[data-testid="review-payment-polling"]')).toBeNull();
   });
 });
 
@@ -603,11 +646,14 @@ describe('ST-01 the conflict state renders its fixed sentence and a retry contro
 });
 
 // ---------------------------------------------------------------------------
-// ST-02 — stock-error / error: fixed sentences, no control in the row
+// ST-02 — stock-error: the way back to the cart / error: fixed sentence and
+// no control in the row
 // ---------------------------------------------------------------------------
-describe('ST-02 the stock-error and error states each render their own fixed sentence and no control', () => {
-  it('renders each sentence and no control inside the status row', () => {
+describe('ST-02 the stock-error state offers the way back to the cart, and the error state renders its sentence and no control', () => {
+  it('the stock-error row renders its fixed sentence and a back-to-cart control that emits once, and the error row renders its sentence and no control', () => {
     const stockFixture = createFixture({ state: 'stock-error' });
+    let backToCartCount = 0;
+    stockFixture.componentInstance.backToCartRequested.subscribe(() => (backToCartCount += 1));
     const stockRoot = getRootElement(stockFixture);
     // MIM-240b1: scope to the status row; the demo notice is another
     // status-message primitive on the page now.
@@ -615,9 +661,22 @@ describe('ST-02 the stock-error and error states each render their own fixed sen
     const stockMessages = stockRow.querySelectorAll('[data-testid="status-message"]');
     expect(stockMessages.length).toBe(1);
     expect(stockMessages[0].textContent).toBe(
-      'Egy vagy több változat elfogyott. Visszavonulhatsz a kosárhoz a cikk korrigálásához.',
+      'Egy vagy több termék közben elfogyott, ezért a rendelés nem jött létre. A kosárban javíthatod; a megadott adataid megmaradnak.',
     );
-    expect(stockRow.querySelectorAll('app-button').length).toBe(0);
+
+    const backToCart = getButton(stockRow, 'review-stock-back-to-cart');
+    expect(backToCart.textContent.trim()).toBe('Vissza a kosárhoz');
+    expect(backToCart.disabled).toBe(false);
+    backToCart.click();
+    stockFixture.detectChanges();
+    expect(backToCartCount).toBe(1);
+
+    TestBed.resetTestingModule();
+    const pendingFixture = createFixture({ state: 'stock-error' });
+    pendingFixture.componentRef.setInput('backToCartPending', true);
+    pendingFixture.detectChanges();
+    const pendingRow = getElement(getRootElement(pendingFixture), '[data-testid="review-status"]');
+    expect(getButton(pendingRow, 'review-stock-back-to-cart').disabled).toBe(true);
 
     TestBed.resetTestingModule();
     const errorFixture = createFixture({ state: 'error' });

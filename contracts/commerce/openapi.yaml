@@ -2416,9 +2416,32 @@ components:
           $ref: '#/components/schemas/CartNoticeCode'
         variantId:
           type: string
+        productName:
+          type: string
+          description: >-
+            The name of the product the notice is about, as its cart line shows it,
+            so the banner can name the product even after an ITEM_REMOVED notice
+            has taken its line out of the cart.
         params:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/CartNoticeParams'
+    CartNoticeParams:
+      type: object
+      additionalProperties: false
+      description: >-
+        What changed, by notice code. ITEM_REMOVED carries quantity, the quantity
+        the removed line held. QUANTITY_REDUCED carries from and to, the line's
+        old and new quantity. PRICE_CHANGED carries from and to, the old and the
+        new unit price in whole Hungarian forints.
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+        from:
+          type: integer
+          minimum: 0
+        to:
+          type: integer
+          minimum: 0
     CartItem:
       type: object
       additionalProperties: false

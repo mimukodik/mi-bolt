@@ -14,42 +14,6 @@ import { App } from './app/app';
 registerLocaleData(localeHu, 'hu-HU');
 
 /**
- * Snapshot key prefix, mirrored from `projects/shop-mocks/src/persistence.ts:35`. The
- * constant is module-private there, so it is repeated rather than
- * imported; the two must stay in step, and the scan below is the only
- * reader of it in this application.
- */
-const SNAPSHOT_KEY_PREFIX = 'mi-bolt.snapshot.';
-
-/**
- * Scenario resolution, reader side (the S3-P0 addendum's decision).
- *
- * The payment page is reached by a redirect from the shop, so its URL
- * carries no `?mi-scenario=`. The shop's snapshot key namespaces the
- * scenario name, so when exactly one `mi-bolt.snapshot.*` key is in
- * sessionStorage its suffix names the scenario the shop is running and
- * both applications read the same snapshot. No key, or more than one,
- * is ambiguous and falls back to the URL.
- */
-function readScenarioNameFromSnapshotKeys(): string | null {
-  let found: string | null = null;
-  try {
-    for (let index = 0; index < sessionStorage.length; index += 1) {
-      const key = sessionStorage.key(index);
-      if (key === null) continue;
-      if (!key.startsWith(SNAPSHOT_KEY_PREFIX)) continue;
-      if (found !== null) return null;
-      found = key.slice(SNAPSHOT_KEY_PREFIX.length);
-    }
-  } catch {
-    // Private browsing denies sessionStorage outright; the persistence
-    // adapter handles the same denial on its own side.
-    return null;
-  }
-  return found;
-}
-
-/**
  * Boot MSW before Angular so the page's first read is already intercepted.
  *
  * `isDevMode()` is the production gate: it is false whenever the Angular
@@ -57,9 +21,16 @@ function readScenarioNameFromSnapshotKeys(): string | null {
  * `development` does. The mock module graph is behind `import()` so the
  * production bundle keeps MSW out of the initial chunk.
  *
- * The six lines below are `startMocks`'s body (`src/core/bootstrap-demo.ts:58-72`)
- * inlined rather than imported: that wrapper also carries `PERSISTENCE_MODE`
- * plumbing for the shop's `DemoNotice`, which this application has no use for.
+ * The lines below follow the storefront's `startMocks`
+ * (`src/core/bootstrap-demo.ts`) rather than importing it: that wrapper also
+ * carries `PERSISTENCE_MODE` plumbing for the shop's `DemoNotice`, which this
+ * application has no use for. The page is reached by a redirect from the shop,
+ * so its URL carries no `?mi-scenario=`: it hydrates the snapshot of the
+ * scenario the shop's tab remembered (`readActiveScenarioName`), falling back
+ * to its own URL's scenario when none is stored, and writes the outcome back
+ * under that same name (`startMockWorker`'s second argument), while its
+ * handlers keep its own URL's scenario. It never writes the remembered name
+ * itself.
  */
 const start = async (): Promise<void> => {
   if (isDevMode()) {
@@ -68,13 +39,13 @@ const start = async (): Promise<void> => {
       import('@mi-bolt/mocks/persistence'),
       import('@mi-bolt/mocks/scenarios'),
     ]);
-    const name = readScenarioNameFromSnapshotKeys();
+    const name = scenarios.readActiveScenarioName(scenarios.browserSessionStorage());
     const scenario =
       name === null ? scenarios.parseScenarioFromLocation() : scenarios.resolveScenario(name);
     const clock = scenarios.createRealClock(scenario.clockOffsetMs);
     const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
     const snapshot = persistence.hydrate(scenario.name);
-    await startMockWorker(snapshot);
+    await startMockWorker(snapshot, scenario.name);
   }
   await bootstrapApplication(App, appConfig);
 };

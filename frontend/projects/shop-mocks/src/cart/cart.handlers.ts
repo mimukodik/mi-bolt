@@ -29,8 +29,9 @@ import {
   type BusinessHandlerEntry,
   type CreateHandlersOptions,
 } from '../create-handlers';
-import { faultResponse } from '../faults';
+import { faultResponse, slowOnce, stockLostOnce } from '../faults';
 import { isRecord } from '../is-record';
+import { stockLedger } from '../stock/stock-ledger';
 
 import { buildTraceId, CartStore, problemType } from './cart-store';
 import { catalogStore } from '../catalog/catalog.handlers';
@@ -146,16 +147,24 @@ function readVariantId(
 export const cartHandlersEntry: BusinessHandlerEntry = (
   options: CreateHandlersOptions,
 ): readonly RequestHandler[] => {
-  const store = new CartStore(options, (id) => requireCatalog().getVariant(id));
+  const store = new CartStore(options, (id) => {
+    const hit = requireCatalog().getVariant(id);
+    if (hit === undefined) return undefined;
+    const ledger = stockLedger.current;
+    return ledger === null
+      ? hit
+      : { product: hit.product, variant: ledger.applyToVariant(hit.variant) };
+  });
   cartStore.current = store;
 
   if (options.snapshot?.cart !== undefined) {
     store.seedFromSnapshot(options.snapshot.simulatedSessionId, options.snapshot.cart);
   }
 
-  const getCart: RequestHandler = http.get('*/api/v1/cart', ({ request }) => {
+  const getCart: RequestHandler = http.get('*/api/v1/cart', async ({ request }) => {
     const fault = faultResponse(options, 'cart');
     if (fault !== null) return fault;
+    await slowOnce(options, 'cart');
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -166,6 +175,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
   const addCartItem: RequestHandler = http.post('*/api/v1/cart/items', async ({ request }) => {
     const fault = faultResponse(options, 'cart-add');
     if (fault !== null) return fault;
+    await slowOnce(options, 'cart-add');
     const sessionId = request.headers.get('X-Demo-Session');
     if (sessionId === null) {
       return invalidRequest(options, 'Missing X-Demo-Session header', {});
@@ -176,6 +186,9 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
     if (!variantRead.ok) return variantRead.response;
     const quantityRead = readQuantity(options, body);
     if (!quantityRead.ok) return quantityRead.response;
+    if (stockLostOnce(options, 'cart-add')) {
+      stockLedger.current?.take(variantRead.value);
+    }
     const outcome = store.add(sessionId, ifMatch, variantRead.value, quantityRead.value);
     if (outcome.ok) options.persist?.(sessionId);
     return outcomeResponse(outcome);
@@ -199,6 +212,7 @@ export const cartHandlersEntry: BusinessHandlerEntry = (
     async ({ request, params }) => {
       const fault = faultResponse(options, 'cart-quantity');
       if (fault !== null) return fault;
+      await slowOnce(options, 'cart-quantity');
       const sessionId = request.headers.get('X-Demo-Session');
       if (sessionId === null) {
         return invalidRequest(options, 'Missing X-Demo-Session header', {});

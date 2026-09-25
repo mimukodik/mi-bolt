@@ -523,6 +523,7 @@ describe('reconcile', () => {
       {
         code: 'QUANTITY_REDUCED',
         variantId: VARIANT_IPHONE_BURGUNDI,
+        productName: 'Apple iPhone 18 Pro Max',
         params: { from: 4, to: 2 },
       },
     ]);
@@ -543,7 +544,30 @@ describe('reconcile', () => {
     expect(result.cart.version).toBe(3);
     expect(result.cart.items).toEqual([]);
     expect(result.cart.notices).toEqual([
-      { code: 'ITEM_REMOVED', variantId: VARIANT_IPHONE_BURGUNDI },
+      { code: 'ITEM_REMOVED', variantId: VARIANT_IPHONE_BURGUNDI, params: { quantity: 4 } },
+    ]);
+  });
+
+  it('names the product on an ITEM_REMOVED notice when the stock drops to zero', () => {
+    let cap = 4;
+    const lookup: VariantLookupFn = (id) =>
+      id === VARIANT_IPHONE_BURGUNDI ? lookupForVariant(id, cap) : undefined;
+    const store = new CartStore(options, lookup);
+    const added = store.add(SESSION_1, '"1"', VARIANT_IPHONE_BURGUNDI, 4);
+    if (!added.ok) throw new Error('add failed');
+    expect(added.cart.items[0]?.productName).toBe('Apple iPhone 18 Pro Max');
+
+    cap = 0;
+    const result = store.get(SESSION_1);
+    if (!result.ok) throw new Error('get failed');
+    expect(result.cart.items).toEqual([]);
+    expect(result.cart.notices).toEqual([
+      {
+        code: 'ITEM_REMOVED',
+        variantId: VARIANT_IPHONE_BURGUNDI,
+        productName: 'Apple iPhone 18 Pro Max',
+        params: { quantity: 4 },
+      },
     ]);
   });
 });
