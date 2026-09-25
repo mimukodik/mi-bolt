@@ -96,6 +96,15 @@ const fullHd = { viewport: { width: 1920, height: 1080 } };
 // Firefox mobile project is viewport-only.
 const mobile = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
 const mobileFirefox = { viewport: { width: 390, height: 844 }, hasTouch: true };
+// The standard's other four widths (docs/spec/testing.md §6, acceptance AC07), in Chromium only
+// (owner, 2026-09-25: "the standard requires it but CI must be spared"). Each width takes the
+// height and touch flags of the existing project on its side of the 1024px breakpoint the specs branch on.
+const narrow = (width: number) => ({
+  viewport: { width, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+});
+const wide = (width: number) => ({ viewport: { width, height: 1080 } });
 const integration = (name: string, use: Record<string, unknown>) => ({
   name: `integration-${name}`,
   testDir: './e2e/integration',
@@ -167,6 +176,10 @@ export default defineConfig({
     },
     integration('chromium-fullhd', { ...devices['Desktop Chrome'], ...fullHd }),
     integration('chromium-mobile', { ...devices['Desktop Chrome'], ...mobile }),
+    integration('chromium-320', { ...devices['Desktop Chrome'], ...narrow(320) }),
+    integration('chromium-768', { ...devices['Desktop Chrome'], ...narrow(768) }),
+    integration('chromium-1024', { ...devices['Desktop Chrome'], ...wide(1024) }),
+    integration('chromium-1440', { ...devices['Desktop Chrome'], ...wide(1440) }),
     integration('firefox-fullhd', { ...devices['Desktop Firefox'], ...fullHd }),
     integration('firefox-mobile', { ...devices['Desktop Firefox'], ...mobileFirefox }),
     integration('webkit-fullhd', { ...devices['Desktop Safari'], ...fullHd }),
