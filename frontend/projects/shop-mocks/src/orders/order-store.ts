@@ -36,6 +36,7 @@ import type { OrderLine } from '@mi-bolt/api/models/order-line';
 import type { Cart } from '@mi-bolt/api/models/cart';
 import type { Money } from '@mi-bolt/api/models/money';
 import type { StorageGb } from '@mi-bolt/api/models/storage-gb';
+import type { Address } from '@mi-bolt/api/models/address';
 import type { Contact } from '@mi-bolt/api/models/contact';
 import type { BillingDetails } from '@mi-bolt/api/models/billing-details';
 import type { DeliverySelection } from '@mi-bolt/api/models/delivery-selection';
@@ -128,6 +129,41 @@ function isOrderReceipt(value: unknown): value is OrderReceipt {
     isMoney(value['total']) &&
     typeof value['paymentMethod'] === 'string'
   );
+}
+
+/** Neutral address the demo snapshot carries in place of a real one. */
+const REDACTED_ADDRESS: Address = {
+  countryCode: 'HU',
+  postalCode: '0000',
+  city: 'redacted',
+  line1: 'redacted',
+};
+
+/** Neutral e-mail the demo snapshot carries in place of the typed one. */
+const REDACTED_CONTACT_EMAIL = 'redacted@example.invalid';
+
+/**
+ * Returns the receipt as the demo snapshot may keep it. The demo snapshot
+ * allows only privacy-minimised receipts (`docs/spec/architecture.md:107`)
+ * and the standard's row E102 asks a reloaded receipt to carry no personal
+ * data, so the saved copy holds no e-mail, billing name or address. The
+ * contract still requires `contactEmail`, `billing` and a home-delivery
+ * `address` on every `OrderReceipt`, and the receipt page renders none of
+ * them, so a receipt read back after a reload carries these neutral
+ * placeholders. The owner chose that the receipt never shows the name, the
+ * address or the e-mail.
+ */
+function withoutPersonalData(receipt: OrderReceipt): OrderReceipt {
+  const delivery: DeliverySelection =
+    receipt.delivery.optionId === 'home_delivery'
+      ? { optionId: 'home_delivery', address: REDACTED_ADDRESS }
+      : receipt.delivery;
+  return {
+    ...receipt,
+    contactEmail: REDACTED_CONTACT_EMAIL,
+    billing: { name: 'redacted', address: REDACTED_ADDRESS },
+    delivery,
+  };
 }
 
 export class OrderStore {
@@ -609,7 +645,8 @@ export class OrderStore {
    * the shape `MockSnapshot` carries. Wire-shaped, with no
    * `sessionId` stamp (the snapshot is read back only in the same
    * tab, and the stamped `StoredIntent.sessionId` round-trips
-   * through `seedFromSnapshot`).
+   * through `seedFromSnapshot`). A receipt goes out through
+   * `withoutPersonalData`, so the snapshot holds no personal data.
    */
   toPersistedOrderState(sessionId: string): {
     intents: readonly PaymentIntent[];
@@ -622,7 +659,7 @@ export class OrderStore {
     }
     const receipts: OrderReceipt[] = [];
     for (const s of this.orders.values()) {
-      if (s.sessionId === sessionId) receipts.push(s.receipt);
+      if (s.sessionId === sessionId) receipts.push(withoutPersonalData(s.receipt));
     }
     const usedIntentIds: string[] = [];
     for (const id of this.usedIntentIds) {
@@ -631,9 +668,22 @@ export class OrderStore {
     return { intents, receipts, usedIntentIds };
   }
 
-  /** The idempotency cache for the snapshot; see `IdempotencyStore.toPersisted`. */
+  /**
+   * The idempotency cache for the snapshot; see
+   * `IdempotencyStore.toPersisted`. A `POST /orders` replay body is an
+   * order receipt, so it goes out through `withoutPersonalData`; every
+   * other record is carried as it is.
+   */
   toPersistedIdempotency(): readonly PersistedIdempotencyRecord[] {
-    return this.idempotency.toPersisted();
+    const records: PersistedIdempotencyRecord[] = [];
+    for (const record of this.idempotency.toPersisted()) {
+      records.push(
+        isOrderReceipt(record.body)
+          ? { ...record, body: withoutPersonalData(record.body) }
+          : record,
+      );
+    }
+    return records;
   }
 
   /** Restores the idempotency cache a snapshot carried. */

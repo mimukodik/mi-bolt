@@ -48,7 +48,6 @@ test.describe('Checkout: retry after one failure', () => {
       const receiptLines = page.getByTestId('receipt-lines');
       const receiptLine = receiptLines.getByTestId('receipt-line');
       const receiptTotals = page.getByTestId('receipt-totals');
-      const receiptDeliveryAddress = page.getByTestId('receipt-row-delivery-address');
       // The reload recovery's single control lives inside the failed read's
       // `success-error`, which wraps the `error-state` primitive.
       const retryButton = successError.getByRole('button', { name: 'Visszatöltés újra' });
@@ -173,9 +172,9 @@ test.describe('Checkout: retry after one failure', () => {
       });
 
       // 2. Record the receipt's values and the address bar: `receipt-order-number`,
-      // `receipt-lines`, `receipt-totals`, `receipt-row-delivery-address` and the
-      // order id in `/penztar/siker/<orderId>`.
-      await test.step("2. Record the receipt's values and the address bar: `receipt-order-number`, `receipt-lines`, `receipt-totals`, `receipt-row-delivery-address` and the order id in `/penztar/siker/<orderId>`.", async () => {
+      // `receipt-lines`, `receipt-totals`, `receipt-row-delivery`,
+      // `receipt-row-payment` and the order id in `/penztar/siker/<orderId>`.
+      await test.step("2. Record the receipt's values and the address bar: `receipt-order-number`, `receipt-lines`, `receipt-totals`, `receipt-row-delivery`, `receipt-row-payment` and the order id in `/penztar/siker/<orderId>`.", async () => {
         // The reads below all sit after the step above proved the receipt
         // rendered, so they read the placed order's values rather than a
         // loading state.
@@ -206,8 +205,12 @@ test.describe('Checkout: retry after one failure', () => {
           receiptTotals.getByTestId('receipt-row-total').getByTestId('price-amount'),
         ).toHaveText('90 480');
 
-        await expect(receiptDeliveryAddress).toContainText('Fő utca 1.');
-        await expect(receiptDeliveryAddress).toContainText('1052 Budapest');
+        // The receipt still names the delivery and payment methods, and carries
+        // no PII (the standard's row E102): neither the name nor the street the
+        // scenario typed appears anywhere in the receipt block.
+        await expect(page.getByTestId('receipt-row-delivery')).toContainText('Házhoz szállítás');
+        await expect(page.getByTestId('receipt-row-payment')).toContainText('Utánvét');
+        await expect(orderReceipt).not.toContainText(/Teszt Elek|Fő utca 1\./);
 
         await expect(receiptOrderNumber).not.toBeEmpty();
         orderNumber = ((await receiptOrderNumber.textContent()) ?? '').trim();
@@ -276,8 +279,8 @@ test.describe('Checkout: retry after one failure', () => {
         await expect(
           receiptTotals.getByTestId('receipt-row-total').getByTestId('price-amount'),
         ).toHaveText('90 480');
-        await expect(receiptDeliveryAddress).toContainText('Fő utca 1.');
-        await expect(receiptDeliveryAddress).toContainText('1052 Budapest');
+        await expect(page.getByTestId('receipt-row-delivery')).toContainText('Házhoz szállítás');
+        await expect(page.getByTestId('receipt-row-payment')).toContainText('Utánvét');
 
         await expect(page).toHaveURL(`/penztar/siker/${orderId}?mi-scenario=fail-once-order-read`);
       });
