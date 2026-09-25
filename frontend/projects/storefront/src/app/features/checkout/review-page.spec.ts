@@ -1022,6 +1022,29 @@ describe('ReviewPage drives the recovery controls', () => {
     expect(spy).toHaveBeenCalledWith(true);
   });
 
+  it('RP-44b an arrival read that fails and leaves no session lands on the contact step instead of a skeleton', async () => {
+    await TestBed.inject(CheckoutFacade).ensureSession();
+    // The draft read answers 410, so the facade drops the session snapshot
+    // and nothing on this page can fill it again; the arrival must not sit
+    // on the loading skeleton for good.
+    server.use(
+      http.get('*/api/v1/checkout', () =>
+        HttpResponse.json(
+          { code: 'CART_EXPIRED', detail: 'The cart has expired', status: 410 },
+          { status: 410 },
+        ),
+      ),
+    );
+
+    const h = harness();
+    await h.fixture.whenStable();
+
+    expect(TestBed.inject(CheckoutFacade).session()).toBeNull();
+    expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/adatok'], {
+      queryParams: { navigationReason: 'incomplete' },
+    });
+  });
+
   it('RP-45 the stock-error control on the page re-reads the cart and opens it', async () => {
     const h = harness();
     await h.fixture.whenStable();

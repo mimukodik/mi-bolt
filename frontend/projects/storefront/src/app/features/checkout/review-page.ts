@@ -240,7 +240,21 @@ export class ReviewPage {
     // back there) would otherwise show the summary the server computed
     // for the old one. The delivery step reads its options fresh for the
     // same reason.
-    await this.checkoutFacade.ensureSession(true);
+    const session = await this.checkoutFacade.ensureSession(true);
+    // A failed read must not strand this page. A 410 CART_EXPIRED drops
+    // the session snapshot (`CheckoutFacade.recordFailure`), and the
+    // arrival would then sit on the loading skeleton for good: the
+    // template renders the step only while `session()` is set, and
+    // nothing on this page reads it again. An arrival whose session is
+    // gone has no draft to review either, so the shopper restarts where
+    // `reviewGuard` sends a session that is not there — the contact step.
+    if (!session.ok && this.checkoutFacade.session() === null) {
+      if (cancelled()) return;
+      await this.router.navigate(['/penztar/adatok'], {
+        queryParams: { navigationReason: 'incomplete' },
+      });
+      return;
+    }
     const id = checkoutKeys.activeIntentId();
     if (id !== null && id.length > 0 && this.checkoutFacade.paymentIntent() === null) {
       if (cancelled()) return;
