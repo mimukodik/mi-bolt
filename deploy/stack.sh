@@ -266,16 +266,17 @@ reclaim_lock() {
   return "${removed}"
 }
 
-# Serializes ensure_state's check-claim-write sequence across two `stack.sh`
-# runs in the same worktree, so they cannot both miss find_existing_slot and
-# both claim a (different) slot, leaking one forever; also used by cmd_reset
-# around its own worktree's delete sequence, and by cmd_prune around a stale
-# slot's delete, keyed to that slot's own (no-longer-existing) worktree so it
-# never contends with this run's own lock. The lock directory's name starts
-# with '.', so it is invisible to every `"${SLOTS_DIR}"/*/` glob used to
-# enumerate slots elsewhere in this script (bash's `*` does not match
-# dotfiles by default) and is never mistaken for a slot.
-acquire_lock() {
+# Shared retry loop behind acquire_lock below and cmd_prune's own call: tries
+# to claim the per-worktree lock for $1 (REPO_ROOT if omitted) up to
+# LOCK_RETRY_TRIES times, reclaiming a stale lock when the mkdir is
+# contested. Sets LOCK_DIR and returns 0 the moment the mkdir succeeds; once
+# the retry budget is spent without acquiring it, returns 1 and leaves
+# LOCK_DIR untouched, for the caller to decide what a failure means. The
+# lock directory's name starts with '.', so it is invisible to every
+# `"${SLOTS_DIR}"/*/` glob used to enumerate slots elsewhere in this script
+# (bash's `*` does not match dotfiles by default) and is never mistaken for
+# a slot.
+attempt_lock() {
   local worktree="${1:-${REPO_ROOT}}"
   mkdir -p "${SLOTS_DIR}"
   local lock_dir _try
@@ -294,6 +295,24 @@ acquire_lock() {
     fi
     sleep "${LOCK_RETRY_INTERVAL}"
   done
+  return 1
+}
+
+# Serializes ensure_state's check-claim-write sequence across two `stack.sh`
+# runs in the same worktree, so they cannot both miss find_existing_slot and
+# both claim a (different) slot, leaking one forever; also used by cmd_reset
+# around its own worktree's delete sequence. Exits the whole script when the
+# retry budget in attempt_lock runs out, which is what ensure_state and
+# cmd_reset both want; cmd_prune calls attempt_lock directly instead, so a
+# lock contended by another run costs it one slot rather than every slot
+# after it.
+acquire_lock() {
+  local worktree="${1:-${REPO_ROOT}}"
+  if attempt_lock "${worktree}"; then
+    return 0
+  fi
+  local lock_dir
+  lock_dir="$(lock_dir_for "${worktree}")"
   echo "stack.sh: timed out waiting for the per-worktree lock ${lock_dir} (held by another stack.sh run there?)" >&2
   echo "stack.sh: if no stack.sh run is actually active there, clear it manually with: rm -rf ${lock_dir} ${lock_dir}.reclaim" >&2
   exit 1
@@ -642,9 +661,15 @@ cmd_prune() {
     # lock a live stack.sh in that worktree would have taken, so it never
     # contends with this run's own per-worktree lock, and it stops two
     # concurrent prunes from both running 'down -v' and 'rm -rf' on the same
-    # stale slot at once. The dir is re-checked once the lock is held, since
-    # a concurrent prune may have already removed it while this one waited.
-    acquire_lock "${owner_path}"
+    # stale slot at once. attempt_lock directly, not acquire_lock: a slot
+    # another run already holds the lock for must be skipped, not made to
+    # abort every slot still left in this loop. The dir is re-checked once
+    # the lock is held, since a concurrent prune may have already removed it
+    # while this one waited.
+    if ! attempt_lock "${owner_path}"; then
+      echo "stack.sh: slot ${n} is locked by another run; skipping" >&2
+      continue
+    fi
     if [ ! -d "${dir}" ]; then
       echo "stack.sh: slot ${n} was already pruned by a concurrent run" >&2
       release_lock

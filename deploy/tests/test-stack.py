@@ -55,6 +55,16 @@ def _lock_dir_for(worktree: Path, slots_dir: Path) -> Path:
     return slots_dir / f".lock-{digest}"
 
 
+def _lock_dir_for_string(worktree_str: str, slots_dir: Path) -> Path:
+    # Same hash lock_dir_for (deploy/stack.sh) computes, but over the literal
+    # string handed to it rather than a resolved worktree path: cmd_prune
+    # passes a stale slot's recorded owner_path straight through, unresolved,
+    # so this is what a test needs when that owner_path never exists on disk
+    # for _repo_root to `cd` into.
+    digest = hashlib.sha1(worktree_str.encode()).hexdigest()[:12]
+    return slots_dir / f".lock-{digest}"
+
+
 def _kill(proc: subprocess.Popen) -> None:
     proc.terminate()
     try:
@@ -278,6 +288,47 @@ class StackScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("timed out waiting for the per-worktree lock", result.stderr)
         self.assertTrue(mutex_dir.is_dir())
+
+    # (i) cmd_prune must not abandon every remaining stale slot when one
+    # slot's lock is contended: it skips the locked slot, reports why, and
+    # still prunes the other stale slot. Proves cmd_prune's `attempt_lock`
+    # skip moves the loop on to the next slot on lock contention, instead
+    # of the exiting acquire_lock aborting the whole prune.
+    def test_prune_skips_locked_slot_and_prunes_the_rest(self) -> None:
+        worktree, compose_log, slots_dir, env = self._sandbox()
+        slots_dir.mkdir(parents=True, exist_ok=True)
+
+        owner_a = str(Path(tempfile.gettempdir()) / "stack-sh-test-gone-a")
+        owner_b = str(Path(tempfile.gettempdir()) / "stack-sh-test-gone-b")
+        project_a = "mi-bolt-wt1-locked-slot"
+        project_b = "mi-bolt-wt2-free-slot"
+
+        slot_a = slots_dir / "1"
+        slot_a.mkdir()
+        (slot_a / "owner").write_text(
+            f"worktree={owner_a}\nbranch=branch-a\nproject={project_a}\n")
+
+        slot_b = slots_dir / "2"
+        slot_b.mkdir()
+        (slot_b / "owner").write_text(
+            f"worktree={owner_b}\nbranch=branch-b\nproject={project_b}\n")
+
+        lock_dir_a = _lock_dir_for_string(owner_a, slots_dir)
+        lock_dir_a.mkdir(parents=True)
+        holder = subprocess.Popen(["sleep", "30"])
+        self.addCleanup(_kill, holder)
+        (lock_dir_a / "pid").write_text(f"{holder.pid}\n")
+
+        result = _run(worktree, env, "prune", "--yes", timeout=LOCK_WAIT_SECONDS + 15)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("slot 1 is locked by another run; skipping", result.stderr)
+        self.assertTrue(slot_a.is_dir(), "the locked slot must be kept, not pruned")
+        self.assertFalse(slot_b.exists(), "the unlocked stale slot must still be pruned")
+
+        log_text = compose_log.read_text() if compose_log.exists() else ""
+        self.assertIn(f"COMPOSE_PROJECT_NAME={project_b}", log_text)
+        self.assertNotIn(f"COMPOSE_PROJECT_NAME={project_a}", log_text)
 
 
 if __name__ == "__main__":
