@@ -1132,6 +1132,22 @@ describe('ReviewPage drives the recovery controls', () => {
     expect(h.navigateSpy).toHaveBeenCalledTimes(1);
     expect(h.navigateSpy).toHaveBeenCalledWith(['/penztar/kosar']);
   });
+
+  it('RP-48 an OUT_OF_STOCK refusal renders the stock-error banner alone, without the submit failure block', async () => {
+    const h = harness();
+    stubSubmitOutcome({ kind: 'unknown', code: 'OUT_OF_STOCK' });
+
+    await h.fixture.whenStable();
+    await h.fixture.componentInstance.onSubmitRequested();
+
+    h.fixture.detectChanges();
+    const host = hostOf(h.fixture);
+    expect(h.fixture.componentInstance.viewState()).toBe('stock-error');
+    expect(h.fixture.componentInstance.submitFailure()).toBeNull();
+    expect(countTestId(host, 'review-stock-back-to-cart')).toBe(1);
+    expect(countTestId(host, 'review-submit-failure')).toBe(0);
+    expect(countTestId(host, 'review-change-payment')).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
