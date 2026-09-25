@@ -161,6 +161,14 @@ export class OrderSubmission {
     return o !== null && (o.kind === 'declined' || o.kind === 'payment-required');
   });
 
+  /** Drops the stored outcome. An outcome belongs to the review visit
+   *  that produced it, so `ReviewPage` clears it when it opens: a stock
+   *  error from an earlier visit would otherwise be the state the
+   *  corrected cart comes back to. */
+  clearOutcome(): void {
+    this.lastOutcomeWritable.set(null);
+  }
+
   /** Replaces the safe-logger sink; entries are already redacted. */
   bindSafeLogger(logger: SafeLogger): void {
     this.logger = logger;

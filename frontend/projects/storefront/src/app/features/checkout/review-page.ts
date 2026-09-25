@@ -101,6 +101,10 @@ export class ReviewPage {
    *  `startPendingPoll`. */
   readonly paymentPoll = signal<PaymentPollState>('idle');
 
+  /** True while the way back to the cart re-reads the cart; the step's
+   *  control is disabled meanwhile, so a second press does nothing. */
+  readonly backToCartPending = signal(false);
+
   /** The intent the poll has already run for. A poll runs at most once
    *  per intent id on this page, so a read that changes nothing about
    *  the intent does not start a second one. */
@@ -147,6 +151,10 @@ export class ReviewPage {
   });
 
   constructor() {
+    // A stock error from an earlier visit would otherwise come back
+    // after the shopper corrected the cart, and in that state the
+    // submit control only focuses the banner.
+    this.orderSubmission.clearOutcome();
     let cancelled = false;
     this.destroyRef.onDestroy(() => {
       cancelled = true;
@@ -206,9 +214,11 @@ export class ReviewPage {
 
   /**
    * Hydrates whatever the shopper's route into this page did not.
-   * Each call is skipped when its signal is already populated, so a
-   * hand-off from `payment-return-page.ts`, which has just loaded the
-   * cart and the session, costs one `GET /checkout/options` at most.
+   * The cart and the options are read only when their signal is empty,
+   * the session on every arrival, so a hand-off from
+   * `payment-return-page.ts`, which has just loaded the cart and the
+   * session, costs one `GET /checkout` and at most one
+   * `GET /checkout/options`.
    *
    * The cold return from the payment page does not survive the SPA
    * (`LOCATION_ASSIGN`), so a reload of `/penztar/ellenorzes` while an
@@ -224,8 +234,26 @@ export class ReviewPage {
     }
     await this.checkoutFacade.ensureOptions();
     if (cancelled()) return;
-    if (this.checkoutFacade.session() === null) {
-      await this.checkoutFacade.ensureSession();
+    // The summary this step shows is computed by the server from the
+    // cart, so the session is read fresh on every arrival: a cart
+    // corrected after an earlier visit (a stock error sends the shopper
+    // back there) would otherwise show the summary the server computed
+    // for the old one. The delivery step reads its options fresh for the
+    // same reason.
+    const session = await this.checkoutFacade.ensureSession(true);
+    // A failed read must not strand this page. A 410 CART_EXPIRED drops
+    // the session snapshot (`CheckoutFacade.recordFailure`), and the
+    // arrival would then sit on the loading skeleton for good: the
+    // template renders the step only while `session()` is set, and
+    // nothing on this page reads it again. An arrival whose session is
+    // gone has no draft to review either, so the shopper restarts where
+    // `reviewGuard` sends a session that is not there — the contact step.
+    if (!session.ok && this.checkoutFacade.session() === null) {
+      if (cancelled()) return;
+      await this.router.navigate(['/penztar/adatok'], {
+        queryParams: { navigationReason: 'incomplete' },
+      });
+      return;
     }
     const id = checkoutKeys.activeIntentId();
     if (id !== null && id.length > 0 && this.checkoutFacade.paymentIntent() === null) {
@@ -237,6 +265,22 @@ export class ReviewPage {
   onEditRequested(section: 'contact' | 'delivery'): void {
     const route = section === 'contact' ? '/penztar/adatok' : '/penztar/szallitas';
     void this.router.navigate([route]);
+  }
+
+  /** The stock-error banner's way back: the cart is read again first,
+   *  so the cart page shows what the refused order changed (a removed
+   *  line and its notice) instead of the cart it already holds. The
+   *  checkout draft stays in the facade, so nothing typed is lost. */
+  async onBackToCart(): Promise<void> {
+    if (this.backToCartPending()) return;
+    this.backToCartPending.set(true);
+    try {
+      await this.cartFacade.refetch();
+    } finally {
+      if (!this.destroyRef.destroyed) this.backToCartPending.set(false);
+    }
+    if (this.destroyRef.destroyed) return;
+    await this.router.navigate(['/penztar/kosar']);
   }
 
   /** The eight `SubmitOutcome` kinds, each to its recovery. A shopper who

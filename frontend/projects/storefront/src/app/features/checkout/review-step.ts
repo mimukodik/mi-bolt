@@ -130,6 +130,8 @@ export class ReviewStep {
   /** Why the facade dropped the card intent this draft held, when it
    *  did; the missing-payment sentence names it. */
   readonly intentDropped = input<IntentDropReason | null>(null);
+  /** True while the page re-reads the cart for the way back; the control is disabled meanwhile. */
+  readonly backToCartPending = input<boolean>(false);
 
   readonly editRequested = output<'contact' | 'delivery'>();
   readonly submitRequested = output();
@@ -141,6 +143,8 @@ export class ReviewStep {
   readonly paymentChangeMethodRequested = output();
   /** pending: one manual re-read per press; the automatic poll is ReviewPage's. */
   readonly paymentCheckRequested = output();
+  /** stock-error: back to the cart to correct it; the page re-reads the cart first. */
+  readonly backToCartRequested = output();
   /** requires_action: back to the payment page's redirect URL. */
   readonly backToPaymentRequested = output();
   /** No intent: start one. */
@@ -321,7 +325,7 @@ export class ReviewStep {
   readonly priceChangedMessage = 'A végösszeg időközben megváltozott.';
   readonly conflictMessage = 'Az adatok időközben megváltoztak. Ellenőrizd és próbáld újra.';
   readonly outOfStockMessage =
-    'Egy vagy több változat elfogyott. Visszavonulhatsz a kosárhoz a cikk korrigálásához.';
+    'Egy vagy több termék közben elfogyott, ezért a rendelés nem jött létre. A kosárban javíthatod; a megadott adataid megmaradnak.';
   readonly errorMessage = 'A rendelés leadása nem sikerült.';
 
   /** Standing "this is a demo" notice rendered as `app-status-message` on

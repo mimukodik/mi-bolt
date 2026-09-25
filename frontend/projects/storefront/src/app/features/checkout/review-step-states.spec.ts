@@ -646,11 +646,14 @@ describe('ST-01 the conflict state renders its fixed sentence and a retry contro
 });
 
 // ---------------------------------------------------------------------------
-// ST-02 — stock-error / error: fixed sentences, no control in the row
+// ST-02 — stock-error: the way back to the cart / error: fixed sentence and
+// no control in the row
 // ---------------------------------------------------------------------------
-describe('ST-02 the stock-error and error states each render their own fixed sentence and no control', () => {
-  it('renders each sentence and no control inside the status row', () => {
+describe('ST-02 the stock-error state offers the way back to the cart, and the error state renders its sentence and no control', () => {
+  it('the stock-error row renders its fixed sentence and a back-to-cart control that emits once, and the error row renders its sentence and no control', () => {
     const stockFixture = createFixture({ state: 'stock-error' });
+    let backToCartCount = 0;
+    stockFixture.componentInstance.backToCartRequested.subscribe(() => (backToCartCount += 1));
     const stockRoot = getRootElement(stockFixture);
     // MIM-240b1: scope to the status row; the demo notice is another
     // status-message primitive on the page now.
@@ -658,9 +661,22 @@ describe('ST-02 the stock-error and error states each render their own fixed sen
     const stockMessages = stockRow.querySelectorAll('[data-testid="status-message"]');
     expect(stockMessages.length).toBe(1);
     expect(stockMessages[0].textContent).toBe(
-      'Egy vagy több változat elfogyott. Visszavonulhatsz a kosárhoz a cikk korrigálásához.',
+      'Egy vagy több termék közben elfogyott, ezért a rendelés nem jött létre. A kosárban javíthatod; a megadott adataid megmaradnak.',
     );
-    expect(stockRow.querySelectorAll('app-button').length).toBe(0);
+
+    const backToCart = getButton(stockRow, 'review-stock-back-to-cart');
+    expect(backToCart.textContent.trim()).toBe('Vissza a kosárhoz');
+    expect(backToCart.disabled).toBe(false);
+    backToCart.click();
+    stockFixture.detectChanges();
+    expect(backToCartCount).toBe(1);
+
+    TestBed.resetTestingModule();
+    const pendingFixture = createFixture({ state: 'stock-error' });
+    pendingFixture.componentRef.setInput('backToCartPending', true);
+    pendingFixture.detectChanges();
+    const pendingRow = getElement(getRootElement(pendingFixture), '[data-testid="review-status"]');
+    expect(getButton(pendingRow, 'review-stock-back-to-cart').disabled).toBe(true);
 
     TestBed.resetTestingModule();
     const errorFixture = createFixture({ state: 'error' });
