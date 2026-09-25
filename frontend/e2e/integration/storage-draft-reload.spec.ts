@@ -387,7 +387,7 @@ test.describe('Checkout: the typed data does not survive a reload', () => {
 
         // The URL to reload is recorded here so the next step re-navigates to
         // exactly this address.
-        expect(page.url()).toBe('http://localhost:4401/penztar/szallitas');
+        await expect(page).toHaveURL('/penztar/szallitas');
       });
 
       // 16. Reload the page by navigating to page.url().
@@ -397,9 +397,7 @@ test.describe('Checkout: the typed data does not survive a reload', () => {
         // The guard sends the reload back to the contact step with the
         // `navigationReason=incomplete` reason in the address bar and the
         // matching banner under the heading.
-        await expect(page).toHaveURL(
-          'http://localhost:4401/penztar/adatok?navigationReason=incomplete',
-        );
+        await expect(page).toHaveURL('/penztar/adatok?navigationReason=incomplete');
         await expect(page).toHaveTitle('MiBolt — Kapcsolattartási adatok');
 
         await expect(navigationReason).toBeVisible();
