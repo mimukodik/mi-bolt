@@ -80,8 +80,13 @@ function browserSessionStorage(): Pick<Storage, 'getItem' | 'setItem'> | undefin
  * Build the handler factory options the browser worker uses. T05
  * owns only the dispatcher shell; T06–T09 will add their own slices
  * by calling `registerBusinessHandlers(...)` from their files.
+ *
+ * The optional name is the snapshot key the page hydrated from when that
+ * differs from the page URL's scenario: the demo payment page reads the
+ * shop's snapshot by its key and writes the outcome back to the same key,
+ * while its handlers keep the scenario its own URL names.
  */
-export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
+export function resolveBrowserHandlerOptions(snapshotScenarioName?: string): CreateHandlersOptions {
   const scenario = parseScenarioFromLocation();
   const ids = createRealIds();
   const clock = createRealClock(scenario.clockOffsetMs);
@@ -105,7 +110,7 @@ export function resolveBrowserHandlerOptions(): CreateHandlersOptions {
         throw new Error('[browser] persist called before the three stores were initialised');
       }
       persistence.save(
-        scenario.name,
+        snapshotScenarioName ?? scenario.name,
         buildSnapshot({ cart, checkout, order }, sessionId, Date.parse(clock.now())),
       );
     },
@@ -205,8 +210,9 @@ export function installUnclaimedApiRouteNetworkError(): void {
  */
 export function buildBrowserHandlers(
   snapshot: MockSnapshot | null = null,
+  snapshotScenarioName?: string,
 ): ReturnType<typeof createHandlers> {
-  const options = resolveBrowserHandlerOptions();
+  const options = resolveBrowserHandlerOptions(snapshotScenarioName);
   options.snapshot = snapshot;
   // The demo configuration adds the dispatcher shell so a misrouted
   // curl does not produce a stack trace inside the page.
@@ -247,7 +253,10 @@ export function resolveMockWorkerUrl(baseUri: string): string {
  * forwarded to `buildBrowserHandlers` so the repository is seeded
  * with the persisted cart before the first request is dispatched.
  */
-export async function startMockWorker(snapshot: MockSnapshot | null = null): Promise<void> {
+export async function startMockWorker(
+  snapshot: MockSnapshot | null = null,
+  snapshotScenarioName?: string,
+): Promise<void> {
   if (worker === undefined) {
     throw new Error(
       '[browser] startMockWorker called outside a browser; MSW setupWorker was skipped at module load',
@@ -261,7 +270,7 @@ export async function startMockWorker(snapshot: MockSnapshot | null = null): Pro
   installUnclaimedApiRouteNetworkError();
   installCrossOriginBlock();
   installBusinessRouteBypass();
-  for (const handler of buildBrowserHandlers(snapshot)) {
+  for (const handler of buildBrowserHandlers(snapshot, snapshotScenarioName)) {
     worker.use(handler);
   }
   await worker.start({

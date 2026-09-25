@@ -29,7 +29,9 @@ const SNAPSHOT_KEY_PREFIX = 'mi-bolt.snapshot.';
  * scenario name, so when exactly one `mi-bolt.snapshot.*` key is in
  * sessionStorage its suffix names the scenario the shop is running and
  * both applications read the same snapshot. No key, or more than one,
- * is ambiguous and falls back to the URL.
+ * is ambiguous and falls back to the URL. The page writes back under
+ * that same key (`startMockWorker`'s second argument), so the outcome
+ * the shopper chose is in the snapshot the shop reads on its return leg.
  */
 function readScenarioNameFromSnapshotKeys(): string | null {
   let found: string | null = null;
@@ -74,7 +76,7 @@ const start = async (): Promise<void> => {
     const clock = scenarios.createRealClock(scenario.clockOffsetMs);
     const persistence = createBrowserPersistence({ nowMs: () => Date.parse(clock.now()) });
     const snapshot = persistence.hydrate(scenario.name);
-    await startMockWorker(snapshot);
+    await startMockWorker(snapshot, scenario.name);
   }
   await bootstrapApplication(App, appConfig);
 };
