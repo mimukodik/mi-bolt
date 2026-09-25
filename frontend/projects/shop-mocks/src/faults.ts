@@ -42,6 +42,15 @@
  * two short-circuiting once families and returns `null` for every
  * lost-once name, which the mutating handlers consult after the store
  * has run.
+ *
+ * `stock-lost-once-<operation>` takes a variant's whole demo stock at
+ * the first matching request of the handler list, so the refusal a
+ * real stock change causes can be tested. The cart-add request takes
+ * the variant in the request body, and the order request takes the
+ * cart's last line. The catalogue, cart and checkout reads all see
+ * the lost stock through `stockLedger.current`, so E060 (`OUT_OF_STOCK`
+ * at add), E085 (`OUT_OF_STOCK` at confirm) and E099 (`OUT_OF_STOCK`
+ * at order) can be exercised. A refused order changes nothing.
  */
 
 import { delay, HttpResponse, type DefaultBodyType } from 'msw';
@@ -82,6 +91,18 @@ export const LOST_RESPONSE_OPERATIONS = ['order', 'payment-intent'] as const;
 
 /** One operation key of `LOST_RESPONSE_OPERATIONS`. */
 export type LostResponseOperation = (typeof LOST_RESPONSE_OPERATIONS)[number];
+
+/**
+ * The operations a `stock-lost-once-<operation>` scenario can take the
+ * stock of. The set is hand-picked rather than derived from a
+ * criterion: an operation belongs here once its handler calls
+ * `stockLostOnce` before the store mutates, so a new endpoint joins
+ * it when that call site lands.
+ */
+export const STOCK_LOST_OPERATIONS = ['cart-add', 'order'] as const;
+
+/** One operation key of `STOCK_LOST_OPERATIONS`. */
+export type StockLostOperation = (typeof STOCK_LOST_OPERATIONS)[number];
 
 /**
  * How long a `slow-once-<operation>` scenario holds its first request
@@ -182,6 +203,25 @@ export function loseResponseOnce(
 ): boolean {
   const scenarioName = options.scenario.name;
   if (scenarioName !== `lost-once-${operation}`) return false;
+  return fireOnce(options, scenarioName);
+}
+
+/**
+ * Answers `true` when this handler list has to take the variant's
+ * whole demo stock at the first matching request under a
+ * `stock-lost-once-<operation>` scenario, and `false` for every other
+ * scenario and every later request. The cart-add handler calls it
+ * before `store.add`, and the order handler before the stock loop, so
+ * the catalogue, cart and checkout reads see the lost stock through
+ * `stockLedger.current` after the first request and the refused
+ * mutation changes nothing on its own.
+ */
+export function stockLostOnce(
+  options: CreateHandlersOptions,
+  operation: StockLostOperation,
+): boolean {
+  const scenarioName = options.scenario.name;
+  if (scenarioName !== `stock-lost-once-${operation}`) return false;
   return fireOnce(options, scenarioName);
 }
 

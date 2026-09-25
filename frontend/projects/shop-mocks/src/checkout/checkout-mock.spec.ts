@@ -126,6 +126,14 @@ function expectRecord(value: unknown): asserts value is Record<string, unknown> 
   expect(isRecord(value)).toBe(true);
 }
 
+function expectDefined<T>(value: T | undefined): asserts value is T {
+  expect(value).toBeDefined();
+}
+
+function expectString(value: unknown, label = 'value'): asserts value is string {
+  expect(typeof value === 'string', `${label} is not a string`).toBe(true);
+}
+
 function readString(body: Record<string, unknown>, key: string): string {
   const value = body[key];
   expect(typeof value).toBe('string');
@@ -1992,5 +2000,418 @@ describe('lost-once-payment-intent scenario', () => {
     expect(retry.status).toBe(201);
     expectRecord(retry.body);
     expect(readString(retry.body, 'id')).toBe(stored?.intents[0]?.id);
+  });
+});
+
+/**
+ * Stock ledger: a committed order decrements the demo stock exactly
+ * once, and two once-only faults take a variant's whole stock at the
+ * first matching request of the handler list so the standard's rows
+ * E060 (`OUT_OF_STOCK` at add), E085 (`OUT_OF_STOCK` at confirm) and
+ * E099 (`OUT_OF_STOCK` at order) can be tested. The committed fixture
+ * keeps `apple-iphone-18-pro-max--fekete--256` at `maxQuantity: 1` and
+ * `honor-magic-v6--fekete--512` at `maxQuantity: 2`.
+ */
+const PRO_MAX_BLACK_256 = 'apple-iphone-18-pro-max--fekete--256';
+const PRO_MAX_GLECCSER_256 = 'apple-iphone-18-pro-max--gleccserszin--256';
+const MAGIC_V6_BLACK_512 = 'honor-magic-v6--fekete--512';
+
+async function addLine(
+  variantId: string,
+  ifMatch: string,
+  headers: Record<string, string> = session1Headers(),
+): Promise<void> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...headers, 'If-Match': ifMatch },
+    body: JSON.stringify({ variantId, quantity: 1 }),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function addLineExpectStatus(
+  variantId: string,
+  ifMatch: string,
+  expectedStatus: number,
+  headers: Record<string, string> = session1Headers(),
+): Promise<{ status: number; body: unknown }> {
+  const res = await fetch('http://localhost/api/v1/cart/items', {
+    method: 'POST',
+    headers: { ...headers, 'If-Match': ifMatch },
+    body: JSON.stringify({ variantId, quantity: 1 }),
+  });
+  expect(res.status).toBe(expectedStatus);
+  const body: unknown = await res.json();
+  return { status: res.status, body };
+}
+
+/** Read the product body and find a variant by id. */
+function findVariant(
+  body: Record<string, unknown>,
+  variantId: string,
+): Record<string, unknown> | undefined {
+  const variants = body['variants'];
+  expect(Array.isArray(variants)).toBe(true);
+  for (const candidate of variants as readonly unknown[]) {
+    expectRecord(candidate);
+    if (candidate['id'] === variantId) return candidate;
+  }
+  return undefined;
+}
+
+/** Read a list item and find a colour option by `variantId`. */
+function findColorOption(
+  item: Record<string, unknown>,
+  variantId: string,
+): Record<string, unknown> | undefined {
+  const colors = item['colors'];
+  expect(Array.isArray(colors)).toBe(true);
+  for (const candidate of colors as readonly unknown[]) {
+    expectRecord(candidate);
+    if (candidate['variantId'] === variantId) return candidate;
+  }
+  return undefined;
+}
+
+/** Read the `fekete` count of `facets.colors` on a `/products` list body. */
+function readFeketeFacetCount(body: Record<string, unknown>): number {
+  expectRecord(body);
+  const facets = body['facets'];
+  expectRecord(facets);
+  const colors = facets['colors'];
+  expect(Array.isArray(colors)).toBe(true);
+  for (const candidate of colors as readonly unknown[]) {
+    expectRecord(candidate);
+    if (candidate['value'] === 'fekete') {
+      expect(typeof candidate['count']).toBe('number');
+      return candidate['count'] as number;
+    }
+  }
+  throw new Error('fekete facet missing');
+}
+
+/** Patch the complete card draft (contact + billing + delivery + payment:card). */
+async function patchCardDraft(ifMatch: string): Promise<void> {
+  const patch = await patchCheckout(
+    {
+      contact: VALID_CONTACT,
+      billing: VALID_BILLING,
+      delivery: { optionId: 'home_delivery', address: VALID_DELIVERY_ADDRESS },
+      payment: { method: 'card' },
+    },
+    ifMatch,
+  );
+  expect(patch.status).toBe(200);
+}
+
+describe('stock ledger (AC13, E060, E085, E099)', () => {
+  it('S-01 a committed order sells its units once', async () => {
+    const listBefore = await fetch(
+      'http://localhost/api/v1/products?q=iphone%2018%20pro%20max&inStock=true&pageSize=24',
+      { headers: session1Headers() },
+    );
+    expect(listBefore.status).toBe(200);
+    const listBeforeBody: unknown = await listBefore.json();
+    expectRecord(listBeforeBody);
+    const feketeBefore = readFeketeFacetCount(listBeforeBody);
+
+    // One `apple-iphone-18-pro-max--fekete--256` card order
+    // → cart v1 empty, add at v1 → v2, patch at v2 → v3,
+    // intent at v3 → v4, order at v4 (using the actual TERMS_VERSION).
+    await addLine(PRO_MAX_BLACK_256, '"1"');
+    await patchCardDraft('"2"');
+    const intentRes = await createCardIntent('"3"', 'idem-int-stock-0001');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const placed = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-stock-0001',
+    );
+    expect(placed.status).toBe(201);
+
+    const listAfter = await fetch(
+      'http://localhost/api/v1/products?q=iphone%2018%20pro%20max&inStock=true&pageSize=24',
+      { headers: session1Headers() },
+    );
+    expect(listAfter.status).toBe(200);
+    const listAfterBody: unknown = await listAfter.json();
+    expectRecord(listAfterBody);
+    const feketeAfter = readFeketeFacetCount(listAfterBody);
+    expect(feketeAfter).toBe(feketeBefore - 1);
+
+    // The product read shows the sold variant out of stock and the
+    // sibling colour still in stock.
+    const productRes = await fetch('http://localhost/api/v1/products/apple-iphone-18-pro-max', {
+      headers: session1Headers(),
+    });
+    expect(productRes.status).toBe(200);
+    const productBody: unknown = await productRes.json();
+    expectRecord(productBody);
+    const proMaxVariant = findVariant(productBody, PRO_MAX_BLACK_256);
+    expect(proMaxVariant).toBeDefined();
+    expect(proMaxVariant?.['maxQuantity']).toBe(0);
+    expect(proMaxVariant?.['availability']).toBe('out_of_stock');
+    const sibling = findVariant(productBody, PRO_MAX_GLECCSER_256);
+    expect(sibling?.['maxQuantity']).toBe(1);
+    expect(sibling?.['availability']).toBe('in_stock');
+
+    // The list item carries the sold-out colour option, and the
+    // related-products item does too.
+    const listNoStockFilter = await fetch(
+      'http://localhost/api/v1/products?q=iphone%2018%20pro%20max&pageSize=24',
+      { headers: session1Headers() },
+    );
+    const listNoStockFilterBody: unknown = await listNoStockFilter.json();
+    expectRecord(listNoStockFilterBody);
+    const items = listNoStockFilterBody['items'];
+    expect(Array.isArray(items)).toBe(true);
+    let proMaxAt256: Record<string, unknown> | undefined;
+    for (const candidate of items as readonly unknown[]) {
+      expectRecord(candidate);
+      if (candidate['slug'] === 'apple-iphone-18-pro-max' && candidate['storageGb'] === 256) {
+        proMaxAt256 = candidate;
+        break;
+      }
+    }
+    expect(proMaxAt256).toBeDefined();
+    expectDefined(proMaxAt256);
+    const soldColor = findColorOption(proMaxAt256, PRO_MAX_BLACK_256);
+    expect(soldColor?.['availability']).toBe('out_of_stock');
+
+    const relatedRes = await fetch('http://localhost/api/v1/products/apple-iphone-18-pro/related', {
+      headers: session1Headers(),
+    });
+    expect(relatedRes.status).toBe(200);
+    const relatedBody: unknown = await relatedRes.json();
+    expect(Array.isArray(relatedBody)).toBe(true);
+    let relatedProMax: Record<string, unknown> | undefined;
+    for (const candidate of relatedBody as readonly unknown[]) {
+      expectRecord(candidate);
+      if (candidate['slug'] === 'apple-iphone-18-pro-max') {
+        relatedProMax = candidate;
+        break;
+      }
+    }
+    expect(relatedProMax).toBeDefined();
+    expectDefined(relatedProMax);
+    const relatedColor = findColorOption(relatedProMax, PRO_MAX_BLACK_256);
+    expect(relatedColor?.['availability']).toBe('out_of_stock');
+
+    // Adding the same variant to a different session now refuses as
+    // `OUT_OF_STOCK` with the variant id in the params.
+    const second = await addLineExpectStatus(PRO_MAX_BLACK_256, '"1"', 409, session2Headers());
+    expectRecord(second.body);
+    expect(second.body['code']).toBe('OUT_OF_STOCK');
+    const params = second.body['params'];
+    expectRecord(params);
+    expect(params['variantId']).toBe(PRO_MAX_BLACK_256);
+  });
+
+  it('S-02 a replayed order does not sell twice', async () => {
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await patchCardDraft('"2"');
+    const intentRes = await createCardIntent('"3"', 'idem-int-stock-0002');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const orderBody = {
+      paymentMethod: 'card',
+      paymentIntentId,
+      termsVersion: TERMS_VERSION,
+      acceptedTerms: true,
+    } as const;
+
+    const first = await placeOrder(orderBody, '"3"', 'idem-stock-0002');
+    expect(first.status).toBe(201);
+    expectRecord(first.body);
+    const firstId = readString(first.body, 'id');
+
+    const second = await placeOrder(orderBody, '"3"', 'idem-stock-0002');
+    expect(second.status).toBe(201);
+    expectRecord(second.body);
+    expect(readString(second.body, 'id')).toBe(firstId);
+
+    const productRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(productRes.status).toBe(200);
+    const productBody: unknown = await productRes.json();
+    expectRecord(productBody);
+    const v = findVariant(productBody, MAGIC_V6_BLACK_512);
+    expect(v?.['maxQuantity']).toBe(1);
+    expect(v?.['availability']).toBe('in_stock');
+  });
+
+  it('S-03 stock-lost-once-order refuses the order and changes nothing', async () => {
+    useScenario('stock-lost-once-order');
+
+    // Two adds, patch card draft, intent, resolve, order.
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await addLine(PRO_MAX_BLACK_256, '"2"');
+    await patchCardDraft('"3"');
+    const intentRes = await createCardIntent('"4"', 'idem-int-stock-0003');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const refused = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"4"',
+      'idem-stock-0003',
+    );
+    expect(refused.status).toBe(409);
+    expectRecord(refused.body);
+    expect(refused.body['code']).toBe('OUT_OF_STOCK');
+    const refusedParams = refused.body['params'];
+    expectRecord(refusedParams);
+    expect(refusedParams['variantId']).toBe(PRO_MAX_BLACK_256);
+
+    const honorRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    expect(honorRes.status).toBe(200);
+    const honorBody: unknown = await honorRes.json();
+    expectRecord(honorBody);
+    expect(findVariant(honorBody, MAGIC_V6_BLACK_512)?.['maxQuantity']).toBe(2);
+
+    const cartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartRes.status).toBe(200);
+    const cartBody: unknown = await cartRes.json();
+    expectRecord(cartBody);
+    const cartEtag = cartRes.headers.get('ETag');
+    expect(typeof cartEtag).toBe('string');
+    const cartItems = cartBody['items'];
+    expect(Array.isArray(cartItems)).toBe(true);
+    expect((cartItems as readonly unknown[]).length).toBe(1);
+    const notices = cartBody['notices'];
+    expect(Array.isArray(notices)).toBe(true);
+    const noticeList = notices as readonly unknown[];
+    let foundNotice: Record<string, unknown> | undefined;
+    for (const entry of noticeList) {
+      expectRecord(entry);
+      if (entry['code'] === 'ITEM_REMOVED' && entry['variantId'] === PRO_MAX_BLACK_256) {
+        foundNotice = entry;
+        break;
+      }
+    }
+    expect(foundNotice).toBeDefined();
+
+    const draftRes = await fetch('http://localhost/api/v1/checkout', {
+      headers: session1Headers(),
+    });
+    expect(draftRes.status).toBe(200);
+    const draftBody: unknown = await draftRes.json();
+    expectRecord(draftBody);
+    const draftContact = draftBody['contact'];
+    expectRecord(draftContact);
+    expect(draftContact['email']).toBe(VALID_CONTACT.email.toLowerCase());
+
+    expectString(cartEtag, 'ETag');
+    const cartEtagString = cartEtag;
+
+    const retryIntent = await createCardIntent(cartEtagString, 'idem-int-stock-0003b');
+    expect(retryIntent.status).toBe(201);
+    expectRecord(retryIntent.body);
+    const retryPaymentIntentId = readString(retryIntent.body, 'id');
+    const retryResolved = await resolveIntent(retryPaymentIntentId, 'succeeded');
+    expect(retryResolved.status).toBe(200);
+
+    const retry = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId: retryPaymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      cartEtagString,
+      'idem-stock-0003b',
+    );
+    expect(retry.status).toBe(201);
+    expectRecord(retry.body);
+    const retryItems = retry.body['items'];
+    expect(Array.isArray(retryItems)).toBe(true);
+    expect((retryItems as readonly unknown[]).length).toBe(1);
+
+    const honorResAfter = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    const honorBodyAfter: unknown = await honorResAfter.json();
+    expectRecord(honorBodyAfter);
+    expect(findVariant(honorBodyAfter, MAGIC_V6_BLACK_512)?.['maxQuantity']).toBe(1);
+  });
+
+  it('S-04 stock-lost-once-cart-add refuses the first add and leaves the cart unchanged', async () => {
+    useScenario('stock-lost-once-cart-add');
+
+    const first = await addLineExpectStatus(MAGIC_V6_BLACK_512, '"1"', 409);
+    expectRecord(first.body);
+    expect(first.body['code']).toBe('OUT_OF_STOCK');
+    expectRecord(first.body['params']);
+    expect(first.body['params']['variantId']).toBe(MAGIC_V6_BLACK_512);
+
+    const cartRes = await fetch('http://localhost/api/v1/cart', {
+      headers: session1Headers(),
+    });
+    expect(cartRes.status).toBe(200);
+    const cartBody: unknown = await cartRes.json();
+    expectRecord(cartBody);
+    expect(cartRes.headers.get('ETag')).toBe('"1"');
+    const items = cartBody['items'];
+    expect(Array.isArray(items)).toBe(true);
+    expect(items).toEqual([]);
+
+    const honorRes = await fetch('http://localhost/api/v1/products/honor-magic-v6', {
+      headers: session1Headers(),
+    });
+    const honorBody: unknown = await honorRes.json();
+    expectRecord(honorBody);
+    expect(findVariant(honorBody, MAGIC_V6_BLACK_512)?.['availability']).toBe('out_of_stock');
+
+    const _second = await addLineExpectStatus(PRO_MAX_BLACK_256, '"1"', 200);
+  });
+
+  it('S-06 the default scenario takes nothing', async () => {
+    await addLine(MAGIC_V6_BLACK_512, '"1"');
+    await patchCardDraft('"2"');
+    const intentRes = await createCardIntent('"3"', 'idem-int-stock-0006');
+    expect(intentRes.status).toBe(201);
+    expectRecord(intentRes.body);
+    const paymentIntentId = readString(intentRes.body, 'id');
+    const resolved = await resolveIntent(paymentIntentId, 'succeeded');
+    expect(resolved.status).toBe(200);
+
+    const placed = await placeOrder(
+      {
+        paymentMethod: 'card',
+        paymentIntentId,
+        termsVersion: TERMS_VERSION,
+        acceptedTerms: true,
+      },
+      '"3"',
+      'idem-stock-0006',
+    );
+    expect(placed.status).toBe(201);
   });
 });

@@ -31,6 +31,7 @@ import { IdempotencyStore } from '../idempotency';
 import { invalidRequest, problemResponse } from '../problem-response';
 
 import { OrderStore } from '../orders/order-store';
+import { stockLedger, StockLedger } from '../stock/stock-ledger';
 import { CheckoutStore } from './checkout-store';
 
 /**
@@ -101,7 +102,9 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
 ): readonly RequestHandler[] => {
   const checkout = new CheckoutStore(options, () => requireCartStore());
   const idempotency = new IdempotencyStore(options.clock);
-  const order = new OrderStore(options, checkout, idempotency, () => requireCartStore());
+  const stock = new StockLedger();
+  stockLedger.current = stock;
+  const order = new OrderStore(options, checkout, idempotency, () => requireCartStore(), stock);
   checkoutStore.current = checkout;
   orderStore.current = order;
 
@@ -118,6 +121,7 @@ export const checkoutHandlersEntry: BusinessHandlerEntry = (
       usedIntentIds: options.snapshot.usedPaymentIntentIds,
     });
     order.seedIdempotency(options.snapshot.idempotency);
+    stock.seedFromReceipts(options.snapshot.receipts);
   }
 
   const getOptions: RequestHandler = http.get('*/api/v1/checkout/options', async ({ request }) => {
