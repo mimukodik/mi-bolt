@@ -147,8 +147,9 @@ test.describe('Checkout: service faults', () => {
         await expect(successHeading).toHaveText('A betöltés nem sikerült');
         await expect(successError).toBeVisible();
         await expect(errorTitle).toHaveText('A visszatöltés nem sikerült');
-        // This is the one screen that renders the server's own English detail.
-        await expect(errorState).toContainText('Simulated failure (fail-order-read scenario)');
+        // The box shows fixed Hungarian copy, never the server's own detail.
+        await expect(errorState).toContainText('A rendelés visszatöltése sikertelen.');
+        await expect(errorState).not.toContainText('Simulated failure');
         await expect(retryButton).toHaveCount(1);
         await expect(retryButton).toHaveText('Visszatöltés újra');
 
@@ -171,7 +172,8 @@ test.describe('Checkout: service faults', () => {
         await expect(successHeading).toHaveText('A betöltés nem sikerült');
         await expect(successError).toBeVisible();
         await expect(errorTitle).toHaveText('A visszatöltés nem sikerült');
-        await expect(errorState).toContainText('Simulated failure (fail-order-read scenario)');
+        await expect(errorState).toContainText('A rendelés visszatöltése sikertelen.');
+        await expect(errorState).not.toContainText('Simulated failure');
         await expect(retryButton).toHaveCount(1);
         await expect(retryButton).toHaveText('Visszatöltés újra');
         await expect(page.getByTestId('order-receipt')).toHaveCount(0);
