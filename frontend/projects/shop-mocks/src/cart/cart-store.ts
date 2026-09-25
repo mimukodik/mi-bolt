@@ -330,7 +330,9 @@ export class CartStore {
    * that the catalogue no longer carries (lookup undefined or
    * `maxQuantity === 0`) is dropped with an `ITEM_REMOVED` notice;
    * a quantity above the new `maxQuantity` is clamped with a
-   * `QUANTITY_REDUCED` notice. Reconcile never emits `PRICE_CHANGED`
+   * `QUANTITY_REDUCED` notice. Every notice names its product
+   * (`productName`) when the catalogue still resolves the variant.
+   * Reconcile never emits `PRICE_CHANGED`
    * because the catalogue is static in this phase.
    *
    * `bumpForMutation` distinguishes the two paths that reach this
@@ -355,10 +357,13 @@ export class CartStore {
     for (const line of cart.lines) {
       const hit = this.lookup(line.variantId);
       if (hit === undefined || hit.variant.maxQuantity === 0) {
-        // The backend's cart service reports the removed quantity the same way.
+        // The backend's cart service reports the removed quantity the same way
+        // and names the product; a variant the catalogue no longer resolves
+        // has no name to give, so that notice goes out without one.
         notices.push({
           code: 'ITEM_REMOVED',
           variantId: line.variantId,
+          ...(hit === undefined ? {} : { productName: hit.product.name }),
           params: { quantity: line.quantity },
         });
         changed = true;
@@ -369,6 +374,7 @@ export class CartStore {
         notices.push({
           code: 'QUANTITY_REDUCED',
           variantId: line.variantId,
+          productName: hit.product.name,
           params: { from: line.quantity, to: cap },
         });
         line.quantity = cap;

@@ -2330,6 +2330,7 @@ describe('stock ledger (AC13, E060, E085, E099)', () => {
       }
     }
     expect(foundNotice).toBeDefined();
+    expect(foundNotice?.['productName']).toBe('Apple iPhone 18 Pro Max');
 
     const draftRes = await fetch('http://localhost/api/v1/checkout', {
       headers: session1Headers(),
