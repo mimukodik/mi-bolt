@@ -70,6 +70,8 @@
     "angular-cli",
     "playwright-test",
     "linear-server",
-    "spring-tools"
+    "spring-tools",
+    "exa",
+    "docmost"
   ]
 }
