@@ -563,6 +563,17 @@ describe('SuccessStep', () => {
     expect(queryHTMLElement(document, '[data-testid="success-missing"]')).toBeNull();
   });
 
+  it("SP-10b a failure's wire detail never reaches the error box", async () => {
+    server.use(http.get('*/api/v1/orders/:orderId', () => fiveHundred()));
+
+    const _fixture = await mountSuccessPage('ord-500');
+
+    const errorBox = queryHTMLElement(document, '[data-testid="success-error"]');
+    expect(errorBox).not.toBeNull();
+    expect(errorBox?.textContent).toContain('A rendelés visszatöltése sikertelen.');
+    expect(errorBox?.textContent).not.toContain('Mocked 500');
+  });
+
   it('SP-11 a malformed order id is treated as missing without any request', async () => {
     const requests: string[] = [];
     const stopCapturing = captureRequests(requests);

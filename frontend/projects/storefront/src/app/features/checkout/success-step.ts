@@ -53,8 +53,7 @@ import { CheckoutStepHeader, type CheckoutCrumb } from './checkout-step-header';
 import { OrderReceiptComponent } from './order-receipt';
 
 /** State of the hydration pipeline that lives on top of `CheckoutFacade.order()`. */
-type LoadState =
-  { kind: 'loading' } | { kind: 'ready' } | { kind: 'missing' } | { kind: 'error'; detail: string };
+type LoadState = { kind: 'loading' } | { kind: 'ready' } | { kind: 'missing' } | { kind: 'error' };
 
 const ORDER_ID_PATTERN = /^[a-zA-Z0-9_-]{1,80}$/;
 
@@ -131,11 +130,9 @@ export class SuccessStep {
       : 'A keresett rendelés nem található. Indíts egy új pénztárat, vagy térj vissza a kosaradhoz.';
   });
 
-  /** Truthy banner copy fed to ErrorState on a network / 5xx failure. */
-  readonly errorMessage = computed<string>(() => {
-    const s = this.loadState();
-    return s.kind === 'error' ? s.detail : 'A rendelés visszatöltése nem sikerült.';
-  });
+  /** Truthy banner copy fed to ErrorState on a network / 5xx failure.
+   *  Fixed copy: the server's English `detail` never reaches the screen. */
+  readonly errorMessage = computed<string>(() => 'A rendelés visszatöltése sikertelen.');
 
   /** Retry button label. */
   readonly retryLabel = computed<string>(() => 'Visszatöltés újra');
@@ -202,11 +199,7 @@ export class SuccessStep {
       this.loadState.set({ kind: 'missing' });
       return;
     }
-    this.loadState.set({
-      kind: 'error',
-      detail:
-        result.error.detail !== '' ? result.error.detail : 'A rendelés visszatöltése sikertelen.',
-    });
+    this.loadState.set({ kind: 'error' });
   }
 
   // -------------------------------------------------------------------------
