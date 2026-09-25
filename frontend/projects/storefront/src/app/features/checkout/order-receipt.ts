@@ -22,6 +22,9 @@
  *   - The component never invents a price: every price is routed
  *     through `PriceBlock` and `Money` so a missing / non-HUF input
  *     gracefully renders the "—" empty state.
+ *   - The receipt shows no name, address or e-mail: the success
+ *     screen's spec and the standard's row E102 ask a fresh and a
+ *     reloaded receipt alike to carry none of them.
  *
  * The component is NOT a replacement for the page chrome (heading,
  * breadcrumbs, "Új vásárlás" CTA); those live in `success-step.ts`.
@@ -32,7 +35,6 @@ import { Component, computed, input } from '@angular/core';
 import { PriceBlock } from '../../shared/ui/price-block/price-block';
 import { StatusMessage } from '../../shared/ui/status-message/status-message';
 
-import type { Address } from '@mi-bolt/api/models/address';
 import type { OrderLine } from '@mi-bolt/api/models/order-line';
 import type { OrderReceipt } from '@mi-bolt/api/models/order-receipt';
 
@@ -73,15 +75,6 @@ export class OrderReceiptComponent {
   readonly deliveryLabel = computed<string>(
     () => DELIVERY_LABELS[this.receipt().delivery.optionId],
   );
-
-  /** The delivery address, or null for pickup: the pickup arm of
-   *  `DeliverySelection` has no address member at all, so narrowing on
-   *  `optionId` is what reaches `address` without a cast. */
-  readonly deliveryAddress = computed<Address | null>(() => {
-    const delivery = this.receipt().delivery;
-    if (delivery.optionId !== 'home_delivery') return null;
-    return delivery.address;
-  });
 
   /** The simulation notice copy. Pulled from the receipt body when present. */
   readonly simulationNotice = computed<string>(() => {
