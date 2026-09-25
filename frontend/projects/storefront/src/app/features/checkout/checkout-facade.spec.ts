@@ -908,7 +908,7 @@ describe('payment intents', () => {
     expect(second?.headers['idempotency-key']).toMatch(KEY_PATTERN);
   });
 
-  it('F-21: a successful create rotates the intent key, so the next create sends a new one', async () => {
+  it('F-21b: a successful create rotates the intent key, so the next create sends a new one', async () => {
     const checkout = await setupCompleteCardDraft();
     captures.length = 0;
 

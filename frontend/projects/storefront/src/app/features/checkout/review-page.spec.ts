@@ -825,7 +825,7 @@ describe('ReviewPage drives the recovery controls', () => {
     expect(readDataErrorCode(host, 'review-submit-failure')).toBe('CART_VERSION_CONFLICT');
   });
 
-  it('RP-21 a retry after a lost payment-intent answer repeats the intent key', async () => {
+  it('RP-21b a retry after a lost payment-intent answer repeats the intent key', async () => {
     const h = harness();
     const keys: string[] = [];
     captureIntentKeys(keys);
